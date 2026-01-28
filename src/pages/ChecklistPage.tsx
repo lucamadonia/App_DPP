@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -27,7 +27,16 @@ import {
   XCircle,
   Minus,
   Factory,
+  Loader2,
 } from 'lucide-react';
+import {
+  getChecklistTemplates,
+  getChecklistProgress,
+  updateChecklistProgress,
+  setTenant,
+  getCurrentTenant,
+} from '@/services/api';
+import type { ChecklistTemplate, ChecklistProgress } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -68,8 +77,8 @@ interface ChecklistItem {
   priority: 'critical' | 'high' | 'medium' | 'low';
 }
 
-// Umfangreiche Checklisten-Daten für jedes Land und jede Produktkategorie
-const checklistData: Record<string, ChecklistItem[]> = {
+// Fallback Checklisten-Daten für jedes Land und jede Produktkategorie
+const fallbackChecklistData: Record<string, ChecklistItem[]> = {
   'DE-electronics': [
     // === SICHERHEIT UND CE-KONFORMITÄT ===
     {
@@ -1620,19 +1629,111 @@ export function ChecklistPage() {
   const [selectedCategory, setSelectedCategory] = useState('electronics');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Checklisten-Daten aus API oder Fallback
+  const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>(fallbackChecklistData);
+  const [progressData, setProgressData] = useState<Record<string, ChecklistProgress>>({});
 
   const key = `${selectedCountry}-${selectedCategory}`;
   const checklist = checklistData[key] || [];
 
   const [itemStates, setItemStates] = useState<Record<string, ChecklistItem['status']>>({});
 
+  // Daten aus API laden
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+
+      // Tenant setzen falls nicht vorhanden
+      if (!getCurrentTenant()) {
+        setTenant('demo-tenant');
+      }
+
+      try {
+        // Checklisten-Templates laden
+        const templates = await getChecklistTemplates(selectedCountry, selectedCategory);
+
+        if (templates && templates.length > 0) {
+          // Templates in ChecklistItem-Format umwandeln
+          const items: ChecklistItem[] = templates.map(t => ({
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            detailedDescription: t.detailedDescription || t.description,
+            mandatory: t.mandatory,
+            category: t.category,
+            subcategory: t.subcategory,
+            documentRequired: t.documentRequired,
+            documentTypes: t.documentTypes,
+            checked: false,
+            status: 'pending' as const,
+            legalBasis: t.legalBasis,
+            authority: t.authority,
+            deadline: t.deadline,
+            penalties: t.penalties,
+            tips: t.tips,
+            links: t.links,
+            applicableProducts: t.applicableProducts,
+            priority: t.priority,
+          }));
+
+          setChecklistData(prev => ({
+            ...prev,
+            [key]: items,
+          }));
+        }
+
+        // Progress laden
+        const progress = await getChecklistProgress();
+        if (progress && progress.length > 0) {
+          const progressMap: Record<string, ChecklistProgress> = {};
+          const statesMap: Record<string, ChecklistItem['status']> = {};
+
+          progress.forEach(p => {
+            progressMap[p.checklist_item_id] = p;
+            statesMap[p.checklist_item_id] = p.status;
+          });
+
+          setProgressData(progressMap);
+          setItemStates(prev => ({ ...prev, ...statesMap }));
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Checklisten-Daten:', error);
+        // Bei Fehler bleiben die Fallback-Daten aktiv
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [selectedCountry, selectedCategory, key]);
+
   const getItemStatus = (item: ChecklistItem) => itemStates[item.id] || item.status;
 
-  const toggleItemStatus = (id: string, currentStatus: ChecklistItem['status']) => {
+  const toggleItemStatus = async (id: string, currentStatus: ChecklistItem['status']) => {
     const statusOrder: ChecklistItem['status'][] = ['pending', 'in_progress', 'completed', 'not_applicable'];
     const currentIndex = statusOrder.indexOf(currentStatus);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+
+    // Optimistisches Update
     setItemStates(prev => ({ ...prev, [id]: nextStatus }));
+
+    // In API speichern
+    setIsSaving(true);
+    try {
+      await updateChecklistProgress(id, {
+        status: nextStatus,
+        checked: nextStatus === 'completed',
+      });
+    } catch (error) {
+      console.error('Fehler beim Speichern des Progress:', error);
+      // Bei Fehler Status zurücksetzen
+      setItemStates(prev => ({ ...prev, [id]: currentStatus }));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const filteredChecklist = checklist.filter(item => {
@@ -1649,6 +1750,17 @@ export function ChecklistPage() {
   const progress = mandatoryItems.length > 0 ? Math.round((completedMandatory.length / mandatoryItems.length) * 100) : 0;
 
   const criticalItems = checklist.filter(i => i.priority === 'critical' && getItemStatus(i) !== 'completed');
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Lade Checklisten-Daten...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>

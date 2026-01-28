@@ -17,6 +17,7 @@ import {
   Globe,
   ClipboardCheck,
   Calculator,
+  Shield,
 } from 'lucide-react';
 
 import {
@@ -123,6 +124,11 @@ const settingsNavItems = [
       { title: 'Benutzer & Rollen', url: '/settings/users', icon: Users },
       { title: 'API-Keys', url: '/settings/api-keys', icon: Key },
     ],
+  },
+  {
+    title: 'Admin Dashboard',
+    url: '/admin',
+    icon: Shield,
   },
   {
     title: 'Hilfe & Support',

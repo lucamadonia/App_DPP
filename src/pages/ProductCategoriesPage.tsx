@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -8,6 +8,7 @@ import {
   Zap,
   Globe,
   Tag,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,9 +20,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { getCategories } from '@/services/api';
+import type { Category } from '@/types/database';
 
-// Umfassende Produktkategorien
-const productCategories = [
+// Fallback-Daten für den Fall, dass die API nicht erreichbar ist
+const fallbackCategories: Category[] = [
   {
     id: 'electronics',
     name: 'Elektronik & IT',
@@ -401,17 +404,37 @@ const productCategories = [
 
 export function ProductCategoriesPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredCategories = productCategories.filter(cat => {
+  // Kategorien aus der API laden
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const apiCategories = await getCategories();
+        if (apiCategories.length > 0) {
+          setCategories(apiCategories);
+        }
+      } catch (error) {
+        console.warn('Kategorien konnten nicht geladen werden, verwende Fallback-Daten:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  const filteredCategories = categories.filter(cat => {
     const searchLower = searchTerm.toLowerCase();
+    const subcategories = cat.subcategories || [];
     return (
       cat.name.toLowerCase().includes(searchLower) ||
-      cat.description.toLowerCase().includes(searchLower) ||
-      cat.subcategories.some(sub => sub.toLowerCase().includes(searchLower))
+      (cat.description || '').toLowerCase().includes(searchLower) ||
+      subcategories.some(sub => sub.toLowerCase().includes(searchLower))
     );
   });
 
-  const totalSubcategories = productCategories.reduce((acc, cat) => acc + cat.subcategories.length, 0);
+  const totalSubcategories = categories.reduce((acc, cat) => acc + (cat.subcategories?.length || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -420,7 +443,7 @@ export function ProductCategoriesPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Produktkategorien</h1>
           <p className="text-muted-foreground">
-            {productCategories.length} Hauptkategorien mit {totalSubcategories} Unterkategorien
+            {categories.length} Hauptkategorien mit {totalSubcategories} Unterkategorien
           </p>
         </div>
         <Link to="/requirements-calculator">
@@ -451,7 +474,7 @@ export function ProductCategoriesPage() {
                 <Package className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{productCategories.length}</p>
+                <p className="text-2xl font-bold">{categories.length}</p>
                 <p className="text-sm text-muted-foreground">Hauptkategorien</p>
               </div>
             </div>
@@ -498,94 +521,108 @@ export function ProductCategoriesPage() {
         </Card>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
       {/* Kategorien-Liste */}
-      <div className="grid gap-4">
-        {filteredCategories.map((category) => (
-          <Card key={category.id} className="overflow-hidden">
-            <Accordion type="single" collapsible>
-              <AccordionItem value={category.id} className="border-none">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/50">
-                  <div className="flex items-center gap-4 text-left w-full">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-2xl">
-                      {category.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{category.name}</h3>
-                        <Badge variant="secondary">{category.subcategories.length} Produkte</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{category.description}</p>
-                    </div>
-                    <div className="hidden md:flex flex-wrap gap-1 max-w-xs justify-end">
-                      {category.regulations.slice(0, 3).map(reg => (
-                        <Badge key={reg} variant="outline" className="text-xs">
-                          {reg}
-                        </Badge>
-                      ))}
-                      {category.regulations.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{category.regulations.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4">
-                  <div className="space-y-4">
-                    {/* Regulierungen */}
-                    <div>
-                      <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4" />
-                        Relevante Regulierungen
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {category.regulations.map(reg => (
-                          <Badge key={reg} variant="default">
-                            {reg}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+      {!isLoading && (
+        <div className="grid gap-4">
+          {filteredCategories.map((category) => {
+            const regulations = category.regulations || [];
+            const subcategories = category.subcategories || [];
 
-                    {/* Unterkategorien */}
-                    <div>
-                      <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Produkttypen ({category.subcategories.length})
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {category.subcategories.map(sub => (
-                          <Badge key={sub} variant="secondary" className="text-xs">
-                            {sub}
-                          </Badge>
-                        ))}
+            return (
+              <Card key={category.id} className="overflow-hidden">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value={category.id} className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/50">
+                      <div className="flex items-center gap-4 text-left w-full">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-2xl">
+                          {category.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{category.name}</h3>
+                            <Badge variant="secondary">{subcategories.length} Produkte</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                        </div>
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-xs justify-end">
+                          {regulations.slice(0, 3).map(reg => (
+                            <Badge key={reg} variant="outline" className="text-xs">
+                              {reg}
+                            </Badge>
+                          ))}
+                          {regulations.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{regulations.length - 3}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-4">
+                      <div className="space-y-4">
+                        {/* Regulierungen */}
+                        <div>
+                          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4" />
+                            Relevante Regulierungen
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {regulations.map(reg => (
+                              <Badge key={reg} variant="default">
+                                {reg}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
 
-                    {/* Aktionen */}
-                    <div className="flex gap-2 pt-2">
-                      <Link to={`/requirements-calculator?category=${category.id}`}>
-                        <Button size="sm">
-                          <Zap className="mr-2 h-4 w-4" />
-                          Anforderungen prüfen
-                        </Button>
-                      </Link>
-                      <Link to={`/checklists?category=${category.id}`}>
-                        <Button size="sm" variant="outline">
-                          <FileText className="mr-2 h-4 w-4" />
-                          Checkliste öffnen
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </Card>
-        ))}
-      </div>
+                        {/* Unterkategorien */}
+                        <div>
+                          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            Produkttypen ({subcategories.length})
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {subcategories.map(sub => (
+                              <Badge key={sub} variant="secondary" className="text-xs">
+                                {sub}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
 
-      {filteredCategories.length === 0 && (
+                        {/* Aktionen */}
+                        <div className="flex gap-2 pt-2">
+                          <Link to={`/requirements-calculator?category=${category.id}`}>
+                            <Button size="sm">
+                              <Zap className="mr-2 h-4 w-4" />
+                              Anforderungen prüfen
+                            </Button>
+                          </Link>
+                          <Link to={`/checklists?category=${category.id}`}>
+                            <Button size="sm" variant="outline">
+                              <FileText className="mr-2 h-4 w-4" />
+                              Checkliste öffnen
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {!isLoading && filteredCategories.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Search className="h-12 w-12 text-muted-foreground mb-4" />

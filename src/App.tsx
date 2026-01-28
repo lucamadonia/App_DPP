@@ -8,6 +8,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductPage } from '@/pages/ProductPage';
@@ -24,6 +25,11 @@ import { ProductCategoriesPage } from '@/pages/ProductCategoriesPage';
 import { DPPVisibilitySettingsPage } from '@/pages/DPPVisibilitySettingsPage';
 import { PublicLayout } from '@/pages/public/PublicLayout';
 import { PublicProductPage } from '@/pages/public/PublicProductPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import { AdminPage } from '@/pages/AdminPage';
+import { SupplyChainPage } from '@/pages/SupplyChainPage';
+import { SuppliersPage } from '@/pages/SuppliersPage';
 import './index.css';
 
 function AppLayout() {
@@ -63,8 +69,13 @@ function PlaceholderPage({ title }: { title: string }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+        {/* Login & Auth */}
+        <Route path="login" element={<LoginPage />} />
+        <Route path="auth/callback" element={<AuthCallbackPage />} />
+
         {/* Öffentliche Seiten ohne Sidebar */}
         <Route element={<PublicLayout />}>
           <Route path="p/:gtin/:serial" element={<PublicProductPage />} />
@@ -94,7 +105,8 @@ function App() {
           <Route path="documents/tracker" element={<DocumentsPage />} />
 
           {/* Lieferkette */}
-          <Route path="supply-chain" element={<PlaceholderPage title="Lieferkette (Phase 2)" />} />
+          <Route path="supply-chain" element={<SupplyChainPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
 
           {/* Compliance */}
           <Route path="compliance" element={<CompliancePage />} />
@@ -119,9 +131,13 @@ function App() {
 
           {/* Hilfe */}
           <Route path="help" element={<PlaceholderPage title="Hilfe & Support" />} />
+
+          {/* Admin */}
+          <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

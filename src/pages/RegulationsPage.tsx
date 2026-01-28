@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Globe,
   FileText,
@@ -18,7 +18,24 @@ import {
   Calendar,
   Download,
   Printer,
+  Loader2,
 } from 'lucide-react';
+import {
+  getCountries,
+  getEURegulations,
+  getNationalRegulations,
+  getPictograms,
+  getRecyclingCodes,
+  getNews,
+} from '@/services/api';
+import type {
+  Country,
+  EURegulation,
+  NationalRegulation,
+  Pictogram,
+  RecyclingCode,
+  NewsItem,
+} from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,9 +57,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-// Umfangreiche Länderdaten
-const countries = [
+// Fallback Länderdaten
+const fallbackCountries: Country[] = [
   {
+    id: 'de',
     code: 'DE',
     name: 'Deutschland',
     flag: '🇩🇪',
@@ -52,6 +70,7 @@ const countries = [
     description: 'Umfangreiche nationale Umsetzungen der EU-Richtlinien mit zusätzlichen Anforderungen',
   },
   {
+    id: 'fr',
     code: 'FR',
     name: 'Frankreich',
     flag: '🇫🇷',
@@ -61,6 +80,7 @@ const countries = [
     description: 'Vorreiter bei Reparierbarkeit und Anti-Obsoleszenz-Gesetzgebung',
   },
   {
+    id: 'at',
     code: 'AT',
     name: 'Österreich',
     flag: '🇦🇹',
@@ -70,6 +90,7 @@ const countries = [
     description: 'Strenge Umweltauflagen und Verpackungsverordnung',
   },
   {
+    id: 'it',
     code: 'IT',
     name: 'Italien',
     flag: '🇮🇹',
@@ -79,6 +100,7 @@ const countries = [
     description: 'Besondere Anforderungen an Produktkennzeichnung und Verpackung',
   },
   {
+    id: 'es',
     code: 'ES',
     name: 'Spanien',
     flag: '🇪🇸',
@@ -88,6 +110,7 @@ const countries = [
     description: 'Nationale Umsetzung mit Fokus auf Kreislaufwirtschaft',
   },
   {
+    id: 'nl',
     code: 'NL',
     name: 'Niederlande',
     flag: '🇳🇱',
@@ -97,6 +120,7 @@ const countries = [
     description: 'Progressive Umweltpolitik und Kreislaufwirtschaftsstrategie',
   },
   {
+    id: 'be',
     code: 'BE',
     name: 'Belgien',
     flag: '🇧🇪',
@@ -106,6 +130,7 @@ const countries = [
     description: 'Regionale Unterschiede bei Umweltauflagen (Flandern, Wallonien, Brüssel)',
   },
   {
+    id: 'pl',
     code: 'PL',
     name: 'Polen',
     flag: '🇵🇱',
@@ -115,6 +140,7 @@ const countries = [
     description: 'Wachsender Fokus auf EU-Konformität und EPR-Systeme',
   },
   {
+    id: 'se',
     code: 'SE',
     name: 'Schweden',
     flag: '🇸🇪',
@@ -124,6 +150,7 @@ const countries = [
     description: 'Strenge Chemikalienverordnung und Nachhaltigkeitsanforderungen',
   },
   {
+    id: 'dk',
     code: 'DK',
     name: 'Dänemark',
     flag: '🇩🇰',
@@ -133,6 +160,7 @@ const countries = [
     description: 'Vorreiter bei Kreislaufwirtschaft und Ressourceneffizienz',
   },
   {
+    id: 'cz',
     code: 'CZ',
     name: 'Tschechien',
     flag: '🇨🇿',
@@ -142,6 +170,7 @@ const countries = [
     description: 'Nationale EPR-Systeme und Verpackungsanforderungen',
   },
   {
+    id: 'pt',
     code: 'PT',
     name: 'Portugal',
     flag: '🇵🇹',
@@ -152,18 +181,8 @@ const countries = [
   },
 ];
 
-// Detaillierte länderspezifische Regulierungen
-const countryRegulations: Record<string, Array<{
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  mandatory: boolean;
-  effectiveDate: string;
-  authority: string;
-  penalties: string;
-  products: string[];
-}>> = {
+// Fallback für länderspezifische Regulierungen
+const fallbackCountryRegulations: Record<string, NationalRegulation[]> = {
   'DE': [
     {
       id: 'de-elekrog',
@@ -381,8 +400,8 @@ const countryRegulations: Record<string, Array<{
   ],
 };
 
-// Umfangreiche EU-Regulierungen
-const euRegulations = [
+// Fallback EU-Regulierungen
+const fallbackEURegulations: EURegulation[] = [
   {
     id: 'espr',
     name: 'ESPR (Ecodesign for Sustainable Products Regulation)',
@@ -629,8 +648,8 @@ const euRegulations = [
   },
 ];
 
-// Umfangreiche Piktogramme und Symbole
-const pictograms = [
+// Fallback Piktogramme und Symbole
+const fallbackPictograms: Pictogram[] = [
   // CE und Sicherheit
   {
     id: 'ce',
@@ -886,27 +905,27 @@ const pictograms = [
   },
 ];
 
-// Recycling-Codes für Kunststoffe
-const recyclingCodes = [
-  { code: '1', symbol: '♳', name: 'PET', fullName: 'Polyethylenterephthalat', examples: 'Getränkeflaschen, Lebensmittelverpackungen', recyclable: true },
-  { code: '2', symbol: '♴', name: 'HDPE', fullName: 'Polyethylen hoher Dichte', examples: 'Milchflaschen, Reinigungsmittel', recyclable: true },
-  { code: '3', symbol: '♵', name: 'PVC', fullName: 'Polyvinylchlorid', examples: 'Rohre, Fensterrahmen, Kabel', recyclable: false },
-  { code: '4', symbol: '♶', name: 'LDPE', fullName: 'Polyethylen niedriger Dichte', examples: 'Plastiktüten, Folien', recyclable: true },
-  { code: '5', symbol: '♷', name: 'PP', fullName: 'Polypropylen', examples: 'Joghurtbecher, Verschlüsse', recyclable: true },
-  { code: '6', symbol: '♸', name: 'PS', fullName: 'Polystyrol', examples: 'Styropor, Einweggeschirr', recyclable: false },
-  { code: '7', symbol: '♹', name: 'O', fullName: 'Andere Kunststoffe', examples: 'PC, PA, ABS, etc.', recyclable: false },
-  { code: '20', symbol: '♺', name: 'PAP', fullName: 'Wellpappe', examples: 'Kartons', recyclable: true },
-  { code: '21', symbol: '♺', name: 'PAP', fullName: 'Sonstige Pappe', examples: 'Faltschachteln', recyclable: true },
-  { code: '22', symbol: '♺', name: 'PAP', fullName: 'Papier', examples: 'Zeitungen, Magazine', recyclable: true },
-  { code: '40', symbol: '♻', name: 'FE', fullName: 'Stahl', examples: 'Konservendosen', recyclable: true },
-  { code: '41', symbol: '♻', name: 'ALU', fullName: 'Aluminium', examples: 'Getränkedosen', recyclable: true },
-  { code: '70', symbol: '♻', name: 'GL', fullName: 'Farbloses Glas', examples: 'Flaschen, Gläser', recyclable: true },
-  { code: '71', symbol: '♻', name: 'GL', fullName: 'Grünes Glas', examples: 'Weinflaschen', recyclable: true },
-  { code: '72', symbol: '♻', name: 'GL', fullName: 'Braunes Glas', examples: 'Bierflaschen', recyclable: true },
+// Fallback Recycling-Codes für Kunststoffe
+const fallbackRecyclingCodes: RecyclingCode[] = [
+  { id: 'rc-1', code: '1', symbol: '♳', name: 'PET', fullName: 'Polyethylenterephthalat', examples: 'Getränkeflaschen, Lebensmittelverpackungen', recyclable: true },
+  { id: 'rc-2', code: '2', symbol: '♴', name: 'HDPE', fullName: 'Polyethylen hoher Dichte', examples: 'Milchflaschen, Reinigungsmittel', recyclable: true },
+  { id: 'rc-3', code: '3', symbol: '♵', name: 'PVC', fullName: 'Polyvinylchlorid', examples: 'Rohre, Fensterrahmen, Kabel', recyclable: false },
+  { id: 'rc-4', code: '4', symbol: '♶', name: 'LDPE', fullName: 'Polyethylen niedriger Dichte', examples: 'Plastiktüten, Folien', recyclable: true },
+  { id: 'rc-5', code: '5', symbol: '♷', name: 'PP', fullName: 'Polypropylen', examples: 'Joghurtbecher, Verschlüsse', recyclable: true },
+  { id: 'rc-6', code: '6', symbol: '♸', name: 'PS', fullName: 'Polystyrol', examples: 'Styropor, Einweggeschirr', recyclable: false },
+  { id: 'rc-7', code: '7', symbol: '♹', name: 'O', fullName: 'Andere Kunststoffe', examples: 'PC, PA, ABS, etc.', recyclable: false },
+  { id: 'rc-20', code: '20', symbol: '♺', name: 'PAP', fullName: 'Wellpappe', examples: 'Kartons', recyclable: true },
+  { id: 'rc-21', code: '21', symbol: '♺', name: 'PAP', fullName: 'Sonstige Pappe', examples: 'Faltschachteln', recyclable: true },
+  { id: 'rc-22', code: '22', symbol: '♺', name: 'PAP', fullName: 'Papier', examples: 'Zeitungen, Magazine', recyclable: true },
+  { id: 'rc-40', code: '40', symbol: '♻', name: 'FE', fullName: 'Stahl', examples: 'Konservendosen', recyclable: true },
+  { id: 'rc-41', code: '41', symbol: '♻', name: 'ALU', fullName: 'Aluminium', examples: 'Getränkedosen', recyclable: true },
+  { id: 'rc-70', code: '70', symbol: '♻', name: 'GL', fullName: 'Farbloses Glas', examples: 'Flaschen, Gläser', recyclable: true },
+  { id: 'rc-71', code: '71', symbol: '♻', name: 'GL', fullName: 'Grünes Glas', examples: 'Weinflaschen', recyclable: true },
+  { id: 'rc-72', code: '72', symbol: '♻', name: 'GL', fullName: 'Braunes Glas', examples: 'Bierflaschen', recyclable: true },
 ];
 
-// Umfangreiche News
-const news = [
+// Fallback News
+const fallbackNews: NewsItem[] = [
   {
     id: '1',
     title: 'ESPR: Delegierte Rechtsakte für erste Produktkategorien erwartet',
@@ -1081,6 +1100,92 @@ export function RegulationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Daten aus API oder Fallback
+  const [countries, setCountries] = useState<Country[]>(fallbackCountries);
+  const [euRegulations, setEURegulations] = useState<EURegulation[]>(fallbackEURegulations);
+  const [countryRegulations, setCountryRegulations] = useState<Record<string, NationalRegulation[]>>(fallbackCountryRegulations);
+  const [pictograms, setPictograms] = useState<Pictogram[]>(fallbackPictograms);
+  const [recyclingCodes, setRecyclingCodes] = useState<RecyclingCode[]>(fallbackRecyclingCodes);
+  const [news, setNews] = useState<NewsItem[]>(fallbackNews);
+
+  // Daten aus API laden
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Alle Master-Daten parallel laden
+        const [
+          countriesData,
+          euRegsData,
+          pictogramsData,
+          recyclingCodesData,
+          newsData,
+        ] = await Promise.all([
+          getCountries(),
+          getEURegulations(),
+          getPictograms(),
+          getRecyclingCodes(),
+          getNews(),
+        ]);
+
+        // Länder setzen
+        if (countriesData && countriesData.length > 0) {
+          setCountries(countriesData);
+        }
+
+        // EU-Regulierungen setzen
+        if (euRegsData && euRegsData.length > 0) {
+          setEURegulations(euRegsData);
+        }
+
+        // Piktogramme setzen
+        if (pictogramsData && pictogramsData.length > 0) {
+          setPictograms(pictogramsData);
+        }
+
+        // Recycling-Codes setzen
+        if (recyclingCodesData && recyclingCodesData.length > 0) {
+          setRecyclingCodes(recyclingCodesData);
+        }
+
+        // News setzen
+        if (newsData && newsData.length > 0) {
+          setNews(newsData);
+        }
+
+        // Nationale Regulierungen für alle Länder mit hardcodiertem Fallback laden
+        const nationalRegsPromises = (countriesData && countriesData.length > 0 ? countriesData : fallbackCountries).map(async (country) => {
+          try {
+            const regs = await getNationalRegulations(country.code);
+            return { code: country.code, regulations: regs && regs.length > 0 ? regs : (fallbackCountryRegulations[country.code] || []) };
+          } catch {
+            return { code: country.code, regulations: fallbackCountryRegulations[country.code] || [] };
+          }
+        });
+
+        const nationalRegsResults = await Promise.all(nationalRegsPromises);
+        const nationalRegsMap: Record<string, NationalRegulation[]> = {};
+        nationalRegsResults.forEach(({ code, regulations }) => {
+          if (regulations.length > 0) {
+            nationalRegsMap[code] = regulations;
+          }
+        });
+
+        if (Object.keys(nationalRegsMap).length > 0) {
+          setCountryRegulations({ ...fallbackCountryRegulations, ...nationalRegsMap });
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Regulierungsdaten:', error);
+        // Bei Fehler bleiben die Fallback-Daten aktiv
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const filteredNews = news.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1095,6 +1200,17 @@ export function RegulationsPage() {
                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Lade Regulierungsdaten...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
