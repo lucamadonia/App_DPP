@@ -14,16 +14,19 @@ const USE_LOCAL_FALLBACK = true;
 
 /**
  * Generische Fetch-Funktion mit NoCodeBackend Authentifizierung
+ * Instance wird als Query-Parameter übergeben
  */
 async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${NOCODEBACKEND_URL}/${endpoint}`;
+  // Instance als Query-Parameter anhängen
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${NOCODEBACKEND_URL}/${endpoint}${separator}Instance=${DATABASE_INSTANCE}`;
 
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    'Instance': DATABASE_INSTANCE,
+    'Accept': 'application/json',
     'Authorization': `Bearer ${SECRET_KEY}`,
   };
 

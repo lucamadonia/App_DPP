@@ -53,13 +53,15 @@
     }
 
     async function apiFetch(endpoint, options = {}) {
-      const url = `${NOCODEBACKEND_URL}/${endpoint}`;
+      // Instance als Query-Parameter
+      const separator = endpoint.includes('?') ? '&' : '?';
+      const url = `${NOCODEBACKEND_URL}/${endpoint}${separator}Instance=${DATABASE_INSTANCE}`;
 
       const response = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Instance': DATABASE_INSTANCE,
+          'Accept': 'application/json',
           'Authorization': `Bearer ${SECRET_KEY}`,
         },
       });
@@ -77,10 +79,9 @@
       return data;
     }
 
-    // Produkte
+    // Produkte - Arrays werden als JSON-Strings gespeichert
     const products = [
       {
-        id: '1',
         name: 'Eco Sneaker Pro',
         manufacturer: 'GreenStep Footwear GmbH',
         gtin: '4012345678901',
@@ -97,32 +98,31 @@
         manufacturerAddress: 'Industriestraße 42, 80339 München, Deutschland',
         manufacturerEORI: 'DE123456789012345',
         manufacturerVAT: 'DE123456789',
-        materials: [
+        materials: JSON.stringify([
           { name: 'Recyceltes Polyester', percentage: 45, recyclable: true, origin: 'Deutschland' },
           { name: 'Bio-Baumwolle', percentage: 30, recyclable: true, origin: 'Türkei' },
           { name: 'Recycelter Gummi', percentage: 20, recyclable: true, origin: 'Portugal' },
           { name: 'Naturkautschuk', percentage: 5, recyclable: true, origin: 'Vietnam' },
-        ],
-        certifications: [
+        ]),
+        certifications: JSON.stringify([
           { name: 'OEKO-TEX Standard 100', issuedBy: 'OEKO-TEX Association', validUntil: '2025-12-31' },
           { name: 'EU Ecolabel', issuedBy: 'European Commission', validUntil: '2025-06-30' },
           { name: 'Fair Trade Certified', issuedBy: 'Fairtrade International', validUntil: '2025-09-15' },
-        ],
-        carbonFootprint: { totalKgCO2: 8.5, productionKgCO2: 5.2, transportKgCO2: 3.3, rating: 'B' },
-        recyclability: {
+        ]),
+        carbonFootprint: JSON.stringify({ totalKgCO2: 8.5, productionKgCO2: 5.2, transportKgCO2: 3.3, rating: 'B' }),
+        recyclability: JSON.stringify({
           recyclablePercentage: 85,
           instructions: 'Trennen Sie Sohle und Obermaterial für optimales Recycling.',
           disposalMethods: ['Textilrecycling', 'Schuh-Rücknahmeprogramm', 'Gummirecycling'],
-        },
-        supplyChain: [
+        }),
+        supplyChain: JSON.stringify([
           { step: 1, location: 'Hamburg', country: 'Deutschland', date: '2024-01-10', description: 'Materialanlieferung' },
           { step: 2, location: 'Porto', country: 'Portugal', date: '2024-01-12', description: 'Fertigung' },
           { step: 3, location: 'München', country: 'Deutschland', date: '2024-01-15', description: 'Qualitätskontrolle' },
           { step: 4, location: 'Berlin', country: 'Deutschland', date: '2024-01-18', description: 'Distribution' },
-        ],
+        ]),
       },
       {
-        id: '2',
         name: 'Solar Powerbank 20000',
         manufacturer: 'EcoTech Solutions AG',
         gtin: '4098765432101',
@@ -139,27 +139,27 @@
         manufacturerAddress: 'Technikweg 15, 70173 Stuttgart, Deutschland',
         manufacturerEORI: 'DE987654321098765',
         manufacturerVAT: 'DE987654321',
-        materials: [
+        materials: JSON.stringify([
           { name: 'Lithium-Ionen-Zellen', percentage: 50, recyclable: true, origin: 'Südkorea' },
           { name: 'Recyceltes Aluminium', percentage: 25, recyclable: true, origin: 'Deutschland' },
           { name: 'Solarzellen', percentage: 15, recyclable: true, origin: 'China' },
           { name: 'ABS-Kunststoff', percentage: 10, recyclable: true, origin: 'Deutschland' },
-        ],
-        certifications: [
+        ]),
+        certifications: JSON.stringify([
           { name: 'CE-Kennzeichnung', issuedBy: 'EU Conformity', validUntil: '2026-12-31' },
           { name: 'RoHS Compliant', issuedBy: 'SGS', validUntil: '2025-08-15' },
-        ],
-        carbonFootprint: { totalKgCO2: 12.3, productionKgCO2: 9.8, transportKgCO2: 2.5, rating: 'C' },
-        recyclability: {
+        ]),
+        carbonFootprint: JSON.stringify({ totalKgCO2: 12.3, productionKgCO2: 9.8, transportKgCO2: 2.5, rating: 'C' }),
+        recyclability: JSON.stringify({
           recyclablePercentage: 78,
           instructions: 'Bitte als Elektroschrott entsorgen.',
           disposalMethods: ['Elektroschrott', 'Batteriesammelstelle'],
-        },
-        supplyChain: [
+        }),
+        supplyChain: JSON.stringify([
           { step: 1, location: 'Seoul', country: 'Südkorea', date: '2024-02-05', description: 'Batteriezellen-Fertigung' },
           { step: 2, location: 'Shenzhen', country: 'China', date: '2024-02-10', description: 'Montage' },
           { step: 3, location: 'Stuttgart', country: 'Deutschland', date: '2024-02-18', description: 'Qualitätsprüfung' },
-        ],
+        ]),
       },
     ];
 
