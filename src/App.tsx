@@ -20,6 +20,7 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { RegulationsPage } from '@/pages/RegulationsPage';
 import { ChecklistPage } from '@/pages/ChecklistPage';
 import { RequirementsCalculatorPage } from '@/pages/RequirementsCalculatorPage';
+import { ProductCategoriesPage } from '@/pages/ProductCategoriesPage';
 import './index.css';
 
 function AppLayout() {
@@ -67,7 +68,7 @@ function App() {
           {/* Produkte */}
           <Route path="products" element={<ProductsPage />} />
           <Route path="products/new" element={<ProductFormPage />} />
-          <Route path="products/categories" element={<PlaceholderPage title="Produktkategorien" />} />
+          <Route path="products/categories" element={<ProductCategoriesPage />} />
           <Route path="products/:id" element={<ProductPage />} />
           <Route path="products/:id/edit" element={<ProductFormPage />} />
 
