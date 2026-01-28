@@ -14,6 +14,18 @@ export interface Product {
   recyclability: RecyclabilityInfo;
   supplyChain: SupplyChainEntry[];
   imageUrl?: string;
+
+  // Zollrelevante Felder
+  hsCode?: string; // Zolltarifnummer
+  batchNumber?: string; // Chargennummer
+  countryOfOrigin?: string; // Herkunftsland
+  netWeight?: number; // Nettogewicht in Gramm
+  grossWeight?: number; // Bruttogewicht in Gramm
+
+  // Erweiterte Herstellerdetails
+  manufacturerAddress?: string;
+  manufacturerEORI?: string; // Economic Operators Registration and Identification
+  manufacturerVAT?: string; // Umsatzsteuer-Identifikationsnummer
 }
 
 export interface Material {

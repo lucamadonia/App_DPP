@@ -60,7 +60,7 @@ interface DomainSettings {
   useGS1: boolean;
   useHTTPS: boolean;
   pathPrefix: string;
-  resolver: 'custom' | 'gs1' | 'id';
+  resolver: 'custom' | 'gs1' | 'id' | 'local';
 }
 
 // QR-Code Einstellungen Interface
@@ -130,8 +130,14 @@ export function QRGeneratorPage() {
   }, [qrSettings]);
 
   // Generiere die DPP-URL basierend auf den Einstellungen
-  const generateDPPUrl = (product: typeof products[0]) => {
+  const generateDPPUrl = (product: typeof products[0], forCustoms = false) => {
     const protocol = domainSettings.useHTTPS ? 'https' : 'http';
+    const customsParam = forCustoms ? '?view=zoll' : '';
+
+    // Lokale öffentliche Seiten
+    if (domainSettings.resolver === 'local') {
+      return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsParam}`;
+    }
 
     if (domainSettings.resolver === 'gs1') {
       return `https://id.gs1.org/01/${product.gtin}/21/${product.serial}`;
@@ -140,11 +146,20 @@ export function QRGeneratorPage() {
     if (domainSettings.useCustomDomain && domainSettings.customDomain) {
       const domain = domainSettings.customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
       const prefix = domainSettings.pathPrefix ? `/${domainSettings.pathPrefix.replace(/^\/|\/$/g, '')}` : '';
-      return `${protocol}://${domain}${prefix}/01/${product.gtin}/21/${product.serial}`;
+      return `${protocol}://${domain}${prefix}/p/${product.gtin}/${product.serial}${customsParam}`;
     }
 
-    return `https://dpp.example.com/01/${product.gtin}/21/${product.serial}`;
+    return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsParam}`;
   };
+
+  // Generiere URL für Zollansicht
+  const generateCustomsUrl = (product: typeof products[0]) => {
+    return generateDPPUrl(product, true);
+  };
+
+  // Lokale Vorschau-URL
+  const localPreviewUrl = `${window.location.origin}/p/${selectedProduct.gtin}/${selectedProduct.serial}`;
+  const localCustomsUrl = `${localPreviewUrl}?view=zoll`;
 
   const dppUrl = generateDPPUrl(selectedProduct);
   const gs1Url = `https://id.gs1.org/01/${selectedProduct.gtin}/21/${selectedProduct.serial}`;
@@ -470,6 +485,28 @@ export function QRGeneratorPage() {
                     </div>
                   </div>
 
+                  {/* Vorschau-Links für lokale Seiten */}
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2 text-green-800 dark:text-green-200">
+                      <Eye className="h-4 w-4" />
+                      Öffentliche Seiten testen
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={localPreviewUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Verbraucheransicht
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={localCustomsUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Zollansicht
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+
                   {/* GS1 Digital Link Struktur */}
                   <div className="p-4 bg-muted/50 rounded-lg">
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -681,6 +718,35 @@ export function QRGeneratorPage() {
                           </p>
                           <p className="text-xs font-mono mt-1 text-muted-foreground">
                             https://id.gs1.org/01/GTIN/21/SERIAL
+                          </p>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                          domainSettings.resolver === 'local'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'hover:bg-muted/50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="resolver"
+                          value="local"
+                          checked={domainSettings.resolver === 'local'}
+                          onChange={() => setDomainSettings({ ...domainSettings, resolver: 'local', useCustomDomain: false })}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium flex items-center gap-2">
+                            Lokale Produktseiten
+                            <Badge variant="default">Neu</Badge>
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Nutzt die integrierten öffentlichen DPP-Seiten dieser Anwendung
+                          </p>
+                          <p className="text-xs font-mono mt-1 text-muted-foreground">
+                            {window.location.origin}/p/GTIN/SERIAL
                           </p>
                         </div>
                       </label>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DPP Manager - Datenbank Setup</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+    h1 { color: #333; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .log { background: #1e1e1e; color: #0f0; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+    .info { color: #3b82f6; }
+  </style>
+</head>
+<body>
+  <h1>🗄️ DPP Manager - Datenbank Setup</h1>
+
+  <div class="card">
+    <h2>NoCodeBackend Konfiguration</h2>
+    <p><strong>Instance:</strong> 48395_mfg_ddp</p>
+    <p><strong>URL:</strong> https://api.nocodebackend.com</p>
+  </div>
+
+  <div class="card">
+    <h2>Setup starten</h2>
+    <p>Klicken Sie auf den Button, um alle Tabellen und Demo-Daten zu erstellen:</p>
+    <button id="setupBtn" onclick="runSetup()">🚀 Datenbank einrichten</button>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <div id="log" class="log">Bereit zum Starten...</div>
+  </div>
+
+  <script>
+    const NOCODEBACKEND_URL = 'https://api.nocodebackend.com';
+    const DATABASE_INSTANCE = '48395_mfg_ddp';
+    const SECRET_KEY = 'e4d980652106cfd48dd5786dbe25f9b4be24a4ba1adb33bc889e139d8ff3f5d7';
+
+    const logEl = document.getElementById('log');
+
+    function log(message, type = '') {
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = message + '\n';
+      logEl.appendChild(span);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function apiFetch(endpoint, options = {}) {
+      const url = `${NOCODEBACKEND_URL}/${endpoint}`;
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Instance': DATABASE_INSTANCE,
+          'Authorization': `Bearer ${SECRET_KEY}`,
+        },
+      });
+
+      const text = await response.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch { data = text; }
+
+      log(`${options.method || 'GET'} ${endpoint}: ${response.status}`, response.ok ? 'success' : 'error');
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${text}`);
+      }
+
+      return data;
+    }
+
+    // Produkte
+    const products = [
+      {
+        id: '1',
+        name: 'Eco Sneaker Pro',
+        manufacturer: 'GreenStep Footwear GmbH',
+        gtin: '4012345678901',
+        serialNumber: 'GSP-2024-001234',
+        productionDate: '2024-01-15',
+        category: 'Textilien',
+        description: 'Nachhaltig produzierter Sneaker aus recycelten Materialien.',
+        imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600',
+        hsCode: '6404.11.00',
+        batchNumber: 'B2024-001',
+        countryOfOrigin: 'Portugal',
+        netWeight: 340,
+        grossWeight: 520,
+        manufacturerAddress: 'Industriestraße 42, 80339 München, Deutschland',
+        manufacturerEORI: 'DE123456789012345',
+        manufacturerVAT: 'DE123456789',
+        materials: [
+          { name: 'Recyceltes Polyester', percentage: 45, recyclable: true, origin: 'Deutschland' },
+          { name: 'Bio-Baumwolle', percentage: 30, recyclable: true, origin: 'Türkei' },
+          { name: 'Recycelter Gummi', percentage: 20, recyclable: true, origin: 'Portugal' },
+          { name: 'Naturkautschuk', percentage: 5, recyclable: true, origin: 'Vietnam' },
+        ],
+        certifications: [
+          { name: 'OEKO-TEX Standard 100', issuedBy: 'OEKO-TEX Association', validUntil: '2025-12-31' },
+          { name: 'EU Ecolabel', issuedBy: 'European Commission', validUntil: '2025-06-30' },
+          { name: 'Fair Trade Certified', issuedBy: 'Fairtrade International', validUntil: '2025-09-15' },
+        ],
+        carbonFootprint: { totalKgCO2: 8.5, productionKgCO2: 5.2, transportKgCO2: 3.3, rating: 'B' },
+        recyclability: {
+          recyclablePercentage: 85,
+          instructions: 'Trennen Sie Sohle und Obermaterial für optimales Recycling.',
+          disposalMethods: ['Textilrecycling', 'Schuh-Rücknahmeprogramm', 'Gummirecycling'],
+        },
+        supplyChain: [
+          { step: 1, location: 'Hamburg', country: 'Deutschland', date: '2024-01-10', description: 'Materialanlieferung' },
+          { step: 2, location: 'Porto', country: 'Portugal', date: '2024-01-12', description: 'Fertigung' },
+          { step: 3, location: 'München', country: 'Deutschland', date: '2024-01-15', description: 'Qualitätskontrolle' },
+          { step: 4, location: 'Berlin', country: 'Deutschland', date: '2024-01-18', description: 'Distribution' },
+        ],
+      },
+      {
+        id: '2',
+        name: 'Solar Powerbank 20000',
+        manufacturer: 'EcoTech Solutions AG',
+        gtin: '4098765432101',
+        serialNumber: 'ETS-PB-2024-5678',
+        productionDate: '2024-02-20',
+        category: 'Elektronik',
+        description: 'Leistungsstarke Powerbank mit integriertem Solarpanel. 20000mAh Kapazität.',
+        imageUrl: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=600',
+        hsCode: '8507.60.00',
+        batchNumber: 'B2024-002',
+        countryOfOrigin: 'China',
+        netWeight: 285,
+        grossWeight: 380,
+        manufacturerAddress: 'Technikweg 15, 70173 Stuttgart, Deutschland',
+        manufacturerEORI: 'DE987654321098765',
+        manufacturerVAT: 'DE987654321',
+        materials: [
+          { name: 'Lithium-Ionen-Zellen', percentage: 50, recyclable: true, origin: 'Südkorea' },
+          { name: 'Recyceltes Aluminium', percentage: 25, recyclable: true, origin: 'Deutschland' },
+          { name: 'Solarzellen', percentage: 15, recyclable: true, origin: 'China' },
+          { name: 'ABS-Kunststoff', percentage: 10, recyclable: true, origin: 'Deutschland' },
+        ],
+        certifications: [
+          { name: 'CE-Kennzeichnung', issuedBy: 'EU Conformity', validUntil: '2026-12-31' },
+          { name: 'RoHS Compliant', issuedBy: 'SGS', validUntil: '2025-08-15' },
+        ],
+        carbonFootprint: { totalKgCO2: 12.3, productionKgCO2: 9.8, transportKgCO2: 2.5, rating: 'C' },
+        recyclability: {
+          recyclablePercentage: 78,
+          instructions: 'Bitte als Elektroschrott entsorgen.',
+          disposalMethods: ['Elektroschrott', 'Batteriesammelstelle'],
+        },
+        supplyChain: [
+          { step: 1, location: 'Seoul', country: 'Südkorea', date: '2024-02-05', description: 'Batteriezellen-Fertigung' },
+          { step: 2, location: 'Shenzhen', country: 'China', date: '2024-02-10', description: 'Montage' },
+          { step: 3, location: 'Stuttgart', country: 'Deutschland', date: '2024-02-18', description: 'Qualitätsprüfung' },
+        ],
+      },
+    ];
+
+    // Sichtbarkeit
+    const visibilitySettings = {
+      id: 'default',
+      version: 2,
+      fields: {
+        name: 'consumer', image: 'consumer', description: 'consumer', manufacturer: 'consumer',
+        category: 'consumer', materials: 'consumer', materialOrigins: 'consumer',
+        carbonFootprint: 'consumer', carbonRating: 'consumer', recyclability: 'consumer',
+        recyclingInstructions: 'consumer', disposalMethods: 'consumer', certifications: 'consumer',
+        supplyChainSimple: 'consumer', supplyChainFull: 'customs', gtin: 'customs',
+        serialNumber: 'customs', batchNumber: 'customs', hsCode: 'customs',
+        countryOfOrigin: 'customs', netWeight: 'customs', grossWeight: 'customs',
+        manufacturerAddress: 'customs', manufacturerEORI: 'customs', manufacturerVAT: 'customs',
+        certificateDownloads: 'customs',
+      },
+    };
+
+    async function runSetup() {
+      const btn = document.getElementById('setupBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Läuft...';
+      logEl.innerHTML = '';
+
+      log('========================================', 'info');
+      log('DPP Manager - NoCodeBackend Setup', 'info');
+      log('========================================', 'info');
+      log('');
+
+      // Produkte erstellen
+      log('--- Produkte erstellen ---', 'info');
+      for (const product of products) {
+        try {
+          const result = await apiFetch('create/products', {
+            method: 'POST',
+            body: JSON.stringify(product),
+          });
+          log(`  ✓ ${product.name} erstellt (ID: ${result?.id || result?._id || 'ok'})`, 'success');
+        } catch (error) {
+          log(`  ✗ ${product.name}: ${error.message}`, 'error');
+        }
+      }
+
+      log('');
+      log('--- Sichtbarkeitseinstellungen erstellen ---', 'info');
+      try {
+        const result = await apiFetch('create/visibility', {
+          method: 'POST',
+          body: JSON.stringify(visibilitySettings),
+        });
+        log(`  ✓ Sichtbarkeitseinstellungen erstellt`, 'success');
+      } catch (error) {
+        log(`  ✗ Fehler: ${error.message}`, 'error');
+      }
+
+      log('');
+      log('========================================', 'info');
+      log('✅ Setup abgeschlossen!', 'success');
+      log('========================================', 'info');
+
+      btn.disabled = false;
+      btn.textContent = '🔄 Erneut ausführen';
+    }
+  </script>
+</body>
+</html>

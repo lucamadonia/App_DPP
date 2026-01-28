@@ -1,0 +1,24 @@
+# Sicherheitseinstellungen für API
+
+# PHP-Fehler ausblenden in Produktion
+php_flag display_errors off
+php_flag log_errors on
+
+# Direkten Zugriff auf config.php verhindern
+<Files "config.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Nur bestimmte HTTP-Methoden erlauben
+<LimitExcept GET POST PUT DELETE OPTIONS>
+    Order allow,deny
+    Deny from all
+</LimitExcept>
+
+# CORS Header (wird auch in PHP gesetzt)
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>

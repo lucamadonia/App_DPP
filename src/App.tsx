@@ -21,6 +21,9 @@ import { RegulationsPage } from '@/pages/RegulationsPage';
 import { ChecklistPage } from '@/pages/ChecklistPage';
 import { RequirementsCalculatorPage } from '@/pages/RequirementsCalculatorPage';
 import { ProductCategoriesPage } from '@/pages/ProductCategoriesPage';
+import { DPPVisibilitySettingsPage } from '@/pages/DPPVisibilitySettingsPage';
+import { PublicLayout } from '@/pages/public/PublicLayout';
+import { PublicProductPage } from '@/pages/public/PublicProductPage';
 import './index.css';
 
 function AppLayout() {
@@ -62,6 +65,13 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Öffentliche Seiten ohne Sidebar */}
+        <Route element={<PublicLayout />}>
+          <Route path="p/:gtin/:serial" element={<PublicProductPage />} />
+          <Route path="01/:gtin/21/:serial" element={<PublicProductPage />} />
+        </Route>
+
+        {/* Admin-Bereich mit Sidebar */}
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
 
@@ -75,6 +85,7 @@ function App() {
           {/* DPP / Pässe */}
           <Route path="dpp" element={<DPPOverviewPage />} />
           <Route path="dpp/qr-generator" element={<QRGeneratorPage />} />
+          <Route path="dpp/visibility" element={<DPPVisibilitySettingsPage />} />
           <Route path="dpp/batch-upload" element={<PlaceholderPage title="Batch-Upload" />} />
 
           {/* Dokumente */}

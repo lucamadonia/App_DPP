@@ -62,6 +62,7 @@ const mainNavItems = [
     items: [
       { title: 'Übersicht', url: '/dpp' },
       { title: 'QR-Generator', url: '/dpp/qr-generator' },
+      { title: 'Sichtbarkeit', url: '/dpp/visibility' },
       { title: 'Batch-Upload', url: '/dpp/batch-upload' },
     ],
   },
