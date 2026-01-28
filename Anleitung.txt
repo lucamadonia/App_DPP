@@ -1,0 +1,206 @@
+1. Gesamtaufbau der Applikation (Multi-Tenant-Architektur)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EbeneTechnologie-EmpfehlungBemerkung / Warum?FrontendReact 18/19 + TypeScript + ViteSchnell, komponentenbasiert, gutes Ökosystem für Formulare & Daten-TabellenDesign Systemshadcn/ui + Tailwind CSS v4Sehr sauberes Corporate-Design, leicht anpassbar pro Mandant (White-Label light)State ManagementZustand oder TanStack QueryLeichtgewichtig, perfekt für Server-State + Caching von DPP-DatenBackendNode.js + NestJS oder tRPCTyp-sichere API, sehr gut für Multi-Tenant-LogikDatenbankPostgreSQL (Schema pro Tenant oder tenant_id)Beste Balance zwischen Isolation & Kosten (→ später Citus / TimescaleDB möglich)Auth & TenantClerk / Auth.js + tenant_id in JWTSehr robuste Multi-Tenant-Unterstützung, einfache RBAC-IntegrationQR / DPP-ResolverEigener Resolver-Service (Next.js Edge)Hohe Verfügbarkeit, Caching, EU-Datenschutz-konform (kein 3rd-Party-Abhängigkeit)Dateien / DocsS3-kompatibel (Backblaze, Scaleway)Günstig, EU-Region möglichDeploymentVercel (Frontend) + Railway / Fly.io (Backend) oder KubernetesSchnell live, später skalierbar
+2. Corporate Design & Farb- / Typografie-Regeln
+Ziel: Seriös, vertrauenswürdig, regulatorisch, modern – kein Consumer-Spielplatz-Look.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ElementEmpfehlungBegründung / WirkungPrimärfarbe#0F172A (Slate 950) oder #1E293B (Slate 900)Tiefes, professionelles Dunkelblau-GrauAkzentfarbe#3B82F6 (Blue 500) → Hover #2563EBVertrauen, EU-Blau-AssoziationSuccess / Compliance#16A34A (Green 600)Positiv, „erfüllt“, „geprüft“Warning#D97706 (Amber 600)Fehlende Daten, Deadline nahDanger#DC2626 (Red 600)Nicht konform, FehlerHintergrund#F8FAFC (Slate 50) + weiße KartenSehr hoher Kontrast, sauberHauptschriftInter oder Manrope (variable)Sehr gute Lesbarkeit, modern, kostenlosMonospace (IDs)JetBrains Mono oder IBM Plex MonoTechnische Werte (Batch-ID, GTIN, DPP-URI)Border Radiusmd → lg (8–12 px)Modern, aber nicht verspieltShadowsubtle (shadow-sm bis shadow-md)Leichtes Depth ohne 2010er-Neon-SchattenSpacing4 px Basis (Tailwind default)Luftig, aber effizient
+White-Label light: Jeder Mandant kann Logo, Primärfarbe (Akzent) und evtl. Schrift hochladen → gespeichert pro tenant.
+3. Seiten- & Navigationsstruktur (Hauptmenü – Sidebar)
+Linke Sidebar (persistent, collapsbar auf Mobile)
+
+Dashboard (Home)
+KPI-Kacheln: # aktive Produkte • # ausstehende Konformitätserklärungen • % abgelaufene Zertifikate • nächste Fristen
+Produkte
+Alle Produkte (Haupttabelle)
+Neu anlegen (Wizard)
+Kategorien / Produktgruppen
+
+DPP / Pässe
+Übersicht (Liste + Status: draft / published / archived)
+QR- & NFC-Generator
+Batch-Upload / Massen-Update
+
+Dokumente & Zertifikate
+Hochladen & Versionsverwaltung (CE, DoC, Materialdatenblätter, LCA, Testberichte …)
+Gültigkeits-Tracker mit Kalender-Ansicht
+
+Lieferkette (optional Phase 2)
+Lieferanten-Verknüpfung
+CoC / Materialnachweise
+
+Compliance & Audit
+Prüfprotokoll
+Export EU-Registry-Format (JSON-LD / GS1 Digital Link)
+Audit-Log (wer hat wann was geändert)
+
+Einstellungen
+Firmenprofil (Name, Adresse, EORI, Verantwortliche Person)
+Branding (Logo, Farbe)
+Benutzer & Rollen
+API-Keys (für ERP-Integration)
+
+Hilfe / Support
+EU-Gesetzes-Referenzen
+FAQ & Tutorials
+
+
+4. Wichtigste Views & Komponenten-Details
+Produkt-Übersicht (Haupttabelle)
+
+Spalten (anpassbar):
+Produktname • interne ID • GTIN/EAN • Kategorie • Status (Draft / Live / Expired) • Letzte Änderung • QR-Status • Konformität % • Aktionen (Edit | QR | Preview | Delete)
+Filter & Suche: Multi-Suche, Status-Filter, Frist-Filter (z. B. „Zertifikat läuft in <30 Tage ab“)
+
+Produkt-Detail / Edit-Ansicht (Tabs)
+
+Stammdaten
+Name, Beschreibung, Bilder, GTIN, SKU, Kategorie (Textil / Batterie / Elektronik …)
+Nachhaltigkeit & Kreislauf
+Materialzusammensetzung (%) • Recycelt-Anteil • Reparatur-Score • Lebensdauer • Entsorgungshinweise
+Konformität
+CE-Kennzeichnung • DoC-Upload • Angewandte Normen • Verantwortliche Person • Gültig bis
+Dokumente
+Drag & Drop Zone + Versionshistorie + Vorschau (PDF)
+QR & Zugriff
+Live-Vorschau des Consumer-DPP
+QR-Code-Generierung (verschiedene Größen)
+Short-URL / GS1 Digital Link Format
+NFC-Tag-Vorbereitung (Text-Export)
+
+Historie & Audit
+Wer hat wann was geändert (Compliance-relevant)
+
+Consumer-DPP-Ansicht (öffentlich, ohne Login)
+
+Clean, sehr große Typo, viel Weißraum
+Abschnitte (akkordeonartig):
+Produkt-Info
+Nachhaltigkeit & CO₂-Fußabdruck
+Materialien & Recycling
+Konformität & Zertifikate (Download-Buttons)
+Reparatur & Ersatzteile
+Hersteller-Kontakt
+
+
+5. Zusammenfassung – Corporate Look & Feel in einem Satz
+„Klare, dunkel akzentuierte Oberfläche mit hohem Blau-/Grün-Vertrauensfaktor, viel Luft, präzise Tabellen, prominente Status-Indikatoren und immer sichtbarer Fortschrittsbalken ‚Konformitäts-Status‘ – so als würde man mit einer sehr seriösen Schweizer Prüfgesellschaft arbeiten.“
+Möchtest du zu einem bestimmten Teil (z. B. Datenmodell, Wizard für neues Produkt, Consumer-DPP-Layout, API-Endpunkte, Rollen & Rechte) eine noch detailliertere Ausarbeitung?

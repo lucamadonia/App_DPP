@@ -1,0 +1,52 @@
+export interface Product {
+  id: string;
+  name: string;
+  manufacturer: string;
+  gtin: string; // Global Trade Item Number
+  serialNumber: string;
+  productionDate: string;
+  expirationDate?: string;
+  category: string;
+  description: string;
+  materials: Material[];
+  certifications: Certification[];
+  carbonFootprint?: CarbonFootprint;
+  recyclability: RecyclabilityInfo;
+  supplyChain: SupplyChainEntry[];
+  imageUrl?: string;
+}
+
+export interface Material {
+  name: string;
+  percentage: number;
+  recyclable: boolean;
+  origin?: string;
+}
+
+export interface Certification {
+  name: string;
+  issuedBy: string;
+  validUntil: string;
+  certificateUrl?: string;
+}
+
+export interface CarbonFootprint {
+  totalKgCO2: number;
+  productionKgCO2: number;
+  transportKgCO2: number;
+  rating: 'A' | 'B' | 'C' | 'D' | 'E';
+}
+
+export interface RecyclabilityInfo {
+  recyclablePercentage: number;
+  instructions: string;
+  disposalMethods: string[];
+}
+
+export interface SupplyChainEntry {
+  step: number;
+  location: string;
+  country: string;
+  date: string;
+  description: string;
+}
