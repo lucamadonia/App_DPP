@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { createProduct, getCategories } from '@/services/supabase';
+import type { Category } from '@/types/database';
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,6 +13,7 @@ import {
   Save,
   Plus,
   Trash2,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const steps = [
   { id: 'stammdaten', title: 'Stammdaten', icon: Package },
@@ -29,6 +33,15 @@ const steps = [
 export function ProductFormPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(console.error).finally(() => setCategoriesLoading(false));
+  }, []);
+
   const [formData, setFormData] = useState({
     name: '',
     manufacturer: '',
@@ -79,9 +92,39 @@ export function ProductFormPage() {
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Produkt erstellt:', formData);
-    navigate('/products');
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await createProduct({
+        name: formData.name,
+        manufacturer: formData.manufacturer,
+        gtin: formData.gtin,
+        serialNumber: formData.serialNumber,
+        category: formData.category,
+        description: formData.description,
+        materials: formData.materials,
+        certifications: formData.certifications.map((name) => ({
+          name,
+          issuedBy: '',
+          validUntil: '',
+        })),
+        recyclability: {
+          recyclablePercentage: formData.recyclablePercentage,
+          instructions: formData.recyclingInstructions,
+          disposalMethods: [],
+        },
+      });
+      if (result.success) {
+        navigate('/products');
+      } else {
+        setSubmitError(result.error || 'Produkt konnte nicht gespeichert werden.');
+      }
+    } catch {
+      setSubmitError('Ein unerwarteter Fehler ist aufgetreten.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const progress = ((currentStep + 1) / steps.length) * 100;
@@ -194,11 +237,18 @@ export function ProductFormPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Kategorie *</label>
-                <Input
-                  placeholder="z.B. Textil / Schuhe"
-                  value={formData.category}
-                  onChange={(e) => updateField('category', e.target.value)}
-                />
+                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={categoriesLoading ? 'Laden...' : 'Kategorie wählen...'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.filter(c => !c.parent_id).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.icon ? `${cat.icon} ` : ''}{cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">Beschreibung</label>
@@ -419,13 +469,23 @@ export function ProductFormPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit}>
-              <Check className="mr-2 h-4 w-4" />
-              Produkt erstellen
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              {isSubmitting ? 'Wird gespeichert…' : 'Produkt erstellen'}
             </Button>
           )}
         </div>
       </div>
+
+      {submitError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+          {submitError}
+        </div>
+      )}
     </div>
   );
 }

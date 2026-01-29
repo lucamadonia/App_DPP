@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -65,6 +65,7 @@ const statusConfig = {
 };
 
 export function ProductsPage() {
+  const location = useLocation();
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +73,7 @@ export function ProductsPage() {
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [location.key]);
 
   const loadProducts = async () => {
     setIsLoading(true);
