@@ -22,6 +22,7 @@ function transformSupplyChainEntry(row: SupplyChainRow): SupplyChainEntry {
     date: row.date,
     description: row.description,
     supplier: row.supplier || undefined,
+    supplier_id: row.supplier_id || undefined,
     risk_level: row.risk_level || undefined,
     verified: row.verified,
     coordinates: row.coordinates || undefined,
@@ -66,6 +67,7 @@ export async function createSupplyChainEntry(
     date: entry.date,
     description: entry.description,
     supplier: entry.supplier || null,
+    supplier_id: entry.supplier_id || null,
     risk_level: entry.risk_level || null,
     verified: entry.verified || false,
     coordinates: entry.coordinates || null,
@@ -100,6 +102,7 @@ export async function updateSupplyChainEntry(
   if (entry.date !== undefined) updateData.date = entry.date;
   if (entry.description !== undefined) updateData.description = entry.description;
   if (entry.supplier !== undefined) updateData.supplier = entry.supplier || null;
+  if (entry.supplier_id !== undefined) updateData.supplier_id = entry.supplier_id || null;
   if (entry.risk_level !== undefined) updateData.risk_level = entry.risk_level || null;
   if (entry.verified !== undefined) updateData.verified = entry.verified;
   if (entry.coordinates !== undefined) updateData.coordinates = entry.coordinates || null;

@@ -408,6 +408,28 @@ export async function assignProductToSupplier(
 }
 
 /**
+ * Get suppliers for a product with supplier details (name, country)
+ */
+export async function getProductSuppliersWithDetails(productId: string): Promise<Array<SupplierProduct & { supplier_name: string; supplier_country: string }>> {
+  const { data, error } = await supabase
+    .from('supplier_products')
+    .select('*, suppliers(name, country)')
+    .eq('product_id', productId);
+
+  if (error) {
+    console.error('Failed to load product suppliers with details:', error);
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((row: any) => ({
+    ...transformSupplierProduct(row),
+    supplier_name: row.suppliers?.name || 'Unbekannt',
+    supplier_country: row.suppliers?.country || '',
+  }));
+}
+
+/**
  * Remove product-supplier association
  */
 export async function removeProductFromSupplier(id: string): Promise<{ success: boolean; error?: string }> {

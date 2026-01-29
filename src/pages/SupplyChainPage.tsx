@@ -152,14 +152,16 @@ export function SupplyChainPage() {
   // Gefilterte Eintrage
   const filteredEntries = useMemo(() => {
     return supplyChainEntries.filter(entry => {
+      const supplierName = getSupplierName(entry) || '';
       const matchesSearch =
         entry.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
         entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         entry.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (entry.supplier?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+        supplierName.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
-  }, [supplyChainEntries, searchQuery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplyChainEntries, searchQuery, suppliers]);
 
   // Timeline-Ansicht: Gruppiert nach Produkt
   const entriesByProduct = useMemo(() => {
@@ -186,6 +188,7 @@ export function SupplyChainPage() {
     date: new Date().toISOString().split('T')[0],
     description: '',
     supplier: '',
+    supplier_id: '',
     risk_level: 'low',
     verified: false,
     coordinates: '',
@@ -295,10 +298,11 @@ export function SupplyChainPage() {
     return products.find(p => p.id === productId)?.name || 'Unbekanntes Produkt';
   };
 
-  // Lieferantenname finden
-  const getSupplierName = (supplierId?: string) => {
-    if (!supplierId) return null;
-    return suppliers.find(s => s.id === supplierId)?.name || supplierId;
+  // Lieferantenname finden (unterstützt supplier_id und supplier TEXT)
+  const getSupplierName = (entry: SupplyChainEntry) => {
+    const id = entry.supplier_id || entry.supplier;
+    if (!id) return null;
+    return suppliers.find(s => s.id === id)?.name || id;
   };
 
   return (
@@ -478,10 +482,10 @@ export function SupplyChainPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {entry.supplier && (
+                        {(entry.supplier_id || entry.supplier) && (
                           <div className="flex items-center gap-1">
                             <Building2 className="h-3 w-3 text-muted-foreground" />
-                            {getSupplierName(entry.supplier)}
+                            {getSupplierName(entry)}
                           </div>
                         )}
                       </TableCell>
@@ -562,10 +566,10 @@ export function SupplyChainPage() {
                                         <Calendar className="h-3 w-3" />
                                         {new Date(entry.date).toLocaleDateString('de-DE')}
                                       </span>
-                                      {entry.supplier && (
+                                      {(entry.supplier_id || entry.supplier) && (
                                         <span className="flex items-center gap-1">
                                           <Building2 className="h-3 w-3" />
-                                          {getSupplierName(entry.supplier)}
+                                          {getSupplierName(entry)}
                                         </span>
                                       )}
                                       {entry.verified && (
@@ -694,11 +698,15 @@ export function SupplyChainPage() {
               <div>
                 <Label>Lieferant (optional)</Label>
                 <Select
-                  value={formData.supplier || 'none'}
-                  onValueChange={v => updateForm('supplier', v === 'none' ? '' : v)}
+                  value={formData.supplier_id || formData.supplier || 'none'}
+                  onValueChange={v => {
+                    const val = v === 'none' ? '' : v;
+                    updateForm('supplier_id', val);
+                    updateForm('supplier', val);
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Lieferant auswahlen" />
+                    <SelectValue placeholder="Lieferant auswählen" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">-- Kein Lieferant --</SelectItem>

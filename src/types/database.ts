@@ -227,6 +227,7 @@ export interface SupplyChainEntry {
   date: string;
   description: string;
   supplier?: string;
+  supplier_id?: string;
   risk_level?: 'low' | 'medium' | 'high';
   verified?: boolean;
   coordinates?: string; // lat,lng
@@ -354,7 +355,7 @@ export interface SupplierProduct {
   tenant_id: string;
   supplier_id: string;
   product_id: string;
-  role: 'manufacturer' | 'component' | 'raw_material' | 'packaging' | 'logistics';
+  role: 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics';
   is_primary: boolean; // Hauptlieferant für dieses Produkt
   lead_time_days?: number; // Lieferzeit in Tagen
   price_per_unit?: number;

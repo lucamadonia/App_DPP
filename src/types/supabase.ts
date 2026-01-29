@@ -596,6 +596,7 @@ export interface Database {
           date: string;
           description: string;
           supplier: string | null;
+          supplier_id: string | null;
           risk_level: 'low' | 'medium' | 'high' | null;
           verified: boolean;
           coordinates: string | null;
@@ -611,6 +612,7 @@ export interface Database {
           date: string;
           description: string;
           supplier?: string | null;
+          supplier_id?: string | null;
           risk_level?: 'low' | 'medium' | 'high' | null;
           verified?: boolean;
           coordinates?: string | null;
@@ -626,6 +628,7 @@ export interface Database {
           date?: string;
           description?: string;
           supplier?: string | null;
+          supplier_id?: string | null;
           risk_level?: 'low' | 'medium' | 'high' | null;
           verified?: boolean;
           coordinates?: string | null;
@@ -852,7 +855,7 @@ export interface Database {
           tenant_id: string;
           supplier_id: string;
           product_id: string;
-          role: 'manufacturer' | 'component' | 'raw_material' | 'packaging' | 'logistics';
+          role: 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics';
           is_primary: boolean;
           lead_time_days: number | null;
           price_per_unit: number | null;
@@ -866,7 +869,7 @@ export interface Database {
           tenant_id: string;
           supplier_id: string;
           product_id: string;
-          role: 'manufacturer' | 'component' | 'raw_material' | 'packaging' | 'logistics';
+          role: 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics';
           is_primary?: boolean;
           lead_time_days?: number | null;
           price_per_unit?: number | null;

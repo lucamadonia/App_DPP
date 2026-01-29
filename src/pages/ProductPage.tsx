@@ -25,14 +25,25 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { getProductById } from '@/services/supabase';
+import { getProductById, getProductSuppliersWithDetails } from '@/services/supabase';
 import type { Product } from '@/types/product';
+import type { SupplierProduct } from '@/types/database';
+
+const SUPPLIER_ROLE_LABELS: Record<string, string> = {
+  manufacturer: 'Hersteller',
+  importeur: 'Importeur',
+  component: 'Komponenten-Lieferant',
+  raw_material: 'Rohstoff-Lieferant',
+  packaging: 'Verpackung',
+  logistics: 'Logistik',
+};
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [productSuppliers, setProductSuppliers] = useState<Array<SupplierProduct & { supplier_name: string; supplier_country: string }>>([]);
 
   useEffect(() => {
     async function loadProduct() {
@@ -45,12 +56,16 @@ export function ProductPage() {
       setIsLoading(true);
       setError(null);
 
-      const data = await getProductById(id);
+      const [data, suppliersData] = await Promise.all([
+        getProductById(id),
+        getProductSuppliersWithDetails(id),
+      ]);
       if (data) {
         setProduct(data);
       } else {
         setError('Produkt nicht gefunden');
       }
+      setProductSuppliers(suppliersData);
       setIsLoading(false);
     }
 
@@ -158,7 +173,7 @@ export function ProductPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="stammdaten" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="stammdaten" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Stammdaten
@@ -174,6 +189,10 @@ export function ProductPage() {
           <TabsTrigger value="dokumente" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Dokumente
+          </TabsTrigger>
+          <TabsTrigger value="lieferanten" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            Lieferanten
           </TabsTrigger>
           <TabsTrigger value="qr" className="flex items-center gap-2">
             <QrCode className="h-4 w-4" />
@@ -439,6 +458,66 @@ export function ProductPage() {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Lieferanten Tab */}
+        <TabsContent value="lieferanten">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-primary" />
+                Zugeordnete Lieferanten
+              </CardTitle>
+              <CardDescription>Wirtschaftsakteure und Lieferanten für dieses Produkt</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {productSuppliers.length > 0 ? (
+                <div className="space-y-4">
+                  {productSuppliers.map((sp) => (
+                    <div key={sp.id} className="flex items-center justify-between p-4 rounded-lg border">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Truck className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{sp.supplier_name}</p>
+                            {sp.is_primary && (
+                              <Badge variant="secondary">Hauptlieferant</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {sp.supplier_country} · {SUPPLIER_ROLE_LABELS[sp.role] || sp.role}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6 text-sm">
+                        {sp.lead_time_days != null && (
+                          <div className="text-right">
+                            <p className="text-muted-foreground">Lieferzeit</p>
+                            <p className="font-medium">{sp.lead_time_days} Tage</p>
+                          </div>
+                        )}
+                        {sp.price_per_unit != null && (
+                          <div className="text-right">
+                            <p className="text-muted-foreground">Preis/Einheit</p>
+                            <p className="font-medium">
+                              {sp.price_per_unit} {sp.currency || 'EUR'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Truck className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                  <p>Keine Lieferanten zugeordnet</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

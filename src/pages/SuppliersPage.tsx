@@ -103,6 +103,7 @@ const LEGAL_FORMS = [
 // Rollen fur Lieferanten-Produkt-Zuordnung
 const SUPPLIER_ROLES: { value: SupplierProduct['role']; label: string }[] = [
   { value: 'manufacturer', label: 'Hersteller' },
+  { value: 'importeur', label: 'Importeur' },
   { value: 'component', label: 'Komponenten-Lieferant' },
   { value: 'raw_material', label: 'Rohstoff-Lieferant' },
   { value: 'packaging', label: 'Verpackung' },

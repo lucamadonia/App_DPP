@@ -227,6 +227,7 @@ CREATE TABLE IF NOT EXISTS supply_chain_entries (
     date DATE NOT NULL,
     description TEXT NOT NULL,
     supplier TEXT,
+    supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
     risk_level TEXT CHECK (risk_level IN ('low', 'medium', 'high')),
     verified BOOLEAN DEFAULT false,
     coordinates TEXT,
@@ -313,7 +314,7 @@ CREATE TABLE IF NOT EXISTS supplier_products (
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('manufacturer', 'component', 'raw_material', 'packaging', 'logistics')),
+    role TEXT NOT NULL CHECK (role IN ('manufacturer', 'importeur', 'component', 'raw_material', 'packaging', 'logistics')),
     is_primary BOOLEAN DEFAULT false,
     lead_time_days INTEGER,
     price_per_unit NUMERIC,
@@ -346,6 +347,7 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_documents_tenant ON documents(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_documents_product ON documents(product_id);
 CREATE INDEX IF NOT EXISTS idx_supply_chain_product ON supply_chain_entries(product_id);
+CREATE INDEX IF NOT EXISTS idx_supply_chain_supplier ON supply_chain_entries(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_checklist_progress_tenant ON checklist_progress(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_suppliers_tenant ON suppliers(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_tenant ON profiles(tenant_id);

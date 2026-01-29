@@ -174,6 +174,21 @@ INSERT INTO news_items (title, summary, content, category, countries, priority, 
 ON CONFLICT DO NOTHING;
 
 -- ============================================
+-- UNTERKATEGORIEN FÜR PRODUKTKATEGORIEN
+-- ============================================
+
+UPDATE categories SET subcategories = ARRAY['Smartphone', 'Tablet', 'Laptop', 'Desktop-PC', 'Wearable', 'Kopfhörer', 'Monitor', 'Smart-Home-Gerät'] WHERE name = 'Elektronik';
+UPDATE categories SET subcategories = ARRAY['Oberbekleidung', 'Hosen', 'Schuhe', 'Accessoires', 'Unterwäsche', 'Sportbekleidung', 'Arbeitskleidung', 'Heimtextilien'] WHERE name = 'Textilien';
+UPDATE categories SET subcategories = ARRAY['Lithium-Ionen', 'Lithium-Polymer', 'Blei-Säure', 'NiMH', 'Knopfzellen', 'EV-Batterie', 'Industriebatterie'] WHERE name = 'Batterien';
+UPDATE categories SET subcategories = ARRAY['Karton', 'Kunststoff', 'Glas', 'Metall', 'Verbund', 'Folien', 'Etiketten'] WHERE name = 'Verpackungen';
+UPDATE categories SET subcategories = ARRAY['Tisch', 'Stuhl', 'Schrank', 'Regal', 'Sofa', 'Bett', 'Büromöbel', 'Gartenmöbel'] WHERE name = 'Möbel';
+UPDATE categories SET subcategories = ARRAY['Hautpflege', 'Haarpflege', 'Dekorative Kosmetik', 'Parfum', 'Sonnenschutz', 'Zahnpflege', 'Naturkosmetik'] WHERE name = 'Kosmetik';
+UPDATE categories SET subcategories = ARRAY['Brettspiele', 'Plüschtiere', 'Elektronisches Spielzeug', 'Bausteine', 'Puppen', 'Outdoor-Spielzeug', 'Lernspielzeug'] WHERE name = 'Spielzeug';
+UPDATE categories SET subcategories = ARRAY['Milchprodukte', 'Fleisch', 'Getränke', 'Backwaren', 'Tiefkühlkost', 'Konserven', 'Gewürze', 'Bio-Lebensmittel'] WHERE name = 'Lebensmittel';
+UPDATE categories SET subcategories = ARRAY['Ziegel', 'Beton', 'Dämmstoffe', 'Fliesen', 'Holzwerkstoffe', 'Farben & Lacke', 'Glas'] WHERE name = 'Baumaterialien';
+UPDATE categories SET subcategories = ARRAY['Motor', 'Antrieb', 'Steuerung', 'Hydraulik', 'Pneumatik', 'Fördertechnik'] WHERE name = 'Maschinen';
+
+-- ============================================
 -- FERTIG
 -- ============================================
 

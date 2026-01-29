@@ -41,6 +41,7 @@ export {
   deleteSupplier,
   getSupplierProducts,
   getProductSuppliers,
+  getProductSuppliersWithDetails,
   assignProductToSupplier,
   removeProductFromSupplier,
 } from './suppliers';
