@@ -239,6 +239,19 @@ export async function uploadBrandingAsset(
   const ext = file.name.split('.').pop();
   const filename = `${tenantId}/${type}-${Date.now()}.${ext}`;
 
+  // Verify bucket exists by attempting to list (helps diagnose missing bucket)
+  const { error: bucketCheckError } = await supabase.storage
+    .from('branding')
+    .list(tenantId, { limit: 1 });
+
+  if (bucketCheckError) {
+    console.error('Branding bucket check failed:', bucketCheckError);
+    const hint = bucketCheckError.message?.includes('not found')
+      ? 'Der Storage-Bucket "branding" existiert nicht. Bitte führen Sie supabase/storage.sql im SQL Editor aus.'
+      : `Bucket-Zugriff fehlgeschlagen: ${bucketCheckError.message}`;
+    return { success: false, error: hint };
+  }
+
   // Upload to storage
   const { error: uploadError } = await supabase.storage
     .from('branding')
@@ -248,8 +261,14 @@ export async function uploadBrandingAsset(
     });
 
   if (uploadError) {
-    console.error('Upload error:', uploadError);
-    return { success: false, error: uploadError.message };
+    console.error('Branding upload error:', uploadError);
+    let errorMsg = uploadError.message;
+    if (uploadError.message?.includes('Bucket not found')) {
+      errorMsg = 'Storage-Bucket "branding" nicht gefunden. Bitte supabase/storage.sql ausführen.';
+    } else if (uploadError.message?.includes('row-level security') || uploadError.message?.includes('policy')) {
+      errorMsg = 'Keine Upload-Berechtigung. Bitte Storage-Policies in supabase/storage.sql prüfen.';
+    }
+    return { success: false, error: errorMsg };
   }
 
   // Get public URL

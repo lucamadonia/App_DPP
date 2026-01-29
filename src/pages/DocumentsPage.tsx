@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -54,6 +54,7 @@ import {
 import {
   getDocuments,
   createDocument,
+  uploadDocument,
   deleteDocument as deleteDocumentService,
   type Document,
 } from '@/services/supabase';
@@ -84,6 +85,9 @@ export function DocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Neues Dokument Formular
   const [newDoc, setNewDoc] = useState({
@@ -116,27 +120,58 @@ export function DocumentsPage() {
     expired: documents.filter((d) => d.status === 'expired').length,
   };
 
-  // Dokument erstellen
+  // Datei auswählen
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!newDoc.name) {
+        setNewDoc((prev) => ({ ...prev, name: file.name }));
+      }
+    }
+  }
+
+  // Dokument erstellen / hochladen
   async function handleCreateDocument() {
     if (!newDoc.name) return;
 
-    const result = await createDocument({
-      name: newDoc.name,
-      type: newDoc.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'other',
-      category: newDoc.category,
-      validUntil: newDoc.validUntil || undefined,
-      status: 'valid',
-    });
+    setIsUploading(true);
 
-    if (result.success) {
-      // Dokumente neu laden
-      const updatedDocs = await getDocuments();
-      setDocuments(updatedDocs);
+    if (selectedFile) {
+      // Upload mit Datei
+      const result = await uploadDocument(selectedFile, {
+        name: newDoc.name,
+        category: newDoc.category,
+        validUntil: newDoc.validUntil || undefined,
+      });
 
-      // Dialog schließen und Formular zurücksetzen
-      setIsUploadDialogOpen(false);
-      setNewDoc({ name: '', category: 'Konformität', validUntil: '' });
+      if (result.success) {
+        const updatedDocs = await getDocuments();
+        setDocuments(updatedDocs);
+        setIsUploadDialogOpen(false);
+        setNewDoc({ name: '', category: 'Konformität', validUntil: '' });
+        setSelectedFile(null);
+      }
+    } else {
+      // Nur Metadaten (ohne Datei)
+      const result = await createDocument({
+        name: newDoc.name,
+        type: newDoc.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'other',
+        category: newDoc.category,
+        validUntil: newDoc.validUntil || undefined,
+        status: 'valid',
+      });
+
+      if (result.success) {
+        const updatedDocs = await getDocuments();
+        setDocuments(updatedDocs);
+        setIsUploadDialogOpen(false);
+        setNewDoc({ name: '', category: 'Konformität', validUntil: '' });
+        setSelectedFile(null);
+      }
     }
+
+    setIsUploading(false);
   }
 
   // Dokument löschen
@@ -382,6 +417,21 @@ export function DocumentsPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
+              <Label>Datei auswählen</Label>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+                onChange={handleFileSelect}
+              />
+              {selectedFile && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="doc-name">Dokumentname</Label>
               <Input
                 id="doc-name"
@@ -422,12 +472,16 @@ export function DocumentsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
+            <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setSelectedFile(null); }}>
               Abbrechen
             </Button>
-            <Button onClick={handleCreateDocument} disabled={!newDoc.name}>
-              <Upload className="mr-2 h-4 w-4" />
-              Hinzufügen
+            <Button onClick={handleCreateDocument} disabled={!newDoc.name || isUploading}>
+              {isUploading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              {isUploading ? 'Wird hochgeladen...' : selectedFile ? 'Hochladen' : 'Hinzufügen'}
             </Button>
           </DialogFooter>
         </DialogContent>

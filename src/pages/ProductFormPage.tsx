@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createProduct, getCategories, getSuppliers, assignProductToSupplier } from '@/services/supabase';
+import { createProduct, getCategories, getSuppliers, assignProductToSupplier, uploadDocument } from '@/services/supabase';
 import type { Category, Supplier } from '@/types/database';
 import { useBranding } from '@/contexts/BrandingContext';
 import {
@@ -17,6 +17,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +69,12 @@ export function ProductFormPage() {
     lead_time_days?: number;
   }>>([]);
 
+  // Dokument-Upload State
+  const docFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<Array<{ name: string; size: string }>>([]);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
   useEffect(() => {
     Promise.all([
       getCategories().then(setCategories),
@@ -82,6 +89,13 @@ export function ProductFormPage() {
     serialNumber: '',
     category: '',
     description: '',
+    batchNumber: '',
+    hsCode: '',
+    countryOfOrigin: '',
+    netWeight: '',
+    grossWeight: '',
+    productionDate: '',
+    expirationDate: '',
     materials: [{ name: '', percentage: 0, recyclable: false, origin: '' }],
     recyclablePercentage: 0,
     recyclingInstructions: '',
@@ -145,6 +159,32 @@ export function ProductFormPage() {
     ));
   };
 
+  // Dokument-Upload Handler
+  const handleDocUpload = async (file: File) => {
+    setIsUploadingDoc(true);
+    const result = await uploadDocument(file, {
+      name: file.name,
+      category: 'Datenblatt',
+    });
+    if (result.success) {
+      setUploadedDocs((prev) => [...prev, { name: file.name, size: `${(file.size / 1024).toFixed(1)} KB` }]);
+    }
+    setIsUploadingDoc(false);
+  };
+
+  const handleDocFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) handleDocUpload(file);
+    if (docFileInputRef.current) docFileInputRef.current.value = '';
+  };
+
+  const handleDocDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) handleDocUpload(file);
+  };
+
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -168,6 +208,13 @@ export function ProductFormPage() {
         serialNumber: formData.serialNumber,
         category: formData.category,
         description: formData.description,
+        batchNumber: formData.batchNumber || undefined,
+        hsCode: formData.hsCode || undefined,
+        countryOfOrigin: formData.countryOfOrigin || undefined,
+        netWeight: formData.netWeight ? parseFloat(formData.netWeight) : undefined,
+        grossWeight: formData.grossWeight ? parseFloat(formData.grossWeight) : undefined,
+        productionDate: formData.productionDate || undefined,
+        expirationDate: formData.expirationDate || undefined,
         materials: formData.materials,
         certifications: formData.certifications.map((name) => ({
           name,
@@ -391,6 +438,68 @@ export function ProductFormPage() {
                   onChange={(e) => updateField('description', e.target.value)}
                 />
               </div>
+
+              <Separator className="md:col-span-2" />
+              <h3 className="font-medium md:col-span-2">Erweiterte Produktdaten</h3>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Chargennummer</label>
+                <Input
+                  placeholder="z.B. LOT-2025-001"
+                  value={formData.batchNumber}
+                  onChange={(e) => updateField('batchNumber', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">HS-Code (Zolltarifnummer)</label>
+                <Input
+                  placeholder="z.B. 8517.12.00"
+                  value={formData.hsCode}
+                  onChange={(e) => updateField('hsCode', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Herkunftsland</label>
+                <Input
+                  placeholder="z.B. Deutschland"
+                  value={formData.countryOfOrigin}
+                  onChange={(e) => updateField('countryOfOrigin', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nettogewicht (g)</label>
+                <Input
+                  type="number"
+                  placeholder="z.B. 250"
+                  value={formData.netWeight}
+                  onChange={(e) => updateField('netWeight', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Bruttogewicht (g)</label>
+                <Input
+                  type="number"
+                  placeholder="z.B. 320"
+                  value={formData.grossWeight}
+                  onChange={(e) => updateField('grossWeight', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Produktionsdatum</label>
+                <Input
+                  type="date"
+                  value={formData.productionDate}
+                  onChange={(e) => updateField('productionDate', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Ablaufdatum (optional)</label>
+                <Input
+                  type="date"
+                  value={formData.expirationDate}
+                  onChange={(e) => updateField('expirationDate', e.target.value)}
+                />
+              </div>
             </div>
           )}
 
@@ -552,11 +661,30 @@ export function ProductFormPage() {
           {/* Step 4: Dokumente */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <div className="flex h-48 items-center justify-center rounded-lg border-2 border-dashed cursor-pointer hover:bg-muted/50">
+              <input
+                ref={docFileInputRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+                onChange={handleDocFileSelect}
+                className="hidden"
+              />
+              <div
+                className={`flex h-48 items-center justify-center rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                  isDragOver ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                }`}
+                onClick={() => docFileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={handleDocDrop}
+              >
                 <div className="text-center">
-                  <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
+                  {isUploadingDoc ? (
+                    <Loader2 className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
+                  ) : (
+                    <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
+                  )}
                   <p className="mt-2 text-sm font-medium">
-                    Dateien hierher ziehen
+                    {isUploadingDoc ? 'Wird hochgeladen...' : 'Dateien hierher ziehen'}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     oder klicken zum Hochladen
@@ -566,6 +694,30 @@ export function ProductFormPage() {
                   </p>
                 </div>
               </div>
+
+              {uploadedDocs.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Hochgeladene Dokumente</h4>
+                  {uploadedDocs.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">{doc.size}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setUploadedDocs((prev) => prev.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="p-4 bg-muted/50 rounded-lg">
                 <h4 className="font-medium mb-2">Empfohlene Dokumente:</h4>

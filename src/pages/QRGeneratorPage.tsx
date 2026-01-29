@@ -52,6 +52,7 @@ interface QRSettings {
   margin: number;
   format: 'standard' | 'rounded' | 'dots';
   includeText: boolean;
+  customText: string;
   textPosition: 'top' | 'bottom';
   logoEnabled: boolean;
   logoUrl: string;
@@ -66,6 +67,7 @@ const defaultQRSettings: QRSettings = {
   margin: 2,
   format: 'standard',
   includeText: false,
+  customText: '',
   textPosition: 'bottom',
   logoEnabled: false,
   logoUrl: '',
@@ -502,7 +504,7 @@ export function QRGeneratorPage() {
                     )}
                     {qrSettings.includeText && selectedProduct && (
                       <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
-                        {selectedProduct.gtin}
+                        {qrSettings.customText || selectedProduct.gtin}
                       </p>
                     )}
                   </div>
@@ -753,8 +755,22 @@ export function QRGeneratorPage() {
                         setQRSettings({ ...qrSettings, includeText: checked })
                       }
                     />
-                    <Label htmlFor="includeText">GTIN unter QR-Code anzeigen</Label>
+                    <Label htmlFor="includeText">Text unter QR-Code anzeigen</Label>
                   </div>
+                  {qrSettings.includeText && (
+                    <div className="space-y-2">
+                      <Label htmlFor="customText">Text unter QR-Code</Label>
+                      <Input
+                        id="customText"
+                        placeholder={selectedProduct?.gtin || 'z.B. Produktname oder GTIN'}
+                        value={qrSettings.customText}
+                        onChange={(e) => setQRSettings({ ...qrSettings, customText: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leer lassen für automatische GTIN-Anzeige
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Voreinstellungen */}

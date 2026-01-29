@@ -21,6 +21,47 @@ INSERT INTO countries (code, name, flag, regulations, checklists, authorities, d
 ('CH', 'Schweiz', '🇨🇭', 35, 8, ARRAY['BAFU', 'SECO'], 'Hohe Qualitätsstandards')
 ON CONFLICT (code) DO NOTHING;
 
+-- Weitere EU-Länder
+INSERT INTO countries (code, name, flag, regulations, checklists, authorities, description) VALUES
+('BG', 'Bulgarien', '🇧🇬', 20, 5, ARRAY['Ministerium für Umwelt und Wasser'], 'EU-Mitglied seit 2007'),
+('CY', 'Zypern', '🇨🇾', 18, 4, ARRAY['Department of Environment'], 'Inselstaat im Mittelmeer'),
+('CZ', 'Tschechien', '🇨🇿', 28, 7, ARRAY['Ministerstvo životního prostředí'], 'Starker Industriestandort'),
+('DK', 'Dänemark', '🇩🇰', 38, 10, ARRAY['Miljøstyrelsen'], 'Vorreiter bei grüner Energie'),
+('EE', 'Estland', '🇪🇪', 22, 5, ARRAY['Keskkonnaministeerium'], 'Digitaler Vorreiter'),
+('FI', 'Finnland', '🇫🇮', 36, 9, ARRAY['Ympäristöministeriö'], 'Hohe Umweltstandards'),
+('GR', 'Griechenland', '🇬🇷', 24, 6, ARRAY['Υπουργείο Περιβάλλοντος και Ενέργειας'], 'Fokus auf Tourismus und Landwirtschaft'),
+('HR', 'Kroatien', '🇭🇷', 20, 5, ARRAY['Ministarstvo gospodarstva i održivog razvoja'], 'EU-Mitglied seit 2013'),
+('HU', 'Ungarn', '🇭🇺', 25, 6, ARRAY['Energiaügyi Minisztérium'], 'Wachsender Industriestandort'),
+('IE', 'Irland', '🇮🇪', 30, 8, ARRAY['Environmental Protection Agency'], 'Wichtiger Tech-Standort'),
+('LT', 'Litauen', '🇱🇹', 22, 5, ARRAY['Aplinkos ministerija'], 'Baltischer EU-Staat'),
+('LU', 'Luxemburg', '🇱🇺', 28, 7, ARRAY['Ministère de l''Environnement'], 'Finanz- und Verwaltungszentrum'),
+('LV', 'Lettland', '🇱🇻', 21, 5, ARRAY['Vides aizsardzības un reģionālās attīstības ministrija'], 'Baltischer EU-Staat'),
+('MT', 'Malta', '🇲🇹', 18, 4, ARRAY['Environment and Resources Authority'], 'Kleinster EU-Staat'),
+('PT', 'Portugal', '🇵🇹', 30, 7, ARRAY['Agência Portuguesa do Ambiente'], 'Wachsender Nachhaltigkeitsmarkt'),
+('RO', 'Rumänien', '🇷🇴', 22, 5, ARRAY['Ministerul Mediului'], 'EU-Mitglied seit 2007'),
+('SI', 'Slowenien', '🇸🇮', 24, 6, ARRAY['Ministrstvo za okolje in prostor'], 'Grüner Alpensstaat'),
+('SK', 'Slowakei', '🇸🇰', 23, 6, ARRAY['Ministerstvo životného prostredia'], 'Starke Automobilindustrie')
+ON CONFLICT (code) DO NOTHING;
+
+-- EWR-Länder (nicht EU)
+INSERT INTO countries (code, name, flag, regulations, checklists, authorities, description) VALUES
+('NO', 'Norwegen', '🇳🇴', 35, 9, ARRAY['Miljødirektoratet'], 'EWR-Mitglied, hohe Umweltstandards'),
+('IS', 'Island', '🇮🇸', 20, 5, ARRAY['Umhverfis- og auðlindaráðuneytið'], 'EWR-Mitglied, erneuerbare Energien'),
+('LI', 'Liechtenstein', '🇱🇮', 18, 4, ARRAY['Amt für Umwelt'], 'EWR-Mitglied, Kleinstaat')
+ON CONFLICT (code) DO NOTHING;
+
+-- Wichtige Handelspartner
+INSERT INTO countries (code, name, flag, regulations, checklists, authorities, description) VALUES
+('GB', 'Vereinigtes Königreich', '🇬🇧', 40, 10, ARRAY['Department for Environment, Food & Rural Affairs', 'Environment Agency'], 'Wichtiger Handelspartner nach Brexit'),
+('US', 'Vereinigte Staaten', '🇺🇸', 35, 8, ARRAY['EPA', 'FTC', 'CPSC'], 'Größte Volkswirtschaft weltweit'),
+('CN', 'China', '🇨🇳', 30, 7, ARRAY['Ministry of Ecology and Environment'], 'Größter Produktionsstandort'),
+('JP', 'Japan', '🇯🇵', 32, 8, ARRAY['Ministry of the Environment'], 'Hohe Qualitäts- und Umweltstandards'),
+('KR', 'Südkorea', '🇰🇷', 28, 7, ARRAY['Ministry of Environment'], 'Technologieführer in Asien'),
+('IN', 'Indien', '🇮🇳', 22, 5, ARRAY['Ministry of Environment, Forest and Climate Change'], 'Wachsender Markt'),
+('TR', 'Türkei', '🇹🇷', 25, 6, ARRAY['Çevre, Şehircilik ve İklim Değişikliği Bakanlığı'], 'Wichtiger Handelspartner'),
+('TW', 'Taiwan', '🇹🇼', 26, 6, ARRAY['Environmental Protection Administration'], 'Halbleiter- und Elektronikproduktion')
+ON CONFLICT (code) DO NOTHING;
+
 -- ============================================
 -- PRODUKTKATEGORIEN
 -- ============================================

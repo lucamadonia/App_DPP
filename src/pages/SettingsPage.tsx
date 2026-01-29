@@ -211,7 +211,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       setBrandingForm((prev) => ({ ...prev, logo: result.url! }));
       await refreshBranding();
     } else {
-      alert(result.error || 'Upload fehlgeschlagen');
+      console.error('Logo upload failed:', result.error);
+      alert(`Logo-Upload fehlgeschlagen: ${result.error || 'Unbekannter Fehler'}`);
     }
 
     setIsUploadingLogo(false);
@@ -232,7 +233,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       setBrandingForm((prev) => ({ ...prev, favicon: result.url! }));
       await refreshBranding();
     } else {
-      alert(result.error || 'Upload fehlgeschlagen');
+      console.error('Favicon upload failed:', result.error);
+      alert(`Favicon-Upload fehlgeschlagen: ${result.error || 'Unbekannter Fehler'}`);
     }
 
     setIsUploadingFavicon(false);
