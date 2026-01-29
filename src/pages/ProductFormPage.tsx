@@ -37,6 +37,7 @@ export function ProductFormPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [selectedMainCategory, setSelectedMainCategory] = useState('');
 
   useEffect(() => {
     getCategories().then(setCategories).catch(console.error).finally(() => setCategoriesLoading(false));
@@ -78,6 +79,19 @@ export function ProductFormPage() {
       ...prev,
       materials: prev.materials.map((m, i) => (i === index ? { ...m, [field]: value } : m)),
     }));
+  };
+
+  const selectedSubcategories = categories
+    .find(c => c.name === selectedMainCategory)
+    ?.subcategories || [];
+
+  const handleCategoryChange = (mainCat: string) => {
+    setSelectedMainCategory(mainCat);
+    updateField('category', mainCat);
+  };
+
+  const handleSubcategoryChange = (sub: string) => {
+    updateField('category', `${selectedMainCategory} / ${sub}`);
   };
 
   const nextStep = () => {
@@ -237,7 +251,7 @@ export function ProductFormPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Kategorie *</label>
-                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
+                <Select value={selectedMainCategory} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
                     <SelectValue placeholder={categoriesLoading ? 'Laden...' : 'Kategorie wählen...'} />
                   </SelectTrigger>
@@ -250,6 +264,24 @@ export function ProductFormPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {selectedMainCategory && selectedSubcategories.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Unterkategorie</label>
+                  <Select
+                    value={formData.category.includes(' / ') ? formData.category.split(' / ')[1] : ''}
+                    onValueChange={handleSubcategoryChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unterkategorie wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedSubcategories.map((sub) => (
+                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">Beschreibung</label>
                 <textarea

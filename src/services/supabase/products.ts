@@ -67,7 +67,7 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 
   let query = supabase
     .from('products')
-    .select('id, name, manufacturer, gtin, serial_number, category, image_url, batch_number, status, created_at')
+    .select('*')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
@@ -189,6 +189,7 @@ export async function createProduct(
 
   const insertData = {
     tenant_id: tenantId,
+    status: 'draft',
     name: product.name || '',
     manufacturer: product.manufacturer || '',
     gtin: product.gtin || '',
