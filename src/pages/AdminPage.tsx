@@ -45,17 +45,49 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  getCountries,
+  getCategories,
+  getPictograms,
+  getRecyclingCodes,
+  getNews,
+  getEURegulations,
+  createCountry,
+  updateCountry,
+  deleteCountry,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  createPictogram,
+  updatePictogram,
+  deletePictogram,
+  createRecyclingCode,
+  updateRecyclingCode,
+  deleteRecyclingCode,
+  createNewsItem,
+  updateNewsItem,
+  deleteNewsItem,
+  createEURegulation,
+  updateEURegulation,
+  deleteEURegulation,
+} from '@/services/supabase';
+import type {
+  Country,
+  Category,
+  Pictogram,
+  RecyclingCode,
+  NewsItem,
+  EURegulation,
+} from '@/types/database';
 
-// API-Konfiguration
+// NoCode API - nur für Tenants & Users (systemweiter Zugriff über alle Tenants)
 const API_CONFIG = {
   instance: '48395_mfg_ddp',
   baseUrl: 'https://api.nocodebackend.com',
   secretKey: import.meta.env.VITE_NCB_SECRET_KEY || '',
 };
 
-// Generic API-Funktion
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  // Instance als Query-Parameter anhängen
   const separator = endpoint.includes('?') ? '&' : '?';
   const url = `${API_CONFIG.baseUrl}/${endpoint}${separator}Instance=${API_CONFIG.instance}`;
 
@@ -77,13 +109,12 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json();
 }
 
-// CRUD-Funktionen
-async function getAll<T>(table: string): Promise<T[]> {
+async function ncbGetAll<T>(table: string): Promise<T[]> {
   const result = await apiFetch<{ data: T[] } | T[]>(`read/${table}`);
   return Array.isArray(result) ? result : result.data || [];
 }
 
-async function create<T>(table: string, data: Partial<T>): Promise<{ success: boolean; id?: string }> {
+async function ncbCreate<T>(table: string, data: Partial<T>): Promise<{ success: boolean; id?: string }> {
   try {
     const result = await apiFetch<{ id?: string; _id?: string }>(`create/${table}`, {
       method: 'POST',
@@ -96,7 +127,7 @@ async function create<T>(table: string, data: Partial<T>): Promise<{ success: bo
   }
 }
 
-async function update<T>(table: string, id: string, data: Partial<T>): Promise<{ success: boolean }> {
+async function ncbUpdate<T>(table: string, id: string, data: Partial<T>): Promise<{ success: boolean }> {
   try {
     await apiFetch(`update/${table}/${encodeURIComponent(id)}`, {
       method: 'PUT',
@@ -109,7 +140,7 @@ async function update<T>(table: string, id: string, data: Partial<T>): Promise<{
   }
 }
 
-async function remove(table: string, id: string): Promise<{ success: boolean }> {
+async function ncbRemove(table: string, id: string): Promise<{ success: boolean }> {
   try {
     await apiFetch(`delete/${table}/${encodeURIComponent(id)}`, { method: 'DELETE' });
     return { success: true };
@@ -119,76 +150,7 @@ async function remove(table: string, id: string): Promise<{ success: boolean }> 
   }
 }
 
-// Typen
-interface Country {
-  id: string;
-  code: string;
-  name: string;
-  flag: string;
-  regulations: number;
-  checklists: number;
-  authorities: string;
-  description: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  regulations: string;
-  sort_order: number;
-}
-
-interface Pictogram {
-  id: string;
-  symbol: string;
-  name: string;
-  description: string;
-  mandatory: boolean;
-  countries: string;
-  category: string;
-  dimensions: string;
-  placement: string;
-}
-
-interface RecyclingCode {
-  id: string;
-  code: string;
-  symbol: string;
-  name: string;
-  fullName: string;
-  examples: string;
-  recyclable: boolean;
-}
-
-interface NewsItem {
-  id: string;
-  title: string;
-  summary: string;
-  content: string;
-  category: string;
-  countries: string;
-  publishedAt: string;
-  effectiveDate: string;
-  priority: string;
-  tags: string;
-}
-
-interface EURegulation {
-  id: string;
-  name: string;
-  fullName: string;
-  description: string;
-  category: string;
-  status: string;
-  effectiveDate: string;
-  applicationDate: string;
-  keyRequirements: string;
-  affectedProducts: string;
-  dppDeadlines: string;
-}
-
+// Typen nur für NoCode-API Tabs (Tenants & Users)
 interface Tenant {
   id: string;
   name: string;
@@ -209,6 +171,22 @@ interface User {
   status: string;
   createdAt: string;
   lastLogin: string;
+}
+
+// Helper: JSON-String sicher parsen (für Formular-Felder die Arrays als Strings darstellen)
+function safeParseJSON(value: unknown): unknown {
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return value; }
+  }
+  return value;
+}
+
+// Helper: Array/Object als JSON-String für Formular-Anzeige
+function toJSONString(value: unknown): string {
+  if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+    return JSON.stringify(value);
+  }
+  return String(value ?? '');
 }
 
 // Admin-Seiten-Komponente
@@ -239,28 +217,29 @@ export function AdminPage() {
     try {
       switch (table) {
         case 'countries':
-          setCountries(await getAll<Country>('countries'));
+          setCountries(await getCountries());
           break;
         case 'categories':
-          setCategories(await getAll<Category>('categories'));
+          setCategories(await getCategories());
           break;
         case 'pictograms':
-          setPictograms(await getAll<Pictogram>('pictograms'));
+          setPictograms(await getPictograms());
           break;
         case 'recycling_codes':
-          setRecyclingCodes(await getAll<RecyclingCode>('recycling_codes'));
+          setRecyclingCodes(await getRecyclingCodes());
           break;
         case 'news':
-          setNews(await getAll<NewsItem>('news'));
+          setNews(await getNews());
           break;
         case 'regulations_eu':
-          setRegulations(await getAll<EURegulation>('regulations_eu'));
+          setRegulations(await getEURegulations());
           break;
+        // Tenants & Users: NoCode API (systemweiter Zugriff)
         case 'tenants':
-          setTenants(await getAll<Tenant>('tenants'));
+          setTenants(await ncbGetAll<Tenant>('tenants'));
           break;
         case 'users':
-          setUsers(await getAll<User>('users'));
+          setUsers(await ncbGetAll<User>('users'));
           break;
       }
     } catch (error) {
@@ -285,7 +264,19 @@ export function AdminPage() {
   const openEditDialog = (item: any) => {
     setDialogMode('edit');
     setEditingItem(item);
-    setFormData({ ...item });
+    // For master-data tabs: convert arrays/objects to JSON strings for form display
+    const isMasterData = ['countries', 'categories', 'pictograms', 'recycling_codes', 'news', 'regulations_eu'].includes(activeTab);
+    if (isMasterData) {
+      const formItem = { ...item };
+      for (const [key, value] of Object.entries(formItem)) {
+        if (Array.isArray(value) || (typeof value === 'object' && value !== null && key !== 'id')) {
+          formItem[key] = toJSONString(value);
+        }
+      }
+      setFormData(formItem);
+    } else {
+      setFormData({ ...item });
+    }
     setDialogOpen(true);
   };
 
@@ -317,10 +308,81 @@ export function AdminPage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      if (dialogMode === 'create') {
-        await create(activeTab, formData);
-      } else {
-        await update(activeTab, editingItem.id, formData);
+      const isCreate = dialogMode === 'create';
+      let result: { success: boolean; error?: string };
+
+      switch (activeTab) {
+        case 'countries': {
+          const data = {
+            ...formData,
+            authorities: safeParseJSON(formData.authorities) as string[],
+          };
+          result = isCreate
+            ? await createCountry(data)
+            : await updateCountry(editingItem.id, data);
+          break;
+        }
+        case 'categories': {
+          const data = {
+            ...formData,
+            regulations: safeParseJSON(formData.regulations) as string[] | undefined,
+          };
+          result = isCreate
+            ? await createCategory(data)
+            : await updateCategory(editingItem.id, data);
+          break;
+        }
+        case 'pictograms': {
+          const data = {
+            ...formData,
+            countries: safeParseJSON(formData.countries) as string[],
+          };
+          result = isCreate
+            ? await createPictogram(data)
+            : await updatePictogram(editingItem.id, data);
+          break;
+        }
+        case 'recycling_codes':
+          result = isCreate
+            ? await createRecyclingCode(formData)
+            : await updateRecyclingCode(editingItem.id, formData);
+          break;
+        case 'news': {
+          const data = {
+            ...formData,
+            countries: safeParseJSON(formData.countries) as string[],
+            tags: safeParseJSON(formData.tags) as string[],
+          };
+          result = isCreate
+            ? await createNewsItem(data)
+            : await updateNewsItem(editingItem.id, data);
+          break;
+        }
+        case 'regulations_eu': {
+          const data = {
+            ...formData,
+            keyRequirements: safeParseJSON(formData.keyRequirements) as string[],
+            affectedProducts: safeParseJSON(formData.affectedProducts) as string[],
+            dppDeadlines: safeParseJSON(formData.dppDeadlines) as Record<string, string>,
+          };
+          result = isCreate
+            ? await createEURegulation(data)
+            : await updateEURegulation(editingItem.id, data);
+          break;
+        }
+        // Tenants & Users: NoCode API
+        case 'tenants':
+        case 'users':
+          result = isCreate
+            ? await ncbCreate(activeTab, formData)
+            : await ncbUpdate(activeTab, editingItem.id, formData);
+          break;
+        default:
+          result = { success: false, error: 'Unbekannter Tab' };
+      }
+
+      if (!result.success) {
+        console.error('Fehler beim Speichern:', result.error);
       }
       await loadData(activeTab);
       setDialogOpen(false);
@@ -335,7 +397,39 @@ export function AdminPage() {
     if (!confirm('Wirklich löschen?')) return;
     setIsLoading(true);
     try {
-      await remove(activeTab, id);
+      let result: { success: boolean; error?: string };
+
+      switch (activeTab) {
+        case 'countries':
+          result = await deleteCountry(id);
+          break;
+        case 'categories':
+          result = await deleteCategory(id);
+          break;
+        case 'pictograms':
+          result = await deletePictogram(id);
+          break;
+        case 'recycling_codes':
+          result = await deleteRecyclingCode(id);
+          break;
+        case 'news':
+          result = await deleteNewsItem(id);
+          break;
+        case 'regulations_eu':
+          result = await deleteEURegulation(id);
+          break;
+        // Tenants & Users: NoCode API
+        case 'tenants':
+        case 'users':
+          result = await ncbRemove(activeTab, id);
+          break;
+        default:
+          result = { success: false, error: 'Unbekannter Tab' };
+      }
+
+      if (!result.success) {
+        console.error('Fehler beim Löschen:', result.error);
+      }
       await loadData(activeTab);
     } catch (error) {
       console.error('Fehler beim Löschen:', error);
@@ -455,7 +549,7 @@ export function AdminPage() {
                   <TableCell className="font-medium">{pic.name}</TableCell>
                   <TableCell><Badge variant="outline">{pic.category}</Badge></TableCell>
                   <TableCell>{pic.mandatory ? <Badge>Ja</Badge> : <Badge variant="secondary">Nein</Badge>}</TableCell>
-                  <TableCell className="max-w-[150px] truncate">{pic.countries}</TableCell>
+                  <TableCell className="max-w-[150px] truncate">{Array.isArray(pic.countries) ? pic.countries.join(', ') : pic.countries}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(pic)}>

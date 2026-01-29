@@ -76,6 +76,25 @@ export {
   getNews,
   invalidateCache,
   preloadMasterData,
+  // Write operations
+  createCountry,
+  updateCountry,
+  deleteCountry,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  createPictogram,
+  updatePictogram,
+  deletePictogram,
+  createRecyclingCode,
+  updateRecyclingCode,
+  deleteRecyclingCode,
+  createNewsItem,
+  updateNewsItem,
+  deleteNewsItem,
+  createEURegulation,
+  updateEURegulation,
+  deleteEURegulation,
 } from './master-data';
 
 // Tenants

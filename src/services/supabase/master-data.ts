@@ -399,6 +399,266 @@ export async function getNews(): Promise<NewsItem[]> {
 }
 
 // ============================================
+// WRITE OPERATIONS
+// ============================================
+
+type WriteResult = { success: boolean; error?: string };
+
+// --- COUNTRIES ---
+
+export async function createCountry(data: Omit<Country, 'id'>): Promise<WriteResult> {
+  const { error } = await supabase.from('countries').insert({
+    code: data.code,
+    name: data.name,
+    flag: data.flag,
+    regulations: data.regulations,
+    checklists: data.checklists,
+    authorities: data.authorities,
+    description: data.description,
+  });
+  if (error) return { success: false, error: error.message };
+  invalidateCache('countries');
+  return { success: true };
+}
+
+export async function updateCountry(id: string, data: Partial<Country>): Promise<WriteResult> {
+  const update: Record<string, unknown> = {};
+  if (data.code !== undefined) update.code = data.code;
+  if (data.name !== undefined) update.name = data.name;
+  if (data.flag !== undefined) update.flag = data.flag;
+  if (data.regulations !== undefined) update.regulations = data.regulations;
+  if (data.checklists !== undefined) update.checklists = data.checklists;
+  if (data.authorities !== undefined) update.authorities = data.authorities;
+  if (data.description !== undefined) update.description = data.description;
+
+  const { error } = await supabase.from('countries').update(update).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('countries');
+  return { success: true };
+}
+
+export async function deleteCountry(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from('countries').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('countries');
+  return { success: true };
+}
+
+// --- CATEGORIES ---
+
+export async function createCategory(data: Omit<Category, 'id'>): Promise<WriteResult> {
+  const { error } = await supabase.from('categories').insert({
+    name: data.name,
+    description: data.description,
+    icon: data.icon,
+    regulations: data.regulations,
+    sort_order: data.sort_order,
+    parent_id: data.parent_id,
+    subcategories: data.subcategories,
+  });
+  if (error) return { success: false, error: error.message };
+  invalidateCache('categories');
+  return { success: true };
+}
+
+export async function updateCategory(id: string, data: Partial<Category>): Promise<WriteResult> {
+  const update: Record<string, unknown> = {};
+  if (data.name !== undefined) update.name = data.name;
+  if (data.description !== undefined) update.description = data.description;
+  if (data.icon !== undefined) update.icon = data.icon;
+  if (data.regulations !== undefined) update.regulations = data.regulations;
+  if (data.sort_order !== undefined) update.sort_order = data.sort_order;
+  if (data.parent_id !== undefined) update.parent_id = data.parent_id;
+  if (data.subcategories !== undefined) update.subcategories = data.subcategories;
+
+  const { error } = await supabase.from('categories').update(update).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('categories');
+  return { success: true };
+}
+
+export async function deleteCategory(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('categories');
+  return { success: true };
+}
+
+// --- PICTOGRAMS ---
+
+export async function createPictogram(data: Omit<Pictogram, 'id'>): Promise<WriteResult> {
+  const { error } = await supabase.from('pictograms').insert({
+    symbol: data.symbol,
+    name: data.name,
+    description: data.description,
+    mandatory: data.mandatory,
+    countries: data.countries,
+    category: data.category,
+    dimensions: data.dimensions,
+    placement: data.placement,
+  });
+  if (error) return { success: false, error: error.message };
+  invalidateCache('pictograms');
+  return { success: true };
+}
+
+export async function updatePictogram(id: string, data: Partial<Pictogram>): Promise<WriteResult> {
+  const update: Record<string, unknown> = {};
+  if (data.symbol !== undefined) update.symbol = data.symbol;
+  if (data.name !== undefined) update.name = data.name;
+  if (data.description !== undefined) update.description = data.description;
+  if (data.mandatory !== undefined) update.mandatory = data.mandatory;
+  if (data.countries !== undefined) update.countries = data.countries;
+  if (data.category !== undefined) update.category = data.category;
+  if (data.dimensions !== undefined) update.dimensions = data.dimensions;
+  if (data.placement !== undefined) update.placement = data.placement;
+
+  const { error } = await supabase.from('pictograms').update(update).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('pictograms');
+  return { success: true };
+}
+
+export async function deletePictogram(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from('pictograms').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('pictograms');
+  return { success: true };
+}
+
+// --- RECYCLING CODES ---
+
+export async function createRecyclingCode(data: Omit<RecyclingCode, 'id'>): Promise<WriteResult> {
+  const { error } = await supabase.from('recycling_codes').insert({
+    code: data.code,
+    symbol: data.symbol,
+    name: data.name,
+    full_name: data.fullName,
+    examples: data.examples,
+    recyclable: data.recyclable,
+  });
+  if (error) return { success: false, error: error.message };
+  invalidateCache('recyclingCodes');
+  return { success: true };
+}
+
+export async function updateRecyclingCode(id: string, data: Partial<RecyclingCode>): Promise<WriteResult> {
+  const update: Record<string, unknown> = {};
+  if (data.code !== undefined) update.code = data.code;
+  if (data.symbol !== undefined) update.symbol = data.symbol;
+  if (data.name !== undefined) update.name = data.name;
+  if (data.fullName !== undefined) update.full_name = data.fullName;
+  if (data.examples !== undefined) update.examples = data.examples;
+  if (data.recyclable !== undefined) update.recyclable = data.recyclable;
+
+  const { error } = await supabase.from('recycling_codes').update(update).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('recyclingCodes');
+  return { success: true };
+}
+
+export async function deleteRecyclingCode(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from('recycling_codes').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('recyclingCodes');
+  return { success: true };
+}
+
+// --- NEWS ITEMS ---
+
+export async function createNewsItem(data: Omit<NewsItem, 'id'>): Promise<WriteResult> {
+  const { error } = await supabase.from('news_items').insert({
+    title: data.title,
+    summary: data.summary,
+    content: data.content,
+    category: data.category,
+    countries: data.countries,
+    published_at: data.publishedAt,
+    effective_date: data.effectiveDate || null,
+    priority: data.priority,
+    tags: data.tags,
+    link: data.link || null,
+  });
+  if (error) return { success: false, error: error.message };
+  invalidateCache('news');
+  return { success: true };
+}
+
+export async function updateNewsItem(id: string, data: Partial<NewsItem>): Promise<WriteResult> {
+  const update: Record<string, unknown> = {};
+  if (data.title !== undefined) update.title = data.title;
+  if (data.summary !== undefined) update.summary = data.summary;
+  if (data.content !== undefined) update.content = data.content;
+  if (data.category !== undefined) update.category = data.category;
+  if (data.countries !== undefined) update.countries = data.countries;
+  if (data.publishedAt !== undefined) update.published_at = data.publishedAt;
+  if (data.effectiveDate !== undefined) update.effective_date = data.effectiveDate || null;
+  if (data.priority !== undefined) update.priority = data.priority;
+  if (data.tags !== undefined) update.tags = data.tags;
+  if (data.link !== undefined) update.link = data.link || null;
+
+  const { error } = await supabase.from('news_items').update(update).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('news');
+  return { success: true };
+}
+
+export async function deleteNewsItem(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from('news_items').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('news');
+  return { success: true };
+}
+
+// --- EU REGULATIONS ---
+
+export async function createEURegulation(data: Omit<EURegulation, 'id'>): Promise<WriteResult> {
+  const { error } = await supabase.from('eu_regulations').insert({
+    name: data.name,
+    full_name: data.fullName,
+    description: data.description,
+    category: data.category,
+    status: data.status,
+    effective_date: data.effectiveDate,
+    application_date: data.applicationDate,
+    key_requirements: data.keyRequirements,
+    affected_products: data.affectedProducts,
+    dpp_deadlines: data.dppDeadlines,
+    link: data.link || null,
+  });
+  if (error) return { success: false, error: error.message };
+  invalidateCache('euRegulations');
+  return { success: true };
+}
+
+export async function updateEURegulation(id: string, data: Partial<EURegulation>): Promise<WriteResult> {
+  const update: Record<string, unknown> = {};
+  if (data.name !== undefined) update.name = data.name;
+  if (data.fullName !== undefined) update.full_name = data.fullName;
+  if (data.description !== undefined) update.description = data.description;
+  if (data.category !== undefined) update.category = data.category;
+  if (data.status !== undefined) update.status = data.status;
+  if (data.effectiveDate !== undefined) update.effective_date = data.effectiveDate;
+  if (data.applicationDate !== undefined) update.application_date = data.applicationDate;
+  if (data.keyRequirements !== undefined) update.key_requirements = data.keyRequirements;
+  if (data.affectedProducts !== undefined) update.affected_products = data.affectedProducts;
+  if (data.dppDeadlines !== undefined) update.dpp_deadlines = data.dppDeadlines;
+  if (data.link !== undefined) update.link = data.link || null;
+
+  const { error } = await supabase.from('eu_regulations').update(update).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('euRegulations');
+  return { success: true };
+}
+
+export async function deleteEURegulation(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from('eu_regulations').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  invalidateCache('euRegulations');
+  return { success: true };
+}
+
+// ============================================
 // CACHE MANAGEMENT
 // ============================================
 

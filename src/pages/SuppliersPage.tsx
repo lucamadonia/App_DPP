@@ -72,8 +72,10 @@ import {
   getProducts,
   assignProductToSupplier,
   removeProductFromSupplier,
+  getCountries,
   type ProductListItem,
 } from '@/services/supabase';
+import type { Country } from '@/types/database';
 import type { Supplier, SupplierProduct, SupplierContact } from '@/types/database';
 
 // Verfugbare Zertifizierungen
@@ -107,29 +109,6 @@ const SUPPLIER_ROLES: { value: SupplierProduct['role']; label: string }[] = [
   { value: 'logistics', label: 'Logistik' },
 ];
 
-// Lander
-const COUNTRIES = [
-  { code: 'DE', name: 'Deutschland' },
-  { code: 'AT', name: 'Osterreich' },
-  { code: 'CH', name: 'Schweiz' },
-  { code: 'FR', name: 'Frankreich' },
-  { code: 'IT', name: 'Italien' },
-  { code: 'NL', name: 'Niederlande' },
-  { code: 'BE', name: 'Belgien' },
-  { code: 'PL', name: 'Polen' },
-  { code: 'CZ', name: 'Tschechien' },
-  { code: 'ES', name: 'Spanien' },
-  { code: 'PT', name: 'Portugal' },
-  { code: 'GB', name: 'Grossbritannien' },
-  { code: 'US', name: 'USA' },
-  { code: 'CN', name: 'China' },
-  { code: 'IN', name: 'Indien' },
-  { code: 'JP', name: 'Japan' },
-  { code: 'KR', name: 'Sudkorea' },
-  { code: 'TW', name: 'Taiwan' },
-  { code: 'VN', name: 'Vietnam' },
-  { code: 'TH', name: 'Thailand' },
-];
 
 export function SuppliersPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -141,6 +120,7 @@ export function SuppliersPage() {
   // Daten-State
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
 
   // Dialog-State fur Lieferant
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
@@ -174,12 +154,14 @@ export function SuppliersPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [suppliersData, productsData] = await Promise.all([
+      const [suppliersData, productsData, countriesData] = await Promise.all([
         getSuppliers(),
         getProducts(),
+        getCountries(),
       ]);
       setSuppliers(suppliersData);
       setProducts(productsData);
+      setCountries(countriesData);
     } catch (error) {
       console.error('Fehler beim Laden:', error);
     }
@@ -544,7 +526,7 @@ export function SuppliersPage() {
 
   // Landername finden
   const getCountryName = (code: string) => {
-    return COUNTRIES.find(c => c.code === code)?.name || code;
+    return countries.find(c => c.code === code)?.name || code;
   };
 
   return (
@@ -1234,7 +1216,7 @@ export function SuppliersPage() {
                 <Select value={formData.country || 'DE'} onValueChange={v => updateForm('country', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
+                    {countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -1260,7 +1242,7 @@ export function SuppliersPage() {
                   <Select value={formData.shipping_country || ''} onValueChange={v => updateForm('shipping_country', v)}>
                     <SelectTrigger><SelectValue placeholder="Auswahlen" /></SelectTrigger>
                     <SelectContent>
-                      {COUNTRIES.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
+                      {countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
