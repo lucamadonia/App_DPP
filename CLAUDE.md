@@ -116,6 +116,21 @@ npm run preview  # Preview production build
 - **Benutzer & Rollen** (`/settings/users`) - Benutzerverwaltung
 - **API-Keys** (`/settings/api-keys`) - API-Schlüssel verwalten
 
+### 12. Admin-Bereich (`/admin`)
+- Master-Daten-Verwaltung (Kategorien, Länder, Regulierungen)
+- Nur für Administratoren zugänglich
+- CRUD-Operationen für globale Stammdaten
+
+### 13. Supply Chain (`/supply-chain`)
+- Lieferketten-Übersicht aller Produkte
+- Visualisierung der Lieferkettenschritte
+- Zuordnung von Lieferanten zu Produkten
+
+### 14. Lieferanten (`/suppliers`)
+- Lieferantenverwaltung (Anlegen, Bearbeiten, Löschen)
+- Zuordnung zu Produkten über `supplier_products`
+- Kontaktdaten und Zertifizierungen
+
 ---
 
 ## Datenmodell
@@ -172,6 +187,55 @@ interface VisibilityConfigV2 {
 }
 ```
 
+### Tenant & Branding Typen
+```typescript
+interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  logo?: string;
+  settings: TenantSettings;
+  plan: 'free' | 'pro' | 'enterprise';
+}
+
+interface TenantSettings {
+  defaultLanguage: string;
+  qrCodeStyle: string;
+  branding: BrandingSettings;
+  qrCode: QRCodeDomainSettings;
+}
+
+interface BrandingSettings {
+  appName: string;
+  primaryColor: string;           // Hex-Farbwert
+  logo?: string;                  // URL zum Logo
+  favicon?: string;               // URL zum Favicon
+  poweredByText?: string;         // "Powered by" Text
+}
+
+interface QRCodeDomainSettings {
+  customDomain?: string;          // z.B. "qr.example.com"
+  pathPrefix: string;             // z.B. "/p"
+  useHttps: boolean;
+  resolver: 'internal' | 'gs1';
+  colors: { foreground: string; background: string; };
+}
+
+interface UserSettings {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  qr_settings: object;
+  domain_settings: QRCodeDomainSettings;
+}
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+```
+
 ---
 
 ## Architecture
@@ -188,6 +252,7 @@ src/
 │   ├── ProductsPage.tsx
 │   ├── ProductPage.tsx
 │   ├── ProductFormPage.tsx
+│   ├── ProductCategoriesPage.tsx
 │   ├── DPPOverviewPage.tsx
 │   ├── DPPVisibilitySettingsPage.tsx
 │   ├── QRGeneratorPage.tsx
@@ -197,6 +262,9 @@ src/
 │   ├── ChecklistPage.tsx
 │   ├── RequirementsCalculatorPage.tsx
 │   ├── SettingsPage.tsx
+│   ├── AdminPage.tsx
+│   ├── SupplyChainPage.tsx
+│   ├── SuppliersPage.tsx
 │   ├── LoginPage.tsx
 │   ├── AuthCallbackPage.tsx
 │   └── public/               # Öffentliche Seiten
@@ -207,7 +275,8 @@ src/
 │   ├── SupabaseAuth.tsx      # Auth-Komponente (Login/Register)
 │   └── ui/                   # shadcn/ui Komponenten
 ├── contexts/
-│   └── AuthContext.tsx       # Supabase Auth State
+│   ├── AuthContext.tsx        # Supabase Auth State
+│   └── BrandingContext.tsx    # Branding/Whitelabel State
 ├── services/
 │   ├── api.ts                # Legacy API (wird ersetzt)
 │   └── supabase/             # Supabase Services
@@ -218,17 +287,27 @@ src/
 │       ├── suppliers.ts      # Lieferanten
 │       ├── supply-chain.ts   # Supply Chain
 │       ├── checklists.ts     # Checklisten
-│       └── master-data.ts    # Kategorien, Länder, etc.
+│       ├── master-data.ts    # Kategorien, Länder, etc.
+│       ├── tenants.ts        # Tenant-Verwaltung + Branding
+│       ├── profiles.ts       # User-Profile + Einladungen
+│       └── visibility.ts     # Sichtbarkeitseinstellungen
 ├── lib/
 │   ├── supabase.ts           # Supabase Client
-│   └── utils.ts              # Hilfsfunktionen
+│   ├── utils.ts              # Hilfsfunktionen
+│   ├── dynamic-theme.ts      # Runtime-Theming (CSS-Variablen)
+│   └── domain-utils.ts       # Custom-Domain-Logik
 ├── types/
 │   ├── product.ts            # Produkt-Typen
 │   ├── database.ts           # Datenbank-Typen
 │   ├── supabase.ts           # Supabase-spezifische Typen
 │   └── visibility.ts         # Sichtbarkeits-Typen
 └── hooks/
-    └── use-mobile.tsx        # Mobile Detection
+    ├── use-mobile.tsx         # Mobile Detection
+    └── use-branding.ts        # Branding-Hook (re-export)
+scripts/
+├── seed-master-data.ts        # Master-Daten Seeding
+├── generate-types.ts          # Supabase Typ-Generierung
+└── check-env.ts               # Environment-Validierung
 ```
 
 ### Supabase Integration
@@ -260,6 +339,33 @@ export async function getCurrentTenantId(): Promise<string | null>;
 | `supply-chain.ts` | getSupplyChainEntries, createSupplyChainEntry |
 | `checklists.ts` | getChecklistProgress, updateChecklistProgress, getChecklistStats |
 | `master-data.ts` | getCategories, getCountries, getEURegulations (mit Caching) |
+| `tenants.ts` | getTenant, updateTenant, updateTenantBranding, getQRCodeSettings, uploadBrandingAsset |
+| `profiles.ts` | getProfile, getProfiles, inviteUser, removeUserFromTenant |
+| `visibility.ts` | getVisibilitySettings, saveVisibilitySettings, getPublicVisibilitySettings |
+
+### Branding & Whitelabeling
+
+#### BrandingContext (`src/contexts/BrandingContext.tsx`)
+- Globaler Branding-State via React Context
+- `BrandingProvider` — lädt Tenant-Branding beim App-Start
+- Stellt Defaults bereit wenn kein Branding konfiguriert ist
+- Exportiert `useBranding()` Hook für Zugriff auf Branding-Daten
+
+#### Dynamic Theme (`src/lib/dynamic-theme.ts`)
+- `hexToHsl(hex)` — Konvertiert Hex-Farbe zu HSL-Werten
+- `applyPrimaryColor(hex)` — Setzt CSS-Variable `--primary` und Varianten
+- `applyBranding(settings)` — Wendet komplettes Branding an (Farbe, Favicon, Title)
+- Aktualisiert CSS Custom Properties zur Laufzeit
+
+#### Domain Utils (`src/lib/domain-utils.ts`)
+- `isValidDomain(domain)` — Validiert Domain-Format
+- `normalizeDomain(domain)` — Entfernt Protokoll/Trailing-Slash
+- `validateDomain(domain)` — Vollständige Validierung mit Fehlermeldung
+- `buildDomainUrl(settings, gtin, serial)` — Baut QR-Code-URL aus Domain-Settings
+
+#### Branding Hook (`src/hooks/use-branding.ts`)
+- Re-export von `useBranding()` aus BrandingContext
+- Zugriff auf: `branding`, `tenant`, `isLoading`, `updateBranding()`
 
 ---
 
@@ -317,11 +423,17 @@ supabase/
 # Supabase
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# API
+VITE_API_URL=/api
 ```
 
 ---
 
 ## Deployment (Vercel)
+
+- **Production URL**: https://dpp-manager.vercel.app
+- **Vercel Projekt**: `dpp-manager`
 
 ### Konfiguration (`vercel.json`)
 ```json
@@ -331,15 +443,40 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
   ]
 }
 ```
 
 ### Setup
 1. Vercel-Projekt erstellen
-2. Environment Variables hinzufügen
+2. Environment Variables hinzufügen (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`)
 3. Custom Domain konfigurieren
 4. In Supabase: Redirect URLs für OAuth hinzufügen
+
+### E-Mail (SMTP)
+- **Provider**: All-Inkl (Custom SMTP)
+- In Supabase Auth → SMTP Settings konfiguriert
+- Verwendet für: Registrierungsbestätigung, Passwort-Reset, Magic Links
+
+### Supabase URL-Konfiguration
+- **Site URL**: `https://dpp-manager.vercel.app`
+- **Redirect URLs**: `https://dpp-manager.vercel.app/**`, `http://localhost:5173/**`
 
 ---
 
