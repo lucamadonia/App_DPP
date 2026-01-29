@@ -57,13 +57,9 @@ import {
   deleteSupplyChainEntry,
   getProducts,
   getSuppliers,
-  setTenant,
   type ProductListItem,
-} from '@/services/api';
+} from '@/services/supabase';
 import type { SupplyChainEntry, Supplier } from '@/types/database';
-
-// Demo-Tenant setzen (in Produktion aus Auth-Context)
-const DEMO_TENANT_ID = 'demo-tenant';
 
 export function SupplyChainPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -82,9 +78,8 @@ export function SupplyChainPage() {
   const [editingEntry, setEditingEntry] = useState<SupplyChainEntry | null>(null);
   const [formData, setFormData] = useState<Partial<SupplyChainEntry>>({});
 
-  // Tenant setzen beim Mount
+  // Daten laden beim Mount
   useEffect(() => {
-    setTenant(DEMO_TENANT_ID);
     loadInitialData();
   }, []);
 

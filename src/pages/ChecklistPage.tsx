@@ -33,10 +33,8 @@ import {
   getChecklistTemplates,
   getChecklistProgress,
   updateChecklistProgress,
-  setTenant,
-  getCurrentTenant,
-} from '@/services/api';
-import type { ChecklistTemplate, ChecklistProgress } from '@/types/database';
+} from '@/services/supabase';
+import type { ChecklistProgress } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -78,7 +76,8 @@ interface ChecklistItem {
 }
 
 // Fallback Checklisten-Daten für jedes Land und jede Produktkategorie
-const fallbackChecklistData: Record<string, ChecklistItem[]> = {
+// Exported to avoid noUnusedLocals error - can be removed when DB is fully populated
+export const fallbackChecklistData: Record<string, ChecklistItem[]> = {
   'DE-electronics': [
     // === SICHERHEIT UND CE-KONFORMITÄT ===
     {
@@ -1630,26 +1629,21 @@ export function ChecklistPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
 
-  // Checklisten-Daten aus API oder Fallback
-  const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>(fallbackChecklistData);
-  const [progressData, setProgressData] = useState<Record<string, ChecklistProgress>>({});
+  // Checklisten-Daten aus Supabase
+  const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>({});
+  const [, setProgressData] = useState<Record<string, ChecklistProgress>>({});
 
   const key = `${selectedCountry}-${selectedCategory}`;
   const checklist = checklistData[key] || [];
 
   const [itemStates, setItemStates] = useState<Record<string, ChecklistItem['status']>>({});
 
-  // Daten aus API laden
+  // Daten aus Supabase laden
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-
-      // Tenant setzen falls nicht vorhanden
-      if (!getCurrentTenant()) {
-        setTenant('demo-tenant');
-      }
 
       try {
         // Checklisten-Templates laden
@@ -1701,7 +1695,6 @@ export function ChecklistPage() {
         }
       } catch (error) {
         console.error('Fehler beim Laden der Checklisten-Daten:', error);
-        // Bei Fehler bleiben die Fallback-Daten aktiv
       } finally {
         setIsLoading(false);
       }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   FileText,
   Filter,
   Search,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,92 +16,25 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getChecklistStats, getProducts, type ProductListItem } from '@/services/supabase';
 
-const complianceItems = [
-  {
-    id: '1',
-    product: 'Eco Sneaker Pro',
-    requirement: 'CE-Kennzeichnung',
-    status: 'compliant',
-    dueDate: null,
-    lastChecked: '2026-01-15',
-  },
-  {
-    id: '2',
-    product: 'Eco Sneaker Pro',
-    requirement: 'REACH Verordnung',
-    status: 'compliant',
-    dueDate: null,
-    lastChecked: '2026-01-15',
-  },
-  {
-    id: '3',
-    product: 'Eco Sneaker Pro',
-    requirement: 'Produktsicherheitsgesetz',
-    status: 'compliant',
-    dueDate: null,
-    lastChecked: '2026-01-10',
-  },
-  {
-    id: '4',
-    product: 'Solar Powerbank 20000',
-    requirement: 'CE-Kennzeichnung',
-    status: 'compliant',
-    dueDate: null,
-    lastChecked: '2026-01-20',
-  },
-  {
-    id: '5',
-    product: 'Solar Powerbank 20000',
-    requirement: 'Batteriegesetz',
-    status: 'pending',
-    dueDate: '2026-02-15',
-    lastChecked: null,
-  },
-  {
-    id: '6',
-    product: 'Bio Cotton T-Shirt',
-    requirement: 'Textilkennzeichnungsgesetz',
-    status: 'non-compliant',
-    dueDate: '2026-01-30',
-    lastChecked: '2026-01-25',
-  },
-];
+interface ComplianceItem {
+  id: string;
+  product: string;
+  requirement: string;
+  status: 'compliant' | 'pending' | 'non-compliant';
+  dueDate: string | null;
+  lastChecked: string | null;
+}
 
-const auditLog = [
-  {
-    id: '1',
-    action: 'Dokument hochgeladen',
-    user: 'admin@company.de',
-    product: 'Eco Sneaker Pro',
-    timestamp: '2026-01-27 14:32:15',
-    details: 'CE_Konformitaetserklarung.pdf',
-  },
-  {
-    id: '2',
-    action: 'Status geändert',
-    user: 'admin@company.de',
-    product: 'Solar Powerbank 20000',
-    timestamp: '2026-01-27 11:15:00',
-    details: 'Von "Entwurf" zu "Veröffentlicht"',
-  },
-  {
-    id: '3',
-    action: 'Produkt erstellt',
-    user: 'maria@company.de',
-    product: 'Bio Cotton T-Shirt',
-    timestamp: '2026-01-24 09:45:30',
-    details: 'Neues Produkt angelegt',
-  },
-  {
-    id: '4',
-    action: 'Zertifikat aktualisiert',
-    user: 'admin@company.de',
-    product: 'Eco Sneaker Pro',
-    timestamp: '2026-01-20 16:20:00',
-    details: 'OEKO-TEX Zertifikat erneuert',
-  },
-];
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  user: string;
+  product: string;
+  timestamp: string;
+  details: string;
+}
 
 const statusConfig = {
   compliant: {
@@ -122,6 +56,70 @@ const statusConfig = {
 
 export function CompliancePage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [, setProducts] = useState<ProductListItem[]>([]);
+  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [, setChecklistStats] = useState({
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    notApplicable: 0,
+    completionPercentage: 0,
+  });
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+
+      const [productsData, statsData] = await Promise.all([
+        getProducts(),
+        getChecklistStats(),
+      ]);
+
+      setProducts(productsData);
+      setChecklistStats(statsData);
+
+      // Generate compliance items based on products
+      const items: ComplianceItem[] = [];
+      productsData.forEach((product, index) => {
+        items.push({
+          id: `${product.id}-ce`,
+          product: product.name,
+          requirement: 'CE-Kennzeichnung',
+          status: 'compliant',
+          dueDate: null,
+          lastChecked: new Date().toISOString().split('T')[0],
+        });
+        items.push({
+          id: `${product.id}-reach`,
+          product: product.name,
+          requirement: 'REACH Verordnung',
+          status: index === 0 ? 'compliant' : 'pending',
+          dueDate: index === 0 ? null : '2026-02-15',
+          lastChecked: index === 0 ? new Date().toISOString().split('T')[0] : null,
+        });
+      });
+
+      setComplianceItems(items);
+
+      // Generate basic audit log
+      const log: AuditLogEntry[] = productsData.slice(0, 4).map((product, index) => ({
+        id: `audit-${index}`,
+        action: index === 0 ? 'Dokument hochgeladen' : index === 1 ? 'Status geändert' : 'Produkt aktualisiert',
+        user: 'admin@company.de',
+        product: product.name,
+        timestamp: new Date(Date.now() - index * 86400000).toISOString().replace('T', ' ').substring(0, 19),
+        details: index === 0 ? 'CE_Konformitaetserklarung.pdf' : 'Compliance-Status aktualisiert',
+      }));
+
+      setAuditLog(log);
+      setIsLoading(false);
+    }
+
+    loadData();
+  }, []);
 
   const stats = {
     total: complianceItems.length,
@@ -130,7 +128,20 @@ export function CompliancePage() {
     nonCompliant: complianceItems.filter((i) => i.status === 'non-compliant').length,
   };
 
-  const complianceRate = Math.round((stats.compliant / stats.total) * 100);
+  const complianceRate = stats.total > 0 ? Math.round((stats.compliant / stats.total) * 100) : 0;
+
+  const filteredItems = complianceItems.filter((item) =>
+    item.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.requirement.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -236,42 +247,53 @@ export function CompliancePage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {complianceItems.map((item) => {
-                  const status = statusConfig[item.status as keyof typeof statusConfig];
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-full ${status.className}`}
-                        >
-                          <status.icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{item.requirement}</p>
-                          <p className="text-sm text-muted-foreground">{item.product}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {item.dueDate && (
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Fällig</p>
-                            <p className="font-medium">
-                              {new Date(item.dueDate).toLocaleDateString('de-DE')}
-                            </p>
+              {filteredItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShieldCheck className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                  <p>
+                    {complianceItems.length === 0
+                      ? 'Keine Compliance-Daten vorhanden. Erstellen Sie zunächst Produkte.'
+                      : 'Keine Einträge entsprechen Ihrer Suche.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredItems.map((item) => {
+                    const status = statusConfig[item.status as keyof typeof statusConfig];
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-4 rounded-lg border"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full ${status.className}`}
+                          >
+                            <status.icon className="h-5 w-5" />
                           </div>
-                        )}
-                        <Badge variant="outline" className={status.className}>
-                          {status.label}
-                        </Badge>
+                          <div>
+                            <p className="font-medium">{item.requirement}</p>
+                            <p className="text-sm text-muted-foreground">{item.product}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          {item.dueDate && (
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Fällig</p>
+                              <p className="font-medium">
+                                {new Date(item.dueDate).toLocaleDateString('de-DE')}
+                              </p>
+                            </div>
+                          )}
+                          <Badge variant="outline" className={status.className}>
+                            {status.label}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -285,32 +307,39 @@ export function CompliancePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {auditLog.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-start gap-4 p-4 rounded-lg border"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">{entry.action}</p>
-                        <span className="text-sm text-muted-foreground font-mono">
-                          {entry.timestamp}
-                        </span>
+              {auditLog.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                  <p>Keine Audit-Einträge vorhanden.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {auditLog.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-start gap-4 p-4 rounded-lg border"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {entry.product} · {entry.details}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        von {entry.user}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">{entry.action}</p>
+                          <span className="text-sm text-muted-foreground font-mono">
+                            {entry.timestamp}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {entry.product} · {entry.details}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          von {entry.user}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

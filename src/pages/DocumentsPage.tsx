@@ -51,84 +51,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getDocuments, createDocument, deleteDocument, setTenant, getCurrentTenant } from '@/services/api';
-import type { Document } from '@/types/database';
-
-// Fallback-Dokumente für den Fall, dass die API nicht erreichbar ist
-const fallbackDocuments: Document[] = [
-  {
-    id: '1',
-    tenant_id: 'demo',
-    name: 'CE_Konformitaetserklarung_EcoSneaker.pdf',
-    type: 'pdf',
-    product_id: '1',
-    category: 'Konformität',
-    uploadedAt: '2024-06-10',
-    validUntil: '2027-06-10',
-    status: 'valid',
-    size: '245 KB',
-  },
-  {
-    id: '2',
-    tenant_id: 'demo',
-    name: 'OEKO-TEX_Zertifikat_100.pdf',
-    type: 'pdf',
-    product_id: '1',
-    category: 'Zertifikat',
-    uploadedAt: '2024-03-15',
-    validUntil: '2025-06-30',
-    status: 'expiring',
-    size: '1.2 MB',
-  },
-  {
-    id: '3',
-    tenant_id: 'demo',
-    name: 'EU_Ecolabel_Certificate.pdf',
-    type: 'pdf',
-    product_id: '1',
-    category: 'Zertifikat',
-    uploadedAt: '2024-01-20',
-    validUntil: '2026-12-31',
-    status: 'valid',
-    size: '890 KB',
-  },
-  {
-    id: '4',
-    tenant_id: 'demo',
-    name: 'LCA_Report_2024.pdf',
-    type: 'pdf',
-    product_id: '2',
-    category: 'Bericht',
-    uploadedAt: '2024-08-15',
-    validUntil: undefined,
-    status: 'valid',
-    size: '3.4 MB',
-  },
-  {
-    id: '5',
-    tenant_id: 'demo',
-    name: 'Materialdatenblatt_PET.pdf',
-    type: 'pdf',
-    product_id: '1',
-    category: 'Datenblatt',
-    uploadedAt: '2024-05-20',
-    validUntil: undefined,
-    status: 'valid',
-    size: '156 KB',
-  },
-  {
-    id: '6',
-    tenant_id: 'demo',
-    name: 'Testbericht_TUV.pdf',
-    type: 'pdf',
-    product_id: '2',
-    category: 'Testbericht',
-    uploadedAt: '2024-07-30',
-    validUntil: '2025-01-15',
-    status: 'expired',
-    size: '2.1 MB',
-  },
-];
+import {
+  getDocuments,
+  createDocument,
+  deleteDocument as deleteDocumentService,
+  type Document,
+} from '@/services/supabase';
 
 const statusConfig = {
   valid: {
@@ -152,7 +80,7 @@ const documentCategories = ['Konformität', 'Zertifikat', 'Bericht', 'Datenblatt
 
 export function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [documents, setDocuments] = useState<Document[]>(fallbackDocuments);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -164,26 +92,13 @@ export function DocumentsPage() {
     validUntil: '',
   });
 
-  // Demo-Tenant setzen wenn nicht vorhanden
-  useEffect(() => {
-    if (!getCurrentTenant()) {
-      setTenant('demo');
-    }
-  }, []);
-
-  // Dokumente aus der API laden
+  // Dokumente aus Supabase laden
   useEffect(() => {
     async function loadDocuments() {
-      try {
-        const apiDocuments = await getDocuments();
-        if (apiDocuments.length > 0) {
-          setDocuments(apiDocuments);
-        }
-      } catch (error) {
-        console.warn('Dokumente konnten nicht geladen werden, verwende Fallback-Daten:', error);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsLoading(true);
+      const data = await getDocuments();
+      setDocuments(data);
+      setIsLoading(false);
     }
     loadDocuments();
   }, []);
@@ -213,27 +128,10 @@ export function DocumentsPage() {
       status: 'valid',
     });
 
-    if (result.success && result.id) {
+    if (result.success) {
       // Dokumente neu laden
       const updatedDocs = await getDocuments();
-      if (updatedDocs.length > 0) {
-        setDocuments(updatedDocs);
-      } else {
-        // Fallback: Lokal hinzufügen
-        setDocuments([
-          ...documents,
-          {
-            id: result.id,
-            tenant_id: getCurrentTenant() || 'demo',
-            name: newDoc.name,
-            type: newDoc.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'other',
-            category: newDoc.category,
-            uploadedAt: new Date().toISOString().split('T')[0],
-            validUntil: newDoc.validUntil || undefined,
-            status: 'valid',
-          },
-        ]);
-      }
+      setDocuments(updatedDocs);
 
       // Dialog schließen und Formular zurücksetzen
       setIsUploadDialogOpen(false);
@@ -244,7 +142,7 @@ export function DocumentsPage() {
   // Dokument löschen
   async function handleDeleteDocument(id: string) {
     setIsDeleting(id);
-    const result = await deleteDocument(id);
+    const result = await deleteDocumentService(id);
 
     if (result.success) {
       setDocuments(documents.filter((d) => d.id !== id));
@@ -362,7 +260,7 @@ export function DocumentsPage() {
       )}
 
       {/* Documents Table */}
-      {!isLoading && (
+      {!isLoading && filteredDocs.length > 0 && (
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -379,7 +277,7 @@ export function DocumentsPage() {
               </TableHeader>
               <TableBody>
                 {filteredDocs.map((doc) => {
-                  const status = statusConfig[doc.status as keyof typeof statusConfig];
+                  const status = statusConfig[doc.status as keyof typeof statusConfig] || statusConfig.valid;
                   return (
                     <TableRow key={doc.id}>
                       <TableCell>
@@ -398,7 +296,7 @@ export function DocumentsPage() {
                         <Badge variant="outline">{doc.category}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(doc.uploadedAt).toLocaleDateString('de-DE')}
+                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('de-DE') : '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {doc.validUntil
@@ -457,7 +355,7 @@ export function DocumentsPage() {
       {!isLoading && filteredDocs.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-medium">Keine Dokumente gefunden</h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery ? 'Versuchen Sie einen anderen Suchbegriff' : 'Laden Sie Ihr erstes Dokument hoch'}

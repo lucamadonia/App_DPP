@@ -20,6 +20,7 @@ export interface VisibilityConfig {
 
 // Neue Konfigurationsstruktur
 export interface VisibilityConfigV2 {
+  id?: string;
   version: 2;
   fields: FieldVisibilityConfig;
 }

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -8,7 +8,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { BrandingProvider, useBranding } from '@/contexts/BrandingContext';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductPage } from '@/pages/ProductPage';
@@ -32,7 +33,31 @@ import { SupplyChainPage } from '@/pages/SupplyChainPage';
 import { SuppliersPage } from '@/pages/SuppliersPage';
 import './index.css';
 
+// Protected Route - redirects to login if not authenticated
+function ProtectedRoute() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Laden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <AppLayout />;
+}
+
 function AppLayout() {
+  const { branding } = useBranding();
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -43,7 +68,7 @@ function AppLayout() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbPage>DPP Manager</BreadcrumbPage>
+                <BreadcrumbPage>{branding.appName}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -70,8 +95,9 @@ function PlaceholderPage({ title }: { title: string }) {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <BrandingProvider>
+        <BrowserRouter>
+          <Routes>
         {/* Login & Auth */}
         <Route path="login" element={<LoginPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
@@ -82,8 +108,8 @@ function App() {
           <Route path="01/:gtin/21/:serial" element={<PublicProductPage />} />
         </Route>
 
-        {/* Admin-Bereich mit Sidebar */}
-        <Route element={<AppLayout />}>
+        {/* Admin-Bereich mit Sidebar (geschützt) */}
+        <Route element={<ProtectedRoute />}>
           <Route index element={<DashboardPage />} />
 
           {/* Produkte */}
@@ -134,9 +160,10 @@ function App() {
 
           {/* Admin */}
           <Route path="admin" element={<AdminPage />} />
-        </Route>
-      </Routes>
-      </BrowserRouter>
+          </Route>
+        </Routes>
+        </BrowserRouter>
+      </BrandingProvider>
     </AuthProvider>
   );
 }

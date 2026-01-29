@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -11,6 +11,8 @@ import {
   Clock,
   Archive,
   Download,
+  Loader2,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,66 +33,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getProducts, type ProductListItem } from '@/services/supabase';
 
-const dpps = [
-  {
-    id: '1',
-    product: 'Eco Sneaker Pro',
-    gtin: '4012345678901',
-    status: 'published',
-    createdAt: '2024-06-15',
-    views: 1234,
-    lastAccessed: '2026-01-27',
-  },
-  {
-    id: '2',
-    product: 'Solar Powerbank 20000',
-    gtin: '4098765432101',
-    status: 'published',
-    createdAt: '2024-08-20',
-    views: 856,
-    lastAccessed: '2026-01-26',
-  },
-  {
-    id: '3',
-    product: 'Bio Cotton T-Shirt',
-    gtin: '4056789012345',
-    status: 'draft',
-    createdAt: '2026-01-24',
-    views: 0,
-    lastAccessed: '-',
-  },
-  {
-    id: '4',
-    product: 'Recycled Backpack',
-    gtin: '4034567890123',
-    status: 'draft',
-    createdAt: '2026-01-20',
-    views: 0,
-    lastAccessed: '-',
-  },
-  {
-    id: '5',
-    product: 'LED Desk Lamp Eco',
-    gtin: '4023456789012',
-    status: 'published',
-    createdAt: '2024-05-10',
-    views: 2341,
-    lastAccessed: '2026-01-27',
-  },
-  {
-    id: '6',
-    product: 'Bamboo Water Bottle',
-    gtin: '4045678901234',
-    status: 'archived',
-    createdAt: '2023-08-15',
-    views: 567,
-    lastAccessed: '2025-11-30',
-  },
-];
+interface DPPItem extends Omit<ProductListItem, 'status'> {
+  status: 'live' | 'draft' | 'archived';
+  createdAt: string;
+  views: number;
+  lastAccessed: string;
+}
 
 const statusConfig = {
-  published: {
+  live: {
     label: 'Veröffentlicht',
     icon: CheckCircle2,
     className: 'bg-success text-success-foreground',
@@ -110,10 +63,33 @@ const statusConfig = {
 export function DPPOverviewPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [dpps, setDpps] = useState<DPPItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      const products = await getProducts();
+
+      // Transform products to DPP items
+      const dppItems: DPPItem[] = products.map((product) => ({
+        ...product,
+        status: 'live' as const, // All products in DB are considered live
+        createdAt: new Date().toISOString().split('T')[0], // Would come from created_at in real impl
+        views: 0, // Would come from analytics
+        lastAccessed: '-', // Would come from analytics
+      }));
+
+      setDpps(dppItems);
+      setIsLoading(false);
+    }
+
+    loadProducts();
+  }, []);
 
   const filteredDpps = dpps.filter((dpp) => {
     const matchesSearch =
-      dpp.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dpp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       dpp.gtin.includes(searchQuery);
     const matchesStatus = !statusFilter || dpp.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -121,11 +97,19 @@ export function DPPOverviewPage() {
 
   const stats = {
     total: dpps.length,
-    published: dpps.filter((d) => d.status === 'published').length,
+    live: dpps.filter((d) => d.status === 'live').length,
     draft: dpps.filter((d) => d.status === 'draft').length,
     archived: dpps.filter((d) => d.status === 'archived').length,
     totalViews: dpps.reduce((acc, d) => acc + d.views, 0),
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -171,7 +155,7 @@ export function DPPOverviewPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{stats.published}</div>
+            <div className="text-2xl font-bold text-success">{stats.live}</div>
           </CardContent>
         </Card>
         <Card>
@@ -245,70 +229,95 @@ export function DPPOverviewPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produkt</TableHead>
-                <TableHead>GTIN</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Erstellt am</TableHead>
-                <TableHead>Aufrufe</TableHead>
-                <TableHead>Letzter Zugriff</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDpps.map((dpp) => {
-                const status = statusConfig[dpp.status as keyof typeof statusConfig];
-                return (
-                  <TableRow key={dpp.id}>
-                    <TableCell className="font-medium">{dpp.product}</TableCell>
-                    <TableCell>
-                      <code className="font-mono text-sm">{dpp.gtin}</code>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className={status.className}>
-                        <status.icon className="mr-1 h-3 w-3" />
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(dpp.createdAt).toLocaleDateString('de-DE')}
-                    </TableCell>
-                    <TableCell>{dpp.views.toLocaleString()}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {dpp.lastAccessed}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${dpp.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <QrCode className="mr-2 h-4 w-4" />
-                            QR-Code
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Öffentliche Ansicht
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {filteredDpps.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
+              <h3 className="text-lg font-medium">Keine DPPs gefunden</h3>
+              <p className="text-muted-foreground mt-1">
+                {dpps.length === 0
+                  ? 'Erstellen Sie Ihr erstes Produkt, um einen DPP zu generieren.'
+                  : 'Keine Produkte entsprechen Ihren Suchkriterien.'}
+              </p>
+              {dpps.length === 0 && (
+                <Button className="mt-4" asChild>
+                  <Link to="/products/new">Erstes Produkt erstellen</Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produkt</TableHead>
+                  <TableHead>GTIN</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Erstellt am</TableHead>
+                  <TableHead>Aufrufe</TableHead>
+                  <TableHead>Letzter Zugriff</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDpps.map((dpp) => {
+                  const status = statusConfig[dpp.status as keyof typeof statusConfig];
+                  return (
+                    <TableRow key={dpp.id}>
+                      <TableCell className="font-medium">{dpp.name}</TableCell>
+                      <TableCell>
+                        <code className="font-mono text-sm">{dpp.gtin}</code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={status.className}>
+                          <status.icon className="mr-1 h-3 w-3" />
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(dpp.createdAt).toLocaleDateString('de-DE')}
+                      </TableCell>
+                      <TableCell>{dpp.views.toLocaleString()}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {dpp.lastAccessed}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${dpp.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to="/dpp/qr-generator">
+                                <QrCode className="mr-2 h-4 w-4" />
+                                QR-Code
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <a
+                                href={`/p/${dpp.gtin}/${dpp.serial}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                Öffentliche Ansicht
+                              </a>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

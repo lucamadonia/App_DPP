@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -16,6 +17,7 @@ import {
   Truck,
   CheckCircle2,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,54 +25,63 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { getProductById } from '@/services/supabase';
 import type { Product } from '@/types/product';
-
-// Demo-Produkt
-const demoProducts: Record<string, Product> = {
-  '1': {
-    id: '1',
-    name: 'Eco Sneaker Pro',
-    manufacturer: 'GreenStep GmbH',
-    gtin: '4012345678901',
-    serialNumber: 'GSP-2024-001234',
-    productionDate: '2024-06-15',
-    category: 'Textil / Schuhe',
-    description:
-      'Der Eco Sneaker Pro ist ein nachhaltiger Freizeitschuh, hergestellt aus recycelten PET-Flaschen, Bio-Baumwolle und Naturkautschuk. Jedes Paar spart durchschnittlich 12 Plastikflaschen vor der Umweltverschmutzung.',
-    materials: [
-      { name: 'Recyceltes PET', percentage: 60, recyclable: true, origin: 'Deutschland' },
-      { name: 'Bio-Baumwolle', percentage: 25, recyclable: true, origin: 'Portugal' },
-      { name: 'Naturkautschuk', percentage: 15, recyclable: true, origin: 'Thailand' },
-    ],
-    certifications: [
-      { name: 'EU Ecolabel', issuedBy: 'European Commission', validUntil: '2026-12-31' },
-      { name: 'OEKO-TEX Standard 100', issuedBy: 'OEKO-TEX', validUntil: '2025-06-30' },
-      { name: 'Fair Trade', issuedBy: 'Fairtrade International', validUntil: '2025-12-31' },
-    ],
-    carbonFootprint: {
-      totalKgCO2: 8.5,
-      productionKgCO2: 5.2,
-      transportKgCO2: 3.3,
-      rating: 'A',
-    },
-    recyclability: {
-      recyclablePercentage: 85,
-      instructions:
-        'Die Schuhe können bei teilnehmenden Händlern oder lokalen Textilsammelstellen abgegeben werden.',
-      disposalMethods: ['Textilsammlung', 'Herstellerücknahme', 'Secondhand-Abgabe'],
-    },
-    supplyChain: [
-      { step: 1, location: 'Hamburg', country: 'Deutschland', date: '2024-06-01', description: 'Materialanlieferung' },
-      { step: 2, location: 'Porto', country: 'Portugal', date: '2024-06-03', description: 'Bio-Baumwolle Verarbeitung' },
-      { step: 3, location: 'Berlin', country: 'Deutschland', date: '2024-06-10', description: 'Produktion' },
-      { step: 4, location: 'München', country: 'Deutschland', date: '2024-06-15', description: 'Qualitätskontrolle' },
-    ],
-  },
-};
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
-  const product = id ? demoProducts[id] || demoProducts['1'] : demoProducts['1'];
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadProduct() {
+      if (!id) {
+        setError('Keine Produkt-ID angegeben');
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      const data = await getProductById(id);
+      if (data) {
+        setProduct(data);
+      } else {
+        setError('Produkt nicht gefunden');
+      }
+      setIsLoading(false);
+    }
+
+    loadProduct();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/products">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Produkt nicht gefunden</h1>
+            <p className="text-muted-foreground">{error || 'Das Produkt existiert nicht oder Sie haben keinen Zugriff.'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const complianceScore = 95;
 
@@ -98,17 +109,21 @@ export function ProductPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <QrCode className="mr-2 h-4 w-4" />
-            QR-Code
+          <Button variant="outline" asChild>
+            <Link to="/dpp/qr-generator">
+              <QrCode className="mr-2 h-4 w-4" />
+              QR-Code
+            </Link>
           </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button>
-            <Edit className="mr-2 h-4 w-4" />
-            Bearbeiten
+          <Button asChild>
+            <Link to={`/products/${id}/edit`}>
+              <Edit className="mr-2 h-4 w-4" />
+              Bearbeiten
+            </Link>
           </Button>
         </div>
       </div>
@@ -209,7 +224,7 @@ export function ProductPage() {
                 <Separator />
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Beschreibung</p>
-                  <p className="text-sm">{product.description}</p>
+                  <p className="text-sm">{product.description || 'Keine Beschreibung vorhanden'}</p>
                 </div>
               </CardContent>
             </Card>
@@ -219,11 +234,19 @@ export function ProductPage() {
                 <CardTitle>Produktbild</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                  <div className="text-6xl font-bold text-muted-foreground/30">
-                    {product.name.charAt(0)}
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="aspect-square rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
+                    <div className="text-6xl font-bold text-muted-foreground/30">
+                      {product.name.charAt(0)}
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -242,29 +265,33 @@ export function ProductPage() {
                 <CardDescription>Anteil und Herkunft der verwendeten Materialien</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {product.materials.map((material, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium">{material.name}</span>
-                      <span className="text-muted-foreground">{material.percentage}%</span>
+                {product.materials && product.materials.length > 0 ? (
+                  product.materials.map((material, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{material.name}</span>
+                        <span className="text-muted-foreground">{material.percentage}%</span>
+                      </div>
+                      <Progress value={material.percentage} className="h-2" />
+                      <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                        {material.origin && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {material.origin}
+                          </span>
+                        )}
+                        {material.recyclable && (
+                          <Badge variant="outline" className="text-success border-success">
+                            <Recycle className="mr-1 h-3 w-3" />
+                            Recycelbar
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <Progress value={material.percentage} className="h-2" />
-                    <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                      {material.origin && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {material.origin}
-                        </span>
-                      )}
-                      {material.recyclable && (
-                        <Badge variant="outline" className="text-success border-success">
-                          <Recycle className="mr-1 h-3 w-3" />
-                          Recycelbar
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm">Keine Materialien hinterlegt</p>
+                )}
               </CardContent>
             </Card>
 
@@ -313,23 +340,27 @@ export function ProductPage() {
                 <div className="grid gap-6 md:grid-cols-3">
                   <div className="text-center p-4 rounded-lg bg-success/10">
                     <div className="text-3xl font-bold text-success">
-                      {product.recyclability.recyclablePercentage}%
+                      {product.recyclability?.recyclablePercentage || 0}%
                     </div>
                     <div className="text-sm text-muted-foreground">Recycelbar</div>
                   </div>
                   <div className="md:col-span-2 space-y-4">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Entsorgungshinweise</p>
-                      <p className="text-sm">{product.recyclability.instructions}</p>
+                      <p className="text-sm">{product.recyclability?.instructions || 'Keine Hinweise hinterlegt'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Entsorgungsmethoden</p>
                       <div className="flex flex-wrap gap-2">
-                        {product.recyclability.disposalMethods.map((method, index) => (
-                          <Badge key={index} variant="secondary">
-                            {method}
-                          </Badge>
-                        ))}
+                        {product.recyclability?.disposalMethods && product.recyclability.disposalMethods.length > 0 ? (
+                          product.recyclability.disposalMethods.map((method, index) => (
+                            <Badge key={index} variant="secondary">
+                              {method}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Keine Methoden hinterlegt</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -350,33 +381,44 @@ export function ProductPage() {
               <CardDescription>Gültige Zertifikate und Konformitätserklärungen</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {product.certifications.map((cert, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                        <Award className="h-5 w-5 text-warning" />
+              {product.certifications && product.certifications.length > 0 ? (
+                <div className="space-y-4">
+                  {product.certifications.map((cert, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                          <Award className="h-5 w-5 text-warning" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{cert.name}</p>
+                          <p className="text-sm text-muted-foreground">{cert.issuedBy}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{cert.name}</p>
-                        <p className="text-sm text-muted-foreground">{cert.issuedBy}</p>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Gültig bis</p>
+                          <p className="font-medium">
+                            {new Date(cert.validUntil).toLocaleDateString('de-DE')}
+                          </p>
+                        </div>
+                        {cert.certificateUrl && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={cert.certificateUrl} target="_blank" rel="noopener noreferrer">
+                              <Download className="mr-2 h-4 w-4" />
+                              PDF
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Gültig bis</p>
-                        <p className="font-medium">
-                          {new Date(cert.validUntil).toLocaleDateString('de-DE')}
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        PDF
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Award className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                  <p>Keine Zertifizierungen hinterlegt</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -441,9 +483,15 @@ export function ProductPage() {
                 <div className="p-3 rounded-lg bg-muted font-mono text-sm break-all">
                   https://id.gs1.org/01/{product.gtin}/21/{product.serialNumber}
                 </div>
-                <Button className="w-full" variant="outline">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Öffentliche Ansicht öffnen
+                <Button className="w-full" variant="outline" asChild>
+                  <a
+                    href={`/p/${product.gtin}/${product.serialNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Öffentliche Ansicht öffnen
+                  </a>
                 </Button>
               </CardContent>
             </Card>
@@ -461,30 +509,37 @@ export function ProductPage() {
               <CardDescription>Vollständige Nachverfolgbarkeit</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="relative">
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-                <div className="space-y-6">
-                  {product.supplyChain.map((entry, index) => (
-                    <div key={index} className="relative pl-10">
-                      <div className="absolute left-2 w-5 h-5 bg-primary rounded-full border-4 border-background" />
-                      <div className="p-4 rounded-lg border">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">
-                            Schritt {entry.step}: {entry.description}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(entry.date).toLocaleDateString('de-DE')}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          {entry.location}, {entry.country}
+              {product.supplyChain && product.supplyChain.length > 0 ? (
+                <div className="relative">
+                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+                  <div className="space-y-6">
+                    {product.supplyChain.map((entry, index) => (
+                      <div key={index} className="relative pl-10">
+                        <div className="absolute left-2 w-5 h-5 bg-primary rounded-full border-4 border-background" />
+                        <div className="p-4 rounded-lg border">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">
+                              Schritt {entry.step}: {entry.description}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(entry.date).toLocaleDateString('de-DE')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            {entry.location}, {entry.country}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Truck className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                  <p>Keine Lieferketten-Daten hinterlegt</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

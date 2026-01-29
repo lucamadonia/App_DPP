@@ -352,7 +352,6 @@ export function DPPVisibilitySettingsPage() {
                 <div className="space-y-3">
                   {fieldsInCategory.map((field) => {
                     const currentLevel = config.fields[field.key] || 'internal';
-                    const levelInfo = visibilityLevels.find((l) => l.value === currentLevel);
 
                     return (
                       <div

@@ -24,17 +24,13 @@ import {
   FileCheck,
   Smartphone,
   Linkedin,
-  CreditCard,
   FileText,
-  Calendar,
   Star,
   Users,
   Factory,
   Truck,
   BadgeCheck,
   AlertCircle,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,12 +64,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
   getSuppliers,
   createSupplier,
   updateSupplier,
@@ -82,13 +72,9 @@ import {
   getProducts,
   assignProductToSupplier,
   removeProductFromSupplier,
-  setTenant,
   type ProductListItem,
-} from '@/services/api';
+} from '@/services/supabase';
 import type { Supplier, SupplierProduct, SupplierContact } from '@/types/database';
-
-// Demo-Tenant setzen (in Produktion aus Auth-Context)
-const DEMO_TENANT_ID = 'demo-tenant';
 
 // Verfugbare Zertifizierungen
 const CERTIFICATIONS = [
@@ -179,9 +165,8 @@ export function SuppliersPage() {
   const [detailProducts, setDetailProducts] = useState<SupplierProduct[]>([]);
   const [activeDetailTab, setActiveDetailTab] = useState('overview');
 
-  // Tenant setzen beim Mount
+  // Daten laden beim Mount
   useEffect(() => {
-    setTenant(DEMO_TENANT_ID);
     loadData();
   }, []);
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -13,11 +13,12 @@ import {
   Clock,
   AlertCircle,
   Download,
+  Package,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -34,76 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Demo-Produkte
-const products = [
-  {
-    id: '1',
-    name: 'Eco Sneaker Pro',
-    internalId: 'PRD-001',
-    gtin: '4012345678901',
-    category: 'Textil / Schuhe',
-    status: 'live',
-    lastModified: '2026-01-27',
-    qrStatus: 'active',
-    compliance: 95,
-  },
-  {
-    id: '2',
-    name: 'Solar Powerbank 20000',
-    internalId: 'PRD-002',
-    gtin: '4098765432101',
-    category: 'Elektronik',
-    status: 'live',
-    lastModified: '2026-01-25',
-    qrStatus: 'active',
-    compliance: 88,
-  },
-  {
-    id: '3',
-    name: 'Bio Cotton T-Shirt',
-    internalId: 'PRD-003',
-    gtin: '4056789012345',
-    category: 'Textil',
-    status: 'draft',
-    lastModified: '2026-01-24',
-    qrStatus: 'pending',
-    compliance: 72,
-  },
-  {
-    id: '4',
-    name: 'Recycled Backpack',
-    internalId: 'PRD-004',
-    gtin: '4034567890123',
-    category: 'Textil / Taschen',
-    status: 'review',
-    lastModified: '2026-01-20',
-    qrStatus: 'pending',
-    compliance: 60,
-  },
-  {
-    id: '5',
-    name: 'LED Desk Lamp Eco',
-    internalId: 'PRD-005',
-    gtin: '4023456789012',
-    category: 'Elektronik',
-    status: 'live',
-    lastModified: '2026-01-18',
-    qrStatus: 'active',
-    compliance: 100,
-  },
-  {
-    id: '6',
-    name: 'Bamboo Water Bottle',
-    internalId: 'PRD-006',
-    gtin: '4045678901234',
-    category: 'Haushalt',
-    status: 'expired',
-    lastModified: '2025-12-15',
-    qrStatus: 'expired',
-    compliance: 45,
-  },
-];
+import { getProducts, deleteProduct, type ProductListItem } from '@/services/supabase/products';
 
 const statusConfig = {
   live: {
@@ -133,17 +65,58 @@ const statusConfig = {
 };
 
 export function ProductsPage() {
+  const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Sind Sie sicher, dass Sie dieses Produkt löschen möchten?')) {
+      return;
+    }
+    const result = await deleteProduct(id);
+    if (result.success) {
+      setProducts(products.filter(p => p.id !== id));
+    } else {
+      alert('Fehler beim Löschen: ' + result.error);
+    }
+  };
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.gtin.includes(searchQuery) ||
-      product.internalId.toLowerCase().includes(searchQuery.toLowerCase());
+      (product.serialNumber && product.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = !statusFilter || product.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Produkte werden geladen...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -173,7 +146,7 @@ export function ProductsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Suche nach Name, GTIN oder ID..."
+                placeholder="Suche nach Name, GTIN oder Seriennummer..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -212,129 +185,118 @@ export function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Products Table */}
+      {/* Products Table or Empty State */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produktname</TableHead>
-                <TableHead>Interne ID</TableHead>
-                <TableHead>GTIN/EAN</TableHead>
-                <TableHead>Kategorie</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Letzte Änderung</TableHead>
-                <TableHead>QR-Status</TableHead>
-                <TableHead>Konformität</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map((product) => {
-                const status = statusConfig[product.status as keyof typeof statusConfig];
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <Link
-                        to={`/products/${product.id}`}
-                        className="font-medium hover:text-primary hover:underline"
-                      >
-                        {product.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                        {product.internalId}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <code className="font-mono text-sm">{product.gtin}</code>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {product.category}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={status.variant} className={status.className}>
-                        <status.icon className="mr-1 h-3 w-3" />
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(product.lastModified).toLocaleDateString('de-DE')}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={product.qrStatus === 'active' ? 'default' : 'secondary'}
-                        className={
-                          product.qrStatus === 'active'
-                            ? 'bg-success text-success-foreground'
-                            : product.qrStatus === 'expired'
-                              ? 'bg-destructive text-destructive-foreground'
-                              : ''
-                        }
-                      >
-                        {product.qrStatus === 'active'
-                          ? 'Aktiv'
-                          : product.qrStatus === 'expired'
-                            ? 'Abgelaufen'
-                            : 'Ausstehend'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={product.compliance} className="h-2 w-16" />
-                        <span
-                          className={`text-sm font-medium ${
-                            product.compliance >= 90
-                              ? 'text-success'
-                              : product.compliance >= 70
-                                ? 'text-warning'
-                                : 'text-destructive'
-                          }`}
+          {products.length === 0 ? (
+            <div className="py-16 text-center">
+              <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-semibold">Keine Produkte vorhanden</h3>
+              <p className="mt-2 text-muted-foreground">
+                Erstellen Sie Ihr erstes Produkt, um mit dem DPP Manager zu starten.
+              </p>
+              <Button className="mt-6" asChild>
+                <Link to="/products/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Erstes Produkt anlegen
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produktname</TableHead>
+                  <TableHead>GTIN/EAN</TableHead>
+                  <TableHead>Seriennummer</TableHead>
+                  <TableHead>Kategorie</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Erstellt</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => {
+                  const status = statusConfig[(product.status as keyof typeof statusConfig) || 'draft'];
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <Link
+                          to={`/products/${product.id}`}
+                          className="font-medium hover:text-primary hover:underline"
                         >
-                          {product.compliance}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${product.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Anzeigen
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${product.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Bearbeiten
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <QrCode className="mr-2 h-4 w-4" />
-                            QR-Code
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Löschen
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          {product.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <code className="font-mono text-sm">{product.gtin}</code>
+                      </TableCell>
+                      <TableCell>
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          {product.serialNumber}
+                        </code>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {product.category}
+                      </TableCell>
+                      <TableCell>
+                        {status && (
+                          <Badge variant={status.variant} className={status.className}>
+                            <status.icon className="mr-1 h-3 w-3" />
+                            {status.label}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {product.createdAt
+                          ? new Date(product.createdAt).toLocaleDateString('de-DE')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Anzeigen
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Bearbeiten
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/dpp/qr-generator?product=${product.id}`}>
+                                <QrCode className="mr-2 h-4 w-4" />
+                                QR-Code
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDelete(product.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Löschen
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
 
-          {filteredProducts.length === 0 && (
+          {products.length > 0 && filteredProducts.length === 0 && (
             <div className="py-12 text-center">
               <p className="text-muted-foreground">Keine Produkte gefunden</p>
             </div>

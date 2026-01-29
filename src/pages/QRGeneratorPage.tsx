@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import {
-  QrCode,
   Download,
   Copy,
   Check,
@@ -11,16 +10,15 @@ import {
   Globe,
   Save,
   RefreshCw,
-  Image,
   FileText,
   Trash2,
-  Plus,
   ExternalLink,
   Info,
   CheckCircle2,
-  AlertTriangle,
   Layers,
   Eye,
+  Loader2,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,32 +41,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { getProducts, type ProductListItem } from '@/services/supabase';
+import { useBranding } from '@/contexts/BrandingContext';
+import { validateDomain, validatePathPrefix, normalizeDomain } from '@/lib/domain-utils';
 
-// Produkte aus der "Datenbank"
-const products = [
-  { id: '1', name: 'Eco Sneaker Pro', gtin: '4012345678901', serial: 'GSP-2024-001234', batch: 'B2024-001', category: 'Textilien' },
-  { id: '2', name: 'Solar Powerbank 20000', gtin: '4098765432101', serial: 'ETS-PB-2024-5678', batch: 'B2024-002', category: 'Elektronik' },
-  { id: '3', name: 'Bio Cotton T-Shirt', gtin: '4056789012345', serial: 'BCT-2024-9012', batch: 'B2024-003', category: 'Textilien' },
-  { id: '4', name: 'LED Smart Bulb E27', gtin: '4023456789012', serial: 'LSB-2024-3456', batch: 'B2024-004', category: 'Beleuchtung' },
-  { id: '5', name: 'Bamboo Cutting Board', gtin: '4034567890123', serial: 'BCB-2024-7890', batch: 'B2024-005', category: 'Lebensmittelkontakt' },
-];
-
-// Domain-Einstellungen Interface
-interface DomainSettings {
-  customDomain: string;
-  useCustomDomain: boolean;
-  useGS1: boolean;
-  useHTTPS: boolean;
-  pathPrefix: string;
-  resolver: 'custom' | 'gs1' | 'id' | 'local';
-}
-
-// QR-Code Einstellungen Interface
+// QR-Code Einstellungen Interface (local state only for visual settings)
 interface QRSettings {
   size: number;
   errorCorrection: 'L' | 'M' | 'Q' | 'H';
-  foregroundColor: string;
-  backgroundColor: string;
   margin: number;
   format: 'standard' | 'rounded' | 'dots';
   includeText: boolean;
@@ -76,23 +56,13 @@ interface QRSettings {
   logoEnabled: boolean;
   logoUrl: string;
   logoSize: number;
+  foregroundColor: string;
+  backgroundColor: string;
 }
-
-// Standardwerte
-const defaultDomainSettings: DomainSettings = {
-  customDomain: '',
-  useCustomDomain: false,
-  useGS1: true,
-  useHTTPS: true,
-  pathPrefix: '',
-  resolver: 'gs1',
-};
 
 const defaultQRSettings: QRSettings = {
   size: 256,
   errorCorrection: 'M',
-  foregroundColor: '#000000',
-  backgroundColor: '#FFFFFF',
   margin: 2,
   format: 'standard',
   includeText: false,
@@ -100,19 +70,39 @@ const defaultQRSettings: QRSettings = {
   logoEnabled: false,
   logoUrl: '',
   logoSize: 20,
+  foregroundColor: '#000000',
+  backgroundColor: '#FFFFFF',
 };
 
 export function QRGeneratorPage() {
-  const [selectedProduct, setSelectedProduct] = useState(products[0]);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<ProductListItem | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedField, setCopiedField] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
-  const [domainSettings, setDomainSettings] = useState<DomainSettings>(() => {
-    const saved = localStorage.getItem('dpp-domain-settings');
-    return saved ? JSON.parse(saved) : defaultDomainSettings;
+  const [isSavingDomain, setIsSavingDomain] = useState(false);
+  const [domainSaved, setDomainSaved] = useState(false);
+  const [domainError, setDomainError] = useState<string | null>(null);
+  const [pathPrefixError, setPathPrefixError] = useState<string | null>(null);
+
+  // Get branding context for QR code domain settings
+  const { qrCodeSettings, updateQRCodeSettings } = useBranding();
+
+  // Local domain settings state (synced with context)
+  const [localDomainSettings, setLocalDomainSettings] = useState({
+    customDomain: qrCodeSettings.customDomain || '',
+    useCustomDomain: qrCodeSettings.resolver === 'custom',
+    useHTTPS: qrCodeSettings.useHttps,
+    pathPrefix: qrCodeSettings.pathPrefix,
+    resolver: qrCodeSettings.resolver as 'custom' | 'gs1' | 'local',
+    foregroundColor: qrCodeSettings.foregroundColor,
+    backgroundColor: qrCodeSettings.backgroundColor,
   });
+
+  // QR visual settings (local state)
   const [qrSettings, setQRSettings] = useState<QRSettings>(() => {
     const saved = localStorage.getItem('dpp-qr-settings');
     return saved ? JSON.parse(saved) : defaultQRSettings;
@@ -120,60 +110,80 @@ export function QRGeneratorPage() {
   const [activeTab, setActiveTab] = useState('preview');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Speichere Einstellungen in localStorage
+  // Sync local domain settings with context
   useEffect(() => {
-    localStorage.setItem('dpp-domain-settings', JSON.stringify(domainSettings));
-  }, [domainSettings]);
+    setLocalDomainSettings({
+      customDomain: qrCodeSettings.customDomain || '',
+      useCustomDomain: qrCodeSettings.resolver === 'custom',
+      useHTTPS: qrCodeSettings.useHttps,
+      pathPrefix: qrCodeSettings.pathPrefix,
+      resolver: qrCodeSettings.resolver as 'custom' | 'gs1' | 'local',
+      foregroundColor: qrCodeSettings.foregroundColor,
+      backgroundColor: qrCodeSettings.backgroundColor,
+    });
+  }, [qrCodeSettings]);
 
+  // Load products from database
+  useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      const productsData = await getProducts();
+      setProducts(productsData);
+      if (productsData.length > 0) {
+        setSelectedProduct(productsData[0]);
+      }
+      setIsLoading(false);
+    }
+    loadProducts();
+  }, []);
+
+  // Save QR visual settings to localStorage
   useEffect(() => {
     localStorage.setItem('dpp-qr-settings', JSON.stringify(qrSettings));
   }, [qrSettings]);
 
   // Generiere die DPP-URL basierend auf den Einstellungen
-  const generateDPPUrl = (product: typeof products[0], forCustoms = false) => {
-    const protocol = domainSettings.useHTTPS ? 'https' : 'http';
+  const generateDPPUrl = (product: ProductListItem, forCustoms = false) => {
+    const protocol = localDomainSettings.useHTTPS ? 'https' : 'http';
     const customsParam = forCustoms ? '?view=zoll' : '';
 
     // Lokale öffentliche Seiten
-    if (domainSettings.resolver === 'local') {
+    if (localDomainSettings.resolver === 'local') {
       return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsParam}`;
     }
 
-    if (domainSettings.resolver === 'gs1') {
+    if (localDomainSettings.resolver === 'gs1') {
       return `https://id.gs1.org/01/${product.gtin}/21/${product.serial}`;
     }
 
-    if (domainSettings.useCustomDomain && domainSettings.customDomain) {
-      const domain = domainSettings.customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-      const prefix = domainSettings.pathPrefix ? `/${domainSettings.pathPrefix.replace(/^\/|\/$/g, '')}` : '';
+    if (localDomainSettings.useCustomDomain && localDomainSettings.customDomain) {
+      const domain = localDomainSettings.customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const prefix = localDomainSettings.pathPrefix ? `/${localDomainSettings.pathPrefix.replace(/^\/|\/$/g, '')}` : '';
       return `${protocol}://${domain}${prefix}/p/${product.gtin}/${product.serial}${customsParam}`;
     }
 
     return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsParam}`;
   };
 
-  // Generiere URL für Zollansicht
-  const generateCustomsUrl = (product: typeof products[0]) => {
-    return generateDPPUrl(product, true);
-  };
-
   // Lokale Vorschau-URL
-  const localPreviewUrl = `${window.location.origin}/p/${selectedProduct.gtin}/${selectedProduct.serial}`;
-  const localCustomsUrl = `${localPreviewUrl}?view=zoll`;
+  const localPreviewUrl = selectedProduct ? `${window.location.origin}/p/${selectedProduct.gtin}/${selectedProduct.serial}` : '';
+  const localCustomsUrl = selectedProduct ? `${localPreviewUrl}?view=zoll` : '';
 
-  const dppUrl = generateDPPUrl(selectedProduct);
-  const gs1Url = `https://id.gs1.org/01/${selectedProduct.gtin}/21/${selectedProduct.serial}`;
+  const dppUrl = selectedProduct ? generateDPPUrl(selectedProduct) : '';
+  const gs1Url = selectedProduct ? `https://id.gs1.org/01/${selectedProduct.gtin}/21/${selectedProduct.serial}` : '';
 
   // Generiere QR-Code
   useEffect(() => {
+    if (!dppUrl) return;
+
     const generateQR = async () => {
       try {
         const options = {
           width: qrSettings.size,
           margin: qrSettings.margin,
           color: {
-            dark: qrSettings.foregroundColor,
-            light: qrSettings.backgroundColor,
+            dark: localDomainSettings.foregroundColor || '#000000',
+            light: localDomainSettings.backgroundColor || '#FFFFFF',
           },
           errorCorrectionLevel: qrSettings.errorCorrection,
         };
@@ -191,7 +201,7 @@ export function QRGeneratorPage() {
     };
 
     generateQR();
-  }, [dppUrl, qrSettings]);
+  }, [dppUrl, qrSettings, localDomainSettings.foregroundColor, localDomainSettings.backgroundColor]);
 
   // Kopieren-Funktion
   const handleCopy = (text: string, field: string) => {
@@ -206,6 +216,7 @@ export function QRGeneratorPage() {
 
   // Download-Funktionen
   const downloadQR = async (format: 'png' | 'svg' | 'pdf') => {
+    if (!selectedProduct) return;
     const filename = `qr-${selectedProduct.gtin}-${selectedProduct.serial}`;
 
     if (format === 'png') {
@@ -219,8 +230,8 @@ export function QRGeneratorPage() {
         width: qrSettings.size,
         margin: qrSettings.margin,
         color: {
-          dark: qrSettings.foregroundColor,
-          light: qrSettings.backgroundColor,
+          dark: localDomainSettings.foregroundColor || '#000000',
+          light: localDomainSettings.backgroundColor || '#FFFFFF',
         },
       });
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
@@ -245,8 +256,8 @@ export function QRGeneratorPage() {
         width: qrSettings.size,
         margin: qrSettings.margin,
         color: {
-          dark: qrSettings.foregroundColor,
-          light: qrSettings.backgroundColor,
+          dark: localDomainSettings.foregroundColor || '#000000',
+          light: localDomainSettings.backgroundColor || '#FFFFFF',
         },
       });
 
@@ -276,11 +287,80 @@ export function QRGeneratorPage() {
     );
   };
 
-  // Einstellungen speichern
-  const saveDomainSettings = () => {
-    localStorage.setItem('dpp-domain-settings', JSON.stringify(domainSettings));
-    alert('Domain-Einstellungen gespeichert!');
+  // Handle domain validation on change
+  const handleDomainChange = (value: string) => {
+    const normalized = normalizeDomain(value);
+    setLocalDomainSettings({ ...localDomainSettings, customDomain: normalized });
+
+    // Only validate if user has entered something
+    if (normalized) {
+      const validation = validateDomain(normalized);
+      setDomainError(validation.isValid ? null : validation.errorMessage || null);
+    } else {
+      setDomainError(null);
+    }
   };
+
+  // Handle path prefix validation on change
+  const handlePathPrefixChange = (value: string) => {
+    setLocalDomainSettings({ ...localDomainSettings, pathPrefix: value });
+
+    if (value) {
+      const validation = validatePathPrefix(value);
+      setPathPrefixError(validation.isValid ? null : validation.errorMessage || null);
+    } else {
+      setPathPrefixError(null);
+    }
+  };
+
+  // Einstellungen in Datenbank speichern
+  const saveDomainSettings = async () => {
+    // Validate before saving
+    if (localDomainSettings.resolver === 'custom') {
+      const domainValidation = validateDomain(localDomainSettings.customDomain);
+      if (!domainValidation.isValid) {
+        setDomainError(domainValidation.errorMessage || 'Ungültige Domain');
+        return;
+      }
+
+      if (localDomainSettings.pathPrefix) {
+        const prefixValidation = validatePathPrefix(localDomainSettings.pathPrefix);
+        if (!prefixValidation.isValid) {
+          setPathPrefixError(prefixValidation.errorMessage || 'Ungültiger Pfad');
+          return;
+        }
+      }
+    }
+
+    setIsSavingDomain(true);
+    setDomainSaved(false);
+
+    const success = await updateQRCodeSettings({
+      customDomain: localDomainSettings.customDomain || undefined,
+      pathPrefix: localDomainSettings.pathPrefix || undefined,
+      useHttps: localDomainSettings.useHTTPS,
+      resolver: localDomainSettings.resolver,
+      foregroundColor: localDomainSettings.foregroundColor,
+      backgroundColor: localDomainSettings.backgroundColor,
+    });
+
+    if (success) {
+      setDomainSaved(true);
+      setTimeout(() => setDomainSaved(false), 2000);
+    } else {
+      alert('Fehler beim Speichern der Einstellungen');
+    }
+
+    setIsSavingDomain(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -300,6 +380,18 @@ export function QRGeneratorPage() {
         </div>
       </div>
 
+      {products.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
+            <h3 className="text-lg font-medium">Keine Produkte vorhanden</h3>
+            <p className="text-muted-foreground mt-1">
+              Erstellen Sie zuerst Produkte, um QR-Codes zu generieren.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+      <>
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Produkt-Auswahl */}
         <Card className="lg:col-span-1">
@@ -322,7 +414,7 @@ export function QRGeneratorPage() {
                   key={product.id}
                   onClick={() => setSelectedProduct(product)}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedProduct.id === product.id
+                    selectedProduct?.id === product.id
                       ? 'border-primary bg-primary/5 ring-1 ring-primary'
                       : 'hover:bg-muted/50'
                   }`}
@@ -351,11 +443,11 @@ export function QRGeneratorPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>QR-Code Generator</CardTitle>
-                <CardDescription>{selectedProduct.name}</CardDescription>
+                <CardDescription>{selectedProduct?.name || 'Kein Produkt ausgewählt'}</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Badge variant={domainSettings.useCustomDomain ? 'default' : 'secondary'}>
-                  {domainSettings.useCustomDomain ? (
+                <Badge variant={localDomainSettings.useCustomDomain ? 'default' : 'secondary'}>
+                  {localDomainSettings.useCustomDomain ? (
                     <>
                       <Globe className="mr-1 h-3 w-3" />
                       Custom Domain
@@ -392,7 +484,7 @@ export function QRGeneratorPage() {
                 <div className="flex justify-center">
                   <div
                     className="bg-white p-6 rounded-lg border-2 shadow-lg"
-                    style={{ backgroundColor: qrSettings.backgroundColor }}
+                    style={{ backgroundColor: localDomainSettings.backgroundColor }}
                   >
                     {qrDataUrl ? (
                       <img
@@ -408,8 +500,8 @@ export function QRGeneratorPage() {
                         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                       </div>
                     )}
-                    {qrSettings.includeText && (
-                      <p className="text-center text-xs font-mono mt-2" style={{ color: qrSettings.foregroundColor }}>
+                    {qrSettings.includeText && selectedProduct && (
+                      <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
                         {selectedProduct.gtin}
                       </p>
                     )}
@@ -486,26 +578,28 @@ export function QRGeneratorPage() {
                   </div>
 
                   {/* Vorschau-Links für lokale Seiten */}
-                  <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2 text-green-800 dark:text-green-200">
-                      <Eye className="h-4 w-4" />
-                      Öffentliche Seiten testen
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={localPreviewUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Verbraucheransicht
-                        </a>
-                      </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={localCustomsUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Zollansicht
-                        </a>
-                      </Button>
+                  {selectedProduct && (
+                    <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <h4 className="text-sm font-medium mb-3 flex items-center gap-2 text-green-800 dark:text-green-200">
+                        <Eye className="h-4 w-4" />
+                        Öffentliche Seiten testen
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={localPreviewUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Verbraucheransicht
+                          </a>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={localCustomsUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Zollansicht
+                          </a>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* GS1 Digital Link Struktur */}
                   <div className="p-4 bg-muted/50 rounded-lg">
@@ -596,13 +690,13 @@ export function QRGeneratorPage() {
                         <div className="flex gap-2">
                           <input
                             type="color"
-                            value={qrSettings.foregroundColor}
-                            onChange={(e) => setQRSettings({ ...qrSettings, foregroundColor: e.target.value })}
+                            value={localDomainSettings.foregroundColor || '#000000'}
+                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, foregroundColor: e.target.value })}
                             className="h-10 w-10 rounded border cursor-pointer"
                           />
                           <Input
-                            value={qrSettings.foregroundColor}
-                            onChange={(e) => setQRSettings({ ...qrSettings, foregroundColor: e.target.value })}
+                            value={localDomainSettings.foregroundColor || '#000000'}
+                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, foregroundColor: e.target.value })}
                             className="font-mono"
                           />
                         </div>
@@ -612,13 +706,13 @@ export function QRGeneratorPage() {
                         <div className="flex gap-2">
                           <input
                             type="color"
-                            value={qrSettings.backgroundColor}
-                            onChange={(e) => setQRSettings({ ...qrSettings, backgroundColor: e.target.value })}
+                            value={localDomainSettings.backgroundColor || '#FFFFFF'}
+                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, backgroundColor: e.target.value })}
                             className="h-10 w-10 rounded border cursor-pointer"
                           />
                           <Input
-                            value={qrSettings.backgroundColor}
-                            onChange={(e) => setQRSettings({ ...qrSettings, backgroundColor: e.target.value })}
+                            value={localDomainSettings.backgroundColor || '#FFFFFF'}
+                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, backgroundColor: e.target.value })}
                             className="font-mono"
                           />
                         </div>
@@ -695,7 +789,7 @@ export function QRGeneratorPage() {
                     <div className="grid gap-3">
                       <label
                         className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                          domainSettings.resolver === 'gs1'
+                          localDomainSettings.resolver === 'gs1'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                             : 'hover:bg-muted/50'
                         }`}
@@ -704,8 +798,8 @@ export function QRGeneratorPage() {
                           type="radio"
                           name="resolver"
                           value="gs1"
-                          checked={domainSettings.resolver === 'gs1'}
-                          onChange={() => setDomainSettings({ ...domainSettings, resolver: 'gs1', useCustomDomain: false })}
+                          checked={localDomainSettings.resolver === 'gs1'}
+                          onChange={() => setLocalDomainSettings({ ...localDomainSettings, resolver: 'gs1', useCustomDomain: false })}
                           className="mt-1"
                         />
                         <div className="flex-1">
@@ -724,7 +818,7 @@ export function QRGeneratorPage() {
 
                       <label
                         className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                          domainSettings.resolver === 'local'
+                          localDomainSettings.resolver === 'local'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                             : 'hover:bg-muted/50'
                         }`}
@@ -733,8 +827,8 @@ export function QRGeneratorPage() {
                           type="radio"
                           name="resolver"
                           value="local"
-                          checked={domainSettings.resolver === 'local'}
-                          onChange={() => setDomainSettings({ ...domainSettings, resolver: 'local', useCustomDomain: false })}
+                          checked={localDomainSettings.resolver === 'local'}
+                          onChange={() => setLocalDomainSettings({ ...localDomainSettings, resolver: 'local', useCustomDomain: false })}
                           className="mt-1"
                         />
                         <div className="flex-1">
@@ -753,7 +847,7 @@ export function QRGeneratorPage() {
 
                       <label
                         className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                          domainSettings.resolver === 'custom'
+                          localDomainSettings.resolver === 'custom'
                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                             : 'hover:bg-muted/50'
                         }`}
@@ -762,8 +856,8 @@ export function QRGeneratorPage() {
                           type="radio"
                           name="resolver"
                           value="custom"
-                          checked={domainSettings.resolver === 'custom'}
-                          onChange={() => setDomainSettings({ ...domainSettings, resolver: 'custom', useCustomDomain: true })}
+                          checked={localDomainSettings.resolver === 'custom'}
+                          onChange={() => setLocalDomainSettings({ ...localDomainSettings, resolver: 'custom', useCustomDomain: true })}
                           className="mt-1"
                         />
                         <div className="flex-1">
@@ -780,52 +874,67 @@ export function QRGeneratorPage() {
                   </div>
 
                   {/* Custom Domain Einstellungen */}
-                  {domainSettings.resolver === 'custom' && (
+                  {localDomainSettings.resolver === 'custom' && (
                     <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                       <div className="space-y-2">
-                        <Label>Ihre Domain</Label>
+                        <Label>Ihre Domain *</Label>
                         <Input
                           placeholder="z.B. dpp.ihre-firma.de"
-                          value={domainSettings.customDomain}
-                          onChange={(e) => setDomainSettings({ ...domainSettings, customDomain: e.target.value })}
+                          value={localDomainSettings.customDomain}
+                          onChange={(e) => handleDomainChange(e.target.value)}
+                          className={domainError ? 'border-destructive' : ''}
                         />
+                        {domainError ? (
+                          <p className="text-xs text-destructive">{domainError}</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Nur die Domain ohne https:// eingeben
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
                         <Label>Pfad-Präfix (optional)</Label>
                         <Input
                           placeholder="z.B. products oder passport"
-                          value={domainSettings.pathPrefix}
-                          onChange={(e) => setDomainSettings({ ...domainSettings, pathPrefix: e.target.value })}
+                          value={localDomainSettings.pathPrefix}
+                          onChange={(e) => handlePathPrefixChange(e.target.value)}
+                          className={pathPrefixError ? 'border-destructive' : ''}
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Wird zwischen Domain und GS1-Pfad eingefügt
-                        </p>
+                        {pathPrefixError ? (
+                          <p className="text-xs text-destructive">{pathPrefixError}</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Wird zwischen Domain und GS1-Pfad eingefügt
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="useHttps"
-                          checked={domainSettings.useHTTPS}
+                          checked={localDomainSettings.useHTTPS}
                           onCheckedChange={(checked: boolean) =>
-                            setDomainSettings({ ...domainSettings, useHTTPS: checked })
+                            setLocalDomainSettings({ ...localDomainSettings, useHTTPS: checked })
                           }
                         />
                         <Label htmlFor="useHttps">HTTPS verwenden (empfohlen)</Label>
                       </div>
 
                       {/* Vorschau */}
-                      <div className="p-3 bg-background rounded border">
-                        <Label className="text-xs text-muted-foreground">URL-Vorschau:</Label>
-                        <p className="font-mono text-sm break-all mt-1">
-                          {generateDPPUrl(selectedProduct)}
-                        </p>
-                      </div>
+                      {selectedProduct && (
+                        <div className="p-3 bg-background rounded border">
+                          <Label className="text-xs text-muted-foreground">URL-Vorschau:</Label>
+                          <p className="font-mono text-sm break-all mt-1">
+                            {generateDPPUrl(selectedProduct)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* DNS-Einrichtung Anleitung */}
-                  {domainSettings.resolver === 'custom' && domainSettings.customDomain && (
+                  {localDomainSettings.resolver === 'custom' && localDomainSettings.customDomain && (
                     <Accordion type="single" collapsible>
                       <AccordionItem value="setup">
                         <AccordionTrigger>
@@ -842,7 +951,7 @@ export function QRGeneratorPage() {
                                 Erstellen Sie einen CNAME oder A-Record für Ihre Subdomain:
                               </p>
                               <code className="block mt-1 p-2 bg-muted rounded text-xs">
-                                {domainSettings.customDomain} CNAME your-dpp-server.com
+                                {localDomainSettings.customDomain} CNAME your-dpp-server.com
                               </code>
                             </div>
 
@@ -876,9 +985,19 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                   )}
 
                   {/* Speichern Button */}
-                  <Button onClick={saveDomainSettings} className="w-full">
-                    <Save className="mr-2 h-4 w-4" />
-                    Domain-Einstellungen speichern
+                  <Button
+                    onClick={saveDomainSettings}
+                    className="w-full"
+                    disabled={isSavingDomain || (localDomainSettings.resolver === 'custom' && !!domainError)}
+                  >
+                    {isSavingDomain ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : domainSaved ? (
+                      <Check className="mr-2 h-4 w-4 text-green-500" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    {domainSaved ? 'Gespeichert!' : 'Domain-Einstellungen speichern'}
                   </Button>
                 </div>
               </TabsContent>
@@ -962,6 +1081,8 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
 
       {/* Hidden Canvas für erweiterte QR-Code Generierung */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />

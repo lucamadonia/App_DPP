@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -18,7 +18,11 @@ import {
   ClipboardCheck,
   Calculator,
   Shield,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/contexts/BrandingContext';
+import { Button } from '@/components/ui/button';
 
 import {
   Sidebar,
@@ -139,6 +143,23 @@ const settingsNavItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { branding } = useBranding();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  const userEmail = user?.email || '';
+  const userName = user?.name || userEmail.split('@')[0] || 'Benutzer';
+  const userInitials = userName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   const isActive = (url: string) => {
     if (url === '/') return location.pathname === '/';
@@ -149,12 +170,20 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <FileText className="h-5 w-5" />
-          </div>
+          {branding.logo ? (
+            <img
+              src={branding.logo}
+              alt={branding.appName}
+              className="h-9 w-9 rounded-lg object-contain"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <FileText className="h-5 w-5" />
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-sidebar-foreground">
-              DPP Manager
+              {branding.appName}
             </span>
             <span className="text-xs text-sidebar-foreground/60">
               Digital Product Passport
@@ -266,20 +295,31 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              AD
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-sidebar-foreground">
-              Admin User
-            </span>
-            <span className="text-xs text-sidebar-foreground/60">
-              admin@company.de
-            </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {userName}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60 max-w-[140px] truncate">
+                {userEmail}
+              </span>
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSignOut}
+            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            title="Abmelden"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

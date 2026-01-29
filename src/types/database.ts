@@ -23,10 +23,37 @@ export interface Tenant {
   createdAt: string;
 }
 
+// ============================================
+// BRANDING SETTINGS (Tenant-Daten)
+// ============================================
+
+export interface BrandingSettings {
+  appName?: string;           // Ersetzt "DPP Manager"
+  primaryColor?: string;      // Hex-Code z.B. "#3B82F6"
+  logo?: string;              // URL zum Logo
+  favicon?: string;           // URL zum Favicon
+  poweredByText?: string;     // Footer-Text
+}
+
+// ============================================
+// QR-CODE DOMAIN SETTINGS (Tenant-Daten)
+// ============================================
+
+export interface QRCodeDomainSettings {
+  customDomain?: string;      // z.B. "dpp.meinefirma.de"
+  pathPrefix?: string;        // z.B. "/passport"
+  useHttps?: boolean;         // Default: true
+  resolver?: 'local' | 'gs1' | 'custom';
+  foregroundColor?: string;   // QR-Code Vordergrundfarbe
+  backgroundColor?: string;   // QR-Code Hintergrundfarbe
+}
+
 export interface TenantSettings {
   defaultLanguage?: string;
   qrCodeStyle?: 'standard' | 'branded';
   publicDomain?: string;
+  branding?: BrandingSettings;
+  qrCode?: QRCodeDomainSettings;
 }
 
 // ============================================
@@ -415,3 +442,7 @@ export interface CacheEntry<T> {
   timestamp: number;
   expiresAt: number;
 }
+
+// Re-export from product.ts for convenience (Material is defined locally, so we only export the others)
+export type { Product, CarbonFootprint, RecyclabilityInfo } from './product';
+export type { SupplyChainEntry as ProductSupplyChainEntry } from './product';

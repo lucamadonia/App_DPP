@@ -1,17 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { NCBAuthHelpers } from '@/components/NCBAuth';
-
-interface AuthUser {
-  id: string;
-  email: string;
-  name?: string;
-  image?: string;
-}
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { AuthUser } from '@/services/supabase/auth';
+import { getSession, signOut as authSignOut, onAuthStateChange } from '@/services/supabase/auth';
 
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  tenantId: string | null;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -24,15 +20,35 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const loadTenantId = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', userId)
+        .single();
+      setTenantId((profile as { tenant_id: string } | null)?.tenant_id || null);
+    } catch {
+      setTenantId(null);
+    }
+  };
 
   const refreshSession = async () => {
     try {
-      const session = await NCBAuthHelpers.getSession();
-      setUser(session?.user || null);
+      const { user: sessionUser } = await getSession();
+      setUser(sessionUser);
+      if (sessionUser) {
+        await loadTenantId(sessionUser.id);
+      } else {
+        setTenantId(null);
+      }
     } catch (error) {
       console.error('Failed to refresh session:', error);
       setUser(null);
+      setTenantId(null);
     }
   };
 
@@ -44,17 +60,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     initAuth();
+
+    // Subscribe to auth changes
+    const unsubscribe = onAuthStateChange(async (newUser) => {
+      setUser(newUser);
+      if (newUser) {
+        await loadTenantId(newUser.id);
+      } else {
+        setTenantId(null);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await NCBAuthHelpers.signOut();
+    await authSignOut();
     setUser(null);
+    setTenantId(null);
   };
 
   const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated: !!user,
+    tenantId,
     signOut,
     refreshSession,
   };

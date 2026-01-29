@@ -1,9 +1,16 @@
-import { useNavigate } from 'react-router-dom';
-import { NCBAuth } from '@/components/NCBAuth';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { SupabaseAuth } from '@/components/SupabaseAuth';
 import { Leaf } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Wenn bereits eingeloggt, zum Dashboard weiterleiten
+  if (!isLoading && isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleAuthSuccess = () => {
     // Nach erfolgreichem Login zum Dashboard navigieren
@@ -31,7 +38,7 @@ export function LoginPage() {
         </div>
 
         {/* Auth Component */}
-        <NCBAuth
+        <SupabaseAuth
           mode="signin"
           onAuthSuccess={handleAuthSuccess}
           onAuthError={handleAuthError}

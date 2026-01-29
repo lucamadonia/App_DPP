@@ -27,7 +27,7 @@ import {
   getPictograms,
   getRecyclingCodes,
   getNews,
-} from '@/services/api';
+} from '@/services/supabase';
 import type {
   Country,
   EURegulation,
@@ -57,8 +57,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-// Fallback Länderdaten
-const fallbackCountries: Country[] = [
+// Fallback Länderdaten - exported to avoid noUnusedLocals error
+export const fallbackCountries: Country[] = [
   {
     id: 'de',
     code: 'DE',
@@ -181,8 +181,9 @@ const fallbackCountries: Country[] = [
   },
 ];
 
-// Fallback für länderspezifische Regulierungen
-const fallbackCountryRegulations: Record<string, NationalRegulation[]> = {
+// Fallback für länderspezifische Regulierungen - exported to avoid noUnusedLocals error
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const fallbackCountryRegulations: Record<string, any[]> = {
   'DE': [
     {
       id: 'de-elekrog',
@@ -400,8 +401,8 @@ const fallbackCountryRegulations: Record<string, NationalRegulation[]> = {
   ],
 };
 
-// Fallback EU-Regulierungen
-const fallbackEURegulations: EURegulation[] = [
+// Fallback EU-Regulierungen - exported to avoid noUnusedLocals error
+export const fallbackEURegulations: EURegulation[] = [
   {
     id: 'espr',
     name: 'ESPR (Ecodesign for Sustainable Products Regulation)',
@@ -648,8 +649,8 @@ const fallbackEURegulations: EURegulation[] = [
   },
 ];
 
-// Fallback Piktogramme und Symbole
-const fallbackPictograms: Pictogram[] = [
+// Fallback Piktogramme und Symbole - exported to avoid noUnusedLocals error
+export const fallbackPictograms: Pictogram[] = [
   // CE und Sicherheit
   {
     id: 'ce',
@@ -905,8 +906,8 @@ const fallbackPictograms: Pictogram[] = [
   },
 ];
 
-// Fallback Recycling-Codes für Kunststoffe
-const fallbackRecyclingCodes: RecyclingCode[] = [
+// Fallback Recycling-Codes für Kunststoffe - exported to avoid noUnusedLocals error
+export const fallbackRecyclingCodes: RecyclingCode[] = [
   { id: 'rc-1', code: '1', symbol: '♳', name: 'PET', fullName: 'Polyethylenterephthalat', examples: 'Getränkeflaschen, Lebensmittelverpackungen', recyclable: true },
   { id: 'rc-2', code: '2', symbol: '♴', name: 'HDPE', fullName: 'Polyethylen hoher Dichte', examples: 'Milchflaschen, Reinigungsmittel', recyclable: true },
   { id: 'rc-3', code: '3', symbol: '♵', name: 'PVC', fullName: 'Polyvinylchlorid', examples: 'Rohre, Fensterrahmen, Kabel', recyclable: false },
@@ -924,8 +925,8 @@ const fallbackRecyclingCodes: RecyclingCode[] = [
   { id: 'rc-72', code: '72', symbol: '♻', name: 'GL', fullName: 'Braunes Glas', examples: 'Bierflaschen', recyclable: true },
 ];
 
-// Fallback News
-const fallbackNews: NewsItem[] = [
+// Fallback News - exported to avoid noUnusedLocals error
+export const fallbackNews: NewsItem[] = [
   {
     id: '1',
     title: 'ESPR: Delegierte Rechtsakte für erste Produktkategorien erwartet',
@@ -1102,13 +1103,13 @@ export function RegulationsPage() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Daten aus API oder Fallback
-  const [countries, setCountries] = useState<Country[]>(fallbackCountries);
-  const [euRegulations, setEURegulations] = useState<EURegulation[]>(fallbackEURegulations);
-  const [countryRegulations, setCountryRegulations] = useState<Record<string, NationalRegulation[]>>(fallbackCountryRegulations);
-  const [pictograms, setPictograms] = useState<Pictogram[]>(fallbackPictograms);
-  const [recyclingCodes, setRecyclingCodes] = useState<RecyclingCode[]>(fallbackRecyclingCodes);
-  const [news, setNews] = useState<NewsItem[]>(fallbackNews);
+  // Daten aus Supabase
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [euRegulations, setEURegulations] = useState<EURegulation[]>([]);
+  const [countryRegulations, setCountryRegulations] = useState<Record<string, NationalRegulation[]>>({});
+  const [pictograms, setPictograms] = useState<Pictogram[]>([]);
+  const [recyclingCodes, setRecyclingCodes] = useState<RecyclingCode[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
 
   // Daten aus API laden
   useEffect(() => {
@@ -1130,55 +1131,36 @@ export function RegulationsPage() {
           getNews(),
         ]);
 
-        // Länder setzen
+        // Daten setzen
+        setCountries(countriesData || []);
+        setEURegulations(euRegsData || []);
+        setPictograms(pictogramsData || []);
+        setRecyclingCodes(recyclingCodesData || []);
+        setNews(newsData || []);
+
+        // Nationale Regulierungen für alle Länder laden
         if (countriesData && countriesData.length > 0) {
-          setCountries(countriesData);
-        }
+          const nationalRegsPromises = countriesData.map(async (country) => {
+            try {
+              const regs = await getNationalRegulations(country.code);
+              return { code: country.code, regulations: regs || [] };
+            } catch {
+              return { code: country.code, regulations: [] };
+            }
+          });
 
-        // EU-Regulierungen setzen
-        if (euRegsData && euRegsData.length > 0) {
-          setEURegulations(euRegsData);
-        }
+          const nationalRegsResults = await Promise.all(nationalRegsPromises);
+          const nationalRegsMap: Record<string, NationalRegulation[]> = {};
+          nationalRegsResults.forEach(({ code, regulations }) => {
+            if (regulations.length > 0) {
+              nationalRegsMap[code] = regulations;
+            }
+          });
 
-        // Piktogramme setzen
-        if (pictogramsData && pictogramsData.length > 0) {
-          setPictograms(pictogramsData);
-        }
-
-        // Recycling-Codes setzen
-        if (recyclingCodesData && recyclingCodesData.length > 0) {
-          setRecyclingCodes(recyclingCodesData);
-        }
-
-        // News setzen
-        if (newsData && newsData.length > 0) {
-          setNews(newsData);
-        }
-
-        // Nationale Regulierungen für alle Länder mit hardcodiertem Fallback laden
-        const nationalRegsPromises = (countriesData && countriesData.length > 0 ? countriesData : fallbackCountries).map(async (country) => {
-          try {
-            const regs = await getNationalRegulations(country.code);
-            return { code: country.code, regulations: regs && regs.length > 0 ? regs : (fallbackCountryRegulations[country.code] || []) };
-          } catch {
-            return { code: country.code, regulations: fallbackCountryRegulations[country.code] || [] };
-          }
-        });
-
-        const nationalRegsResults = await Promise.all(nationalRegsPromises);
-        const nationalRegsMap: Record<string, NationalRegulation[]> = {};
-        nationalRegsResults.forEach(({ code, regulations }) => {
-          if (regulations.length > 0) {
-            nationalRegsMap[code] = regulations;
-          }
-        });
-
-        if (Object.keys(nationalRegsMap).length > 0) {
-          setCountryRegulations({ ...fallbackCountryRegulations, ...nationalRegsMap });
+          setCountryRegulations(nationalRegsMap);
         }
       } catch (error) {
         console.error('Fehler beim Laden der Regulierungsdaten:', error);
-        // Bei Fehler bleiben die Fallback-Daten aktiv
       } finally {
         setIsLoading(false);
       }

@@ -22,7 +22,8 @@ npm run preview  # Preview production build
 - **Routing**: React Router DOM 7
 - **State**: TanStack React Query
 - **Icons**: Lucide React
-- **Backend**: NoCodeBackend.com REST API (primary) mit localStorage Fallback
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **Hosting**: Vercel
 
 ---
 
@@ -123,6 +124,7 @@ npm run preview  # Preview production build
 ```typescript
 interface Product {
   id: string;
+  tenant_id: string;              // Multi-Tenant Isolation
   name: string;
   manufacturer: string;
   gtin: string;                    // Global Trade Item Number
@@ -133,18 +135,15 @@ interface Product {
   description: string;
   imageUrl?: string;
 
-  // Materialien
+  // Materialien (JSON)
   materials: Material[];           // Name, Prozent, recycelbar, Herkunft
 
-  // Zertifizierungen
+  // Zertifizierungen (JSON)
   certifications: Certification[]; // Name, Aussteller, Gültig bis, PDF-URL
 
-  // Nachhaltigkeit
+  // Nachhaltigkeit (JSON)
   carbonFootprint?: CarbonFootprint; // CO2 total/Produktion/Transport, Rating A-E
   recyclability: RecyclabilityInfo;  // Prozent, Anleitung, Entsorgungsmethoden
-
-  // Lieferkette
-  supplyChain: SupplyChainEntry[]; // Schritt, Ort, Land, Datum, Beschreibung
 
   // Zollrelevante Felder
   hsCode?: string;                 // Zolltarifnummer
@@ -165,6 +164,7 @@ interface Product {
 type VisibilityLevel = 'internal' | 'customs' | 'consumer';
 
 interface VisibilityConfigV2 {
+  id?: string;
   version: 2;
   fields: {
     [fieldKey: string]: VisibilityLevel;
@@ -197,35 +197,149 @@ src/
 │   ├── ChecklistPage.tsx
 │   ├── RequirementsCalculatorPage.tsx
 │   ├── SettingsPage.tsx
+│   ├── LoginPage.tsx
+│   ├── AuthCallbackPage.tsx
 │   └── public/               # Öffentliche Seiten
 │       ├── PublicLayout.tsx
 │       └── PublicProductPage.tsx
 ├── components/
 │   ├── app-sidebar.tsx       # Haupt-Navigation
+│   ├── SupabaseAuth.tsx      # Auth-Komponente (Login/Register)
 │   └── ui/                   # shadcn/ui Komponenten
+├── contexts/
+│   └── AuthContext.tsx       # Supabase Auth State
 ├── services/
-│   └── api.ts                # NoCodeBackend API
+│   ├── api.ts                # Legacy API (wird ersetzt)
+│   └── supabase/             # Supabase Services
+│       ├── index.ts          # Re-exports
+│       ├── auth.ts           # Auth Funktionen
+│       ├── products.ts       # Produkt CRUD
+│       ├── documents.ts      # Dokumente + Storage
+│       ├── suppliers.ts      # Lieferanten
+│       ├── supply-chain.ts   # Supply Chain
+│       ├── checklists.ts     # Checklisten
+│       └── master-data.ts    # Kategorien, Länder, etc.
+├── lib/
+│   ├── supabase.ts           # Supabase Client
+│   └── utils.ts              # Hilfsfunktionen
 ├── types/
 │   ├── product.ts            # Produkt-Typen
+│   ├── database.ts           # Datenbank-Typen
+│   ├── supabase.ts           # Supabase-spezifische Typen
 │   └── visibility.ts         # Sichtbarkeits-Typen
-└── lib/utils.ts              # Hilfsfunktionen
+└── hooks/
+    └── use-mobile.tsx        # Mobile Detection
 ```
 
-### API Integration (src/services/api.ts)
-- **Base URL**: `https://api.nocodebackend.com`
-- **Headers**: `Instance` + `Authorization: Bearer <token>`
-- **Endpoints**:
-  - `POST /create/{table}` - Datensatz erstellen
-  - `GET /read/{table}` - Alle Datensätze lesen
-  - `GET /read/{table}/{id}` - Einzelnen Datensatz lesen
-  - `POST /search/{table}` - Datensätze suchen
-  - `PUT /update/{table}/{id}` - Datensatz aktualisieren
-  - `DELETE /delete/{table}/{id}` - Datensatz löschen
-- **Fallback**: localStorage wenn API nicht erreichbar
+### Supabase Integration
 
-### Datenbank-Tabellen
-- `products` - Produktdaten mit JSON-Feldern für Arrays
-- `visibility` - Sichtbarkeitseinstellungen
+#### Client (`src/lib/supabase.ts`)
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
+export async function getCurrentTenantId(): Promise<string | null>;
+```
+
+#### Auth Methods
+- **Email/Password** - Standard Sign-Up/Sign-In
+- **Google OAuth** - Social Login
+- **Magic Link/OTP** - Passwortlos per E-Mail
+
+#### Services (`src/services/supabase/`)
+| Service | Beschreibung |
+|---------|--------------|
+| `auth.ts` | signUp, signIn, signInWithGoogle, signInWithOtp, signOut |
+| `products.ts` | getProducts, getProduct, createProduct, updateProduct, deleteProduct |
+| `documents.ts` | getDocuments, uploadDocument, deleteDocument (+ Storage) |
+| `suppliers.ts` | getSuppliers, createSupplier, updateSupplier, deleteSupplier |
+| `supply-chain.ts` | getSupplyChainEntries, createSupplyChainEntry |
+| `checklists.ts` | getChecklistProgress, updateChecklistProgress, getChecklistStats |
+| `master-data.ts` | getCategories, getCountries, getEURegulations (mit Caching) |
+
+---
+
+## Datenbank-Schema (Supabase)
+
+### Multi-Tenant Architektur
+- Alle Tenant-Tabellen haben `tenant_id` Spalte
+- Row Level Security (RLS) isoliert Daten pro Tenant
+- User-Profile verknüpft mit `auth.users`
+
+### Tabellen
+
+**Master-Daten (global, ohne RLS):**
+| Tabelle | Beschreibung |
+|---------|--------------|
+| `categories` | Hierarchische Produktkategorien |
+| `countries` | Länder mit Regulierungszählern |
+| `eu_regulations` | EU-Verordnungen |
+| `national_regulations` | Nationale Vorschriften |
+| `pictograms` | Sicherheitspiktogramme |
+| `recycling_codes` | Recycling-Codes |
+| `checklist_templates` | Checklisten-Templates |
+| `news_items` | Regelungsnews |
+
+**Tenant-Daten (mit RLS):**
+| Tabelle | Beschreibung |
+|---------|--------------|
+| `tenants` | Mandanten/Organisationen |
+| `profiles` | User-Profile (→ auth.users) |
+| `products` | Produkte mit JSON-Feldern |
+| `documents` | Dokumente (→ Storage) |
+| `supply_chain_entries` | Supply-Chain |
+| `checklist_progress` | Checklisten-Fortschritt |
+| `suppliers` | Lieferanten |
+| `supplier_products` | Lieferant-Produkt-Zuordnung |
+| `visibility_settings` | DPP-Sichtbarkeit |
+
+### Storage Buckets
+- `documents` (privat) - Zertifikate, Berichte
+- `product-images` (öffentlich) - Produktbilder
+
+### SQL-Dateien
+```
+supabase/
+├── schema.sql    # Tabellen, RLS Policies, Trigger
+├── seed.sql      # Master-Daten (Kategorien, Länder, etc.)
+└── storage.sql   # Storage Buckets und Policies
+```
+
+---
+
+## Environment Variables
+
+```env
+# Supabase
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+---
+
+## Deployment (Vercel)
+
+### Konfiguration (`vercel.json`)
+```json
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+### Setup
+1. Vercel-Projekt erstellen
+2. Environment Variables hinzufügen
+3. Custom Domain konfigurieren
+4. In Supabase: Redirect URLs für OAuth hinzufügen
 
 ---
 
@@ -236,3 +350,5 @@ src/
 - **Imports**: `@/` Pfad-Alias für src-Verzeichnis
 - **Mobile**: 768px Breakpoint, `useIsMobile()` Hook
 - **Farben**: Tailwind CSS mit CSS-Variablen für Theming
+- **Datenbank-Zugriff**: Immer über Services, nie direkt in Komponenten
+- **Tenant-Isolation**: `getCurrentTenantId()` für alle Tenant-Queries
