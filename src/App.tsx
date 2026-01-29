@@ -28,6 +28,7 @@ import { PublicLayout } from '@/pages/public/PublicLayout';
 import { PublicProductPage } from '@/pages/public/PublicProductPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { SupplyChainPage } from '@/pages/SupplyChainPage';
 import { SuppliersPage } from '@/pages/SuppliersPage';
@@ -101,6 +102,7 @@ function App() {
         {/* Login & Auth */}
         <Route path="login" element={<LoginPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
+        <Route path="auth/reset-password" element={<ResetPasswordPage />} />
 
         {/* Öffentliche Seiten ohne Sidebar */}
         <Route element={<PublicLayout />}>

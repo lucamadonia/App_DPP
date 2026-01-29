@@ -87,6 +87,11 @@ const mainNavItems = [
     badge: 'Phase 2',
   },
   {
+    title: 'Lieferanten',
+    url: '/suppliers',
+    icon: Users,
+  },
+  {
     title: 'Compliance',
     icon: ShieldCheck,
     items: [

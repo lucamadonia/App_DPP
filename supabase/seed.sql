@@ -132,25 +132,13 @@ INSERT INTO national_regulations (country_code, name, description, category, man
 ON CONFLICT DO NOTHING;
 
 -- ============================================
--- CHECKLIST TEMPLATES (Beispiele)
+-- CHECKLIST TEMPLATES
 -- ============================================
-
-INSERT INTO checklist_templates (country_code, category_key, title, description, mandatory, category, priority, document_required, sort_order) VALUES
--- Deutschland - Elektronik
-('DE', 'electronics', 'CE-Kennzeichnung', 'Prüfen Sie, ob das CE-Zeichen korrekt angebracht ist.', true, 'Sicherheit & CE-Konformität', 'critical', true, 1),
-('DE', 'electronics', 'WEEE-Registrierung', 'Registrierung bei der Stiftung EAR für Elektro-Altgeräte.', true, 'Recycling & Entsorgung', 'critical', true, 2),
-('DE', 'electronics', 'RoHS-Konformität', 'Nachweis der Beschränkung gefährlicher Stoffe.', true, 'Chemikalien', 'high', true, 3),
-('DE', 'electronics', 'Energielabel', 'EU-Energieeffizienzlabel anbringen (falls zutreffend).', true, 'Kennzeichnung', 'high', false, 4),
-
--- Deutschland - Textilien
-('DE', 'textiles', 'Textilkennzeichnung', 'Materialzusammensetzung nach EU-Verordnung angeben.', true, 'Kennzeichnung', 'high', false, 1),
-('DE', 'textiles', 'REACH-Konformität', 'Prüfung auf SVHC-Stoffe und Grenzwerte.', true, 'Chemikalien', 'high', true, 2),
-('DE', 'textiles', 'Pflegesymbole', 'Korrekte Wasch- und Pflegesymbole anbringen.', true, 'Kennzeichnung', 'medium', false, 3),
-
--- Frankreich - Elektronik
-('FR', 'electronics', 'Reparierbarkeitsindex', 'Reparierbarkeitsindex berechnen und anzeigen.', true, 'Kennzeichnung', 'critical', true, 1),
-('FR', 'electronics', 'Triman-Symbol', 'Triman-Recycling-Symbol auf Verpackung.', true, 'Recycling & Entsorgung', 'high', false, 2)
-ON CONFLICT DO NOTHING;
+-- Umfassende Checklisten-Daten befinden sich in:
+-- supabase/seed-checklist-templates.sql
+-- (291 Einträge für 10 Kategorien × 6 Länder mit vollständig befüllten Feldern)
+-- Zum Laden ausführen: \i seed-checklist-templates.sql
+-- Oder über das Migration-Script: node scripts/seed-checklist-templates.mjs
 
 -- ============================================
 -- NEWS (Beispiele)

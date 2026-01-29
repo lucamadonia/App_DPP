@@ -77,26 +77,61 @@ interface ChecklistItem {
 
 
 const categoryIcons: Record<string, React.ElementType> = {
+  // Compliance-Gruppierung 1: Produktsicherheit & CE
+  'Produktsicherheit & CE-Konformität': Shield,
   'Sicherheit & CE-Konformität': Shield,
   'Sicherheit': Shield,
+  'CE-Konformität': Shield,
+  'Allgemeine Produktsicherheit': Shield,
+  'Maschinensicherheit': Shield,
+  'Spielzeugsicherheit': Shield,
+  'Lebensmittelsicherheit': Shield,
+  // Compliance-Gruppierung 2: Umwelt & Nachhaltigkeit
+  'Umwelt & Nachhaltigkeit': Recycle,
+  'Nachhaltigkeit': Recycle,
+  'Recycling': Recycle,
+  'Recycling & Entsorgung': Recycle,
+  'Rücknahme & Verwertung': Recycle,
+  'Kreislaufwirtschaft': Recycle,
   'Elektrogerätegesetz (ElektroG)': Recycle,
+  // Compliance-Gruppierung 3: Chemikalien & Inhaltsstoffe
+  'Chemikalien & Inhaltsstoffe': FlaskConical,
   'RoHS (Stoffbeschränkungen)': FlaskConical,
   'REACH (Chemikalien)': FlaskConical,
-  'Batterien (BattG)': Zap,
-  'Verpackung (VerpackG)': Package,
-  'Energiekennzeichnung': Zap,
-  'Dokumentation & Anleitungen': BookOpen,
-  'Produktidentifikation': Tag,
-  'Produktkennzeichnung': Tag,
   'Chemikalien (REACH)': FlaskConical,
-  'Nachhaltigkeit': Recycle,
-  'EU-Batterieverordnung': Zap,
-  'Registrierung Deutschland': FileText,
+  'Chemikalien': FlaskConical,
+  'Inhaltsstoffe & Sicherheit': FlaskConical,
+  'Stoffbeschränkungen': FlaskConical,
+  // Compliance-Gruppierung 4: Kennzeichnung & Verpackung
+  'Kennzeichnung & Verpackung': Tag,
   'Kennzeichnung': Tag,
-  'Rücknahme & Verwertung': Recycle,
-  'Digitaler Produktpass': Globe,
-  'Recycling': Recycle,
+  'Produktkennzeichnung': Tag,
+  'Produktidentifikation': Tag,
+  'Textilkennzeichnung': Tag,
+  'Lebensmittelkennzeichnung': Tag,
+  'Energiekennzeichnung': Zap,
+  'Verpackung (VerpackG)': Package,
+  'Verpackung': Package,
+  'Verpackungskonformität': Package,
+  // Compliance-Gruppierung 5: Dokumentation & Rückverfolgbarkeit
+  'Dokumentation & Rückverfolgbarkeit': BookOpen,
+  'Dokumentation & Anleitungen': BookOpen,
+  'Dokumentation': BookOpen,
+  'Rückverfolgbarkeit': BookOpen,
+  'Registrierung Deutschland': FileText,
+  'Registrierung': FileText,
+  // Compliance-Gruppierung 6: Soziale Verantwortung & Lieferkette
+  'Soziale Verantwortung & Lieferkette': Factory,
+  'Lieferketten-Sorgfaltspflicht': Factory,
   'REP (Herstellerverantwortung)': Factory,
+  'Herstellerverantwortung': Factory,
+  // Compliance-Gruppierung 7: Digitaler Produktpass
+  'Digitaler Produktpass': Globe,
+  'DPP': Globe,
+  // Spezifische Kategorien
+  'Batterien (BattG)': Zap,
+  'EU-Batterieverordnung': Zap,
+  'Batterie-Compliance': Zap,
 };
 
 const priorityColors: Record<string, string> = {
@@ -316,6 +351,11 @@ export function ChecklistPage() {
                   { id: 'batteries', name: 'Batterien', icon: '🔋' },
                   { id: 'furniture', name: 'Möbel', icon: '🛋️' },
                   { id: 'toys', name: 'Spielzeug', icon: '🧸' },
+                  { id: 'packaging', name: 'Verpackungen', icon: '📦' },
+                  { id: 'cosmetics', name: 'Kosmetik', icon: '💄' },
+                  { id: 'food', name: 'Lebensmittel', icon: '🍎' },
+                  { id: 'construction', name: 'Baumaterialien', icon: '🧱' },
+                  { id: 'machinery', name: 'Maschinen', icon: '⚙️' },
                 ].map((cat) => (
                   <Button
                     key={cat.id}

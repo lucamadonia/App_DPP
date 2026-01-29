@@ -9,6 +9,7 @@ import {
   signUpWithEmail,
   signInWithGoogle,
   sendMagicLink,
+  sendPasswordReset,
   verifyOtp,
   signOut,
   type AuthUser,
@@ -32,7 +33,8 @@ interface SupabaseAuthProps {
 
 export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: SupabaseAuthProps) {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState<'signin' | 'signup' | 'otp'>(mode);
+  const [currentView, setCurrentView] = useState<'signin' | 'signup' | 'otp' | 'forgot'>(mode);
+  const [resetSent, setResetSent] = useState(false);
   const [error, setError] = useState('');
 
   // Form state
@@ -149,6 +151,26 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
     }
   };
 
+  const handleSendPasswordReset = async () => {
+    setFormLoading(true);
+    setError('');
+
+    try {
+      const { error: authError } = await sendPasswordReset(email);
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      setResetSent(true);
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
   };
@@ -181,14 +203,16 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle>
-          {currentView === 'signin' ? 'Anmelden' : currentView === 'signup' ? 'Konto erstellen' : 'Mit OTP anmelden'}
+          {currentView === 'signin' ? 'Anmelden' : currentView === 'signup' ? 'Konto erstellen' : currentView === 'forgot' ? 'Passwort vergessen' : 'Mit OTP anmelden'}
         </CardTitle>
         <CardDescription>
           {currentView === 'signin'
             ? 'Melden Sie sich bei Ihrem DPP Manager-Konto an'
             : currentView === 'signup'
               ? 'Erstellen Sie ein neues Konto'
-              : 'Erhalten Sie einen Einmalcode per E-Mail'}
+              : currentView === 'forgot'
+                ? 'Setzen Sie Ihr Passwort zurück'
+                : 'Erhalten Sie einen Einmalcode per E-Mail'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -198,8 +222,54 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
           </div>
         )}
 
-        {/* OTP Flow - Exclusive View */}
-        {currentView === 'otp' ? (
+        {/* Forgot Password Flow */}
+        {currentView === 'forgot' ? (
+          <div className="space-y-4">
+            {!resetSent ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">E-Mail</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="ihre@email.de"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleSendPasswordReset} disabled={formLoading} className="w-full">
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sende...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Link zum Zurücksetzen senden
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">
+                Eine E-Mail zum Zurücksetzen des Passworts wurde an <strong>{email}</strong> gesendet. Bitte prüfen Sie Ihren Posteingang.
+              </p>
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => { setResetSent(false); setCurrentView('signin'); }}
+              className="w-full"
+            >
+              Zurück zur Anmeldung
+            </Button>
+          </div>
+        ) : /* OTP Flow - Exclusive View */
+        currentView === 'otp' ? (
           <div className="space-y-4">
             {!otpSent ? (
               <>
@@ -344,6 +414,18 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     required
                   />
                 </div>
+                {currentView === 'signin' && (
+                  <div className="text-right">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => setCurrentView('forgot')}
+                    >
+                      Passwort vergessen?
+                    </Button>
+                  </div>
+                )}
               </div>
               <Button type="submit" disabled={formLoading} className="w-full">
                 {formLoading ? (

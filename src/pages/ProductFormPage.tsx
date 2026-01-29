@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronsUpDown,
   Package,
   Leaf,
   ShieldCheck,
@@ -24,6 +25,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 
 const SUPPLIER_ROLES = [
   { value: 'manufacturer', label: 'Hersteller' },
@@ -51,6 +55,7 @@ export function ProductFormPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
+  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
 
   // Lieferanten-State
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -327,19 +332,54 @@ export function ProductFormPage() {
               {selectedMainCategory && selectedSubcategories.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Unterkategorie</label>
-                  <Select
-                    value={formData.category.includes(' / ') ? formData.category.split(' / ')[1] : ''}
-                    onValueChange={handleSubcategoryChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Unterkategorie wählen..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedSubcategories.map((sub) => (
-                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        role="combobox"
+                        aria-expanded={subcategoryOpen}
+                        className={cn(
+                          "border-input data-[placeholder]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] h-9",
+                          !formData.category.includes(' / ') && "text-muted-foreground"
+                        )}
+                      >
+                        {formData.category.includes(' / ')
+                          ? formData.category.split(' / ')[1]
+                          : 'Unterkategorie suchen...'}
+                        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Unterkategorie suchen..." />
+                        <CommandList>
+                          <CommandEmpty>Keine Unterkategorie gefunden.</CommandEmpty>
+                          <CommandGroup>
+                            {selectedSubcategories.map((sub) => (
+                              <CommandItem
+                                key={sub}
+                                value={sub}
+                                onSelect={() => {
+                                  handleSubcategoryChange(sub);
+                                  setSubcategoryOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.category === `${selectedMainCategory} / ${sub}`
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {sub}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               )}
               <div className="space-y-2 md:col-span-2">
