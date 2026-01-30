@@ -38,17 +38,17 @@ interface AuditLogEntry {
 
 const statusConfig = {
   compliant: {
-    label: 'Konform',
+    label: 'Compliant',
     icon: CheckCircle2,
     className: 'bg-success/10 text-success',
   },
   pending: {
-    label: 'Ausstehend',
+    label: 'Pending',
     icon: Clock,
     className: 'bg-warning/10 text-warning',
   },
   'non-compliant': {
-    label: 'Nicht konform',
+    label: 'Non-Compliant',
     icon: XCircle,
     className: 'bg-destructive/10 text-destructive',
   },
@@ -87,7 +87,7 @@ export function CompliancePage() {
         items.push({
           id: `${product.id}-ce`,
           product: product.name,
-          requirement: 'CE-Kennzeichnung',
+          requirement: 'CE Marking',
           status: 'compliant',
           dueDate: null,
           lastChecked: new Date().toISOString().split('T')[0],
@@ -95,7 +95,7 @@ export function CompliancePage() {
         items.push({
           id: `${product.id}-reach`,
           product: product.name,
-          requirement: 'REACH Verordnung',
+          requirement: 'REACH Regulation',
           status: index === 0 ? 'compliant' : 'pending',
           dueDate: index === 0 ? null : '2026-02-15',
           lastChecked: index === 0 ? new Date().toISOString().split('T')[0] : null,
@@ -107,11 +107,11 @@ export function CompliancePage() {
       // Generate basic audit log
       const log: AuditLogEntry[] = productsData.slice(0, 4).map((product, index) => ({
         id: `audit-${index}`,
-        action: index === 0 ? 'Dokument hochgeladen' : index === 1 ? 'Status geändert' : 'Produkt aktualisiert',
+        action: index === 0 ? 'Document uploaded' : index === 1 ? 'Status changed' : 'Product updated',
         user: 'admin@company.de',
         product: product.name,
         timestamp: new Date(Date.now() - index * 86400000).toISOString().replace('T', ' ').substring(0, 19),
-        details: index === 0 ? 'CE_Konformitaetserklarung.pdf' : 'Compliance-Status aktualisiert',
+        details: index === 0 ? 'CE_Declaration_of_Conformity.pdf' : 'Compliance status updated',
       }));
 
       setAuditLog(log);
@@ -146,17 +146,17 @@ export function CompliancePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Compliance & Audit</h1>
           <p className="text-muted-foreground">
-            Prüfprotokolle und Konformitätsübersicht
+            Audit protocols and compliance overview
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Report exportieren
+            Export Report
           </Button>
           <Button>
             <FileText className="mr-2 h-4 w-4" />
@@ -170,7 +170,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Konformitätsrate
+              Compliance Rate
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -183,7 +183,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Konform
+              Compliant
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -193,7 +193,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ausstehend
+              Pending
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -203,7 +203,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Nicht konform
+              Non-Compliant
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -217,11 +217,11 @@ export function CompliancePage() {
         <TabsList>
           <TabsTrigger value="checklist">
             <ShieldCheck className="mr-2 h-4 w-4" />
-            Prüfprotokoll
+            Audit Protocol
           </TabsTrigger>
           <TabsTrigger value="audit">
             <FileText className="mr-2 h-4 w-4" />
-            Audit-Log
+            Audit Log
           </TabsTrigger>
         </TabsList>
 
@@ -229,12 +229,12 @@ export function CompliancePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Konformitätsprüfung</CardTitle>
+                <CardTitle>Compliance Check</CardTitle>
                 <div className="flex gap-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Suchen..."
+                      placeholder="Search..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 w-64"
@@ -252,8 +252,8 @@ export function CompliancePage() {
                   <ShieldCheck className="mx-auto h-12 w-12 opacity-30 mb-2" />
                   <p>
                     {complianceItems.length === 0
-                      ? 'Keine Compliance-Daten vorhanden. Erstellen Sie zunächst Produkte.'
-                      : 'Keine Einträge entsprechen Ihrer Suche.'}
+                      ? 'No compliance data available. Please create products first.'
+                      : 'No entries match your search.'}
                   </p>
                 </div>
               ) : (
@@ -279,9 +279,9 @@ export function CompliancePage() {
                         <div className="flex items-center gap-4">
                           {item.dueDate && (
                             <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Fällig</p>
+                              <p className="text-sm text-muted-foreground">Due</p>
                               <p className="font-medium">
-                                {new Date(item.dueDate).toLocaleDateString('de-DE')}
+                                {new Date(item.dueDate).toLocaleDateString('en-US')}
                               </p>
                             </div>
                           )}
@@ -301,16 +301,16 @@ export function CompliancePage() {
         <TabsContent value="audit" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Audit-Log</CardTitle>
+              <CardTitle>Audit Log</CardTitle>
               <CardDescription>
-                Vollständige Protokollierung aller Änderungen
+                Complete log of all changes
               </CardDescription>
             </CardHeader>
             <CardContent>
               {auditLog.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>Keine Audit-Einträge vorhanden.</p>
+                  <p>No audit entries available.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -333,7 +333,7 @@ export function CompliancePage() {
                           {entry.product} · {entry.details}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          von {entry.user}
+                          by {entry.user}
                         </p>
                       </div>
                     </div>

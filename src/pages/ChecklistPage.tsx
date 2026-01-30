@@ -77,61 +77,61 @@ interface ChecklistItem {
 
 
 const categoryIcons: Record<string, React.ElementType> = {
-  // Compliance-Gruppierung 1: Produktsicherheit & CE
-  'Produktsicherheit & CE-Konformität': Shield,
-  'Sicherheit & CE-Konformität': Shield,
-  'Sicherheit': Shield,
-  'CE-Konformität': Shield,
-  'Allgemeine Produktsicherheit': Shield,
-  'Maschinensicherheit': Shield,
-  'Spielzeugsicherheit': Shield,
-  'Lebensmittelsicherheit': Shield,
-  // Compliance-Gruppierung 2: Umwelt & Nachhaltigkeit
-  'Umwelt & Nachhaltigkeit': Recycle,
-  'Nachhaltigkeit': Recycle,
+  // Compliance group 1: Product Safety & CE
+  'Product Safety & CE Conformity': Shield,
+  'Safety & CE Conformity': Shield,
+  'Safety': Shield,
+  'CE Conformity': Shield,
+  'General Product Safety': Shield,
+  'Machine Safety': Shield,
+  'Toy Safety': Shield,
+  'Food Safety': Shield,
+  // Compliance group 2: Environment & Sustainability
+  'Environment & Sustainability': Recycle,
+  'Sustainability': Recycle,
   'Recycling': Recycle,
-  'Recycling & Entsorgung': Recycle,
-  'Rücknahme & Verwertung': Recycle,
-  'Kreislaufwirtschaft': Recycle,
-  'Elektrogerätegesetz (ElektroG)': Recycle,
-  // Compliance-Gruppierung 3: Chemikalien & Inhaltsstoffe
-  'Chemikalien & Inhaltsstoffe': FlaskConical,
-  'RoHS (Stoffbeschränkungen)': FlaskConical,
-  'REACH (Chemikalien)': FlaskConical,
-  'Chemikalien (REACH)': FlaskConical,
-  'Chemikalien': FlaskConical,
-  'Inhaltsstoffe & Sicherheit': FlaskConical,
-  'Stoffbeschränkungen': FlaskConical,
-  // Compliance-Gruppierung 4: Kennzeichnung & Verpackung
-  'Kennzeichnung & Verpackung': Tag,
-  'Kennzeichnung': Tag,
-  'Produktkennzeichnung': Tag,
-  'Produktidentifikation': Tag,
-  'Textilkennzeichnung': Tag,
-  'Lebensmittelkennzeichnung': Tag,
-  'Energiekennzeichnung': Zap,
-  'Verpackung (VerpackG)': Package,
-  'Verpackung': Package,
-  'Verpackungskonformität': Package,
-  // Compliance-Gruppierung 5: Dokumentation & Rückverfolgbarkeit
-  'Dokumentation & Rückverfolgbarkeit': BookOpen,
-  'Dokumentation & Anleitungen': BookOpen,
-  'Dokumentation': BookOpen,
-  'Rückverfolgbarkeit': BookOpen,
-  'Registrierung Deutschland': FileText,
-  'Registrierung': FileText,
-  // Compliance-Gruppierung 6: Soziale Verantwortung & Lieferkette
-  'Soziale Verantwortung & Lieferkette': Factory,
-  'Lieferketten-Sorgfaltspflicht': Factory,
-  'REP (Herstellerverantwortung)': Factory,
-  'Herstellerverantwortung': Factory,
-  // Compliance-Gruppierung 7: Digitaler Produktpass
-  'Digitaler Produktpass': Globe,
+  'Recycling & Disposal': Recycle,
+  'Take-back & Recovery': Recycle,
+  'Circular Economy': Recycle,
+  'Electrical Equipment Act (ElektroG)': Recycle,
+  // Compliance group 3: Chemicals & Ingredients
+  'Chemicals & Ingredients': FlaskConical,
+  'RoHS (Substance Restrictions)': FlaskConical,
+  'REACH (Chemicals)': FlaskConical,
+  'Chemicals (REACH)': FlaskConical,
+  'Chemicals': FlaskConical,
+  'Ingredients & Safety': FlaskConical,
+  'Substance Restrictions': FlaskConical,
+  // Compliance group 4: Labeling & Packaging
+  'Labeling & Packaging': Tag,
+  'Labeling': Tag,
+  'Product Labeling': Tag,
+  'Product Identification': Tag,
+  'Textile Labeling': Tag,
+  'Food Labeling': Tag,
+  'Energy Labeling': Zap,
+  'Packaging (VerpackG)': Package,
+  'Packaging': Package,
+  'Packaging Compliance': Package,
+  // Compliance group 5: Documentation & Traceability
+  'Documentation & Traceability': BookOpen,
+  'Documentation & Manuals': BookOpen,
+  'Documentation': BookOpen,
+  'Traceability': BookOpen,
+  'Registration Germany': FileText,
+  'Registration': FileText,
+  // Compliance group 6: Social Responsibility & Supply Chain
+  'Social Responsibility & Supply Chain': Factory,
+  'Supply Chain Due Diligence': Factory,
+  'EPR (Producer Responsibility)': Factory,
+  'Producer Responsibility': Factory,
+  // Compliance group 7: Digital Product Passport
+  'Digital Product Passport': Globe,
   'DPP': Globe,
-  // Spezifische Kategorien
-  'Batterien (BattG)': Zap,
-  'EU-Batterieverordnung': Zap,
-  'Batterie-Compliance': Zap,
+  // Specific categories
+  'Batteries (BattG)': Zap,
+  'EU Battery Regulation': Zap,
+  'Battery Compliance': Zap,
 };
 
 const priorityColors: Record<string, string> = {
@@ -163,7 +163,7 @@ export function ChecklistPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [, setIsSaving] = useState(false);
 
-  // Checklisten-Daten aus Supabase
+  // Checklist data from Supabase
   const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>({});
   const [, setProgressData] = useState<Record<string, ChecklistProgress>>({});
 
@@ -172,17 +172,17 @@ export function ChecklistPage() {
 
   const [itemStates, setItemStates] = useState<Record<string, ChecklistItem['status']>>({});
 
-  // Daten aus Supabase laden
+  // Load data from Supabase
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
 
       try {
-        // Checklisten-Templates laden
+        // Load checklist templates
         const templates = await getChecklistTemplates(selectedCountry, selectedCategory);
 
         if (templates && templates.length > 0) {
-          // Templates in ChecklistItem-Format umwandeln
+          // Transform templates into ChecklistItem format
           const items: ChecklistItem[] = templates.map(t => ({
             id: t.id,
             title: t.title,
@@ -211,7 +211,7 @@ export function ChecklistPage() {
           }));
         }
 
-        // Progress laden
+        // Load progress
         const progress = await getChecklistProgress();
         if (progress && progress.length > 0) {
           const progressMap: Record<string, ChecklistProgress> = {};
@@ -226,7 +226,7 @@ export function ChecklistPage() {
           setItemStates(prev => ({ ...prev, ...statesMap }));
         }
       } catch (error) {
-        console.error('Fehler beim Laden der Checklisten-Daten:', error);
+        console.error('Error loading checklist data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -242,10 +242,10 @@ export function ChecklistPage() {
     const currentIndex = statusOrder.indexOf(currentStatus);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
 
-    // Optimistisches Update
+    // Optimistic update
     setItemStates(prev => ({ ...prev, [id]: nextStatus }));
 
-    // In API speichern
+    // Save to API
     setIsSaving(true);
     try {
       await updateChecklistProgress(id, {
@@ -253,8 +253,8 @@ export function ChecklistPage() {
         checked: nextStatus === 'completed',
       });
     } catch (error) {
-      console.error('Fehler beim Speichern des Progress:', error);
-      // Bei Fehler Status zurücksetzen
+      console.error('Error saving progress:', error);
+      // Revert status on error
       setItemStates(prev => ({ ...prev, [id]: currentStatus }));
     } finally {
       setIsSaving(false);
@@ -281,7 +281,7 @@ export function ChecklistPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Lade Checklisten-Daten...</p>
+          <p className="text-muted-foreground">Loading checklist data...</p>
         </div>
       </div>
     );
@@ -291,17 +291,17 @@ export function ChecklistPage() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Compliance Checkliste</h1>
+            <h1 className="text-2xl font-bold text-foreground">Compliance Checklist</h1>
             <p className="text-muted-foreground">
-              Umfassende, interaktive Checkliste für länderspezifische Anforderungen
+              Comprehensive, interactive checklist for country-specific requirements
             </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline">
               <Printer className="mr-2 h-4 w-4" />
-              Drucken
+              Print
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
@@ -310,21 +310,21 @@ export function ChecklistPage() {
           </div>
         </div>
 
-        {/* Auswahl */}
+        {/* Selection */}
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Land auswählen</CardTitle>
+              <CardTitle className="text-base">Select Country</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { code: 'DE', name: 'Deutschland', flag: '🇩🇪' },
-                  { code: 'FR', name: 'Frankreich', flag: '🇫🇷' },
-                  { code: 'AT', name: 'Österreich', flag: '🇦🇹' },
-                  { code: 'IT', name: 'Italien', flag: '🇮🇹' },
-                  { code: 'ES', name: 'Spanien', flag: '🇪🇸' },
-                  { code: 'NL', name: 'Niederlande', flag: '🇳🇱' },
+                  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+                  { code: 'FR', name: 'France', flag: '🇫🇷' },
+                  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
+                  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+                  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+                  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
                 ].map((country) => (
                   <Button
                     key={country.code}
@@ -341,21 +341,21 @@ export function ChecklistPage() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Produktkategorie</CardTitle>
+              <CardTitle className="text-base">Product Category</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { id: 'electronics', name: 'Elektronik', icon: '💻' },
-                  { id: 'textiles', name: 'Textilien', icon: '👕' },
-                  { id: 'batteries', name: 'Batterien', icon: '🔋' },
-                  { id: 'furniture', name: 'Möbel', icon: '🛋️' },
-                  { id: 'toys', name: 'Spielzeug', icon: '🧸' },
-                  { id: 'packaging', name: 'Verpackungen', icon: '📦' },
-                  { id: 'cosmetics', name: 'Kosmetik', icon: '💄' },
-                  { id: 'food', name: 'Lebensmittel', icon: '🍎' },
-                  { id: 'construction', name: 'Baumaterialien', icon: '🧱' },
-                  { id: 'machinery', name: 'Maschinen', icon: '⚙️' },
+                  { id: 'electronics', name: 'Electronics', icon: '💻' },
+                  { id: 'textiles', name: 'Textiles', icon: '👕' },
+                  { id: 'batteries', name: 'Batteries', icon: '🔋' },
+                  { id: 'furniture', name: 'Furniture', icon: '🛋️' },
+                  { id: 'toys', name: 'Toys', icon: '🧸' },
+                  { id: 'packaging', name: 'Packaging', icon: '📦' },
+                  { id: 'cosmetics', name: 'Cosmetics', icon: '💄' },
+                  { id: 'food', name: 'Food', icon: '🍎' },
+                  { id: 'construction', name: 'Construction Materials', icon: '🧱' },
+                  { id: 'machinery', name: 'Machinery', icon: '⚙️' },
                 ].map((cat) => (
                   <Button
                     key={cat.id}
@@ -377,10 +377,10 @@ export function ChecklistPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
-                {criticalItems.length} kritische Punkte offen
+                {criticalItems.length} critical items open
               </CardTitle>
               <CardDescription>
-                Diese Punkte haben höchste Priorität und können zu Vertriebsverboten führen
+                These items have the highest priority and may lead to sales bans
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -393,7 +393,7 @@ export function ChecklistPage() {
                 ))}
                 {criticalItems.length > 3 && (
                   <p className="text-sm text-muted-foreground">
-                    + {criticalItems.length - 3} weitere kritische Punkte
+                    + {criticalItems.length - 3} more critical items
                   </p>
                 )}
               </div>
@@ -407,22 +407,22 @@ export function ChecklistPage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
-                <span className="font-medium">Compliance-Fortschritt</span>
+                <span className="font-medium">Compliance Progress</span>
               </div>
               <span className="font-bold text-lg">{progress}%</span>
             </div>
             <Progress value={progress} className="h-3" />
             <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
-              <span>{completedMandatory.length} von {mandatoryItems.length} Pflichtpunkten erledigt</span>
+              <span>{completedMandatory.length} of {mandatoryItems.length} mandatory items completed</span>
               {progress === 100 ? (
                 <Badge className="bg-success text-success-foreground">
                   <CheckCircle2 className="mr-1 h-3 w-3" />
-                  Vollständig
+                  Complete
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-warning border-warning">
                   <AlertTriangle className="mr-1 h-3 w-3" />
-                  Unvollständig
+                  Incomplete
                 </Badge>
               )}
             </div>
@@ -434,7 +434,7 @@ export function ChecklistPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Checkliste durchsuchen..."
+              placeholder="Search checklist..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -445,24 +445,24 @@ export function ChecklistPage() {
             onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
           >
             <Filter className="mr-2 h-4 w-4" />
-            Nur offene Punkte
+            Open items only
           </Button>
         </div>
 
-        {/* Keine Daten Hinweis */}
+        {/* No data notice */}
         {checklist.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Keine Checkliste verfügbar</h3>
+              <h3 className="text-lg font-medium mb-2">No checklist available</h3>
               <p className="text-muted-foreground">
-                Für diese Land/Kategorie-Kombination ist noch keine detaillierte Checkliste verfügbar.
+                No detailed checklist is available yet for this country/category combination.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Checkliste nach Kategorien */}
+        {/* Checklist by categories */}
         <div className="space-y-4">
           {categories.map((category) => {
             const categoryItems = filteredChecklist.filter(i => i.category === category);
@@ -525,18 +525,18 @@ export function ChecklistPage() {
                                         </p>
                                         {item.mandatory && (
                                           <Badge variant="destructive" className="text-xs">
-                                            Pflicht
+                                            Required
                                           </Badge>
                                         )}
                                         <Badge className={`text-xs ${priorityColors[item.priority]}`}>
-                                          {item.priority === 'critical' ? 'Kritisch' :
-                                           item.priority === 'high' ? 'Hoch' :
-                                           item.priority === 'medium' ? 'Mittel' : 'Niedrig'}
+                                          {item.priority === 'critical' ? 'Critical' :
+                                           item.priority === 'high' ? 'High' :
+                                           item.priority === 'medium' ? 'Medium' : 'Low'}
                                         </Badge>
                                         {item.documentRequired && (
                                           <Badge variant="outline" className="text-xs">
                                             <FileText className="mr-1 h-3 w-3" />
-                                            Dokument
+                                            Document
                                           </Badge>
                                         )}
                                         {item.deadline && (
@@ -553,11 +553,11 @@ export function ChecklistPage() {
                                   </AccordionTrigger>
                                   <AccordionContent>
                                     <div className="mt-4 space-y-4 border-t pt-4">
-                                      {/* Detaillierte Beschreibung */}
+                                      {/* Detailed description */}
                                       <div>
                                         <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                                           <Info className="h-4 w-4" />
-                                          Detaillierte Beschreibung
+                                          Detailed Description
                                         </h4>
                                         <p className="text-sm text-muted-foreground">
                                           {item.detailedDescription}
@@ -568,25 +568,25 @@ export function ChecklistPage() {
                                       <div className="grid gap-4 md:grid-cols-2">
                                         {item.legalBasis && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Rechtsgrundlage</h5>
+                                            <h5 className="text-sm font-medium mb-1">Legal Basis</h5>
                                             <p className="text-sm text-muted-foreground">{item.legalBasis}</p>
                                           </div>
                                         )}
                                         {item.authority && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Zuständige Behörde</h5>
+                                            <h5 className="text-sm font-medium mb-1">Responsible Authority</h5>
                                             <p className="text-sm text-muted-foreground">{item.authority}</p>
                                           </div>
                                         )}
                                         {item.penalties && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Sanktionen</h5>
+                                            <h5 className="text-sm font-medium mb-1">Penalties</h5>
                                             <p className="text-sm text-destructive">{item.penalties}</p>
                                           </div>
                                         )}
                                         {item.documentTypes && item.documentTypes.length > 0 && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Erforderliche Dokumente</h5>
+                                            <h5 className="text-sm font-medium mb-1">Required Documents</h5>
                                             <div className="flex flex-wrap gap-1">
                                               {item.documentTypes.map(doc => (
                                                 <Badge key={doc} variant="outline" className="text-xs">
@@ -603,7 +603,7 @@ export function ChecklistPage() {
                                         <div>
                                           <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
                                             <HelpCircle className="h-4 w-4" />
-                                            Tipps zur Umsetzung
+                                            Implementation Tips
                                           </h5>
                                           <ul className="space-y-1">
                                             {item.tips.map((tip, idx) => (
@@ -619,7 +619,7 @@ export function ChecklistPage() {
                                       {/* Applicable Products */}
                                       {item.applicableProducts && item.applicableProducts.length > 0 && (
                                         <div>
-                                          <h5 className="text-sm font-medium mb-2">Betroffene Produkte</h5>
+                                          <h5 className="text-sm font-medium mb-2">Affected Products</h5>
                                           <div className="flex flex-wrap gap-1">
                                             {item.applicableProducts.map(product => (
                                               <Badge key={product} variant="secondary" className="text-xs">
@@ -633,7 +633,7 @@ export function ChecklistPage() {
                                       {/* Links */}
                                       {item.links && item.links.length > 0 && (
                                         <div>
-                                          <h5 className="text-sm font-medium mb-2">Weiterführende Links</h5>
+                                          <h5 className="text-sm font-medium mb-2">Related Links</h5>
                                           <div className="flex flex-wrap gap-2">
                                             {item.links.map(link => (
                                               <Button key={link.url} variant="outline" size="sm" asChild>

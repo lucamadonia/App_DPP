@@ -61,23 +61,23 @@ import {
 
 const statusConfig = {
   valid: {
-    label: 'Gültig',
+    label: 'Valid',
     icon: CheckCircle2,
     className: 'bg-success/10 text-success border-success',
   },
   expiring: {
-    label: 'Läuft bald ab',
+    label: 'Expiring soon',
     icon: AlertTriangle,
     className: 'bg-warning/10 text-warning border-warning',
   },
   expired: {
-    label: 'Abgelaufen',
+    label: 'Expired',
     icon: Clock,
     className: 'bg-destructive/10 text-destructive border-destructive',
   },
 };
 
-const documentCategories = ['Konformität', 'Zertifikat', 'Bericht', 'Datenblatt', 'Testbericht'] as const;
+const documentCategories = ['Conformity', 'Certificate', 'Report', 'Datasheet', 'Test Report'] as const;
 
 export function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,14 +89,14 @@ export function DocumentsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Neues Dokument Formular
+  // New document form
   const [newDoc, setNewDoc] = useState({
     name: '',
-    category: 'Konformität' as Document['category'],
+    category: 'Conformity' as Document['category'],
     validUntil: '',
   });
 
-  // Dokumente aus Supabase laden
+  // Load documents from Supabase
   useEffect(() => {
     async function loadDocuments() {
       setIsLoading(true);
@@ -120,7 +120,7 @@ export function DocumentsPage() {
     expired: documents.filter((d) => d.status === 'expired').length,
   };
 
-  // Datei auswählen
+  // Select file
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) {
@@ -131,14 +131,14 @@ export function DocumentsPage() {
     }
   }
 
-  // Dokument erstellen / hochladen
+  // Create / upload document
   async function handleCreateDocument() {
     if (!newDoc.name) return;
 
     setIsUploading(true);
 
     if (selectedFile) {
-      // Upload mit Datei
+      // Upload with file
       const result = await uploadDocument(selectedFile, {
         name: newDoc.name,
         category: newDoc.category,
@@ -149,11 +149,11 @@ export function DocumentsPage() {
         const updatedDocs = await getDocuments();
         setDocuments(updatedDocs);
         setIsUploadDialogOpen(false);
-        setNewDoc({ name: '', category: 'Konformität', validUntil: '' });
+        setNewDoc({ name: '', category: 'Conformity', validUntil: '' });
         setSelectedFile(null);
       }
     } else {
-      // Nur Metadaten (ohne Datei)
+      // Metadata only (no file)
       const result = await createDocument({
         name: newDoc.name,
         type: newDoc.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'other',
@@ -166,7 +166,7 @@ export function DocumentsPage() {
         const updatedDocs = await getDocuments();
         setDocuments(updatedDocs);
         setIsUploadDialogOpen(false);
-        setNewDoc({ name: '', category: 'Konformität', validUntil: '' });
+        setNewDoc({ name: '', category: 'Conformity', validUntil: '' });
         setSelectedFile(null);
       }
     }
@@ -174,7 +174,7 @@ export function DocumentsPage() {
     setIsUploading(false);
   }
 
-  // Dokument löschen
+  // Delete document
   async function handleDeleteDocument(id: string) {
     setIsDeleting(id);
     const result = await deleteDocumentService(id);
@@ -189,16 +189,16 @@ export function DocumentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dokumente & Zertifikate</h1>
+          <h1 className="text-2xl font-bold text-foreground">Documents & Certificates</h1>
           <p className="text-muted-foreground">
-            Verwalten Sie alle Dokumente zu Ihren Produkten
+            Manage all documents for your products
           </p>
         </div>
         <Button onClick={() => setIsUploadDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Dokument hinzufügen
+          Add Document
         </Button>
       </div>
 
@@ -207,7 +207,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Gesamt
+              Total
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -217,7 +217,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Gültig
+              Valid
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -227,7 +227,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Läuft bald ab
+              Expiring Soon
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -237,7 +237,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Abgelaufen
+              Expired
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -255,8 +255,8 @@ export function DocumentsPage() {
           >
             <div className="text-center">
               <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium">Dateien hierher ziehen</p>
-              <p className="text-xs text-muted-foreground">oder klicken zum Auswählen</p>
+              <p className="mt-2 text-sm font-medium">Drag files here</p>
+              <p className="text-xs text-muted-foreground">or click to select</p>
             </div>
           </div>
         </CardContent>
@@ -269,7 +269,7 @@ export function DocumentsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Suche nach Dokument oder Kategorie..."
+                placeholder="Search by document or category..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -281,7 +281,7 @@ export function DocumentsPage() {
             </Button>
             <Button variant="outline">
               <Calendar className="mr-2 h-4 w-4" />
-              Gültigkeits-Tracker
+              Validity Tracker
             </Button>
           </div>
         </CardContent>
@@ -301,12 +301,12 @@ export function DocumentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Dokument</TableHead>
-                  <TableHead>Kategorie</TableHead>
-                  <TableHead>Hochgeladen</TableHead>
-                  <TableHead>Gültig bis</TableHead>
+                  <TableHead>Document</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Uploaded</TableHead>
+                  <TableHead>Valid Until</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Größe</TableHead>
+                  <TableHead>Size</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -331,11 +331,11 @@ export function DocumentsPage() {
                         <Badge variant="outline">{doc.category}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('de-DE') : '-'}
+                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-US') : '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {doc.validUntil
-                          ? new Date(doc.validUntil).toLocaleDateString('de-DE')
+                          ? new Date(doc.validUntil).toLocaleDateString('en-US')
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -355,11 +355,11 @@ export function DocumentsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>
                               <Eye className="mr-2 h-4 w-4" />
-                              Vorschau
+                              Preview
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Download className="mr-2 h-4 w-4" />
-                              Herunterladen
+                              Download
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -372,7 +372,7 @@ export function DocumentsPage() {
                               ) : (
                                 <Trash2 className="mr-2 h-4 w-4" />
                               )}
-                              Löschen
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -391,14 +391,14 @@ export function DocumentsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium">Keine Dokumente gefunden</h3>
+            <h3 className="text-lg font-medium">No documents found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery ? 'Versuchen Sie einen anderen Suchbegriff' : 'Laden Sie Ihr erstes Dokument hoch'}
+              {searchQuery ? 'Try a different search term' : 'Upload your first document'}
             </p>
             {!searchQuery && (
               <Button onClick={() => setIsUploadDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Dokument hinzufügen
+                Add Document
               </Button>
             )}
           </CardContent>
@@ -409,15 +409,15 @@ export function DocumentsPage() {
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Dokument hinzufügen</DialogTitle>
+            <DialogTitle>Add Document</DialogTitle>
             <DialogDescription>
-              Fügen Sie ein neues Dokument zu Ihrem Produktportfolio hinzu.
+              Add a new document to your product portfolio.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Datei auswählen</Label>
+              <Label>Select File</Label>
               <Input
                 ref={fileInputRef}
                 type="file"
@@ -432,17 +432,17 @@ export function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-name">Dokumentname</Label>
+              <Label htmlFor="doc-name">Document Name</Label>
               <Input
                 id="doc-name"
-                placeholder="z.B. CE_Konformitaetserklarung.pdf"
+                placeholder="e.g. CE_Declaration_of_Conformity.pdf"
                 value={newDoc.name}
                 onChange={(e) => setNewDoc({ ...newDoc, name: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-category">Kategorie</Label>
+              <Label htmlFor="doc-category">Category</Label>
               <Select
                 value={newDoc.category}
                 onValueChange={(value) => setNewDoc({ ...newDoc, category: value as Document['category'] })}
@@ -461,7 +461,7 @@ export function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-valid">Gültig bis (optional)</Label>
+              <Label htmlFor="doc-valid">Valid Until (optional)</Label>
               <Input
                 id="doc-valid"
                 type="date"
@@ -473,7 +473,7 @@ export function DocumentsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setSelectedFile(null); }}>
-              Abbrechen
+              Cancel
             </Button>
             <Button onClick={handleCreateDocument} disabled={!newDoc.name || isUploading}>
               {isUploading ? (
@@ -481,7 +481,7 @@ export function DocumentsPage() {
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              {isUploading ? 'Wird hochgeladen...' : selectedFile ? 'Hochladen' : 'Hinzufügen'}
+              {isUploading ? 'Uploading...' : selectedFile ? 'Upload' : 'Add'}
             </Button>
           </DialogFooter>
         </DialogContent>

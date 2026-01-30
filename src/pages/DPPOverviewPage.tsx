@@ -44,17 +44,17 @@ interface DPPItem extends Omit<ProductListItem, 'status'> {
 
 const statusConfig = {
   live: {
-    label: 'Veröffentlicht',
+    label: 'Published',
     icon: CheckCircle2,
     className: 'bg-success text-success-foreground',
   },
   draft: {
-    label: 'Entwurf',
+    label: 'Draft',
     icon: Clock,
     className: '',
   },
   archived: {
-    label: 'Archiviert',
+    label: 'Archived',
     icon: Archive,
     className: 'bg-muted text-muted-foreground',
   },
@@ -114,11 +114,11 @@ export function DPPOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Digital Product Passports</h1>
           <p className="text-muted-foreground">
-            Übersicht aller DPPs und deren Status
+            Overview of all DPPs and their status
           </p>
         </div>
         <div className="flex gap-2">
@@ -130,7 +130,7 @@ export function DPPOverviewPage() {
           </Button>
           <Button asChild>
             <Link to="/products/new">
-              Neuen DPP erstellen
+              Create New DPP
             </Link>
           </Button>
         </div>
@@ -141,7 +141,7 @@ export function DPPOverviewPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Gesamt
+              Total
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -151,7 +151,7 @@ export function DPPOverviewPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Veröffentlicht
+              Published
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -161,7 +161,7 @@ export function DPPOverviewPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Entwürfe
+              Drafts
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -171,7 +171,7 @@ export function DPPOverviewPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Aufrufe gesamt
+              Total Views
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -187,7 +187,7 @@ export function DPPOverviewPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Suche nach Produkt oder GTIN..."
+                placeholder="Search by product or GTIN..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -207,7 +207,7 @@ export function DPPOverviewPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setStatusFilter(null)}>
-                  Alle Status
+                  All Statuses
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {Object.entries(statusConfig).map(([key, config]) => (
@@ -232,15 +232,15 @@ export function DPPOverviewPage() {
           {filteredDpps.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium">Keine DPPs gefunden</h3>
+              <h3 className="text-lg font-medium">No DPPs found</h3>
               <p className="text-muted-foreground mt-1">
                 {dpps.length === 0
-                  ? 'Erstellen Sie Ihr erstes Produkt, um einen DPP zu generieren.'
-                  : 'Keine Produkte entsprechen Ihren Suchkriterien.'}
+                  ? 'Create your first product to generate a DPP.'
+                  : 'No products match your search criteria.'}
               </p>
               {dpps.length === 0 && (
                 <Button className="mt-4" asChild>
-                  <Link to="/products/new">Erstes Produkt erstellen</Link>
+                  <Link to="/products/new">Create First Product</Link>
                 </Button>
               )}
             </div>
@@ -248,12 +248,12 @@ export function DPPOverviewPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produkt</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>GTIN</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Erstellt am</TableHead>
-                  <TableHead>Aufrufe</TableHead>
-                  <TableHead>Letzter Zugriff</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Views</TableHead>
+                  <TableHead>Last Accessed</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -273,7 +273,7 @@ export function DPPOverviewPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(dpp.createdAt).toLocaleDateString('de-DE')}
+                        {new Date(dpp.createdAt).toLocaleDateString('en-US')}
                       </TableCell>
                       <TableCell>{dpp.views.toLocaleString()}</TableCell>
                       <TableCell className="text-muted-foreground">
@@ -306,7 +306,7 @@ export function DPPOverviewPage() {
                                 rel="noopener noreferrer"
                               >
                                 <ExternalLink className="mr-2 h-4 w-4" />
-                                Öffentliche Ansicht
+                                Public View
                               </a>
                             </DropdownMenuItem>
                           </DropdownMenuContent>

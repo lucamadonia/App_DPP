@@ -45,7 +45,7 @@ import { getProducts, type ProductListItem } from '@/services/supabase';
 import { useBranding } from '@/contexts/BrandingContext';
 import { validateDomain, validatePathPrefix, normalizeDomain } from '@/lib/domain-utils';
 
-// QR-Code Einstellungen Interface (local state only for visual settings)
+// QR Code Settings Interface (local state only for visual settings)
 interface QRSettings {
   size: number;
   errorCorrection: 'L' | 'M' | 'Q' | 'H';
@@ -85,6 +85,7 @@ export function QRGeneratorPage() {
   const [copied, setCopied] = useState(false);
   const [copiedField, setCopiedField] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrCustomsDataUrl, setQrCustomsDataUrl] = useState('');
   const [isSavingDomain, setIsSavingDomain] = useState(false);
   const [domainSaved, setDomainSaved] = useState(false);
   const [domainError, setDomainError] = useState<string | null>(null);
@@ -144,14 +145,14 @@ export function QRGeneratorPage() {
     localStorage.setItem('dpp-qr-settings', JSON.stringify(qrSettings));
   }, [qrSettings]);
 
-  // Generiere die DPP-URL basierend auf den Einstellungen
+  // Generate the DPP URL based on settings
   const generateDPPUrl = (product: ProductListItem, forCustoms = false) => {
     const protocol = localDomainSettings.useHTTPS ? 'https' : 'http';
-    const customsParam = forCustoms ? '?view=zoll' : '';
+    const customsSuffix = forCustoms ? '/customs' : '';
 
-    // Lokale öffentliche Seiten
+    // Local public pages
     if (localDomainSettings.resolver === 'local') {
-      return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsParam}`;
+      return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsSuffix}`;
     }
 
     if (localDomainSettings.resolver === 'gs1') {
@@ -161,20 +162,21 @@ export function QRGeneratorPage() {
     if (localDomainSettings.useCustomDomain && localDomainSettings.customDomain) {
       const domain = localDomainSettings.customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
       const prefix = localDomainSettings.pathPrefix ? `/${localDomainSettings.pathPrefix.replace(/^\/|\/$/g, '')}` : '';
-      return `${protocol}://${domain}${prefix}/p/${product.gtin}/${product.serial}${customsParam}`;
+      return `${protocol}://${domain}${prefix}/p/${product.gtin}/${product.serial}${customsSuffix}`;
     }
 
-    return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsParam}`;
+    return `${window.location.origin}/p/${product.gtin}/${product.serial}${customsSuffix}`;
   };
 
-  // Lokale Vorschau-URL
+  // Local preview URLs
   const localPreviewUrl = selectedProduct ? `${window.location.origin}/p/${selectedProduct.gtin}/${selectedProduct.serial}` : '';
-  const localCustomsUrl = selectedProduct ? `${localPreviewUrl}?view=zoll` : '';
+  const localCustomsUrl = selectedProduct ? `${localPreviewUrl}/customs` : '';
 
   const dppUrl = selectedProduct ? generateDPPUrl(selectedProduct) : '';
+  const dppCustomsUrl = selectedProduct ? generateDPPUrl(selectedProduct, true) : '';
   const gs1Url = selectedProduct ? `https://id.gs1.org/01/${selectedProduct.gtin}/21/${selectedProduct.serial}` : '';
 
-  // Generiere QR-Code
+  // Generate QR Codes (customer + customs)
   useEffect(() => {
     if (!dppUrl) return;
 
@@ -193,7 +195,11 @@ export function QRGeneratorPage() {
         const url = await QRCode.toDataURL(dppUrl, options);
         setQrDataUrl(url);
 
-        // Auch auf Canvas zeichnen für erweiterte Funktionen
+        // Generate customs QR code
+        const customsUrl = await QRCode.toDataURL(dppCustomsUrl, options);
+        setQrCustomsDataUrl(customsUrl);
+
+        // Also draw on canvas for advanced features
         if (canvasRef.current) {
           await QRCode.toCanvas(canvasRef.current, dppUrl, options);
         }
@@ -203,9 +209,9 @@ export function QRGeneratorPage() {
     };
 
     generateQR();
-  }, [dppUrl, qrSettings, localDomainSettings.foregroundColor, localDomainSettings.backgroundColor]);
+  }, [dppUrl, dppCustomsUrl, qrSettings, localDomainSettings.foregroundColor, localDomainSettings.backgroundColor]);
 
-  // Kopieren-Funktion
+  // Copy function
   const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -216,18 +222,21 @@ export function QRGeneratorPage() {
     }, 2000);
   };
 
-  // Download-Funktionen
-  const downloadQR = async (format: 'png' | 'svg' | 'pdf') => {
+  // Download functions
+  const downloadQR = async (format: 'png' | 'svg' | 'pdf', forCustoms = false) => {
     if (!selectedProduct) return;
-    const filename = `qr-${selectedProduct.gtin}-${selectedProduct.serial}`;
+    const suffix = forCustoms ? '-customs' : '-customer';
+    const filename = `qr-${selectedProduct.gtin}-${selectedProduct.serial}${suffix}`;
+    const targetUrl = forCustoms ? dppCustomsUrl : dppUrl;
+    const targetDataUrl = forCustoms ? qrCustomsDataUrl : qrDataUrl;
 
     if (format === 'png') {
       const link = document.createElement('a');
       link.download = `${filename}.png`;
-      link.href = qrDataUrl;
+      link.href = targetDataUrl;
       link.click();
     } else if (format === 'svg') {
-      const svgString = await QRCode.toString(dppUrl, {
+      const svgString = await QRCode.toString(targetUrl, {
         type: 'svg',
         width: qrSettings.size,
         margin: qrSettings.margin,
@@ -246,41 +255,53 @@ export function QRGeneratorPage() {
     }
   };
 
-  // Batch-Download
+  // Batch download (both customer + customs per product)
   const downloadBatch = async () => {
     const productsToExport = selectedProducts.length > 0
       ? products.filter(p => selectedProducts.includes(p.id))
       : products;
 
     for (const product of productsToExport) {
-      const url = generateDPPUrl(product);
-      const dataUrl = await QRCode.toDataURL(url, {
+      const qrOptions = {
         width: qrSettings.size,
         margin: qrSettings.margin,
         color: {
           dark: localDomainSettings.foregroundColor || '#000000',
           light: localDomainSettings.backgroundColor || '#FFFFFF',
         },
-      });
+      };
 
-      const link = document.createElement('a');
-      link.download = `qr-${product.gtin}-${product.serial}.png`;
-      link.href = dataUrl;
-      link.click();
+      // Customer QR
+      const customerUrl = generateDPPUrl(product);
+      const customerDataUrl = await QRCode.toDataURL(customerUrl, qrOptions);
+      const link1 = document.createElement('a');
+      link1.download = `qr-${product.gtin}-${product.serial}-customer.png`;
+      link1.href = customerDataUrl;
+      link1.click();
 
-      // Kleine Verzögerung zwischen Downloads
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Customs QR
+      const customsUrl = generateDPPUrl(product, true);
+      const customsDataUrl = await QRCode.toDataURL(customsUrl, qrOptions);
+      const link2 = document.createElement('a');
+      link2.download = `qr-${product.gtin}-${product.serial}-customs.png`;
+      link2.href = customsDataUrl;
+      link2.click();
+
+      // Small delay between downloads
       await new Promise(resolve => setTimeout(resolve, 200));
     }
   };
 
-  // Produkte filtern
+  // Filter products
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.gtin.includes(searchTerm) ||
     p.serial.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Toggle Produkt-Auswahl für Batch
+  // Toggle product selection for batch
   const toggleProductSelection = (productId: string) => {
     setSelectedProducts(prev =>
       prev.includes(productId)
@@ -294,7 +315,6 @@ export function QRGeneratorPage() {
     const normalized = normalizeDomain(value);
     setLocalDomainSettings({ ...localDomainSettings, customDomain: normalized });
 
-    // Only validate if user has entered something
     if (normalized) {
       const validation = validateDomain(normalized);
       setDomainError(validation.isValid ? null : validation.errorMessage || null);
@@ -315,20 +335,19 @@ export function QRGeneratorPage() {
     }
   };
 
-  // Einstellungen in Datenbank speichern
+  // Save settings to database
   const saveDomainSettings = async () => {
-    // Validate before saving
     if (localDomainSettings.resolver === 'custom') {
       const domainValidation = validateDomain(localDomainSettings.customDomain);
       if (!domainValidation.isValid) {
-        setDomainError(domainValidation.errorMessage || 'Ungültige Domain');
+        setDomainError(domainValidation.errorMessage || 'Invalid domain');
         return;
       }
 
       if (localDomainSettings.pathPrefix) {
         const prefixValidation = validatePathPrefix(localDomainSettings.pathPrefix);
         if (!prefixValidation.isValid) {
-          setPathPrefixError(prefixValidation.errorMessage || 'Ungültiger Pfad');
+          setPathPrefixError(prefixValidation.errorMessage || 'Invalid path');
           return;
         }
       }
@@ -350,7 +369,7 @@ export function QRGeneratorPage() {
       setDomainSaved(true);
       setTimeout(() => setDomainSaved(false), 2000);
     } else {
-      alert('Fehler beim Speichern der Einstellungen');
+      alert('Error saving settings');
     }
 
     setIsSavingDomain(false);
@@ -367,17 +386,17 @@ export function QRGeneratorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">QR-Code Generator</h1>
+          <h1 className="text-2xl font-bold text-foreground">QR Code Generator</h1>
           <p className="text-muted-foreground">
-            Erstellen Sie QR-Codes für Ihre Digital Product Passports mit Ihrer eigenen Domain
+            Create QR codes for your Digital Product Passports with your own domain
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setActiveTab('domain')}>
             <Globe className="mr-2 h-4 w-4" />
-            Domain-Einstellungen
+            Domain Settings
           </Button>
         </div>
       </div>
@@ -386,27 +405,27 @@ export function QRGeneratorPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium">Keine Produkte vorhanden</h3>
+            <h3 className="text-lg font-medium">No products available</h3>
             <p className="text-muted-foreground mt-1">
-              Erstellen Sie zuerst Produkte, um QR-Codes zu generieren.
+              Create products first to generate QR codes.
             </p>
           </CardContent>
         </Card>
       ) : (
       <>
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Produkt-Auswahl */}
+        {/* Product Selection */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Produkt auswählen</span>
+              <span>Select Product</span>
               <Badge variant="secondary">{filteredProducts.length}</Badge>
             </CardTitle>
-            <CardDescription>Wählen Sie ein Produkt für den QR-Code</CardDescription>
+            <CardDescription>Choose a product for the QR code</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              placeholder="Produkt, GTIN oder Seriennummer suchen..."
+              placeholder="Search product, GTIN or serial number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -439,13 +458,13 @@ export function QRGeneratorPage() {
           </CardContent>
         </Card>
 
-        {/* QR-Code Vorschau & Einstellungen */}
+        {/* QR Code Preview & Settings */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>QR-Code Generator</CardTitle>
-                <CardDescription>{selectedProduct?.name || 'Kein Produkt ausgewählt'}</CardDescription>
+                <CardTitle>QR Code Generator</CardTitle>
+                <CardDescription>{selectedProduct?.name || 'No product selected'}</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Badge variant={localDomainSettings.useCustomDomain ? 'default' : 'secondary'}>
@@ -469,11 +488,11 @@ export function QRGeneratorPage() {
               <TabsList className="mb-4">
                 <TabsTrigger value="preview">
                   <Eye className="mr-2 h-4 w-4" />
-                  Vorschau
+                  Preview
                 </TabsTrigger>
                 <TabsTrigger value="settings">
                   <Settings className="mr-2 h-4 w-4" />
-                  QR-Einstellungen
+                  QR Settings
                 </TabsTrigger>
                 <TabsTrigger value="domain">
                   <Globe className="mr-2 h-4 w-4" />
@@ -481,62 +500,90 @@ export function QRGeneratorPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Vorschau Tab */}
+              {/* Preview Tab */}
               <TabsContent value="preview" className="space-y-6">
-                <div className="flex justify-center">
-                  <div
-                    className="bg-white p-6 rounded-lg border-2 shadow-lg"
-                    style={{ backgroundColor: localDomainSettings.backgroundColor }}
-                  >
-                    {qrDataUrl ? (
-                      <img
-                        src={qrDataUrl}
-                        alt="QR Code"
-                        style={{ width: qrSettings.size, height: qrSettings.size }}
-                      />
-                    ) : (
-                      <div
-                        className="flex items-center justify-center bg-muted rounded"
-                        style={{ width: qrSettings.size, height: qrSettings.size }}
-                      >
-                        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-                      </div>
-                    )}
-                    {qrSettings.includeText && selectedProduct && (
-                      <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
-                        {qrSettings.customText || selectedProduct.gtin}
-                      </p>
-                    )}
+                {/* Two QR codes side by side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Customer QR */}
+                  <div className="text-center space-y-3">
+                    <h4 className="font-medium text-sm">Customer</h4>
+                    <div
+                      className="bg-white p-4 sm:p-6 rounded-lg border-2 shadow-lg inline-block"
+                      style={{ backgroundColor: localDomainSettings.backgroundColor }}
+                    >
+                      {qrDataUrl ? (
+                        <img
+                          src={qrDataUrl}
+                          alt="Customer QR Code"
+                          className="w-full max-w-[256px] h-auto"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
+                          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {qrSettings.includeText && selectedProduct && (
+                        <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
+                          {qrSettings.customText || selectedProduct.gtin}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => downloadQR('png', false)}>
+                        <Download className="mr-1 h-3 w-3" />
+                        PNG
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => downloadQR('svg', false)}>
+                        <Download className="mr-1 h-3 w-3" />
+                        SVG
+                      </Button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Download Buttons */}
-                <div className="flex justify-center gap-2">
-                  <Button variant="outline" onClick={() => downloadQR('png')}>
-                    <Download className="mr-2 h-4 w-4" />
-                    PNG
-                  </Button>
-                  <Button variant="outline" onClick={() => downloadQR('svg')}>
-                    <Download className="mr-2 h-4 w-4" />
-                    SVG
-                  </Button>
-                  <Button variant="outline" disabled>
-                    <Download className="mr-2 h-4 w-4" />
-                    PDF
-                  </Button>
-                  <Button variant="outline" disabled>
-                    <Download className="mr-2 h-4 w-4" />
-                    EPS
-                  </Button>
+                  {/* Customs QR */}
+                  <div className="text-center space-y-3">
+                    <h4 className="font-medium text-sm">Customs</h4>
+                    <div
+                      className="bg-white p-4 sm:p-6 rounded-lg border-2 shadow-lg inline-block"
+                      style={{ backgroundColor: localDomainSettings.backgroundColor }}
+                    >
+                      {qrCustomsDataUrl ? (
+                        <img
+                          src={qrCustomsDataUrl}
+                          alt="Customs QR Code"
+                          className="w-full max-w-[256px] h-auto"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
+                          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {qrSettings.includeText && selectedProduct && (
+                        <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
+                          {qrSettings.customText || `${selectedProduct.gtin} (Customs)`}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => downloadQR('png', true)}>
+                        <Download className="mr-1 h-3 w-3" />
+                        PNG
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => downloadQR('svg', true)}>
+                        <Download className="mr-1 h-3 w-3" />
+                        SVG
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 <Separator />
 
-                {/* URL-Anzeige */}
+                {/* URL Display */}
                 <div className="space-y-4">
                   <div>
                     <Label className="text-sm font-medium mb-2 block">
-                      DPP URL (wird im QR-Code verwendet)
+                      Customer DPP URL (used in QR code)
                     </Label>
                     <div className="flex gap-2">
                       <Input value={dppUrl} readOnly className="font-mono text-sm" />
@@ -553,6 +600,31 @@ export function QRGeneratorPage() {
                       </Button>
                       <Button variant="outline" size="icon" asChild>
                         <a href={dppUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Customs DPP URL
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input value={dppCustomsUrl} readOnly className="font-mono text-sm" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleCopy(dppCustomsUrl, 'customs')}
+                      >
+                        {copied && copiedField === 'customs' ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={dppCustomsUrl} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-4 w-4" />
                         </a>
                       </Button>
@@ -579,54 +651,54 @@ export function QRGeneratorPage() {
                     </div>
                   </div>
 
-                  {/* Vorschau-Links für lokale Seiten */}
+                  {/* Preview links for local pages */}
                   {selectedProduct && (
                     <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                       <h4 className="text-sm font-medium mb-3 flex items-center gap-2 text-green-800 dark:text-green-200">
                         <Eye className="h-4 w-4" />
-                        Öffentliche Seiten testen
+                        Test Public Pages
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" asChild>
                           <a href={localPreviewUrl} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="mr-2 h-4 w-4" />
-                            Verbraucheransicht
+                            Customer View
                           </a>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
                           <a href={localCustomsUrl} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="mr-2 h-4 w-4" />
-                            Zollansicht
+                            Customs View
                           </a>
                         </Button>
                       </div>
                     </div>
                   )}
 
-                  {/* GS1 Digital Link Struktur */}
+                  {/* GS1 Digital Link Structure */}
                   <div className="p-4 bg-muted/50 rounded-lg">
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       <Info className="h-4 w-4" />
-                      GS1 Digital Link Struktur
+                      GS1 Digital Link Structure
                     </h4>
                     <div className="font-mono text-xs space-y-1">
                       <p><span className="text-blue-500">01</span> = GTIN (Global Trade Item Number)</p>
-                      <p><span className="text-green-500">21</span> = Seriennummer</p>
+                      <p><span className="text-green-500">21</span> = Serial Number</p>
                       <p><span className="text-orange-500">10</span> = Batch/Lot (optional)</p>
-                      <p><span className="text-purple-500">17</span> = Verfallsdatum (optional)</p>
+                      <p><span className="text-purple-500">17</span> = Expiry Date (optional)</p>
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
-              {/* QR-Einstellungen Tab */}
+              {/* QR Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
-                  {/* Größe */}
+                  {/* Size */}
                   <div className="space-y-4">
                     <h3 className="font-medium flex items-center gap-2">
                       <Settings className="h-4 w-4" />
-                      Größe
+                      Size
                     </h3>
                     <div className="grid grid-cols-4 gap-2">
                       {[128, 256, 512, 1024].map((size) => (
@@ -649,15 +721,15 @@ export function QRGeneratorPage() {
                         min={64}
                         max={2048}
                       />
-                      <span className="text-sm text-muted-foreground">px (benutzerdefiniert)</span>
+                      <span className="text-sm text-muted-foreground">px (custom)</span>
                     </div>
                   </div>
 
-                  {/* Fehlerkorrektur */}
+                  {/* Error Correction */}
                   <div className="space-y-4">
                     <h3 className="font-medium flex items-center gap-2">
                       <Layers className="h-4 w-4" />
-                      Fehlerkorrektur
+                      Error Correction
                     </h3>
                     <Select
                       value={qrSettings.errorCorrection}
@@ -676,19 +748,19 @@ export function QRGeneratorPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Höhere Korrektur = größerer QR-Code, aber bessere Lesbarkeit bei Beschädigung
+                      Higher correction = larger QR code, but better readability when damaged
                     </p>
                   </div>
 
-                  {/* Farben */}
+                  {/* Colors */}
                   <div className="space-y-4">
                     <h3 className="font-medium flex items-center gap-2">
                       <Palette className="h-4 w-4" />
-                      Farben
+                      Colors
                     </h3>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">Vordergrund</Label>
+                        <Label className="text-sm text-muted-foreground">Foreground</Label>
                         <div className="flex gap-2">
                           <input
                             type="color"
@@ -704,7 +776,7 @@ export function QRGeneratorPage() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">Hintergrund</Label>
+                        <Label className="text-sm text-muted-foreground">Background</Label>
                         <div className="flex gap-2">
                           <input
                             type="color"
@@ -722,9 +794,9 @@ export function QRGeneratorPage() {
                     </div>
                   </div>
 
-                  {/* Rand */}
+                  {/* Margin */}
                   <div className="space-y-4">
-                    <h3 className="font-medium">Rand (Quiet Zone)</h3>
+                    <h3 className="font-medium">Margin (Quiet Zone)</h3>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -734,19 +806,19 @@ export function QRGeneratorPage() {
                         min={0}
                         max={10}
                       />
-                      <span className="text-sm text-muted-foreground">Module</span>
+                      <span className="text-sm text-muted-foreground">Modules</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Mindestens 2 Module werden für optimale Lesbarkeit empfohlen
+                      At least 2 modules are recommended for optimal readability
                     </p>
                   </div>
                 </div>
 
                 <Separator />
 
-                {/* Erweiterte Optionen */}
+                {/* Advanced Options */}
                 <div className="space-y-4">
-                  <h3 className="font-medium">Erweiterte Optionen</h3>
+                  <h3 className="font-medium">Advanced Options</h3>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="includeText"
@@ -755,53 +827,53 @@ export function QRGeneratorPage() {
                         setQRSettings({ ...qrSettings, includeText: checked })
                       }
                     />
-                    <Label htmlFor="includeText">Text unter QR-Code anzeigen</Label>
+                    <Label htmlFor="includeText">Show text below QR code</Label>
                   </div>
                   {qrSettings.includeText && (
                     <div className="space-y-2">
-                      <Label htmlFor="customText">Text unter QR-Code</Label>
+                      <Label htmlFor="customText">Text below QR code</Label>
                       <Input
                         id="customText"
-                        placeholder={selectedProduct?.gtin || 'z.B. Produktname oder GTIN'}
+                        placeholder={selectedProduct?.gtin || 'e.g. product name or GTIN'}
                         value={qrSettings.customText}
                         onChange={(e) => setQRSettings({ ...qrSettings, customText: e.target.value })}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Leer lassen für automatische GTIN-Anzeige
+                        Leave empty for automatic GTIN display
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Voreinstellungen */}
+                {/* Presets */}
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     onClick={() => setQRSettings(defaultQRSettings)}
                   >
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Zurücksetzen
+                    Reset
                   </Button>
                 </div>
               </TabsContent>
 
-              {/* Domain-Einstellungen Tab */}
+              {/* Domain Settings Tab */}
               <TabsContent value="domain" className="space-y-6">
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <h4 className="text-sm font-medium flex items-center gap-2 text-blue-800 dark:text-blue-200">
                     <Info className="h-4 w-4" />
-                    Warum eine eigene Domain verwenden?
+                    Why use your own domain?
                   </h4>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    Mit einer eigenen Domain haben Sie volle Kontrolle über Ihre DPP-URLs.
-                    Sie können einen eigenen Resolver einrichten, der die QR-Codes zu Ihren Produktseiten weiterleitet.
+                    With your own domain you have full control over your DPP URLs.
+                    You can set up your own resolver that redirects QR codes to your product pages.
                   </p>
                 </div>
 
                 <div className="space-y-6">
-                  {/* URL-Resolver Auswahl */}
+                  {/* URL Resolver Selection */}
                   <div className="space-y-4">
-                    <Label className="text-base font-medium">URL-Resolver</Label>
+                    <Label className="text-base font-medium">URL Resolver</Label>
                     <div className="grid gap-3">
                       <label
                         className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
@@ -821,10 +893,10 @@ export function QRGeneratorPage() {
                         <div className="flex-1">
                           <p className="font-medium flex items-center gap-2">
                             GS1 Digital Link Resolver
-                            <Badge variant="secondary">Empfohlen</Badge>
+                            <Badge variant="secondary">Recommended</Badge>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Nutzt den offiziellen GS1 Resolver (id.gs1.org)
+                            Uses the official GS1 Resolver (id.gs1.org)
                           </p>
                           <p className="text-xs font-mono mt-1 text-muted-foreground">
                             https://id.gs1.org/01/GTIN/21/SERIAL
@@ -849,11 +921,11 @@ export function QRGeneratorPage() {
                         />
                         <div className="flex-1">
                           <p className="font-medium flex items-center gap-2">
-                            Lokale Produktseiten
-                            <Badge variant="default">Neu</Badge>
+                            Local Product Pages
+                            <Badge variant="default">New</Badge>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Nutzt die integrierten öffentlichen DPP-Seiten dieser Anwendung
+                            Uses the built-in public DPP pages of this application
                           </p>
                           <p className="text-xs font-mono mt-1 text-muted-foreground">
                             {window.location.origin}/p/GTIN/SERIAL
@@ -878,24 +950,24 @@ export function QRGeneratorPage() {
                         />
                         <div className="flex-1">
                           <p className="font-medium flex items-center gap-2">
-                            Eigene Domain
+                            Custom Domain
                             <Badge variant="outline">Custom</Badge>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Verwenden Sie Ihre eigene Domain für DPP-URLs
+                            Use your own domain for DPP URLs
                           </p>
                         </div>
                       </label>
                     </div>
                   </div>
 
-                  {/* Custom Domain Einstellungen */}
+                  {/* Custom Domain Settings */}
                   {localDomainSettings.resolver === 'custom' && (
                     <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                       <div className="space-y-2">
-                        <Label>Ihre Domain *</Label>
+                        <Label>Your Domain *</Label>
                         <Input
-                          placeholder="z.B. dpp.ihre-firma.de"
+                          placeholder="e.g. dpp.your-company.com"
                           value={localDomainSettings.customDomain}
                           onChange={(e) => handleDomainChange(e.target.value)}
                           className={domainError ? 'border-destructive' : ''}
@@ -904,15 +976,15 @@ export function QRGeneratorPage() {
                           <p className="text-xs text-destructive">{domainError}</p>
                         ) : (
                           <p className="text-xs text-muted-foreground">
-                            Nur die Domain ohne https:// eingeben
+                            Enter domain only without https://
                           </p>
                         )}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Pfad-Präfix (optional)</Label>
+                        <Label>Path Prefix (optional)</Label>
                         <Input
-                          placeholder="z.B. products oder passport"
+                          placeholder="e.g. products or passport"
                           value={localDomainSettings.pathPrefix}
                           onChange={(e) => handlePathPrefixChange(e.target.value)}
                           className={pathPrefixError ? 'border-destructive' : ''}
@@ -921,7 +993,7 @@ export function QRGeneratorPage() {
                           <p className="text-xs text-destructive">{pathPrefixError}</p>
                         ) : (
                           <p className="text-xs text-muted-foreground">
-                            Wird zwischen Domain und GS1-Pfad eingefügt
+                            Inserted between domain and GS1 path
                           </p>
                         )}
                       </div>
@@ -934,13 +1006,13 @@ export function QRGeneratorPage() {
                             setLocalDomainSettings({ ...localDomainSettings, useHTTPS: checked })
                           }
                         />
-                        <Label htmlFor="useHttps">HTTPS verwenden (empfohlen)</Label>
+                        <Label htmlFor="useHttps">Use HTTPS (recommended)</Label>
                       </div>
 
-                      {/* Vorschau */}
+                      {/* Preview */}
                       {selectedProduct && (
                         <div className="p-3 bg-background rounded border">
-                          <Label className="text-xs text-muted-foreground">URL-Vorschau:</Label>
+                          <Label className="text-xs text-muted-foreground">URL Preview:</Label>
                           <p className="font-mono text-sm break-all mt-1">
                             {generateDPPUrl(selectedProduct)}
                           </p>
@@ -949,22 +1021,22 @@ export function QRGeneratorPage() {
                     </div>
                   )}
 
-                  {/* DNS-Einrichtung Anleitung */}
+                  {/* DNS Setup Guide */}
                   {localDomainSettings.resolver === 'custom' && localDomainSettings.customDomain && (
                     <Accordion type="single" collapsible>
                       <AccordionItem value="setup">
                         <AccordionTrigger>
                           <span className="flex items-center gap-2">
                             <FileText className="h-4 w-4" />
-                            Einrichtungsanleitung
+                            Setup Guide
                           </span>
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-4 text-sm">
                             <div>
-                              <h5 className="font-medium mb-2">1. DNS-Eintrag erstellen</h5>
+                              <h5 className="font-medium mb-2">1. Create DNS Record</h5>
                               <p className="text-muted-foreground">
-                                Erstellen Sie einen CNAME oder A-Record für Ihre Subdomain:
+                                Create a CNAME or A record for your subdomain:
                               </p>
                               <code className="block mt-1 p-2 bg-muted rounded text-xs">
                                 {localDomainSettings.customDomain} CNAME your-dpp-server.com
@@ -972,24 +1044,24 @@ export function QRGeneratorPage() {
                             </div>
 
                             <div>
-                              <h5 className="font-medium mb-2">2. SSL-Zertifikat</h5>
+                              <h5 className="font-medium mb-2">2. SSL Certificate</h5>
                               <p className="text-muted-foreground">
-                                Stellen Sie sicher, dass ein gültiges SSL-Zertifikat für HTTPS vorhanden ist
-                                (z.B. über Let's Encrypt).
+                                Make sure a valid SSL certificate for HTTPS is available
+                                (e.g. via Let's Encrypt).
                               </p>
                             </div>
 
                             <div>
-                              <h5 className="font-medium mb-2">3. Resolver einrichten</h5>
+                              <h5 className="font-medium mb-2">3. Set up Resolver</h5>
                               <p className="text-muted-foreground">
-                                Ihr Server muss GS1 Digital Link URLs parsen und zur entsprechenden
-                                Produktseite weiterleiten.
+                                Your server must parse GS1 Digital Link URLs and redirect to the
+                                corresponding product page.
                               </p>
                               <code className="block mt-1 p-2 bg-muted rounded text-xs whitespace-pre">
-{`// Beispiel Express.js Route
+{`// Example Express.js Route
 app.get('/01/:gtin/21/:serial', (req, res) => {
   const { gtin, serial } = req.params;
-  // Produkt suchen und DPP anzeigen
+  // Find product and display DPP
   res.redirect(\`/product/\${gtin}?serial=\${serial}\`);
 });`}
                               </code>
@@ -1000,7 +1072,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                     </Accordion>
                   )}
 
-                  {/* Speichern Button */}
+                  {/* Save Button */}
                   <Button
                     onClick={saveDomainSettings}
                     className="w-full"
@@ -1013,7 +1085,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                     ) : (
                       <Save className="mr-2 h-4 w-4" />
                     )}
-                    {domainSaved ? 'Gespeichert!' : 'Domain-Einstellungen speichern'}
+                    {domainSaved ? 'Saved!' : 'Save Domain Settings'}
                   </Button>
                 </div>
               </TabsContent>
@@ -1028,14 +1100,14 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Layers className="h-5 w-5" />
-              Batch-Export
+              Batch Export
             </span>
             {selectedProducts.length > 0 && (
-              <Badge>{selectedProducts.length} ausgewählt</Badge>
+              <Badge>{selectedProducts.length} selected</Badge>
             )}
           </CardTitle>
           <CardDescription>
-            Exportieren Sie QR-Codes für mehrere Produkte gleichzeitig
+            Export QR codes for multiple products at once (customer + customs per product)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1053,24 +1125,24 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
               {selectedProducts.length === products.length ? (
                 <>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Auswahl aufheben
+                  Deselect All
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Alle auswählen
+                  Select All
                 </>
               )}
             </Button>
             <Button onClick={downloadBatch} disabled={selectedProducts.length === 0 && products.length === 0}>
               <Download className="mr-2 h-4 w-4" />
               {selectedProducts.length > 0
-                ? `${selectedProducts.length} QR-Codes herunterladen`
-                : 'Alle QR-Codes herunterladen'}
+                ? `Download ${selectedProducts.length} QR codes`
+                : 'Download all QR codes'}
             </Button>
           </div>
 
-          {/* Produkt-Auswahl für Batch */}
+          {/* Product Selection for Batch */}
           <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
               <div
@@ -1100,7 +1172,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
       </>
       )}
 
-      {/* Hidden Canvas für erweiterte QR-Code Generierung */}
+      {/* Hidden Canvas for advanced QR code generation */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );

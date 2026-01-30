@@ -132,11 +132,11 @@ export function DPPVisibilitySettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">DPP Sichtbarkeitseinstellungen</h1>
+          <h1 className="text-2xl font-bold text-foreground">DPP Visibility Settings</h1>
           <p className="text-muted-foreground">
-            Legen Sie fest, welche Informationen für wen sichtbar sind
+            Define which information is visible to whom
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -145,12 +145,12 @@ export function DPPVisibilitySettingsPage() {
             {apiStatus === 'online' ? (
               <>
                 <Cloud className="h-3 w-3" />
-                Datenbank
+                Database
               </>
             ) : apiStatus === 'offline' ? (
               <>
                 <CloudOff className="h-3 w-3" />
-                Lokal
+                Local
               </>
             ) : (
               <>
@@ -161,23 +161,23 @@ export function DPPVisibilitySettingsPage() {
           </Badge>
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Zurücksetzen
+            Reset
           </Button>
           <Button onClick={handleSave} disabled={!hasChanges || loading}>
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Laden...
+                Loading...
               </>
             ) : saved ? (
               <>
                 <Check className="mr-2 h-4 w-4" />
-                Gespeichert
+                Saved
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Speichern
+                Save
               </>
             )}
           </Button>
@@ -189,7 +189,7 @@ export function DPPVisibilitySettingsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Info className="h-5 w-5" />
-            Sichtbarkeitsstufen
+            Visibility Levels
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -222,10 +222,10 @@ export function DPPVisibilitySettingsPage() {
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
             <div className="space-y-2">
               <p className="font-medium text-blue-800 dark:text-blue-200">
-                Wie funktioniert die Sichtbarkeit?
+                How does visibility work?
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                Die Sichtbarkeit ist <strong>hierarchisch</strong> aufgebaut. Höhere Stufen sehen immer alles von den niedrigeren Stufen.
+                Visibility is structured <strong>hierarchically</strong>. Higher levels always see everything from the lower levels.
               </p>
             </div>
           </div>
@@ -235,24 +235,24 @@ export function DPPVisibilitySettingsPage() {
             <div className="flex items-center gap-3 p-3 rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 w-full max-w-md">
               <Users className="h-5 w-5 text-green-600" />
               <div className="flex-1">
-                <p className="font-medium text-green-800 dark:text-green-200">Verbraucher</p>
-                <p className="text-xs text-green-600 dark:text-green-400">Alle sehen dieses Feld (Verbraucher + Zoll + Admin)</p>
+                <p className="font-medium text-green-800 dark:text-green-200">Consumer</p>
+                <p className="text-xs text-green-600 dark:text-green-400">Everyone sees this field (Consumer + Customs + Admin)</p>
               </div>
             </div>
             <div className="h-4 w-0.5 bg-blue-300 dark:bg-blue-600" />
             <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 w-full max-w-md">
               <ShieldCheck className="h-5 w-5 text-amber-600" />
               <div className="flex-1">
-                <p className="font-medium text-amber-800 dark:text-amber-200">Zoll</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400">Nur Zoll + Admin sehen dieses Feld</p>
+                <p className="font-medium text-amber-800 dark:text-amber-200">Customs</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">Only Customs + Admin see this field</p>
               </div>
             </div>
             <div className="h-4 w-0.5 bg-blue-300 dark:bg-blue-600" />
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-900/30 border border-slate-300 dark:border-slate-700 w-full max-w-md">
               <Lock className="h-5 w-5 text-slate-600" />
               <div className="flex-1">
-                <p className="font-medium text-slate-800 dark:text-slate-200">Nur intern</p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Nur Admin sieht dieses Feld (nicht öffentlich)</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">Internal Only</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Only Admin sees this field (not public)</p>
               </div>
             </div>
           </div>
@@ -262,16 +262,16 @@ export function DPPVisibilitySettingsPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-blue-200 dark:border-blue-700">
-                  <th className="text-left py-2 px-3 text-blue-800 dark:text-blue-200">Sie wählen</th>
-                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Verbraucher sieht</th>
-                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Zoll sieht</th>
-                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Admin sieht</th>
+                  <th className="text-left py-2 px-3 text-blue-800 dark:text-blue-200">You select</th>
+                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Consumer sees</th>
+                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Customs sees</th>
+                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Admin sees</th>
                 </tr>
               </thead>
               <tbody className="text-blue-700 dark:text-blue-300">
                 <tr className="border-b border-blue-100 dark:border-blue-800">
                   <td className="py-2 px-3 flex items-center gap-2">
-                    <Users className="h-4 w-4 text-green-500" /> Verbraucher
+                    <Users className="h-4 w-4 text-green-500" /> Consumer
                   </td>
                   <td className="py-2 px-3 text-center text-green-600">✓</td>
                   <td className="py-2 px-3 text-center text-green-600">✓</td>
@@ -279,7 +279,7 @@ export function DPPVisibilitySettingsPage() {
                 </tr>
                 <tr className="border-b border-blue-100 dark:border-blue-800">
                   <td className="py-2 px-3 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-amber-500" /> Zoll
+                    <ShieldCheck className="h-4 w-4 text-amber-500" /> Customs
                   </td>
                   <td className="py-2 px-3 text-center text-red-500">✗</td>
                   <td className="py-2 px-3 text-center text-green-600">✓</td>
@@ -287,7 +287,7 @@ export function DPPVisibilitySettingsPage() {
                 </tr>
                 <tr>
                   <td className="py-2 px-3 flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-slate-500" /> Nur intern
+                    <Lock className="h-4 w-4 text-slate-500" /> Internal Only
                   </td>
                   <td className="py-2 px-3 text-center text-red-500">✗</td>
                   <td className="py-2 px-3 text-center text-red-500">✗</td>
@@ -311,18 +311,18 @@ export function DPPVisibilitySettingsPage() {
                   <div>
                     <CardTitle className="text-lg">{category}</CardTitle>
                     <CardDescription>
-                      {fieldsInCategory.length} Felder in dieser Kategorie
+                      {fieldsInCategory.length} fields in this category
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Alle auf:</span>
+                    <span className="text-sm text-muted-foreground">Set all to:</span>
                     <div className="flex gap-1">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setCategoryLevel(category, 'consumer')}
                         className="h-8"
-                        title="Alle für Verbraucher sichtbar"
+                        title="Set all visible to Consumer"
                       >
                         <Users className="h-3 w-3" />
                       </Button>
@@ -331,7 +331,7 @@ export function DPPVisibilitySettingsPage() {
                         size="sm"
                         onClick={() => setCategoryLevel(category, 'customs')}
                         className="h-8"
-                        title="Alle nur für Zoll sichtbar"
+                        title="Set all visible to Customs only"
                       >
                         <ShieldCheck className="h-3 w-3" />
                       </Button>
@@ -340,7 +340,7 @@ export function DPPVisibilitySettingsPage() {
                         size="sm"
                         onClick={() => setCategoryLevel(category, 'internal')}
                         className="h-8"
-                        title="Alle nur intern"
+                        title="Set all to Internal Only"
                       >
                         <Lock className="h-3 w-3" />
                       </Button>
@@ -404,10 +404,10 @@ export function DPPVisibilitySettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            Vorschau
+            Preview
           </CardTitle>
           <CardDescription>
-            Testen Sie die öffentlichen Seiten mit den aktuellen Einstellungen
+            Test the public pages with current settings
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -421,16 +421,16 @@ export function DPPVisibilitySettingsPage() {
               <div>
                 <p className="font-medium flex items-center gap-2">
                   <Users className="h-4 w-4 text-green-600" />
-                  Verbraucheransicht
+                  Customer View
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Zeigt {countByLevel('consumer')} Felder
+                  Shows {countByLevel('consumer')} fields
                 </p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </a>
             <a
-              href="/p/4012345678901/GSP-2024-001234?view=zoll"
+              href="/p/4012345678901/GSP-2024-001234/customs"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -438,10 +438,10 @@ export function DPPVisibilitySettingsPage() {
               <div>
                 <p className="font-medium flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-amber-600" />
-                  Zollansicht
+                  Customs View
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Zeigt {countByLevel('consumer') + countByLevel('customs')} Felder
+                  Shows {countByLevel('consumer') + countByLevel('customs')} fields
                 </p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -449,7 +449,7 @@ export function DPPVisibilitySettingsPage() {
           </div>
           <p className="text-xs text-muted-foreground text-center">
             <Lock className="h-3 w-3 inline mr-1" />
-            {countByLevel('internal')} Felder sind nur intern sichtbar und werden auf keiner öffentlichen Seite angezeigt
+            {countByLevel('internal')} fields are internal only and not shown on any public page
           </p>
         </CardContent>
       </Card>

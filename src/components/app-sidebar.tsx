@@ -53,41 +53,41 @@ const mainNavItems = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Produkte',
+    title: 'Products',
     icon: Package,
     items: [
-      { title: 'Alle Produkte', url: '/products' },
-      { title: 'Neu anlegen', url: '/products/new' },
-      { title: 'Kategorien', url: '/products/categories' },
+      { title: 'All Products', url: '/products' },
+      { title: 'Create New', url: '/products/new' },
+      { title: 'Categories', url: '/products/categories' },
     ],
   },
   {
-    title: 'DPP / Pässe',
+    title: 'DPP / Passports',
     icon: QrCode,
     items: [
-      { title: 'Übersicht', url: '/dpp' },
-      { title: 'QR-Generator', url: '/dpp/qr-generator' },
-      { title: 'Sichtbarkeit', url: '/dpp/visibility' },
-      { title: 'Batch-Upload', url: '/dpp/batch-upload' },
+      { title: 'Overview', url: '/dpp' },
+      { title: 'QR Generator', url: '/dpp/qr-generator' },
+      { title: 'Visibility', url: '/dpp/visibility' },
+      { title: 'Batch Upload', url: '/dpp/batch-upload' },
     ],
   },
   {
-    title: 'Dokumente',
+    title: 'Documents',
     icon: FolderArchive,
     items: [
-      { title: 'Alle Dokumente', url: '/documents' },
-      { title: 'Hochladen', url: '/documents/upload' },
-      { title: 'Gültigkeits-Tracker', url: '/documents/tracker' },
+      { title: 'All Documents', url: '/documents' },
+      { title: 'Upload', url: '/documents/upload' },
+      { title: 'Validity Tracker', url: '/documents/tracker' },
     ],
   },
   {
-    title: 'Lieferkette',
+    title: 'Supply Chain',
     url: '/supply-chain',
     icon: Link2,
     badge: 'Phase 2',
   },
   {
-    title: 'Lieferanten',
+    title: 'Suppliers',
     url: '/suppliers',
     icon: Users,
   },
@@ -95,43 +95,43 @@ const mainNavItems = [
     title: 'Compliance',
     icon: ShieldCheck,
     items: [
-      { title: 'Prüfprotokoll', url: '/compliance' },
+      { title: 'Audit Report', url: '/compliance' },
       { title: 'Export', url: '/compliance/export' },
-      { title: 'Audit-Log', url: '/compliance/audit-log' },
+      { title: 'Audit Log', url: '/compliance/audit-log' },
     ],
   },
   {
-    title: 'Regulierungen',
+    title: 'Regulations',
     icon: Globe,
     items: [
-      { title: 'Länder', url: '/regulations/countries' },
-      { title: 'EU-Regulierungen', url: '/regulations/eu' },
-      { title: 'Piktogramme', url: '/regulations/pictograms' },
+      { title: 'Countries', url: '/regulations/countries' },
+      { title: 'EU Regulations', url: '/regulations/eu' },
+      { title: 'Pictograms', url: '/regulations/pictograms' },
       { title: 'News', url: '/regulations/news' },
     ],
   },
   {
-    title: 'Checklisten',
+    title: 'Checklists',
     url: '/checklists',
     icon: ClipboardCheck,
   },
   {
-    title: 'Anforderungs-Kalkulator',
+    title: 'Requirements Calculator',
     url: '/requirements-calculator',
     icon: Calculator,
-    badge: 'Neu',
+    badge: 'New',
   },
 ];
 
 const settingsNavItems = [
   {
-    title: 'Einstellungen',
+    title: 'Settings',
     icon: Settings,
     items: [
-      { title: 'Firmenprofil', url: '/settings/company', icon: Building2 },
+      { title: 'Company Profile', url: '/settings/company', icon: Building2 },
       { title: 'Branding', url: '/settings/branding', icon: FolderKanban },
-      { title: 'Benutzer & Rollen', url: '/settings/users', icon: Users },
-      { title: 'API-Keys', url: '/settings/api-keys', icon: Key },
+      { title: 'Users & Roles', url: '/settings/users', icon: Users },
+      { title: 'API Keys', url: '/settings/api-keys', icon: Key },
     ],
   },
   {
@@ -140,7 +140,7 @@ const settingsNavItems = [
     icon: Shield,
   },
   {
-    title: 'Hilfe & Support',
+    title: 'Help & Support',
     url: '/help',
     icon: HelpCircle,
   },
@@ -158,7 +158,7 @@ export function AppSidebar() {
   };
 
   const userEmail = user?.email || '';
-  const userName = user?.name || userEmail.split('@')[0] || 'Benutzer';
+  const userName = user?.name || userEmail.split('@')[0] || 'User';
   const userInitials = userName
     .split(' ')
     .map((n) => n[0])
@@ -199,7 +199,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Hauptmenü</SidebarGroupLabel>
+          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) =>
@@ -321,7 +321,7 @@ export function AppSidebar() {
             size="icon"
             onClick={handleSignOut}
             className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-            title="Abmelden"
+            title="Sign Out"
           >
             <LogOut className="h-4 w-4" />
           </Button>

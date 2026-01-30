@@ -30,12 +30,12 @@ export function AIAnalysisButton({ onClick, isStreaming, hasResult }: AIAnalysis
       {isStreaming ? (
         <>
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Analysiere...
+          Analyzing...
         </>
       ) : (
         <>
           <Sparkles className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-12" />
-          KI-Tiefenanalyse
+          AI Deep Analysis
         </>
       )}
     </Button>

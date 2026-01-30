@@ -41,7 +41,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
             <div className="flex items-center justify-center p-2.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10">
               <SearchCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
-            <span>KI-Erweiterte Anforderungen</span>
+            <span>AI Additional Requirements</span>
           </div>
           {!text && !isStreaming && (
             <Button
@@ -53,7 +53,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
                 <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               </div>
               <Sparkles className="h-3.5 w-3.5" />
-              Weitere Anforderungen suchen
+              Find Additional Requirements
             </Button>
           )}
           {text && !isStreaming && (
@@ -64,7 +64,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
               className="gap-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Zurücksetzen
+              Reset
             </Button>
           )}
         </CardTitle>
@@ -76,7 +76,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
               <SearchCheck className="h-6 w-6 text-amber-400" />
             </div>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Die KI identifiziert branchenspezifische Normen, länderspezifische Besonderheiten und freiwillige Zertifizierungen, die über die Standardanalyse hinausgehen.
+              AI identifies industry-specific standards, country-specific requirements, and voluntary certifications that go beyond the standard analysis.
             </p>
           </div>
         )}

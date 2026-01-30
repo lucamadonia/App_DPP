@@ -45,19 +45,19 @@ const statusConfig = {
     className: 'bg-success text-success-foreground',
   },
   draft: {
-    label: 'Entwurf',
+    label: 'Draft',
     icon: Clock,
     variant: 'secondary' as const,
     className: '',
   },
   review: {
-    label: 'Prüfung',
+    label: 'Review',
     icon: AlertCircle,
     variant: 'outline' as const,
     className: 'border-warning text-warning',
   },
   expired: {
-    label: 'Abgelaufen',
+    label: 'Expired',
     icon: AlertCircle,
     variant: 'destructive' as const,
     className: '',
@@ -88,14 +88,14 @@ export function ProductsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Sind Sie sicher, dass Sie dieses Produkt löschen möchten?')) {
+    if (!confirm('Are you sure you want to delete this product?')) {
       return;
     }
     const result = await deleteProduct(id);
     if (result.success) {
       setProducts(products.filter(p => p.id !== id));
     } else {
-      alert('Fehler beim Löschen: ' + result.error);
+      alert('Error deleting: ' + result.error);
     }
   };
 
@@ -113,7 +113,7 @@ export function ProductsPage() {
       <div className="flex h-[50vh] items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-muted-foreground">Produkte werden geladen...</p>
+          <p className="mt-4 text-muted-foreground">Loading products...</p>
         </div>
       </div>
     );
@@ -122,17 +122,17 @@ export function ProductsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Produkte</h1>
+          <h1 className="text-2xl font-bold text-foreground">Products</h1>
           <p className="text-muted-foreground">
-            Verwalten Sie Ihre Produkte und deren Digital Product Passports
+            Manage your products and their Digital Product Passports
           </p>
         </div>
         <Button asChild>
           <Link to="/products/new">
             <Plus className="mr-2 h-4 w-4" />
-            Neues Produkt
+            New Product
           </Link>
         </Button>
       </div>
@@ -140,14 +140,14 @@ export function ProductsPage() {
       {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Filter & Suche</CardTitle>
+          <CardTitle className="text-base">Filter & Search</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Suche nach Name, GTIN oder Seriennummer..."
+                placeholder="Search by name, GTIN or serial number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -167,7 +167,7 @@ export function ProductsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setStatusFilter(null)}>
-                  Alle Status
+                  All Statuses
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {Object.entries(statusConfig).map(([key, config]) => (
@@ -192,14 +192,14 @@ export function ProductsPage() {
           {products.length === 0 ? (
             <div className="py-16 text-center">
               <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">Keine Produkte vorhanden</h3>
+              <h3 className="mt-4 text-lg font-semibold">No products available</h3>
               <p className="mt-2 text-muted-foreground">
-                Erstellen Sie Ihr erstes Produkt, um mit dem DPP Manager zu starten.
+                Create your first product to get started with DPP Manager.
               </p>
               <Button className="mt-6" asChild>
                 <Link to="/products/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  Erstes Produkt anlegen
+                  Create First Product
                 </Link>
               </Button>
             </div>
@@ -207,12 +207,12 @@ export function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produktname</TableHead>
+                  <TableHead>Product Name</TableHead>
                   <TableHead>GTIN/EAN</TableHead>
-                  <TableHead>Seriennummer</TableHead>
-                  <TableHead>Kategorie</TableHead>
+                  <TableHead>Serial Number</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Erstellt</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -250,7 +250,7 @@ export function ProductsPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {product.createdAt
-                          ? new Date(product.createdAt).toLocaleDateString('de-DE')
+                          ? new Date(product.createdAt).toLocaleDateString('en-US')
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -264,13 +264,13 @@ export function ProductsPage() {
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
-                                Anzeigen
+                                View
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Bearbeiten
+                                Edit
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
@@ -285,7 +285,7 @@ export function ProductsPage() {
                               onClick={() => handleDelete(product.id)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Löschen
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -299,7 +299,7 @@ export function ProductsPage() {
 
           {products.length > 0 && filteredProducts.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-muted-foreground">Keine Produkte gefunden</p>
+              <p className="text-muted-foreground">No products found</p>
             </div>
           )}
         </CardContent>

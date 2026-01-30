@@ -47,33 +47,33 @@ export function DashboardPage() {
 
   const stats = [
     {
-      title: 'Aktive Produkte',
+      title: 'Active Products',
       value: products.length.toString(),
-      change: products.length === 0 ? 'Noch keine Produkte' : `${products.length} gesamt`,
+      change: products.length === 0 ? 'No products yet' : `${products.length} total`,
       icon: Package,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
     },
     {
-      title: 'Dokumente',
+      title: 'Documents',
       value: docStats.total.toString(),
-      change: docStats.total === 0 ? 'Noch keine Dokumente' : `${docStats.valid} gültig`,
+      change: docStats.total === 0 ? 'No documents yet' : `${docStats.valid} valid`,
       icon: FileWarning,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
     },
     {
-      title: 'Ablaufende Zertifikate',
+      title: 'Expiring Certificates',
       value: docStats.expiring.toString(),
-      change: 'nächste 30 Tage',
+      change: 'next 30 days',
       icon: AlertTriangle,
       color: docStats.expiring > 0 ? 'text-warning' : 'text-muted-foreground',
       bgColor: docStats.expiring > 0 ? 'bg-warning/10' : 'bg-muted/50',
     },
     {
-      title: 'Abgelaufene Dokumente',
+      title: 'Expired Documents',
       value: docStats.expired.toString(),
-      change: docStats.expired > 0 ? 'Aktion erforderlich' : 'Alles aktuell',
+      change: docStats.expired > 0 ? 'Action required' : 'All up to date',
       icon: TrendingUp,
       color: docStats.expired > 0 ? 'text-destructive' : 'text-success',
       bgColor: docStats.expired > 0 ? 'bg-destructive/10' : 'bg-success/10',
@@ -87,7 +87,7 @@ export function DashboardPage() {
       <div className="flex h-[50vh] items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-muted-foreground">Dashboard wird geladen...</p>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -96,24 +96,24 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
-            Willkommen zurück{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+            Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild>
             <Link to="/dpp/qr-generator">
               <QrCode className="mr-2 h-4 w-4" />
-              QR generieren
+              Generate QR
             </Link>
           </Button>
           <Button asChild>
             <Link to="/products/new">
               <Package className="mr-2 h-4 w-4" />
-              Neues Produkt
+              New Product
             </Link>
           </Button>
         </div>
@@ -147,13 +147,13 @@ export function DashboardPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-muted-foreground" />
-                  Aktuelle Produkte
+                  Recent Products
                 </CardTitle>
-                <CardDescription>Ihre zuletzt hinzugefügten Produkte</CardDescription>
+                <CardDescription>Your most recently added products</CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/products">
-                  Alle anzeigen
+                  View All
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
@@ -164,12 +164,12 @@ export function DashboardPage() {
               <div className="py-8 text-center">
                 <Package className="mx-auto h-10 w-10 text-muted-foreground/50" />
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Noch keine Produkte vorhanden
+                  No products yet
                 </p>
                 <Button className="mt-4" size="sm" asChild>
                   <Link to="/products/new">
                     <Plus className="mr-2 h-4 w-4" />
-                    Erstes Produkt anlegen
+                    Create First Product
                   </Link>
                 </Button>
               </div>
@@ -201,7 +201,7 @@ export function DashboardPage() {
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {product.createdAt
-                        ? new Date(product.createdAt).toLocaleDateString('de-DE')
+                        ? new Date(product.createdAt).toLocaleDateString('en-US')
                         : ''}
                     </span>
                   </Link>
@@ -214,11 +214,11 @@ export function DashboardPage() {
         {/* Getting Started / Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Schnellstart</CardTitle>
+            <CardTitle>Quick Start</CardTitle>
             <CardDescription>
               {products.length === 0
-                ? 'Starten Sie mit dem DPP Manager'
-                : 'Häufig verwendete Funktionen'}
+                ? 'Get started with DPP Manager'
+                : 'Frequently used features'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -226,25 +226,25 @@ export function DashboardPage() {
               <Button variant="outline" className="h-auto flex-col gap-2 p-4" asChild>
                 <Link to="/products/new">
                   <Package className="h-6 w-6" />
-                  <span>Produkt anlegen</span>
+                  <span>Create Product</span>
                 </Link>
               </Button>
               <Button variant="outline" className="h-auto flex-col gap-2 p-4" asChild>
                 <Link to="/documents">
                   <FileWarning className="h-6 w-6" />
-                  <span>Dokumente</span>
+                  <span>Documents</span>
                 </Link>
               </Button>
               <Button variant="outline" className="h-auto flex-col gap-2 p-4" asChild>
                 <Link to="/dpp/qr-generator">
                   <QrCode className="h-6 w-6" />
-                  <span>QR-Code erstellen</span>
+                  <span>Create QR Code</span>
                 </Link>
               </Button>
               <Button variant="outline" className="h-auto flex-col gap-2 p-4" asChild>
                 <Link to="/regulations">
                   <TrendingUp className="h-6 w-6" />
-                  <span>Regulierungen</span>
+                  <span>Regulations</span>
                 </Link>
               </Button>
             </div>

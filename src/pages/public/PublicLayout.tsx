@@ -104,10 +104,10 @@ export function PublicLayout() {
             </p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">
-                Impressum
+                Legal Notice
               </a>
               <a href="#" className="hover:text-foreground transition-colors">
-                Datenschutz
+                Privacy Policy
               </a>
             </div>
           </div>

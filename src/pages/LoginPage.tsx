@@ -33,7 +33,7 @@ export function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold">DPP Manager</h1>
           <p className="text-muted-foreground text-sm">
-            Digitale Produktpässe für nachhaltige Produkte
+            Digital Product Passports for sustainable products
           </p>
         </div>
 
@@ -46,10 +46,10 @@ export function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground">
-          Mit der Anmeldung akzeptieren Sie unsere{' '}
-          <a href="#" className="text-primary hover:underline">Nutzungsbedingungen</a>
-          {' '}und{' '}
-          <a href="#" className="text-primary hover:underline">Datenschutzrichtlinie</a>.
+          By signing in you agree to our{' '}
+          <a href="#" className="text-primary hover:underline">Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
         </p>
       </div>
     </div>

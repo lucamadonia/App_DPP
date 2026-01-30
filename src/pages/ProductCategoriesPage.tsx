@@ -23,381 +23,381 @@ import {
 import { getCategories } from '@/services/api';
 import type { Category } from '@/types/database';
 
-// Fallback-Daten für den Fall, dass die API nicht erreichbar ist
+// Fallback data in case the API is unreachable
 const fallbackCategories: Category[] = [
   {
     id: 'electronics',
-    name: 'Elektronik & IT',
+    name: 'Electronics & IT',
     icon: '💻',
-    description: 'Alle elektronischen Geräte und IT-Equipment',
-    regulations: ['CE', 'RoHS', 'WEEE', 'EMV', 'RED'],
+    description: 'All electronic devices and IT equipment',
+    regulations: ['CE', 'RoHS', 'WEEE', 'EMC', 'RED'],
     subcategories: [
-      'Smartphone', 'Tablet', 'Laptop', 'Desktop-PC', 'Server', 'Monitor', 'TV/Fernseher',
-      'Kopfhörer', 'Lautsprecher', 'Soundbar', 'HiFi-Anlage', 'Mikrofon',
-      'Drucker', 'Scanner', 'Router', 'Switch', 'NAS-Speicher',
-      'Externes Laufwerk', 'USB-Stick', 'Speicherkarte',
-      'Webcam', 'Projektor', 'Digitalkamera', 'Videokamera',
-      'Spielkonsole', 'Gaming-PC', 'VR-Headset',
-      'Smartwatch', 'Fitness-Tracker', 'E-Reader',
-      'IoT-Gerät', 'Smart Speaker', 'Smart Display',
-      'Drohne', 'E-Scooter', 'E-Bike Display',
+      'Smartphone', 'Tablet', 'Laptop', 'Desktop PC', 'Server', 'Monitor', 'TV/Television',
+      'Headphones', 'Speakers', 'Soundbar', 'HiFi System', 'Microphone',
+      'Printer', 'Scanner', 'Router', 'Switch', 'NAS Storage',
+      'External Drive', 'USB Stick', 'Memory Card',
+      'Webcam', 'Projector', 'Digital Camera', 'Video Camera',
+      'Game Console', 'Gaming PC', 'VR Headset',
+      'Smartwatch', 'Fitness Tracker', 'E-Reader',
+      'IoT Device', 'Smart Speaker', 'Smart Display',
+      'Drone', 'E-Scooter', 'E-Bike Display',
     ],
   },
   {
     id: 'household-electronics',
-    name: 'Haushaltsgeräte',
+    name: 'Household Appliances',
     icon: '🏠',
-    description: 'Elektrische Haushaltsgeräte (Weiße Ware, Kleingeräte)',
-    regulations: ['CE', 'RoHS', 'WEEE', 'Energielabel', 'Ökodesign'],
+    description: 'Electrical household appliances (white goods, small appliances)',
+    regulations: ['CE', 'RoHS', 'WEEE', 'Energy Label', 'Ecodesign'],
     subcategories: [
-      'Kühlschrank', 'Gefrierschrank', 'Kühl-Gefrier-Kombi',
-      'Waschmaschine', 'Trockner', 'Waschtrockner',
-      'Geschirrspüler', 'Herd', 'Backofen', 'Mikrowelle',
-      'Dunstabzugshaube', 'Induktionskochfeld',
-      'Kaffeevollautomat', 'Kaffeemaschine', 'Wasserkocher', 'Toaster',
-      'Mixer', 'Küchenmaschine', 'Handmixer', 'Pürierstab',
-      'Staubsauger', 'Saugroboter', 'Dampfreiniger',
-      'Bügeleisen', 'Dampfbügelstation', 'Nähmaschine',
-      'Klimaanlage', 'Ventilator', 'Heizlüfter', 'Luftreiniger',
-      'Luftbefeuchter', 'Luftentfeuchter',
-      'Haartrockner', 'Glätteisen', 'Lockenstab', 'Haarschneider',
-      'Rasierer', 'Epiliergerät', 'Elektrische Zahnbürste',
+      'Refrigerator', 'Freezer', 'Fridge-Freezer Combo',
+      'Washing Machine', 'Dryer', 'Washer-Dryer',
+      'Dishwasher', 'Stove', 'Oven', 'Microwave',
+      'Range Hood', 'Induction Cooktop',
+      'Fully Automatic Coffee Machine', 'Coffee Maker', 'Kettle', 'Toaster',
+      'Blender', 'Food Processor', 'Hand Mixer', 'Immersion Blender',
+      'Vacuum Cleaner', 'Robot Vacuum', 'Steam Cleaner',
+      'Iron', 'Steam Iron Station', 'Sewing Machine',
+      'Air Conditioner', 'Fan', 'Fan Heater', 'Air Purifier',
+      'Humidifier', 'Dehumidifier',
+      'Hair Dryer', 'Flat Iron', 'Curling Iron', 'Hair Clipper',
+      'Shaver', 'Epilator', 'Electric Toothbrush',
     ],
   },
   {
     id: 'lighting',
-    name: 'Beleuchtung',
+    name: 'Lighting',
     icon: '💡',
-    description: 'Leuchtmittel und Leuchten',
-    regulations: ['CE', 'RoHS', 'WEEE', 'Energielabel', 'Ökodesign'],
+    description: 'Light sources and luminaires',
+    regulations: ['CE', 'RoHS', 'WEEE', 'Energy Label', 'Ecodesign'],
     subcategories: [
-      'LED-Lampe E27', 'LED-Lampe E14', 'LED-Lampe GU10', 'LED-Lampe G9',
-      'LED-Röhre T8', 'LED-Panel', 'LED-Streifen',
-      'Halogenlampe', 'Energiesparlampe',
-      'Deckenleuchte', 'Wandleuchte', 'Stehlampe', 'Tischlampe',
-      'Pendelleuchte', 'Einbaustrahler', 'Außenleuchte',
-      'Smart Lighting', 'Smarte Birne', 'Lichtsteuerung',
-      'Notbeleuchtung', 'Fluchtwegleuchte', 'Sicherheitsbeleuchtung',
-      'UV-Lampe', 'Infrarotlampe', 'Wachstumslampe',
-      'Taschenlampe', 'Stirnlampe', 'Arbeitsleuchte',
+      'LED Bulb E27', 'LED Bulb E14', 'LED Bulb GU10', 'LED Bulb G9',
+      'LED Tube T8', 'LED Panel', 'LED Strip',
+      'Halogen Lamp', 'Compact Fluorescent Lamp',
+      'Ceiling Light', 'Wall Light', 'Floor Lamp', 'Table Lamp',
+      'Pendant Light', 'Recessed Spotlight', 'Outdoor Light',
+      'Smart Lighting', 'Smart Bulb', 'Light Control',
+      'Emergency Lighting', 'Exit Sign Light', 'Safety Lighting',
+      'UV Lamp', 'Infrared Lamp', 'Grow Light',
+      'Flashlight', 'Headlamp', 'Work Light',
     ],
   },
   {
     id: 'textiles',
-    name: 'Textilien & Mode',
+    name: 'Textiles & Fashion',
     icon: '👕',
-    description: 'Bekleidung, Schuhe und textile Produkte',
-    regulations: ['REACH', 'Textilkennzeichnung', 'ESPR/DPP'],
+    description: 'Clothing, footwear and textile products',
+    regulations: ['REACH', 'Textile Labelling', 'ESPR/DPP'],
     subcategories: [
-      'T-Shirt', 'Hemd', 'Bluse', 'Pullover', 'Jacke', 'Mantel',
-      'Hose', 'Jeans', 'Rock', 'Kleid', 'Anzug',
-      'Unterwäsche', 'Socken', 'Strumpfhose',
-      'Sportbekleidung', 'Funktionskleidung', 'Outdoor-Bekleidung',
-      'Arbeitskleidung', 'Berufskleidung', 'Schutzkleidung',
-      'Kinderbekleidung', 'Babybekleidung',
-      'Schuhe', 'Sneaker', 'Stiefel', 'Sandalen', 'Sportschuhe',
-      'Taschen', 'Rucksäcke', 'Koffer',
-      'Gürtel', 'Schals', 'Mützen', 'Handschuhe',
-      'Heimtextilien', 'Bettwäsche', 'Handtücher', 'Vorhänge',
-      'Teppiche', 'Matten', 'Polsterbezüge',
-      'Technische Textilien', 'Geotextilien', 'Agrartextilien',
+      'T-Shirt', 'Shirt', 'Blouse', 'Sweater', 'Jacket', 'Coat',
+      'Trousers', 'Jeans', 'Skirt', 'Dress', 'Suit',
+      'Underwear', 'Socks', 'Tights',
+      'Sportswear', 'Functional Clothing', 'Outdoor Clothing',
+      'Workwear', 'Professional Clothing', 'Protective Clothing',
+      'Children\'s Clothing', 'Baby Clothing',
+      'Shoes', 'Sneakers', 'Boots', 'Sandals', 'Sports Shoes',
+      'Bags', 'Backpacks', 'Suitcases',
+      'Belts', 'Scarves', 'Hats', 'Gloves',
+      'Home Textiles', 'Bedding', 'Towels', 'Curtains',
+      'Carpets', 'Mats', 'Upholstery Covers',
+      'Technical Textiles', 'Geotextiles', 'Agricultural Textiles',
     ],
   },
   {
     id: 'toys',
-    name: 'Spielzeug',
+    name: 'Toys',
     icon: '🧸',
-    description: 'Spielwaren für alle Altersgruppen',
-    regulations: ['CE', 'Spielzeugrichtlinie', 'REACH', 'EN 71'],
+    description: 'Toys for all age groups',
+    regulations: ['CE', 'Toy Safety Directive', 'REACH', 'EN 71'],
     subcategories: [
-      'Elektronisches Spielzeug', 'Lerncomputer', 'Interaktive Puppen',
-      'Ferngesteuertes Auto', 'Drohne (Spielzeug)', 'Roboter',
-      'Plüschtiere', 'Stofftiere', 'Puppen',
-      'LEGO/Bausteine', 'Konstruktionsspielzeug',
-      'Brettspiele', 'Kartenspiele', 'Puzzles',
-      'Outdoor-Spielzeug', 'Sandspielzeug', 'Wasserspielzeug',
-      'Sportspielzeug', 'Bälle', 'Schaukeln',
-      'Musikspielzeug', 'Instrumente (Spielzeug)',
-      'Kreativspielzeug', 'Malsets', 'Bastelsets',
-      'Lernspielzeug', 'Experimentierkästen', 'MINT-Spielzeug',
-      'Baby-Spielzeug', 'Rasseln', 'Beißringe',
-      'Spielfahrzeuge', 'Modellautos', 'Eisenbahn',
-      'Actionfiguren', 'Sammelfiguren',
-      'Kostüme', 'Rollenspiel-Zubehör',
+      'Electronic Toys', 'Learning Computer', 'Interactive Dolls',
+      'Remote Control Car', 'Drone (Toy)', 'Robot',
+      'Plush Toys', 'Stuffed Animals', 'Dolls',
+      'LEGO/Building Blocks', 'Construction Toys',
+      'Board Games', 'Card Games', 'Puzzles',
+      'Outdoor Toys', 'Sand Toys', 'Water Toys',
+      'Sports Toys', 'Balls', 'Swings',
+      'Musical Toys', 'Instruments (Toy)',
+      'Creative Toys', 'Painting Sets', 'Craft Sets',
+      'Educational Toys', 'Experiment Kits', 'STEM Toys',
+      'Baby Toys', 'Rattles', 'Teething Rings',
+      'Toy Vehicles', 'Model Cars', 'Toy Train',
+      'Action Figures', 'Collectible Figures',
+      'Costumes', 'Role Play Accessories',
     ],
   },
   {
     id: 'furniture',
-    name: 'Möbel & Einrichtung',
+    name: 'Furniture & Furnishings',
     icon: '🛋️',
-    description: 'Möbel für Wohn- und Arbeitsbereich',
-    regulations: ['REACH', 'Holzhandelsverordnung', 'ESPR/DPP'],
+    description: 'Furniture for living and working spaces',
+    regulations: ['REACH', 'Timber Regulation', 'ESPR/DPP'],
     subcategories: [
-      'Sofa', 'Sessel', 'Stuhl', 'Hocker', 'Bank',
-      'Esstisch', 'Couchtisch', 'Schreibtisch', 'Beistelltisch',
-      'Kleiderschrank', 'Kommode', 'Sideboard', 'Regal', 'Vitrine',
-      'Bett', 'Bettgestell', 'Hochbett', 'Kinderbett',
-      'Matratze', 'Lattenrost', 'Topper',
-      'Küchenmöbel', 'Küchenzeile', 'Arbeitsplatte',
-      'Badmöbel', 'Waschtisch', 'Spiegelschrank',
-      'Büromöbel', 'Bürostuhl', 'Konferenztisch',
-      'Gartenmöbel', 'Loungemöbel', 'Sonnenliege',
-      'Kindermöbel', 'Wickelkommode', 'Kinderschreibtisch',
-      'Polstermöbel', 'Schlafsofa', 'Recamiere',
+      'Sofa', 'Armchair', 'Chair', 'Stool', 'Bench',
+      'Dining Table', 'Coffee Table', 'Desk', 'Side Table',
+      'Wardrobe', 'Chest of Drawers', 'Sideboard', 'Shelf', 'Display Cabinet',
+      'Bed', 'Bed Frame', 'Loft Bed', 'Children\'s Bed',
+      'Mattress', 'Slatted Frame', 'Topper',
+      'Kitchen Furniture', 'Kitchen Unit', 'Countertop',
+      'Bathroom Furniture', 'Washbasin', 'Mirror Cabinet',
+      'Office Furniture', 'Office Chair', 'Conference Table',
+      'Garden Furniture', 'Lounge Furniture', 'Sun Lounger',
+      'Children\'s Furniture', 'Changing Table', 'Children\'s Desk',
+      'Upholstered Furniture', 'Sofa Bed', 'Chaise Longue',
     ],
   },
   {
     id: 'cosmetics',
-    name: 'Kosmetik & Körperpflege',
+    name: 'Cosmetics & Personal Care',
     icon: '💄',
-    description: 'Kosmetische Produkte und Körperpflegeartikel',
-    regulations: ['Kosmetikverordnung (EG) 1223/2009', 'REACH', 'CPNP'],
+    description: 'Cosmetic products and personal care items',
+    regulations: ['Cosmetics Regulation (EC) 1223/2009', 'REACH', 'CPNP'],
     subcategories: [
-      'Gesichtspflege', 'Tagescreme', 'Nachtcreme', 'Serum',
-      'Reinigung', 'Gesichtswasser', 'Peeling', 'Maske',
-      'Körperpflege', 'Bodylotion', 'Duschgel', 'Seife',
-      'Haarpflege', 'Shampoo', 'Conditioner', 'Haarkur',
-      'Styling', 'Haarspray', 'Gel', 'Wachs',
-      'Make-up', 'Foundation', 'Concealer', 'Puder',
-      'Lippenstift', 'Lipgloss', 'Lipliner',
-      'Mascara', 'Eyeliner', 'Lidschatten',
-      'Nagellack', 'Nagelpflege',
-      'Parfüm', 'Eau de Toilette', 'Deo',
-      'Sonnenschutz', 'Selbstbräuner', 'After-Sun',
-      'Männerpflege', 'Rasiercreme', 'Aftershave',
-      'Babypflege', 'Kinderpflege',
-      'Naturkosmetik', 'Biokosmetik',
+      'Facial Care', 'Day Cream', 'Night Cream', 'Serum',
+      'Cleansing', 'Toner', 'Exfoliant', 'Face Mask',
+      'Body Care', 'Body Lotion', 'Shower Gel', 'Soap',
+      'Hair Care', 'Shampoo', 'Conditioner', 'Hair Treatment',
+      'Styling', 'Hairspray', 'Gel', 'Wax',
+      'Makeup', 'Foundation', 'Concealer', 'Powder',
+      'Lipstick', 'Lip Gloss', 'Lip Liner',
+      'Mascara', 'Eyeliner', 'Eye Shadow',
+      'Nail Polish', 'Nail Care',
+      'Perfume', 'Eau de Toilette', 'Deodorant',
+      'Sunscreen', 'Self-Tanner', 'After-Sun',
+      'Men\'s Grooming', 'Shaving Cream', 'Aftershave',
+      'Baby Care', 'Children\'s Care',
+      'Natural Cosmetics', 'Organic Cosmetics',
     ],
   },
   {
     id: 'food-contact',
-    name: 'Lebensmittelkontakt',
+    name: 'Food Contact Materials',
     icon: '🍽️',
-    description: 'Materialien und Gegenstände mit Lebensmittelkontakt',
-    regulations: ['VO (EG) 1935/2004', 'VO (EU) 10/2011', 'LFGB'],
+    description: 'Materials and articles in contact with food',
+    regulations: ['Reg (EC) 1935/2004', 'Reg (EU) 10/2011', 'LFGB'],
     subcategories: [
-      'Geschirr', 'Teller', 'Schüssel', 'Tasse',
-      'Gläser', 'Weingläser', 'Biergläser',
-      'Besteck', 'Messer', 'Gabel', 'Löffel',
-      'Kochtöpfe', 'Pfannen', 'Auflaufformen',
-      'Küchenutensilien', 'Schneidebretter', 'Kochlöffel',
-      'Lebensmittelbehälter', 'Vorratsdosen', 'Frischhaltebox',
-      'Trinkflaschen', 'Thermoskannen', 'Isolierbecher',
-      'Backformen', 'Muffinformen', 'Kuchenformen',
-      'Grillzubehör', 'Grillrost', 'Grillzange',
-      'Babyflaschen', 'Schnuller', 'Beikostgeschirr',
-      'Einweggeschirr', 'Einwegbesteck',
-      'Lebensmittelverpackung', 'Folien', 'Beutel',
-      'Küchenmaschinen', 'Mixer', 'Entsafter',
+      'Tableware', 'Plates', 'Bowls', 'Cups',
+      'Glasses', 'Wine Glasses', 'Beer Glasses',
+      'Cutlery', 'Knives', 'Forks', 'Spoons',
+      'Cooking Pots', 'Pans', 'Casserole Dishes',
+      'Kitchen Utensils', 'Cutting Boards', 'Cooking Spoons',
+      'Food Containers', 'Storage Containers', 'Fresh-keeping Boxes',
+      'Drinking Bottles', 'Thermos Flasks', 'Insulated Mugs',
+      'Baking Forms', 'Muffin Forms', 'Cake Forms',
+      'Grill Accessories', 'Grill Grate', 'Grill Tongs',
+      'Baby Bottles', 'Pacifiers', 'Weaning Tableware',
+      'Disposable Tableware', 'Disposable Cutlery',
+      'Food Packaging', 'Foils', 'Bags',
+      'Kitchen Appliances', 'Blender', 'Juicer',
     ],
   },
   {
     id: 'batteries',
-    name: 'Batterien & Akkus',
+    name: 'Batteries & Accumulators',
     icon: '🔋',
-    description: 'Alle Arten von Batterien und Akkumulatoren',
-    regulations: ['EU-Batterieverordnung', 'BattG', 'Digitaler Batteriepass'],
+    description: 'All types of batteries and accumulators',
+    regulations: ['EU Battery Regulation', 'BattG', 'Digital Battery Passport'],
     subcategories: [
-      'Gerätebatterie AA', 'Gerätebatterie AAA', 'Gerätebatterie C', 'Gerätebatterie D',
-      'Knopfzelle', 'Lithium-Knopfzelle', 'Silberoxid-Knopfzelle',
-      '9V-Block', 'Spezialbatterien',
-      'Lithium-Ionen-Akku', 'Lithium-Polymer-Akku',
-      'NiMH-Akku', 'NiCd-Akku',
-      'Powerbank', 'Laptop-Akku', 'Smartphone-Akku',
-      'E-Bike-Akku', 'E-Scooter-Akku', 'LMT-Batterie',
-      'Starterbatterie (SLI)', 'Motorradbatterie',
-      'Industriebatterie', 'USV-Batterie', 'Gabelstapler-Batterie',
-      'EV-Batterie', 'Traktionsbatterie',
-      'Solarspeicher', 'Heimspeicher',
-      'Blei-Säure-Batterie', 'AGM-Batterie', 'Gel-Batterie',
+      'Device Battery AA', 'Device Battery AAA', 'Device Battery C', 'Device Battery D',
+      'Button Cell', 'Lithium Button Cell', 'Silver Oxide Button Cell',
+      '9V Block', 'Special Batteries',
+      'Lithium-Ion Battery', 'Lithium-Polymer Battery',
+      'NiMH Battery', 'NiCd Battery',
+      'Power Bank', 'Laptop Battery', 'Smartphone Battery',
+      'E-Bike Battery', 'E-Scooter Battery', 'LMT Battery',
+      'Starter Battery (SLI)', 'Motorcycle Battery',
+      'Industrial Battery', 'UPS Battery', 'Forklift Battery',
+      'EV Battery', 'Traction Battery',
+      'Solar Storage', 'Home Storage',
+      'Lead-Acid Battery', 'AGM Battery', 'Gel Battery',
     ],
   },
   {
     id: 'chemicals',
-    name: 'Chemikalien & Gemische',
+    name: 'Chemicals & Mixtures',
     icon: '🧪',
-    description: 'Chemische Stoffe und Zubereitungen',
-    regulations: ['REACH', 'CLP', 'Biozidverordnung', 'Detergenzienverordnung'],
+    description: 'Chemical substances and preparations',
+    regulations: ['REACH', 'CLP', 'Biocidal Products Regulation', 'Detergents Regulation'],
     subcategories: [
-      'Reinigungsmittel', 'Allzweckreiniger', 'Glasreiniger', 'Badreiniger',
-      'Waschmittel', 'Vollwaschmittel', 'Colorwaschmittel', 'Weichspüler',
-      'Geschirrspülmittel', 'Handspülmittel', 'Maschinenspülmittel',
-      'Farben', 'Wandfarbe', 'Holzfarbe', 'Metallfarbe',
-      'Lacke', 'Klarlack', 'Buntlack', 'Holzlasur',
-      'Verdünner', 'Lösemittel', 'Pinselreiniger',
-      'Klebstoffe', 'Holzleim', 'Sekundenkleber', 'Montagekleber',
-      'Dichtstoffe', 'Silikon', 'Acryl', 'PU-Schaum',
-      'Öle', 'Motoröl', 'Hydrauliköl', 'Schmieröl',
-      'Frostschutzmittel', 'Kühlerfrostschutz',
-      'Insektizide', 'Pestizide', 'Herbizide',
-      'Düngemittel', 'Pflanzenschutzmittel',
-      'Industriechemikalien', 'Säuren', 'Laugen',
+      'Cleaning Agents', 'All-Purpose Cleaner', 'Glass Cleaner', 'Bathroom Cleaner',
+      'Detergents', 'Heavy-Duty Detergent', 'Color Detergent', 'Fabric Softener',
+      'Dishwashing Detergent', 'Hand Dishwashing Liquid', 'Machine Dishwashing Detergent',
+      'Paints', 'Wall Paint', 'Wood Paint', 'Metal Paint',
+      'Lacquers', 'Clear Coat', 'Colored Lacquer', 'Wood Stain',
+      'Thinners', 'Solvents', 'Brush Cleaner',
+      'Adhesives', 'Wood Glue', 'Super Glue', 'Mounting Adhesive',
+      'Sealants', 'Silicone', 'Acrylic', 'PU Foam',
+      'Oils', 'Motor Oil', 'Hydraulic Oil', 'Lubricating Oil',
+      'Antifreeze', 'Radiator Antifreeze',
+      'Insecticides', 'Pesticides', 'Herbicides',
+      'Fertilizers', 'Plant Protection Products',
+      'Industrial Chemicals', 'Acids', 'Alkalis',
     ],
   },
   {
     id: 'medical',
-    name: 'Medizinprodukte',
+    name: 'Medical Devices',
     icon: '🏥',
-    description: 'Medizinische Geräte und Hilfsmittel',
+    description: 'Medical devices and aids',
     regulations: ['MDR (EU) 2017/745', 'IVDR (EU) 2017/746', 'CE'],
     subcategories: [
-      'Klasse I - Nicht-invasiv', 'Verbandmaterial', 'Kompressionsstrümpfe',
-      'Klasse I - Steril', 'Einmalhandschuhe steril',
-      'Klasse IIa', 'Blutdruckmessgerät', 'Fieberthermometer', 'Hörgerät',
-      'Klasse IIb', 'Beatmungsgerät', 'Infusionspumpe', 'Defibrilator',
-      'Klasse III', 'Herzschrittmacher', 'Implantate',
-      'IVD Klasse A', 'Schwangerschaftstest', 'Urintest',
-      'IVD Klasse B', 'Blutzuckermessgerät',
-      'IVD Klasse C', 'HIV-Test', 'Hepatitis-Test',
-      'IVD Klasse D', 'Blutgruppenbestimmung',
-      'Hilfsmittel', 'Rollator', 'Rollstuhl', 'Gehhilfe',
-      'Orthopädische Einlagen', 'Bandagen', 'Orthesen',
+      'Class I - Non-invasive', 'Dressing Material', 'Compression Stockings',
+      'Class I - Sterile', 'Sterile Disposable Gloves',
+      'Class IIa', 'Blood Pressure Monitor', 'Thermometer', 'Hearing Aid',
+      'Class IIb', 'Ventilator', 'Infusion Pump', 'Defibrillator',
+      'Class III', 'Pacemaker', 'Implants',
+      'IVD Class A', 'Pregnancy Test', 'Urine Test',
+      'IVD Class B', 'Blood Glucose Meter',
+      'IVD Class C', 'HIV Test', 'Hepatitis Test',
+      'IVD Class D', 'Blood Typing',
+      'Mobility Aids', 'Rollator', 'Wheelchair', 'Walking Aid',
+      'Orthopedic Insoles', 'Bandages', 'Orthoses',
     ],
   },
   {
     id: 'construction',
-    name: 'Bauprodukte',
+    name: 'Construction Products',
     icon: '🏗️',
-    description: 'Baumaterialien und Bauprodukte',
-    regulations: ['Bauproduktenverordnung (EU) 305/2011', 'CE', 'DoP'],
+    description: 'Building materials and construction products',
+    regulations: ['Construction Products Regulation (EU) 305/2011', 'CE', 'DoP'],
     subcategories: [
-      'Dämmstoffe', 'Mineralwolle', 'EPS', 'XPS', 'PUR',
-      'Fenster', 'Türen', 'Tore',
-      'Bodenbeläge', 'Laminat', 'Parkett', 'Vinyl', 'Fliesen',
-      'Sanitärprodukte', 'WC', 'Waschbecken', 'Badewanne', 'Dusche',
-      'Heizung', 'Heizkörper', 'Fußbodenheizung', 'Wärmepumpe',
-      'Elektroinstallation', 'Steckdosen', 'Schalter', 'Kabel',
-      'Rohre', 'Fittings', 'Armaturen',
-      'Beton', 'Mörtel', 'Estrich',
-      'Ziegel', 'Kalksandstein', 'Porenbeton',
-      'Holzwerkstoffe', 'OSB', 'MDF', 'Sperrholz',
-      'Dachziegel', 'Dachbahnen', 'Dachdämmung',
-      'Fassade', 'Putz', 'WDVS',
+      'Insulation Materials', 'Mineral Wool', 'EPS', 'XPS', 'PUR',
+      'Windows', 'Doors', 'Gates',
+      'Floor Coverings', 'Laminate', 'Parquet', 'Vinyl', 'Tiles',
+      'Sanitary Products', 'Toilet', 'Washbasin', 'Bathtub', 'Shower',
+      'Heating', 'Radiators', 'Underfloor Heating', 'Heat Pump',
+      'Electrical Installation', 'Sockets', 'Switches', 'Cables',
+      'Pipes', 'Fittings', 'Taps',
+      'Concrete', 'Mortar', 'Screed',
+      'Bricks', 'Sand-lime Brick', 'Aerated Concrete',
+      'Wood-based Materials', 'OSB', 'MDF', 'Plywood',
+      'Roof Tiles', 'Roofing Membranes', 'Roof Insulation',
+      'Facade', 'Plaster', 'ETICS',
     ],
   },
   {
     id: 'machinery',
-    name: 'Maschinen & Werkzeuge',
+    name: 'Machinery & Tools',
     icon: '🔧',
-    description: 'Maschinen und elektrische Werkzeuge',
-    regulations: ['Maschinenrichtlinie 2006/42/EG', 'CE', 'Outdoor-Lärm-RL'],
+    description: 'Machinery and power tools',
+    regulations: ['Machinery Directive 2006/42/EC', 'CE', 'Outdoor Noise Directive'],
     subcategories: [
-      'Bohrmaschine', 'Bohrhammer', 'Schlagbohrmaschine',
-      'Winkelschleifer', 'Schwingschleifer', 'Bandschleifer',
-      'Kreissäge', 'Stichsäge', 'Kappsäge', 'Kettensäge',
-      'Akkuschrauber', 'Schlagschrauber',
-      'Kompressor', 'Druckluft-Werkzeug',
-      'Schweißgerät', 'Lötstation',
-      'Rasenmäher', 'Rasentrimmer', 'Heckenschere',
-      'Hochdruckreiniger', 'Nasssauger',
-      'Industriemaschine', 'CNC-Maschine', 'Fräse', 'Drehmaschine',
-      'Fördertechnik', 'Gabelstapler', 'Hubwagen',
-      'Druckluftkompressor', 'Hydraulikpumpe',
-      'Messinstrumente', 'Multimeter', 'Oszilloskop',
+      'Drill', 'Rotary Hammer', 'Impact Drill',
+      'Angle Grinder', 'Orbital Sander', 'Belt Sander',
+      'Circular Saw', 'Jigsaw', 'Miter Saw', 'Chain Saw',
+      'Cordless Screwdriver', 'Impact Wrench',
+      'Compressor', 'Pneumatic Tools',
+      'Welding Machine', 'Soldering Station',
+      'Lawn Mower', 'Grass Trimmer', 'Hedge Trimmer',
+      'Pressure Washer', 'Wet Vacuum',
+      'Industrial Machine', 'CNC Machine', 'Milling Machine', 'Lathe',
+      'Conveyor Technology', 'Forklift', 'Pallet Truck',
+      'Air Compressor', 'Hydraulic Pump',
+      'Measuring Instruments', 'Multimeter', 'Oscilloscope',
     ],
   },
   {
     id: 'automotive',
-    name: 'Kfz-Teile & Zubehör',
+    name: 'Automotive Parts & Accessories',
     icon: '🚗',
-    description: 'Fahrzeugteile und Autozubehör',
-    regulations: ['ECE-Regelungen', 'Typgenehmigung', 'REACH'],
+    description: 'Vehicle parts and automotive accessories',
+    regulations: ['ECE Regulations', 'Type Approval', 'REACH'],
     subcategories: [
-      'Reifen', 'Sommerreifen', 'Winterreifen', 'Ganzjahresreifen',
-      'Felgen', 'Alufelgen', 'Stahlfelgen',
-      'Bremsscheiben', 'Bremsbeläge', 'Bremsflüssigkeit',
-      'Ölfilter', 'Luftfilter', 'Kraftstofffilter',
-      'Scheinwerfer', 'Rückleuchten', 'Blinker',
-      'Auspuff', 'Katalysator', 'Partikelfilter',
-      'Batterie', 'Anlasser', 'Lichtmaschine',
-      'Kühlerschläuche', 'Keilriemen', 'Zahnriemen',
-      'Stoßdämpfer', 'Federn', 'Fahrwerk',
-      'Scheibenwischer', 'Scheibenwascher',
-      'Innenausstattung', 'Sitzbezüge', 'Fußmatten',
-      'Navigation', 'Autoradio', 'Dashcam',
-      'Kindersitz', 'Babyschale',
+      'Tires', 'Summer Tires', 'Winter Tires', 'All-Season Tires',
+      'Rims', 'Alloy Rims', 'Steel Rims',
+      'Brake Discs', 'Brake Pads', 'Brake Fluid',
+      'Oil Filter', 'Air Filter', 'Fuel Filter',
+      'Headlights', 'Tail Lights', 'Turn Signals',
+      'Exhaust', 'Catalytic Converter', 'Particulate Filter',
+      'Battery', 'Starter Motor', 'Alternator',
+      'Coolant Hoses', 'V-Belt', 'Timing Belt',
+      'Shock Absorbers', 'Springs', 'Suspension',
+      'Windshield Wipers', 'Windshield Washer',
+      'Interior', 'Seat Covers', 'Floor Mats',
+      'Navigation', 'Car Radio', 'Dashcam',
+      'Child Seat', 'Infant Carrier',
     ],
   },
   {
     id: 'sports',
-    name: 'Sport & Freizeit',
+    name: 'Sports & Leisure',
     icon: '⚽',
-    description: 'Sportgeräte und Freizeitartikel',
-    regulations: ['PSA-Verordnung', 'CE', 'EN-Normen'],
+    description: 'Sports equipment and leisure articles',
+    regulations: ['PPE Regulation', 'CE', 'EN Standards'],
     subcategories: [
-      'Fahrrad', 'E-Bike', 'Mountainbike', 'Rennrad',
-      'Heimtrainer', 'Laufband', 'Crosstrainer', 'Rudergerät',
-      'Hanteln', 'Gewichte', 'Kraftstation',
-      'Fußball', 'Basketball', 'Volleyball', 'Tennis',
-      'Golf', 'Golfschläger', 'Golfbag',
-      'Skiausrüstung', 'Ski', 'Skistöcke', 'Skischuhe',
-      'Snowboard', 'Snowboardbindung',
-      'Schwimmausrüstung', 'Schwimmbrille', 'Neopren',
-      'Camping', 'Zelt', 'Schlafsack', 'Isomatte',
-      'Wanderausrüstung', 'Wanderschuhe', 'Trekkingstöcke',
-      'Angeln', 'Angel', 'Rolle', 'Köder',
-      'Reitsport', 'Sattel', 'Reithelm',
-      'PSA Sport', 'Helm', 'Protektoren', 'Schienbeinschoner',
+      'Bicycle', 'E-Bike', 'Mountain Bike', 'Road Bike',
+      'Exercise Bike', 'Treadmill', 'Elliptical Trainer', 'Rowing Machine',
+      'Dumbbells', 'Weights', 'Multi-Gym',
+      'Football', 'Basketball', 'Volleyball', 'Tennis',
+      'Golf', 'Golf Clubs', 'Golf Bag',
+      'Ski Equipment', 'Skis', 'Ski Poles', 'Ski Boots',
+      'Snowboard', 'Snowboard Binding',
+      'Swimming Equipment', 'Swimming Goggles', 'Neoprene',
+      'Camping', 'Tent', 'Sleeping Bag', 'Sleeping Pad',
+      'Hiking Equipment', 'Hiking Boots', 'Trekking Poles',
+      'Fishing', 'Fishing Rod', 'Reel', 'Lure',
+      'Equestrian Sports', 'Saddle', 'Riding Helmet',
+      'Sports PPE', 'Helmet', 'Protectors', 'Shin Guards',
     ],
   },
   {
     id: 'baby',
-    name: 'Baby & Kleinkind',
+    name: 'Baby & Toddler',
     icon: '👶',
-    description: 'Babyausstattung und Kleinkindprodukte',
-    regulations: ['Spielzeugrichtlinie', 'EN 1888', 'ECE R44/R129', 'REACH'],
+    description: 'Baby equipment and toddler products',
+    regulations: ['Toy Safety Directive', 'EN 1888', 'ECE R44/R129', 'REACH'],
     subcategories: [
-      'Kinderwagen', 'Buggy', 'Kombikinderwagen', 'Geschwisterwagen',
-      'Autositze', 'Babyschale', 'Kindersitz Gruppe 1', 'Kindersitz Gruppe 2/3',
-      'Babybetten', 'Stubenwagen', 'Reisebett', 'Beistellbett',
-      'Hochstühle', 'Treppenhochstuhl', 'Reisehochstuhl',
-      'Babytragen', 'Tragetuch', 'Babytrage', 'Kraxe',
-      'Stillzubehör', 'Stillkissen', 'Milchpumpe', 'Stilleinlagen',
-      'Babyflaschen', 'Sauger', 'Flaschenwärmer', 'Sterilisator',
-      'Windeln', 'Einwegwindeln', 'Stoffwindeln', 'Schwimmwindeln',
-      'Babypflege', 'Wickelauflage', 'Badewanne', 'Pflegeprodukte',
-      'Babykleidung', 'Strampler', 'Bodies', 'Schlafsäcke',
-      'Laufgitter', 'Türschutzgitter', 'Treppenschutzgitter',
-      'Babyphone', 'Babykamera', 'Sensormatten',
+      'Strollers', 'Buggy', 'Combination Stroller', 'Double Stroller',
+      'Car Seats', 'Infant Carrier', 'Child Seat Group 1', 'Child Seat Group 2/3',
+      'Baby Cribs', 'Bassinet', 'Travel Crib', 'Bedside Crib',
+      'High Chairs', 'Stair High Chair', 'Travel High Chair',
+      'Baby Carriers', 'Baby Wrap', 'Baby Carrier', 'Child Carrier Backpack',
+      'Nursing Accessories', 'Nursing Pillow', 'Breast Pump', 'Nursing Pads',
+      'Baby Bottles', 'Nipples', 'Bottle Warmer', 'Sterilizer',
+      'Diapers', 'Disposable Diapers', 'Cloth Diapers', 'Swim Diapers',
+      'Baby Care', 'Changing Pad', 'Baby Bath', 'Care Products',
+      'Baby Clothing', 'Onesies', 'Bodysuits', 'Sleep Sacks',
+      'Playpens', 'Door Gates', 'Stair Gates',
+      'Baby Monitor', 'Baby Camera', 'Sensor Mats',
     ],
   },
   {
     id: 'psa',
-    name: 'PSA - Schutzausrüstung',
+    name: 'PPE - Protective Equipment',
     icon: '🦺',
-    description: 'Persönliche Schutzausrüstung',
-    regulations: ['PSA-Verordnung (EU) 2016/425', 'CE', 'Kategorie I-III'],
+    description: 'Personal protective equipment',
+    regulations: ['PPE Regulation (EU) 2016/425', 'CE', 'Category I-III'],
     subcategories: [
-      'Kopfschutz', 'Schutzhelm', 'Anstoßkappe', 'Haarschutz',
-      'Augenschutz', 'Schutzbrille', 'Vollsichtbrille', 'Gesichtsschild',
-      'Gehörschutz', 'Ohrstöpsel', 'Kapselgehörschutz', 'Bügelgehörschutz',
-      'Atemschutz', 'FFP-Masken', 'Halbmasken', 'Vollmasken', 'Gebläseatemschutz',
-      'Handschutz', 'Arbeitshandschuhe', 'Chemikalienschutz', 'Schnittschutz',
-      'Fußschutz', 'Sicherheitsschuhe S1-S3', 'Gummistiefel', 'Überschuhe',
-      'Körperschutz', 'Warnweste', 'Schweißerschutz', 'Hitzeschutz',
-      'Fallschutz', 'Auffanggurt', 'Sicherheitsseil', 'Höhensicherung',
-      'Knieschutz', 'Knieschoner', 'Kniematte',
-      'Arbeitskleidung', 'Bundhose', 'Latzhose', 'Arbeitsjacke',
-      'Einwegschutz', 'Einwegoverall', 'Einweghandschuhe', 'Überzieher',
+      'Head Protection', 'Safety Helmet', 'Bump Cap', 'Hair Protection',
+      'Eye Protection', 'Safety Glasses', 'Full-Vision Goggles', 'Face Shield',
+      'Hearing Protection', 'Ear Plugs', 'Ear Muffs', 'Banded Ear Plugs',
+      'Respiratory Protection', 'FFP Masks', 'Half Masks', 'Full Face Masks', 'Powered Air Respirator',
+      'Hand Protection', 'Work Gloves', 'Chemical Protection', 'Cut Protection',
+      'Foot Protection', 'Safety Shoes S1-S3', 'Rubber Boots', 'Overshoes',
+      'Body Protection', 'High-Visibility Vest', 'Welding Protection', 'Heat Protection',
+      'Fall Protection', 'Safety Harness', 'Safety Rope', 'Height Safety',
+      'Knee Protection', 'Knee Pads', 'Knee Mat',
+      'Work Clothing', 'Work Trousers', 'Bib Overalls', 'Work Jacket',
+      'Disposable Protection', 'Disposable Coverall', 'Disposable Gloves', 'Overshoes',
     ],
   },
   {
     id: 'renewable',
-    name: 'Erneuerbare Energien',
+    name: 'Renewable Energy',
     icon: '☀️',
-    description: 'Solar, Wind und Energiespeicher',
-    regulations: ['CE', 'Niederspannungsrichtlinie', 'EMV', 'Ökodesign'],
+    description: 'Solar, wind and energy storage',
+    regulations: ['CE', 'Low Voltage Directive', 'EMC', 'Ecodesign'],
     subcategories: [
-      'Solarmodule', 'Monokristallin', 'Polykristallin', 'Dünnschicht',
-      'Wechselrichter', 'String-Wechselrichter', 'Hybrid-Wechselrichter', 'Mikro-Wechselrichter',
-      'Batteriespeicher', 'Lithium-Speicher', 'Blei-Speicher', 'Salzwasser-Speicher',
-      'Montagesysteme', 'Aufdach', 'Indach', 'Flachdach', 'Freifläche',
-      'Balkonkraftwerk', 'Stecker-Solar', 'Mini-PV',
-      'Solarthermie', 'Flachkollektoren', 'Röhrenkollektoren',
-      'Kleinwindanlagen', 'Vertikalachser', 'Horizontalachser',
-      'Energiemanagement', 'Smart Meter', 'Energiemonitor', 'Lastmanagement',
-      'Wallbox', 'AC-Wallbox', 'DC-Schnelllader', 'Mobile Ladestation',
-      'Kabel & Zubehör', 'Solarkabel', 'Stecker', 'Überspannungsschutz',
+      'Solar Modules', 'Monocrystalline', 'Polycrystalline', 'Thin Film',
+      'Inverters', 'String Inverter', 'Hybrid Inverter', 'Micro Inverter',
+      'Battery Storage', 'Lithium Storage', 'Lead Storage', 'Saltwater Storage',
+      'Mounting Systems', 'On-Roof', 'In-Roof', 'Flat Roof', 'Ground-Mounted',
+      'Balcony Power Station', 'Plug-In Solar', 'Mini PV',
+      'Solar Thermal', 'Flat Plate Collectors', 'Evacuated Tube Collectors',
+      'Small Wind Turbines', 'Vertical Axis', 'Horizontal Axis',
+      'Energy Management', 'Smart Meter', 'Energy Monitor', 'Load Management',
+      'Wallbox', 'AC Wallbox', 'DC Fast Charger', 'Mobile Charging Station',
+      'Cables & Accessories', 'Solar Cable', 'Connectors', 'Surge Protection',
     ],
   },
 ];
@@ -407,7 +407,7 @@ export function ProductCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Kategorien aus der API laden
+  // Load categories from the API
   useEffect(() => {
     async function loadCategories() {
       try {
@@ -416,7 +416,7 @@ export function ProductCategoriesPage() {
           setCategories(apiCategories);
         }
       } catch (error) {
-        console.warn('Kategorien konnten nicht geladen werden, verwende Fallback-Daten:', error);
+        console.warn('Could not load categories, using fallback data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -439,33 +439,33 @@ export function ProductCategoriesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Produktkategorien</h1>
+          <h1 className="text-2xl font-bold text-foreground">Product Categories</h1>
           <p className="text-muted-foreground">
-            {categories.length} Hauptkategorien mit {totalSubcategories} Unterkategorien
+            {categories.length} main categories with {totalSubcategories} subcategories
           </p>
         </div>
         <Link to="/requirements-calculator">
           <Button>
             <Zap className="mr-2 h-4 w-4" />
-            Anforderungs-Kalkulator
+            Requirements Calculator
           </Button>
         </Link>
       </div>
 
-      {/* Suche */}
+      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Kategorie oder Produkt suchen..."
+          placeholder="Search category or product..."
           className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* Statistik-Karten */}
+      {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
@@ -475,7 +475,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{categories.length}</p>
-                <p className="text-sm text-muted-foreground">Hauptkategorien</p>
+                <p className="text-sm text-muted-foreground">Main Categories</p>
               </div>
             </div>
           </CardContent>
@@ -488,7 +488,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalSubcategories}</p>
-                <p className="text-sm text-muted-foreground">Unterkategorien</p>
+                <p className="text-sm text-muted-foreground">Subcategories</p>
               </div>
             </div>
           </CardContent>
@@ -501,7 +501,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">27+</p>
-                <p className="text-sm text-muted-foreground">EU-Länder abgedeckt</p>
+                <p className="text-sm text-muted-foreground">EU Countries Covered</p>
               </div>
             </div>
           </CardContent>
@@ -514,7 +514,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">50+</p>
-                <p className="text-sm text-muted-foreground">Regulierungen</p>
+                <p className="text-sm text-muted-foreground">Regulations</p>
               </div>
             </div>
           </CardContent>
@@ -528,7 +528,7 @@ export function ProductCategoriesPage() {
         </div>
       )}
 
-      {/* Kategorien-Liste */}
+      {/* Categories List */}
       {!isLoading && (
         <div className="grid gap-4">
           {filteredCategories.map((category) => {
@@ -547,7 +547,7 @@ export function ProductCategoriesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{category.name}</h3>
-                            <Badge variant="secondary">{subcategories.length} Produkte</Badge>
+                            <Badge variant="secondary">{subcategories.length} Products</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{category.description}</p>
                         </div>
@@ -567,11 +567,11 @@ export function ProductCategoriesPage() {
                     </AccordionTrigger>
                     <AccordionContent className="px-6 pb-4">
                       <div className="space-y-4">
-                        {/* Regulierungen */}
+                        {/* Regulations */}
                         <div>
                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                             <ShieldCheck className="h-4 w-4" />
-                            Relevante Regulierungen
+                            Relevant Regulations
                           </h4>
                           <div className="flex flex-wrap gap-2">
                             {regulations.map(reg => (
@@ -582,11 +582,11 @@ export function ProductCategoriesPage() {
                           </div>
                         </div>
 
-                        {/* Unterkategorien */}
+                        {/* Subcategories */}
                         <div>
                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                             <Package className="h-4 w-4" />
-                            Produkttypen ({subcategories.length})
+                            Product Types ({subcategories.length})
                           </h4>
                           <div className="flex flex-wrap gap-2">
                             {subcategories.map(sub => (
@@ -597,18 +597,18 @@ export function ProductCategoriesPage() {
                           </div>
                         </div>
 
-                        {/* Aktionen */}
+                        {/* Actions */}
                         <div className="flex gap-2 pt-2">
                           <Link to={`/requirements-calculator?category=${category.id}`}>
                             <Button size="sm">
                               <Zap className="mr-2 h-4 w-4" />
-                              Anforderungen prüfen
+                              Check Requirements
                             </Button>
                           </Link>
                           <Link to={`/checklists?category=${category.id}`}>
                             <Button size="sm" variant="outline">
                               <FileText className="mr-2 h-4 w-4" />
-                              Checkliste öffnen
+                              Open Checklist
                             </Button>
                           </Link>
                         </div>
@@ -626,8 +626,8 @@ export function ProductCategoriesPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Keine Kategorien gefunden</h3>
-            <p className="text-muted-foreground">Versuchen Sie einen anderen Suchbegriff</p>
+            <h3 className="text-lg font-medium">No categories found</h3>
+            <p className="text-muted-foreground">Try a different search term</p>
           </CardContent>
         </Card>
       )}

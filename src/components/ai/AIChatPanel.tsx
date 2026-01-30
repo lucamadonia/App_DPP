@@ -20,9 +20,9 @@ interface AIChatPanelProps {
 }
 
 const SUGGESTED_QUESTIONS = [
-  'Welche Normen gelten für mein Produkt?',
-  'Was kostet die CE-Zertifizierung?',
-  'Brauche ich eine benannte Stelle?',
+  'Which standards apply to my product?',
+  'What does CE certification cost?',
+  'Do I need a notified body?',
 ];
 
 function TypingDots() {
@@ -77,8 +77,8 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
       }
       setMessages(prev => [...prev, { role: 'assistant', content: fullText }]);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Fehler bei der KI-Anfrage';
-      setMessages(prev => [...prev, { role: 'assistant', content: `Fehler: ${errorMsg}` }]);
+      const errorMsg = err instanceof Error ? err.message : 'Error during AI request';
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMsg}` }]);
     } finally {
       setIsStreaming(false);
       setStreamingText('');
@@ -126,10 +126,10 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                 <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
                   <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                Compliance-Assistent
+                Compliance Assistant
               </SheetTitle>
               <SheetDescription>
-                Stellen Sie Fragen zu den Anforderungen Ihres Produkts.
+                Ask questions about your product's requirements.
               </SheetDescription>
             </SheetHeader>
           </div>
@@ -143,7 +143,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                     <Sparkles className="h-7 w-7 text-blue-400" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Fragen Sie mich zu Compliance-Anforderungen.
+                    Ask me about compliance requirements.
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
                     {SUGGESTED_QUESTIONS.map((q) => (
@@ -206,7 +206,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Frage eingeben..."
+                placeholder="Enter question..."
                 disabled={isStreaming}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 py-1.5"
               />
@@ -226,7 +226,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                 className="w-full text-muted-foreground gap-1.5 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Chat leeren
+                Clear Chat
               </Button>
             )}
           </div>

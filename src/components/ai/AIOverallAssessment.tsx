@@ -41,7 +41,7 @@ export function AIOverallAssessment({ productContext, requirements }: AIOverallA
             <div className="flex items-center justify-center p-2.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
               <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <span>KI-Gesamtbewertung</span>
+            <span>AI Overall Assessment</span>
           </div>
           {!text && !isStreaming && (
             <Button
@@ -53,7 +53,7 @@ export function AIOverallAssessment({ productContext, requirements }: AIOverallA
                 <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               </div>
               <Sparkles className="h-3.5 w-3.5" />
-              Bewertung generieren
+              Generate Assessment
             </Button>
           )}
           {text && !isStreaming && (
@@ -64,7 +64,7 @@ export function AIOverallAssessment({ productContext, requirements }: AIOverallA
               className="gap-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Zurücksetzen
+              Reset
             </Button>
           )}
         </CardTitle>
@@ -76,7 +76,7 @@ export function AIOverallAssessment({ productContext, requirements }: AIOverallA
               <BarChart3 className="h-6 w-6 text-blue-400" />
             </div>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Lassen Sie die KI eine Gesamtbewertung Ihrer Compliance-Readiness erstellen — inkl. Risikobereiche, Aufwandsschätzung und Empfehlungen.
+              Let AI create an overall assessment of your compliance readiness — including risk areas, effort estimates, and recommendations.
             </p>
           </div>
         )}

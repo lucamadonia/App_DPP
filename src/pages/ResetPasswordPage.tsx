@@ -19,12 +19,12 @@ export function ResetPasswordPage() {
     setError('');
 
     if (password.length < 8) {
-      setError('Das Passwort muss mindestens 8 Zeichen lang sein.');
+      setError('Password must be at least 8 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Die Passwörter stimmen nicht überein.');
+      setError('Passwords do not match.');
       return;
     }
 
@@ -58,17 +58,17 @@ export function ResetPasswordPage() {
           </div>
           <h1 className="text-2xl font-bold">DPP Manager</h1>
           <p className="text-muted-foreground text-sm">
-            Digitale Produktpässe für nachhaltige Produkte
+            Digital Product Passports for sustainable products
           </p>
         </div>
 
         <Card className="w-full max-w-md mx-auto">
           <CardHeader className="text-center">
-            <CardTitle>Neues Passwort setzen</CardTitle>
+            <CardTitle>Set New Password</CardTitle>
             <CardDescription>
               {success
-                ? 'Ihr Passwort wurde erfolgreich geändert.'
-                : 'Geben Sie Ihr neues Passwort ein.'}
+                ? 'Your password has been changed successfully.'
+                : 'Enter your new password.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -84,22 +84,22 @@ export function ResetPasswordPage() {
                   <CheckCircle className="h-12 w-12 text-green-500" />
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
-                  Sie können sich jetzt mit Ihrem neuen Passwort anmelden.
+                  You can now sign in with your new password.
                 </p>
                 <Button asChild className="w-full">
-                  <Link to="/login">Zur Anmeldung</Link>
+                  <Link to="/login">Go to Sign In</Link>
                 </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">Neues Passwort</Label>
+                  <Label htmlFor="new-password">New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="new-password"
                       type="password"
-                      placeholder="Mindestens 8 Zeichen"
+                      placeholder="At least 8 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-9"
@@ -109,13 +109,13 @@ export function ResetPasswordPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="confirm-password"
                       type="password"
-                      placeholder="Passwort wiederholen"
+                      placeholder="Repeat password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-9"
@@ -128,14 +128,14 @@ export function ResetPasswordPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Speichere...
+                      Saving...
                     </>
                   ) : (
-                    'Passwort speichern'
+                    'Save Password'
                   )}
                 </Button>
                 <Button variant="ghost" asChild className="w-full">
-                  <Link to="/login">Zurück zur Anmeldung</Link>
+                  <Link to="/login">Back to Sign In</Link>
                 </Button>
               </form>
             )}

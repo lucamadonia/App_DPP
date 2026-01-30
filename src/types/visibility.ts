@@ -29,20 +29,20 @@ export interface VisibilityConfigV2 {
 export const visibilityLevels: { value: VisibilityLevel; label: string; description: string; icon: string }[] = [
   {
     value: 'internal',
-    label: 'Nur intern',
-    description: 'Nur im Admin-Bereich sichtbar',
+    label: 'Internal Only',
+    description: 'Only visible in admin area',
     icon: 'lock'
   },
   {
     value: 'customs',
-    label: 'Zoll',
-    description: 'Sichtbar für Zoll und intern',
+    label: 'Customs',
+    description: 'Visible for customs and admin',
     icon: 'shield'
   },
   {
     value: 'consumer',
-    label: 'Verbraucher',
-    description: 'Öffentlich für alle sichtbar',
+    label: 'Consumer',
+    description: 'Publicly visible for everyone',
     icon: 'users'
   },
 ];
@@ -199,58 +199,58 @@ export interface FieldDefinition {
 
 export const fieldDefinitions: FieldDefinition[] = [
   // Grundlegende Produktinfos
-  { key: 'name', label: 'Produktname', category: 'Grunddaten' },
-  { key: 'image', label: 'Produktbild', category: 'Grunddaten' },
-  { key: 'description', label: 'Beschreibung', category: 'Grunddaten' },
-  { key: 'manufacturer', label: 'Hersteller', category: 'Grunddaten' },
-  { key: 'category', label: 'Kategorie', category: 'Grunddaten' },
+  { key: 'name', label: 'Product Name', category: 'Basic Data' },
+  { key: 'image', label: 'Product Image', category: 'Basic Data' },
+  { key: 'description', label: 'Description', category: 'Basic Data' },
+  { key: 'manufacturer', label: 'Manufacturer', category: 'Basic Data' },
+  { key: 'category', label: 'Category', category: 'Basic Data' },
 
   // Identifikatoren
-  { key: 'gtin', label: 'GTIN', category: 'Identifikatoren', description: 'Global Trade Item Number' },
-  { key: 'serialNumber', label: 'Seriennummer', category: 'Identifikatoren' },
-  { key: 'batchNumber', label: 'Chargennummer', category: 'Identifikatoren' },
+  { key: 'gtin', label: 'GTIN', category: 'Identifiers', description: 'Global Trade Item Number' },
+  { key: 'serialNumber', label: 'Serial Number', category: 'Identifiers' },
+  { key: 'batchNumber', label: 'Batch Number', category: 'Identifiers' },
 
   // Materialien
-  { key: 'materials', label: 'Materialzusammensetzung', category: 'Materialien' },
-  { key: 'materialOrigins', label: 'Materialherkunft', category: 'Materialien' },
+  { key: 'materials', label: 'Material Composition', category: 'Materials' },
+  { key: 'materialOrigins', label: 'Material Origin', category: 'Materials' },
 
   // Nachhaltigkeit
-  { key: 'carbonFootprint', label: 'CO2-Fußabdruck (kg)', category: 'Nachhaltigkeit' },
-  { key: 'carbonRating', label: 'CO2-Bewertung (A-E)', category: 'Nachhaltigkeit' },
+  { key: 'carbonFootprint', label: 'Carbon Footprint (kg)', category: 'Sustainability' },
+  { key: 'carbonRating', label: 'CO2 Rating (A-E)', category: 'Sustainability' },
 
   // Recycling
-  { key: 'recyclability', label: 'Recyclingfähigkeit (%)', category: 'Recycling' },
-  { key: 'recyclingInstructions', label: 'Recycling-Anleitung', category: 'Recycling' },
-  { key: 'disposalMethods', label: 'Entsorgungsmethoden', category: 'Recycling' },
+  { key: 'recyclability', label: 'Recyclability (%)', category: 'Recycling' },
+  { key: 'recyclingInstructions', label: 'Recycling Instructions', category: 'Recycling' },
+  { key: 'disposalMethods', label: 'Disposal Methods', category: 'Recycling' },
 
   // Zertifizierungen
-  { key: 'certifications', label: 'Zertifizierungen', category: 'Zertifizierungen' },
-  { key: 'certificateDownloads', label: 'Zertifikat-Downloads', category: 'Zertifizierungen' },
+  { key: 'certifications', label: 'Certifications', category: 'Certifications' },
+  { key: 'certificateDownloads', label: 'Certificate Downloads', category: 'Certifications' },
 
   // Lieferkette
-  { key: 'supplyChainSimple', label: 'Lieferkette (vereinfacht)', category: 'Lieferkette' },
-  { key: 'supplyChainFull', label: 'Lieferkette (vollständig)', category: 'Lieferkette' },
+  { key: 'supplyChainSimple', label: 'Supply Chain (simplified)', category: 'Supply Chain' },
+  { key: 'supplyChainFull', label: 'Supply Chain (full)', category: 'Supply Chain' },
 
   // Zollrelevante Felder
-  { key: 'hsCode', label: 'HS-Code', category: 'Zolldaten', description: 'Zolltarifnummer' },
-  { key: 'countryOfOrigin', label: 'Herkunftsland', category: 'Zolldaten' },
-  { key: 'netWeight', label: 'Nettogewicht (g)', category: 'Zolldaten' },
-  { key: 'grossWeight', label: 'Bruttogewicht (g)', category: 'Zolldaten' },
-  { key: 'manufacturerAddress', label: 'Herstelleradresse', category: 'Zolldaten' },
-  { key: 'manufacturerEORI', label: 'EORI-Nummer', category: 'Zolldaten', description: 'Economic Operators Registration and Identification' },
-  { key: 'manufacturerVAT', label: 'USt-IdNr.', category: 'Zolldaten', description: 'Umsatzsteuer-Identifikationsnummer' },
+  { key: 'hsCode', label: 'HS-Code', category: 'Customs Data', description: 'Customs tariff number' },
+  { key: 'countryOfOrigin', label: 'Country of Origin', category: 'Customs Data' },
+  { key: 'netWeight', label: 'Net Weight (g)', category: 'Customs Data' },
+  { key: 'grossWeight', label: 'Gross Weight (g)', category: 'Customs Data' },
+  { key: 'manufacturerAddress', label: 'Manufacturer Address', category: 'Customs Data' },
+  { key: 'manufacturerEORI', label: 'EORI Number', category: 'Customs Data', description: 'Economic Operators Registration and Identification' },
+  { key: 'manufacturerVAT', label: 'VAT ID', category: 'Customs Data', description: 'Value Added Tax Identification Number' },
 ];
 
 // Kategorien für die Gruppierung in den Einstellungen
 export const fieldCategories = [
-  'Grunddaten',
-  'Identifikatoren',
-  'Materialien',
-  'Nachhaltigkeit',
+  'Basic Data',
+  'Identifiers',
+  'Materials',
+  'Sustainability',
   'Recycling',
-  'Zertifizierungen',
-  'Lieferkette',
-  'Zolldaten',
+  'Certifications',
+  'Supply Chain',
+  'Customs Data',
 ];
 
 // Hilfsfunktion zum Laden der V2-Konfiguration

@@ -79,23 +79,23 @@ export function AuthCallbackPage() {
             )}
           </div>
           <CardTitle>
-            {status === 'loading' && 'Authentifizierung wird verarbeitet...'}
-            {status === 'success' && 'Erfolgreich angemeldet!'}
-            {status === 'error' && 'Anmeldung fehlgeschlagen'}
+            {status === 'loading' && 'Processing authentication...'}
+            {status === 'success' && 'Successfully signed in!'}
+            {status === 'error' && 'Sign in failed'}
           </CardTitle>
           <CardDescription>
-            {status === 'loading' && 'Bitte warten Sie einen Moment.'}
-            {status === 'success' && 'Sie werden zum Dashboard weitergeleitet.'}
+            {status === 'loading' && 'Please wait a moment.'}
+            {status === 'success' && 'You will be redirected to the dashboard.'}
             {status === 'error' && error}
           </CardDescription>
         </CardHeader>
         {status === 'error' && (
           <CardContent className="flex flex-col gap-2">
             <Button onClick={() => navigate('/login', { replace: true })}>
-              Zurück zur Anmeldung
+              Back to Sign In
             </Button>
             <Button variant="ghost" onClick={() => navigate('/', { replace: true })}>
-              Zur Startseite
+              Go to Homepage
             </Button>
           </CardContent>
         )}

@@ -31,20 +31,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 
 const SUPPLIER_ROLES = [
-  { value: 'manufacturer', label: 'Hersteller' },
-  { value: 'importeur', label: 'Importeur' },
-  { value: 'component', label: 'Komponenten-Lieferant' },
-  { value: 'raw_material', label: 'Rohstoff-Lieferant' },
-  { value: 'packaging', label: 'Verpackung' },
-  { value: 'logistics', label: 'Logistik' },
+  { value: 'manufacturer', label: 'Manufacturer' },
+  { value: 'importeur', label: 'Importer' },
+  { value: 'component', label: 'Component Supplier' },
+  { value: 'raw_material', label: 'Raw Material Supplier' },
+  { value: 'packaging', label: 'Packaging' },
+  { value: 'logistics', label: 'Logistics' },
 ];
 
 const steps = [
-  { id: 'stammdaten', title: 'Stammdaten', icon: Package },
-  { id: 'nachhaltigkeit', title: 'Nachhaltigkeit', icon: Leaf },
-  { id: 'konformitaet', title: 'Konformität', icon: ShieldCheck },
-  { id: 'dokumente', title: 'Dokumente', icon: FileText },
-  { id: 'lieferanten', title: 'Lieferanten', icon: Truck },
+  { id: 'master-data', title: 'Basic Data', icon: Package },
+  { id: 'sustainability', title: 'Sustainability', icon: Leaf },
+  { id: 'compliance', title: 'Compliance', icon: ShieldCheck },
+  { id: 'documents', title: 'Documents', icon: FileText },
+  { id: 'suppliers', title: 'Suppliers', icon: Truck },
 ];
 
 export function ProductFormPage() {
@@ -61,7 +61,7 @@ export function ProductFormPage() {
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
 
-  // Lieferanten-State
+  // Supplier state
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isSelfManufacturer, setIsSelfManufacturer] = useState(false);
   const [isSelfImporter, setIsSelfImporter] = useState(false);
@@ -73,7 +73,7 @@ export function ProductFormPage() {
     lead_time_days?: number;
   }>>([]);
 
-  // Dokument-Upload State
+  // Document upload state
   const docFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedDocs, setUploadedDocs] = useState<Array<{ name: string; size: string }>>([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
@@ -95,7 +95,7 @@ export function ProductFormPage() {
       getProductSuppliers(id),
     ]).then(([product, productSuppliers]) => {
       if (!product) {
-        setSubmitError('Produkt nicht gefunden.');
+        setSubmitError('Product not found.');
         setIsLoading(false);
         return;
       }
@@ -146,7 +146,7 @@ export function ProductFormPage() {
         }))
       );
     }).catch(() => {
-      setSubmitError('Fehler beim Laden des Produkts.');
+      setSubmitError('Error loading product.');
     }).finally(() => {
       setIsLoading(false);
     });
@@ -210,7 +210,7 @@ export function ProductFormPage() {
     updateField('category', `${selectedMainCategory} / ${sub}`);
   };
 
-  // Lieferanten-Handler
+  // Supplier handlers
   const addSupplierAssignment = () => {
     setSelectedSuppliers(prev => [...prev, {
       supplier_id: '',
@@ -229,7 +229,7 @@ export function ProductFormPage() {
     ));
   };
 
-  // Dokument-Upload Handler
+  // Document upload handler
   const handleDocUpload = async (file: File) => {
     setIsUploadingDoc(true);
     const result = await uploadDocument(file, {
@@ -319,7 +319,7 @@ export function ProductFormPage() {
           }
           navigate(`/products/${id}`);
         } else {
-          setSubmitError(result.error || 'Produkt konnte nicht gespeichert werden.');
+          setSubmitError(result.error || 'Product could not be saved.');
         }
       } else {
         // Create new product
@@ -339,11 +339,11 @@ export function ProductFormPage() {
         } else if (result.success) {
           navigate('/products');
         } else {
-          setSubmitError(result.error || 'Produkt konnte nicht gespeichert werden.');
+          setSubmitError(result.error || 'Product could not be saved.');
         }
       }
     } catch {
-      setSubmitError('Ein unerwarteter Fehler ist aufgetreten.');
+      setSubmitError('An unexpected error occurred.');
     } finally {
       setIsSubmitting(false);
     }
@@ -362,12 +362,12 @@ export function ProductFormPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {isEditMode ? 'Produkt bearbeiten' : 'Neues Produkt anlegen'}
+            {isEditMode ? 'Edit Product' : 'Create New Product'}
           </h1>
           <p className="text-muted-foreground">
             {isEditMode
-              ? 'Bearbeiten Sie den Digital Product Passport'
-              : 'Erstellen Sie einen neuen Digital Product Passport'}
+              ? 'Edit the Digital Product Passport'
+              : 'Create a new Digital Product Passport'}
           </p>
         </div>
       </div>
@@ -375,13 +375,13 @@ export function ProductFormPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <span className="ml-3 text-muted-foreground">Produktdaten werden geladen…</span>
+          <span className="ml-3 text-muted-foreground">Loading product data…</span>
         </div>
       ) : (<>
       {/* Progress */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 overflow-x-auto gap-1 sm:gap-2">
             {steps.map((step, index) => (
               <div
                 key={step.id}
@@ -423,29 +423,29 @@ export function ProductFormPage() {
             {steps[currentStep].title}
           </CardTitle>
           <CardDescription>
-            {currentStep === 0 && 'Geben Sie die grundlegenden Produktinformationen ein'}
-            {currentStep === 1 && 'Definieren Sie Materialien und Nachhaltigkeitsdaten'}
-            {currentStep === 2 && 'Fügen Sie Zertifizierungen und Konformitätsdaten hinzu'}
-            {currentStep === 3 && 'Laden Sie relevante Dokumente hoch'}
-            {currentStep === 4 && 'Ordnen Sie Lieferanten und Wirtschaftsakteure zu'}
+            {currentStep === 0 && 'Enter basic product information'}
+            {currentStep === 1 && 'Define materials and sustainability data'}
+            {currentStep === 2 && 'Add certifications and compliance data'}
+            {currentStep === 3 && 'Upload relevant documents'}
+            {currentStep === 4 && 'Assign suppliers and economic operators'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Step 1: Stammdaten */}
+          {/* Step 1: Basic Data */}
           {currentStep === 0 && (
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Produktname *</label>
+                <label className="text-sm font-medium">Product Name *</label>
                 <Input
-                  placeholder="z.B. Eco Sneaker Pro"
+                  placeholder="e.g. Eco Sneaker Pro"
                   value={formData.name}
                   onChange={(e) => updateField('name', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Hersteller *</label>
+                <label className="text-sm font-medium">Manufacturer *</label>
                 <Input
-                  placeholder="z.B. GreenStep GmbH"
+                  placeholder="e.g. GreenStep GmbH"
                   value={formData.manufacturer}
                   onChange={(e) => updateField('manufacturer', e.target.value)}
                 />
@@ -453,26 +453,26 @@ export function ProductFormPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">GTIN/EAN *</label>
                 <Input
-                  placeholder="z.B. 4012345678901"
+                  placeholder="e.g. 4012345678901"
                   value={formData.gtin}
                   onChange={(e) => updateField('gtin', e.target.value)}
                   className="font-mono"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Seriennummer</label>
+                <label className="text-sm font-medium">Serial Number</label>
                 <Input
-                  placeholder="z.B. GSP-2024-001234"
+                  placeholder="e.g. GSP-2024-001234"
                   value={formData.serialNumber}
                   onChange={(e) => updateField('serialNumber', e.target.value)}
                   className="font-mono"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Kategorie *</label>
+                <label className="text-sm font-medium">Category *</label>
                 <Select value={selectedMainCategory} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder={categoriesLoading ? 'Laden...' : 'Kategorie wählen...'} />
+                    <SelectValue placeholder={categoriesLoading ? 'Loading...' : 'Select category...'} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.filter(c => !c.parent_id).map((cat) => (
@@ -485,7 +485,7 @@ export function ProductFormPage() {
               </div>
               {selectedMainCategory && selectedSubcategories.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Unterkategorie</label>
+                  <label className="text-sm font-medium">Subcategory</label>
                   <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -499,15 +499,15 @@ export function ProductFormPage() {
                       >
                         {formData.category.includes(' / ')
                           ? formData.category.split(' / ')[1]
-                          : 'Unterkategorie suchen...'}
+                          : 'Search subcategory...'}
                         <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Unterkategorie suchen..." />
+                        <CommandInput placeholder="Search subcategory..." />
                         <CommandList>
-                          <CommandEmpty>Keine Unterkategorie gefunden.</CommandEmpty>
+                          <CommandEmpty>No subcategory found.</CommandEmpty>
                           <CommandGroup>
                             {selectedSubcategories.map((sub) => (
                               <CommandItem
@@ -537,62 +537,62 @@ export function ProductFormPage() {
                 </div>
               )}
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium">Beschreibung</label>
+                <label className="text-sm font-medium">Description</label>
                 <textarea
                   className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="Produktbeschreibung..."
+                  placeholder="Product description..."
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
                 />
               </div>
 
               <Separator className="md:col-span-2" />
-              <h3 className="font-medium md:col-span-2">Erweiterte Produktdaten</h3>
+              <h3 className="font-medium md:col-span-2">Extended Product Data</h3>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Chargennummer</label>
+                <label className="text-sm font-medium">Batch Number</label>
                 <Input
-                  placeholder="z.B. LOT-2025-001"
+                  placeholder="e.g. LOT-2025-001"
                   value={formData.batchNumber}
                   onChange={(e) => updateField('batchNumber', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">HS-Code (Zolltarifnummer)</label>
+                <label className="text-sm font-medium">HS Code (Customs Tariff Number)</label>
                 <Input
-                  placeholder="z.B. 8517.12.00"
+                  placeholder="e.g. 8517.12.00"
                   value={formData.hsCode}
                   onChange={(e) => updateField('hsCode', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Herkunftsland</label>
+                <label className="text-sm font-medium">Country of Origin</label>
                 <Input
-                  placeholder="z.B. Deutschland"
+                  placeholder="e.g. Germany"
                   value={formData.countryOfOrigin}
                   onChange={(e) => updateField('countryOfOrigin', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nettogewicht (g)</label>
+                <label className="text-sm font-medium">Net Weight (g)</label>
                 <Input
                   type="number"
-                  placeholder="z.B. 250"
+                  placeholder="e.g. 250"
                   value={formData.netWeight}
                   onChange={(e) => updateField('netWeight', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Bruttogewicht (g)</label>
+                <label className="text-sm font-medium">Gross Weight (g)</label>
                 <Input
                   type="number"
-                  placeholder="z.B. 320"
+                  placeholder="e.g. 320"
                   value={formData.grossWeight}
                   onChange={(e) => updateField('grossWeight', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Produktionsdatum</label>
+                <label className="text-sm font-medium">Production Date</label>
                 <Input
                   type="date"
                   value={formData.productionDate}
@@ -600,7 +600,7 @@ export function ProductFormPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Ablaufdatum (optional)</label>
+                <label className="text-sm font-medium">Expiration Date (optional)</label>
                 <Input
                   type="date"
                   value={formData.expirationDate}
@@ -610,30 +610,30 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 2: Nachhaltigkeit */}
+          {/* Step 2: Sustainability */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Materialzusammensetzung</h3>
+                  <h3 className="font-medium">Material Composition</h3>
                   <Button variant="outline" size="sm" onClick={addMaterial}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Material hinzufügen
+                    Add Material
                   </Button>
                 </div>
                 <div className="space-y-4">
                   {formData.materials.map((material, index) => (
-                    <div key={index} className="grid gap-4 md:grid-cols-5 p-4 border rounded-lg">
+                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Material</label>
                         <Input
-                          placeholder="z.B. Recyceltes PET"
+                          placeholder="e.g. Recycled PET"
                           value={material.name}
                           onChange={(e) => updateMaterial(index, 'name', e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Anteil (%)</label>
+                        <label className="text-sm font-medium">Share (%)</label>
                         <Input
                           type="number"
                           min="0"
@@ -643,15 +643,15 @@ export function ProductFormPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Herkunft</label>
+                        <label className="text-sm font-medium">Origin</label>
                         <Input
-                          placeholder="z.B. Deutschland"
+                          placeholder="e.g. Germany"
                           value={material.origin}
                           onChange={(e) => updateMaterial(index, 'origin', e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Recycelbar</label>
+                        <label className="text-sm font-medium">Recyclable</label>
                         <div className="flex items-center h-10">
                           <input
                             type="checkbox"
@@ -659,7 +659,7 @@ export function ProductFormPage() {
                             onChange={(e) => updateMaterial(index, 'recyclable', e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300"
                           />
-                          <span className="ml-2 text-sm">Ja</span>
+                          <span className="ml-2 text-sm">Yes</span>
                         </div>
                       </div>
                       <div className="flex items-end">
@@ -681,7 +681,7 @@ export function ProductFormPage() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Recycelbarkeit gesamt (%)</label>
+                  <label className="text-sm font-medium">Total Recyclability (%)</label>
                   <Input
                     type="number"
                     min="0"
@@ -691,10 +691,10 @@ export function ProductFormPage() {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Recycling-Hinweise</label>
+                  <label className="text-sm font-medium">Recycling Instructions</label>
                   <textarea
                     className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="Entsorgungshinweise für den Verbraucher..."
+                    placeholder="Disposal instructions for consumers..."
                     value={formData.recyclingInstructions}
                     onChange={(e) => updateField('recyclingInstructions', e.target.value)}
                   />
@@ -703,11 +703,11 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 3: Konformität */}
+          {/* Step 3: Compliance */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h3 className="font-medium mb-4">Zertifizierungen</h3>
+                <h3 className="font-medium mb-4">Certifications</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {[
                     'CE-Kennzeichnung',
@@ -751,7 +751,7 @@ export function ProductFormPage() {
                 <>
                   <Separator />
                   <div>
-                    <h3 className="font-medium mb-4">Ausgewählte Zertifizierungen</h3>
+                    <h3 className="font-medium mb-4">Selected Certifications</h3>
                     <div className="flex flex-wrap gap-2">
                       {formData.certifications.map((cert) => (
                         <Badge key={cert} variant="secondary">
@@ -765,7 +765,7 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 4: Dokumente */}
+          {/* Step 4: Documents */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <input
@@ -791,20 +791,20 @@ export function ProductFormPage() {
                     <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
                   )}
                   <p className="mt-2 text-sm font-medium">
-                    {isUploadingDoc ? 'Wird hochgeladen...' : 'Dateien hierher ziehen'}
+                    {isUploadingDoc ? 'Uploading...' : 'Drag files here'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    oder klicken zum Hochladen
+                    or click to upload
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    PDF, PNG, JPG bis 10MB
+                    PDF, PNG, JPG up to 10MB
                   </p>
                 </div>
               </div>
 
               {uploadedDocs.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-medium">Hochgeladene Dokumente</h4>
+                  <h4 className="font-medium">Uploaded Documents</h4>
                   {uploadedDocs.map((doc, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
@@ -827,24 +827,24 @@ export function ProductFormPage() {
               )}
 
               <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2">Empfohlene Dokumente:</h4>
+                <h4 className="font-medium mb-2">Recommended Documents:</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Konformitätserklärung (DoC)</li>
-                  <li>• CE-Zertifikat</li>
-                  <li>• Testberichte</li>
-                  <li>• Materialdatenblätter</li>
-                  <li>• LCA (Lebenszyklusanalyse)</li>
+                  <li>• Declaration of Conformity (DoC)</li>
+                  <li>• CE Certificate</li>
+                  <li>• Test Reports</li>
+                  <li>• Material Data Sheets</li>
+                  <li>• LCA (Life Cycle Assessment)</li>
                 </ul>
               </div>
             </div>
           )}
 
-          {/* Step 5: Lieferanten */}
+          {/* Step 5: Suppliers */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              {/* Eigenes Unternehmen */}
+              {/* Own Company */}
               <div>
-                <h3 className="font-medium mb-4">Eigenes Unternehmen</h3>
+                <h3 className="font-medium mb-4">Own Company</h3>
                 <div className="space-y-3 p-4 border rounded-lg">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -854,7 +854,7 @@ export function ProductFormPage() {
                       className="h-4 w-4 rounded border-gray-300"
                     />
                     <span className="font-medium">
-                      {branding.appName || 'Eigenes Unternehmen'} ist Hersteller dieses Produkts
+                      {branding.appName || 'Own Company'} is manufacturer of this product
                     </span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -865,16 +865,16 @@ export function ProductFormPage() {
                       className="h-4 w-4 rounded border-gray-300"
                     />
                     <span className="font-medium">
-                      {branding.appName || 'Eigenes Unternehmen'} ist Importeur dieses Produkts
+                      {branding.appName || 'Own Company'} is importer of this product
                     </span>
                   </label>
                   {(isSelfManufacturer || isSelfImporter) && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {isSelfManufacturer && (
-                        <Badge variant="secondary">Hersteller (eigen)</Badge>
+                        <Badge variant="secondary">Manufacturer (self)</Badge>
                       )}
                       {isSelfImporter && (
-                        <Badge variant="secondary">Importeur (eigen)</Badge>
+                        <Badge variant="secondary">Importer (self)</Badge>
                       )}
                     </div>
                   )}
@@ -883,36 +883,36 @@ export function ProductFormPage() {
 
               <Separator />
 
-              {/* Externe Lieferanten */}
+              {/* External Suppliers */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Externe Lieferanten</h3>
+                  <h3 className="font-medium">External Suppliers</h3>
                   <Button variant="outline" size="sm" onClick={addSupplierAssignment}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Lieferant hinzufügen
+                    Add Supplier
                   </Button>
                 </div>
 
                 {selectedSuppliers.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground border rounded-lg">
                     <Truck className="mx-auto h-10 w-10 opacity-30 mb-2" />
-                    <p>Noch keine Lieferanten zugeordnet</p>
+                    <p>No suppliers assigned yet</p>
                     <p className="text-xs mt-1">
-                      Klicken Sie auf "Lieferant hinzufügen" um externe Partner zuzuordnen
+                      Click "Add Supplier" to assign external partners
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {selectedSuppliers.map((assignment, index) => (
-                      <div key={index} className="grid gap-4 md:grid-cols-5 p-4 border rounded-lg">
+                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-sm font-medium">Lieferant</label>
+                          <label className="text-sm font-medium">Supplier</label>
                           <Select
                             value={assignment.supplier_id}
                             onValueChange={(v) => updateSupplierAssignment(index, 'supplier_id', v)}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Lieferant wählen..." />
+                              <SelectValue placeholder="Select supplier..." />
                             </SelectTrigger>
                             <SelectContent>
                               {suppliers.map((s) => (
@@ -924,7 +924,7 @@ export function ProductFormPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Rolle</label>
+                          <label className="text-sm font-medium">Role</label>
                           <Select
                             value={assignment.role}
                             onValueChange={(v) => updateSupplierAssignment(index, 'role', v)}
@@ -942,17 +942,17 @@ export function ProductFormPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Lieferzeit (Tage)</label>
+                          <label className="text-sm font-medium">Lead Time (Days)</label>
                           <Input
                             type="number"
                             min="0"
                             value={assignment.lead_time_days || ''}
                             onChange={(e) => updateSupplierAssignment(index, 'lead_time_days', parseInt(e.target.value) || undefined)}
-                            placeholder="z.B. 14"
+                            placeholder="e.g. 14"
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Optionen</label>
+                          <label className="text-sm font-medium">Options</label>
                           <div className="flex items-center gap-3 h-10">
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -961,7 +961,7 @@ export function ProductFormPage() {
                                 onChange={(e) => updateSupplierAssignment(index, 'is_primary', e.target.checked)}
                                 className="h-4 w-4 rounded border-gray-300"
                               />
-                              <span className="text-sm">Primär</span>
+                              <span className="text-sm">Primary</span>
                             </label>
                             <Button
                               variant="ghost"
@@ -986,18 +986,18 @@ export function ProductFormPage() {
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={prevStep} disabled={currentStep === 0}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Zurück
+          Back
         </Button>
 
         <div className="flex gap-2">
           <Button variant="outline">
             <Save className="mr-2 h-4 w-4" />
-            Als Entwurf speichern
+            Save as Draft
           </Button>
 
           {currentStep < steps.length - 1 ? (
             <Button onClick={nextStep}>
-              Weiter
+              Next
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
@@ -1007,7 +1007,7 @@ export function ProductFormPage() {
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}
-              {isSubmitting ? 'Wird gespeichert…' : isEditMode ? 'Änderungen speichern' : 'Produkt erstellen'}
+              {isSubmitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Product'}
             </Button>
           )}
         </div>

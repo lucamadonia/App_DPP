@@ -80,7 +80,7 @@ import type {
   EURegulation,
 } from '@/types/database';
 
-// NoCode API - nur für Tenants & Users (systemweiter Zugriff über alle Tenants)
+// NoCode API - only for Tenants & Users (system-wide access across all tenants)
 const API_CONFIG = {
   instance: '48395_mfg_ddp',
   baseUrl: 'https://api.nocodebackend.com',
@@ -102,7 +102,7 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
@@ -122,7 +122,7 @@ async function ncbCreate<T>(table: string, data: Partial<T>): Promise<{ success:
     });
     return { success: true, id: result.id || result._id };
   } catch (error) {
-    console.error('Fehler beim Erstellen:', error);
+    console.error('Error creating:', error);
     return { success: false };
   }
 }
@@ -135,7 +135,7 @@ async function ncbUpdate<T>(table: string, id: string, data: Partial<T>): Promis
     });
     return { success: true };
   } catch (error) {
-    console.error('Fehler beim Aktualisieren:', error);
+    console.error('Error updating:', error);
     return { success: false };
   }
 }
@@ -145,12 +145,12 @@ async function ncbRemove(table: string, id: string): Promise<{ success: boolean 
     await apiFetch(`delete/${table}/${encodeURIComponent(id)}`, { method: 'DELETE' });
     return { success: true };
   } catch (error) {
-    console.error('Fehler beim Löschen:', error);
+    console.error('Error deleting:', error);
     return { success: false };
   }
 }
 
-// Typen nur für NoCode-API Tabs (Tenants & Users)
+// Types only for NoCode API tabs (Tenants & Users)
 interface Tenant {
   id: string;
   name: string;
@@ -173,7 +173,7 @@ interface User {
   lastLogin: string;
 }
 
-// Helper: JSON-String sicher parsen (für Formular-Felder die Arrays als Strings darstellen)
+// Helper: safely parse JSON string (for form fields that represent arrays as strings)
 function safeParseJSON(value: unknown): unknown {
   if (typeof value === 'string') {
     try { return JSON.parse(value); } catch { return value; }
@@ -181,7 +181,7 @@ function safeParseJSON(value: unknown): unknown {
   return value;
 }
 
-// Helper: Array/Object als JSON-String für Formular-Anzeige
+// Helper: Array/Object as JSON string for form display
 function toJSONString(value: unknown): string {
   if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
     return JSON.stringify(value);
@@ -189,13 +189,13 @@ function toJSONString(value: unknown): string {
   return String(value ?? '');
 }
 
-// Admin-Seiten-Komponente
+// Admin page component
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState('countries');
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Daten-State
+  // Data state
   const [countries, setCountries] = useState<Country[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [pictograms, setPictograms] = useState<Pictogram[]>([]);
@@ -205,13 +205,13 @@ export function AdminPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<User[]>([]);
 
-  // Dialog-State
+  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
 
-  // Daten laden
+  // Load data
   const loadData = async (table: string) => {
     setIsLoading(true);
     try {
@@ -234,7 +234,7 @@ export function AdminPage() {
         case 'regulations_eu':
           setRegulations(await getEURegulations());
           break;
-        // Tenants & Users: NoCode API (systemweiter Zugriff)
+        // Tenants & Users: NoCode API (system-wide access)
         case 'tenants':
           setTenants(await ncbGetAll<Tenant>('tenants'));
           break;
@@ -243,17 +243,17 @@ export function AdminPage() {
           break;
       }
     } catch (error) {
-      console.error('Fehler beim Laden:', error);
+      console.error('Error loading:', error);
     }
     setIsLoading(false);
   };
 
-  // Initial laden
+  // Initial load
   useEffect(() => {
     loadData(activeTab);
   }, [activeTab]);
 
-  // Dialog öffnen
+  // Open dialog
   const openCreateDialog = () => {
     setDialogMode('create');
     setEditingItem(null);
@@ -280,7 +280,7 @@ export function AdminPage() {
     setDialogOpen(true);
   };
 
-  // Leere Formulare
+  // Empty forms
   const getEmptyForm = (table: string) => {
     switch (table) {
       case 'countries':
@@ -304,7 +304,7 @@ export function AdminPage() {
     }
   };
 
-  // Speichern
+  // Save
   const handleSave = async () => {
     setIsLoading(true);
     try {
@@ -378,23 +378,23 @@ export function AdminPage() {
             : await ncbUpdate(activeTab, editingItem.id, formData);
           break;
         default:
-          result = { success: false, error: 'Unbekannter Tab' };
+          result = { success: false, error: 'Unknown tab' };
       }
 
       if (!result.success) {
-        console.error('Fehler beim Speichern:', result.error);
+        console.error('Error saving:', result.error);
       }
       await loadData(activeTab);
       setDialogOpen(false);
     } catch (error) {
-      console.error('Fehler beim Speichern:', error);
+      console.error('Error saving:', error);
     }
     setIsLoading(false);
   };
 
-  // Löschen
+  // Delete
   const handleDelete = async (id: string) => {
-    if (!confirm('Wirklich löschen?')) return;
+    if (!confirm('Are you sure you want to delete this?')) return;
     setIsLoading(true);
     try {
       let result: { success: boolean; error?: string };
@@ -424,37 +424,37 @@ export function AdminPage() {
           result = await ncbRemove(activeTab, id);
           break;
         default:
-          result = { success: false, error: 'Unbekannter Tab' };
+          result = { success: false, error: 'Unknown tab' };
       }
 
       if (!result.success) {
-        console.error('Fehler beim Löschen:', result.error);
+        console.error('Error deleting:', result.error);
       }
       await loadData(activeTab);
     } catch (error) {
-      console.error('Fehler beim Löschen:', error);
+      console.error('Error deleting:', error);
     }
     setIsLoading(false);
   };
 
-  // Formular-Felder aktualisieren
+  // Update form fields
   const updateForm = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  // Tab-Konfiguration
+  // Tab configuration
   const tabs = [
-    { id: 'countries', label: 'Länder', icon: Globe, count: countries.length },
-    { id: 'categories', label: 'Kategorien', icon: Package, count: categories.length },
-    { id: 'regulations_eu', label: 'EU-Regulierungen', icon: Shield, count: regulations.length },
-    { id: 'pictograms', label: 'Piktogramme', icon: Tag, count: pictograms.length },
-    { id: 'recycling_codes', label: 'Recycling-Codes', icon: Recycle, count: recyclingCodes.length },
+    { id: 'countries', label: 'Countries', icon: Globe, count: countries.length },
+    { id: 'categories', label: 'Categories', icon: Package, count: categories.length },
+    { id: 'regulations_eu', label: 'EU Regulations', icon: Shield, count: regulations.length },
+    { id: 'pictograms', label: 'Pictograms', icon: Tag, count: pictograms.length },
+    { id: 'recycling_codes', label: 'Recycling Codes', icon: Recycle, count: recyclingCodes.length },
     { id: 'news', label: 'News', icon: Bell, count: news.length },
-    { id: 'tenants', label: 'Mandanten', icon: Building2, count: tenants.length },
-    { id: 'users', label: 'Benutzer', icon: Users, count: users.length },
+    { id: 'tenants', label: 'Tenants', icon: Building2, count: tenants.length },
+    { id: 'users', label: 'Users', icon: Users, count: users.length },
   ];
 
-  // Render-Funktionen für Tabellen
+  // Render functions for tables
   const renderTable = () => {
     switch (activeTab) {
       case 'countries':
@@ -465,9 +465,9 @@ export function AdminPage() {
                 <TableHead>Flag</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Beschreibung</TableHead>
-                <TableHead>Regulierungen</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Regulations</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -501,9 +501,9 @@ export function AdminPage() {
               <TableRow>
                 <TableHead>Icon</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Beschreibung</TableHead>
-                <TableHead>Sortierung</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Sort Order</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -536,10 +536,10 @@ export function AdminPage() {
               <TableRow>
                 <TableHead>Symbol</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Kategorie</TableHead>
-                <TableHead>Pflicht</TableHead>
-                <TableHead>Länder</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Mandatory</TableHead>
+                <TableHead>Countries</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -548,7 +548,7 @@ export function AdminPage() {
                   <TableCell className="text-2xl">{pic.symbol}</TableCell>
                   <TableCell className="font-medium">{pic.name}</TableCell>
                   <TableCell><Badge variant="outline">{pic.category}</Badge></TableCell>
-                  <TableCell>{pic.mandatory ? <Badge>Ja</Badge> : <Badge variant="secondary">Nein</Badge>}</TableCell>
+                  <TableCell>{pic.mandatory ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
                   <TableCell className="max-w-[150px] truncate">{Array.isArray(pic.countries) ? pic.countries.join(', ') : pic.countries}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -575,8 +575,8 @@ export function AdminPage() {
                 <TableHead>Symbol</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Material</TableHead>
-                <TableHead>Recycelbar</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Recyclable</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -586,7 +586,7 @@ export function AdminPage() {
                   <TableCell className="text-2xl">{rc.symbol}</TableCell>
                   <TableCell className="font-medium">{rc.name}</TableCell>
                   <TableCell>{rc.fullName}</TableCell>
-                  <TableCell>{rc.recyclable ? <Badge className="bg-success">Ja</Badge> : <Badge variant="secondary">Nein</Badge>}</TableCell>
+                  <TableCell>{rc.recyclable ? <Badge className="bg-success">Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(rc)}>
@@ -608,11 +608,11 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Titel</TableHead>
-                <TableHead>Kategorie</TableHead>
-                <TableHead>Priorität</TableHead>
-                <TableHead>Veröffentlicht</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Published</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -648,10 +648,10 @@ export function AdminPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Kategorie</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Gültig ab</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Effective From</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -661,7 +661,7 @@ export function AdminPage() {
                   <TableCell><Badge variant="outline">{reg.category}</Badge></TableCell>
                   <TableCell>
                     <Badge className={reg.status === 'active' ? 'bg-success' : 'bg-warning'}>
-                      {reg.status === 'active' ? 'Aktiv' : 'Kommend'}
+                      {reg.status === 'active' ? 'Active' : 'Upcoming'}
                     </Badge>
                   </TableCell>
                   <TableCell>{reg.effectiveDate}</TableCell>
@@ -688,9 +688,9 @@ export function AdminPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>Land</TableHead>
+                <TableHead>Country</TableHead>
                 <TableHead>Plan</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -726,12 +726,12 @@ export function AdminPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>E-Mail</TableHead>
-                <TableHead>Rolle</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Mandant</TableHead>
-                <TableHead>Letzter Login</TableHead>
-                <TableHead className="w-[100px]">Aktionen</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Last Login</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -741,18 +741,18 @@ export function AdminPage() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge className={user.role === 'admin' ? 'bg-primary' : user.role === 'manager' ? 'bg-success' : 'bg-muted'}>
-                      {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : 'Benutzer'}
+                      {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : 'User'}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge className={user.status === 'active' ? 'bg-success' : user.status === 'pending' ? 'bg-warning' : 'bg-destructive'}>
-                      {user.status === 'active' ? 'Aktiv' : user.status === 'pending' ? 'Ausstehend' : 'Inaktiv'}
+                      {user.status === 'active' ? 'Active' : user.status === 'pending' ? 'Pending' : 'Inactive'}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {tenants.find(t => t.id === user.tenant_id)?.name || '-'}
                   </TableCell>
-                  <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('de-DE') : '-'}</TableCell>
+                  <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-US') : '-'}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}>
@@ -774,7 +774,7 @@ export function AdminPage() {
     }
   };
 
-  // Render-Funktion für Dialog-Formulare
+  // Render function for dialog forms
   const renderForm = () => {
     switch (activeTab) {
       case 'countries':
@@ -782,7 +782,7 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Ländercode</Label>
+                <Label>Country Code</Label>
                 <Input value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} placeholder="DE" />
               </div>
               <div>
@@ -792,24 +792,24 @@ export function AdminPage() {
             </div>
             <div>
               <Label>Name</Label>
-              <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Deutschland" />
+              <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Germany" />
             </div>
             <div>
-              <Label>Beschreibung</Label>
+              <Label>Description</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Anzahl Regulierungen</Label>
+                <Label>Number of Regulations</Label>
                 <Input type="number" value={formData.regulations || 0} onChange={(e) => updateForm('regulations', parseInt(e.target.value))} />
               </div>
               <div>
-                <Label>Anzahl Checklisten</Label>
+                <Label>Number of Checklists</Label>
                 <Input type="number" value={formData.checklists || 0} onChange={(e) => updateForm('checklists', parseInt(e.target.value))} />
               </div>
             </div>
             <div>
-              <Label>Behörden (JSON-Array)</Label>
+              <Label>Authorities (JSON Array)</Label>
               <Input value={formData.authorities || '[]'} onChange={(e) => updateForm('authorities', e.target.value)} placeholder='["BAuA", "UBA"]' />
             </div>
           </div>
@@ -825,19 +825,19 @@ export function AdminPage() {
               </div>
               <div className="col-span-3">
                 <Label>Name</Label>
-                <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Elektronik" />
+                <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Electronics" />
               </div>
             </div>
             <div>
-              <Label>Beschreibung</Label>
+              <Label>Description</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div>
-              <Label>Sortierung</Label>
+              <Label>Sort Order</Label>
               <Input type="number" value={formData.sort_order || 0} onChange={(e) => updateForm('sort_order', parseInt(e.target.value))} />
             </div>
             <div>
-              <Label>Regulierungen (JSON-Array)</Label>
+              <Label>Regulations (JSON Array)</Label>
               <Input value={formData.regulations || '[]'} onChange={(e) => updateForm('regulations', e.target.value)} placeholder='["WEEE", "RoHS"]' />
             </div>
           </div>
@@ -857,40 +857,40 @@ export function AdminPage() {
               </div>
             </div>
             <div>
-              <Label>Beschreibung</Label>
+              <Label>Description</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Kategorie</Label>
+                <Label>Category</Label>
                 <Select value={formData.category || 'safety'} onValueChange={(v) => updateForm('category', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="safety">Sicherheit</SelectItem>
+                    <SelectItem value="safety">Safety</SelectItem>
                     <SelectItem value="recycling">Recycling</SelectItem>
-                    <SelectItem value="chemicals">Chemikalien</SelectItem>
-                    <SelectItem value="energy">Energie</SelectItem>
-                    <SelectItem value="durability">Haltbarkeit</SelectItem>
+                    <SelectItem value="chemicals">Chemicals</SelectItem>
+                    <SelectItem value="energy">Energy</SelectItem>
+                    <SelectItem value="durability">Durability</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2 pt-6">
                 <Checkbox checked={formData.mandatory || false} onCheckedChange={(v) => updateForm('mandatory', v)} />
-                <Label>Verpflichtend</Label>
+                <Label>Mandatory</Label>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Maße</Label>
-                <Input value={formData.dimensions || ''} onChange={(e) => updateForm('dimensions', e.target.value)} placeholder="Mind. 5mm" />
+                <Label>Dimensions</Label>
+                <Input value={formData.dimensions || ''} onChange={(e) => updateForm('dimensions', e.target.value)} placeholder="Min. 5mm" />
               </div>
               <div>
-                <Label>Platzierung</Label>
-                <Input value={formData.placement || ''} onChange={(e) => updateForm('placement', e.target.value)} placeholder="Auf Produkt" />
+                <Label>Placement</Label>
+                <Input value={formData.placement || ''} onChange={(e) => updateForm('placement', e.target.value)} placeholder="On product" />
               </div>
             </div>
             <div>
-              <Label>Länder (JSON-Array)</Label>
+              <Label>Countries (JSON Array)</Label>
               <Input value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} />
             </div>
           </div>
@@ -909,21 +909,21 @@ export function AdminPage() {
                 <Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} placeholder="♳" />
               </div>
               <div>
-                <Label>Kurzname</Label>
+                <Label>Short Name</Label>
                 <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="PET" />
               </div>
             </div>
             <div>
-              <Label>Vollständiger Name</Label>
-              <Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} placeholder="Polyethylenterephthalat" />
+              <Label>Full Name</Label>
+              <Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} placeholder="Polyethylene terephthalate" />
             </div>
             <div>
-              <Label>Beispiele</Label>
-              <Input value={formData.examples || ''} onChange={(e) => updateForm('examples', e.target.value)} placeholder="Getränkeflaschen" />
+              <Label>Examples</Label>
+              <Input value={formData.examples || ''} onChange={(e) => updateForm('examples', e.target.value)} placeholder="Beverage bottles" />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox checked={formData.recyclable || false} onCheckedChange={(v) => updateForm('recyclable', v)} />
-              <Label>Recycelbar</Label>
+              <Label>Recyclable</Label>
             </div>
           </div>
         );
@@ -932,58 +932,58 @@ export function AdminPage() {
         return (
           <div className="grid gap-4">
             <div>
-              <Label>Titel</Label>
+              <Label>Title</Label>
               <Input value={formData.title || ''} onChange={(e) => updateForm('title', e.target.value)} />
             </div>
             <div>
-              <Label>Zusammenfassung</Label>
+              <Label>Summary</Label>
               <Input value={formData.summary || ''} onChange={(e) => updateForm('summary', e.target.value)} />
             </div>
             <div>
-              <Label>Inhalt</Label>
+              <Label>Content</Label>
               <Input value={formData.content || ''} onChange={(e) => updateForm('content', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Kategorie</Label>
+                <Label>Category</Label>
                 <Select value={formData.category || 'update'} onValueChange={(v) => updateForm('category', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="regulation">Regulierung</SelectItem>
-                    <SelectItem value="deadline">Frist</SelectItem>
+                    <SelectItem value="regulation">Regulation</SelectItem>
+                    <SelectItem value="deadline">Deadline</SelectItem>
                     <SelectItem value="update">Update</SelectItem>
-                    <SelectItem value="warning">Warnung</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Priorität</Label>
+                <Label>Priority</Label>
                 <Select value={formData.priority || 'medium'} onValueChange={(v) => updateForm('priority', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="high">Hoch</SelectItem>
-                    <SelectItem value="medium">Mittel</SelectItem>
-                    <SelectItem value="low">Niedrig</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Veröffentlicht am</Label>
+                <Label>Published On</Label>
                 <Input type="date" value={formData.publishedAt || ''} onChange={(e) => updateForm('publishedAt', e.target.value)} />
               </div>
               <div>
-                <Label>Gültig ab</Label>
+                <Label>Effective Date</Label>
                 <Input type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>Länder (JSON-Array)</Label>
+              <Label>Countries (JSON Array)</Label>
               <Input value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} />
             </div>
             <div>
-              <Label>Tags (JSON-Array)</Label>
+              <Label>Tags (JSON Array)</Label>
               <Input value={formData.tags || '[]'} onChange={(e) => updateForm('tags', e.target.value)} placeholder='["ESPR", "DPP"]' />
             </div>
           </div>
@@ -994,7 +994,7 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Kurzname</Label>
+                <Label>Short Name</Label>
                 <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="ESPR" />
               </div>
               <div>
@@ -1002,49 +1002,49 @@ export function AdminPage() {
                 <Select value={formData.status || 'active'} onValueChange={(v) => updateForm('status', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Aktiv</SelectItem>
-                    <SelectItem value="upcoming">Kommend</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Vollständiger Name</Label>
+              <Label>Full Name</Label>
               <Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} />
             </div>
             <div>
-              <Label>Beschreibung</Label>
+              <Label>Description</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Kategorie</Label>
+                <Label>Category</Label>
                 <Select value={formData.category || 'environment'} onValueChange={(v) => updateForm('category', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="environment">Umwelt</SelectItem>
-                    <SelectItem value="chemicals">Chemikalien</SelectItem>
+                    <SelectItem value="environment">Environment</SelectItem>
+                    <SelectItem value="chemicals">Chemicals</SelectItem>
                     <SelectItem value="recycling">Recycling</SelectItem>
-                    <SelectItem value="safety">Sicherheit</SelectItem>
-                    <SelectItem value="energy">Energie</SelectItem>
+                    <SelectItem value="safety">Safety</SelectItem>
+                    <SelectItem value="energy">Energy</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>In Kraft getreten</Label>
+                <Label>Effective Date</Label>
                 <Input type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>Anwendung ab</Label>
+              <Label>Application Date</Label>
               <Input type="date" value={formData.applicationDate || ''} onChange={(e) => updateForm('applicationDate', e.target.value)} />
             </div>
             <div>
-              <Label>Anforderungen (JSON-Array)</Label>
+              <Label>Requirements (JSON Array)</Label>
               <Input value={formData.keyRequirements || '[]'} onChange={(e) => updateForm('keyRequirements', e.target.value)} />
             </div>
             <div>
-              <Label>Betroffene Produkte (JSON-Array)</Label>
+              <Label>Affected Products (JSON Array)</Label>
               <Input value={formData.affectedProducts || '[]'} onChange={(e) => updateForm('affectedProducts', e.target.value)} />
             </div>
           </div>
@@ -1054,20 +1054,20 @@ export function AdminPage() {
         return (
           <div className="grid gap-4">
             <div>
-              <Label>Firmenname</Label>
+              <Label>Company Name</Label>
               <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
             </div>
             <div>
-              <Label>Slug (URL-freundlich)</Label>
-              <Input value={formData.slug || ''} onChange={(e) => updateForm('slug', e.target.value)} placeholder="meine-firma" />
+              <Label>Slug (URL-friendly)</Label>
+              <Input value={formData.slug || ''} onChange={(e) => updateForm('slug', e.target.value)} placeholder="my-company" />
             </div>
             <div>
-              <Label>Adresse</Label>
+              <Label>Address</Label>
               <Input value={formData.address || ''} onChange={(e) => updateForm('address', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Land</Label>
+                <Label>Country</Label>
                 <Input value={formData.country || 'DE'} onChange={(e) => updateForm('country', e.target.value)} />
               </div>
               <div>
@@ -1084,11 +1084,11 @@ export function AdminPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>EORI-Nummer</Label>
+                <Label>EORI Number</Label>
                 <Input value={formData.eori || ''} onChange={(e) => updateForm('eori', e.target.value)} />
               </div>
               <div>
-                <Label>USt-IdNr</Label>
+                <Label>VAT ID</Label>
                 <Input value={formData.vat || ''} onChange={(e) => updateForm('vat', e.target.value)} />
               </div>
             </div>
@@ -1100,21 +1100,21 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div>
               <Label>Name</Label>
-              <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Max Mustermann" />
+              <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="John Doe" />
             </div>
             <div>
-              <Label>E-Mail</Label>
-              <Input type="email" value={formData.email || ''} onChange={(e) => updateForm('email', e.target.value)} placeholder="max@beispiel.de" />
+              <Label>Email</Label>
+              <Input type="email" value={formData.email || ''} onChange={(e) => updateForm('email', e.target.value)} placeholder="john@example.com" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Rolle</Label>
+                <Label>Role</Label>
                 <Select value={formData.role || 'user'} onValueChange={(v) => updateForm('role', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1123,17 +1123,17 @@ export function AdminPage() {
                 <Select value={formData.status || 'active'} onValueChange={(v) => updateForm('status', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Aktiv</SelectItem>
-                    <SelectItem value="pending">Ausstehend</SelectItem>
-                    <SelectItem value="inactive">Inaktiv</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Mandant</Label>
+              <Label>Tenant</Label>
               <Select value={formData.tenant_id || ''} onValueChange={(v) => updateForm('tenant_id', v)}>
-                <SelectTrigger><SelectValue placeholder="Mandant auswählen" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select tenant" /></SelectTrigger>
                 <SelectContent>
                   {tenants.map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id}>{tenant.name}</SelectItem>
@@ -1144,7 +1144,7 @@ export function AdminPage() {
             {dialogMode === 'create' && (
               <div className="rounded-lg border border-dashed p-4 bg-muted/30">
                 <p className="text-sm text-muted-foreground">
-                  Der Benutzer erhält eine E-Mail mit Anweisungen zur Passwort-Einrichtung.
+                  The user will receive an email with instructions to set up their password.
                 </p>
               </div>
             )}
@@ -1165,7 +1165,7 @@ export function AdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Backend-Verwaltung für alle Master-Daten
+            Backend management for all master data
           </p>
         </div>
       </div>
@@ -1204,7 +1204,7 @@ export function AdminPage() {
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Suchen..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -1215,7 +1215,7 @@ export function AdminPage() {
               </Button>
               <Button onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
-                Neu
+                New
               </Button>
             </div>
           </div>
@@ -1236,18 +1236,18 @@ export function AdminPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'Neu erstellen' : 'Bearbeiten'}: {currentTab?.label}
+              {dialogMode === 'create' ? 'Create New' : 'Edit'}: {currentTab?.label}
             </DialogTitle>
           </DialogHeader>
           {renderForm()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               <X className="mr-2 h-4 w-4" />
-              Abbrechen
+              Cancel
             </Button>
             <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Speichern
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -212,7 +212,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       await refreshBranding();
     } else {
       console.error('Logo upload failed:', result.error);
-      alert(`Logo-Upload fehlgeschlagen: ${result.error || 'Unbekannter Fehler'}`);
+      alert(`Logo upload failed: ${result.error || 'Unknown error'}`);
     }
 
     setIsUploadingLogo(false);
@@ -234,7 +234,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       await refreshBranding();
     } else {
       console.error('Favicon upload failed:', result.error);
-      alert(`Favicon-Upload fehlgeschlagen: ${result.error || 'Unbekannter Fehler'}`);
+      alert(`Favicon upload failed: ${result.error || 'Unknown error'}`);
     }
 
     setIsUploadingFavicon(false);
@@ -285,14 +285,14 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     if (domainForm.resolver === 'custom') {
       const domainValidation = validateDomain(domainForm.customDomain);
       if (!domainValidation.isValid) {
-        setDomainError(domainValidation.errorMessage || 'Ungültige Domain');
+        setDomainError(domainValidation.errorMessage || 'Invalid domain');
         return;
       }
 
       if (domainForm.pathPrefix) {
         const prefixValidation = validatePathPrefix(domainForm.pathPrefix);
         if (!prefixValidation.isValid) {
-          setPathPrefixError(prefixValidation.errorMessage || 'Ungültiger Pfad');
+          setPathPrefixError(prefixValidation.errorMessage || 'Invalid path');
           return;
         }
       }
@@ -351,58 +351,58 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Einstellungen</h1>
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">
-          Verwalten Sie Ihr Firmenprofil und Systemeinstellungen
+          Manage your company profile and system settings
         </p>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue={tab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="company" className="flex items-center gap-2">
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="company" className="flex items-center gap-2 flex-shrink-0">
             <Building2 className="h-4 w-4" />
-            Firmenprofil
+            <span className="hidden sm:inline">Company Profile</span>
           </TabsTrigger>
-          <TabsTrigger value="branding" className="flex items-center gap-2">
+          <TabsTrigger value="branding" className="flex items-center gap-2 flex-shrink-0">
             <Palette className="h-4 w-4" />
-            Branding
+            <span className="hidden sm:inline">Branding</span>
           </TabsTrigger>
-          <TabsTrigger value="domain" className="flex items-center gap-2">
+          <TabsTrigger value="domain" className="flex items-center gap-2 flex-shrink-0">
             <Globe className="h-4 w-4" />
-            Domain
+            <span className="hidden sm:inline">Domain</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
+          <TabsTrigger value="users" className="flex items-center gap-2 flex-shrink-0">
             <Users className="h-4 w-4" />
-            Benutzer
+            <span className="hidden sm:inline">Users</span>
           </TabsTrigger>
-          <TabsTrigger value="api" className="flex items-center gap-2">
+          <TabsTrigger value="api" className="flex items-center gap-2 flex-shrink-0">
             <Key className="h-4 w-4" />
-            API-Keys
+            <span className="hidden sm:inline">API Keys</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Firmenprofil */}
+        {/* Company Profile */}
         <TabsContent value="company" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Unternehmensdaten</CardTitle>
+              <CardTitle>Company Data</CardTitle>
               <CardDescription>
-                Diese Informationen werden in Ihren DPPs angezeigt
+                This information will be displayed in your DPPs
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Firmenname *</label>
+                  <label className="text-sm font-medium">Company Name *</label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ihre Firma GmbH"
+                    placeholder="Your Company Inc."
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">EORI-Nummer</label>
+                  <label className="text-sm font-medium">EORI Number</label>
                   <Input
                     value={formData.eori}
                     onChange={(e) => setFormData({ ...formData, eori: e.target.value })}
@@ -411,23 +411,23 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Adresse</label>
+                  <label className="text-sm font-medium">Address</label>
                   <Input
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Musterstraße 123, 10115 Berlin"
+                    placeholder="123 Main Street, New York, NY 10001"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Land</label>
+                  <label className="text-sm font-medium">Country</label>
                   <Input
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    placeholder="Deutschland"
+                    placeholder="United States"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">USt-IdNr.</label>
+                  <label className="text-sm font-medium">VAT ID</label>
                   <Input
                     value={formData.vat}
                     onChange={(e) => setFormData({ ...formData, vat: e.target.value })}
@@ -454,7 +454,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         : 'Free'}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {tenant?.plan === 'free' && '(Upgrade für mehr Funktionen)'}
+                      {tenant?.plan === 'free' && '(Upgrade for more features)'}
                     </span>
                   </div>
                 </div>
@@ -463,18 +463,18 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <Separator />
 
               <div>
-                <h3 className="font-medium mb-4">Verantwortliche Person (EU-Verordnung)</h3>
+                <h3 className="font-medium mb-4">Responsible Person (EU Regulation)</h3>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Name</label>
-                    <Input placeholder="Dr. Anna Musterfrau" />
+                    <Input placeholder="Dr. Jane Smith" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">E-Mail</label>
-                    <Input placeholder="compliance@ihre-firma.de" />
+                    <label className="text-sm font-medium">Email</label>
+                    <Input placeholder="compliance@your-company.com" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Telefon</label>
+                    <label className="text-sm font-medium">Phone</label>
                     <Input placeholder="+49 30 123456789" />
                   </div>
                 </div>
@@ -487,7 +487,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   ) : (
                     <Save className="mr-2 h-4 w-4" />
                   )}
-                  Speichern
+                  Save
                 </Button>
               </div>
             </CardContent>
@@ -498,16 +498,16 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         <TabsContent value="branding" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>App-Name & Logo</CardTitle>
+              <CardTitle>App Name & Logo</CardTitle>
               <CardDescription>
-                Passen Sie das Erscheinungsbild Ihrer DPP-Anwendung an
+                Customize the appearance of your DPP application
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 {/* App-Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="appName">App-Name</Label>
+                  <Label htmlFor="appName">App Name</Label>
                   <Input
                     id="appName"
                     placeholder="DPP Manager"
@@ -517,13 +517,13 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Wird in der Sidebar, im Breadcrumb und im Browser-Tab angezeigt
+                    Displayed in the sidebar, breadcrumb, and browser tab
                   </p>
                 </div>
 
                 {/* Powered By Text */}
                 <div className="space-y-2">
-                  <Label htmlFor="poweredBy">Footer-Text</Label>
+                  <Label htmlFor="poweredBy">Footer Text</Label>
                   <Input
                     id="poweredBy"
                     placeholder="Powered by DPP Manager"
@@ -533,7 +533,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Wird im Footer der öffentlichen Seiten angezeigt
+                    Displayed in the footer of public pages
                   </p>
                 </div>
               </div>
@@ -543,7 +543,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Logo */}
                 <div className="space-y-4">
-                  <Label>Firmenlogo</Label>
+                  <Label>Company Logo</Label>
                   <div className="flex items-center gap-4">
                     <div className="h-20 w-20 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
                       {brandingForm.logo ? (
@@ -581,7 +581,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         ) : (
                           <Upload className="mr-2 h-4 w-4" />
                         )}
-                        Hochladen
+                        Upload
                       </Button>
                       {brandingForm.logo && (
                         <Button
@@ -591,10 +591,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                           className="text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Entfernen
+                          Remove
                         </Button>
                       )}
-                      <p className="text-xs text-muted-foreground">PNG, JPG, SVG bis 2MB</p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG, SVG up to 2MB</p>
                     </div>
                   </div>
                 </div>
@@ -633,7 +633,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         ) : (
                           <Upload className="mr-2 h-4 w-4" />
                         )}
-                        Hochladen
+                        Upload
                       </Button>
                       {brandingForm.favicon && (
                         <Button
@@ -643,10 +643,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                           className="text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Entfernen
+                          Remove
                         </Button>
                       )}
-                      <p className="text-xs text-muted-foreground">PNG, SVG, ICO bis 2MB</p>
+                      <p className="text-xs text-muted-foreground">PNG, SVG, ICO up to 2MB</p>
                     </div>
                   </div>
                 </div>
@@ -656,15 +656,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Primärfarbe</CardTitle>
+              <CardTitle>Primary Color</CardTitle>
               <CardDescription>
-                Diese Farbe wird als Akzentfarbe in der gesamten Anwendung verwendet
+                This color is used as the accent color throughout the application
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="space-y-2">
-                  <Label>Farbe auswählen</Label>
+                  <Label>Choose Color</Label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -687,7 +687,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
                 {/* Preset colors */}
                 <div className="space-y-2">
-                  <Label>Vorlagen</Label>
+                  <Label>Presets</Label>
                   <div className="flex gap-2">
                     {['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#6366F1'].map(
                       (color) => (
@@ -718,15 +718,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 }
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Standardfarbe wiederherstellen
+                Reset to Default Color
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Vorschau</CardTitle>
-              <CardDescription>So erscheint Ihr Branding in der Anwendung</CardDescription>
+              <CardTitle>Preview</CardTitle>
+              <CardDescription>This is how your branding appears in the application</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="p-6 rounded-lg border bg-card">
@@ -751,9 +751,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 </div>
                 <div className="flex gap-2 mb-4">
                   <Badge style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}>
-                    Primärfarbe
+                    Primary Color
                   </Badge>
-                  <Badge variant="outline">Sekundär</Badge>
+                  <Badge variant="outline">Secondary</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {brandingForm.poweredByText || 'Powered by DPP Manager'}
@@ -762,22 +762,22 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             </CardContent>
           </Card>
 
-          {/* Preview-Links für öffentliche Seiten */}
+          {/* Preview links for public pages */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Eye className="h-5 w-5" />
-                Öffentliche Seiten testen
+                Test Public Pages
               </CardTitle>
               <CardDescription>
-                Sehen Sie wie Ihr Branding für Endverbraucher aussieht
+                See how your branding looks for end consumers
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {sampleProduct ? (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Öffnen Sie eine Beispiel-Produktseite, um Ihr Branding in Aktion zu sehen:
+                    Open a sample product page to see your branding in action:
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" asChild>
@@ -787,7 +787,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        Verbraucheransicht ({sampleProduct.name})
+                        Consumer View ({sampleProduct.name})
                       </a>
                     </Button>
                     <Button variant="outline" asChild>
@@ -797,18 +797,18 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        Zollansicht
+                        Customs View
                       </a>
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Das Produkt "{sampleProduct.name}" wird als Beispiel verwendet.
+                    The product "{sampleProduct.name}" is used as an example.
                   </p>
                 </>
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <Info className="mx-auto h-8 w-8 opacity-30 mb-2" />
-                  <p>Erstellen Sie zuerst ein Produkt, um die öffentlichen Seiten zu testen.</p>
+                  <p>Create a product first to test the public pages.</p>
                 </div>
               )}
             </CardContent>
@@ -823,7 +823,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              {brandingSaved ? 'Gespeichert!' : 'Branding speichern'}
+              {brandingSaved ? 'Saved!' : 'Save Branding'}
             </Button>
           </div>
         </TabsContent>
@@ -832,20 +832,20 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         <TabsContent value="domain" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>URL-Resolver</CardTitle>
+              <CardTitle>URL Resolver</CardTitle>
               <CardDescription>
-                Wählen Sie wie QR-Code-URLs für Ihre Produkte aufgelöst werden sollen
+                Choose how QR code URLs for your products should be resolved
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <h4 className="text-sm font-medium flex items-center gap-2 text-blue-800 dark:text-blue-200">
                   <Info className="h-4 w-4" />
-                  Warum eine eigene Domain verwenden?
+                  Why use a custom domain?
                 </h4>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Mit einer eigenen Domain haben Sie volle Kontrolle über Ihre DPP-URLs.
-                  Sie können einen eigenen Resolver einrichten, der die QR-Codes zu Ihren Produktseiten weiterleitet.
+                  With a custom domain you have full control over your DPP URLs.
+                  You can set up your own resolver that redirects QR codes to your product pages.
                 </p>
               </div>
 
@@ -869,10 +869,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   <div className="flex-1">
                     <p className="font-medium flex items-center gap-2">
                       GS1 Digital Link Resolver
-                      <Badge variant="secondary">Empfohlen</Badge>
+                      <Badge variant="secondary">Recommended</Badge>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Nutzt den offiziellen GS1 Resolver (id.gs1.org)
+                      Uses the official GS1 Resolver (id.gs1.org)
                     </p>
                     <p className="text-xs font-mono mt-1 text-muted-foreground">
                       https://id.gs1.org/01/GTIN/21/SERIAL
@@ -898,11 +898,11 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                   <div className="flex-1">
                     <p className="font-medium flex items-center gap-2">
-                      Lokale Produktseiten
-                      <Badge variant="default">Integriert</Badge>
+                      Local Product Pages
+                      <Badge variant="default">Built-in</Badge>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Nutzt die integrierten öffentlichen DPP-Seiten dieser Anwendung
+                      Uses the built-in public DPP pages of this application
                     </p>
                     <p className="text-xs font-mono mt-1 text-muted-foreground">
                       {window.location.origin}/p/GTIN/SERIAL
@@ -928,11 +928,11 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                   <div className="flex-1">
                     <p className="font-medium flex items-center gap-2">
-                      Eigene Domain
+                      Custom Domain
                       <Badge variant="outline">Custom</Badge>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Verwenden Sie Ihre eigene Domain für DPP-URLs
+                      Use your own domain for DPP URLs
                     </p>
                   </div>
                 </label>
@@ -940,23 +940,23 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             </CardContent>
           </Card>
 
-          {/* Custom Domain Einstellungen */}
+          {/* Custom Domain Settings */}
           {domainForm.resolver === 'custom' && (
             <Card>
               <CardHeader>
-                <CardTitle>Domain-Konfiguration</CardTitle>
+                <CardTitle>Domain Configuration</CardTitle>
                 <CardDescription>
-                  Konfigurieren Sie Ihre eigene Domain für DPP-URLs
+                  Configure your own domain for DPP URLs
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Domain Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="customDomain">Ihre Domain *</Label>
+                    <Label htmlFor="customDomain">Your Domain *</Label>
                     <Input
                       id="customDomain"
-                      placeholder="z.B. dpp.ihre-firma.de"
+                      placeholder="e.g. dpp.your-company.com"
                       value={domainForm.customDomain}
                       onChange={(e) => handleDomainChange(e.target.value)}
                       className={domainError ? 'border-destructive' : ''}
@@ -965,17 +965,17 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       <p className="text-xs text-destructive">{domainError}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Nur die Domain ohne https:// eingeben
+                        Enter the domain only, without https://
                       </p>
                     )}
                   </div>
 
                   {/* Path Prefix */}
                   <div className="space-y-2">
-                    <Label htmlFor="pathPrefix">Pfad-Präfix (optional)</Label>
+                    <Label htmlFor="pathPrefix">Path Prefix (optional)</Label>
                     <Input
                       id="pathPrefix"
-                      placeholder="z.B. products oder passport"
+                      placeholder="e.g. products or passport"
                       value={domainForm.pathPrefix}
                       onChange={(e) => handlePathPrefixChange(e.target.value)}
                       className={pathPrefixError ? 'border-destructive' : ''}
@@ -984,7 +984,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       <p className="text-xs text-destructive">{pathPrefixError}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Wird zwischen Domain und Produkt-Pfad eingefügt
+                        Inserted between the domain and product path
                       </p>
                     )}
                   </div>
@@ -999,12 +999,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       setDomainForm({ ...domainForm, useHTTPS: checked })
                     }
                   />
-                  <Label htmlFor="useHttps">HTTPS verwenden (empfohlen)</Label>
+                  <Label htmlFor="useHttps">Use HTTPS (recommended)</Label>
                 </div>
 
                 {/* URL Preview */}
                 <div className="p-4 bg-muted/50 rounded-lg border">
-                  <Label className="text-sm font-medium">URL-Vorschau</Label>
+                  <Label className="text-sm font-medium">URL Preview</Label>
                   <p className="font-mono text-sm break-all mt-2 text-muted-foreground">
                     {getPreviewUrl()}
                   </p>
@@ -1013,10 +1013,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             </Card>
           )}
 
-          {/* Aktuelle Einstellung */}
+          {/* Current Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle>Aktuelle Konfiguration</CardTitle>
+              <CardTitle>Current Configuration</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="p-4 bg-muted/30 rounded-lg border">
@@ -1025,8 +1025,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     <span className="text-muted-foreground">Resolver:</span>
                     <span className="font-medium">
                       {domainForm.resolver === 'gs1' && 'GS1 Digital Link'}
-                      {domainForm.resolver === 'local' && 'Lokale Produktseiten'}
-                      {domainForm.resolver === 'custom' && 'Eigene Domain'}
+                      {domainForm.resolver === 'local' && 'Local Product Pages'}
+                      {domainForm.resolver === 'custom' && 'Custom Domain'}
                     </span>
                   </div>
                   {domainForm.resolver === 'custom' && domainForm.customDomain && (
@@ -1036,12 +1036,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         <span className="font-mono">{domainForm.customDomain}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Protokoll:</span>
+                        <span className="text-muted-foreground">Protocol:</span>
                         <span>{domainForm.useHTTPS ? 'HTTPS' : 'HTTP'}</span>
                       </div>
                       {domainForm.pathPrefix && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Pfad-Präfix:</span>
+                          <span className="text-muted-foreground">Path Prefix:</span>
                           <span className="font-mono">/{domainForm.pathPrefix}</span>
                         </div>
                       )}
@@ -1049,7 +1049,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   )}
                   <Separator className="my-2" />
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Beispiel-URL:</span>
+                    <span className="text-muted-foreground">Example URL:</span>
                     <span className="font-mono text-xs break-all">{getPreviewUrl()}</span>
                   </div>
                 </div>
@@ -1069,25 +1069,25 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              {domainSaved ? 'Gespeichert!' : 'Domain-Einstellungen speichern'}
+              {domainSaved ? 'Saved!' : 'Save Domain Settings'}
             </Button>
           </div>
         </TabsContent>
 
-        {/* Benutzer */}
+        {/* Users */}
         <TabsContent value="users" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Benutzer & Rollen</CardTitle>
+                  <CardTitle>Users & Roles</CardTitle>
                   <CardDescription>
-                    Verwalten Sie Zugriffsrechte für Ihr Team
+                    Manage access rights for your team
                   </CardDescription>
                 </div>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Benutzer einladen
+                  Invite User
                 </Button>
               </div>
             </CardHeader>
@@ -1095,15 +1095,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               {users.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>Keine weiteren Benutzer in diesem Mandanten</p>
+                  <p>No other users in this tenant</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>E-Mail</TableHead>
-                      <TableHead>Rolle</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -1111,7 +1111,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name || 'Unbekannt'}</TableCell>
+                        <TableCell className="font-medium">{user.name || 'Unknown'}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge
@@ -1123,7 +1123,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-success">
-                            Aktiv
+                            Active
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -1141,27 +1141,27 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Rollen</CardTitle>
-              <CardDescription>Definierte Zugriffsrechte</CardDescription>
+              <CardTitle>Roles</CardTitle>
+              <CardDescription>Defined access rights</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="p-4 rounded-lg border">
                   <h4 className="font-medium">Admin</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Vollzugriff auf alle Funktionen inkl. Einstellungen und Benutzerverwaltung
+                    Full access to all features including settings and user management
                   </p>
                 </div>
                 <div className="p-4 rounded-lg border">
                   <h4 className="font-medium">Editor</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Kann Produkte und DPPs erstellen, bearbeiten und veröffentlichen
+                    Can create, edit, and publish products and DPPs
                   </p>
                 </div>
                 <div className="p-4 rounded-lg border">
                   <h4 className="font-medium">Viewer</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Nur Lesezugriff auf Produkte und Berichte
+                    Read-only access to products and reports
                   </p>
                 </div>
               </div>
@@ -1177,12 +1177,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 <div>
                   <CardTitle>API-Keys</CardTitle>
                   <CardDescription>
-                    Verwalten Sie API-Schlüssel für Integrationen (ERP, Shop-Systeme)
+                    Manage API keys for integrations (ERP, shop systems)
                   </CardDescription>
                 </div>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Neuer API-Key
+                  New API Key
                 </Button>
               </div>
             </CardHeader>
@@ -1191,9 +1191,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>API-Key</TableHead>
-                    <TableHead>Erstellt</TableHead>
-                    <TableHead>Zuletzt verwendet</TableHead>
+                    <TableHead>API Key</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Last Used</TableHead>
                     <TableHead className="w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1224,15 +1224,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(key.created).toLocaleDateString('de-DE')}
+                        {new Date(key.created).toLocaleDateString('en-US')}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(key.lastUsed).toLocaleDateString('de-DE')}
+                        {new Date(key.lastUsed).toLocaleDateString('en-US')}
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Löschen
+                          Delete
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -1244,17 +1244,17 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>API-Dokumentation</CardTitle>
+              <CardTitle>API Documentation</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="p-4 rounded-lg bg-muted font-mono text-sm">
-                <p className="text-muted-foreground"># Basis-URL</p>
+                <p className="text-muted-foreground"># Base URL</p>
                 <p>https://api.dpp-manager.de/v1</p>
-                <p className="text-muted-foreground mt-4"># Authentifizierung</p>
+                <p className="text-muted-foreground mt-4"># Authentication</p>
                 <p>Authorization: Bearer {'<API_KEY>'}</p>
               </div>
               <Button variant="outline" className="mt-4">
-                Vollständige Dokumentation
+                Full Documentation
               </Button>
             </CardContent>
           </Card>

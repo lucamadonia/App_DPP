@@ -25,7 +25,8 @@ import { RequirementsCalculatorPage } from '@/pages/RequirementsCalculatorPage';
 import { ProductCategoriesPage } from '@/pages/ProductCategoriesPage';
 import { DPPVisibilitySettingsPage } from '@/pages/DPPVisibilitySettingsPage';
 import { PublicLayout } from '@/pages/public/PublicLayout';
-import { PublicProductPage } from '@/pages/public/PublicProductPage';
+import { PublicCustomerPage } from '@/pages/public/PublicCustomerPage';
+import { PublicCustomsPage } from '@/pages/public/PublicCustomsPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
@@ -43,7 +44,7 @@ function ProtectedRoute() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Laden...</p>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -74,7 +75,7 @@ function AppLayout() {
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </SidebarInset>
@@ -87,7 +88,7 @@ function PlaceholderPage({ title }: { title: string }) {
     <div className="flex h-[50vh] items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        <p className="mt-2 text-muted-foreground">Diese Seite ist in Entwicklung</p>
+        <p className="mt-2 text-muted-foreground">This page is under development</p>
       </div>
     </div>
   );
@@ -104,35 +105,37 @@ function App() {
         <Route path="auth/callback" element={<AuthCallbackPage />} />
         <Route path="auth/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Öffentliche Seiten ohne Sidebar */}
+        {/* Public pages without sidebar */}
         <Route element={<PublicLayout />}>
-          <Route path="p/:gtin/:serial" element={<PublicProductPage />} />
-          <Route path="01/:gtin/21/:serial" element={<PublicProductPage />} />
+          <Route path="p/:gtin/:serial" element={<PublicCustomerPage />} />
+          <Route path="01/:gtin/21/:serial" element={<PublicCustomerPage />} />
+          <Route path="p/:gtin/:serial/customs" element={<PublicCustomsPage />} />
+          <Route path="01/:gtin/21/:serial/customs" element={<PublicCustomsPage />} />
         </Route>
 
-        {/* Admin-Bereich mit Sidebar (geschützt) */}
+        {/* Admin area with sidebar (protected) */}
         <Route element={<ProtectedRoute />}>
           <Route index element={<DashboardPage />} />
 
-          {/* Produkte */}
+          {/* Products */}
           <Route path="products" element={<ProductsPage />} />
           <Route path="products/new" element={<ProductFormPage />} />
           <Route path="products/categories" element={<ProductCategoriesPage />} />
           <Route path="products/:id" element={<ProductPage />} />
           <Route path="products/:id/edit" element={<ProductFormPage />} />
 
-          {/* DPP / Pässe */}
+          {/* DPP / Passports */}
           <Route path="dpp" element={<DPPOverviewPage />} />
           <Route path="dpp/qr-generator" element={<QRGeneratorPage />} />
           <Route path="dpp/visibility" element={<DPPVisibilitySettingsPage />} />
           <Route path="dpp/batch-upload" element={<PlaceholderPage title="Batch-Upload" />} />
 
-          {/* Dokumente */}
+          {/* Documents */}
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="documents/upload" element={<DocumentsPage />} />
           <Route path="documents/tracker" element={<DocumentsPage />} />
 
-          {/* Lieferkette */}
+          {/* Supply Chain */}
           <Route path="supply-chain" element={<SupplyChainPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
 
@@ -141,7 +144,7 @@ function App() {
           <Route path="compliance/export" element={<CompliancePage />} />
           <Route path="compliance/audit-log" element={<CompliancePage />} />
 
-          {/* Regulierungen & Checklisten */}
+          {/* Regulations & Checklists */}
           <Route path="regulations" element={<RegulationsPage />} />
           <Route path="regulations/countries" element={<RegulationsPage />} />
           <Route path="regulations/eu" element={<RegulationsPage />} />
@@ -151,14 +154,14 @@ function App() {
           <Route path="checklists/:country" element={<ChecklistPage />} />
           <Route path="requirements-calculator" element={<RequirementsCalculatorPage />} />
 
-          {/* Einstellungen */}
+          {/* Settings */}
           <Route path="settings/company" element={<SettingsPage tab="company" />} />
           <Route path="settings/branding" element={<SettingsPage tab="branding" />} />
           <Route path="settings/users" element={<SettingsPage tab="users" />} />
           <Route path="settings/api-keys" element={<SettingsPage tab="api" />} />
 
-          {/* Hilfe */}
-          <Route path="help" element={<PlaceholderPage title="Hilfe & Support" />} />
+          {/* Help */}
+          <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
 
           {/* Admin */}
           <Route path="admin" element={<AdminPage />} />

@@ -78,7 +78,7 @@ import {
 import type { Country } from '@/types/database';
 import type { Supplier, SupplierProduct, SupplierContact } from '@/types/database';
 
-// Verfugbare Zertifizierungen
+// Available certifications
 const CERTIFICATIONS = [
   'ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 27001', 'ISO 50001',
   'BSCI', 'SA8000', 'GOTS', 'OEKO-TEX', 'FSC', 'PEFC',
@@ -86,28 +86,28 @@ const CERTIFICATIONS = [
   'GMP', 'HACCP', 'BRC', 'IFS', 'Fairtrade',
 ];
 
-// Lieferantentypen
+// Supplier types
 const SUPPLIER_TYPES = [
-  { value: 'manufacturer', label: 'Hersteller', icon: Factory },
-  { value: 'wholesaler', label: 'Grosshandler', icon: Building2 },
+  { value: 'manufacturer', label: 'Manufacturer', icon: Factory },
+  { value: 'wholesaler', label: 'Wholesaler', icon: Building2 },
   { value: 'distributor', label: 'Distributor', icon: Truck },
-  { value: 'service_provider', label: 'Dienstleister', icon: Users },
+  { value: 'service_provider', label: 'Service Provider', icon: Users },
 ];
 
-// Rechtsformen
+// Legal forms
 const LEGAL_FORMS = [
   'GmbH', 'AG', 'GmbH & Co. KG', 'KG', 'OHG', 'GbR', 'e.K.',
   'Ltd.', 'Inc.', 'Corp.', 'LLC', 'S.A.', 'S.r.l.', 'B.V.',
 ];
 
-// Rollen fur Lieferanten-Produkt-Zuordnung
+// Roles for supplier-product assignment
 const SUPPLIER_ROLES: { value: SupplierProduct['role']; label: string }[] = [
-  { value: 'manufacturer', label: 'Hersteller' },
-  { value: 'importeur', label: 'Importeur' },
-  { value: 'component', label: 'Komponenten-Lieferant' },
-  { value: 'raw_material', label: 'Rohstoff-Lieferant' },
-  { value: 'packaging', label: 'Verpackung' },
-  { value: 'logistics', label: 'Logistik' },
+  { value: 'manufacturer', label: 'Manufacturer' },
+  { value: 'importeur', label: 'Importer' },
+  { value: 'component', label: 'Component Supplier' },
+  { value: 'raw_material', label: 'Raw Material Supplier' },
+  { value: 'packaging', label: 'Packaging' },
+  { value: 'logistics', label: 'Logistics' },
 ];
 
 
@@ -118,40 +118,40 @@ export function SuppliersPage() {
   const [riskFilter, setRiskFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  // Daten-State
+  // Data state
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
 
-  // Dialog-State fur Lieferant
+  // Dialog state for supplier
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<Partial<Supplier>>({});
   const [activeFormTab, setActiveFormTab] = useState('basic');
 
-  // Ansprechpartner im Formular
+  // Contact person in form
   const [contactFormOpen, setContactFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<SupplierContact | null>(null);
   const [contactForm, setContactForm] = useState<Partial<SupplierContact>>({});
 
-  // Dialog-State fur Produkt-Zuordnung
+  // Dialog state for product assignment
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>([]);
   const [productFormData, setProductFormData] = useState<Partial<SupplierProduct>>({});
 
-  // Detail-Ansicht
+  // Detail view
   const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null);
   const [detailProducts, setDetailProducts] = useState<SupplierProduct[]>([]);
   const [activeDetailTab, setActiveDetailTab] = useState('overview');
 
-  // Daten laden beim Mount
+  // Load data on mount
   useEffect(() => {
     loadData();
   }, []);
 
-  // Daten laden
+  // Load data
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -164,12 +164,12 @@ export function SuppliersPage() {
       setProducts(productsData);
       setCountries(countriesData);
     } catch (error) {
-      console.error('Fehler beim Laden:', error);
+      console.error('Error loading data:', error);
     }
     setIsLoading(false);
   };
 
-  // Statistiken berechnen
+  // Calculate statistics
   const stats = useMemo(() => {
     const total = suppliers.length;
     const active = suppliers.filter(s => s.status === 'active').length;
@@ -181,7 +181,7 @@ export function SuppliersPage() {
     return { total, active, highRisk, verified, countries, pendingApproval };
   }, [suppliers]);
 
-  // Gefilterte Lieferanten
+  // Filtered suppliers
   const filteredSuppliers = useMemo(() => {
     return suppliers.filter(supplier => {
       const matchesSearch =
@@ -197,7 +197,7 @@ export function SuppliersPage() {
     });
   }, [suppliers, searchQuery, statusFilter, riskFilter, typeFilter]);
 
-  // Leeres Lieferanten-Formular
+  // Empty supplier form
   const getEmptySupplierForm = (): Partial<Supplier> => ({
     name: '',
     code: '',
@@ -228,7 +228,7 @@ export function SuppliersPage() {
     bank_name: '',
     iban: '',
     bic: '',
-    payment_terms: '30 Tage netto',
+    payment_terms: 'Net 30',
     risk_level: 'low',
     quality_rating: undefined,
     delivery_rating: undefined,
@@ -248,7 +248,7 @@ export function SuppliersPage() {
     status: 'active',
   });
 
-  // Leeres Produkt-Zuordnungs-Formular
+  // Empty product assignment form
   const getEmptyProductForm = (): Partial<SupplierProduct> => ({
     product_id: '',
     role: 'component',
@@ -257,7 +257,7 @@ export function SuppliersPage() {
     notes: '',
   });
 
-  // Leeres Kontakt-Formular
+  // Empty contact form
   const getEmptyContactForm = (): Partial<SupplierContact> => ({
     name: '',
     position: '',
@@ -269,7 +269,7 @@ export function SuppliersPage() {
     notes: '',
   });
 
-  // Dialog offnen: Neuer Lieferant
+  // Open dialog: New supplier
   const openCreateDialog = () => {
     setDialogMode('create');
     setEditingSupplier(null);
@@ -278,7 +278,7 @@ export function SuppliersPage() {
     setSupplierDialogOpen(true);
   };
 
-  // Dialog offnen: Lieferant bearbeiten
+  // Open dialog: Edit supplier
   const openEditDialog = (supplier: Supplier) => {
     setDialogMode('edit');
     setEditingSupplier(supplier);
@@ -287,7 +287,7 @@ export function SuppliersPage() {
     setSupplierDialogOpen(true);
   };
 
-  // Dialog offnen: Produkt zuordnen
+  // Open dialog: Assign product
   const openProductDialog = async (supplier: Supplier) => {
     setSelectedSupplier(supplier);
     setProductFormData(getEmptyProductForm());
@@ -296,13 +296,13 @@ export function SuppliersPage() {
       const products = await getSupplierProducts(supplier.id);
       setSupplierProducts(products);
     } catch (error) {
-      console.error('Fehler beim Laden der Produkte:', error);
+      console.error('Error loading products:', error);
     }
     setIsLoading(false);
     setProductDialogOpen(true);
   };
 
-  // Detail-Ansicht offnen
+  // Open detail view
   const openDetailView = async (supplier: Supplier) => {
     setDetailSupplier(supplier);
     setActiveDetailTab('overview');
@@ -311,12 +311,12 @@ export function SuppliersPage() {
       const products = await getSupplierProducts(supplier.id);
       setDetailProducts(products);
     } catch (error) {
-      console.error('Fehler:', error);
+      console.error('Error:', error);
     }
     setIsLoading(false);
   };
 
-  // Formular aktualisieren
+  // Update form
   const updateForm = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -329,7 +329,7 @@ export function SuppliersPage() {
     setContactForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Zertifizierung hinzufugen/entfernen
+  // Toggle certification
   const toggleCertification = (cert: string) => {
     const current = formData.certifications || [];
     if (current.includes(cert)) {
@@ -339,21 +339,21 @@ export function SuppliersPage() {
     }
   };
 
-  // Ansprechpartner hinzufugen
+  // Add contact person
   const handleAddContact = () => {
     setEditingContact(null);
     setContactForm(getEmptyContactForm());
     setContactFormOpen(true);
   };
 
-  // Ansprechpartner bearbeiten
+  // Edit contact person
   const handleEditContact = (contact: SupplierContact, index: number) => {
     setEditingContact({ ...contact, id: String(index) });
     setContactForm({ ...contact });
     setContactFormOpen(true);
   };
 
-  // Ansprechpartner speichern
+  // Save contact person
   const handleSaveContact = () => {
     const contacts = formData.additional_contacts || [];
     if (editingContact?.id !== undefined) {
@@ -366,52 +366,52 @@ export function SuppliersPage() {
     setContactFormOpen(false);
   };
 
-  // Ansprechpartner loschen
+  // Delete contact person
   const handleDeleteContact = (index: number) => {
     const contacts = formData.additional_contacts || [];
     contacts.splice(index, 1);
     updateForm('additional_contacts', [...contacts]);
   };
 
-  // Lieferant speichern
+  // Save supplier
   const handleSaveSupplier = async () => {
     setIsLoading(true);
     try {
       if (dialogMode === 'create') {
         const result = await createSupplier(formData as Omit<Supplier, 'id' | 'tenant_id' | 'createdAt'>);
-        if (!result.success) throw new Error('Erstellen fehlgeschlagen');
+        if (!result.success) throw new Error('Creation failed');
       } else if (editingSupplier) {
         const result = await updateSupplier(editingSupplier.id, formData);
-        if (!result.success) throw new Error('Aktualisierung fehlgeschlagen');
+        if (!result.success) throw new Error('Update failed');
       }
       await loadData();
       setSupplierDialogOpen(false);
     } catch (error) {
-      console.error('Fehler beim Speichern:', error);
-      alert('Fehler beim Speichern');
+      console.error('Error saving:', error);
+      alert('Error saving');
     }
     setIsLoading(false);
   };
 
-  // Lieferant loschen
+  // Delete supplier
   const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Lieferant wirklich loschen? Alle Produkt-Zuordnungen werden ebenfalls entfernt.')) return;
+    if (!confirm('Really delete this supplier? All product assignments will also be removed.')) return;
     setIsLoading(true);
     try {
       const result = await deleteSupplier(id);
-      if (!result.success) throw new Error('Loschen fehlgeschlagen');
+      if (!result.success) throw new Error('Deletion failed');
       await loadData();
       if (detailSupplier?.id === id) {
         setDetailSupplier(null);
       }
     } catch (error) {
-      console.error('Fehler:', error);
-      alert('Fehler beim Loschen');
+      console.error('Error:', error);
+      alert('Error deleting');
     }
     setIsLoading(false);
   };
 
-  // Produkt zuordnen
+  // Assign product
   const handleAssignProduct = async () => {
     if (!selectedSupplier || !productFormData.product_id) return;
     setIsLoading(true);
@@ -424,88 +424,88 @@ export function SuppliersPage() {
         lead_time_days: productFormData.lead_time_days,
         notes: productFormData.notes,
       });
-      if (!result.success) throw new Error('Zuordnung fehlgeschlagen');
+      if (!result.success) throw new Error('Assignment failed');
       const products = await getSupplierProducts(selectedSupplier.id);
       setSupplierProducts(products);
       setProductFormData(getEmptyProductForm());
     } catch (error) {
-      console.error('Fehler:', error);
-      alert('Fehler bei der Zuordnung');
+      console.error('Error:', error);
+      alert('Error assigning product');
     }
     setIsLoading(false);
   };
 
-  // Produkt-Zuordnung entfernen
+  // Remove product assignment
   const handleRemoveProduct = async (id: string) => {
     if (!selectedSupplier) return;
     setIsLoading(true);
     try {
       const result = await removeProductFromSupplier(id);
-      if (!result.success) throw new Error('Entfernen fehlgeschlagen');
+      if (!result.success) throw new Error('Removal failed');
       const products = await getSupplierProducts(selectedSupplier.id);
       setSupplierProducts(products);
     } catch (error) {
-      console.error('Fehler:', error);
+      console.error('Error:', error);
     }
     setIsLoading(false);
   };
 
-  // Risiko-Badge Renderer
+  // Risk badge renderer
   const renderRiskBadge = (level: string) => {
     switch (level) {
       case 'high':
         return (
           <Badge variant="destructive" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
-            Hoch
+            High
           </Badge>
         );
       case 'medium':
         return (
           <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             <Clock className="h-3 w-3" />
-            Mittel
+            Medium
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" className="gap-1 text-green-600 border-green-200">
             <CheckCircle2 className="h-3 w-3" />
-            Niedrig
+            Low
           </Badge>
         );
     }
   };
 
-  // Status-Badge Renderer
+  // Status badge renderer
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aktiv</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
       case 'inactive':
-        return <Badge variant="secondary">Inaktiv</Badge>;
+        return <Badge variant="secondary">Inactive</Badge>;
       case 'blocked':
-        return <Badge variant="destructive">Gesperrt</Badge>;
+        return <Badge variant="destructive">Blocked</Badge>;
       case 'pending_approval':
-        return <Badge className="bg-yellow-100 text-yellow-800">Freigabe ausstehend</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending Approval</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  // Compliance-Badge Renderer
+  // Compliance badge renderer
   const renderComplianceBadge = (status?: string) => {
     switch (status) {
       case 'compliant':
-        return <Badge className="bg-green-100 text-green-800"><BadgeCheck className="h-3 w-3 mr-1" />Konform</Badge>;
+        return <Badge className="bg-green-100 text-green-800"><BadgeCheck className="h-3 w-3 mr-1" />Compliant</Badge>;
       case 'non_compliant':
-        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Nicht konform</Badge>;
+        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Non-Compliant</Badge>;
       default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Prufung ausstehend</Badge>;
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Review Pending</Badge>;
     }
   };
 
-  // Sterne-Rating Renderer
+  // Star rating renderer
   const renderStars = (rating?: number) => {
     if (!rating) return <span className="text-muted-foreground">-</span>;
     return (
@@ -520,12 +520,12 @@ export function SuppliersPage() {
     );
   };
 
-  // Produktname finden
+  // Find product name
   const getProductName = (productId: string) => {
-    return products.find(p => p.id === productId)?.name || 'Unbekannt';
+    return products.find(p => p.id === productId)?.name || 'Unknown';
   };
 
-  // Landername finden
+  // Find country name
   const getCountryName = (code: string) => {
     return countries.find(c => c.code === code)?.name || code;
   };
@@ -533,26 +533,26 @@ export function SuppliersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Lieferanten</h1>
+          <h1 className="text-2xl font-bold text-foreground">Suppliers</h1>
           <p className="text-muted-foreground">
-            Lieferanten verwalten, bewerten und Produkte zuordnen
+            Manage suppliers, rate them, and assign products
           </p>
         </div>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 h-4 w-4" />
-          Neuer Lieferant
+          New Supplier
         </Button>
       </div>
 
-      {/* Statistik-Karten */}
+      {/* Statistics cards */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Gesamt</span>
+              <span className="text-sm font-medium">Total</span>
             </div>
             <p className="text-2xl font-bold mt-1">{stats.total}</p>
           </CardContent>
@@ -562,7 +562,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">Aktiv</span>
+              <span className="text-sm font-medium">Active</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-green-600">{stats.active}</p>
           </CardContent>
@@ -572,7 +572,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-yellow-600" />
-              <span className="text-sm font-medium">Freigabe</span>
+              <span className="text-sm font-medium">Approval</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-yellow-600">{stats.pendingApproval}</p>
           </CardContent>
@@ -582,7 +582,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium">Hohes Risiko</span>
+              <span className="text-sm font-medium">High Risk</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-destructive">{stats.highRisk}</p>
           </CardContent>
@@ -592,7 +592,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Verifiziert</span>
+              <span className="text-sm font-medium">Verified</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-blue-600">{stats.verified}</p>
           </CardContent>
@@ -602,26 +602,26 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium">Lander</span>
+              <span className="text-sm font-medium">Countries</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-purple-600">{stats.countries}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Lieferanten-Liste */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        {/* Supplier list */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-lg">Lieferanten-Liste</CardTitle>
+              <CardTitle className="text-lg">Supplier List</CardTitle>
               <div className="flex items-center gap-2 flex-wrap">
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-[130px]">
-                    <SelectValue placeholder="Typ" />
+                    <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Alle Typen</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     {SUPPLIER_TYPES.map(t => (
                       <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
@@ -633,30 +633,30 @@ export function SuppliersPage() {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Alle Status</SelectItem>
-                    <SelectItem value="active">Aktiv</SelectItem>
-                    <SelectItem value="inactive">Inaktiv</SelectItem>
-                    <SelectItem value="blocked">Gesperrt</SelectItem>
-                    <SelectItem value="pending_approval">Freigabe</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                    <SelectItem value="pending_approval">Approval</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={riskFilter} onValueChange={setRiskFilter}>
                   <SelectTrigger className="w-[110px]">
-                    <SelectValue placeholder="Risiko" />
+                    <SelectValue placeholder="Risk" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Alle</SelectItem>
-                    <SelectItem value="low">Niedrig</SelectItem>
-                    <SelectItem value="medium">Mittel</SelectItem>
-                    <SelectItem value="high">Hoch</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <div className="relative w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Suchen..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -676,18 +676,18 @@ export function SuppliersPage() {
               </div>
             ) : filteredSuppliers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {suppliers.length === 0 ? 'Noch keine Lieferanten vorhanden' : 'Keine Treffer'}
+                {suppliers.length === 0 ? 'No suppliers yet' : 'No results'}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Lieferant</TableHead>
-                    <TableHead>Kontakt</TableHead>
-                    <TableHead>Standort</TableHead>
-                    <TableHead>Bewertung</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Rating</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-[120px]">Aktionen</TableHead>
+                    <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -756,7 +756,7 @@ export function SuppliersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" onClick={() => openProductDialog(supplier)} title="Produkte">
+                          <Button variant="ghost" size="icon" onClick={() => openProductDialog(supplier)} title="Products">
                             <Link2 className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => openEditDialog(supplier)}>
@@ -775,59 +775,59 @@ export function SuppliersPage() {
           </CardContent>
         </Card>
 
-        {/* Detail-Ansicht */}
+        {/* Detail view */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">
               {detailSupplier ? detailSupplier.name : 'Details'}
             </CardTitle>
             {detailSupplier && (
-              <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || 'Kein Kurzel'}</CardDescription>
+              <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || 'No code'}</CardDescription>
             )}
           </CardHeader>
           <CardContent>
             {!detailSupplier ? (
               <div className="text-center py-8 text-muted-foreground">
-                Wahlen Sie einen Lieferanten aus der Liste
+                Select a supplier from the list
               </div>
             ) : (
               <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="overview">Ubersicht</TabsTrigger>
-                  <TabsTrigger value="contacts">Kontakte</TabsTrigger>
-                  <TabsTrigger value="products">Produkte</TabsTrigger>
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="contacts">Contacts</TabsTrigger>
+                  <TabsTrigger value="products">Products</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4 mt-4">
-                  {/* Status & Bewertung */}
+                  {/* Status & Rating */}
                   <div className="flex flex-wrap gap-2">
                     {renderStatusBadge(detailSupplier.status)}
                     {renderRiskBadge(detailSupplier.risk_level)}
                     {detailSupplier.verified && (
                       <Badge className="bg-blue-100 text-blue-800">
-                        <Shield className="h-3 w-3 mr-1" />Verifiziert
+                        <Shield className="h-3 w-3 mr-1" />Verified
                       </Badge>
                     )}
                   </div>
 
-                  {/* Bewertungen */}
+                  {/* Ratings */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Qualitat:</span>
+                      <span className="text-muted-foreground">Quality:</span>
                       <div>{renderStars(detailSupplier.quality_rating)}</div>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Lieferung:</span>
+                      <span className="text-muted-foreground">Delivery:</span>
                       <div>{renderStars(detailSupplier.delivery_rating)}</div>
                     </div>
                   </div>
 
                   <Separator />
 
-                  {/* Adresse */}
+                  {/* Address */}
                   <div className="space-y-1">
                     <h4 className="font-medium text-sm flex items-center gap-1">
-                      <MapPin className="h-4 w-4" /> Adresse
+                      <MapPin className="h-4 w-4" /> Address
                     </h4>
                     <div className="text-sm text-muted-foreground">
                       {detailSupplier.address && <div>{detailSupplier.address}</div>}
@@ -838,13 +838,13 @@ export function SuppliersPage() {
                     </div>
                   </div>
 
-                  {/* Zertifizierungen */}
+                  {/* Certifications */}
                   {detailSupplier.certifications && detailSupplier.certifications.length > 0 && (
                     <>
                       <Separator />
                       <div className="space-y-1">
                         <h4 className="font-medium text-sm flex items-center gap-1">
-                          <FileCheck className="h-4 w-4" /> Zertifizierungen
+                          <FileCheck className="h-4 w-4" /> Certifications
                         </h4>
                         <div className="flex flex-wrap gap-1">
                           {detailSupplier.certifications.map(cert => (
@@ -855,35 +855,35 @@ export function SuppliersPage() {
                     </>
                   )}
 
-                  {/* Vertrag */}
+                  {/* Contract */}
                   {(detailSupplier.contract_start || detailSupplier.contract_end) && (
                     <>
                       <Separator />
                       <div className="space-y-1">
                         <h4 className="font-medium text-sm flex items-center gap-1">
-                          <FileText className="h-4 w-4" /> Vertrag
+                          <FileText className="h-4 w-4" /> Contract
                         </h4>
                         <div className="text-sm text-muted-foreground">
                           {detailSupplier.contract_start && (
-                            <div>Start: {new Date(detailSupplier.contract_start).toLocaleDateString('de-DE')}</div>
+                            <div>Start: {new Date(detailSupplier.contract_start).toLocaleDateString('en-US')}</div>
                           )}
                           {detailSupplier.contract_end && (
-                            <div>Ende: {new Date(detailSupplier.contract_end).toLocaleDateString('de-DE')}</div>
+                            <div>End: {new Date(detailSupplier.contract_end).toLocaleDateString('en-US')}</div>
                           )}
                           {detailSupplier.payment_terms && (
-                            <div>Zahlungsziel: {detailSupplier.payment_terms}</div>
+                            <div>Payment Terms: {detailSupplier.payment_terms}</div>
                           )}
                         </div>
                       </div>
                     </>
                   )}
 
-                  {/* Notizen */}
+                  {/* Notes */}
                   {detailSupplier.notes && (
                     <>
                       <Separator />
                       <div className="space-y-1">
-                        <h4 className="font-medium text-sm">Notizen</h4>
+                        <h4 className="font-medium text-sm">Notes</h4>
                         <p className="text-sm text-muted-foreground">{detailSupplier.notes}</p>
                       </div>
                     </>
@@ -891,11 +891,11 @@ export function SuppliersPage() {
                 </TabsContent>
 
                 <TabsContent value="contacts" className="space-y-4 mt-4">
-                  {/* Hauptkontakt */}
+                  {/* Primary contact */}
                   {detailSupplier.contact_person && (
                     <div className="p-3 rounded-lg border bg-card">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge>Hauptkontakt</Badge>
+                        <Badge>Primary Contact</Badge>
                       </div>
                       <div className="space-y-1 text-sm">
                         <div className="font-medium">{detailSupplier.contact_person}</div>
@@ -926,10 +926,10 @@ export function SuppliersPage() {
                     </div>
                   )}
 
-                  {/* Weitere Kontakte */}
+                  {/* Additional contacts */}
                   {detailSupplier.additional_contacts && detailSupplier.additional_contacts.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Weitere Ansprechpartner</h4>
+                      <h4 className="font-medium text-sm">Additional Contacts</h4>
                       {detailSupplier.additional_contacts.map((contact, i) => (
                         <div key={i} className="p-2 rounded border text-sm">
                           <div className="font-medium">{contact.name}</div>
@@ -978,13 +978,13 @@ export function SuppliersPage() {
 
                 <TabsContent value="products" className="space-y-4 mt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{detailProducts.length} Produkte</span>
+                    <span className="text-sm text-muted-foreground">{detailProducts.length} Products</span>
                     <Button variant="outline" size="sm" onClick={() => openProductDialog(detailSupplier)}>
-                      <Plus className="h-3 w-3 mr-1" />Zuordnen
+                      <Plus className="h-3 w-3 mr-1" />Assign
                     </Button>
                   </div>
                   {detailProducts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Keine Produkte zugeordnet</p>
+                    <p className="text-sm text-muted-foreground text-center py-4">No products assigned</p>
                   ) : (
                     <div className="space-y-2">
                       {detailProducts.map(sp => (
@@ -995,7 +995,7 @@ export function SuppliersPage() {
                               <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
                               <div className="text-xs text-muted-foreground">
                                 {SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}
-                                {sp.is_primary && <Badge variant="secondary" className="ml-1 text-xs">Haupt</Badge>}
+                                {sp.is_primary && <Badge variant="secondary" className="ml-1 text-xs">Primary</Badge>}
                               </div>
                             </div>
                           </div>
@@ -1010,140 +1010,140 @@ export function SuppliersPage() {
         </Card>
       </div>
 
-      {/* Dialog: Lieferant erstellen/bearbeiten */}
+      {/* Dialog: Create/edit supplier */}
       <Dialog open={supplierDialogOpen} onOpenChange={setSupplierDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'Neuer Lieferant' : 'Lieferant bearbeiten'}
+              {dialogMode === 'create' ? 'New Supplier' : 'Edit Supplier'}
             </DialogTitle>
           </DialogHeader>
 
           <Tabs value={activeFormTab} onValueChange={setActiveFormTab}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="basic">Stammdaten</TabsTrigger>
-              <TabsTrigger value="contact">Kontakt</TabsTrigger>
-              <TabsTrigger value="address">Adressen</TabsTrigger>
-              <TabsTrigger value="compliance">Compliance</TabsTrigger>
-              <TabsTrigger value="finance">Finanzen</TabsTrigger>
+            <TabsList className="flex w-full overflow-x-auto">
+              <TabsTrigger value="basic" className="flex-shrink-0">General</TabsTrigger>
+              <TabsTrigger value="contact" className="flex-shrink-0">Contact</TabsTrigger>
+              <TabsTrigger value="address" className="flex-shrink-0">Addresses</TabsTrigger>
+              <TabsTrigger value="compliance" className="flex-shrink-0">Compliance</TabsTrigger>
+              <TabsTrigger value="finance" className="flex-shrink-0">Finance</TabsTrigger>
             </TabsList>
 
-            {/* Stammdaten */}
+            {/* General */}
             <TabsContent value="basic" className="space-y-4 mt-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <Label>Firmenname *</Label>
-                  <Input value={formData.name || ''} onChange={e => updateForm('name', e.target.value)} placeholder="Firmenname" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <Label>Company Name *</Label>
+                  <Input value={formData.name || ''} onChange={e => updateForm('name', e.target.value)} placeholder="Company Name" />
                 </div>
                 <div>
-                  <Label>Kurzel</Label>
+                  <Label>Code</Label>
                   <Input value={formData.code || ''} onChange={e => updateForm('code', e.target.value)} placeholder="SUP001" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>Rechtsform</Label>
+                  <Label>Legal Form</Label>
                   <Select value={formData.legal_form || ''} onValueChange={v => updateForm('legal_form', v)}>
-                    <SelectTrigger><SelectValue placeholder="Auswahlen" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       {LEGAL_FORMS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Lieferantentyp</Label>
+                  <Label>Supplier Type</Label>
                   <Select value={formData.supplier_type || ''} onValueChange={v => updateForm('supplier_type', v)}>
-                    <SelectTrigger><SelectValue placeholder="Auswahlen" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       {SUPPLIER_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Branche</Label>
-                  <Input value={formData.industry || ''} onChange={e => updateForm('industry', e.target.value)} placeholder="z.B. Elektronik" />
+                  <Label>Industry</Label>
+                  <Input value={formData.industry || ''} onChange={e => updateForm('industry', e.target.value)} placeholder="e.g. Electronics" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label>Status</Label>
                   <Select value={formData.status || 'active'} onValueChange={v => updateForm('status', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Aktiv</SelectItem>
-                      <SelectItem value="inactive">Inaktiv</SelectItem>
-                      <SelectItem value="blocked">Gesperrt</SelectItem>
-                      <SelectItem value="pending_approval">Freigabe ausstehend</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="blocked">Blocked</SelectItem>
+                      <SelectItem value="pending_approval">Pending Approval</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Risikostufe</Label>
+                  <Label>Risk Level</Label>
                   <Select value={formData.risk_level || 'low'} onValueChange={v => updateForm('risk_level', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low">Niedrig</SelectItem>
-                      <SelectItem value="medium">Mittel</SelectItem>
-                      <SelectItem value="high">Hoch</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <Checkbox id="verified" checked={formData.verified || false} onCheckedChange={v => updateForm('verified', v)} />
-                  <Label htmlFor="verified">Verifiziert</Label>
+                  <Label htmlFor="verified">Verified</Label>
                 </div>
               </div>
 
               <div>
-                <Label>Notizen</Label>
-                <Input value={formData.notes || ''} onChange={e => updateForm('notes', e.target.value)} placeholder="Offentliche Notizen..." />
+                <Label>Notes</Label>
+                <Input value={formData.notes || ''} onChange={e => updateForm('notes', e.target.value)} placeholder="Public notes..." />
               </div>
 
               <div>
-                <Label>Interne Notizen</Label>
-                <Input value={formData.internal_notes || ''} onChange={e => updateForm('internal_notes', e.target.value)} placeholder="Nur intern sichtbar..." />
+                <Label>Internal Notes</Label>
+                <Input value={formData.internal_notes || ''} onChange={e => updateForm('internal_notes', e.target.value)} placeholder="Internal use only..." />
               </div>
             </TabsContent>
 
-            {/* Kontakt */}
+            {/* Contact */}
             <TabsContent value="contact" className="space-y-4 mt-4">
-              <h3 className="font-medium">Hauptkontakt</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className="font-medium">Primary Contact</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Name</Label>
-                  <Input value={formData.contact_person || ''} onChange={e => updateForm('contact_person', e.target.value)} placeholder="Max Mustermann" />
+                  <Input value={formData.contact_person || ''} onChange={e => updateForm('contact_person', e.target.value)} placeholder="John Doe" />
                 </div>
                 <div>
                   <Label>Position</Label>
-                  <Input value={formData.contact_position || ''} onChange={e => updateForm('contact_position', e.target.value)} placeholder="Vertriebsleiter" />
+                  <Input value={formData.contact_position || ''} onChange={e => updateForm('contact_position', e.target.value)} placeholder="Sales Manager" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>E-Mail</Label>
-                  <Input type="email" value={formData.email || ''} onChange={e => updateForm('email', e.target.value)} placeholder="kontakt@firma.de" />
+                  <Label>Email</Label>
+                  <Input type="email" value={formData.email || ''} onChange={e => updateForm('email', e.target.value)} placeholder="contact@company.com" />
                 </div>
                 <div>
-                  <Label>Telefon</Label>
-                  <Input value={formData.phone || ''} onChange={e => updateForm('phone', e.target.value)} placeholder="+49 123 456789" />
+                  <Label>Phone</Label>
+                  <Input value={formData.phone || ''} onChange={e => updateForm('phone', e.target.value)} placeholder="+1 234 567890" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Mobil</Label>
-                  <Input value={formData.mobile || ''} onChange={e => updateForm('mobile', e.target.value)} placeholder="+49 170 1234567" />
+                  <Label>Mobile</Label>
+                  <Input value={formData.mobile || ''} onChange={e => updateForm('mobile', e.target.value)} placeholder="+1 234 567890" />
                 </div>
                 <div>
                   <Label>Fax</Label>
-                  <Input value={formData.fax || ''} onChange={e => updateForm('fax', e.target.value)} placeholder="+49 123 456789-0" />
+                  <Input value={formData.fax || ''} onChange={e => updateForm('fax', e.target.value)} placeholder="+1 234 567890" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Website</Label>
-                  <Input value={formData.website || ''} onChange={e => updateForm('website', e.target.value)} placeholder="https://www.firma.de" />
+                  <Input value={formData.website || ''} onChange={e => updateForm('website', e.target.value)} placeholder="https://www.company.com" />
                 </div>
                 <div>
                   <Label>LinkedIn</Label>
@@ -1154,14 +1154,14 @@ export function SuppliersPage() {
               <Separator />
 
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">Weitere Ansprechpartner</h3>
+                <h3 className="font-medium">Additional Contacts</h3>
                 <Button variant="outline" size="sm" onClick={handleAddContact}>
-                  <Plus className="h-4 w-4 mr-1" />Hinzufugen
+                  <Plus className="h-4 w-4 mr-1" />Add
                 </Button>
               </div>
 
               {(formData.additional_contacts || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">Keine weiteren Ansprechpartner</p>
+                <p className="text-sm text-muted-foreground">No additional contacts</p>
               ) : (
                 <div className="space-y-2">
                   {(formData.additional_contacts || []).map((contact, i) => (
@@ -1187,33 +1187,33 @@ export function SuppliersPage() {
               )}
             </TabsContent>
 
-            {/* Adressen */}
+            {/* Addresses */}
             <TabsContent value="address" className="space-y-4 mt-4">
-              <h3 className="font-medium">Firmenadresse</h3>
+              <h3 className="font-medium">Company Address</h3>
               <div>
-                <Label>Strasse</Label>
-                <Input value={formData.address || ''} onChange={e => updateForm('address', e.target.value)} placeholder="Musterstrasse 123" />
+                <Label>Street</Label>
+                <Input value={formData.address || ''} onChange={e => updateForm('address', e.target.value)} placeholder="123 Main Street" />
               </div>
               <div>
-                <Label>Adresszusatz</Label>
-                <Input value={formData.address_line2 || ''} onChange={e => updateForm('address_line2', e.target.value)} placeholder="Gebaude B, 3. Stock" />
+                <Label>Address Line 2</Label>
+                <Input value={formData.address_line2 || ''} onChange={e => updateForm('address_line2', e.target.value)} placeholder="Building B, 3rd Floor" />
               </div>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <Label>PLZ</Label>
+                  <Label>ZIP/Postal Code</Label>
                   <Input value={formData.postal_code || ''} onChange={e => updateForm('postal_code', e.target.value)} placeholder="12345" />
                 </div>
                 <div className="col-span-2">
-                  <Label>Stadt</Label>
+                  <Label>City</Label>
                   <Input value={formData.city || ''} onChange={e => updateForm('city', e.target.value)} placeholder="Berlin" />
                 </div>
                 <div>
-                  <Label>Bundesland</Label>
+                  <Label>State/Province</Label>
                   <Input value={formData.state || ''} onChange={e => updateForm('state', e.target.value)} placeholder="Berlin" />
                 </div>
               </div>
               <div>
-                <Label>Land</Label>
+                <Label>Country</Label>
                 <Select value={formData.country || 'DE'} onValueChange={v => updateForm('country', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1224,24 +1224,24 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Lieferadresse (falls abweichend)</h3>
+              <h3 className="font-medium">Shipping Address (if different)</h3>
               <div>
-                <Label>Strasse</Label>
+                <Label>Street</Label>
                 <Input value={formData.shipping_address || ''} onChange={e => updateForm('shipping_address', e.target.value)} />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>PLZ</Label>
+                  <Label>ZIP/Postal Code</Label>
                   <Input value={formData.shipping_postal_code || ''} onChange={e => updateForm('shipping_postal_code', e.target.value)} />
                 </div>
                 <div>
-                  <Label>Stadt</Label>
+                  <Label>City</Label>
                   <Input value={formData.shipping_city || ''} onChange={e => updateForm('shipping_city', e.target.value)} />
                 </div>
                 <div>
-                  <Label>Land</Label>
+                  <Label>Country</Label>
                   <Select value={formData.shipping_country || ''} onValueChange={v => updateForm('shipping_country', v)}>
-                    <SelectTrigger><SelectValue placeholder="Auswahlen" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       {countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
                     </SelectContent>
@@ -1252,24 +1252,24 @@ export function SuppliersPage() {
 
             {/* Compliance */}
             <TabsContent value="compliance" className="space-y-4 mt-4">
-              <h3 className="font-medium">Rechtliche Informationen</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className="font-medium">Legal Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Steuernummer</Label>
+                  <Label>Tax ID</Label>
                   <Input value={formData.tax_id || ''} onChange={e => updateForm('tax_id', e.target.value)} placeholder="123/456/78901" />
                 </div>
                 <div>
-                  <Label>USt-IdNr</Label>
+                  <Label>VAT ID</Label>
                   <Input value={formData.vat_id || ''} onChange={e => updateForm('vat_id', e.target.value)} placeholder="DE123456789" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>D-U-N-S Nummer</Label>
+                  <Label>D-U-N-S Number</Label>
                   <Input value={formData.duns_number || ''} onChange={e => updateForm('duns_number', e.target.value)} placeholder="12-345-6789" />
                 </div>
                 <div>
-                  <Label>Handelsregisternr.</Label>
+                  <Label>Registration No.</Label>
                   <Input value={formData.registration_number || ''} onChange={e => updateForm('registration_number', e.target.value)} placeholder="HRB 12345" />
                 </div>
               </div>
@@ -1277,31 +1277,31 @@ export function SuppliersPage() {
               <Separator />
 
               <h3 className="font-medium">Compliance & Audits</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>Compliance-Status</Label>
+                  <Label>Compliance Status</Label>
                   <Select value={formData.compliance_status || 'pending'} onValueChange={v => updateForm('compliance_status', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="compliant">Konform</SelectItem>
-                      <SelectItem value="pending">Prufung ausstehend</SelectItem>
-                      <SelectItem value="non_compliant">Nicht konform</SelectItem>
+                      <SelectItem value="compliant">Compliant</SelectItem>
+                      <SelectItem value="pending">Review Pending</SelectItem>
+                      <SelectItem value="non_compliant">Non-Compliant</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Letztes Audit</Label>
+                  <Label>Last Audit</Label>
                   <Input type="date" value={formData.audit_date || ''} onChange={e => updateForm('audit_date', e.target.value)} />
                 </div>
                 <div>
-                  <Label>Nachstes Audit</Label>
+                  <Label>Next Audit</Label>
                   <Input type="date" value={formData.next_audit_date || ''} onChange={e => updateForm('next_audit_date', e.target.value)} />
                 </div>
               </div>
 
               <Separator />
 
-              <h3 className="font-medium">Zertifizierungen</h3>
+              <h3 className="font-medium">Certifications</h3>
               <div className="flex flex-wrap gap-2">
                 {CERTIFICATIONS.map(cert => (
                   <Badge
@@ -1318,51 +1318,51 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Bewertungen</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className="font-medium">Ratings</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Qualitat (1-5)</Label>
+                  <Label>Quality (1-5)</Label>
                   <Select value={String(formData.quality_rating || '')} onValueChange={v => updateForm('quality_rating', v ? parseInt(v) : undefined)}>
-                    <SelectTrigger><SelectValue placeholder="Bewerten" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Rate" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keine Bewertung</SelectItem>
-                      {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n} Sterne</SelectItem>)}
+                      <SelectItem value="">No Rating</SelectItem>
+                      {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n} Stars</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Liefertreue (1-5)</Label>
+                  <Label>Delivery Reliability (1-5)</Label>
                   <Select value={String(formData.delivery_rating || '')} onValueChange={v => updateForm('delivery_rating', v ? parseInt(v) : undefined)}>
-                    <SelectTrigger><SelectValue placeholder="Bewerten" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Rate" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keine Bewertung</SelectItem>
-                      {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n} Sterne</SelectItem>)}
+                      <SelectItem value="">No Rating</SelectItem>
+                      {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n} Stars</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </TabsContent>
 
-            {/* Finanzen */}
+            {/* Finance */}
             <TabsContent value="finance" className="space-y-4 mt-4">
-              <h3 className="font-medium">Vertragsdaten</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className="font-medium">Contract Data</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Vertragsbeginn</Label>
+                  <Label>Contract Start</Label>
                   <Input type="date" value={formData.contract_start || ''} onChange={e => updateForm('contract_start', e.target.value)} />
                 </div>
                 <div>
-                  <Label>Vertragsende</Label>
+                  <Label>Contract End</Label>
                   <Input type="date" value={formData.contract_end || ''} onChange={e => updateForm('contract_end', e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>Mindestbestellwert</Label>
+                  <Label>Minimum Order Value</Label>
                   <Input type="number" value={formData.min_order_value || ''} onChange={e => updateForm('min_order_value', parseFloat(e.target.value) || undefined)} placeholder="0.00" />
                 </div>
                 <div>
-                  <Label>Wahrung</Label>
+                  <Label>Currency</Label>
                   <Select value={formData.currency || 'EUR'} onValueChange={v => updateForm('currency', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1374,19 +1374,19 @@ export function SuppliersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Zahlungsziel</Label>
-                  <Input value={formData.payment_terms || ''} onChange={e => updateForm('payment_terms', e.target.value)} placeholder="30 Tage netto" />
+                  <Label>Payment Terms</Label>
+                  <Input value={formData.payment_terms || ''} onChange={e => updateForm('payment_terms', e.target.value)} placeholder="Net 30" />
                 </div>
               </div>
 
               <Separator />
 
-              <h3 className="font-medium">Bankverbindung</h3>
+              <h3 className="font-medium">Bank Details</h3>
               <div>
                 <Label>Bank</Label>
                 <Input value={formData.bank_name || ''} onChange={e => updateForm('bank_name', e.target.value)} placeholder="Deutsche Bank" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>IBAN</Label>
                   <Input value={formData.iban || ''} onChange={e => updateForm('iban', e.target.value)} placeholder="DE89 3704 0044 0532 0130 00" />
@@ -1401,81 +1401,81 @@ export function SuppliersPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSupplierDialogOpen(false)}>
-              <X className="mr-2 h-4 w-4" />Abbrechen
+              <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button onClick={handleSaveSupplier} disabled={isLoading || !formData.name}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Speichern
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Ansprechpartner hinzufugen/bearbeiten */}
+      {/* Dialog: Add/edit contact person */}
       <Dialog open={contactFormOpen} onOpenChange={setContactFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingContact ? 'Ansprechpartner bearbeiten' : 'Neuer Ansprechpartner'}</DialogTitle>
+            <DialogTitle>{editingContact ? 'Edit Contact' : 'New Contact'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Name *</Label>
-                <Input value={contactForm.name || ''} onChange={e => updateContactForm('name', e.target.value)} placeholder="Max Mustermann" />
+                <Input value={contactForm.name || ''} onChange={e => updateContactForm('name', e.target.value)} placeholder="John Doe" />
               </div>
               <div>
                 <Label>Position</Label>
-                <Input value={contactForm.position || ''} onChange={e => updateContactForm('position', e.target.value)} placeholder="Einkaufsleiter" />
+                <Input value={contactForm.position || ''} onChange={e => updateContactForm('position', e.target.value)} placeholder="Purchasing Manager" />
               </div>
             </div>
             <div>
-              <Label>Abteilung</Label>
-              <Input value={contactForm.department || ''} onChange={e => updateContactForm('department', e.target.value)} placeholder="Einkauf" />
+              <Label>Department</Label>
+              <Input value={contactForm.department || ''} onChange={e => updateContactForm('department', e.target.value)} placeholder="Purchasing" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>E-Mail</Label>
+                <Label>Email</Label>
                 <Input type="email" value={contactForm.email || ''} onChange={e => updateContactForm('email', e.target.value)} />
               </div>
               <div>
-                <Label>Telefon</Label>
+                <Label>Phone</Label>
                 <Input value={contactForm.phone || ''} onChange={e => updateContactForm('phone', e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>Mobil</Label>
+              <Label>Mobile</Label>
               <Input value={contactForm.mobile || ''} onChange={e => updateContactForm('mobile', e.target.value)} />
             </div>
             <div>
-              <Label>Notizen</Label>
+              <Label>Notes</Label>
               <Input value={contactForm.notes || ''} onChange={e => updateContactForm('notes', e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setContactFormOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSaveContact} disabled={!contactForm.name}>Speichern</Button>
+            <Button variant="outline" onClick={() => setContactFormOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveContact} disabled={!contactForm.name}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Produkte zuordnen */}
+      {/* Dialog: Assign products */}
       <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Produkte zuordnen</DialogTitle>
-            <DialogDescription>Lieferant: {selectedSupplier?.name}</DialogDescription>
+            <DialogTitle>Assign Products</DialogTitle>
+            <DialogDescription>Supplier: {selectedSupplier?.name}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Neues Produkt zuordnen</CardTitle>
+                <CardTitle className="text-sm">Assign New Product</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <Label>Produkt</Label>
+                  <Label>Product</Label>
                   <Select value={productFormData.product_id || ''} onValueChange={v => updateProductForm('product_id', v)}>
-                    <SelectTrigger><SelectValue placeholder="Produkt auswahlen" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                     <SelectContent>
                       {products.filter(p => !supplierProducts.some(sp => sp.product_id === p.id)).map(product => (
                         <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
@@ -1483,9 +1483,9 @@ export function SuppliersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label>Rolle</Label>
+                    <Label>Role</Label>
                     <Select value={productFormData.role || 'component'} onValueChange={v => updateProductForm('role', v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -1494,25 +1494,25 @@ export function SuppliersPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Lieferzeit (Tage)</Label>
+                    <Label>Lead Time (Days)</Label>
                     <Input type="number" value={productFormData.lead_time_days || ''} onChange={e => updateProductForm('lead_time_days', parseInt(e.target.value) || undefined)} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox id="is_primary" checked={productFormData.is_primary || false} onCheckedChange={v => updateProductForm('is_primary', v)} />
-                  <Label htmlFor="is_primary">Hauptlieferant</Label>
+                  <Label htmlFor="is_primary">Primary Supplier</Label>
                 </div>
                 <Button onClick={handleAssignProduct} disabled={!productFormData.product_id || isLoading} className="w-full">
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                  Zuordnen
+                  Assign
                 </Button>
               </CardContent>
             </Card>
 
             <div>
-              <h4 className="font-medium text-sm mb-2">Zugeordnete Produkte ({supplierProducts.length})</h4>
+              <h4 className="font-medium text-sm mb-2">Assigned Products ({supplierProducts.length})</h4>
               {supplierProducts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Noch keine Produkte zugeordnet</p>
+                <p className="text-sm text-muted-foreground">No products assigned yet</p>
               ) : (
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
                   {supplierProducts.map(sp => (
@@ -1523,7 +1523,7 @@ export function SuppliersPage() {
                           <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
                           <div className="text-xs text-muted-foreground">
                             {SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}
-                            {sp.is_primary && <Badge variant="secondary" className="ml-2 text-xs">Haupt</Badge>}
+                            {sp.is_primary && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
                           </div>
                         </div>
                       </div>
@@ -1538,7 +1538,7 @@ export function SuppliersPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setProductDialogOpen(false)}>Schliessen</Button>
+            <Button variant="outline" onClick={() => setProductDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

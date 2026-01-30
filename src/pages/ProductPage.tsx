@@ -30,12 +30,12 @@ import type { Product } from '@/types/product';
 import type { SupplierProduct } from '@/types/database';
 
 const SUPPLIER_ROLE_LABELS: Record<string, string> = {
-  manufacturer: 'Hersteller',
-  importeur: 'Importeur',
-  component: 'Komponenten-Lieferant',
-  raw_material: 'Rohstoff-Lieferant',
-  packaging: 'Verpackung',
-  logistics: 'Logistik',
+  manufacturer: 'Manufacturer',
+  importeur: 'Importer',
+  component: 'Component Supplier',
+  raw_material: 'Raw Material Supplier',
+  packaging: 'Packaging',
+  logistics: 'Logistics',
 };
 
 export function ProductPage() {
@@ -48,7 +48,7 @@ export function ProductPage() {
   useEffect(() => {
     async function loadProduct() {
       if (!id) {
-        setError('Keine Produkt-ID angegeben');
+        setError('No product ID provided');
         setIsLoading(false);
         return;
       }
@@ -63,7 +63,7 @@ export function ProductPage() {
       if (data) {
         setProduct(data);
       } else {
-        setError('Produkt nicht gefunden');
+        setError('Product not found');
       }
       setProductSuppliers(suppliersData);
       setIsLoading(false);
@@ -90,8 +90,8 @@ export function ProductPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Produkt nicht gefunden</h1>
-            <p className="text-muted-foreground">{error || 'Das Produkt existiert nicht oder Sie haben keinen Zugriff.'}</p>
+            <h1 className="text-2xl font-bold text-foreground">Product not found</h1>
+            <p className="text-muted-foreground">{error || 'The product does not exist or you do not have access.'}</p>
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function ProductPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/products">
@@ -127,7 +127,7 @@ export function ProductPage() {
           <Button variant="outline" asChild>
             <Link to="/dpp/qr-generator">
               <QrCode className="mr-2 h-4 w-4" />
-              QR-Code
+              QR Code
             </Link>
           </Button>
           <Button variant="outline">
@@ -137,7 +137,7 @@ export function ProductPage() {
           <Button asChild>
             <Link to={`/products/${id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Bearbeiten
+              Edit
             </Link>
           </Button>
         </div>
@@ -150,7 +150,7 @@ export function ProductPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-success" />
-                <span className="font-medium">Konformitäts-Status</span>
+                <span className="font-medium">Compliance Status</span>
               </div>
               <div className="flex items-center gap-2">
                 <Progress value={complianceScore} className="h-2 w-48" />
@@ -160,11 +160,11 @@ export function ProductPage() {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4 text-success" />
-                12 erfüllt
+                12 fulfilled
               </span>
               <span className="flex items-center gap-1">
                 <AlertTriangle className="h-4 w-4 text-warning" />
-                1 ausstehend
+                1 pending
               </span>
             </div>
           </div>
@@ -173,52 +173,52 @@ export function ProductPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="stammdaten" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="stammdaten" className="flex items-center gap-2">
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="stammdaten" className="flex items-center gap-2 flex-shrink-0">
             <Package className="h-4 w-4" />
-            Stammdaten
+            <span className="hidden sm:inline">Master Data</span>
           </TabsTrigger>
-          <TabsTrigger value="nachhaltigkeit" className="flex items-center gap-2">
+          <TabsTrigger value="nachhaltigkeit" className="flex items-center gap-2 flex-shrink-0">
             <Leaf className="h-4 w-4" />
-            Nachhaltigkeit
+            <span className="hidden sm:inline">Sustainability</span>
           </TabsTrigger>
-          <TabsTrigger value="konformitaet" className="flex items-center gap-2">
+          <TabsTrigger value="konformitaet" className="flex items-center gap-2 flex-shrink-0">
             <ShieldCheck className="h-4 w-4" />
-            Konformität
+            <span className="hidden sm:inline">Compliance</span>
           </TabsTrigger>
-          <TabsTrigger value="dokumente" className="flex items-center gap-2">
+          <TabsTrigger value="dokumente" className="flex items-center gap-2 flex-shrink-0">
             <FileText className="h-4 w-4" />
-            Dokumente
+            <span className="hidden sm:inline">Documents</span>
           </TabsTrigger>
-          <TabsTrigger value="lieferanten" className="flex items-center gap-2">
+          <TabsTrigger value="lieferanten" className="flex items-center gap-2 flex-shrink-0">
             <Truck className="h-4 w-4" />
-            Lieferanten
+            <span className="hidden sm:inline">Suppliers</span>
           </TabsTrigger>
-          <TabsTrigger value="qr" className="flex items-center gap-2">
+          <TabsTrigger value="qr" className="flex items-center gap-2 flex-shrink-0">
             <QrCode className="h-4 w-4" />
-            QR & Zugriff
+            <span className="hidden sm:inline">QR & Access</span>
           </TabsTrigger>
-          <TabsTrigger value="historie" className="flex items-center gap-2">
+          <TabsTrigger value="historie" className="flex items-center gap-2 flex-shrink-0">
             <History className="h-4 w-4" />
-            Historie
+            <span className="hidden sm:inline">History</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Stammdaten Tab */}
+        {/* Master Data Tab */}
         <TabsContent value="stammdaten" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Produktinformationen</CardTitle>
+                <CardTitle>Product Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Produktname</p>
+                    <p className="text-sm text-muted-foreground">Product Name</p>
                     <p className="font-medium">{product.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Hersteller</p>
+                    <p className="text-sm text-muted-foreground">Manufacturer</p>
                     <p className="font-medium">{product.manufacturer}</p>
                   </div>
                   <div>
@@ -226,31 +226,31 @@ export function ProductPage() {
                     <code className="font-mono text-sm">{product.gtin}</code>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Seriennummer</p>
+                    <p className="text-sm text-muted-foreground">Serial Number</p>
                     <code className="font-mono text-sm">{product.serialNumber}</code>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Kategorie</p>
+                    <p className="text-sm text-muted-foreground">Category</p>
                     <p className="font-medium">{product.category}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Produktionsdatum</p>
+                    <p className="text-sm text-muted-foreground">Production Date</p>
                     <p className="font-medium">
-                      {new Date(product.productionDate).toLocaleDateString('de-DE')}
+                      {new Date(product.productionDate).toLocaleDateString('en-US')}
                     </p>
                   </div>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Beschreibung</p>
-                  <p className="text-sm">{product.description || 'Keine Beschreibung vorhanden'}</p>
+                  <p className="text-sm text-muted-foreground mb-2">Description</p>
+                  <p className="text-sm">{product.description || 'No description available'}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Produktbild</CardTitle>
+                <CardTitle>Product Image</CardTitle>
               </CardHeader>
               <CardContent>
                 {product.imageUrl ? (
@@ -271,17 +271,17 @@ export function ProductPage() {
           </div>
         </TabsContent>
 
-        {/* Nachhaltigkeit Tab */}
+        {/* Sustainability Tab */}
         <TabsContent value="nachhaltigkeit" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Materialzusammensetzung */}
+            {/* Material Composition */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Recycle className="h-5 w-5 text-success" />
-                  Materialzusammensetzung
+                  Material Composition
                 </CardTitle>
-                <CardDescription>Anteil und Herkunft der verwendeten Materialien</CardDescription>
+                <CardDescription>Share and origin of used materials</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {product.materials && product.materials.length > 0 ? (
@@ -302,25 +302,25 @@ export function ProductPage() {
                         {material.recyclable && (
                           <Badge variant="outline" className="text-success border-success">
                             <Recycle className="mr-1 h-3 w-3" />
-                            Recycelbar
+                            Recyclable
                           </Badge>
                         )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-sm">Keine Materialien hinterlegt</p>
+                  <p className="text-muted-foreground text-sm">No materials recorded</p>
                 )}
               </CardContent>
             </Card>
 
-            {/* CO2-Fußabdruck */}
+            {/* Carbon Footprint */}
             {product.carbonFootprint && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Leaf className="h-5 w-5 text-success" />
-                    CO2-Fußabdruck
+                    Carbon Footprint
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -331,11 +331,11 @@ export function ProductPage() {
                       </span>
                     </div>
                     <div className="text-3xl font-bold">{product.carbonFootprint.totalKgCO2} kg</div>
-                    <div className="text-muted-foreground">CO2 gesamt</div>
+                    <div className="text-muted-foreground">CO2 Total</div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
-                      <span>Produktion</span>
+                      <span>Production</span>
                       <span className="font-medium">{product.carbonFootprint.productionKgCO2} kg</span>
                     </div>
                     <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
@@ -352,7 +352,7 @@ export function ProductPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Recycle className="h-5 w-5 text-success" />
-                  Recycling & Entsorgung
+                  Recycling & Disposal
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -361,15 +361,15 @@ export function ProductPage() {
                     <div className="text-3xl font-bold text-success">
                       {product.recyclability?.recyclablePercentage || 0}%
                     </div>
-                    <div className="text-sm text-muted-foreground">Recycelbar</div>
+                    <div className="text-sm text-muted-foreground">Recyclable</div>
                   </div>
                   <div className="md:col-span-2 space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Entsorgungshinweise</p>
-                      <p className="text-sm">{product.recyclability?.instructions || 'Keine Hinweise hinterlegt'}</p>
+                      <p className="text-sm text-muted-foreground mb-1">Disposal Notes</p>
+                      <p className="text-sm">{product.recyclability?.instructions || 'No notes recorded'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">Entsorgungsmethoden</p>
+                      <p className="text-sm text-muted-foreground mb-2">Disposal Methods</p>
                       <div className="flex flex-wrap gap-2">
                         {product.recyclability?.disposalMethods && product.recyclability.disposalMethods.length > 0 ? (
                           product.recyclability.disposalMethods.map((method, index) => (
@@ -378,7 +378,7 @@ export function ProductPage() {
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-muted-foreground text-sm">Keine Methoden hinterlegt</span>
+                          <span className="text-muted-foreground text-sm">No methods recorded</span>
                         )}
                       </div>
                     </div>
@@ -389,15 +389,15 @@ export function ProductPage() {
           </div>
         </TabsContent>
 
-        {/* Konformität Tab */}
+        {/* Compliance Tab */}
         <TabsContent value="konformitaet" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-warning" />
-                Zertifizierungen
+                Certifications
               </CardTitle>
-              <CardDescription>Gültige Zertifikate und Konformitätserklärungen</CardDescription>
+              <CardDescription>Valid certificates and declarations of conformity</CardDescription>
             </CardHeader>
             <CardContent>
               {product.certifications && product.certifications.length > 0 ? (
@@ -415,9 +415,9 @@ export function ProductPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Gültig bis</p>
+                          <p className="text-sm text-muted-foreground">Valid until</p>
                           <p className="font-medium">
-                            {new Date(cert.validUntil).toLocaleDateString('de-DE')}
+                            {new Date(cert.validUntil).toLocaleDateString('en-US')}
                           </p>
                         </div>
                         {cert.certificateUrl && (
@@ -435,26 +435,26 @@ export function ProductPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Award className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>Keine Zertifizierungen hinterlegt</p>
+                  <p>No certifications recorded</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Dokumente Tab */}
+        {/* Documents Tab */}
         <TabsContent value="dokumente">
           <Card>
             <CardHeader>
-              <CardTitle>Dokumente & Zertifikate</CardTitle>
-              <CardDescription>Alle hochgeladenen Dokumente zu diesem Produkt</CardDescription>
+              <CardTitle>Documents & Certificates</CardTitle>
+              <CardDescription>All uploaded documents for this product</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex h-48 items-center justify-center rounded-lg border-2 border-dashed">
                 <div className="text-center">
                   <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Dateien hierher ziehen oder klicken zum Hochladen
+                    Drag files here or click to upload
                   </p>
                 </div>
               </div>
@@ -462,15 +462,15 @@ export function ProductPage() {
           </Card>
         </TabsContent>
 
-        {/* Lieferanten Tab */}
+        {/* Suppliers Tab */}
         <TabsContent value="lieferanten">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
-                Zugeordnete Lieferanten
+                Assigned Suppliers
               </CardTitle>
-              <CardDescription>Wirtschaftsakteure und Lieferanten für dieses Produkt</CardDescription>
+              <CardDescription>Economic operators and suppliers for this product</CardDescription>
             </CardHeader>
             <CardContent>
               {productSuppliers.length > 0 ? (
@@ -485,7 +485,7 @@ export function ProductPage() {
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{sp.supplier_name}</p>
                             {sp.is_primary && (
-                              <Badge variant="secondary">Hauptlieferant</Badge>
+                              <Badge variant="secondary">Primary Supplier</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
@@ -496,13 +496,13 @@ export function ProductPage() {
                       <div className="flex items-center gap-6 text-sm">
                         {sp.lead_time_days != null && (
                           <div className="text-right">
-                            <p className="text-muted-foreground">Lieferzeit</p>
-                            <p className="font-medium">{sp.lead_time_days} Tage</p>
+                            <p className="text-muted-foreground">Lead Time</p>
+                            <p className="font-medium">{sp.lead_time_days} days</p>
                           </div>
                         )}
                         {sp.price_per_unit != null && (
                           <div className="text-right">
-                            <p className="text-muted-foreground">Preis/Einheit</p>
+                            <p className="text-muted-foreground">Price/Unit</p>
                             <p className="font-medium">
                               {sp.price_per_unit} {sp.currency || 'EUR'}
                             </p>
@@ -515,20 +515,20 @@ export function ProductPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Truck className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>Keine Lieferanten zugeordnet</p>
+                  <p>No suppliers assigned</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* QR & Zugriff Tab */}
+        {/* QR & Access Tab */}
         <TabsContent value="qr" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>QR-Code</CardTitle>
-                <CardDescription>Scannen für den öffentlichen DPP</CardDescription>
+                <CardTitle>QR Code</CardTitle>
+                <CardDescription>Scan for the public DPP</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="aspect-square max-w-xs mx-auto rounded-lg bg-white p-8 border">
@@ -555,37 +555,49 @@ export function ProductPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Öffentlicher Link</CardTitle>
+                <CardTitle>Public Link</CardTitle>
                 <CardDescription>GS1 Digital Link Format</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="p-3 rounded-lg bg-muted font-mono text-sm break-all">
                   https://id.gs1.org/01/{product.gtin}/21/{product.serialNumber}
                 </div>
-                <Button className="w-full" variant="outline" asChild>
-                  <a
-                    href={`/p/${product.gtin}/${product.serialNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Öffentliche Ansicht öffnen
-                  </a>
-                </Button>
+                <div className="flex gap-2">
+                  <Button className="flex-1" variant="outline" asChild>
+                    <a
+                      href={`/p/${product.gtin}/${product.serialNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Customer View
+                    </a>
+                  </Button>
+                  <Button className="flex-1" variant="outline" asChild>
+                    <a
+                      href={`/p/${product.gtin}/${product.serialNumber}/customs`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Customs View
+                    </a>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* Historie Tab */}
+        {/* History Tab */}
         <TabsContent value="historie">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
-                Lieferkette & Audit-Log
+                Supply Chain & Audit Log
               </CardTitle>
-              <CardDescription>Vollständige Nachverfolgbarkeit</CardDescription>
+              <CardDescription>Complete traceability</CardDescription>
             </CardHeader>
             <CardContent>
               {product.supplyChain && product.supplyChain.length > 0 ? (
@@ -598,10 +610,10 @@ export function ProductPage() {
                         <div className="p-4 rounded-lg border">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">
-                              Schritt {entry.step}: {entry.description}
+                              Step {entry.step}: {entry.description}
                             </span>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(entry.date).toLocaleDateString('de-DE')}
+                              {new Date(entry.date).toLocaleDateString('en-US')}
                             </span>
                           </div>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -616,7 +628,7 @@ export function ProductPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Truck className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>Keine Lieferketten-Daten hinterlegt</p>
+                  <p>No supply chain data recorded</p>
                 </div>
               )}
             </CardContent>

@@ -87,7 +87,7 @@ export function RegulationsPage() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Daten aus Supabase
+  // Data from Supabase
   const [countries, setCountries] = useState<Country[]>([]);
   const [euRegulations, setEURegulations] = useState<EURegulation[]>([]);
   const [countryRegulations, setCountryRegulations] = useState<Record<string, NationalRegulation[]>>({});
@@ -95,12 +95,12 @@ export function RegulationsPage() {
   const [recyclingCodes, setRecyclingCodes] = useState<RecyclingCode[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
 
-  // Daten aus API laden
+  // Load data from API
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Alle Master-Daten parallel laden
+        // Load all master data in parallel
         const [
           countriesData,
           euRegsData,
@@ -115,14 +115,14 @@ export function RegulationsPage() {
           getNews(),
         ]);
 
-        // Daten setzen
+        // Set data
         setCountries(countriesData || []);
         setEURegulations(euRegsData || []);
         setPictograms(pictogramsData || []);
         setRecyclingCodes(recyclingCodesData || []);
         setNews(newsData || []);
 
-        // Nationale Regulierungen für alle Länder laden
+        // Load national regulations for all countries
         if (countriesData && countriesData.length > 0) {
           const nationalRegsPromises = countriesData.map(async (country) => {
             try {
@@ -144,7 +144,7 @@ export function RegulationsPage() {
           setCountryRegulations(nationalRegsMap);
         }
       } catch (error) {
-        console.error('Fehler beim Laden der Regulierungsdaten:', error);
+        console.error('Error loading regulation data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -172,7 +172,7 @@ export function RegulationsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Lade Regulierungsdaten...</p>
+          <p className="text-muted-foreground">Loading regulation data...</p>
         </div>
       </div>
     );
@@ -181,11 +181,11 @@ export function RegulationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Regulierungen & Compliance</h1>
+          <h1 className="text-2xl font-bold text-foreground">Regulations & Compliance</h1>
           <p className="text-muted-foreground">
-            Umfassende Übersicht zu EU- und nationalen Vorschriften, Piktogrammen und aktuellen Entwicklungen
+            Comprehensive overview of EU and national regulations, pictograms, and recent developments
           </p>
         </div>
         <div className="flex gap-2">
@@ -195,7 +195,7 @@ export function RegulationsPage() {
           </Button>
           <Button variant="outline">
             <Printer className="mr-2 h-4 w-4" />
-            Drucken
+            Print
           </Button>
         </div>
       </div>
@@ -210,7 +210,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{countries.length}</p>
-                <p className="text-sm text-muted-foreground">Länder abgedeckt</p>
+                <p className="text-sm text-muted-foreground">Countries covered</p>
               </div>
             </div>
           </CardContent>
@@ -223,7 +223,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{euRegulations.length}</p>
-                <p className="text-sm text-muted-foreground">EU-Regulierungen</p>
+                <p className="text-sm text-muted-foreground">EU Regulations</p>
               </div>
             </div>
           </CardContent>
@@ -236,7 +236,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{pictograms.length}</p>
-                <p className="text-sm text-muted-foreground">Piktogramme</p>
+                <p className="text-sm text-muted-foreground">Pictograms</p>
               </div>
             </div>
           </CardContent>
@@ -249,7 +249,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{news.filter(n => n.priority === 'high').length}</p>
-                <p className="text-sm text-muted-foreground">Wichtige Updates</p>
+                <p className="text-sm text-muted-foreground">Important Updates</p>
               </div>
             </div>
           </CardContent>
@@ -261,15 +261,15 @@ export function RegulationsPage() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="countries" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            Länder
+            Countries
           </TabsTrigger>
           <TabsTrigger value="eu" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            EU-Regulierungen
+            EU Regulations
           </TabsTrigger>
           <TabsTrigger value="pictograms" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
-            Piktogramme
+            Pictograms
           </TabsTrigger>
           <TabsTrigger value="news" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
@@ -277,13 +277,13 @@ export function RegulationsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Länder Tab */}
+        {/* Countries Tab */}
         <TabsContent value="countries" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Länderspezifische Regulierungen</CardTitle>
+              <CardTitle>Country-Specific Regulations</CardTitle>
               <CardDescription>
-                Wählen Sie ein Land für detaillierte Compliance-Anforderungen und nationale Besonderheiten
+                Select a country for detailed compliance requirements and national specifics
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -304,7 +304,7 @@ export function RegulationsPage() {
                         <div>
                           <p className="font-medium">{country.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {country.regulations} Regulierungen
+                            {country.regulations} Regulations
                           </p>
                         </div>
                       </div>
@@ -331,10 +331,10 @@ export function RegulationsPage() {
                   <span className="text-2xl">
                     {countries.find(c => c.code === selectedCountry)?.flag}
                   </span>
-                  Regulierungen in {countries.find(c => c.code === selectedCountry)?.name}
+                  Regulations in {countries.find(c => c.code === selectedCountry)?.name}
                 </CardTitle>
                 <CardDescription>
-                  Detaillierte Übersicht der nationalen Anforderungen
+                  Detailed overview of national requirements
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -344,7 +344,7 @@ export function RegulationsPage() {
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-4 text-left">
                           <Badge variant={reg.mandatory ? 'default' : 'secondary'}>
-                            {reg.mandatory ? 'Pflicht' : 'Optional'}
+                            {reg.mandatory ? 'Mandatory' : 'Optional'}
                           </Badge>
                           <div>
                             <p className="font-medium">{reg.name}</p>
@@ -358,21 +358,21 @@ export function RegulationsPage() {
 
                           <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Zuständige Behörde</p>
+                              <p className="text-sm font-medium">Responsible Authority</p>
                               <p className="text-sm text-muted-foreground">{reg.authority}</p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">In Kraft seit</p>
+                              <p className="text-sm font-medium">Effective since</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(reg.effectiveDate).toLocaleDateString('de-DE')}
+                                {new Date(reg.effectiveDate).toLocaleDateString('en-US')}
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Sanktionen</p>
+                              <p className="text-sm font-medium">Penalties</p>
                               <p className="text-sm text-destructive">{reg.penalties}</p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Betroffene Produkte</p>
+                              <p className="text-sm font-medium">Affected Products</p>
                               <div className="flex flex-wrap gap-1">
                                 {reg.products.map((product) => (
                                   <Badge key={product} variant="outline" className="text-xs">
@@ -392,21 +392,21 @@ export function RegulationsPage() {
           )}
         </TabsContent>
 
-        {/* EU-Regulierungen Tab */}
+        {/* EU Regulations Tab */}
         <TabsContent value="eu" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>EU-weite Regulierungen</CardTitle>
+                  <CardTitle>EU-wide Regulations</CardTitle>
                   <CardDescription>
-                    Gültig in allen EU-Mitgliedsstaaten - Klicken Sie auf eine Regulierung für Details
+                    Valid in all EU member states - Click on a regulation for details
                   </CardDescription>
                 </div>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Suchen..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -435,7 +435,7 @@ export function RegulationsPage() {
                                     : 'bg-warning/10 text-warning'
                                 }
                               >
-                                {reg.status === 'active' ? 'Aktiv' : 'Kommend'}
+                                {reg.status === 'active' ? 'Active' : 'Upcoming'}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-1">
@@ -447,32 +447,32 @@ export function RegulationsPage() {
                       <AccordionContent>
                         <div className="space-y-6 pt-4">
                           <div>
-                            <p className="text-sm font-medium mb-2">Vollständiger Name</p>
+                            <p className="text-sm font-medium mb-2">Full Name</p>
                             <p className="text-sm text-muted-foreground">{reg.fullName}</p>
                           </div>
 
                           <div>
-                            <p className="text-sm font-medium mb-2">Beschreibung</p>
+                            <p className="text-sm font-medium mb-2">Description</p>
                             <p className="text-sm text-muted-foreground">{reg.description}</p>
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                              <p className="text-sm font-medium mb-2">In Kraft getreten</p>
+                              <p className="text-sm font-medium mb-2">Entered into Force</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(reg.effectiveDate).toLocaleDateString('de-DE')}
+                                {new Date(reg.effectiveDate).toLocaleDateString('en-US')}
                               </p>
                             </div>
                             <div>
-                              <p className="text-sm font-medium mb-2">Anwendung ab</p>
+                              <p className="text-sm font-medium mb-2">Application from</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(reg.applicationDate).toLocaleDateString('de-DE')}
+                                {new Date(reg.applicationDate).toLocaleDateString('en-US')}
                               </p>
                             </div>
                           </div>
 
                           <div>
-                            <p className="text-sm font-medium mb-2">Wesentliche Anforderungen</p>
+                            <p className="text-sm font-medium mb-2">Key Requirements</p>
                             <ul className="space-y-1">
                               {reg.keyRequirements.map((req, idx) => (
                                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -484,7 +484,7 @@ export function RegulationsPage() {
                           </div>
 
                           <div>
-                            <p className="text-sm font-medium mb-2">Betroffene Produktkategorien</p>
+                            <p className="text-sm font-medium mb-2">Affected Product Categories</p>
                             <div className="flex flex-wrap gap-2">
                               {reg.affectedProducts.map((product) => (
                                 <Badge key={product} variant="outline">
@@ -496,13 +496,13 @@ export function RegulationsPage() {
 
                           {Object.keys(reg.dppDeadlines).length > 0 && (
                             <div>
-                              <p className="text-sm font-medium mb-2">DPP-Fristen</p>
+                              <p className="text-sm font-medium mb-2">DPP Deadlines</p>
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Produktkategorie</TableHead>
-                                    <TableHead>Frist</TableHead>
-                                    <TableHead>Verbleibend</TableHead>
+                                    <TableHead>Product Category</TableHead>
+                                    <TableHead>Deadline</TableHead>
+                                    <TableHead>Remaining</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -511,10 +511,10 @@ export function RegulationsPage() {
                                     return (
                                       <TableRow key={product}>
                                         <TableCell>{product}</TableCell>
-                                        <TableCell>{new Date(deadline).toLocaleDateString('de-DE')}</TableCell>
+                                        <TableCell>{new Date(deadline).toLocaleDateString('en-US')}</TableCell>
                                         <TableCell>
                                           <Badge variant={daysRemaining < 365 ? 'destructive' : 'secondary'}>
-                                            {daysRemaining} Tage
+                                            {daysRemaining} Days
                                           </Badge>
                                         </TableCell>
                                       </TableRow>
@@ -536,17 +536,17 @@ export function RegulationsPage() {
           {/* DPP Timeline */}
           <Card>
             <CardHeader>
-              <CardTitle>DPP-Timeline: Wichtige Fristen</CardTitle>
-              <CardDescription>Übersicht der kommenden Digital Product Passport Deadlines</CardDescription>
+              <CardTitle>DPP Timeline: Important Deadlines</CardTitle>
+              <CardDescription>Overview of upcoming Digital Product Passport deadlines</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { date: '2027-02-18', product: 'Batterien (>2kWh)', regulation: 'EU-Batterieverordnung' },
-                  { date: '2027-12-31', product: 'Textilien', regulation: 'ESPR' },
-                  { date: '2028-08-18', product: 'Alle Batterien', regulation: 'EU-Batterieverordnung' },
-                  { date: '2028-12-31', product: 'Elektronik', regulation: 'ESPR' },
-                  { date: '2029-06-30', product: 'Möbel', regulation: 'ESPR' },
+                  { date: '2027-02-18', product: 'Batteries (>2kWh)', regulation: 'EU Battery Regulation' },
+                  { date: '2027-12-31', product: 'Textiles', regulation: 'ESPR' },
+                  { date: '2028-08-18', product: 'All Batteries', regulation: 'EU Battery Regulation' },
+                  { date: '2028-12-31', product: 'Electronics', regulation: 'ESPR' },
+                  { date: '2029-06-30', product: 'Furniture', regulation: 'ESPR' },
                 ].map((item, idx) => {
                   const daysRemaining = Math.ceil((new Date(item.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                   const progress = Math.max(0, 100 - (daysRemaining / 365 * 20));
@@ -559,11 +559,11 @@ export function RegulationsPage() {
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-medium">{item.product}</p>
                           <Badge variant={daysRemaining < 365 ? 'destructive' : daysRemaining < 730 ? 'default' : 'secondary'}>
-                            {daysRemaining} Tage
+                            {daysRemaining} Days
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">
-                          {item.regulation} - {new Date(item.date).toLocaleDateString('de-DE')}
+                          {item.regulation} - {new Date(item.date).toLocaleDateString('en-US')}
                         </p>
                         <Progress value={progress} className="h-2" />
                       </div>
@@ -575,7 +575,7 @@ export function RegulationsPage() {
           </Card>
         </TabsContent>
 
-        {/* Piktogramme Tab */}
+        {/* Pictograms Tab */}
         <TabsContent value="pictograms" className="space-y-6">
           {/* Category Filter */}
           <div className="flex flex-wrap gap-2">
@@ -584,7 +584,7 @@ export function RegulationsPage() {
               size="sm"
               onClick={() => setCategoryFilter(null)}
             >
-              Alle
+              All
             </Button>
             {['safety', 'recycling', 'chemicals', 'energy', 'durability'].map((cat) => (
               <Button
@@ -593,20 +593,20 @@ export function RegulationsPage() {
                 size="sm"
                 onClick={() => setCategoryFilter(cat)}
               >
-                {cat === 'safety' && 'Sicherheit'}
+                {cat === 'safety' && 'Safety'}
                 {cat === 'recycling' && 'Recycling'}
-                {cat === 'chemicals' && 'Chemie'}
-                {cat === 'energy' && 'Energie'}
-                {cat === 'durability' && 'Haltbarkeit'}
+                {cat === 'chemicals' && 'Chemicals'}
+                {cat === 'energy' && 'Energy'}
+                {cat === 'durability' && 'Durability'}
               </Button>
             ))}
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Piktogramme & Symbole</CardTitle>
+              <CardTitle>Pictograms & Symbols</CardTitle>
               <CardDescription>
-                Wichtige Kennzeichnungen für Ihre Produkte mit detaillierten Anforderungen
+                Important markings for your products with detailed requirements
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -623,7 +623,7 @@ export function RegulationsPage() {
                           <Badge
                             variant={pictogram.mandatory ? 'default' : 'secondary'}
                           >
-                            {pictogram.mandatory ? 'Verpflichtend' : 'Freiwillig'}
+                            {pictogram.mandatory ? 'Mandatory' : 'Voluntary'}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -640,11 +640,11 @@ export function RegulationsPage() {
                     </p>
                     <div className="grid gap-2 text-xs">
                       <div className="flex items-start gap-2">
-                        <span className="font-medium text-muted-foreground w-20 shrink-0">Maße:</span>
+                        <span className="font-medium text-muted-foreground w-20 shrink-0">Dimensions:</span>
                         <span>{pictogram.dimensions}</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="font-medium text-muted-foreground w-20 shrink-0">Platzierung:</span>
+                        <span className="font-medium text-muted-foreground w-20 shrink-0">Placement:</span>
                         <span>{pictogram.placement}</span>
                       </div>
                     </div>
@@ -656,8 +656,8 @@ export function RegulationsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recycling-Codes nach ISO 1043 & 14021</CardTitle>
-              <CardDescription>Materialidentifikationscodes für Verpackungen und Produkte</CardDescription>
+              <CardTitle>Recycling Codes per ISO 1043 & 14021</CardTitle>
+              <CardDescription>Material identification codes for packaging and products</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -665,10 +665,10 @@ export function RegulationsPage() {
                   <TableRow>
                     <TableHead>Code</TableHead>
                     <TableHead>Symbol</TableHead>
-                    <TableHead>Kurzzeichen</TableHead>
-                    <TableHead>Materialname</TableHead>
-                    <TableHead>Beispiele</TableHead>
-                    <TableHead>Recycelbar</TableHead>
+                    <TableHead>Abbreviation</TableHead>
+                    <TableHead>Material Name</TableHead>
+                    <TableHead>Examples</TableHead>
+                    <TableHead>Recyclable</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -681,9 +681,9 @@ export function RegulationsPage() {
                       <TableCell className="text-muted-foreground">{code.examples}</TableCell>
                       <TableCell>
                         {code.recyclable ? (
-                          <Badge className="bg-success/10 text-success">Ja</Badge>
+                          <Badge className="bg-success/10 text-success">Yes</Badge>
                         ) : (
-                          <Badge variant="secondary">Eingeschränkt</Badge>
+                          <Badge variant="secondary">Limited</Badge>
                         )}
                       </TableCell>
                     </TableRow>
@@ -700,16 +700,16 @@ export function RegulationsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Aktuelle Neuerungen & Fristen</CardTitle>
+                  <CardTitle>Latest Changes & Deadlines</CardTitle>
                   <CardDescription>
-                    Wichtige Updates zu Regulierungen, neue Anforderungen und bevorstehende Deadlines
+                    Important updates on regulations, new requirements, and upcoming deadlines
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <div className="relative w-64">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Suchen..."
+                      placeholder="Search..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
@@ -721,7 +721,7 @@ export function RegulationsPage() {
                     onClick={() => setPriorityFilter(priorityFilter === 'high' ? null : 'high')}
                   >
                     <AlertTriangle className="mr-1 h-4 w-4" />
-                    Wichtig
+                    Important
                   </Button>
                 </div>
               </div>
@@ -758,12 +758,12 @@ export function RegulationsPage() {
                                   </Badge>
                                 ))}
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(item.publishedAt).toLocaleDateString('de-DE')}
+                                  {new Date(item.publishedAt).toLocaleDateString('en-US')}
                                 </span>
                               </div>
                             </div>
                             {item.priority === 'high' && (
-                              <Badge variant="destructive">Wichtig</Badge>
+                              <Badge variant="destructive">Important</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">
@@ -781,9 +781,9 @@ export function RegulationsPage() {
                             {item.effectiveDate && (
                               <div className="flex items-center gap-2 text-sm">
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Gültig ab:</span>
+                                <span className="text-muted-foreground">Valid from:</span>
                                 <span className="font-medium">
-                                  {new Date(item.effectiveDate).toLocaleDateString('de-DE')}
+                                  {new Date(item.effectiveDate).toLocaleDateString('en-US')}
                                 </span>
                               </div>
                             )}
@@ -805,7 +805,7 @@ export function RegulationsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Kommende Fristen (nächste 12 Monate)
+                Upcoming Deadlines (next 12 months)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -830,10 +830,10 @@ export function RegulationsPage() {
                         </div>
                         <div className="text-right">
                           <Badge variant={daysRemaining < 90 ? 'destructive' : daysRemaining < 180 ? 'default' : 'secondary'}>
-                            {daysRemaining} Tage
+                            {daysRemaining} Days
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(item.effectiveDate!).toLocaleDateString('de-DE')}
+                            {new Date(item.effectiveDate!).toLocaleDateString('en-US')}
                           </p>
                         </div>
                       </div>

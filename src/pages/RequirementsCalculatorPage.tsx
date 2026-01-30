@@ -91,7 +91,7 @@ function useRequirementAnalysis() {
         [requirementId]: {
           text: fullText,
           isStreaming: false,
-          error: err instanceof Error ? err.message : 'Unbekannter Fehler'
+          error: err instanceof Error ? err.message : 'Unknown error'
         }
       }));
     }
@@ -149,32 +149,32 @@ export function RequirementsCalculatorPage() {
     );
   };
 
-  // Berechne anwendbare Anforderungen
+  // Calculate applicable requirements
   const calculateRequirements = (): Requirement[] => {
     const requirements: Requirement[] = [];
 
-    // Basis: CE-Kennzeichnung für alle Produkte mit Elektronik
+    // Base: CE marking for all products with electronics
     if (hasElectronics || selectedCategory === 'electronics' || selectedCategory === 'lighting' || selectedCategory === 'toys') {
       requirements.push(requirementsDatabase.find(r => r.id === 'ce-marking')!);
 
-      // LVD wenn Netzspannung
+      // LVD if mains voltage
       if (voltage === 'high') {
         requirements.push(requirementsDatabase.find(r => r.id === 'lvd')!);
       }
 
-      // EMV für alle Elektronik
+      // EMC for all electronics
       requirements.push(requirementsDatabase.find(r => r.id === 'emv')!);
 
-      // RoHS für Elektronik
+      // RoHS for electronics
       requirements.push(requirementsDatabase.find(r => r.id === 'rohs')!);
     }
 
-    // RED für Funkprodukte
+    // RED for wireless products
     if (hasWireless) {
       requirements.push(requirementsDatabase.find(r => r.id === 'red')!);
     }
 
-    // WEEE je nach Land
+    // WEEE depending on country
     if (hasElectronics || selectedCategory === 'electronics' || selectedCategory === 'lighting') {
       if (selectedCountries.includes('DE')) {
         requirements.push(requirementsDatabase.find(r => r.id === 'weee-de')!);
@@ -186,7 +186,7 @@ export function RequirementsCalculatorPage() {
       }
     }
 
-    // Batterien
+    // Batteries
     if (hasBattery) {
       if (selectedCountries.includes('DE')) {
         requirements.push(requirementsDatabase.find(r => r.id === 'battery-de')!);
@@ -194,7 +194,7 @@ export function RequirementsCalculatorPage() {
       requirements.push(requirementsDatabase.find(r => r.id === 'battery-dpp')!);
     }
 
-    // Verpackung
+    // Packaging
     if (hasPackaging && targetAudience !== 'b2b') {
       if (selectedCountries.includes('DE')) {
         requirements.push(requirementsDatabase.find(r => r.id === 'packaging-de')!);
@@ -204,21 +204,21 @@ export function RequirementsCalculatorPage() {
       }
     }
 
-    // REACH SVHC für alle Produkte
+    // REACH SVHC for all products
     requirements.push(requirementsDatabase.find(r => r.id === 'reach-svhc')!);
 
-    // Textilien
+    // Textiles
     if (selectedCategory === 'textiles') {
       requirements.push(requirementsDatabase.find(r => r.id === 'textile-label')!);
       requirements.push(requirementsDatabase.find(r => r.id === 'textile-azodyes')!);
     }
 
-    // Energielabel für bestimmte Produktgruppen
-    if (['Haushaltsgerät', 'TV/Monitor', 'LED-Lampe', 'Leuchte'].includes(selectedSubcategory)) {
+    // Energy label for specific product groups
+    if (['Household Appliance', 'TV/Monitor', 'LED Bulb', 'Luminaire'].includes(selectedSubcategory)) {
       requirements.push(requirementsDatabase.find(r => r.id === 'energy-label')!);
     }
 
-    // Filter undefined und duplikate
+    // Filter undefined and duplicates
     return requirements.filter((r, index, self) =>
       r && self.findIndex(req => req?.id === r.id) === index
     );
@@ -291,18 +291,18 @@ export function RequirementsCalculatorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Anforderungs-Kalkulator</h1>
+          <h1 className="text-2xl font-bold text-foreground">Requirements Calculator</h1>
           <p className="text-muted-foreground">
-            Ermitteln Sie alle Compliance-Anforderungen basierend auf Ihrem Produkt und Zielmarkt
+            Determine all compliance requirements based on your product and target market
           </p>
         </div>
         {showResults && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowResults(false)}>
               <X className="mr-2 h-4 w-4" />
-              Neu berechnen
+              Recalculate
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
@@ -314,32 +314,32 @@ export function RequirementsCalculatorPage() {
 
       {!showResults ? (
         <div className="space-y-6">
-          {/* Produkt-Konfiguration */}
+          {/* Product Configuration */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5" />
-                Produkt-Konfiguration
+                Product Configuration
               </CardTitle>
               <CardDescription>
-                Beantworten Sie die folgenden Fragen, um alle relevanten Anforderungen zu ermitteln
+                Answer the following questions to determine all relevant requirements
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Produktname */}
+              {/* Product Name */}
               <div className="space-y-2">
-                <Label htmlFor="product-name">Produktname (optional)</Label>
+                <Label htmlFor="product-name">Product Name (optional)</Label>
                 <Input
                   id="product-name"
-                  placeholder="z.B. Smart Home Hub XL-500"
+                  placeholder="e.g. Smart Home Hub XL-500"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
                 />
               </div>
 
-              {/* Kategorie */}
+              {/* Category */}
               <div className="space-y-2">
-                <Label>Produktkategorie *</Label>
+                <Label>Product Category *</Label>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {productCategories.map(cat => (
                     <Button
@@ -358,13 +358,13 @@ export function RequirementsCalculatorPage() {
                 </div>
               </div>
 
-              {/* Unterkategorie */}
+              {/* Subcategory */}
               {categoryInfo && (
                 <div className="space-y-2">
-                  <Label>Unterkategorie *</Label>
+                  <Label>Subcategory *</Label>
                   <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Unterkategorie wählen..." />
+                      <SelectValue placeholder="Select subcategory..." />
                     </SelectTrigger>
                     <SelectContent>
                       {categoryInfo.subcategories.map(sub => (
@@ -375,9 +375,9 @@ export function RequirementsCalculatorPage() {
                 </div>
               )}
 
-              {/* Zielmärkte */}
+              {/* Target Markets */}
               <div className="space-y-2">
-                <Label>Zielmärkte (Länder) *</Label>
+                <Label>Target Markets (Countries) *</Label>
                 <div className="flex flex-wrap gap-2">
                   {countries.map(country => (
                     <Button
@@ -393,14 +393,14 @@ export function RequirementsCalculatorPage() {
                 </div>
               </div>
 
-              {/* Zielgruppe */}
+              {/* Target Audience */}
               <div className="space-y-2">
-                <Label>Zielgruppe *</Label>
+                <Label>Target Audience *</Label>
                 <div className="flex gap-2">
                   {[
-                    { value: 'b2c', label: 'Endverbraucher (B2C)' },
-                    { value: 'b2b', label: 'Gewerblich (B2B)' },
-                    { value: 'both', label: 'Beide' },
+                    { value: 'b2c', label: 'Consumer (B2C)' },
+                    { value: 'b2b', label: 'Business (B2B)' },
+                    { value: 'both', label: 'Both' },
                   ].map(option => (
                     <Button
                       key={option.value}
@@ -415,34 +415,34 @@ export function RequirementsCalculatorPage() {
             </CardContent>
           </Card>
 
-          {/* Technische Eigenschaften */}
+          {/* Technical Properties */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
-                Technische Eigenschaften
+                Technical Properties
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Elektronik */}
+              {/* Electronics */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="has-electronics"
                   checked={hasElectronics}
                   onCheckedChange={(checked: boolean) => setHasElectronics(checked)}
                 />
-                <Label htmlFor="has-electronics">Enthält elektronische Komponenten</Label>
+                <Label htmlFor="has-electronics">Contains electronic components</Label>
               </div>
 
-              {/* Spannung */}
+              {/* Voltage */}
               {hasElectronics && (
                 <div className="space-y-2 pl-6">
-                  <Label>Betriebsspannung</Label>
+                  <Label>Operating Voltage</Label>
                   <div className="flex gap-2">
                     {[
-                      { value: 'none', label: 'Keine / Batterie' },
-                      { value: 'low', label: 'Niederspannung (<50V AC)' },
-                      { value: 'high', label: 'Netzspannung (50-1000V AC)' },
+                      { value: 'none', label: 'None / Battery' },
+                      { value: 'low', label: 'Low Voltage (<50V AC)' },
+                      { value: 'high', label: 'Mains Voltage (50-1000V AC)' },
                     ].map(option => (
                       <Button
                         key={option.value}
@@ -457,24 +457,24 @@ export function RequirementsCalculatorPage() {
                 </div>
               )}
 
-              {/* Batterie */}
+              {/* Battery */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="has-battery"
                   checked={hasBattery}
                   onCheckedChange={(checked: boolean) => setHasBattery(checked)}
                 />
-                <Label htmlFor="has-battery">Enthält Batterie/Akku</Label>
+                <Label htmlFor="has-battery">Contains battery/rechargeable battery</Label>
               </div>
 
               {hasBattery && (
                 <div className="space-y-2 pl-6">
-                  <Label>Batterietyp</Label>
+                  <Label>Battery Type</Label>
                   <div className="flex gap-2">
                     {[
-                      { value: 'removable', label: 'Wechselbar' },
-                      { value: 'integrated', label: 'Fest eingebaut' },
-                      { value: 'external', label: 'Extern (Netzteil mit Akku)' },
+                      { value: 'removable', label: 'Removable' },
+                      { value: 'integrated', label: 'Built-in' },
+                      { value: 'external', label: 'External (power supply with battery)' },
                     ].map(option => (
                       <Button
                         key={option.value}
@@ -489,19 +489,19 @@ export function RequirementsCalculatorPage() {
                 </div>
               )}
 
-              {/* Funk */}
+              {/* Wireless */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="has-wireless"
                   checked={hasWireless}
                   onCheckedChange={(checked: boolean) => setHasWireless(checked)}
                 />
-                <Label htmlFor="has-wireless">Enthält Funkfunktionen</Label>
+                <Label htmlFor="has-wireless">Contains wireless capabilities</Label>
               </div>
 
               {hasWireless && (
                 <div className="space-y-2 pl-6">
-                  <Label>Funkstandards</Label>
+                  <Label>Wireless Standards</Label>
                   <div className="flex flex-wrap gap-2">
                     {wirelessTypes.map(wt => (
                       <Button
@@ -517,34 +517,34 @@ export function RequirementsCalculatorPage() {
                 </div>
               )}
 
-              {/* Vernetzt */}
+              {/* Connected */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is-connected"
                   checked={isConnected}
                   onCheckedChange={(checked: boolean) => setIsConnected(checked)}
                 />
-                <Label htmlFor="is-connected">Vernetztes Gerät (IoT, Smart Home)</Label>
+                <Label htmlFor="is-connected">Connected device (IoT, Smart Home)</Label>
               </div>
 
-              {/* Chemikalien */}
+              {/* Chemicals */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="contains-chemicals"
                   checked={containsChemicals}
                   onCheckedChange={(checked: boolean) => setContainsChemicals(checked)}
                 />
-                <Label htmlFor="contains-chemicals">Enthält chemische Stoffe/Gemische</Label>
+                <Label htmlFor="contains-chemicals">Contains chemical substances/mixtures</Label>
               </div>
             </CardContent>
           </Card>
 
-          {/* Verpackung */}
+          {/* Packaging */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Verpackung
+                Packaging
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -554,20 +554,20 @@ export function RequirementsCalculatorPage() {
                   checked={hasPackaging}
                   onCheckedChange={(checked: boolean) => setHasPackaging(checked)}
                 />
-                <Label htmlFor="has-packaging">Produkt wird verpackt verkauft</Label>
+                <Label htmlFor="has-packaging">Product is sold packaged</Label>
               </div>
 
               {hasPackaging && (
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base font-semibold">Verpackungsmaterialien auswählen</Label>
+                    <Label className="text-base font-semibold">Select packaging materials</Label>
                     <p className="text-sm text-muted-foreground">
-                      Wählen Sie alle in Ihrer Verpackung verwendeten Materialien. Die Codes entsprechen der Entscheidung 97/129/EG.
+                      Select all materials used in your packaging. The codes correspond to Decision 97/129/EC.
                     </p>
                   </div>
 
-                  {/* Gruppierung nach Kategorie */}
-                  {['Kunststoff', 'Papier/Pappe', 'Metall', 'Glas', 'Holz', 'Textil', 'Verbund', 'Biokunststoff', 'Sonstige'].map(category => {
+                  {/* Grouping by category */}
+                  {['Plastic', 'Paper/Cardboard', 'Metal', 'Glass', 'Wood', 'Textile', 'Composite', 'Bioplastic', 'Other'].map(category => {
                     const categoryMaterials = packagingMaterials.filter(pm => pm.category === category);
                     if (categoryMaterials.length === 0) return null;
                     return (
@@ -594,7 +594,7 @@ export function RequirementsCalculatorPage() {
                               {pm.recyclable !== undefined && (
                                 <div className="flex items-center gap-1 mt-2">
                                   <Badge variant={pm.recyclable ? 'outline' : 'secondary'} className="text-xs">
-                                    {pm.recyclable ? '♻️ Recycelbar' : '❌ Schwer recycelbar'}
+                                    {pm.recyclable ? '♻️ Recyclable' : '❌ Difficult to recycle'}
                                   </Badge>
                                 </div>
                               )}
@@ -605,10 +605,10 @@ export function RequirementsCalculatorPage() {
                     );
                   })}
 
-                  {/* Ausgewählte Materialien Zusammenfassung */}
+                  {/* Selected Materials Summary */}
                   {selectedPackagingMaterials.length > 0 && (
                     <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
-                      <Label className="text-sm font-medium">Ausgewählte Materialien ({selectedPackagingMaterials.length})</Label>
+                      <Label className="text-sm font-medium">Selected Materials ({selectedPackagingMaterials.length})</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {selectedPackagingMaterials.map(id => {
                           const pm = packagingMaterials.find(m => m.id === id);
@@ -635,7 +635,7 @@ export function RequirementsCalculatorPage() {
             </CardContent>
           </Card>
 
-          {/* Berechnen Button */}
+          {/* Calculate Button */}
           <Button
             size="lg"
             className="w-full"
@@ -643,18 +643,18 @@ export function RequirementsCalculatorPage() {
             onClick={() => setShowResults(true)}
           >
             <Calculator className="mr-2 h-5 w-5" />
-            Anforderungen berechnen
+            Calculate Requirements
           </Button>
 
           {(!selectedCategory || !selectedSubcategory || selectedCountries.length === 0) && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Bitte füllen Sie alle Pflichtfelder aus:{' '}
+                Please fill in all required fields:{' '}
                 {[
-                  !selectedCategory && 'Kategorie',
-                  !selectedSubcategory && 'Unterkategorie',
-                  selectedCountries.length === 0 && 'mindestens ein Land',
+                  !selectedCategory && 'Category',
+                  !selectedSubcategory && 'Subcategory',
+                  selectedCountries.length === 0 && 'at least one country',
                 ]
                   .filter(Boolean)
                   .join(', ')}
@@ -664,22 +664,22 @@ export function RequirementsCalculatorPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Zusammenfassung */}
+          {/* Summary */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
-                Produktzusammenfassung
+                Product Summary
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Produkt</p>
+                  <p className="text-sm font-medium text-muted-foreground">Product</p>
                   <p className="font-medium">{productName || categoryInfo?.name} - {selectedSubcategory}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Zielmärkte</p>
+                  <p className="text-sm font-medium text-muted-foreground">Target Markets</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedCountries.map(code => {
                       const country = countries.find(c => c.code === code);
@@ -692,19 +692,19 @@ export function RequirementsCalculatorPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Eigenschaften</p>
+                  <p className="text-sm font-medium text-muted-foreground">Properties</p>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {hasElectronics && <Badge variant="secondary">Elektronik</Badge>}
-                    {hasBattery && <Badge variant="secondary">Batterie</Badge>}
-                    {hasWireless && <Badge variant="secondary">Funk</Badge>}
-                    {hasPackaging && <Badge variant="secondary">Verpackung</Badge>}
+                    {hasElectronics && <Badge variant="secondary">Electronics</Badge>}
+                    {hasBattery && <Badge variant="secondary">Battery</Badge>}
+                    {hasWireless && <Badge variant="secondary">Wireless</Badge>}
+                    {hasPackaging && <Badge variant="secondary">Packaging</Badge>}
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Statistik */}
+          {/* Statistics */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="pt-6">
@@ -714,7 +714,7 @@ export function RequirementsCalculatorPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{criticalRequirements.length}</p>
-                    <p className="text-sm text-muted-foreground">Kritische Anforderungen</p>
+                    <p className="text-sm text-muted-foreground">Critical Requirements</p>
                   </div>
                 </div>
               </CardContent>
@@ -727,7 +727,7 @@ export function RequirementsCalculatorPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{highRequirements.length}</p>
-                    <p className="text-sm text-muted-foreground">Hohe Priorität</p>
+                    <p className="text-sm text-muted-foreground">High Priority</p>
                   </div>
                 </div>
               </CardContent>
@@ -742,7 +742,7 @@ export function RequirementsCalculatorPage() {
                     <p className="text-2xl font-bold">
                       {requirements.reduce((acc, r) => acc + r.documents.length, 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Dokumente benötigt</p>
+                    <p className="text-sm text-muted-foreground">Documents Required</p>
                   </div>
                 </div>
               </CardContent>
@@ -757,14 +757,14 @@ export function RequirementsCalculatorPage() {
                     <p className="text-2xl font-bold">
                       {requirements.reduce((acc, r) => acc + r.registrations.length, 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Registrierungen</p>
+                    <p className="text-sm text-muted-foreground">Registrations</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* KI-Gesamtbewertung */}
+          {/* AI Overall Assessment */}
           {aiAvailable && (
             <AIOverallAssessment
               productContext={productContext}
@@ -772,13 +772,13 @@ export function RequirementsCalculatorPage() {
             />
           )}
 
-          {/* Kritische Anforderungen */}
+          {/* Critical Requirements */}
           {criticalRequirements.length > 0 && (
             <Card className="border-destructive">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-5 w-5" />
-                  Kritische Anforderungen (Pflicht vor Inverkehrbringen)
+                  Critical Requirements (Mandatory before placing on market)
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -787,7 +787,7 @@ export function RequirementsCalculatorPage() {
                     <AccordionItem key={req.id} value={req.id}>
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-4 text-left">
-                          <Badge variant="destructive">Kritisch</Badge>
+                          <Badge variant="destructive">Critical</Badge>
                           <div>
                             <p className="font-medium">{req.name}</p>
                             <p className="text-sm text-muted-foreground">{req.description}</p>
@@ -800,7 +800,7 @@ export function RequirementsCalculatorPage() {
 
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                              <h5 className="text-sm font-medium mb-2">Erforderliche Dokumente</h5>
+                              <h5 className="text-sm font-medium mb-2">Required Documents</h5>
                               <ul className="space-y-1">
                                 {req.documents.map(doc => (
                                   <li key={doc} className="text-sm flex items-center gap-2">
@@ -812,7 +812,7 @@ export function RequirementsCalculatorPage() {
                             </div>
                             {req.registrations.length > 0 && (
                               <div>
-                                <h5 className="text-sm font-medium mb-2">Registrierungen</h5>
+                                <h5 className="text-sm font-medium mb-2">Registrations</h5>
                                 <ul className="space-y-1">
                                   {req.registrations.map(reg => (
                                     <li key={reg} className="text-sm flex items-center gap-2">
@@ -825,7 +825,7 @@ export function RequirementsCalculatorPage() {
                             )}
                             {req.symbols.length > 0 && (
                               <div>
-                                <h5 className="text-sm font-medium mb-2">Erforderliche Symbole</h5>
+                                <h5 className="text-sm font-medium mb-2">Required Symbols</h5>
                                 <div className="flex flex-wrap gap-2">
                                   {req.symbols.map(sym => (
                                     <Badge key={sym} variant="outline">{sym}</Badge>
@@ -834,11 +834,11 @@ export function RequirementsCalculatorPage() {
                               </div>
                             )}
                             <div>
-                              <h5 className="text-sm font-medium mb-2">Zuständige Behörde</h5>
+                              <h5 className="text-sm font-medium mb-2">Responsible Authority</h5>
                               <p className="text-sm text-muted-foreground">{req.authority}</p>
                             </div>
                             <div>
-                              <h5 className="text-sm font-medium mb-2">Sanktionen bei Nichteinhaltung</h5>
+                              <h5 className="text-sm font-medium mb-2">Penalties for Non-Compliance</h5>
                               <p className="text-sm text-destructive">{req.penalties}</p>
                             </div>
                           </div>
@@ -847,7 +847,7 @@ export function RequirementsCalculatorPage() {
                             <div>
                               <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
                                 <Lightbulb className="h-4 w-4" />
-                                Tipps
+                                Tips
                               </h5>
                               <ul className="space-y-1">
                                 {req.tips.map((tip, idx) => (
@@ -873,7 +873,7 @@ export function RequirementsCalculatorPage() {
                             </div>
                           )}
 
-                          {/* KI-Tiefenanalyse */}
+                          {/* AI Deep Analysis */}
                           {renderAIAnalysis(req)}
                         </div>
                       </AccordionContent>
@@ -884,13 +884,13 @@ export function RequirementsCalculatorPage() {
             </Card>
           )}
 
-          {/* Weitere Anforderungen */}
+          {/* Additional Requirements */}
           {(highRequirements.length > 0 || otherRequirements.length > 0) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5" />
-                  Weitere Anforderungen
+                  Additional Requirements
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -900,7 +900,7 @@ export function RequirementsCalculatorPage() {
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-4 text-left">
                           <Badge variant={req.priority === 'high' ? 'default' : 'secondary'}>
-                            {req.priority === 'high' ? 'Hoch' : req.priority === 'medium' ? 'Mittel' : 'Niedrig'}
+                            {req.priority === 'high' ? 'High' : req.priority === 'medium' ? 'Medium' : 'Low'}
                           </Badge>
                           <div>
                             <p className="font-medium">{req.name}</p>
@@ -915,7 +915,7 @@ export function RequirementsCalculatorPage() {
                           <div className="grid gap-4 md:grid-cols-2">
                             {req.documents.length > 0 && (
                               <div>
-                                <h5 className="text-sm font-medium mb-2">Erforderliche Dokumente</h5>
+                                <h5 className="text-sm font-medium mb-2">Required Documents</h5>
                                 <ul className="space-y-1">
                                   {req.documents.map(doc => (
                                     <li key={doc} className="text-sm flex items-center gap-2">
@@ -928,7 +928,7 @@ export function RequirementsCalculatorPage() {
                             )}
                             {req.registrations.length > 0 && (
                               <div>
-                                <h5 className="text-sm font-medium mb-2">Registrierungen</h5>
+                                <h5 className="text-sm font-medium mb-2">Registrations</h5>
                                 <ul className="space-y-1">
                                   {req.registrations.map(reg => (
                                     <li key={reg} className="text-sm flex items-center gap-2">
@@ -941,7 +941,7 @@ export function RequirementsCalculatorPage() {
                             )}
                             {req.symbols.length > 0 && (
                               <div>
-                                <h5 className="text-sm font-medium mb-2">Erforderliche Symbole</h5>
+                                <h5 className="text-sm font-medium mb-2">Required Symbols</h5>
                                 <div className="flex flex-wrap gap-2">
                                   {req.symbols.map(sym => (
                                     <Badge key={sym} variant="outline">{sym}</Badge>
@@ -953,7 +953,7 @@ export function RequirementsCalculatorPage() {
 
                           {req.tips.length > 0 && (
                             <div>
-                              <h5 className="text-sm font-medium mb-2">Tipps</h5>
+                              <h5 className="text-sm font-medium mb-2">Tips</h5>
                               <ul className="space-y-1">
                                 {req.tips.map((tip, idx) => (
                                   <li key={idx} className="text-sm text-muted-foreground">• {tip}</li>
@@ -962,7 +962,7 @@ export function RequirementsCalculatorPage() {
                             </div>
                           )}
 
-                          {/* KI-Tiefenanalyse */}
+                          {/* AI Deep Analysis */}
                           {renderAIAnalysis(req)}
                         </div>
                       </AccordionContent>
@@ -973,7 +973,7 @@ export function RequirementsCalculatorPage() {
             </Card>
           )}
 
-          {/* KI-Erweiterte Anforderungen */}
+          {/* AI Additional Requirements */}
           {aiAvailable && (
             <AIAdditionalReqs
               productContext={productContext}
@@ -981,7 +981,7 @@ export function RequirementsCalculatorPage() {
             />
           )}
 
-          {/* KI-Handlungsplan */}
+          {/* AI Action Plan */}
           {aiAvailable && (
             <AIActionPlan
               productContext={productContext}
@@ -989,21 +989,21 @@ export function RequirementsCalculatorPage() {
             />
           )}
 
-          {/* Dokumenten-Checkliste */}
+          {/* Document Checklist */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Zusammenfassung: Alle benötigten Dokumente
+                Summary: All Required Documents
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Dokument</TableHead>
-                    <TableHead>Anforderung</TableHead>
-                    <TableHead>Priorität</TableHead>
+                    <TableHead>Document</TableHead>
+                    <TableHead>Requirement</TableHead>
+                    <TableHead>Priority</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1022,8 +1022,8 @@ export function RequirementsCalculatorPage() {
                           item.priority === 'critical' ? 'destructive' :
                           item.priority === 'high' ? 'default' : 'secondary'
                         }>
-                          {item.priority === 'critical' ? 'Kritisch' :
-                           item.priority === 'high' ? 'Hoch' : 'Mittel'}
+                          {item.priority === 'critical' ? 'Critical' :
+                           item.priority === 'high' ? 'High' : 'Medium'}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -1033,12 +1033,12 @@ export function RequirementsCalculatorPage() {
             </CardContent>
           </Card>
 
-          {/* Symbole Übersicht */}
+          {/* Symbols Overview */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Tag className="h-5 w-5" />
-                Erforderliche Symbole und Kennzeichnungen
+                Required Symbols and Markings
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1053,7 +1053,7 @@ export function RequirementsCalculatorPage() {
                     </div>
                     <div>
                       <p className="font-medium">{symbol}</p>
-                      <p className="text-sm text-muted-foreground">Auf Produkt/Verpackung</p>
+                      <p className="text-sm text-muted-foreground">On product/packaging</p>
                     </div>
                   </div>
                 ))}
@@ -1061,7 +1061,7 @@ export function RequirementsCalculatorPage() {
             </CardContent>
           </Card>
 
-          {/* KI-Compliance-Chat */}
+          {/* AI Compliance Chat */}
           {aiAvailable && (
             <AIChatPanel
               productContext={productContext}

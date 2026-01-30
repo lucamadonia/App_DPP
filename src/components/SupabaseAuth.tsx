@@ -185,13 +185,13 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               {user.name?.charAt(0) || user.email?.charAt(0).toUpperCase()}
             </div>
           </div>
-          <CardTitle>{user.name || 'Benutzer'}</CardTitle>
+          <CardTitle>{user.name || 'User'}</CardTitle>
           <CardDescription>{user.email}</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleSignOut} variant="outline" className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
-            Abmelden
+            Sign Out
           </Button>
         </CardContent>
       </Card>
@@ -203,16 +203,16 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle>
-          {currentView === 'signin' ? 'Anmelden' : currentView === 'signup' ? 'Konto erstellen' : currentView === 'forgot' ? 'Passwort vergessen' : 'Mit OTP anmelden'}
+          {currentView === 'signin' ? 'Sign In' : currentView === 'signup' ? 'Create Account' : currentView === 'forgot' ? 'Forgot Password' : 'Sign In with OTP'}
         </CardTitle>
         <CardDescription>
           {currentView === 'signin'
-            ? 'Melden Sie sich bei Ihrem DPP Manager-Konto an'
+            ? 'Sign in to your DPP Manager account'
             : currentView === 'signup'
-              ? 'Erstellen Sie ein neues Konto'
+              ? 'Create a new account'
               : currentView === 'forgot'
-                ? 'Setzen Sie Ihr Passwort zurück'
-                : 'Erhalten Sie einen Einmalcode per E-Mail'}
+                ? 'Reset your password'
+                : 'Receive a one-time code via email'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -234,7 +234,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     <Input
                       id="reset-email"
                       type="email"
-                      placeholder="ihre@email.de"
+                      placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-9"
@@ -245,19 +245,19 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sende...
+                      Sending...
                     </>
                   ) : (
                     <>
                       <Mail className="mr-2 h-4 w-4" />
-                      Link zum Zurücksetzen senden
+                      Send Reset Link
                     </>
                   )}
                 </Button>
               </>
             ) : (
               <p className="text-sm text-muted-foreground text-center">
-                Eine E-Mail zum Zurücksetzen des Passworts wurde an <strong>{email}</strong> gesendet. Bitte prüfen Sie Ihren Posteingang.
+                A password reset email has been sent to <strong>{email}</strong>. Please check your inbox.
               </p>
             )}
             <Button
@@ -265,7 +265,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               onClick={() => { setResetSent(false); setCurrentView('signin'); }}
               className="w-full"
             >
-              Zurück zur Anmeldung
+              Back to Sign In
             </Button>
           </div>
         ) : /* OTP Flow - Exclusive View */
@@ -280,7 +280,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     <Input
                       id="otp-email"
                       type="email"
-                      placeholder="ihre@email.de"
+                      placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-9"
@@ -291,12 +291,12 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sende...
+                      Sending...
                     </>
                   ) : (
                     <>
                       <KeyRound className="mr-2 h-4 w-4" />
-                      Magic Link senden
+                      Send Magic Link
                     </>
                   )}
                 </Button>
@@ -304,10 +304,10 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             ) : (
               <>
                 <p className="text-sm text-muted-foreground text-center">
-                  Link gesendet an {email}. Klicken Sie auf den Link in der E-Mail oder geben Sie den Code ein.
+                  Link sent to {email}. Click the link in the email or enter the code.
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="otp-code">6-stelliger Code</Label>
+                  <Label htmlFor="otp-code">6-digit Code</Label>
                   <Input
                     id="otp-code"
                     type="text"
@@ -322,10 +322,10 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Verifiziere...
+                      Verifying...
                     </>
                   ) : (
-                    'Verifizieren & Anmelden'
+                    'Verify & Sign In'
                   )}
                 </Button>
               </>
@@ -335,7 +335,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               onClick={() => { setOtpSent(false); setCurrentView('signin'); }}
               className="w-full"
             >
-              Zuruck zur Anmeldung
+              Back to Sign In
             </Button>
           </div>
         ) : (
@@ -349,12 +349,12 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Mit Google fortfahren
+              Continue with Google
             </Button>
 
             <Button variant="outline" onClick={() => setCurrentView('otp')} className="w-full">
               <KeyRound className="mr-2 h-4 w-4" />
-              Mit Magic Link anmelden
+              Sign in with Magic Link
             </Button>
 
             <div className="relative">
@@ -362,7 +362,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">oder</span>
+                <span className="bg-card px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
@@ -376,7 +376,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     <Input
                       id="name"
                       type="text"
-                      placeholder="Ihr Name"
+                      placeholder="Your Name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="pl-9"
@@ -392,7 +392,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   <Input
                     id="email"
                     type="email"
-                    placeholder="ihre@email.de"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
@@ -422,7 +422,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                       className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
                       onClick={() => setCurrentView('forgot')}
                     >
-                      Passwort vergessen?
+                      Forgot password?
                     </Button>
                   </div>
                 )}
@@ -431,23 +431,23 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 {formLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Laden...
+                    Loading...
                   </>
                 ) : (
-                  currentView === 'signin' ? 'Anmelden' : 'Registrieren'
+                  currentView === 'signin' ? 'Sign In' : 'Sign Up'
                 )}
               </Button>
             </form>
 
             {/* Toggle between sign in/up */}
             <p className="text-center text-sm text-muted-foreground">
-              {currentView === 'signin' ? 'Noch kein Konto? ' : 'Bereits ein Konto? '}
+              {currentView === 'signin' ? 'Don\'t have an account? ' : 'Already have an account? '}
               <Button
                 variant="link"
                 className="p-0 h-auto text-primary"
                 onClick={() => setCurrentView(currentView === 'signin' ? 'signup' : 'signin')}
               >
-                {currentView === 'signin' ? 'Registrieren' : 'Anmelden'}
+                {currentView === 'signin' ? 'Sign Up' : 'Sign In'}
               </Button>
             </p>
           </>

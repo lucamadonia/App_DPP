@@ -257,7 +257,7 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
       <div className="flex items-center justify-center min-h-[300px]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Lade...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -273,13 +273,13 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
               {session.user.name?.charAt(0) || session.user.email?.charAt(0).toUpperCase()}
             </div>
           </div>
-          <CardTitle>{session.user.name || 'Benutzer'}</CardTitle>
+          <CardTitle>{session.user.name || 'User'}</CardTitle>
           <CardDescription>{session.user.email}</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleSignOut} variant="outline" className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
-            Abmelden
+            Sign Out
           </Button>
         </CardContent>
       </Card>
@@ -291,14 +291,14 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle>
-          {currentView === 'signin' ? 'Anmelden' : currentView === 'signup' ? 'Konto erstellen' : 'Mit OTP anmelden'}
+          {currentView === 'signin' ? 'Sign In' : currentView === 'signup' ? 'Create Account' : 'Sign In with OTP'}
         </CardTitle>
         <CardDescription>
           {currentView === 'signin'
-            ? 'Melden Sie sich bei Ihrem DPP Manager-Konto an'
+            ? 'Sign in to your DPP Manager account'
             : currentView === 'signup'
-              ? 'Erstellen Sie ein neues Konto'
-              : 'Erhalten Sie einen Einmalcode per E-Mail'}
+              ? 'Create a new account'
+              : 'Get a one-time code via email'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -314,13 +314,13 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
             {!otpSent ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="otp-email">E-Mail</Label>
+                  <Label htmlFor="otp-email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="otp-email"
                       type="email"
-                      placeholder="ihre@email.de"
+                      placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-9"
@@ -331,12 +331,12 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sende...
+                      Sending...
                     </>
                   ) : (
                     <>
                       <KeyRound className="mr-2 h-4 w-4" />
-                      OTP senden
+                      Send OTP
                     </>
                   )}
                 </Button>
@@ -344,10 +344,10 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
             ) : (
               <>
                 <p className="text-sm text-muted-foreground text-center">
-                  Code gesendet an {email}
+                  Code sent to {email}
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="otp-code">6-stelliger Code</Label>
+                  <Label htmlFor="otp-code">6-digit code</Label>
                   <Input
                     id="otp-code"
                     type="text"
@@ -362,10 +362,10 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Verifiziere...
+                      Verifying...
                     </>
                   ) : (
-                    'Verifizieren & Anmelden'
+                    'Verify & Sign In'
                   )}
                 </Button>
               </>
@@ -375,7 +375,7 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
               onClick={() => { setOtpSent(false); setCurrentView('signin'); }}
               className="w-full"
             >
-              Zuruck zur Anmeldung
+              Back to sign in
             </Button>
           </div>
         ) : (
@@ -390,14 +390,14 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Mit Google fortfahren
+                Continue with Google
               </Button>
             )}
 
             {providers?.emailOTP && (
               <Button variant="outline" onClick={() => setCurrentView('otp')} className="w-full">
                 <KeyRound className="mr-2 h-4 w-4" />
-                Mit E-Mail-OTP anmelden
+                Sign in with Email OTP
               </Button>
             )}
 
@@ -407,7 +407,7 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">oder</span>
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
                 </div>
               </div>
             )}
@@ -423,7 +423,7 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                       <Input
                         id="name"
                         type="text"
-                        placeholder="Ihr Name"
+                        placeholder="Your name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="pl-9"
@@ -433,13 +433,13 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-Mail</Label>
+                  <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="ihre@email.de"
+                      placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-9"
@@ -448,7 +448,7 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Passwort</Label>
+                  <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -466,10 +466,10 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Laden...
+                      Loading...
                     </>
                   ) : (
-                    currentView === 'signin' ? 'Anmelden' : 'Registrieren'
+                    currentView === 'signin' ? 'Sign In' : 'Sign Up'
                   )}
                 </Button>
               </form>
@@ -477,13 +477,13 @@ export function NCBAuth({ mode = 'signin', onAuthSuccess, onAuthError }: NCBAuth
 
             {/* Toggle between sign in/up */}
             <p className="text-center text-sm text-muted-foreground">
-              {currentView === 'signin' ? 'Noch kein Konto? ' : 'Bereits ein Konto? '}
+              {currentView === 'signin' ? 'Don\'t have an account? ' : 'Already have an account? '}
               <Button
                 variant="link"
                 className="p-0 h-auto text-primary"
                 onClick={() => setCurrentView(currentView === 'signin' ? 'signup' : 'signin')}
               >
-                {currentView === 'signin' ? 'Registrieren' : 'Anmelden'}
+                {currentView === 'signin' ? 'Sign Up' : 'Sign In'}
               </Button>
             </p>
           </>
