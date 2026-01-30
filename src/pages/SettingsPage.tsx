@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Building2,
   Palette,
@@ -54,6 +55,7 @@ const apiKeys = [
 ];
 
 export function SettingsPage({ tab = 'company' }: { tab?: string }) {
+  const { t } = useTranslation('settings');
   const [showApiKey, setShowApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -351,9 +353,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t('Settings')}</h1>
         <p className="text-muted-foreground">
-          Manage your company profile and system settings
+          {t('Manage your company profile and system settings')}
         </p>
       </div>
 
@@ -362,23 +364,23 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         <TabsList className="flex w-full overflow-x-auto">
           <TabsTrigger value="company" className="flex items-center gap-2 flex-shrink-0">
             <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Company Profile</span>
+            <span className="hidden sm:inline">{t('Company Profile')}</span>
           </TabsTrigger>
           <TabsTrigger value="branding" className="flex items-center gap-2 flex-shrink-0">
             <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Branding</span>
+            <span className="hidden sm:inline">{t('Branding')}</span>
           </TabsTrigger>
           <TabsTrigger value="domain" className="flex items-center gap-2 flex-shrink-0">
             <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Domain</span>
+            <span className="hidden sm:inline">{t('Domain')}</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2 flex-shrink-0">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Users</span>
+            <span className="hidden sm:inline">{t('Users')}</span>
           </TabsTrigger>
           <TabsTrigger value="api" className="flex items-center gap-2 flex-shrink-0">
             <Key className="h-4 w-4" />
-            <span className="hidden sm:inline">API Keys</span>
+            <span className="hidden sm:inline">{t('API Keys')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -386,15 +388,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         <TabsContent value="company" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Company Data</CardTitle>
+              <CardTitle>{t('Company Data')}</CardTitle>
               <CardDescription>
-                This information will be displayed in your DPPs
+                {t('This information will be displayed in your DPPs')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Company Name *</label>
+                  <label className="text-sm font-medium">{t('Company Name')} *</label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -402,7 +404,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">EORI Number</label>
+                  <label className="text-sm font-medium">{t('EORI Number')}</label>
                   <Input
                     value={formData.eori}
                     onChange={(e) => setFormData({ ...formData, eori: e.target.value })}
@@ -411,7 +413,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Address</label>
+                  <label className="text-sm font-medium">{t('Address')}</label>
                   <Input
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -419,7 +421,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Country</label>
+                  <label className="text-sm font-medium">{t('Country')}</label>
                   <Input
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
@@ -427,7 +429,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">VAT ID</label>
+                  <label className="text-sm font-medium">{t('VAT ID')}</label>
                   <Input
                     value={formData.vat}
                     onChange={(e) => setFormData({ ...formData, vat: e.target.value })}
@@ -436,7 +438,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Plan</label>
+                  <label className="text-sm font-medium">{t('Plan')}</label>
                   <div className="flex items-center gap-2">
                     <Badge
                       className={
@@ -463,7 +465,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <Separator />
 
               <div>
-                <h3 className="font-medium mb-4">Responsible Person (EU Regulation)</h3>
+                <h3 className="font-medium mb-4">{t('Responsible Person (EU Regulation)')}</h3>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Name</label>
@@ -498,9 +500,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         <TabsContent value="branding" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>App Name & Logo</CardTitle>
+              <CardTitle>{t('App Name & Logo')}</CardTitle>
               <CardDescription>
-                Customize the appearance of your DPP application
+                {t('Customize the appearance of your DPP application')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -656,9 +658,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Primary Color</CardTitle>
+              <CardTitle>{t('Primary Color')}</CardTitle>
               <CardDescription>
-                This color is used as the accent color throughout the application
+                {t('This color is used as the accent color throughout the application')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -718,15 +720,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 }
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Reset to Default Color
+                {t('Reset to Default Color')}
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Preview</CardTitle>
-              <CardDescription>This is how your branding appears in the application</CardDescription>
+              <CardTitle>{t('Preview')}</CardTitle>
+              <CardDescription>{t('This is how your branding appears in the application')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="p-6 rounded-lg border bg-card">
@@ -767,10 +769,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Eye className="h-5 w-5" />
-                Test Public Pages
+                {t('Test Public Pages')}
               </CardTitle>
               <CardDescription>
-                See how your branding looks for end consumers
+                {t('See how your branding looks for end consumers')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -823,7 +825,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              {brandingSaved ? 'Saved!' : 'Save Branding'}
+              {brandingSaved ? t('Saved!') : t('Save Branding')}
             </Button>
           </div>
         </TabsContent>
@@ -832,9 +834,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         <TabsContent value="domain" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>URL Resolver</CardTitle>
+              <CardTitle>{t('URL Resolver')}</CardTitle>
               <CardDescription>
-                Choose how QR code URLs for your products should be resolved
+                {t('Choose how QR code URLs for your products should be resolved')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -944,9 +946,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           {domainForm.resolver === 'custom' && (
             <Card>
               <CardHeader>
-                <CardTitle>Domain Configuration</CardTitle>
+                <CardTitle>{t('Domain Configuration')}</CardTitle>
                 <CardDescription>
-                  Configure your own domain for DPP URLs
+                  {t('Configure your own domain for DPP URLs')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1016,7 +1018,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           {/* Current Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle>Current Configuration</CardTitle>
+              <CardTitle>{t('Current Configuration')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="p-4 bg-muted/30 rounded-lg border">
@@ -1069,7 +1071,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              {domainSaved ? 'Saved!' : 'Save Domain Settings'}
+              {domainSaved ? t('Saved!') : t('Save Domain Settings')}
             </Button>
           </div>
         </TabsContent>
@@ -1080,14 +1082,14 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Users & Roles</CardTitle>
+                  <CardTitle>{t('Users & Roles')}</CardTitle>
                   <CardDescription>
-                    Manage access rights for your team
+                    {t('Manage access rights for your team')}
                   </CardDescription>
                 </div>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Invite User
+                  {t('Invite User')}
                 </Button>
               </div>
             </CardHeader>
@@ -1141,8 +1143,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Roles</CardTitle>
-              <CardDescription>Defined access rights</CardDescription>
+              <CardTitle>{t('Roles')}</CardTitle>
+              <CardDescription>{t('Defined access rights')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
@@ -1175,14 +1177,14 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>API-Keys</CardTitle>
+                  <CardTitle>{t('API-Keys')}</CardTitle>
                   <CardDescription>
-                    Manage API keys for integrations (ERP, shop systems)
+                    {t('Manage API keys for integrations (ERP, shop systems)')}
                   </CardDescription>
                 </div>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  New API Key
+                  {t('New API Key')}
                 </Button>
               </div>
             </CardHeader>
@@ -1224,10 +1226,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(key.created).toLocaleDateString('en-US')}
+                        {formatDate(key.created, locale)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(key.lastUsed).toLocaleDateString('en-US')}
+                        {formatDate(key.lastUsed, locale)}
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" className="text-destructive">
@@ -1244,7 +1246,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>API Documentation</CardTitle>
+              <CardTitle>{t('API Documentation')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="p-4 rounded-lg bg-muted font-mono text-sm">
@@ -1254,7 +1256,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 <p>Authorization: Bearer {'<API_KEY>'}</p>
               </div>
               <Button variant="outline" className="mt-4">
-                Full Documentation
+                {t('Full Documentation')}
               </Button>
             </CardContent>
           </Card>

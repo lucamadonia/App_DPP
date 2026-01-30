@@ -19,6 +19,20 @@ export {
   type ProductListItem,
 } from './products';
 
+// Product Batches
+export {
+  getBatches,
+  getBatchById,
+  getBatchByProductAndSerial,
+  createBatch,
+  updateBatch,
+  deleteBatch,
+  duplicateBatch,
+  getBatchCount,
+  getBatchStats,
+  getAllBatches,
+} from './batches';
+
 // Documents
 export {
   getDocuments,

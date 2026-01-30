@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
   Edit,
@@ -18,6 +21,15 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
+  Layers,
+  Plus,
+  MoreHorizontal,
+  Eye,
+  Trash2,
+  Copy,
+  Clock,
+  Archive,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +37,25 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { getProductById, getProductSuppliersWithDetails } from '@/services/supabase';
+import { getBatches, deleteBatch } from '@/services/supabase/batches';
 import type { Product } from '@/types/product';
+import type { BatchListItem } from '@/types/product';
 import type { SupplierProduct } from '@/types/database';
 
 const SUPPLIER_ROLE_LABELS: Record<string, string> = {
@@ -38,12 +67,24 @@ const SUPPLIER_ROLE_LABELS: Record<string, string> = {
   logistics: 'Logistics',
 };
 
+const batchStatusConfig = {
+  live: { label: 'Live', icon: CheckCircle2, className: 'bg-success text-success-foreground' },
+  draft: { label: 'Draft', icon: Clock, className: '' },
+  archived: { label: 'Archived', icon: Archive, className: 'bg-muted text-muted-foreground' },
+};
+
 export function ProductPage() {
+  const { t } = useTranslation('products');
+  const locale = useLocale();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'stammdaten';
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [productSuppliers, setProductSuppliers] = useState<Array<SupplierProduct & { supplier_name: string; supplier_country: string }>>([]);
+  const [batches, setBatches] = useState<BatchListItem[]>([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
@@ -67,10 +108,26 @@ export function ProductPage() {
       }
       setProductSuppliers(suppliersData);
       setIsLoading(false);
+
+      // Load batches
+      setBatchesLoading(true);
+      const batchData = await getBatches(id);
+      setBatches(batchData);
+      setBatchesLoading(false);
     }
 
     loadProduct();
   }, [id]);
+
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm('Are you sure you want to delete this batch?')) return;
+    const result = await deleteBatch(batchId);
+    if (result.success) {
+      setBatches(batches.filter(b => b.id !== batchId));
+    } else {
+      alert('Error deleting batch: ' + result.error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -90,8 +147,8 @@ export function ProductPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Product not found</h1>
-            <p className="text-muted-foreground">{error || 'The product does not exist or you do not have access.'}</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('Product not found')}</h1>
+            <p className="text-muted-foreground">{error || t('The product does not exist or you do not have access.')}</p>
           </div>
         </div>
       </div>
@@ -125,19 +182,25 @@ export function ProductPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
+            <Link to={`/products/${id}/batches/new`}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('New Batch')}
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
             <Link to="/dpp/qr-generator">
               <QrCode className="mr-2 h-4 w-4" />
-              QR Code
+              {t('QR Code')}
             </Link>
           </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Export
+            {t('Export')}
           </Button>
           <Button asChild>
             <Link to={`/products/${id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              {t('Edit')}
             </Link>
           </Button>
         </div>
@@ -150,7 +213,7 @@ export function ProductPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-success" />
-                <span className="font-medium">Compliance Status</span>
+                <span className="font-medium">{t('Compliance Status')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Progress value={complianceScore} className="h-2 w-48" />
@@ -160,11 +223,11 @@ export function ProductPage() {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4 text-success" />
-                12 fulfilled
+                {t('{{count}} fulfilled', { count: 12 })}
               </span>
               <span className="flex items-center gap-1">
                 <AlertTriangle className="h-4 w-4 text-warning" />
-                1 pending
+                {t('{{count}} pending', { count: 1 })}
               </span>
             </div>
           </div>
@@ -172,35 +235,42 @@ export function ProductPage() {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="stammdaten" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="flex w-full overflow-x-auto">
           <TabsTrigger value="stammdaten" className="flex items-center gap-2 flex-shrink-0">
             <Package className="h-4 w-4" />
-            <span className="hidden sm:inline">Master Data</span>
+            <span className="hidden sm:inline">{t('Master Data')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="batches" className="flex items-center gap-2 flex-shrink-0">
+            <Layers className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('Batches')}</span>
+            {batches.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{batches.length}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="nachhaltigkeit" className="flex items-center gap-2 flex-shrink-0">
             <Leaf className="h-4 w-4" />
-            <span className="hidden sm:inline">Sustainability</span>
+            <span className="hidden sm:inline">{t('Sustainability')}</span>
           </TabsTrigger>
           <TabsTrigger value="konformitaet" className="flex items-center gap-2 flex-shrink-0">
             <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Compliance</span>
+            <span className="hidden sm:inline">{t('Compliance')}</span>
           </TabsTrigger>
           <TabsTrigger value="dokumente" className="flex items-center gap-2 flex-shrink-0">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Documents</span>
+            <span className="hidden sm:inline">{t('Documents')}</span>
           </TabsTrigger>
           <TabsTrigger value="lieferanten" className="flex items-center gap-2 flex-shrink-0">
             <Truck className="h-4 w-4" />
-            <span className="hidden sm:inline">Suppliers</span>
+            <span className="hidden sm:inline">{t('Suppliers')}</span>
           </TabsTrigger>
           <TabsTrigger value="qr" className="flex items-center gap-2 flex-shrink-0">
             <QrCode className="h-4 w-4" />
-            <span className="hidden sm:inline">QR & Access</span>
+            <span className="hidden sm:inline">{t('QR & Access')}</span>
           </TabsTrigger>
           <TabsTrigger value="historie" className="flex items-center gap-2 flex-shrink-0">
             <History className="h-4 w-4" />
-            <span className="hidden sm:inline">History</span>
+            <span className="hidden sm:inline">{t('History')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -209,48 +279,48 @@ export function ProductPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Product Information</CardTitle>
+                <CardTitle>{t('Product Information')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Product Name</p>
+                    <p className="text-sm text-muted-foreground">{t('Product Name')}</p>
                     <p className="font-medium">{product.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Manufacturer</p>
+                    <p className="text-sm text-muted-foreground">{t('Manufacturer')}</p>
                     <p className="font-medium">{product.manufacturer}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">GTIN/EAN</p>
+                    <p className="text-sm text-muted-foreground">{t('GTIN/EAN')}</p>
                     <code className="font-mono text-sm">{product.gtin}</code>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Serial Number</p>
-                    <code className="font-mono text-sm">{product.serialNumber}</code>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Category</p>
+                    <p className="text-sm text-muted-foreground">{t('Category')}</p>
                     <p className="font-medium">{product.category}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Production Date</p>
-                    <p className="font-medium">
-                      {new Date(product.productionDate).toLocaleDateString('en-US')}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t('Batches')}</p>
+                    <p className="font-medium">{batches.length} {t('Batches').toLowerCase()}</p>
                   </div>
+                  {product.countryOfOrigin && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">{t('Country of Origin')}</p>
+                      <p className="font-medium">{product.countryOfOrigin}</p>
+                    </div>
+                  )}
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Description</p>
-                  <p className="text-sm">{product.description || 'No description available'}</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('Description')}</p>
+                  <p className="text-sm">{product.description || t('No description available')}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Product Image</CardTitle>
+                <CardTitle>{t('Product Image')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {product.imageUrl ? (
@@ -271,6 +341,159 @@ export function ProductPage() {
           </div>
         </TabsContent>
 
+        {/* Batches Tab */}
+        <TabsContent value="batches" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-primary" />
+                    {t('Batches')}
+                  </CardTitle>
+                  <CardDescription>{t('All batches/lots for this product. Each batch has its own DPP.')}</CardDescription>
+                </div>
+                <Button asChild>
+                  <Link to={`/products/${id}/batches/new`}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('New Batch')}
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {batchesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : batches.length === 0 ? (
+                <div className="text-center py-12">
+                  <Layers className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-medium">{t('No batches yet')}</h3>
+                  <p className="text-muted-foreground mt-1 mb-4">
+                    {t('Create the first batch for this product to start issuing DPPs.')}
+                  </p>
+                  <Button asChild>
+                    <Link to={`/products/${id}/batches/new`}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t('Create First Batch')}
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('Serial Number')}</TableHead>
+                      <TableHead>{t('Batch Number')}</TableHead>
+                      <TableHead>{t('Production Date')}</TableHead>
+                      <TableHead>{t('Status')}</TableHead>
+                      <TableHead>{t('Overrides')}</TableHead>
+                      <TableHead>{t('Created')}</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {batches.map((batch) => {
+                      const status = batchStatusConfig[batch.status];
+                      return (
+                        <TableRow key={batch.id}>
+                          <TableCell>
+                            <Link
+                              to={`/products/${id}/batches/${batch.id}`}
+                              className="font-mono text-sm font-medium hover:text-primary hover:underline"
+                            >
+                              {batch.serialNumber}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {batch.batchNumber || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(batch.productionDate, locale)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className={status.className}>
+                              <status.icon className="mr-1 h-3 w-3" />
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {batch.hasOverrides ? (
+                              <Badge variant="outline" className="border-primary text-primary">
+                                <Settings2 className="mr-1 h-3 w-3" />
+                                Overrides
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">{t('Inherited')}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(batch.createdAt, locale)}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/products/${id}/batches/${batch.id}`}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    {t('View')}
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/products/${id}/batches/${batch.id}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    {t('Edit')}
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <a
+                                    href={`/p/${product.gtin}/${batch.serialNumber}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    {t('Public DPP')}
+                                  </a>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/dpp/qr-generator?product=${id}`}>
+                                    <QrCode className="mr-2 h-4 w-4" />
+                                    {t('QR Code')}
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/products/${id}/batches/new?duplicate=${batch.id}`}>
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    {t('Duplicate')}
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteBatch(batch.id)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {t('Delete')}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Sustainability Tab */}
         <TabsContent value="nachhaltigkeit" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
@@ -279,9 +502,9 @@ export function ProductPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Recycle className="h-5 w-5 text-success" />
-                  Material Composition
+                  {t('Material Composition')}
                 </CardTitle>
-                <CardDescription>Share and origin of used materials</CardDescription>
+                <CardDescription>{t('Share and origin of used materials')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {product.materials && product.materials.length > 0 ? (
@@ -302,14 +525,14 @@ export function ProductPage() {
                         {material.recyclable && (
                           <Badge variant="outline" className="text-success border-success">
                             <Recycle className="mr-1 h-3 w-3" />
-                            Recyclable
+                            {t('Recyclable')}
                           </Badge>
                         )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-sm">No materials recorded</p>
+                  <p className="text-muted-foreground text-sm">{t('No materials recorded')}</p>
                 )}
               </CardContent>
             </Card>
@@ -320,7 +543,7 @@ export function ProductPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Leaf className="h-5 w-5 text-success" />
-                    Carbon Footprint
+                    {t('Carbon Footprint')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -335,11 +558,11 @@ export function ProductPage() {
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
-                      <span>Production</span>
+                      <span>{t('Production')}</span>
                       <span className="font-medium">{product.carbonFootprint.productionKgCO2} kg</span>
                     </div>
                     <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
-                      <span>Transport</span>
+                      <span>{t('Transport')}</span>
                       <span className="font-medium">{product.carbonFootprint.transportKgCO2} kg</span>
                     </div>
                   </div>
@@ -352,7 +575,7 @@ export function ProductPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Recycle className="h-5 w-5 text-success" />
-                  Recycling & Disposal
+                  {t('Recycling & Disposal')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -361,15 +584,15 @@ export function ProductPage() {
                     <div className="text-3xl font-bold text-success">
                       {product.recyclability?.recyclablePercentage || 0}%
                     </div>
-                    <div className="text-sm text-muted-foreground">Recyclable</div>
+                    <div className="text-sm text-muted-foreground">{t('Recyclable')}</div>
                   </div>
                   <div className="md:col-span-2 space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Disposal Notes</p>
-                      <p className="text-sm">{product.recyclability?.instructions || 'No notes recorded'}</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('Disposal Notes')}</p>
+                      <p className="text-sm">{product.recyclability?.instructions || t('No notes recorded')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">Disposal Methods</p>
+                      <p className="text-sm text-muted-foreground mb-2">{t('Disposal Methods')}</p>
                       <div className="flex flex-wrap gap-2">
                         {product.recyclability?.disposalMethods && product.recyclability.disposalMethods.length > 0 ? (
                           product.recyclability.disposalMethods.map((method, index) => (
@@ -378,7 +601,7 @@ export function ProductPage() {
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-muted-foreground text-sm">No methods recorded</span>
+                          <span className="text-muted-foreground text-sm">{t('No methods recorded')}</span>
                         )}
                       </div>
                     </div>
@@ -395,9 +618,9 @@ export function ProductPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-warning" />
-                Certifications
+                {t('Certifications')}
               </CardTitle>
-              <CardDescription>Valid certificates and declarations of conformity</CardDescription>
+              <CardDescription>{t('Valid certificates and declarations of conformity')}</CardDescription>
             </CardHeader>
             <CardContent>
               {product.certifications && product.certifications.length > 0 ? (
@@ -415,9 +638,9 @@ export function ProductPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Valid until</p>
+                          <p className="text-sm text-muted-foreground">{t('Valid until')}</p>
                           <p className="font-medium">
-                            {new Date(cert.validUntil).toLocaleDateString('en-US')}
+                            {formatDate(cert.validUntil, locale)}
                           </p>
                         </div>
                         {cert.certificateUrl && (
@@ -435,7 +658,7 @@ export function ProductPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Award className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>No certifications recorded</p>
+                  <p>{t('No certifications recorded')}</p>
                 </div>
               )}
             </CardContent>
@@ -446,15 +669,15 @@ export function ProductPage() {
         <TabsContent value="dokumente">
           <Card>
             <CardHeader>
-              <CardTitle>Documents & Certificates</CardTitle>
-              <CardDescription>All uploaded documents for this product</CardDescription>
+              <CardTitle>{t('Documents & Certificates')}</CardTitle>
+              <CardDescription>{t('All uploaded documents for this product')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex h-48 items-center justify-center rounded-lg border-2 border-dashed">
                 <div className="text-center">
                   <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Drag files here or click to upload
+                    {t('Drag files here or click to upload')}
                   </p>
                 </div>
               </div>
@@ -468,9 +691,9 @@ export function ProductPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
-                Assigned Suppliers
+                {t('Assigned Suppliers')}
               </CardTitle>
-              <CardDescription>Economic operators and suppliers for this product</CardDescription>
+              <CardDescription>{t('Economic operators and suppliers for this product')}</CardDescription>
             </CardHeader>
             <CardContent>
               {productSuppliers.length > 0 ? (
@@ -485,7 +708,7 @@ export function ProductPage() {
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{sp.supplier_name}</p>
                             {sp.is_primary && (
-                              <Badge variant="secondary">Primary Supplier</Badge>
+                              <Badge variant="secondary">{t('Primary Supplier')}</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
@@ -496,13 +719,13 @@ export function ProductPage() {
                       <div className="flex items-center gap-6 text-sm">
                         {sp.lead_time_days != null && (
                           <div className="text-right">
-                            <p className="text-muted-foreground">Lead Time</p>
-                            <p className="font-medium">{sp.lead_time_days} days</p>
+                            <p className="text-muted-foreground">{t('Lead Time')}</p>
+                            <p className="font-medium">{sp.lead_time_days} {t('days')}</p>
                           </div>
                         )}
                         {sp.price_per_unit != null && (
                           <div className="text-right">
-                            <p className="text-muted-foreground">Price/Unit</p>
+                            <p className="text-muted-foreground">{t('Price/Unit')}</p>
                             <p className="font-medium">
                               {sp.price_per_unit} {sp.currency || 'EUR'}
                             </p>
@@ -515,7 +738,7 @@ export function ProductPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Truck className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>No suppliers assigned</p>
+                  <p>{t('No suppliers assigned')}</p>
                 </div>
               )}
             </CardContent>
@@ -527,8 +750,8 @@ export function ProductPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>QR Code</CardTitle>
-                <CardDescription>Scan for the public DPP</CardDescription>
+                <CardTitle>{t('QR Code')}</CardTitle>
+                <CardDescription>{t('Select a batch to generate QR codes for individual DPPs')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="aspect-square max-w-xs mx-auto rounded-lg bg-white p-8 border">
@@ -537,17 +760,11 @@ export function ProductPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4 justify-center">
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    PNG
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    SVG
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    PDF
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/dpp/qr-generator?product=${id}`}>
+                      <QrCode className="mr-2 h-4 w-4" />
+                      {t('Open QR Generator')}
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
@@ -555,35 +772,51 @@ export function ProductPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Public Link</CardTitle>
-                <CardDescription>GS1 Digital Link Format</CardDescription>
+                <CardTitle>{t('Public Links')}</CardTitle>
+                <CardDescription>{t('Links per batch (select a batch to see its DPP link)')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-3 rounded-lg bg-muted font-mono text-sm break-all">
-                  https://id.gs1.org/01/{product.gtin}/21/{product.serialNumber}
-                </div>
-                <div className="flex gap-2">
-                  <Button className="flex-1" variant="outline" asChild>
-                    <a
-                      href={`/p/${product.gtin}/${product.serialNumber}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Customer View
-                    </a>
-                  </Button>
-                  <Button className="flex-1" variant="outline" asChild>
-                    <a
-                      href={`/p/${product.gtin}/${product.serialNumber}/customs`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Customs View
-                    </a>
-                  </Button>
-                </div>
+                {batches.length > 0 ? (
+                  batches.slice(0, 5).map((batch) => (
+                    <div key={batch.id} className="p-3 rounded-lg border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{batch.serialNumber}</span>
+                        <Badge variant="secondary" className={batchStatusConfig[batch.status].className}>
+                          {batchStatusConfig[batch.status].label}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1" asChild>
+                          <a
+                            href={`/p/${product.gtin}/${batch.serialNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="mr-2 h-3 w-3" />
+                            {t('Customer')}
+                          </a>
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1" asChild>
+                          <a
+                            href={`/p/${product.gtin}/${batch.serialNumber}/customs`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="mr-2 h-3 w-3" />
+                            {t('Customs')}
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t('No batches available. Create a batch first.')}</p>
+                )}
+                {batches.length > 5 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {t('... and {{count}} more batches', { count: batches.length - 5 })}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -595,9 +828,9 @@ export function ProductPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
-                Supply Chain & Audit Log
+                {t('Supply Chain & Audit Log')}
               </CardTitle>
-              <CardDescription>Complete traceability</CardDescription>
+              <CardDescription>{t('Complete traceability')}</CardDescription>
             </CardHeader>
             <CardContent>
               {product.supplyChain && product.supplyChain.length > 0 ? (
@@ -613,7 +846,7 @@ export function ProductPage() {
                               Step {entry.step}: {entry.description}
                             </span>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(entry.date).toLocaleDateString('en-US')}
+                              {formatDate(entry.date, locale)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -628,7 +861,7 @@ export function ProductPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Truck className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>No supply chain data recorded</p>
+                  <p>{t('No supply chain data recorded')}</p>
                 </div>
               )}
             </CardContent>

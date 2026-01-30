@@ -1,4 +1,7 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Package,
   Leaf,
@@ -18,6 +21,8 @@ import { isFieldVisibleForView } from '@/types/visibility';
 import { usePublicProduct } from '@/hooks/use-public-product';
 
 export function PublicCustomsPage() {
+  const { t } = useTranslation('dpp');
+  const locale = useLocale();
   const { gtin, serial } = useParams();
   const { product, visibilityV2, loading } = usePublicProduct(gtin, serial);
 
@@ -35,8 +40,8 @@ export function PublicCustomsPage() {
               <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
-              <h1 className="text-xl font-bold">Loading product data...</h1>
-              <p className="text-muted-foreground">Please wait a moment.</p>
+              <h1 className="text-xl font-bold">{t('Loading product data...')}</h1>
+              <p className="text-muted-foreground">{t('Please wait a moment.')}</p>
             </div>
           </CardContent>
         </Card>
@@ -53,10 +58,9 @@ export function PublicCustomsPage() {
               <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
                 <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
-              <h1 className="text-xl font-bold">Product not found</h1>
+              <h1 className="text-xl font-bold">{t('Product not found')}</h1>
               <p className="text-muted-foreground">
-                The product with GTIN <code className="font-mono bg-muted px-1 rounded">{gtin}</code> and
-                serial number <code className="font-mono bg-muted px-1 rounded">{serial}</code> was not found.
+                {t('The product with GTIN {{gtin}} and serial number {{serial}} was not found.', { gtin, serial })}
               </p>
             </div>
           </CardContent>
@@ -101,19 +105,19 @@ export function PublicCustomsPage() {
                 )}
                 {isFieldVisible('serialNumber') && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Serial Number</p>
+                    <p className="text-xs text-muted-foreground">{t('Serial Number')}</p>
                     <p className="font-mono font-semibold">{product.serialNumber}</p>
                   </div>
                 )}
                 {isFieldVisible('batchNumber') && product.batchNumber && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Batch Number</p>
+                    <p className="text-xs text-muted-foreground">{t('Batch Number')}</p>
                     <p className="font-mono font-semibold">{product.batchNumber}</p>
                   </div>
                 )}
                 {isFieldVisible('hsCode') && product.hsCode && (
                   <div>
-                    <p className="text-xs text-muted-foreground">HS Code</p>
+                    <p className="text-xs text-muted-foreground">{t('HS Code')}</p>
                     <p className="font-mono font-semibold">{product.hsCode}</p>
                   </div>
                 )}
@@ -128,10 +132,10 @@ export function PublicCustomsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" />
-            Customs Data
+            {t('Customs Data')}
           </CardTitle>
           <CardDescription>
-            Information for customs clearance and import/export
+            {t('Information for customs clearance and import/export')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -140,31 +144,31 @@ export function PublicCustomsPage() {
             <div className="space-y-4">
               <h4 className="font-semibold flex items-center gap-2">
                 <Globe className="h-4 w-4" />
-                Product Data
+                {t('Product Data')}
               </h4>
               <div className="space-y-2">
                 {isFieldVisible('countryOfOrigin') && product.countryOfOrigin && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Country of Origin</span>
+                    <span className="text-muted-foreground">{t('Country of Origin')}</span>
                     <span className="font-medium">{product.countryOfOrigin}</span>
                   </div>
                 )}
                 {isFieldVisible('netWeight') && product.netWeight && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Net Weight</span>
+                    <span className="text-muted-foreground">{t('Net Weight')}</span>
                     <span className="font-medium">{product.netWeight} g</span>
                   </div>
                 )}
                 {isFieldVisible('grossWeight') && product.grossWeight && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Gross Weight</span>
+                    <span className="text-muted-foreground">{t('Gross Weight')}</span>
                     <span className="font-medium">{product.grossWeight} g</span>
                   </div>
                 )}
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Production Date</span>
+                  <span className="text-muted-foreground">{t('Production Date')}</span>
                   <span className="font-medium">
-                    {new Date(product.productionDate).toLocaleDateString('en-US')}
+                    {formatDate(product.productionDate, locale)}
                   </span>
                 </div>
               </div>
@@ -174,16 +178,16 @@ export function PublicCustomsPage() {
             <div className="space-y-4">
               <h4 className="font-semibold flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                Manufacturer Data
+                {t('Manufacturer Data')}
               </h4>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Company</span>
+                  <span className="text-muted-foreground">{t('Company')}</span>
                   <span className="font-medium">{product.manufacturer}</span>
                 </div>
                 {isFieldVisible('manufacturerAddress') && product.manufacturerAddress && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Address</span>
+                    <span className="text-muted-foreground">{t('Address')}</span>
                     <span className="font-medium text-right text-sm">
                       {product.manufacturerAddress}
                     </span>
@@ -191,13 +195,13 @@ export function PublicCustomsPage() {
                 )}
                 {isFieldVisible('manufacturerEORI') && product.manufacturerEORI && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">EORI Number</span>
+                    <span className="text-muted-foreground">{t('EORI Number')}</span>
                     <span className="font-mono font-medium">{product.manufacturerEORI}</span>
                   </div>
                 )}
                 {isFieldVisible('manufacturerVAT') && product.manufacturerVAT && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">VAT ID</span>
+                    <span className="text-muted-foreground">{t('VAT ID')}</span>
                     <span className="font-mono font-medium">{product.manufacturerVAT}</span>
                   </div>
                 )}
@@ -213,7 +217,7 @@ export function PublicCustomsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Material Composition
+              {t('Material Composition')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -221,10 +225,10 @@ export function PublicCustomsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2">Material</th>
-                    <th className="text-right py-2">Share</th>
-                    <th className="text-center py-2">Recyclable</th>
-                    <th className="text-left py-2">Origin</th>
+                    <th className="text-left py-2">{t('Material')}</th>
+                    <th className="text-right py-2">{t('Share')}</th>
+                    <th className="text-center py-2">{t('Recyclable')}</th>
+                    <th className="text-left py-2">{t('Origin')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,9 +238,9 @@ export function PublicCustomsPage() {
                       <td className="py-2 text-right">{material.percentage}%</td>
                       <td className="py-2 text-center">
                         {material.recyclable ? (
-                          <Badge variant="secondary" className="text-xs">Yes</Badge>
+                          <Badge variant="secondary" className="text-xs">{t('Yes')}</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-xs">No</Badge>
+                          <Badge variant="outline" className="text-xs">{t('No')}</Badge>
                         )}
                       </td>
                       <td className="py-2">{material.origin || '-'}</td>
@@ -255,7 +259,7 @@ export function PublicCustomsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="h-5 w-5" />
-              Certifications
+              {t('Certifications')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -268,8 +272,8 @@ export function PublicCustomsPage() {
                   <div>
                     <p className="font-semibold">{cert.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {cert.issuedBy} | Valid until:{' '}
-                      {new Date(cert.validUntil).toLocaleDateString('en-US')}
+                      {cert.issuedBy} | {t('Valid until')}:{' '}
+                      {formatDate(cert.validUntil, locale)}
                     </p>
                   </div>
                   {isFieldVisible('certificateDownloads') && cert.certificateUrl && (
@@ -291,7 +295,7 @@ export function PublicCustomsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />
-              Full Supply Chain
+              {t('Full Supply Chain')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -299,11 +303,11 @@ export function PublicCustomsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2">Step</th>
-                    <th className="text-left py-2">Description</th>
-                    <th className="text-left py-2">Location</th>
-                    <th className="text-left py-2">Country</th>
-                    <th className="text-left py-2">Date</th>
+                    <th className="text-left py-2">{t('Step')}</th>
+                    <th className="text-left py-2">{t('Description')}</th>
+                    <th className="text-left py-2">{t('Location')}</th>
+                    <th className="text-left py-2">{t('Country')}</th>
+                    <th className="text-left py-2">{t('Date')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -316,7 +320,7 @@ export function PublicCustomsPage() {
                       <td className="py-2">{entry.location}</td>
                       <td className="py-2">{entry.country}</td>
                       <td className="py-2">
-                        {new Date(entry.date).toLocaleDateString('en-US')}
+                        {formatDate(entry.date, locale)}
                       </td>
                     </tr>
                   ))}
@@ -333,22 +337,22 @@ export function PublicCustomsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Leaf className="h-5 w-5" />
-              Carbon Footprint
+              {t('Carbon Footprint')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-3xl font-bold">{product.carbonFootprint.totalKgCO2}</p>
-                <p className="text-sm text-muted-foreground">kg CO2 Total</p>
+                <p className="text-sm text-muted-foreground">{t('kg CO2 Total')}</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-3xl font-bold">{product.carbonFootprint.productionKgCO2}</p>
-                <p className="text-sm text-muted-foreground">kg CO2 Production</p>
+                <p className="text-sm text-muted-foreground">{t('kg CO2 Production')}</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-3xl font-bold">{product.carbonFootprint.transportKgCO2}</p>
-                <p className="text-sm text-muted-foreground">kg CO2 Transport</p>
+                <p className="text-sm text-muted-foreground">{t('kg CO2 Transport')}</p>
               </div>
             </div>
           </CardContent>

@@ -199,11 +199,36 @@ CREATE TABLE IF NOT EXISTS products (
     UNIQUE(gtin, serial_number)
 );
 
+-- Product Batches (Chargen)
+CREATE TABLE IF NOT EXISTS product_batches (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    batch_number TEXT,
+    serial_number TEXT NOT NULL,
+    production_date DATE NOT NULL,
+    expiration_date DATE,
+    net_weight NUMERIC,
+    gross_weight NUMERIC,
+    status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'live', 'archived')),
+    notes TEXT,
+    -- Override fields (NULL = inherit from product master data)
+    materials_override JSONB,
+    certifications_override JSONB,
+    carbon_footprint_override JSONB,
+    recyclability_override JSONB,
+    description_override TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, product_id, serial_number)
+);
+
 -- Dokumente
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    batch_id UUID REFERENCES product_batches(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('pdf', 'image', 'other')),
     category TEXT NOT NULL,
@@ -221,6 +246,7 @@ CREATE TABLE IF NOT EXISTS supply_chain_entries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    batch_id UUID REFERENCES product_batches(id) ON DELETE SET NULL,
     step INTEGER NOT NULL,
     location TEXT NOT NULL,
     country TEXT NOT NULL,
@@ -344,9 +370,16 @@ CREATE TABLE IF NOT EXISTS visibility_settings (
 CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_products_gtin ON products(gtin);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_batches_tenant ON product_batches(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_batches_product ON product_batches(product_id);
+CREATE INDEX IF NOT EXISTS idx_batches_batch_number ON product_batches(batch_number);
+CREATE INDEX IF NOT EXISTS idx_batches_serial_number ON product_batches(serial_number);
+CREATE INDEX IF NOT EXISTS idx_batches_product_serial ON product_batches(product_id, serial_number);
 CREATE INDEX IF NOT EXISTS idx_documents_tenant ON documents(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_documents_product ON documents(product_id);
+CREATE INDEX IF NOT EXISTS idx_documents_batch ON documents(batch_id);
 CREATE INDEX IF NOT EXISTS idx_supply_chain_product ON supply_chain_entries(product_id);
+CREATE INDEX IF NOT EXISTS idx_supply_chain_batch ON supply_chain_entries(batch_id);
 CREATE INDEX IF NOT EXISTS idx_supply_chain_supplier ON supply_chain_entries(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_checklist_progress_tenant ON checklist_progress(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_suppliers_tenant ON suppliers(tenant_id);
@@ -361,6 +394,7 @@ CREATE INDEX IF NOT EXISTS idx_national_regulations_country ON national_regulati
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_chain_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE checklist_progress ENABLE ROW LEVEL SECURITY;
@@ -438,6 +472,48 @@ CREATE POLICY "Editors can update products"
 
 CREATE POLICY "Admins can delete products"
     ON products FOR DELETE
+    USING (
+        tenant_id = get_user_tenant_id()
+        AND EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+
+-- Product batches policies
+CREATE POLICY "Users can view batches in their tenant"
+    ON product_batches FOR SELECT
+    USING (tenant_id = get_user_tenant_id());
+
+CREATE POLICY "Public can view batches for DPP"
+    ON product_batches FOR SELECT
+    USING (true);
+
+CREATE POLICY "Editors can create batches"
+    ON product_batches FOR INSERT
+    WITH CHECK (
+        tenant_id = get_user_tenant_id()
+        AND EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role IN ('admin', 'editor')
+        )
+    );
+
+CREATE POLICY "Editors can update batches"
+    ON product_batches FOR UPDATE
+    USING (
+        tenant_id = get_user_tenant_id()
+        AND EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role IN ('admin', 'editor')
+        )
+    );
+
+CREATE POLICY "Admins can delete batches"
+    ON product_batches FOR DELETE
     USING (
         tenant_id = get_user_tenant_id()
         AND EXISTS (
@@ -564,6 +640,10 @@ CREATE TRIGGER products_updated_at
     BEFORE UPDATE ON products
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER product_batches_updated_at
+    BEFORE UPDATE ON product_batches
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 CREATE TRIGGER profiles_updated_at
     BEFORE UPDATE ON profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -616,3 +696,36 @@ CREATE TRIGGER on_auth_user_created
 -- VALUES ('product-images', 'product-images', true);
 
 -- Storage policies would go here but need to be run separately
+
+-- ============================================
+-- DATA MIGRATION: Products -> Product Batches
+-- ============================================
+-- Run this AFTER the schema above is applied.
+-- Creates one batch per existing product, migrating batch-specific fields.
+-- Existing products keep their columns temporarily for backwards compatibility.
+
+-- INSERT INTO product_batches (tenant_id, product_id, batch_number, serial_number, production_date, expiration_date, net_weight, gross_weight, status)
+-- SELECT
+--     tenant_id,
+--     id,
+--     batch_number,
+--     serial_number,
+--     production_date,
+--     expiration_date,
+--     net_weight,
+--     gross_weight,
+--     COALESCE(status, 'draft')
+-- FROM products
+-- WHERE serial_number IS NOT NULL AND serial_number != '';
+
+-- Migrate document references to batch_id:
+-- UPDATE documents d
+-- SET batch_id = pb.id
+-- FROM product_batches pb
+-- WHERE d.product_id = pb.product_id;
+
+-- Migrate supply chain references to batch_id:
+-- UPDATE supply_chain_entries sc
+-- SET batch_id = pb.id
+-- FROM product_batches pb
+-- WHERE sc.product_id = pb.product_id;

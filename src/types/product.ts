@@ -28,6 +28,44 @@ export interface Product {
   manufacturerVAT?: string; // Umsatzsteuer-Identifikationsnummer
 }
 
+export interface ProductBatch {
+  id: string;
+  tenantId: string;
+  productId: string;
+  batchNumber?: string;
+  serialNumber: string;
+  productionDate: string;
+  expirationDate?: string;
+  netWeight?: number;
+  grossWeight?: number;
+  status: 'draft' | 'live' | 'archived';
+  notes?: string;
+  // Override fields (null/undefined = inherit from product)
+  materialsOverride?: Material[];
+  certificationsOverride?: Certification[];
+  carbonFootprintOverride?: CarbonFootprint;
+  recyclabilityOverride?: RecyclabilityInfo;
+  descriptionOverride?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BatchListItem {
+  id: string;
+  productId: string;
+  batchNumber?: string;
+  serialNumber: string;
+  productionDate: string;
+  status: 'draft' | 'live' | 'archived';
+  hasOverrides: boolean;
+  createdAt: string;
+}
+
+export interface ProductWithBatches {
+  product: Product;
+  batches: BatchListItem[];
+}
+
 export interface Material {
   name: string;
   percentage: number;

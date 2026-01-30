@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -33,18 +34,21 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { SupplyChainPage } from '@/pages/SupplyChainPage';
 import { SuppliersPage } from '@/pages/SuppliersPage';
+import { BatchFormPage } from '@/pages/BatchFormPage';
+import { BatchDetailPage } from '@/pages/BatchDetailPage';
 import './index.css';
 
 // Protected Route - redirects to login if not authenticated
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useTranslation('common');
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <p className="mt-4 text-muted-foreground">{t('Loading...')}</p>
         </div>
       </div>
     );
@@ -84,11 +88,12 @@ function AppLayout() {
 }
 
 function PlaceholderPage({ title }: { title: string }) {
+  const { t } = useTranslation('common');
   return (
     <div className="flex h-[50vh] items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        <p className="mt-2 text-muted-foreground">This page is under development</p>
+        <p className="mt-2 text-muted-foreground">{t('This page is under development')}</p>
       </div>
     </div>
   );
@@ -123,6 +128,9 @@ function App() {
           <Route path="products/categories" element={<ProductCategoriesPage />} />
           <Route path="products/:id" element={<ProductPage />} />
           <Route path="products/:id/edit" element={<ProductFormPage />} />
+          <Route path="products/:id/batches/new" element={<BatchFormPage />} />
+          <Route path="products/:id/batches/:batchId" element={<BatchDetailPage />} />
+          <Route path="products/:id/batches/:batchId/edit" element={<BatchFormPage />} />
 
           {/* DPP / Passports */}
           <Route path="dpp" element={<DPPOverviewPage />} />

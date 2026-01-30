@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Search,
   Plus,
@@ -15,6 +18,7 @@ import {
   Download,
   Package,
   Loader2,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +69,8 @@ const statusConfig = {
 };
 
 export function ProductsPage() {
+  const { t } = useTranslation('products');
+  const locale = useLocale();
   const location = useLocation();
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,7 +94,7 @@ export function ProductsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) {
+    if (!confirm('Are you sure you want to delete this product? All batches will also be deleted.')) {
       return;
     }
     const result = await deleteProduct(id);
@@ -103,7 +109,7 @@ export function ProductsPage() {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.gtin.includes(searchQuery) ||
-      (product.serialNumber && product.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = !statusFilter || product.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -113,7 +119,7 @@ export function ProductsPage() {
       <div className="flex h-[50vh] items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-muted-foreground">Loading products...</p>
+          <p className="mt-4 text-muted-foreground">{t('Loading products...')}</p>
         </div>
       </div>
     );
@@ -124,15 +130,15 @@ export function ProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Products</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Products')}</h1>
           <p className="text-muted-foreground">
-            Manage your products and their Digital Product Passports
+            {t('Manage your products and their Digital Product Passports')}
           </p>
         </div>
         <Button asChild>
           <Link to="/products/new">
             <Plus className="mr-2 h-4 w-4" />
-            New Product
+            {t('New Product')}
           </Link>
         </Button>
       </div>
@@ -140,14 +146,14 @@ export function ProductsPage() {
       {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Filter & Search</CardTitle>
+          <CardTitle className="text-base">{t('Filter & Search')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name, GTIN or serial number..."
+                placeholder={t('Search by name, GTIN or manufacturer...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -167,7 +173,7 @@ export function ProductsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setStatusFilter(null)}>
-                  All Statuses
+                  {t('All Statuses')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {Object.entries(statusConfig).map(([key, config]) => (
@@ -180,7 +186,7 @@ export function ProductsPage() {
             </DropdownMenu>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {t('Export')}
             </Button>
           </div>
         </CardContent>
@@ -192,14 +198,14 @@ export function ProductsPage() {
           {products.length === 0 ? (
             <div className="py-16 text-center">
               <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">No products available</h3>
+              <h3 className="mt-4 text-lg font-semibold">{t('No products available')}</h3>
               <p className="mt-2 text-muted-foreground">
-                Create your first product to get started with DPP Manager.
+                {t('Create your first product to get started with DPP Manager.')}
               </p>
               <Button className="mt-6" asChild>
                 <Link to="/products/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  Create First Product
+                  {t('Create First Product')}
                 </Link>
               </Button>
             </div>
@@ -207,12 +213,12 @@ export function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>GTIN/EAN</TableHead>
-                  <TableHead>Serial Number</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>{t('Product Name')}</TableHead>
+                  <TableHead>{t('GTIN/EAN')}</TableHead>
+                  <TableHead>{t('Category')}</TableHead>
+                  <TableHead>{t('Batches')}</TableHead>
+                  <TableHead>{t('Status')}</TableHead>
+                  <TableHead>{t('Created')}</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -232,13 +238,19 @@ export function ProductsPage() {
                       <TableCell>
                         <code className="font-mono text-sm">{product.gtin}</code>
                       </TableCell>
-                      <TableCell>
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                          {product.serialNumber}
-                        </code>
-                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {product.category}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          to={`/products/${product.id}?tab=batches`}
+                          className="inline-flex items-center gap-1.5 hover:text-primary"
+                        >
+                          <Layers className="h-3.5 w-3.5" />
+                          <span className="text-sm font-medium">
+                            {product.batchCount} {product.batchCount === 1 ? t('Batch') : t('Batches')}
+                          </span>
+                        </Link>
                       </TableCell>
                       <TableCell>
                         {status && (
@@ -250,7 +262,7 @@ export function ProductsPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {product.createdAt
-                          ? new Date(product.createdAt).toLocaleDateString('en-US')
+                          ? formatDate(product.createdAt, locale)
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -264,19 +276,25 @@ export function ProductsPage() {
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
-                                View
+                                {t('View')}
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Edit
+                                {t('Edit')}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.id}/batches/new`}>
+                                <Layers className="mr-2 h-4 w-4" />
+                                {t('New Batch')}
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to={`/dpp/qr-generator?product=${product.id}`}>
                                 <QrCode className="mr-2 h-4 w-4" />
-                                QR-Code
+                                {t('QR-Code')}
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -285,7 +303,7 @@ export function ProductsPage() {
                               onClick={() => handleDelete(product.id)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t('Delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -299,7 +317,7 @@ export function ProductsPage() {
 
           {products.length > 0 && filteredProducts.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-muted-foreground">No products found</p>
+              <p className="text-muted-foreground">{t('No products found')}</p>
             </div>
           )}
         </CardContent>

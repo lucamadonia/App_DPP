@@ -1,4 +1,7 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Package,
   Leaf,
@@ -37,6 +40,8 @@ const ratingDescriptions: Record<string, string> = {
 };
 
 export function PublicCustomerPage() {
+  const { t } = useTranslation('dpp');
+  const locale = useLocale();
   const { gtin, serial } = useParams();
   const { product, visibilityV2, loading } = usePublicProduct(gtin, serial);
 
@@ -54,8 +59,8 @@ export function PublicCustomerPage() {
               <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
-              <h1 className="text-xl font-bold">Loading product data...</h1>
-              <p className="text-muted-foreground">Please wait a moment.</p>
+              <h1 className="text-xl font-bold">{t('Loading product data...')}</h1>
+              <p className="text-muted-foreground">{t('Please wait a moment.')}</p>
             </div>
           </CardContent>
         </Card>
@@ -72,10 +77,9 @@ export function PublicCustomerPage() {
               <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
                 <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
-              <h1 className="text-xl font-bold">Product not found</h1>
+              <h1 className="text-xl font-bold">{t('Product not found')}</h1>
               <p className="text-muted-foreground">
-                The product with GTIN <code className="font-mono bg-muted px-1 rounded">{gtin}</code> and
-                serial number <code className="font-mono bg-muted px-1 rounded">{serial}</code> was not found.
+                {t('The product with GTIN {{gtin}} and serial number {{serial}} was not found.', { gtin, serial })}
               </p>
             </div>
           </CardContent>
@@ -109,7 +113,7 @@ export function PublicCustomerPage() {
                 )}
                 {isFieldVisible('carbonRating') && product.carbonFootprint && (
                   <Badge className={`${ratingColors[product.carbonFootprint.rating]} text-white`}>
-                    CO2 Rating: {product.carbonFootprint.rating}
+                    {t('CO2 Rating')}: {product.carbonFootprint.rating}
                   </Badge>
                 )}
               </div>
@@ -133,10 +137,10 @@ export function PublicCustomerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Material Composition
+              {t('Material Composition')}
             </CardTitle>
             <CardDescription>
-              Materials used and their origins
+              {t('Materials used and their origins')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -148,7 +152,7 @@ export function PublicCustomerPage() {
                     {material.recyclable && (
                       <Badge variant="outline" className="text-xs">
                         <Recycle className="h-3 w-3 mr-1" />
-                        Recyclable
+                        {t('Recyclable')}
                       </Badge>
                     )}
                   </div>
@@ -158,7 +162,7 @@ export function PublicCustomerPage() {
                 {isFieldVisible('materialOrigins') && material.origin && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
-                    Origin: {material.origin}
+                    {t('Origin')}: {material.origin}
                   </p>
                 )}
               </div>
@@ -173,10 +177,10 @@ export function PublicCustomerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Leaf className="h-5 w-5" />
-              Carbon Footprint
+              {t('Carbon Footprint')}
             </CardTitle>
             <CardDescription>
-              Climate impact across the product lifecycle
+              {t('Climate impact across the product lifecycle')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -189,7 +193,7 @@ export function PublicCustomerPage() {
               </div>
               <div>
                 <p className="font-semibold text-lg">
-                  {product.carbonFootprint.totalKgCO2} kg CO2
+                  {product.carbonFootprint.totalKgCO2} {t('kg CO2')}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {ratingDescriptions[product.carbonFootprint.rating]}
@@ -203,11 +207,11 @@ export function PublicCustomerPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold">{product.carbonFootprint.productionKgCO2} kg</p>
-                <p className="text-sm text-muted-foreground">Production</p>
+                <p className="text-sm text-muted-foreground">{t('Production')}</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold">{product.carbonFootprint.transportKgCO2} kg</p>
-                <p className="text-sm text-muted-foreground">Transport</p>
+                <p className="text-sm text-muted-foreground">{t('Transport')}</p>
               </div>
             </div>
           </CardContent>
@@ -220,10 +224,10 @@ export function PublicCustomerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Recycle className="h-5 w-5" />
-              Recycling & Disposal
+              {t('Recycling & Disposal')}
             </CardTitle>
             <CardDescription>
-              Guide for environmentally friendly disposal
+              {t('Guide for environmentally friendly disposal')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -232,7 +236,7 @@ export function PublicCustomerPage() {
                 <div className="text-4xl font-bold text-green-600">
                   {product.recyclability.recyclablePercentage}%
                 </div>
-                <p className="text-sm text-muted-foreground">Recyclable</p>
+                <p className="text-sm text-muted-foreground">{t('Recyclable')}</p>
               </div>
               <Progress value={product.recyclability.recyclablePercentage} className="flex-1 h-4" />
             </div>
@@ -241,7 +245,7 @@ export function PublicCustomerPage() {
               <div className="p-4 bg-muted/50 rounded-lg">
                 <h4 className="font-medium mb-2 flex items-center gap-2">
                   <Info className="h-4 w-4" />
-                  Recycling Instructions
+                  {t('Recycling Instructions')}
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   {product.recyclability.instructions}
@@ -251,7 +255,7 @@ export function PublicCustomerPage() {
 
             {isFieldVisible('disposalMethods') && (
               <div>
-                <h4 className="font-medium mb-2">Disposal Methods</h4>
+                <h4 className="font-medium mb-2">{t('Disposal Methods')}</h4>
                 <div className="flex flex-wrap gap-2">
                   {product.recyclability.disposalMethods.map((method, index) => (
                     <Badge key={index} variant="outline">
@@ -271,10 +275,10 @@ export function PublicCustomerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="h-5 w-5" />
-              Certifications
+              {t('Certifications')}
             </CardTitle>
             <CardDescription>
-              Verified quality and sustainability standards
+              {t('Verified quality and sustainability standards')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -290,11 +294,11 @@ export function PublicCustomerPage() {
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">
-                      Valid until: {new Date(cert.validUntil).toLocaleDateString('en-US')}
+                      {t('Valid until')}: {formatDate(cert.validUntil, locale)}
                     </p>
                     <Badge variant="secondary" className="text-xs">
                       <ShieldCheck className="h-3 w-3 mr-1" />
-                      Valid
+                      {t('Valid')}
                     </Badge>
                   </div>
                 </div>
@@ -310,10 +314,10 @@ export function PublicCustomerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />
-              Supply Chain
+              {t('Supply Chain')}
             </CardTitle>
             <CardDescription>
-              The journey of your product from raw material to you
+              {t('The journey of your product from raw material to you')}
             </CardDescription>
           </CardHeader>
           <CardContent>

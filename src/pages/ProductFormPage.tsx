@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument } from '@/services/supabase';
 import type { Category, Supplier } from '@/types/database';
@@ -48,6 +49,7 @@ const steps = [
 ];
 
 export function ProductFormPage() {
+  const { t } = useTranslation('products');
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
@@ -113,16 +115,10 @@ export function ProductFormPage() {
         name: product.name || '',
         manufacturer: product.manufacturer || '',
         gtin: product.gtin || '',
-        serialNumber: product.serialNumber || '',
         category: product.category || '',
         description: product.description || '',
-        batchNumber: product.batchNumber || '',
         hsCode: product.hsCode || '',
         countryOfOrigin: product.countryOfOrigin || '',
-        netWeight: product.netWeight != null ? String(product.netWeight) : '',
-        grossWeight: product.grossWeight != null ? String(product.grossWeight) : '',
-        productionDate: product.productionDate ? product.productionDate.slice(0, 10) : '',
-        expirationDate: product.expirationDate ? product.expirationDate.slice(0, 10) : '',
         materials: product.materials?.length
           ? product.materials.map(m => ({
               name: m.name || '',
@@ -156,16 +152,10 @@ export function ProductFormPage() {
     name: '',
     manufacturer: '',
     gtin: '',
-    serialNumber: '',
     category: '',
     description: '',
-    batchNumber: '',
     hsCode: '',
     countryOfOrigin: '',
-    netWeight: '',
-    grossWeight: '',
-    productionDate: '',
-    expirationDate: '',
     materials: [{ name: '', percentage: 0, recyclable: false, origin: '' }],
     recyclablePercentage: 0,
     recyclingInstructions: '',
@@ -275,16 +265,10 @@ export function ProductFormPage() {
         name: formData.name,
         manufacturer: formData.manufacturer,
         gtin: formData.gtin,
-        serialNumber: formData.serialNumber,
         category: formData.category,
         description: formData.description,
-        batchNumber: formData.batchNumber || undefined,
         hsCode: formData.hsCode || undefined,
         countryOfOrigin: formData.countryOfOrigin || undefined,
-        netWeight: formData.netWeight ? parseFloat(formData.netWeight) : undefined,
-        grossWeight: formData.grossWeight ? parseFloat(formData.grossWeight) : undefined,
-        productionDate: formData.productionDate || undefined,
-        expirationDate: formData.expirationDate || undefined,
         materials: formData.materials,
         certifications: formData.certifications.map((name) => ({
           name,
@@ -335,7 +319,8 @@ export function ProductFormPage() {
               lead_time_days: assignment.lead_time_days,
             });
           }
-          navigate('/products');
+          // Redirect to create first batch for this product
+          navigate(`/products/${result.id}/batches/new`);
         } else if (result.success) {
           navigate('/products');
         } else {
@@ -362,12 +347,12 @@ export function ProductFormPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {isEditMode ? 'Edit Product' : 'Create New Product'}
+            {isEditMode ? t('Edit Product') : t('Create New Product')}
           </h1>
           <p className="text-muted-foreground">
             {isEditMode
-              ? 'Edit the Digital Product Passport'
-              : 'Create a new Digital Product Passport'}
+              ? t('Edit the Digital Product Passport')
+              : t('Create a new Digital Product Passport')}
           </p>
         </div>
       </div>
@@ -375,7 +360,7 @@ export function ProductFormPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <span className="ml-3 text-muted-foreground">Loading product data…</span>
+          <span className="ml-3 text-muted-foreground">{t('Loading product data...')}</span>
         </div>
       ) : (<>
       {/* Progress */}
@@ -423,11 +408,11 @@ export function ProductFormPage() {
             {steps[currentStep].title}
           </CardTitle>
           <CardDescription>
-            {currentStep === 0 && 'Enter basic product information'}
-            {currentStep === 1 && 'Define materials and sustainability data'}
-            {currentStep === 2 && 'Add certifications and compliance data'}
-            {currentStep === 3 && 'Upload relevant documents'}
-            {currentStep === 4 && 'Assign suppliers and economic operators'}
+            {currentStep === 0 && t('Enter basic product information')}
+            {currentStep === 1 && t('Define materials and sustainability data')}
+            {currentStep === 2 && t('Add certifications and compliance data')}
+            {currentStep === 3 && t('Upload relevant documents')}
+            {currentStep === 4 && t('Assign suppliers and economic operators')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -435,23 +420,23 @@ export function ProductFormPage() {
           {currentStep === 0 && (
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Product Name *</label>
+                <label className="text-sm font-medium">{t('Product Name')} *</label>
                 <Input
-                  placeholder="e.g. Eco Sneaker Pro"
+                  placeholder={t('e.g. Eco Sneaker Pro')}
                   value={formData.name}
                   onChange={(e) => updateField('name', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Manufacturer *</label>
+                <label className="text-sm font-medium">{t('Manufacturer')} *</label>
                 <Input
-                  placeholder="e.g. GreenStep GmbH"
+                  placeholder={t('e.g. GreenStep GmbH')}
                   value={formData.manufacturer}
                   onChange={(e) => updateField('manufacturer', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">GTIN/EAN *</label>
+                <label className="text-sm font-medium">{t('GTIN/EAN')} *</label>
                 <Input
                   placeholder="e.g. 4012345678901"
                   value={formData.gtin}
@@ -460,19 +445,10 @@ export function ProductFormPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Serial Number</label>
-                <Input
-                  placeholder="e.g. GSP-2024-001234"
-                  value={formData.serialNumber}
-                  onChange={(e) => updateField('serialNumber', e.target.value)}
-                  className="font-mono"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category *</label>
+                <label className="text-sm font-medium">{t('Category')} *</label>
                 <Select value={selectedMainCategory} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder={categoriesLoading ? 'Loading...' : 'Select category...'} />
+                    <SelectValue placeholder={categoriesLoading ? t('Loading...') : t('Select category...')} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.filter(c => !c.parent_id).map((cat) => (
@@ -485,7 +461,7 @@ export function ProductFormPage() {
               </div>
               {selectedMainCategory && selectedSubcategories.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Subcategory</label>
+                  <label className="text-sm font-medium">{t('Subcategory')}</label>
                   <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -499,15 +475,15 @@ export function ProductFormPage() {
                       >
                         {formData.category.includes(' / ')
                           ? formData.category.split(' / ')[1]
-                          : 'Search subcategory...'}
+                          : t('Search subcategory...')}
                         <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search subcategory..." />
+                        <CommandInput placeholder={t('Search subcategory...')} />
                         <CommandList>
-                          <CommandEmpty>No subcategory found.</CommandEmpty>
+                          <CommandEmpty>{t('No subcategory found.')}</CommandEmpty>
                           <CommandGroup>
                             {selectedSubcategories.map((sub) => (
                               <CommandItem
@@ -537,28 +513,20 @@ export function ProductFormPage() {
                 </div>
               )}
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium">Description</label>
+                <label className="text-sm font-medium">{t('Description')}</label>
                 <textarea
                   className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="Product description..."
+                  placeholder={t('Product description...')}
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
                 />
               </div>
 
               <Separator className="md:col-span-2" />
-              <h3 className="font-medium md:col-span-2">Extended Product Data</h3>
+              <h3 className="font-medium md:col-span-2">{t('Extended Product Data')}</h3>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Batch Number</label>
-                <Input
-                  placeholder="e.g. LOT-2025-001"
-                  value={formData.batchNumber}
-                  onChange={(e) => updateField('batchNumber', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">HS Code (Customs Tariff Number)</label>
+                <label className="text-sm font-medium">{t('HS Code (Customs Tariff Number)')}</label>
                 <Input
                   placeholder="e.g. 8517.12.00"
                   value={formData.hsCode}
@@ -566,47 +534,24 @@ export function ProductFormPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Country of Origin</label>
+                <label className="text-sm font-medium">{t('Country of Origin')}</label>
                 <Input
                   placeholder="e.g. Germany"
                   value={formData.countryOfOrigin}
                   onChange={(e) => updateField('countryOfOrigin', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Net Weight (g)</label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 250"
-                  value={formData.netWeight}
-                  onChange={(e) => updateField('netWeight', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Gross Weight (g)</label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 320"
-                  value={formData.grossWeight}
-                  onChange={(e) => updateField('grossWeight', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Production Date</label>
-                <Input
-                  type="date"
-                  value={formData.productionDate}
-                  onChange={(e) => updateField('productionDate', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Expiration Date (optional)</label>
-                <Input
-                  type="date"
-                  value={formData.expirationDate}
-                  onChange={(e) => updateField('expirationDate', e.target.value)}
-                />
-              </div>
+
+              {isEditMode && (
+                <>
+                  <div className="md:col-span-2 p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                    <p>{t('Batch-specific fields (serial number, batch number, production date, weights) are now managed per batch.')}</p>
+                    <p className="mt-1">
+                      {t('Go to the Batches tab on the product detail page to manage batches.')}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -615,25 +560,25 @@ export function ProductFormPage() {
             <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Material Composition</h3>
+                  <h3 className="font-medium">{t('Material Composition')}</h3>
                   <Button variant="outline" size="sm" onClick={addMaterial}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Material
+                    {t('Add Material')}
                   </Button>
                 </div>
                 <div className="space-y-4">
                   {formData.materials.map((material, index) => (
                     <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Material</label>
+                        <label className="text-sm font-medium">{t('Material')}</label>
                         <Input
-                          placeholder="e.g. Recycled PET"
+                          placeholder={t('e.g. Recycled PET')}
                           value={material.name}
                           onChange={(e) => updateMaterial(index, 'name', e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Share (%)</label>
+                        <label className="text-sm font-medium">{t('Share (%)')}</label>
                         <Input
                           type="number"
                           min="0"
@@ -643,7 +588,7 @@ export function ProductFormPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Origin</label>
+                        <label className="text-sm font-medium">{t('Origin')}</label>
                         <Input
                           placeholder="e.g. Germany"
                           value={material.origin}
@@ -651,7 +596,7 @@ export function ProductFormPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Recyclable</label>
+                        <label className="text-sm font-medium">{t('Recyclable')}</label>
                         <div className="flex items-center h-10">
                           <input
                             type="checkbox"
@@ -659,7 +604,7 @@ export function ProductFormPage() {
                             onChange={(e) => updateMaterial(index, 'recyclable', e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300"
                           />
-                          <span className="ml-2 text-sm">Yes</span>
+                          <span className="ml-2 text-sm">{t('Yes')}</span>
                         </div>
                       </div>
                       <div className="flex items-end">
@@ -681,7 +626,7 @@ export function ProductFormPage() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Total Recyclability (%)</label>
+                  <label className="text-sm font-medium">{t('Total Recyclability (%)')}</label>
                   <Input
                     type="number"
                     min="0"
@@ -691,10 +636,10 @@ export function ProductFormPage() {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Recycling Instructions</label>
+                  <label className="text-sm font-medium">{t('Recycling Instructions')}</label>
                   <textarea
                     className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="Disposal instructions for consumers..."
+                    placeholder={t('Disposal instructions for consumers...')}
                     value={formData.recyclingInstructions}
                     onChange={(e) => updateField('recyclingInstructions', e.target.value)}
                   />
@@ -707,7 +652,7 @@ export function ProductFormPage() {
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h3 className="font-medium mb-4">Certifications</h3>
+                <h3 className="font-medium mb-4">{t('Certifications')}</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {[
                     'CE-Kennzeichnung',
@@ -751,7 +696,7 @@ export function ProductFormPage() {
                 <>
                   <Separator />
                   <div>
-                    <h3 className="font-medium mb-4">Selected Certifications</h3>
+                    <h3 className="font-medium mb-4">{t('Selected Certifications')}</h3>
                     <div className="flex flex-wrap gap-2">
                       {formData.certifications.map((cert) => (
                         <Badge key={cert} variant="secondary">
@@ -791,10 +736,10 @@ export function ProductFormPage() {
                     <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
                   )}
                   <p className="mt-2 text-sm font-medium">
-                    {isUploadingDoc ? 'Uploading...' : 'Drag files here'}
+                    {isUploadingDoc ? t('Uploading...') : t('Drag files here')}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    or click to upload
+                    {t('or click to upload')}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     PDF, PNG, JPG up to 10MB
@@ -804,7 +749,7 @@ export function ProductFormPage() {
 
               {uploadedDocs.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-medium">Uploaded Documents</h4>
+                  <h4 className="font-medium">{t('Uploaded Documents')}</h4>
                   {uploadedDocs.map((doc, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
@@ -827,13 +772,13 @@ export function ProductFormPage() {
               )}
 
               <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2">Recommended Documents:</h4>
+                <h4 className="font-medium mb-2">{t('Recommended Documents:')}</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Declaration of Conformity (DoC)</li>
-                  <li>• CE Certificate</li>
-                  <li>• Test Reports</li>
-                  <li>• Material Data Sheets</li>
-                  <li>• LCA (Life Cycle Assessment)</li>
+                  <li>• {t('Declaration of Conformity (DoC)')}</li>
+                  <li>• {t('CE Certificate')}</li>
+                  <li>• {t('Test Reports')}</li>
+                  <li>• {t('Material Data Sheets')}</li>
+                  <li>• {t('LCA (Life Cycle Assessment)')}</li>
                 </ul>
               </div>
             </div>
@@ -844,7 +789,7 @@ export function ProductFormPage() {
             <div className="space-y-6">
               {/* Own Company */}
               <div>
-                <h3 className="font-medium mb-4">Own Company</h3>
+                <h3 className="font-medium mb-4">{t('Own Company')}</h3>
                 <div className="space-y-3 p-4 border rounded-lg">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -854,7 +799,7 @@ export function ProductFormPage() {
                       className="h-4 w-4 rounded border-gray-300"
                     />
                     <span className="font-medium">
-                      {branding.appName || 'Own Company'} is manufacturer of this product
+                      {t('{{company}} is manufacturer of this product', { company: branding.appName || t('Own Company') })}
                     </span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -865,16 +810,16 @@ export function ProductFormPage() {
                       className="h-4 w-4 rounded border-gray-300"
                     />
                     <span className="font-medium">
-                      {branding.appName || 'Own Company'} is importer of this product
+                      {t('{{company}} is importer of this product', { company: branding.appName || t('Own Company') })}
                     </span>
                   </label>
                   {(isSelfManufacturer || isSelfImporter) && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {isSelfManufacturer && (
-                        <Badge variant="secondary">Manufacturer (self)</Badge>
+                        <Badge variant="secondary">{t('Manufacturer (self)')}</Badge>
                       )}
                       {isSelfImporter && (
-                        <Badge variant="secondary">Importer (self)</Badge>
+                        <Badge variant="secondary">{t('Importer (self)')}</Badge>
                       )}
                     </div>
                   )}
@@ -886,19 +831,19 @@ export function ProductFormPage() {
               {/* External Suppliers */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">External Suppliers</h3>
+                  <h3 className="font-medium">{t('External Suppliers')}</h3>
                   <Button variant="outline" size="sm" onClick={addSupplierAssignment}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Supplier
+                    {t('Add Supplier')}
                   </Button>
                 </div>
 
                 {selectedSuppliers.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground border rounded-lg">
                     <Truck className="mx-auto h-10 w-10 opacity-30 mb-2" />
-                    <p>No suppliers assigned yet</p>
+                    <p>{t('No suppliers assigned yet')}</p>
                     <p className="text-xs mt-1">
-                      Click "Add Supplier" to assign external partners
+                      {t('Click "Add Supplier" to assign external partners')}
                     </p>
                   </div>
                 ) : (
@@ -906,13 +851,13 @@ export function ProductFormPage() {
                     {selectedSuppliers.map((assignment, index) => (
                       <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-sm font-medium">Supplier</label>
+                          <label className="text-sm font-medium">{t('Supplier')}</label>
                           <Select
                             value={assignment.supplier_id}
                             onValueChange={(v) => updateSupplierAssignment(index, 'supplier_id', v)}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select supplier..." />
+                              <SelectValue placeholder={t('Select supplier...')} />
                             </SelectTrigger>
                             <SelectContent>
                               {suppliers.map((s) => (
@@ -924,7 +869,7 @@ export function ProductFormPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Role</label>
+                          <label className="text-sm font-medium">{t('Role')}</label>
                           <Select
                             value={assignment.role}
                             onValueChange={(v) => updateSupplierAssignment(index, 'role', v)}
@@ -942,7 +887,7 @@ export function ProductFormPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Lead Time (Days)</label>
+                          <label className="text-sm font-medium">{t('Lead Time (Days)')}</label>
                           <Input
                             type="number"
                             min="0"
@@ -952,7 +897,7 @@ export function ProductFormPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Options</label>
+                          <label className="text-sm font-medium">{t('Options')}</label>
                           <div className="flex items-center gap-3 h-10">
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -961,7 +906,7 @@ export function ProductFormPage() {
                                 onChange={(e) => updateSupplierAssignment(index, 'is_primary', e.target.checked)}
                                 className="h-4 w-4 rounded border-gray-300"
                               />
-                              <span className="text-sm">Primary</span>
+                              <span className="text-sm">{t('Primary')}</span>
                             </label>
                             <Button
                               variant="ghost"
@@ -986,18 +931,18 @@ export function ProductFormPage() {
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={prevStep} disabled={currentStep === 0}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          {t('Back')}
         </Button>
 
         <div className="flex gap-2">
           <Button variant="outline">
             <Save className="mr-2 h-4 w-4" />
-            Save as Draft
+            {t('Save as Draft')}
           </Button>
 
           {currentStep < steps.length - 1 ? (
             <Button onClick={nextStep}>
-              Next
+              {t('Next')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
@@ -1007,7 +952,7 @@ export function ProductFormPage() {
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}
-              {isSubmitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Product'}
+              {isSubmitting ? t('Saving...') : isEditMode ? t('Save Changes') : t('Create Product')}
             </Button>
           )}
         </div>

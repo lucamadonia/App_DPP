@@ -7,7 +7,7 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { Product, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry } from '@/types/product';
 
-// Transform database row to Product type
+// Transform database row to Product type (master data only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformProduct(row: any): Product {
   return {
@@ -15,8 +15,8 @@ function transformProduct(row: any): Product {
     name: row.name,
     manufacturer: row.manufacturer,
     gtin: row.gtin,
-    serialNumber: row.serial_number,
-    productionDate: row.production_date,
+    serialNumber: row.serial_number || '',
+    productionDate: row.production_date || '',
     expirationDate: row.expiration_date || undefined,
     category: row.category,
     description: row.description,
@@ -41,6 +41,29 @@ function transformProduct(row: any): Product {
   };
 }
 
+/**
+ * Merge product master data with batch data.
+ * Batch overrides take precedence when not null/undefined.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mergeProductWithBatch(product: Product, batch: any): Product {
+  return {
+    ...product,
+    serialNumber: batch.serial_number || product.serialNumber,
+    productionDate: batch.production_date || product.productionDate,
+    expirationDate: batch.expiration_date || product.expirationDate,
+    batchNumber: batch.batch_number || product.batchNumber,
+    netWeight: batch.net_weight != null ? Number(batch.net_weight) : product.netWeight,
+    grossWeight: batch.gross_weight != null ? Number(batch.gross_weight) : product.grossWeight,
+    // Override fields: batch override wins if present
+    description: batch.description_override || product.description,
+    materials: batch.materials_override || product.materials,
+    certifications: batch.certifications_override || product.certifications,
+    carbonFootprint: batch.carbon_footprint_override || product.carbonFootprint,
+    recyclability: batch.recyclability_override || product.recyclability,
+  };
+}
+
 export interface ProductListItem {
   id: string;
   name: string;
@@ -51,6 +74,7 @@ export interface ProductListItem {
   category: string;
   imageUrl?: string;
   batch?: string;
+  batchCount: number;
   status?: 'draft' | 'live' | 'archived';
   createdAt?: string;
 }
@@ -67,7 +91,7 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 
   let query = supabase
     .from('products')
-    .select('*')
+    .select('*, product_batches(id)')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
@@ -88,11 +112,12 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
     name: p.name,
     manufacturer: p.manufacturer,
     gtin: p.gtin,
-    serial: p.serial_number,
-    serialNumber: p.serial_number,
+    serial: p.serial_number || '',
+    serialNumber: p.serial_number || '',
     category: p.category,
     imageUrl: p.image_url || undefined,
     batch: p.batch_number || undefined,
+    batchCount: Array.isArray(p.product_batches) ? p.product_batches.length : 0,
     status: p.status || 'draft',
     createdAt: p.created_at,
   }));
@@ -100,43 +125,85 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 
 /**
  * Get a product by GTIN and serial number (for public DPP view)
+ * Two-step lookup: find product by GTIN, then batch by serial_number, then merge.
+ * Falls back to legacy direct product lookup for backwards compatibility.
  */
 export async function getProductByGtinSerial(
   gtin: string,
   serial: string
 ): Promise<Product | null> {
-  const { data, error } = await supabase
+  // Step 1: Find the product by GTIN
+  const { data: productRows, error: productError } = await supabase
     .from('products')
     .select('*')
-    .eq('gtin', gtin)
-    .eq('serial_number', serial)
-    .single();
+    .eq('gtin', gtin);
 
-  if (error || !data) {
+  if (productError || !productRows || productRows.length === 0) {
     return null;
   }
 
-  const product = transformProduct(data);
+  // Step 2: Try to find a batch with the given serial number
+  for (const productRow of productRows) {
+    const { data: batchRow } = await supabase
+      .from('product_batches')
+      .select('*')
+      .eq('product_id', productRow.id)
+      .eq('serial_number', serial)
+      .single();
 
-  // Load supply chain entries
-  const { data: supplyChain } = await supabase
-    .from('supply_chain_entries')
-    .select('*')
-    .eq('product_id', data.id)
-    .order('step', { ascending: true });
+    if (batchRow) {
+      // Found batch - merge product + batch
+      const product = transformProduct(productRow);
+      const merged = mergeProductWithBatch(product, batchRow);
 
-  if (supplyChain) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    product.supplyChain = supplyChain.map((sc: any) => ({
-      step: sc.step,
-      location: sc.location,
-      country: sc.country,
-      date: sc.date,
-      description: sc.description,
-    }));
+      // Load supply chain entries (product-level + batch-level)
+      const { data: supplyChain } = await supabase
+        .from('supply_chain_entries')
+        .select('*')
+        .eq('product_id', productRow.id)
+        .order('step', { ascending: true });
+
+      if (supplyChain) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        merged.supplyChain = supplyChain.map((sc: any) => ({
+          step: sc.step,
+          location: sc.location,
+          country: sc.country,
+          date: sc.date,
+          description: sc.description,
+        }));
+      }
+
+      return merged;
+    }
   }
 
-  return product;
+  // Fallback: legacy lookup (product has serial_number directly)
+  const legacyRow = productRows.find(p => p.serial_number === serial);
+  if (legacyRow) {
+    const product = transformProduct(legacyRow);
+
+    const { data: supplyChain } = await supabase
+      .from('supply_chain_entries')
+      .select('*')
+      .eq('product_id', legacyRow.id)
+      .order('step', { ascending: true });
+
+    if (supplyChain) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      product.supplyChain = supplyChain.map((sc: any) => ({
+        step: sc.step,
+        location: sc.location,
+        country: sc.country,
+        date: sc.date,
+        description: sc.description,
+      }));
+    }
+
+    return product;
+  }
+
+  return null;
 }
 
 /**
@@ -177,7 +244,7 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 /**
- * Create a new product
+ * Create a new product (master data only, no batch-specific fields)
  */
 export async function createProduct(
   product: Partial<Product>
@@ -304,6 +371,8 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; err
     .delete()
     .eq('product_id', id);
 
+  // Batches are CASCADE deleted via FK
+
   const { error } = await supabase
     .from('products')
     .delete()
@@ -322,13 +391,14 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; err
  */
 export async function getProductStats(): Promise<{
   total: number;
+  totalBatches: number;
   withDpp: number;
   expiringSoon: number;
   byCategory: Record<string, number>;
 }> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) {
-    return { total: 0, withDpp: 0, expiringSoon: 0, byCategory: {} };
+    return { total: 0, totalBatches: 0, withDpp: 0, expiringSoon: 0, byCategory: {} };
   }
 
   // Get all products
@@ -338,8 +408,14 @@ export async function getProductStats(): Promise<{
     .eq('tenant_id', tenantId);
 
   if (error || !products) {
-    return { total: 0, withDpp: 0, expiringSoon: 0, byCategory: {} };
+    return { total: 0, totalBatches: 0, withDpp: 0, expiringSoon: 0, byCategory: {} };
   }
+
+  // Get batch count
+  const { count: batchCount } = await supabase
+    .from('product_batches')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId);
 
   const now = new Date();
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -363,7 +439,8 @@ export async function getProductStats(): Promise<{
 
   return {
     total: products.length,
-    withDpp: products.length, // All products have DPP in our system
+    totalBatches: batchCount || 0,
+    withDpp: batchCount || products.length,
     expiringSoon,
     byCategory,
   };
