@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Package,
   MapPin,
@@ -62,6 +65,8 @@ import {
 import type { SupplyChainEntry, Supplier } from '@/types/database';
 
 export function SupplyChainPage() {
+  const { t } = useTranslation('settings');
+  const locale = useLocale();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<'table' | 'timeline'>('table');
@@ -273,21 +278,21 @@ export function SupplyChainPage() {
         return (
           <Badge variant="destructive" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
-            High
+            {t('High')}
           </Badge>
         );
       case 'medium':
         return (
           <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             <Clock className="h-3 w-3" />
-            Medium
+            {t('Medium')}
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" className="gap-1 text-green-600 border-green-200">
             <CheckCircle2 className="h-3 w-3" />
-            Low
+            {t('Low')}
           </Badge>
         );
     }
@@ -310,14 +315,14 @@ export function SupplyChainPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Supply Chain</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Supply Chain')}</h1>
           <p className="text-muted-foreground">
-            Supply chain transparency and traceability
+            {t('Supply chain transparency and traceability')}
           </p>
         </div>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 h-4 w-4" />
-          New Entry
+          {t('New Entry')}
         </Button>
       </div>
 
@@ -327,10 +332,10 @@ export function SupplyChainPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Total</span>
+              <span className="text-sm font-medium">{t('Total')}</span>
             </div>
             <p className="text-2xl font-bold mt-1">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Supply Chain Steps</p>
+            <p className="text-xs text-muted-foreground">{t('Supply Chain Steps')}</p>
           </CardContent>
         </Card>
 
@@ -338,10 +343,10 @@ export function SupplyChainPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium">High Risk</span>
+              <span className="text-sm font-medium">{t('High Risk')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-destructive">{stats.highRisk}</p>
-            <p className="text-xs text-muted-foreground">Entries</p>
+            <p className="text-xs text-muted-foreground">{t('Entries')}</p>
           </CardContent>
         </Card>
 
@@ -349,10 +354,10 @@ export function SupplyChainPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-yellow-600" />
-              <span className="text-sm font-medium">Medium Risk</span>
+              <span className="text-sm font-medium">{t('Medium Risk')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-yellow-600">{stats.mediumRisk}</p>
-            <p className="text-xs text-muted-foreground">Entries</p>
+            <p className="text-xs text-muted-foreground">{t('Entries')}</p>
           </CardContent>
         </Card>
 
@@ -360,10 +365,10 @@ export function SupplyChainPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">Verified</span>
+              <span className="text-sm font-medium">{t('Verified')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-green-600">{stats.verified}</p>
-            <p className="text-xs text-muted-foreground">of {stats.total}</p>
+            <p className="text-xs text-muted-foreground">{t('of {{total}}', { total: stats.total })}</p>
           </CardContent>
         </Card>
 
@@ -371,10 +376,10 @@ export function SupplyChainPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Countries</span>
+              <span className="text-sm font-medium">{t('Countries')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-blue-600">{stats.countries}</p>
-            <p className="text-xs text-muted-foreground">involved</p>
+            <p className="text-xs text-muted-foreground">{t('involved')}</p>
           </CardContent>
         </Card>
       </div>
@@ -383,7 +388,7 @@ export function SupplyChainPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Supply Chain Entries</CardTitle>
+            <CardTitle className="text-lg">{t('Supply Chain Entries')}</CardTitle>
             <div className="flex items-center gap-2">
               <Select value={selectedProductId} onValueChange={setSelectedProductId}>
                 <SelectTrigger className="w-[200px]">
@@ -391,7 +396,7 @@ export function SupplyChainPage() {
                   <SelectValue placeholder="Filter by product" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Products</SelectItem>
+                  <SelectItem value="all">{t('All Products')}</SelectItem>
                   {products.map(product => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.name}
@@ -403,7 +408,7 @@ export function SupplyChainPage() {
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search..."
+                  placeholder={t('Search...', { ns: 'common' })}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -427,8 +432,8 @@ export function SupplyChainPage() {
           {/* View Tabs */}
           <Tabs value={activeView} onValueChange={v => setActiveView(v as 'table' | 'timeline')} className="mb-4">
             <TabsList>
-              <TabsTrigger value="table">Table</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="table">{t('Table')}</TabsTrigger>
+              <TabsTrigger value="timeline">{t('Timeline')}</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -441,22 +446,22 @@ export function SupplyChainPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[60px]">Step</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Risk</TableHead>
-                  <TableHead>Verified</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead className="w-[60px]">{t('Step')}</TableHead>
+                  <TableHead>{t('Product')}</TableHead>
+                  <TableHead>{t('Location')}</TableHead>
+                  <TableHead>{t('Country')}</TableHead>
+                  <TableHead>{t('Date')}</TableHead>
+                  <TableHead>{t('Supplier')}</TableHead>
+                  <TableHead>{t('Risk')}</TableHead>
+                  <TableHead>{t('Verified')}</TableHead>
+                  <TableHead className="w-[100px]">{t('Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredEntries.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      No entries found
+                      {t('No entries found')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -478,7 +483,7 @@ export function SupplyChainPage() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                          {new Date(entry.date).toLocaleDateString('en-US')}
+                          {formatDate(entry.date, locale)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -516,7 +521,7 @@ export function SupplyChainPage() {
             /* Timeline View */
             <div className="space-y-6">
               {Object.keys(entriesByProduct).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No entries found</div>
+                <div className="text-center py-8 text-muted-foreground">{t('No entries found')}</div>
               ) : (
                 Object.entries(entriesByProduct).map(([productId, entries]) => (
                   <Card key={productId}>
@@ -525,7 +530,7 @@ export function SupplyChainPage() {
                         <Package className="h-4 w-4" />
                         {getProductName(productId)}
                       </CardTitle>
-                      <CardDescription>{entries.length} steps in the supply chain</CardDescription>
+                      <CardDescription>{t('{{count}} steps in the supply chain', { count: entries.length })}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="relative">
@@ -564,7 +569,7 @@ export function SupplyChainPage() {
                                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                       <span className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
-                                        {new Date(entry.date).toLocaleDateString('en-US')}
+                                        {formatDate(entry.date, locale)}
                                       </span>
                                       {(entry.supplier_id || entry.supplier) && (
                                         <span className="flex items-center gap-1">
@@ -575,7 +580,7 @@ export function SupplyChainPage() {
                                       {entry.verified && (
                                         <span className="flex items-center gap-1 text-green-600">
                                           <CheckCircle2 className="h-3 w-3" />
-                                          Verified
+                                          {t('Verified')}
                                         </span>
                                       )}
                                     </div>
@@ -613,19 +618,19 @@ export function SupplyChainPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'New Supply Chain Entry' : 'Edit Entry'}
+              {dialogMode === 'create' ? t('New Supply Chain Entry') : t('Edit Entry')}
             </DialogTitle>
             <DialogDescription>
               {dialogMode === 'create'
-                ? 'Add a new step to the supply chain.'
-                : 'Edit the details of this supply chain step.'}
+                ? t('Add a new step to the supply chain.')
+                : t('Edit the details of this supply chain step.')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4">
             {/* Product Selection */}
             <div>
-              <Label>Product</Label>
+              <Label>{t('Product')}</Label>
               <Select
                 value={formData.product_id || ''}
                 onValueChange={v => updateForm('product_id', v)}
@@ -647,7 +652,7 @@ export function SupplyChainPage() {
             {/* Step & Country */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Step</Label>
+                <Label>{t('Step')}</Label>
                 <Input
                   type="number"
                   value={formData.step || 1}
@@ -656,7 +661,7 @@ export function SupplyChainPage() {
                 />
               </div>
               <div>
-                <Label>Country</Label>
+                <Label>{t('Country')}</Label>
                 <Select value={formData.country || 'DE'} onValueChange={v => updateForm('country', v)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -681,7 +686,7 @@ export function SupplyChainPage() {
 
             {/* Location */}
             <div>
-              <Label>Location</Label>
+              <Label>{t('Location')}</Label>
               <Input
                 value={formData.location || ''}
                 onChange={e => updateForm('location', e.target.value)}
@@ -692,11 +697,11 @@ export function SupplyChainPage() {
             {/* Date & Supplier */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Date</Label>
+                <Label>{t('Date')}</Label>
                 <Input type="date" value={formData.date || ''} onChange={e => updateForm('date', e.target.value)} />
               </div>
               <div>
-                <Label>Supplier (optional)</Label>
+                <Label>{t('Supplier (optional)')}</Label>
                 <Select
                   value={formData.supplier_id || formData.supplier || 'none'}
                   onValueChange={v => {
@@ -709,7 +714,7 @@ export function SupplyChainPage() {
                     <SelectValue placeholder="Select supplier" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">-- No Supplier --</SelectItem>
+                    <SelectItem value="none">-- {t('No Supplier')} --</SelectItem>
                     {suppliers.map(supplier => (
                       <SelectItem key={supplier.id} value={supplier.id}>
                         {supplier.name} ({supplier.country})
@@ -722,7 +727,7 @@ export function SupplyChainPage() {
 
             {/* Description */}
             <div>
-              <Label>Description</Label>
+              <Label>{t('Description')}</Label>
               <Input
                 value={formData.description || ''}
                 onChange={e => updateForm('description', e.target.value)}
@@ -733,7 +738,7 @@ export function SupplyChainPage() {
             {/* Risk & Verified */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Risk Level</Label>
+                <Label>{t('Risk Level')}</Label>
                 <Select
                   value={formData.risk_level || 'low'}
                   onValueChange={v => updateForm('risk_level', v as 'low' | 'medium' | 'high')}
@@ -754,13 +759,13 @@ export function SupplyChainPage() {
                   checked={formData.verified || false}
                   onCheckedChange={v => updateForm('verified', v)}
                 />
-                <Label htmlFor="verified">Verified</Label>
+                <Label htmlFor="verified">{t('Verified')}</Label>
               </div>
             </div>
 
             {/* Coordinates (optional) */}
             <div>
-              <Label>Coordinates (optional)</Label>
+              <Label>{t('Coordinates (optional)')}</Label>
               <Input
                 value={formData.coordinates || ''}
                 onChange={e => updateForm('coordinates', e.target.value)}
@@ -773,11 +778,11 @@ export function SupplyChainPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               <X className="mr-2 h-4 w-4" />
-              Cancel
+              {t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save
+              {t('Save', { ns: 'common' })}
             </Button>
           </DialogFooter>
         </DialogContent>

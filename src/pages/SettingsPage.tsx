@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Building2,
   Palette,
@@ -56,6 +58,7 @@ const apiKeys = [
 
 export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const { t } = useTranslation('settings');
+  const locale = useLocale();
   const [showApiKey, setShowApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -525,7 +528,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
                 {/* Powered By Text */}
                 <div className="space-y-2">
-                  <Label htmlFor="poweredBy">Footer Text</Label>
+                  <Label htmlFor="poweredBy">{t('Footer Text')}</Label>
                   <Input
                     id="poweredBy"
                     placeholder="Powered by DPP Manager"
@@ -535,7 +538,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Displayed in the footer of public pages
+                    {t('Displayed in the footer of public pages')}
                   </p>
                 </div>
               </div>
@@ -545,7 +548,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Logo */}
                 <div className="space-y-4">
-                  <Label>Company Logo</Label>
+                  <Label>{t('Company Logo')}</Label>
                   <div className="flex items-center gap-4">
                     <div className="h-20 w-20 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
                       {brandingForm.logo ? (
@@ -583,7 +586,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         ) : (
                           <Upload className="mr-2 h-4 w-4" />
                         )}
-                        Upload
+                        {t('Upload')}
                       </Button>
                       {brandingForm.logo && (
                         <Button
@@ -593,17 +596,17 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                           className="text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Remove
+                          {t('Remove')}
                         </Button>
                       )}
-                      <p className="text-xs text-muted-foreground">PNG, JPG, SVG up to 2MB</p>
+                      <p className="text-xs text-muted-foreground">{t('PNG, JPG, SVG up to 2MB')}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Favicon */}
                 <div className="space-y-4">
-                  <Label>Favicon</Label>
+                  <Label>{t('Favicon')}</Label>
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
                       {brandingForm.favicon ? (
@@ -635,7 +638,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         ) : (
                           <Upload className="mr-2 h-4 w-4" />
                         )}
-                        Upload
+                        {t('Upload')}
                       </Button>
                       {brandingForm.favicon && (
                         <Button
@@ -645,10 +648,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                           className="text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Remove
+                          {t('Remove')}
                         </Button>
                       )}
-                      <p className="text-xs text-muted-foreground">PNG, SVG, ICO up to 2MB</p>
+                      <p className="text-xs text-muted-foreground">{t('PNG, SVG, ICO up to 2MB')}</p>
                     </div>
                   </div>
                 </div>
@@ -666,7 +669,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="space-y-2">
-                  <Label>Choose Color</Label>
+                  <Label>{t('Choose Color')}</Label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -689,7 +692,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
                 {/* Preset colors */}
                 <div className="space-y-2">
-                  <Label>Presets</Label>
+                  <Label>{t('Presets')}</Label>
                   <div className="flex gap-2">
                     {['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#6366F1'].map(
                       (color) => (
@@ -753,7 +756,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 </div>
                 <div className="flex gap-2 mb-4">
                   <Badge style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}>
-                    Primary Color
+                    {t('Primary Color')}
                   </Badge>
                   <Badge variant="outline">Secondary</Badge>
                 </div>
@@ -779,7 +782,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               {sampleProduct ? (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Open a sample product page to see your branding in action:
+                    {t('Open a sample product page to see your branding in action:')}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" asChild>
@@ -789,7 +792,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        Consumer View ({sampleProduct.name})
+                        {t('Consumer View')} ({sampleProduct.name})
                       </a>
                     </Button>
                     <Button variant="outline" asChild>
@@ -799,18 +802,18 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        Customs View
+                        {t('Customs View')}
                       </a>
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    The product "{sampleProduct.name}" is used as an example.
+                    {t('The product "{{name}}" is used as an example.', { name: sampleProduct.name })}
                   </p>
                 </>
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <Info className="mx-auto h-8 w-8 opacity-30 mb-2" />
-                  <p>Create a product first to test the public pages.</p>
+                  <p>{t('Create a product first to test the public pages.')}</p>
                 </div>
               )}
             </CardContent>
@@ -843,11 +846,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <h4 className="text-sm font-medium flex items-center gap-2 text-blue-800 dark:text-blue-200">
                   <Info className="h-4 w-4" />
-                  Why use a custom domain?
+                  {t('Why use a custom domain?')}
                 </h4>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  With a custom domain you have full control over your DPP URLs.
-                  You can set up your own resolver that redirects QR codes to your product pages.
+                  {t('With a custom domain you have full control over your DPP URLs. You can set up your own resolver that redirects QR codes to your product pages.')}
                 </p>
               </div>
 
@@ -870,11 +872,11 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                   <div className="flex-1">
                     <p className="font-medium flex items-center gap-2">
-                      GS1 Digital Link Resolver
-                      <Badge variant="secondary">Recommended</Badge>
+                      {t('GS1 Digital Link Resolver')}
+                      <Badge variant="secondary">{t('Recommended')}</Badge>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Uses the official GS1 Resolver (id.gs1.org)
+                      {t('Uses the official GS1 Resolver (id.gs1.org)')}
                     </p>
                     <p className="text-xs font-mono mt-1 text-muted-foreground">
                       https://id.gs1.org/01/GTIN/21/SERIAL
@@ -900,11 +902,11 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                   <div className="flex-1">
                     <p className="font-medium flex items-center gap-2">
-                      Local Product Pages
-                      <Badge variant="default">Built-in</Badge>
+                      {t('Local Product Pages')}
+                      <Badge variant="default">{t('Built-in')}</Badge>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Uses the built-in public DPP pages of this application
+                      {t('Uses the built-in public DPP pages of this application')}
                     </p>
                     <p className="text-xs font-mono mt-1 text-muted-foreground">
                       {window.location.origin}/p/GTIN/SERIAL
@@ -930,11 +932,11 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   />
                   <div className="flex-1">
                     <p className="font-medium flex items-center gap-2">
-                      Custom Domain
-                      <Badge variant="outline">Custom</Badge>
+                      {t('Custom Domain')}
+                      <Badge variant="outline">{t('Custom')}</Badge>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Use your own domain for DPP URLs
+                      {t('Use your own domain for DPP URLs')}
                     </p>
                   </div>
                 </label>
@@ -955,7 +957,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Domain Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="customDomain">Your Domain *</Label>
+                    <Label htmlFor="customDomain">{t('Your Domain')} *</Label>
                     <Input
                       id="customDomain"
                       placeholder="e.g. dpp.your-company.com"
@@ -967,14 +969,14 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       <p className="text-xs text-destructive">{domainError}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Enter the domain only, without https://
+                        {t('Enter the domain only, without https://')}
                       </p>
                     )}
                   </div>
 
                   {/* Path Prefix */}
                   <div className="space-y-2">
-                    <Label htmlFor="pathPrefix">Path Prefix (optional)</Label>
+                    <Label htmlFor="pathPrefix">{t('Path Prefix (optional)')}</Label>
                     <Input
                       id="pathPrefix"
                       placeholder="e.g. products or passport"
@@ -986,7 +988,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       <p className="text-xs text-destructive">{pathPrefixError}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Inserted between the domain and product path
+                        {t('Inserted between the domain and product path')}
                       </p>
                     )}
                   </div>
@@ -1001,12 +1003,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       setDomainForm({ ...domainForm, useHTTPS: checked })
                     }
                   />
-                  <Label htmlFor="useHttps">Use HTTPS (recommended)</Label>
+                  <Label htmlFor="useHttps">{t('Use HTTPS (recommended)')}</Label>
                 </div>
 
                 {/* URL Preview */}
                 <div className="p-4 bg-muted/50 rounded-lg border">
-                  <Label className="text-sm font-medium">URL Preview</Label>
+                  <Label className="text-sm font-medium">{t('URL Preview')}</Label>
                   <p className="font-mono text-sm break-all mt-2 text-muted-foreground">
                     {getPreviewUrl()}
                   </p>
@@ -1024,26 +1026,26 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <div className="p-4 bg-muted/30 rounded-lg border">
                 <div className="grid gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Resolver:</span>
+                    <span className="text-muted-foreground">{t('Resolver')}:</span>
                     <span className="font-medium">
-                      {domainForm.resolver === 'gs1' && 'GS1 Digital Link'}
-                      {domainForm.resolver === 'local' && 'Local Product Pages'}
-                      {domainForm.resolver === 'custom' && 'Custom Domain'}
+                      {domainForm.resolver === 'gs1' && t('GS1 Digital Link')}
+                      {domainForm.resolver === 'local' && t('Local Product Pages')}
+                      {domainForm.resolver === 'custom' && t('Custom Domain')}
                     </span>
                   </div>
                   {domainForm.resolver === 'custom' && domainForm.customDomain && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Domain:</span>
+                        <span className="text-muted-foreground">{t('Domain')}:</span>
                         <span className="font-mono">{domainForm.customDomain}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Protocol:</span>
+                        <span className="text-muted-foreground">{t('Protocol')}:</span>
                         <span>{domainForm.useHTTPS ? 'HTTPS' : 'HTTP'}</span>
                       </div>
                       {domainForm.pathPrefix && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Path Prefix:</span>
+                          <span className="text-muted-foreground">{t('Path Prefix')}:</span>
                           <span className="font-mono">/{domainForm.pathPrefix}</span>
                         </div>
                       )}
@@ -1051,7 +1053,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   )}
                   <Separator className="my-2" />
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Example URL:</span>
+                    <span className="text-muted-foreground">{t('Example URL')}:</span>
                     <span className="font-mono text-xs break-all">{getPreviewUrl()}</span>
                   </div>
                 </div>
@@ -1097,16 +1099,16 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               {users.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>No other users in this tenant</p>
+                  <p>{t('No other users in this tenant')}</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>{t('Name')}</TableHead>
+                      <TableHead>{t('Email')}</TableHead>
+                      <TableHead>{t('Role')}</TableHead>
+                      <TableHead>{t('Status')}</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1120,12 +1122,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                             variant={user.role === 'admin' ? 'default' : 'secondary'}
                           >
                             <Shield className="mr-1 h-3 w-3" />
-                            {user.role === 'admin' ? 'Admin' : user.role === 'editor' ? 'Editor' : 'Viewer'}
+                            {user.role === 'admin' ? t('Admin') : user.role === 'editor' ? t('Editor') : t('Viewer')}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-success">
-                            Active
+                            {t('Active')}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -1149,21 +1151,21 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium">Admin</h4>
+                  <h4 className="font-medium">{t('Admin')}</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Full access to all features including settings and user management
+                    {t('Full access to all features including settings and user management')}
                   </p>
                 </div>
                 <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium">Editor</h4>
+                  <h4 className="font-medium">{t('Editor')}</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Can create, edit, and publish products and DPPs
+                    {t('Can create, edit, and publish products and DPPs')}
                   </p>
                 </div>
                 <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium">Viewer</h4>
+                  <h4 className="font-medium">{t('Viewer')}</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Read-only access to products and reports
+                    {t('Read-only access to products and reports')}
                   </p>
                 </div>
               </div>
@@ -1192,10 +1194,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>API Key</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Last Used</TableHead>
+                    <TableHead>{t('Name')}</TableHead>
+                    <TableHead>{t('API Key')}</TableHead>
+                    <TableHead>{t('Created')}</TableHead>
+                    <TableHead>{t('Last Used')}</TableHead>
                     <TableHead className="w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1234,7 +1236,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       <TableCell>
                         <Button variant="ghost" size="sm" className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t('Delete')}
                         </Button>
                       </TableCell>
                     </TableRow>

@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Building2,
   Package,
@@ -112,6 +115,8 @@ const SUPPLIER_ROLES: { value: SupplierProduct['role']; label: string }[] = [
 
 
 export function SuppliersPage() {
+  const { t } = useTranslation('settings');
+  const locale = useLocale();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -457,21 +462,21 @@ export function SuppliersPage() {
         return (
           <Badge variant="destructive" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
-            High
+            {t('High')}
           </Badge>
         );
       case 'medium':
         return (
           <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             <Clock className="h-3 w-3" />
-            Medium
+            {t('Medium')}
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" className="gap-1 text-green-600 border-green-200">
             <CheckCircle2 className="h-3 w-3" />
-            Low
+            {t('Low')}
           </Badge>
         );
     }
@@ -481,13 +486,13 @@ export function SuppliersPage() {
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t('Active')}</Badge>;
       case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>;
+        return <Badge variant="secondary">{t('Inactive')}</Badge>;
       case 'blocked':
-        return <Badge variant="destructive">Blocked</Badge>;
+        return <Badge variant="destructive">{t('Blocked')}</Badge>;
       case 'pending_approval':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending Approval</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">{t('Pending Approval')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -497,11 +502,11 @@ export function SuppliersPage() {
   const renderComplianceBadge = (status?: string) => {
     switch (status) {
       case 'compliant':
-        return <Badge className="bg-green-100 text-green-800"><BadgeCheck className="h-3 w-3 mr-1" />Compliant</Badge>;
+        return <Badge className="bg-green-100 text-green-800"><BadgeCheck className="h-3 w-3 mr-1" />{t('Compliant')}</Badge>;
       case 'non_compliant':
-        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Non-Compliant</Badge>;
+        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />{t('Non-Compliant')}</Badge>;
       default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Review Pending</Badge>;
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />{t('Review Pending')}</Badge>;
     }
   };
 
@@ -535,14 +540,14 @@ export function SuppliersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Suppliers</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Suppliers')}</h1>
           <p className="text-muted-foreground">
-            Manage suppliers, rate them, and assign products
+            {t('Manage suppliers, rate them, and assign products')}
           </p>
         </div>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 h-4 w-4" />
-          New Supplier
+          {t('New Supplier')}
         </Button>
       </div>
 
@@ -552,7 +557,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Total</span>
+              <span className="text-sm font-medium">{t('Total')}</span>
             </div>
             <p className="text-2xl font-bold mt-1">{stats.total}</p>
           </CardContent>
@@ -562,7 +567,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">Active</span>
+              <span className="text-sm font-medium">{t('Active')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-green-600">{stats.active}</p>
           </CardContent>
@@ -572,7 +577,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-yellow-600" />
-              <span className="text-sm font-medium">Approval</span>
+              <span className="text-sm font-medium">{t('Approval')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-yellow-600">{stats.pendingApproval}</p>
           </CardContent>
@@ -582,7 +587,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium">High Risk</span>
+              <span className="text-sm font-medium">{t('High Risk')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-destructive">{stats.highRisk}</p>
           </CardContent>
@@ -592,7 +597,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Verified</span>
+              <span className="text-sm font-medium">{t('Verified')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-blue-600">{stats.verified}</p>
           </CardContent>
@@ -602,7 +607,7 @@ export function SuppliersPage() {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium">Countries</span>
+              <span className="text-sm font-medium">{t('Countries')}</span>
             </div>
             <p className="text-2xl font-bold mt-1 text-purple-600">{stats.countries}</p>
           </CardContent>
@@ -614,14 +619,14 @@ export function SuppliersPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-lg">Supplier List</CardTitle>
+              <CardTitle className="text-lg">{t('Supplier List')}</CardTitle>
               <div className="flex items-center gap-2 flex-wrap">
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-[130px]">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="all">{t('All Types')}</SelectItem>
                     {SUPPLIER_TYPES.map(t => (
                       <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
@@ -633,11 +638,11 @@ export function SuppliersPage() {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                    <SelectItem value="pending_approval">Approval</SelectItem>
+                    <SelectItem value="all">{t('All Status')}</SelectItem>
+                    <SelectItem value="active">{t('Active')}</SelectItem>
+                    <SelectItem value="inactive">{t('Inactive')}</SelectItem>
+                    <SelectItem value="blocked">{t('Blocked')}</SelectItem>
+                    <SelectItem value="pending_approval">{t('Approval')}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -656,7 +661,7 @@ export function SuppliersPage() {
                 <div className="relative w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search..."
+                    placeholder={t('Search...', { ns: 'common' })}
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -676,18 +681,18 @@ export function SuppliersPage() {
               </div>
             ) : filteredSuppliers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {suppliers.length === 0 ? 'No suppliers yet' : 'No results'}
+                {suppliers.length === 0 ? t('No suppliers yet') : t('No results')}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-[120px]">Actions</TableHead>
+                    <TableHead>{t('Supplier')}</TableHead>
+                    <TableHead>{t('Contact')}</TableHead>
+                    <TableHead>{t('Location')}</TableHead>
+                    <TableHead>{t('Rating')}</TableHead>
+                    <TableHead>{t('Status')}</TableHead>
+                    <TableHead className="w-[120px]">{t('Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -779,23 +784,23 @@ export function SuppliersPage() {
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">
-              {detailSupplier ? detailSupplier.name : 'Details'}
+              {detailSupplier ? detailSupplier.name : t('Details')}
             </CardTitle>
             {detailSupplier && (
-              <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || 'No code'}</CardDescription>
+              <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || t('No code')}</CardDescription>
             )}
           </CardHeader>
           <CardContent>
             {!detailSupplier ? (
               <div className="text-center py-8 text-muted-foreground">
-                Select a supplier from the list
+                {t('Select a supplier from the list')}
               </div>
             ) : (
               <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="contacts">Contacts</TabsTrigger>
-                  <TabsTrigger value="products">Products</TabsTrigger>
+                  <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
+                  <TabsTrigger value="contacts">{t('Contacts')}</TabsTrigger>
+                  <TabsTrigger value="products">{t('Products')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4 mt-4">
@@ -805,7 +810,7 @@ export function SuppliersPage() {
                     {renderRiskBadge(detailSupplier.risk_level)}
                     {detailSupplier.verified && (
                       <Badge className="bg-blue-100 text-blue-800">
-                        <Shield className="h-3 w-3 mr-1" />Verified
+                        <Shield className="h-3 w-3 mr-1" />{t('Verified')}
                       </Badge>
                     )}
                   </div>
@@ -813,11 +818,11 @@ export function SuppliersPage() {
                   {/* Ratings */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Quality:</span>
+                      <span className="text-muted-foreground">{t('Quality')}:</span>
                       <div>{renderStars(detailSupplier.quality_rating)}</div>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Delivery:</span>
+                      <span className="text-muted-foreground">{t('Delivery')}:</span>
                       <div>{renderStars(detailSupplier.delivery_rating)}</div>
                     </div>
                   </div>
@@ -827,7 +832,7 @@ export function SuppliersPage() {
                   {/* Address */}
                   <div className="space-y-1">
                     <h4 className="font-medium text-sm flex items-center gap-1">
-                      <MapPin className="h-4 w-4" /> Address
+                      <MapPin className="h-4 w-4" /> {t('Address')}
                     </h4>
                     <div className="text-sm text-muted-foreground">
                       {detailSupplier.address && <div>{detailSupplier.address}</div>}
@@ -844,7 +849,7 @@ export function SuppliersPage() {
                       <Separator />
                       <div className="space-y-1">
                         <h4 className="font-medium text-sm flex items-center gap-1">
-                          <FileCheck className="h-4 w-4" /> Certifications
+                          <FileCheck className="h-4 w-4" /> {t('Certifications')}
                         </h4>
                         <div className="flex flex-wrap gap-1">
                           {detailSupplier.certifications.map(cert => (
@@ -861,17 +866,17 @@ export function SuppliersPage() {
                       <Separator />
                       <div className="space-y-1">
                         <h4 className="font-medium text-sm flex items-center gap-1">
-                          <FileText className="h-4 w-4" /> Contract
+                          <FileText className="h-4 w-4" /> {t('Contract')}
                         </h4>
                         <div className="text-sm text-muted-foreground">
                           {detailSupplier.contract_start && (
-                            <div>Start: {new Date(detailSupplier.contract_start).toLocaleDateString('en-US')}</div>
+                            <div>{t('Start')}: {formatDate(detailSupplier.contract_start, locale)}</div>
                           )}
                           {detailSupplier.contract_end && (
-                            <div>End: {new Date(detailSupplier.contract_end).toLocaleDateString('en-US')}</div>
+                            <div>{t('End')}: {formatDate(detailSupplier.contract_end, locale)}</div>
                           )}
                           {detailSupplier.payment_terms && (
-                            <div>Payment Terms: {detailSupplier.payment_terms}</div>
+                            <div>{t('Payment Terms')}: {detailSupplier.payment_terms}</div>
                           )}
                         </div>
                       </div>
@@ -883,7 +888,7 @@ export function SuppliersPage() {
                     <>
                       <Separator />
                       <div className="space-y-1">
-                        <h4 className="font-medium text-sm">Notes</h4>
+                        <h4 className="font-medium text-sm">{t('Notes')}</h4>
                         <p className="text-sm text-muted-foreground">{detailSupplier.notes}</p>
                       </div>
                     </>
@@ -895,7 +900,7 @@ export function SuppliersPage() {
                   {detailSupplier.contact_person && (
                     <div className="p-3 rounded-lg border bg-card">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge>Primary Contact</Badge>
+                        <Badge>{t('Primary Contact')}</Badge>
                       </div>
                       <div className="space-y-1 text-sm">
                         <div className="font-medium">{detailSupplier.contact_person}</div>
@@ -929,7 +934,7 @@ export function SuppliersPage() {
                   {/* Additional contacts */}
                   {detailSupplier.additional_contacts && detailSupplier.additional_contacts.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Additional Contacts</h4>
+                      <h4 className="font-medium text-sm">{t('Additional Contacts')}</h4>
                       {detailSupplier.additional_contacts.map((contact, i) => (
                         <div key={i} className="p-2 rounded border text-sm">
                           <div className="font-medium">{contact.name}</div>
@@ -956,7 +961,7 @@ export function SuppliersPage() {
 
                   {/* Online */}
                   <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Online</h4>
+                    <h4 className="font-medium text-sm">{t('Online')}</h4>
                     {detailSupplier.website && (
                       <div className="flex items-center gap-1 text-sm">
                         <Globe className="h-3 w-3" />
@@ -978,13 +983,13 @@ export function SuppliersPage() {
 
                 <TabsContent value="products" className="space-y-4 mt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{detailProducts.length} Products</span>
+                    <span className="text-sm text-muted-foreground">{detailProducts.length} {t('Products')}</span>
                     <Button variant="outline" size="sm" onClick={() => openProductDialog(detailSupplier)}>
-                      <Plus className="h-3 w-3 mr-1" />Assign
+                      <Plus className="h-3 w-3 mr-1" />{t('Assign')}
                     </Button>
                   </div>
                   {detailProducts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No products assigned</p>
+                    <p className="text-sm text-muted-foreground text-center py-4">{t('No products assigned')}</p>
                   ) : (
                     <div className="space-y-2">
                       {detailProducts.map(sp => (
@@ -1015,35 +1020,35 @@ export function SuppliersPage() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'New Supplier' : 'Edit Supplier'}
+              {dialogMode === 'create' ? t('New Supplier') : t('Edit Supplier')}
             </DialogTitle>
           </DialogHeader>
 
           <Tabs value={activeFormTab} onValueChange={setActiveFormTab}>
             <TabsList className="flex w-full overflow-x-auto">
-              <TabsTrigger value="basic" className="flex-shrink-0">General</TabsTrigger>
-              <TabsTrigger value="contact" className="flex-shrink-0">Contact</TabsTrigger>
-              <TabsTrigger value="address" className="flex-shrink-0">Addresses</TabsTrigger>
-              <TabsTrigger value="compliance" className="flex-shrink-0">Compliance</TabsTrigger>
-              <TabsTrigger value="finance" className="flex-shrink-0">Finance</TabsTrigger>
+              <TabsTrigger value="basic" className="flex-shrink-0">{t('General')}</TabsTrigger>
+              <TabsTrigger value="contact" className="flex-shrink-0">{t('Contact')}</TabsTrigger>
+              <TabsTrigger value="address" className="flex-shrink-0">{t('Addresses')}</TabsTrigger>
+              <TabsTrigger value="compliance" className="flex-shrink-0">{t('Compliance')}</TabsTrigger>
+              <TabsTrigger value="finance" className="flex-shrink-0">{t('Finance')}</TabsTrigger>
             </TabsList>
 
             {/* General */}
             <TabsContent value="basic" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <Label>Company Name *</Label>
+                  <Label>{t('Company Name')} *</Label>
                   <Input value={formData.name || ''} onChange={e => updateForm('name', e.target.value)} placeholder="Company Name" />
                 </div>
                 <div>
-                  <Label>Code</Label>
+                  <Label>{t('Code')}</Label>
                   <Input value={formData.code || ''} onChange={e => updateForm('code', e.target.value)} placeholder="SUP001" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>Legal Form</Label>
+                  <Label>{t('Legal Form')}</Label>
                   <Select value={formData.legal_form || ''} onValueChange={v => updateForm('legal_form', v)}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
@@ -1052,7 +1057,7 @@ export function SuppliersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Supplier Type</Label>
+                  <Label>{t('Supplier Type')}</Label>
                   <Select value={formData.supplier_type || ''} onValueChange={v => updateForm('supplier_type', v)}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
@@ -1061,14 +1066,14 @@ export function SuppliersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Industry</Label>
+                  <Label>{t('Industry')}</Label>
                   <Input value={formData.industry || ''} onChange={e => updateForm('industry', e.target.value)} placeholder="e.g. Electronics" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>Status</Label>
+                  <Label>{t('Status')}</Label>
                   <Select value={formData.status || 'active'} onValueChange={v => updateForm('status', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1080,7 +1085,7 @@ export function SuppliersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Risk Level</Label>
+                  <Label>{t('Risk Level')}</Label>
                   <Select value={formData.risk_level || 'low'} onValueChange={v => updateForm('risk_level', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1092,24 +1097,24 @@ export function SuppliersPage() {
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <Checkbox id="verified" checked={formData.verified || false} onCheckedChange={v => updateForm('verified', v)} />
-                  <Label htmlFor="verified">Verified</Label>
+                  <Label htmlFor="verified">{t('Verified')}</Label>
                 </div>
               </div>
 
               <div>
-                <Label>Notes</Label>
+                <Label>{t('Notes')}</Label>
                 <Input value={formData.notes || ''} onChange={e => updateForm('notes', e.target.value)} placeholder="Public notes..." />
               </div>
 
               <div>
-                <Label>Internal Notes</Label>
+                <Label>{t('Internal Notes')}</Label>
                 <Input value={formData.internal_notes || ''} onChange={e => updateForm('internal_notes', e.target.value)} placeholder="Internal use only..." />
               </div>
             </TabsContent>
 
             {/* Contact */}
             <TabsContent value="contact" className="space-y-4 mt-4">
-              <h3 className="font-medium">Primary Contact</h3>
+              <h3 className="font-medium">{t('Primary Contact')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Name</Label>
@@ -1154,14 +1159,14 @@ export function SuppliersPage() {
               <Separator />
 
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">Additional Contacts</h3>
+                <h3 className="font-medium">{t('Additional Contacts')}</h3>
                 <Button variant="outline" size="sm" onClick={handleAddContact}>
-                  <Plus className="h-4 w-4 mr-1" />Add
+                  <Plus className="h-4 w-4 mr-1" />{t('Add')}
                 </Button>
               </div>
 
               {(formData.additional_contacts || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No additional contacts</p>
+                <p className="text-sm text-muted-foreground">{t('No additional contacts')}</p>
               ) : (
                 <div className="space-y-2">
                   {(formData.additional_contacts || []).map((contact, i) => (
@@ -1189,7 +1194,7 @@ export function SuppliersPage() {
 
             {/* Addresses */}
             <TabsContent value="address" className="space-y-4 mt-4">
-              <h3 className="font-medium">Company Address</h3>
+              <h3 className="font-medium">{t('Company Address')}</h3>
               <div>
                 <Label>Street</Label>
                 <Input value={formData.address || ''} onChange={e => updateForm('address', e.target.value)} placeholder="123 Main Street" />
@@ -1224,7 +1229,7 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Shipping Address (if different)</h3>
+              <h3 className="font-medium">{t('Shipping Address (if different)')}</h3>
               <div>
                 <Label>Street</Label>
                 <Input value={formData.shipping_address || ''} onChange={e => updateForm('shipping_address', e.target.value)} />
@@ -1252,7 +1257,7 @@ export function SuppliersPage() {
 
             {/* Compliance */}
             <TabsContent value="compliance" className="space-y-4 mt-4">
-              <h3 className="font-medium">Legal Information</h3>
+              <h3 className="font-medium">{t('Legal Information')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Tax ID</Label>
@@ -1276,7 +1281,7 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Compliance & Audits</h3>
+              <h3 className="font-medium">{t('Compliance & Audits')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label>Compliance Status</Label>
@@ -1301,7 +1306,7 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Certifications</h3>
+              <h3 className="font-medium">{t('Certifications')}</h3>
               <div className="flex flex-wrap gap-2">
                 {CERTIFICATIONS.map(cert => (
                   <Badge
@@ -1318,7 +1323,7 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Ratings</h3>
+              <h3 className="font-medium">{t('Ratings')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Quality (1-5)</Label>
@@ -1345,7 +1350,7 @@ export function SuppliersPage() {
 
             {/* Finance */}
             <TabsContent value="finance" className="space-y-4 mt-4">
-              <h3 className="font-medium">Contract Data</h3>
+              <h3 className="font-medium">{t('Contract Data')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Contract Start</Label>
@@ -1381,7 +1386,7 @@ export function SuppliersPage() {
 
               <Separator />
 
-              <h3 className="font-medium">Bank Details</h3>
+              <h3 className="font-medium">{t('Bank Details')}</h3>
               <div>
                 <Label>Bank</Label>
                 <Input value={formData.bank_name || ''} onChange={e => updateForm('bank_name', e.target.value)} placeholder="Deutsche Bank" />
@@ -1401,11 +1406,11 @@ export function SuppliersPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSupplierDialogOpen(false)}>
-              <X className="mr-2 h-4 w-4" />Cancel
+              <X className="mr-2 h-4 w-4" />{t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleSaveSupplier} disabled={isLoading || !formData.name}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save
+              {t('Save', { ns: 'common' })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1415,7 +1420,7 @@ export function SuppliersPage() {
       <Dialog open={contactFormOpen} onOpenChange={setContactFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingContact ? 'Edit Contact' : 'New Contact'}</DialogTitle>
+            <DialogTitle>{editingContact ? t('Edit Contact') : t('New Contact')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1452,8 +1457,8 @@ export function SuppliersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setContactFormOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveContact} disabled={!contactForm.name}>Save</Button>
+            <Button variant="outline" onClick={() => setContactFormOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+            <Button onClick={handleSaveContact} disabled={!contactForm.name}>{t('Save', { ns: 'common' })}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1462,14 +1467,14 @@ export function SuppliersPage() {
       <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Assign Products</DialogTitle>
-            <DialogDescription>Supplier: {selectedSupplier?.name}</DialogDescription>
+            <DialogTitle>{t('Assign Products')}</DialogTitle>
+            <DialogDescription>{t('Supplier')}: {selectedSupplier?.name}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Assign New Product</CardTitle>
+                <CardTitle className="text-sm">{t('Assign New Product')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
@@ -1500,19 +1505,19 @@ export function SuppliersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox id="is_primary" checked={productFormData.is_primary || false} onCheckedChange={v => updateProductForm('is_primary', v)} />
-                  <Label htmlFor="is_primary">Primary Supplier</Label>
+                  <Label htmlFor="is_primary">{t('Primary Supplier')}</Label>
                 </div>
                 <Button onClick={handleAssignProduct} disabled={!productFormData.product_id || isLoading} className="w-full">
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                  Assign
+                  {t('Assign')}
                 </Button>
               </CardContent>
             </Card>
 
             <div>
-              <h4 className="font-medium text-sm mb-2">Assigned Products ({supplierProducts.length})</h4>
+              <h4 className="font-medium text-sm mb-2">{t('Assigned Products')} ({supplierProducts.length})</h4>
               {supplierProducts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No products assigned yet</p>
+                <p className="text-sm text-muted-foreground">{t('No products assigned yet')}</p>
               ) : (
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
                   {supplierProducts.map(sp => (
@@ -1538,7 +1543,7 @@ export function SuppliersPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setProductDialogOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setProductDialogOpen(false)}>{t('Close', { ns: 'common' })}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
