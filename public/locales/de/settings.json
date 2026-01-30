@@ -184,5 +184,19 @@
   "Describe this supply chain step...": "Beschreiben Sie diesen Lieferkettenschritt...",
   "Coordinates (optional)": "Koordinaten (optional)",
   "e.g. 48.1351,11.5820": "z.B. 48.1351,11.5820",
-  "Format: Latitude,Longitude": "Format: Breitengrad,Längengrad"
+  "Format: Latitude,Longitude": "Format: Breitengrad,Längengrad",
+  "Brand Identity": "Markenidentität",
+  "Drag & drop your logo here or click to upload": "Logo hierher ziehen oder klicken zum Hochladen",
+  "Change logo": "Logo ändern",
+  "Change favicon": "Favicon ändern",
+  "Drag & drop your favicon here or click to upload": "Favicon hierher ziehen oder klicken zum Hochladen",
+  "The small icon displayed in browser tabs": "Das kleine Symbol in Browser-Tabs",
+  "Browser Tab Preview": "Browser-Tab-Vorschau",
+  "Theme Color": "Designfarbe",
+  "Pick a color or choose from presets": "Farbe wählen oder Voreinstellung nutzen",
+  "Live Preview": "Live-Vorschau",
+  "This is how your branding appears across the app": "So erscheint Ihr Branding in der Anwendung",
+  "Uploaded!": "Hochgeladen!",
+  "Upload failed": "Upload fehlgeschlagen",
+  "Link example": "Link-Beispiel"
 }

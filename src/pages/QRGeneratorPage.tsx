@@ -20,6 +20,12 @@ import {
   Eye,
   Loader2,
   Package,
+  LayoutTemplate,
+  Sparkles,
+  BookOpen,
+  Smartphone,
+  Upload,
+  Trash2 as TrashIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,6 +85,93 @@ const defaultQRSettings: QRSettings = {
   backgroundColor: '#FFFFFF',
 };
 
+// Helper: load an image element from URL
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// Generate composite QR code with optional logo overlay and text
+async function generateCompositeQR(
+  data: string,
+  qrOpts: {
+    width: number;
+    margin: number;
+    errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H';
+    color: { dark: string; light: string };
+  },
+  logo: { enabled: boolean; url: string; size: number },
+  text: { enabled: boolean; content: string; position: 'top' | 'bottom'; color: string }
+): Promise<string> {
+  const qrCanvas = document.createElement('canvas');
+  const ecLevel = logo.enabled ? 'H' : qrOpts.errorCorrectionLevel;
+  await QRCode.toCanvas(qrCanvas, data, {
+    width: qrOpts.width,
+    margin: qrOpts.margin,
+    color: qrOpts.color,
+    errorCorrectionLevel: ecLevel,
+  });
+
+  const qrW = qrCanvas.width;
+  const qrH = qrCanvas.height;
+
+  const fontSize = Math.max(11, Math.round(qrW * 0.05));
+  const textBlockH = text.enabled && text.content ? fontSize + 12 : 0;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = qrW;
+  canvas.height = qrH + textBlockH;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = qrOpts.color.light;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const qrY = text.enabled && text.position === 'top' ? textBlockH : 0;
+  ctx.drawImage(qrCanvas, 0, qrY);
+
+  if (logo.enabled && logo.url) {
+    try {
+      const img = await loadImage(logo.url);
+      const scale = logo.size / 100;
+      const logoW = qrW * scale;
+      const logoH = (img.naturalHeight / img.naturalWidth) * logoW;
+      const logoX = (qrW - logoW) / 2;
+      const logoY = qrY + (qrH - logoH) / 2;
+      const pad = Math.round(qrW * 0.02);
+
+      ctx.fillStyle = qrOpts.color.light;
+      ctx.fillRect(logoX - pad, logoY - pad, logoW + pad * 2, logoH + pad * 2);
+      ctx.drawImage(img, logoX, logoY, logoW, logoH);
+    } catch {
+      // Skip logo on load failure
+    }
+  }
+
+  if (text.enabled && text.content) {
+    ctx.font = `${fontSize}px "SF Mono", Consolas, "Liberation Mono", monospace`;
+    ctx.fillStyle = text.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const textY = text.position === 'top'
+      ? textBlockH / 2
+      : qrY + qrH + textBlockH / 2;
+
+    let label = text.content;
+    while (ctx.measureText(label).width > canvas.width - 12 && label.length > 3) {
+      label = label.slice(0, -4) + '\u2026';
+    }
+    ctx.fillText(label, canvas.width / 2, textY);
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
 export function QRGeneratorPage() {
   const { t } = useTranslation('dpp');
   const [products, setProducts] = useState<ProductListItem[]>([]);
@@ -99,7 +192,7 @@ export function QRGeneratorPage() {
   const [pathPrefixError, setPathPrefixError] = useState<string | null>(null);
 
   // Get branding context for QR code domain settings
-  const { qrCodeSettings, updateQRCodeSettings } = useBranding();
+  const { branding, qrCodeSettings, updateQRCodeSettings } = useBranding();
 
   // Local domain settings state (synced with context)
   const [localDomainSettings, setLocalDomainSettings] = useState({
@@ -110,6 +203,7 @@ export function QRGeneratorPage() {
     resolver: qrCodeSettings.resolver as 'custom' | 'gs1' | 'local',
     foregroundColor: qrCodeSettings.foregroundColor,
     backgroundColor: qrCodeSettings.backgroundColor,
+    dppTemplate: qrCodeSettings.dppTemplate as 'modern' | 'classic' | 'compact',
   });
 
   // QR visual settings (local state)
@@ -118,7 +212,7 @@ export function QRGeneratorPage() {
     return saved ? JSON.parse(saved) : defaultQRSettings;
   });
   const [activeTab, setActiveTab] = useState('preview');
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logoUploadRef = useRef<HTMLInputElement>(null);
 
   // Sync local domain settings with context
   useEffect(() => {
@@ -130,6 +224,7 @@ export function QRGeneratorPage() {
       resolver: qrCodeSettings.resolver as 'custom' | 'gs1' | 'local',
       foregroundColor: qrCodeSettings.foregroundColor,
       backgroundColor: qrCodeSettings.backgroundColor,
+      dppTemplate: qrCodeSettings.dppTemplate as 'modern' | 'classic' | 'compact',
     });
   }, [qrCodeSettings]);
 
@@ -204,13 +299,18 @@ export function QRGeneratorPage() {
   const dppCustomsUrl = (activeGtin && activeSerial) ? generateDPPUrl(activeGtin, activeSerial, true) : '';
   const gs1Url = (activeGtin && activeSerial) ? `https://id.gs1.org/01/${activeGtin}/21/${activeSerial}` : '';
 
-  // Generate QR Codes (customer + customs)
+  // Resolve effective logo URL (custom upload > branding logo)
+  const effectiveLogoUrl = qrSettings.logoEnabled
+    ? (qrSettings.logoUrl || branding.logo || '')
+    : '';
+
+  // Generate QR Codes (customer + customs) with composite rendering
   useEffect(() => {
     if (!dppUrl) return;
 
     const generateQR = async () => {
       try {
-        const options = {
+        const qrOpts = {
           width: qrSettings.size,
           margin: qrSettings.margin,
           color: {
@@ -220,24 +320,38 @@ export function QRGeneratorPage() {
           errorCorrectionLevel: qrSettings.errorCorrection,
         };
 
-        const url = await QRCode.toDataURL(dppUrl, options);
+        const logoOpts = {
+          enabled: qrSettings.logoEnabled && !!effectiveLogoUrl,
+          url: effectiveLogoUrl,
+          size: qrSettings.logoSize,
+        };
+
+        const customerTextContent = qrSettings.includeText
+          ? (qrSettings.customText || selectedProduct?.gtin || '')
+          : '';
+        const customsTextContent = qrSettings.includeText
+          ? (qrSettings.customText || `${selectedProduct?.gtin || ''} (Customs)`)
+          : '';
+
+        const makeTextOpts = (content: string) => ({
+          enabled: qrSettings.includeText,
+          content,
+          position: qrSettings.textPosition,
+          color: localDomainSettings.foregroundColor || '#000000',
+        });
+
+        const url = await generateCompositeQR(dppUrl, qrOpts, logoOpts, makeTextOpts(customerTextContent));
         setQrDataUrl(url);
 
-        // Generate customs QR code
-        const customsUrl = await QRCode.toDataURL(dppCustomsUrl, options);
+        const customsUrl = await generateCompositeQR(dppCustomsUrl, qrOpts, logoOpts, makeTextOpts(customsTextContent));
         setQrCustomsDataUrl(customsUrl);
-
-        // Also draw on canvas for advanced features
-        if (canvasRef.current) {
-          await QRCode.toCanvas(canvasRef.current, dppUrl, options);
-        }
       } catch (err) {
         console.error('QR Code generation failed:', err);
       }
     };
 
     generateQR();
-  }, [dppUrl, dppCustomsUrl, qrSettings, localDomainSettings.foregroundColor, localDomainSettings.backgroundColor]);
+  }, [dppUrl, dppCustomsUrl, qrSettings, localDomainSettings.foregroundColor, localDomainSettings.backgroundColor, effectiveLogoUrl, selectedProduct?.gtin]);
 
   // Copy function
   const handleCopy = (text: string, field: string) => {
@@ -256,23 +370,134 @@ export function QRGeneratorPage() {
     const suffix = forCustoms ? '-customs' : '-customer';
     const filename = `qr-${activeGtin}-${activeSerial}${suffix}`;
     const targetUrl = forCustoms ? dppCustomsUrl : dppUrl;
-    const targetDataUrl = forCustoms ? qrCustomsDataUrl : qrDataUrl;
+
+    const qrOpts = {
+      width: qrSettings.size,
+      margin: qrSettings.margin,
+      color: {
+        dark: localDomainSettings.foregroundColor || '#000000',
+        light: localDomainSettings.backgroundColor || '#FFFFFF',
+      },
+      errorCorrectionLevel: qrSettings.errorCorrection,
+    };
+
+    const logoOpts = {
+      enabled: qrSettings.logoEnabled && !!effectiveLogoUrl,
+      url: effectiveLogoUrl,
+      size: qrSettings.logoSize,
+    };
+
+    const textContent = qrSettings.includeText
+      ? (qrSettings.customText || (forCustoms ? `${selectedProduct.gtin} (Customs)` : selectedProduct.gtin))
+      : '';
+    const textOpts = {
+      enabled: qrSettings.includeText,
+      content: textContent,
+      position: qrSettings.textPosition,
+      color: localDomainSettings.foregroundColor || '#000000',
+    };
 
     if (format === 'png') {
+      const dataUrl = await generateCompositeQR(targetUrl, qrOpts, logoOpts, textOpts);
       const link = document.createElement('a');
       link.download = `${filename}.png`;
-      link.href = targetDataUrl;
+      link.href = dataUrl;
       link.click();
     } else if (format === 'svg') {
-      const svgString = await QRCode.toString(targetUrl, {
+      const ecLevel = qrSettings.logoEnabled ? 'H' : qrSettings.errorCorrection;
+      let svgString = await QRCode.toString(targetUrl, {
         type: 'svg',
         width: qrSettings.size,
         margin: qrSettings.margin,
-        color: {
-          dark: localDomainSettings.foregroundColor || '#000000',
-          light: localDomainSettings.backgroundColor || '#FFFFFF',
-        },
+        color: qrOpts.color,
+        errorCorrectionLevel: ecLevel,
       });
+
+      // Enhance SVG with logo and/or text
+      if ((logoOpts.enabled && logoOpts.url) || (textOpts.enabled && textOpts.content)) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgString, 'image/svg+xml');
+        const svg = doc.documentElement;
+        const svgW = parseFloat(svg.getAttribute('width') || String(qrSettings.size));
+        const svgH = parseFloat(svg.getAttribute('height') || String(qrSettings.size));
+
+        const fontSize = Math.max(11, Math.round(svgW * 0.05));
+        const textBlockH = textOpts.enabled && textOpts.content ? fontSize + 12 : 0;
+
+        if (textBlockH > 0) {
+          const newH = svgH + textBlockH;
+          svg.setAttribute('height', String(newH));
+          const vb = svg.getAttribute('viewBox');
+          if (vb) {
+            const parts = vb.split(' ');
+            parts[3] = String(parseFloat(parts[3]) + textBlockH);
+            svg.setAttribute('viewBox', parts.join(' '));
+          }
+
+          const bgRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          bgRect.setAttribute('x', '0');
+          bgRect.setAttribute('y', String(svgH));
+          bgRect.setAttribute('width', String(svgW));
+          bgRect.setAttribute('height', String(textBlockH));
+          bgRect.setAttribute('fill', qrOpts.color.light);
+          svg.appendChild(bgRect);
+
+          const textEl = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+          textEl.setAttribute('x', String(svgW / 2));
+          textEl.setAttribute('y', String(svgH + textBlockH / 2));
+          textEl.setAttribute('text-anchor', 'middle');
+          textEl.setAttribute('dominant-baseline', 'central');
+          textEl.setAttribute('font-family', 'monospace');
+          textEl.setAttribute('font-size', String(fontSize));
+          textEl.setAttribute('fill', qrOpts.color.dark);
+          textEl.textContent = textOpts.content;
+          svg.appendChild(textEl);
+        }
+
+        if (logoOpts.enabled && logoOpts.url) {
+          try {
+            let logoDataUrl = logoOpts.url;
+            if (!logoOpts.url.startsWith('data:')) {
+              const img = await loadImage(logoOpts.url);
+              const tmpCanvas = document.createElement('canvas');
+              tmpCanvas.width = img.naturalWidth;
+              tmpCanvas.height = img.naturalHeight;
+              tmpCanvas.getContext('2d')!.drawImage(img, 0, 0);
+              logoDataUrl = tmpCanvas.toDataURL('image/png');
+            }
+
+            const scale = logoOpts.size / 100;
+            const logoW = svgW * scale;
+            const logoH = logoW;
+            const logoX = (svgW - logoW) / 2;
+            const logoY = (svgH - logoH) / 2;
+            const pad = Math.round(svgW * 0.02);
+
+            const logoBg = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            logoBg.setAttribute('x', String(logoX - pad));
+            logoBg.setAttribute('y', String(logoY - pad));
+            logoBg.setAttribute('width', String(logoW + pad * 2));
+            logoBg.setAttribute('height', String(logoH + pad * 2));
+            logoBg.setAttribute('rx', String(Math.round(pad)));
+            logoBg.setAttribute('fill', qrOpts.color.light);
+            svg.appendChild(logoBg);
+
+            const imgEl = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+            imgEl.setAttribute('x', String(logoX));
+            imgEl.setAttribute('y', String(logoY));
+            imgEl.setAttribute('width', String(logoW));
+            imgEl.setAttribute('height', String(logoH));
+            imgEl.setAttribute('href', logoDataUrl);
+            imgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            svg.appendChild(imgEl);
+          } catch {
+            // Skip logo on failure
+          }
+        }
+
+        svgString = new XMLSerializer().serializeToString(doc);
+      }
+
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -289,24 +514,33 @@ export function QRGeneratorPage() {
       ? products.filter(p => selectedProducts.includes(p.id))
       : products;
 
-    for (const product of productsToExport) {
-      const qrOptions = {
-        width: qrSettings.size,
-        margin: qrSettings.margin,
-        color: {
-          dark: localDomainSettings.foregroundColor || '#000000',
-          light: localDomainSettings.backgroundColor || '#FFFFFF',
-        },
-      };
+    const qrOpts = {
+      width: qrSettings.size,
+      margin: qrSettings.margin,
+      color: {
+        dark: localDomainSettings.foregroundColor || '#000000',
+        light: localDomainSettings.backgroundColor || '#FFFFFF',
+      },
+      errorCorrectionLevel: qrSettings.errorCorrection,
+    };
 
-      // Load batches for this product
+    const logoOpts = {
+      enabled: qrSettings.logoEnabled && !!effectiveLogoUrl,
+      url: effectiveLogoUrl,
+      size: qrSettings.logoSize,
+    };
+
+    for (const product of productsToExport) {
       const productBatches = await getBatches(product.id);
       if (productBatches.length === 0) continue;
 
       for (const batch of productBatches) {
-        // Customer QR
         const customerUrl = generateDPPUrl(product.gtin, batch.serialNumber);
-        const customerDataUrl = await QRCode.toDataURL(customerUrl, qrOptions);
+        const customerText = qrSettings.includeText ? (qrSettings.customText || product.gtin) : '';
+        const customerDataUrl = await generateCompositeQR(
+          customerUrl, qrOpts, logoOpts,
+          { enabled: qrSettings.includeText, content: customerText, position: qrSettings.textPosition, color: qrOpts.color.dark }
+        );
         const link1 = document.createElement('a');
         link1.download = `qr-${product.gtin}-${batch.serialNumber}-customer.png`;
         link1.href = customerDataUrl;
@@ -314,9 +548,12 @@ export function QRGeneratorPage() {
 
         await new Promise(resolve => setTimeout(resolve, 200));
 
-        // Customs QR
         const customsUrl = generateDPPUrl(product.gtin, batch.serialNumber, true);
-        const customsDataUrl = await QRCode.toDataURL(customsUrl, qrOptions);
+        const customsText = qrSettings.includeText ? (qrSettings.customText || `${product.gtin} (Customs)`) : '';
+        const customsDataUrl = await generateCompositeQR(
+          customsUrl, qrOpts, logoOpts,
+          { enabled: qrSettings.includeText, content: customsText, position: qrSettings.textPosition, color: qrOpts.color.dark }
+        );
         const link2 = document.createElement('a');
         link2.download = `qr-${product.gtin}-${batch.serialNumber}-customs.png`;
         link2.href = customsDataUrl;
@@ -367,6 +604,25 @@ export function QRGeneratorPage() {
     }
   };
 
+  // Handle custom logo file upload (convert to data URL)
+  const handleLogoFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 512 * 1024) {
+      alert('Logo file must be under 500 KB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setQRSettings(prev => ({ ...prev, logoUrl: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+    if (logoUploadRef.current) {
+      logoUploadRef.current.value = '';
+    }
+  };
+
   // Save settings to database
   const saveDomainSettings = async () => {
     if (localDomainSettings.resolver === 'custom') {
@@ -395,6 +651,7 @@ export function QRGeneratorPage() {
       resolver: localDomainSettings.resolver,
       foregroundColor: localDomainSettings.foregroundColor,
       backgroundColor: localDomainSettings.backgroundColor,
+      dppTemplate: localDomainSettings.dppTemplate,
     });
 
     if (success) {
@@ -607,11 +864,6 @@ export function QRGeneratorPage() {
                           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                       )}
-                      {qrSettings.includeText && selectedProduct && (
-                        <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
-                          {qrSettings.customText || selectedProduct.gtin}
-                        </p>
-                      )}
                     </div>
                     <div className="flex justify-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => downloadQR('png', false)}>
@@ -642,11 +894,6 @@ export function QRGeneratorPage() {
                         <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
                           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
-                      )}
-                      {qrSettings.includeText && selectedProduct && (
-                        <p className="text-center text-xs font-mono mt-2" style={{ color: localDomainSettings.foregroundColor }}>
-                          {qrSettings.customText || `${selectedProduct.gtin} (Customs)`}
-                        </p>
                       )}
                     </div>
                     <div className="flex justify-center gap-2">
@@ -928,6 +1175,102 @@ export function QRGeneratorPage() {
                       </p>
                     </div>
                   )}
+
+                  <Separator />
+
+                  {/* Logo overlay */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="logoEnabled"
+                      checked={qrSettings.logoEnabled}
+                      onCheckedChange={(checked: boolean) =>
+                        setQRSettings({ ...qrSettings, logoEnabled: checked })
+                      }
+                    />
+                    <Label htmlFor="logoEnabled">{t('Embed logo in QR code')}</Label>
+                  </div>
+
+                  {qrSettings.logoEnabled && (
+                    <div className="space-y-4 pl-4 border-l-2 border-muted">
+                      {/* Branding logo hint */}
+                      {branding.logo && !qrSettings.logoUrl && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                          <img src={branding.logo} alt="Company logo" className="h-8 w-8 object-contain rounded" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{t('Company logo')}</p>
+                            <p className="text-xs text-muted-foreground">{t('From branding settings')}</p>
+                          </div>
+                          <Badge variant="secondary">{t('Active')}</Badge>
+                        </div>
+                      )}
+
+                      {/* Custom logo upload */}
+                      <div className="space-y-2">
+                        <Label>{t('Custom logo (optional)')}</Label>
+                        <input
+                          type="file"
+                          ref={logoUploadRef}
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={handleLogoFileUpload}
+                          className="hidden"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => logoUploadRef.current?.click()}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            {t('Upload custom logo')}
+                          </Button>
+                          {qrSettings.logoUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setQRSettings({ ...qrSettings, logoUrl: '' })}
+                              className="text-destructive"
+                            >
+                              <TrashIcon className="mr-1 h-3 w-3" />
+                              {t('Remove', { ns: 'common' })}
+                            </Button>
+                          )}
+                        </div>
+                        {qrSettings.logoUrl && (
+                          <div className="flex items-center gap-2">
+                            <img src={qrSettings.logoUrl} alt="Custom logo" className="h-8 w-8 object-contain rounded border" />
+                            <Badge>{t('Custom logo active')}</Badge>
+                          </div>
+                        )}
+                        {!branding.logo && !qrSettings.logoUrl && (
+                          <p className="text-xs text-muted-foreground">
+                            {t('Upload a logo or set one in branding settings')}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Logo size slider */}
+                      <div className="space-y-2">
+                        <Label>{t('Logo size')}: {qrSettings.logoSize}%</Label>
+                        <input
+                          type="range"
+                          min={10}
+                          max={30}
+                          value={qrSettings.logoSize}
+                          onChange={(e) => setQRSettings({ ...qrSettings, logoSize: parseInt(e.target.value) })}
+                          className="w-full accent-primary"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>10%</span>
+                          <span>20%</span>
+                          <span>30%</span>
+                        </div>
+                      </div>
+
+                      {/* Info: error correction */}
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-1.5">
+                          <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                          {t('Error correction is automatically set to H (30%) when a logo is embedded to ensure scannability.')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Presets */}
@@ -1154,6 +1497,96 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                     </Accordion>
                   )}
 
+                  {/* DPP Template Selection */}
+                  <Separator />
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-base font-medium flex items-center gap-2">
+                        <LayoutTemplate className="h-4 w-4" />
+                        {t('DPP Page Template')}
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {t('Choose the design template for your public product pages')}
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {/* Modern */}
+                      <div
+                        onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'modern' })}
+                        className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
+                          localDomainSettings.dppTemplate === 'modern'
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary'
+                            : 'hover:bg-muted/50 hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{t('Modern')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('Hero header, glassmorphism cards, animations')}
+                            </p>
+                          </div>
+                          {localDomainSettings.dppTemplate === 'modern' && (
+                            <Badge variant="default" className="text-xs">{t('Active')}</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Classic */}
+                      <div
+                        onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'classic' })}
+                        className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
+                          localDomainSettings.dppTemplate === 'classic'
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary'
+                            : 'hover:bg-muted/50 hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                            <BookOpen className="h-5 w-5 text-foreground/70" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{t('Classic')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('Clean cards, structured sections, professional')}
+                            </p>
+                          </div>
+                          {localDomainSettings.dppTemplate === 'classic' && (
+                            <Badge variant="default" className="text-xs">{t('Active')}</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Compact */}
+                      <div
+                        onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'compact' })}
+                        className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
+                          localDomainSettings.dppTemplate === 'compact'
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary'
+                            : 'hover:bg-muted/50 hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                            <Smartphone className="h-5 w-5 text-foreground/70" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{t('Compact')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('Tab layout, mobile-first, minimal whitespace')}
+                            </p>
+                          </div>
+                          {localDomainSettings.dppTemplate === 'compact' && (
+                            <Badge variant="default" className="text-xs">{t('Active')}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Save Button */}
                   <Button
                     onClick={saveDomainSettings}
@@ -1254,8 +1687,6 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
       </>
       )}
 
-      {/* Hidden Canvas for advanced QR code generation */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 }

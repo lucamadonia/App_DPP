@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
@@ -21,6 +21,12 @@ import {
   Globe,
   ExternalLink,
   Info,
+  Camera,
+  X,
+  LayoutDashboard,
+  Package,
+  FileText,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +77,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
+  const [logoDragOver, setLogoDragOver] = useState(false);
+  const [faviconDragOver, setFaviconDragOver] = useState(false);
+  const [logoUploadSuccess, setLogoUploadSuccess] = useState(false);
+  const [faviconUploadSuccess, setFaviconUploadSuccess] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [faviconUploadError, setFaviconUploadError] = useState<string | null>(null);
 
   // Domain settings state
   const [isSavingDomain, setIsSavingDomain] = useState(false);
@@ -79,7 +91,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const [pathPrefixError, setPathPrefixError] = useState<string | null>(null);
 
   // Get branding context
-  const { branding, rawBranding, updateBranding, refreshBranding, qrCodeSettings, updateQRCodeSettings } = useBranding();
+  const { rawBranding, updateBranding, refreshBranding, qrCodeSettings, updateQRCodeSettings } = useBranding();
 
   // Branding form state
   const [brandingForm, setBrandingForm] = useState<BrandingSettings>({
@@ -204,49 +216,69 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     setIsSavingBranding(false);
   };
 
-  // Handle logo upload
+  // Handle file upload (shared logic)
+  const processUpload = useCallback(async (file: File, type: 'logo' | 'favicon') => {
+    const setUploading = type === 'logo' ? setIsUploadingLogo : setIsUploadingFavicon;
+    const setSuccess = type === 'logo' ? setLogoUploadSuccess : setFaviconUploadSuccess;
+    const setError = type === 'logo' ? setLogoUploadError : setFaviconUploadError;
+    const inputRef = type === 'logo' ? logoInputRef : faviconInputRef;
+
+    setUploading(true);
+    setError(null);
+    setSuccess(false);
+
+    const result = await uploadBrandingAsset(file, type);
+
+    if (result.success && result.url) {
+      setBrandingForm((prev) => ({ ...prev, [type]: result.url! }));
+      await refreshBranding();
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
+    } else {
+      console.error(`${type} upload failed:`, result.error);
+      setError(result.error || 'Unknown error');
+      setTimeout(() => setError(null), 4000);
+    }
+
+    setUploading(false);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  }, [refreshBranding]);
+
+  // Handle logo upload via file input
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    setIsUploadingLogo(true);
-    const result = await uploadBrandingAsset(file, 'logo');
-
-    if (result.success && result.url) {
-      setBrandingForm((prev) => ({ ...prev, logo: result.url! }));
-      await refreshBranding();
-    } else {
-      console.error('Logo upload failed:', result.error);
-      alert(`Logo upload failed: ${result.error || 'Unknown error'}`);
-    }
-
-    setIsUploadingLogo(false);
-    if (logoInputRef.current) {
-      logoInputRef.current.value = '';
-    }
+    await processUpload(file, 'logo');
   };
 
-  // Handle favicon upload
+  // Handle favicon upload via file input
   const handleFaviconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    setIsUploadingFavicon(true);
-    const result = await uploadBrandingAsset(file, 'favicon');
-
-    if (result.success && result.url) {
-      setBrandingForm((prev) => ({ ...prev, favicon: result.url! }));
-      await refreshBranding();
-    } else {
-      console.error('Favicon upload failed:', result.error);
-      alert(`Favicon upload failed: ${result.error || 'Unknown error'}`);
-    }
-
-    setIsUploadingFavicon(false);
-    if (faviconInputRef.current) {
-      faviconInputRef.current.value = '';
-    }
+    await processUpload(file, 'favicon');
   };
+
+  // Handle drag & drop for logo
+  const handleLogoDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setLogoDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      processUpload(file, 'logo');
+    }
+  }, [processUpload]);
+
+  // Handle drag & drop for favicon
+  const handleFaviconDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setFaviconDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      processUpload(file, 'favicon');
+    }
+  }, [processUpload]);
 
   // Handle removing logo
   const handleRemoveLogo = () => {
@@ -501,157 +533,255 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
         {/* Branding */}
         <TabsContent value="branding" className="space-y-6">
+          {/* Card 1: Brand Identity */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('App Name & Logo')}</CardTitle>
+              <CardTitle>{t('Brand Identity')}</CardTitle>
               <CardDescription>
                 {t('Customize the appearance of your DPP application')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
-                {/* App-Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="appName">{t('App Name')}</Label>
-                  <Input
-                    id="appName"
-                    placeholder="DPP Manager"
-                    value={brandingForm.appName || ''}
-                    onChange={(e) =>
-                      setBrandingForm((prev) => ({ ...prev, appName: e.target.value }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t('Displayed in the sidebar, breadcrumb, and browser tab')}
-                  </p>
-                </div>
-
-                {/* Powered By Text */}
-                <div className="space-y-2">
-                  <Label htmlFor="poweredBy">{t('Footer Text')}</Label>
-                  <Input
-                    id="poweredBy"
-                    placeholder="Powered by DPP Manager"
-                    value={brandingForm.poweredByText || ''}
-                    onChange={(e) =>
-                      setBrandingForm((prev) => ({ ...prev, poweredByText: e.target.value }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t('Displayed in the footer of public pages')}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Logo */}
-                <div className="space-y-4">
+                {/* Logo Drag & Drop Zone */}
+                <div className="space-y-3">
                   <Label>{t('Company Logo')}</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="h-20 w-20 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
-                      {brandingForm.logo ? (
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <div
+                    className={`relative h-52 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                      logoDragOver
+                        ? 'border-primary bg-primary/5'
+                        : brandingForm.logo
+                        ? 'border-muted hover:border-primary/50'
+                        : 'border-muted-foreground/25 hover:border-primary/50 bg-muted/30'
+                    }`}
+                    onClick={() => !isUploadingLogo && logoInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setLogoDragOver(true); }}
+                    onDragLeave={() => setLogoDragOver(false)}
+                    onDrop={handleLogoDrop}
+                  >
+                    {isUploadingLogo ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    ) : brandingForm.logo ? (
+                      <>
                         <img
                           src={brandingForm.logo}
                           alt="Logo"
-                          className="max-h-18 max-w-18 object-contain"
+                          className="max-h-36 max-w-full object-contain"
                         />
-                      ) : branding.logo ? (
-                        <img
-                          src={branding.logo}
-                          alt="Logo"
-                          className="max-h-18 max-w-18 object-contain"
-                        />
-                      ) : (
-                        <Upload className="h-8 w-8 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/svg+xml"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                      />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                          <Camera className="h-6 w-6 text-white" />
+                          <span className="text-white text-sm font-medium">{t('Change logo')}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground text-center px-4">
+                          {t('Drag & drop your logo here or click to upload')}
+                        </p>
+                      </>
+                    )}
+                    {/* Success overlay */}
+                    {logoUploadSuccess && (
+                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
+                        <div className="flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                          <Check className="h-4 w-4" />
+                          {t('Uploaded!')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {logoUploadError && (
+                    <p className="text-xs text-destructive">{t('Upload failed')}: {logoUploadError}</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">{t('PNG, JPG, SVG up to 2MB')}</p>
+                    {brandingForm.logo && (
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => logoInputRef.current?.click()}
-                        disabled={isUploadingLogo}
+                        onClick={(e) => { e.stopPropagation(); handleRemoveLogo(); }}
+                        className="text-destructive h-8"
                       >
-                        {isUploadingLogo ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Upload className="mr-2 h-4 w-4" />
-                        )}
-                        {t('Upload')}
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        {t('Remove')}
                       </Button>
-                      {brandingForm.logo && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveLogo}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('Remove')}
-                        </Button>
-                      )}
-                      <p className="text-xs text-muted-foreground">{t('PNG, JPG, SVG up to 2MB')}</p>
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Favicon */}
+                {/* App Name + Footer Text */}
                 <div className="space-y-4">
-                  <Label>{t('Favicon')}</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
-                      {brandingForm.favicon ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="appName">{t('App Name')}</Label>
+                    <Input
+                      id="appName"
+                      placeholder="DPP Manager"
+                      value={brandingForm.appName || ''}
+                      onChange={(e) =>
+                        setBrandingForm((prev) => ({ ...prev, appName: e.target.value }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('Displayed in the sidebar, breadcrumb, and browser tab')}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="poweredBy">{t('Footer Text')}</Label>
+                    <Input
+                      id="poweredBy"
+                      placeholder="Powered by DPP Manager"
+                      value={brandingForm.poweredByText || ''}
+                      onChange={(e) =>
+                        setBrandingForm((prev) => ({ ...prev, poweredByText: e.target.value }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('Displayed in the footer of public pages')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: Favicon */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('Favicon')}</CardTitle>
+              <CardDescription>
+                {t('The small icon displayed in browser tabs')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Favicon Drag & Drop Zone */}
+                <div className="space-y-3">
+                  <input
+                    ref={faviconInputRef}
+                    type="file"
+                    accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon"
+                    onChange={handleFaviconUpload}
+                    className="hidden"
+                  />
+                  <div
+                    className={`relative h-32 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                      faviconDragOver
+                        ? 'border-primary bg-primary/5'
+                        : brandingForm.favicon
+                        ? 'border-muted hover:border-primary/50'
+                        : 'border-muted-foreground/25 hover:border-primary/50 bg-muted/30'
+                    }`}
+                    onClick={() => !isUploadingFavicon && faviconInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setFaviconDragOver(true); }}
+                    onDragLeave={() => setFaviconDragOver(false)}
+                    onDrop={handleFaviconDrop}
+                  >
+                    {isUploadingFavicon ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    ) : brandingForm.favicon ? (
+                      <>
                         <img
                           src={brandingForm.favicon}
                           alt="Favicon"
-                          className="max-h-10 max-w-10 object-contain"
+                          className="max-h-16 max-w-16 object-contain"
                         />
-                      ) : (
-                        <Upload className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        ref={faviconInputRef}
-                        type="file"
-                        accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon"
-                        onChange={handleFaviconUpload}
-                        className="hidden"
-                      />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                          <Camera className="h-5 w-5 text-white" />
+                          <span className="text-white text-xs font-medium">{t('Change favicon')}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground text-center px-4">
+                          {t('Drag & drop your favicon here or click to upload')}
+                        </p>
+                      </>
+                    )}
+                    {faviconUploadSuccess && (
+                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
+                        <div className="flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                          <Check className="h-4 w-4" />
+                          {t('Uploaded!')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {faviconUploadError && (
+                    <p className="text-xs text-destructive">{t('Upload failed')}: {faviconUploadError}</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">{t('PNG, SVG, ICO up to 2MB')}</p>
+                    {brandingForm.favicon && (
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => faviconInputRef.current?.click()}
-                        disabled={isUploadingFavicon}
+                        onClick={(e) => { e.stopPropagation(); handleRemoveFavicon(); }}
+                        className="text-destructive h-8"
                       >
-                        {isUploadingFavicon ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Upload className="mr-2 h-4 w-4" />
-                        )}
-                        {t('Upload')}
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        {t('Remove')}
                       </Button>
-                      {brandingForm.favicon && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveFavicon}
-                          className="text-destructive"
+                    )}
+                  </div>
+                </div>
+
+                {/* Browser Tab Mockup */}
+                <div className="space-y-2">
+                  <Label>{t('Browser Tab Preview')}</Label>
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden">
+                    {/* Tab bar */}
+                    <div className="bg-muted/60 border-b px-2 pt-2">
+                      <div className="flex items-center">
+                        <div className="flex items-center gap-1.5 bg-background rounded-t-lg border border-b-0 px-3 py-1.5 max-w-[200px]">
+                          {brandingForm.favicon ? (
+                            <img src={brandingForm.favicon} alt="" className="h-4 w-4 object-contain flex-shrink-0" />
+                          ) : (
+                            <Globe className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <span className="text-xs truncate">
+                            {brandingForm.appName || 'DPP Manager'}
+                          </span>
+                          <X className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
+                        </div>
+                      </div>
+                    </div>
+                    {/* URL bar */}
+                    <div className="px-3 py-2 border-b bg-background">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                          <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                          <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                        </div>
+                        <div className="flex-1 bg-muted/50 rounded px-2 py-0.5">
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {window.location.origin}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Page content hint */}
+                    <div className="p-4 flex items-center gap-2">
+                      {brandingForm.favicon ? (
+                        <img src={brandingForm.favicon} alt="" className="h-5 w-5 object-contain" />
+                      ) : (
+                        <div
+                          className="h-5 w-5 rounded flex items-center justify-center text-white text-[10px] font-bold"
+                          style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('Remove')}
-                        </Button>
+                          {(brandingForm.appName || 'D').charAt(0)}
+                        </div>
                       )}
-                      <p className="text-xs text-muted-foreground">{t('PNG, SVG, ICO up to 2MB')}</p>
+                      <span className="text-sm font-medium">{brandingForm.appName || 'DPP Manager'}</span>
                     </div>
                   </div>
                 </div>
@@ -659,15 +789,16 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             </CardContent>
           </Card>
 
+          {/* Card 3: Theme Color */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('Primary Color')}</CardTitle>
+              <CardTitle>{t('Theme Color')}</CardTitle>
               <CardDescription>
-                {t('This color is used as the accent color throughout the application')}
+                {t('Pick a color or choose from presets')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-end gap-4">
                 <div className="space-y-2">
                   <Label>{t('Choose Color')}</Label>
                   <div className="flex gap-2">
@@ -677,97 +808,185 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       onChange={(e) =>
                         setBrandingForm((prev) => ({ ...prev, primaryColor: e.target.value }))
                       }
-                      className="h-10 w-14 rounded border cursor-pointer"
+                      className="h-12 w-16 rounded border cursor-pointer"
                     />
                     <Input
                       value={brandingForm.primaryColor || '#3B82F6'}
                       onChange={(e) =>
                         setBrandingForm((prev) => ({ ...prev, primaryColor: e.target.value }))
                       }
-                      className="font-mono w-28"
+                      className="font-mono w-28 h-12"
                       placeholder="#3B82F6"
                     />
                   </div>
                 </div>
 
-                {/* Preset colors */}
-                <div className="space-y-2">
-                  <Label>{t('Presets')}</Label>
-                  <div className="flex gap-2">
-                    {['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#6366F1'].map(
-                      (color) => (
-                        <button
-                          key={color}
-                          onClick={() =>
-                            setBrandingForm((prev) => ({ ...prev, primaryColor: color }))
-                          }
-                          className={`h-8 w-8 rounded border-2 transition-all ${
-                            brandingForm.primaryColor === color
-                              ? 'border-foreground scale-110'
-                              : 'border-transparent hover:scale-105'
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setBrandingForm((prev) => ({ ...prev, primaryColor: '#3B82F6' }))
+                  }
+                  className="h-9"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {t('Reset to Default Color')}
+                </Button>
+              </div>
+
+              {/* 12 Preset colors in 2 rows */}
+              <div className="space-y-2">
+                <Label>{t('Presets')}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { color: '#3B82F6', name: 'Blue' },
+                    { color: '#10B981', name: 'Emerald' },
+                    { color: '#8B5CF6', name: 'Violet' },
+                    { color: '#F59E0B', name: 'Amber' },
+                    { color: '#F43F5E', name: 'Rose' },
+                    { color: '#6366F1', name: 'Indigo' },
+                    { color: '#06B6D4', name: 'Cyan' },
+                    { color: '#84CC16', name: 'Lime' },
+                    { color: '#D946EF', name: 'Fuchsia' },
+                    { color: '#F97316', name: 'Orange' },
+                    { color: '#64748B', name: 'Slate' },
+                    { color: '#14B8A6', name: 'Teal' },
+                  ].map(({ color, name }) => (
+                    <button
+                      key={color}
+                      onClick={() =>
+                        setBrandingForm((prev) => ({ ...prev, primaryColor: color }))
+                      }
+                      className={`relative h-9 w-9 min-w-[36px] rounded-lg transition-all ${
+                        brandingForm.primaryColor === color
+                          ? 'ring-2 ring-offset-2 ring-foreground scale-110'
+                          : 'hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={name}
+                    >
+                      {brandingForm.primaryColor === color && (
+                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 4: Live Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('Live Preview')}</CardTitle>
+              <CardDescription>{t('This is how your branding appears across the app')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Sidebar Mockup */}
+                <div className="rounded-lg border overflow-hidden bg-slate-900 text-white">
+                  <div className="p-4 space-y-4">
+                    {/* Logo + App Name */}
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                      {brandingForm.logo ? (
+                        <img src={brandingForm.logo} alt="Logo" className="h-8 w-8 rounded object-contain" />
+                      ) : (
+                        <div
+                          className="h-8 w-8 rounded flex items-center justify-center text-white text-sm font-bold"
+                          style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}
+                        >
+                          {(brandingForm.appName || 'D').charAt(0)}
+                        </div>
+                      )}
+                      <span className="font-semibold text-sm truncate">
+                        {brandingForm.appName || 'DPP Manager'}
+                      </span>
+                    </div>
+                    {/* Nav Items */}
+                    <nav className="space-y-1">
+                      {[
+                        { icon: LayoutDashboard, label: 'Dashboard', active: true },
+                        { icon: Package, label: 'Products', active: false },
+                        { icon: FileText, label: 'DPP', active: false },
+                        { icon: Settings, label: 'Settings', active: false },
+                      ].map(({ icon: Icon, label, active }) => (
+                        <div
+                          key={label}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${
+                            active ? 'text-white font-medium' : 'text-white/60'
                           }`}
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      )
+                          style={active ? { backgroundColor: brandingForm.primaryColor || '#3B82F6' } : undefined}
+                        >
+                          <Icon className="h-4 w-4 flex-shrink-0" />
+                          <span>{label}</span>
+                        </div>
+                      ))}
+                    </nav>
+                  </div>
+                </div>
+
+                {/* Public Page Mockup */}
+                <div className="rounded-lg border overflow-hidden bg-background">
+                  {/* Mini header */}
+                  <div className="border-b px-4 py-3 flex items-center gap-2">
+                    {brandingForm.logo ? (
+                      <img src={brandingForm.logo} alt="Logo" className="h-6 w-6 rounded object-contain" />
+                    ) : (
+                      <div
+                        className="h-6 w-6 rounded flex items-center justify-center text-white text-xs font-bold"
+                        style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}
+                      >
+                        {(brandingForm.appName || 'D').charAt(0)}
+                      </div>
                     )}
+                    <span className="font-medium text-sm">{brandingForm.appName || 'DPP Manager'}</span>
+                  </div>
+                  {/* Content */}
+                  <div className="p-4 space-y-3">
+                    <Badge
+                      className="text-white"
+                      style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}
+                    >
+                      Digital Product Passport
+                    </Badge>
+                    <div className="space-y-2">
+                      <div className="h-2 bg-muted rounded w-3/4" />
+                      <div className="h-2 bg-muted rounded w-1/2" />
+                    </div>
+                    {/* UI Elements */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        className="h-8 text-white"
+                        style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}
+                      >
+                        {t('Primary Color')}
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8">
+                        {t('Secondary', { ns: 'settings' })}
+                      </Button>
+                    </div>
+                    <a
+                      href="#"
+                      className="text-sm underline"
+                      style={{ color: brandingForm.primaryColor || '#3B82F6' }}
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      {t('Link example')}
+                    </a>
+                  </div>
+                  {/* Footer */}
+                  <div className="border-t px-4 py-2">
+                    <p className="text-xs text-muted-foreground">
+                      {brandingForm.poweredByText || 'Powered by DPP Manager'}
+                    </p>
                   </div>
                 </div>
               </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setBrandingForm((prev) => ({ ...prev, primaryColor: '#3B82F6' }))
-                }
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                {t('Reset to Default Color')}
-              </Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Preview')}</CardTitle>
-              <CardDescription>{t('This is how your branding appears in the application')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-6 rounded-lg border bg-card">
-                <div className="flex items-center gap-3 mb-4">
-                  {brandingForm.logo ? (
-                    <img
-                      src={brandingForm.logo}
-                      alt="Logo"
-                      className="h-10 w-10 rounded object-contain"
-                    />
-                  ) : (
-                    <div
-                      className="h-10 w-10 rounded flex items-center justify-center text-white font-bold"
-                      style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}
-                    >
-                      {(brandingForm.appName || tenant?.name || 'D').charAt(0)}
-                    </div>
-                  )}
-                  <span className="font-semibold">
-                    {brandingForm.appName || 'DPP Manager'}
-                  </span>
-                </div>
-                <div className="flex gap-2 mb-4">
-                  <Badge style={{ backgroundColor: brandingForm.primaryColor || '#3B82F6' }}>
-                    {t('Primary Color')}
-                  </Badge>
-                  <Badge variant="outline">Secondary</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {brandingForm.poweredByText || 'Powered by DPP Manager'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Preview links for public pages */}
+          {/* Card 5: Test Public Pages */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -184,5 +184,19 @@
   "Describe this supply chain step...": "Describe this supply chain step...",
   "Coordinates (optional)": "Coordinates (optional)",
   "e.g. 48.1351,11.5820": "e.g. 48.1351,11.5820",
-  "Format: Latitude,Longitude": "Format: Latitude,Longitude"
+  "Format: Latitude,Longitude": "Format: Latitude,Longitude",
+  "Brand Identity": "Brand Identity",
+  "Drag & drop your logo here or click to upload": "Drag & drop your logo here or click to upload",
+  "Change logo": "Change logo",
+  "Change favicon": "Change favicon",
+  "Drag & drop your favicon here or click to upload": "Drag & drop your favicon here or click to upload",
+  "The small icon displayed in browser tabs": "The small icon displayed in browser tabs",
+  "Browser Tab Preview": "Browser Tab Preview",
+  "Theme Color": "Theme Color",
+  "Pick a color or choose from presets": "Pick a color or choose from presets",
+  "Live Preview": "Live Preview",
+  "This is how your branding appears across the app": "This is how your branding appears across the app",
+  "Uploaded!": "Uploaded!",
+  "Upload failed": "Upload failed",
+  "Link example": "Link example"
 }
