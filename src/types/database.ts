@@ -46,6 +46,7 @@ export interface QRCodeDomainSettings {
   resolver?: 'local' | 'gs1' | 'custom';
   foregroundColor?: string;   // QR-Code Vordergrundfarbe
   backgroundColor?: string;   // QR-Code Hintergrundfarbe
+  dppTemplate?: 'modern' | 'classic' | 'compact'; // Public DPP page template
 }
 
 export interface TenantSettings {

@@ -3,17 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { FileText, Loader2 } from 'lucide-react';
 import { getPublicBrandingByProduct } from '@/services/supabase';
+import { getPublicTenantQRSettings } from '@/services/supabase/tenants';
 import type { BrandingSettings } from '@/types/database';
 import { DEFAULT_BRANDING } from '@/lib/dynamic-theme';
+import type { DPPTemplate } from '@/hooks/use-public-product';
 
 // Context for public branding
 interface PublicBrandingContextType {
   branding: BrandingSettings | null;
+  dppTemplate: DPPTemplate;
   isLoading: boolean;
 }
 
 const PublicBrandingContext = createContext<PublicBrandingContextType>({
   branding: null,
+  dppTemplate: 'modern',
   isLoading: true,
 });
 
@@ -25,6 +29,7 @@ export function PublicLayout() {
   const { t } = useTranslation('dpp');
   const { gtin, serial } = useParams();
   const [branding, setBranding] = useState<BrandingSettings | null>(null);
+  const [dppTemplate, setDppTemplate] = useState<DPPTemplate>('modern');
   const [isLoading, setIsLoading] = useState(true);
 
   // Load branding based on product
@@ -36,8 +41,14 @@ export function PublicLayout() {
       }
 
       try {
-        const brandingData = await getPublicBrandingByProduct(gtin, serial);
+        const [brandingData, qrSettings] = await Promise.all([
+          getPublicBrandingByProduct(gtin, serial),
+          getPublicTenantQRSettings(gtin, serial),
+        ]);
         setBranding(brandingData);
+        if (qrSettings?.dppTemplate) {
+          setDppTemplate(qrSettings.dppTemplate as DPPTemplate);
+        }
       } catch (error) {
         console.error('Failed to load public branding:', error);
         setBranding(null);
@@ -57,7 +68,7 @@ export function PublicLayout() {
   };
 
   return (
-    <PublicBrandingContext.Provider value={{ branding, isLoading }}>
+    <PublicBrandingContext.Provider value={{ branding, dppTemplate, isLoading }}>
       <div className="min-h-screen flex flex-col bg-background">
         {/* Header */}
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -350,3 +350,36 @@ export async function getPublicBrandingByProduct(
 
   return getPublicTenantBranding(product.tenant_id);
 }
+
+/**
+ * Get QR code settings for a product's tenant (for public pages)
+ * Returns the dppTemplate and other QR settings
+ */
+export async function getPublicTenantQRSettings(
+  gtin: string,
+  serial: string
+): Promise<QRCodeDomainSettings | null> {
+  const { data: product, error: productError } = await supabase
+    .from('products')
+    .select('tenant_id')
+    .eq('gtin', gtin)
+    .eq('serial_number', serial)
+    .single();
+
+  if (productError || !product) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', product.tenant_id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const settings = data.settings as TenantSettings | null;
+  return settings?.qrCode || null;
+}

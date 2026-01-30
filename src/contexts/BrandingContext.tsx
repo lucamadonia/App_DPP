@@ -47,6 +47,7 @@ interface ResolvedQRCodeSettings {
   resolver: 'local' | 'gs1' | 'custom';
   foregroundColor: string;
   backgroundColor: string;
+  dppTemplate: 'modern' | 'classic' | 'compact';
 }
 
 interface BrandingContextType {
@@ -82,6 +83,7 @@ const DEFAULT_QR_CODE_SETTINGS: ResolvedQRCodeSettings = {
   resolver: 'local',
   foregroundColor: '#000000',
   backgroundColor: '#FFFFFF',
+  dppTemplate: 'modern',
 };
 
 const BrandingContext = createContext<BrandingContextType | undefined>(undefined);
@@ -113,6 +115,7 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
     resolver: rawQRCodeSettings?.resolver || DEFAULT_QR_CODE_SETTINGS.resolver,
     foregroundColor: rawQRCodeSettings?.foregroundColor || DEFAULT_QR_CODE_SETTINGS.foregroundColor,
     backgroundColor: rawQRCodeSettings?.backgroundColor || DEFAULT_QR_CODE_SETTINGS.backgroundColor,
+    dppTemplate: rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplate,
   };
 
   // Load branding from database
