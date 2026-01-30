@@ -12,15 +12,21 @@ export function AIAnalysisButton({ onClick, isStreaming, hasResult }: AIAnalysis
 
   return (
     <Button
-      variant="outline"
       size="sm"
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
       disabled={isStreaming}
-      className="gap-1.5"
+      className="relative overflow-hidden gap-1.5 w-full sm:w-auto bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white border-0 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 transition-all duration-300"
     >
+      {/* Shimmer overlay */}
+      {!isStreaming && (
+        <div className="absolute inset-0 animate-shimmer" aria-hidden="true">
+          <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        </div>
+      )}
+
       {isStreaming ? (
         <>
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -28,7 +34,7 @@ export function AIAnalysisButton({ onClick, isStreaming, hasResult }: AIAnalysis
         </>
       ) : (
         <>
-          <Sparkles className="h-3.5 w-3.5" />
+          <Sparkles className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-12" />
           KI-Tiefenanalyse
         </>
       )}

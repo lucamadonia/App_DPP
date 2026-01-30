@@ -1,4 +1,4 @@
-import { Sparkles, Loader2, ListChecks } from 'lucide-react';
+import { Sparkles, ListChecks, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAIStream } from '@/hooks/use-ai-stream';
@@ -11,6 +11,17 @@ interface AIActionPlanProps {
   requirements: RequirementSummary[];
 }
 
+function SkeletonLoader() {
+  return (
+    <div className="space-y-3 py-2">
+      <div className="h-3.5 w-full rounded-full bg-green-100 dark:bg-green-900/30 animate-pulse" />
+      <div className="h-3.5 w-5/6 rounded-full bg-green-100 dark:bg-green-900/30 animate-pulse" style={{ animationDelay: '100ms' }} />
+      <div className="h-3.5 w-4/6 rounded-full bg-green-100 dark:bg-green-900/30 animate-pulse" style={{ animationDelay: '200ms' }} />
+      <div className="h-3.5 w-3/6 rounded-full bg-green-100 dark:bg-green-900/30 animate-pulse" style={{ animationDelay: '300ms' }} />
+    </div>
+  );
+}
+
 export function AIActionPlan({ productContext, requirements }: AIActionPlanProps) {
   const { text, isStreaming, error, startStream, reset } = useAIStream();
 
@@ -20,45 +31,67 @@ export function AIActionPlan({ productContext, requirements }: AIActionPlanProps
   };
 
   return (
-    <Card className="border-primary/30">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ListChecks className="h-5 w-5 text-primary" />
-            KI-Handlungsplan
+    <Card className="overflow-hidden border-0 shadow-md">
+      {/* Gradient stripe */}
+      <div className="h-1.5 bg-gradient-to-r from-green-500 to-emerald-500" />
+
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center p-2.5 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10">
+              <ListChecks className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <span>KI-Handlungsplan</span>
           </div>
           {!text && !isStreaming && (
-            <Button onClick={handleGenerate} size="sm" className="gap-1.5">
+            <Button
+              onClick={handleGenerate}
+              size="sm"
+              className="relative overflow-hidden gap-1.5 w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 hover:from-green-600 hover:to-emerald-600 transition-all duration-300"
+            >
+              <div className="absolute inset-0 animate-shimmer" aria-hidden="true">
+                <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              </div>
               <Sparkles className="h-3.5 w-3.5" />
               Plan erstellen
             </Button>
           )}
           {text && !isStreaming && (
-            <Button onClick={reset} variant="ghost" size="sm">
+            <Button
+              onClick={reset}
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
               Zurücksetzen
             </Button>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0">
         {!text && !isStreaming && !error && (
-          <p className="text-sm text-muted-foreground">
-            Erstellen Sie einen priorisierten, chronologischen Handlungsplan mit konkreten Schritten, Fristen und Aufwandsschätzungen.
-          </p>
-        )}
-
-        {isStreaming && !text && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Erstelle Handlungsplan...
+          <div className="text-center py-6">
+            <div className="flex items-center justify-center h-12 w-12 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/10">
+              <ListChecks className="h-6 w-6 text-green-400" />
+            </div>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Erstellen Sie einen priorisierten, chronologischen Handlungsplan mit konkreten Schritten, Fristen und Aufwandsschätzungen.
+            </p>
           </div>
         )}
+
+        {isStreaming && !text && <SkeletonLoader />}
 
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}
 
-        <AIStreamingText text={text} isStreaming={isStreaming} />
+        {text && (
+          <div className="animate-slide-up">
+            <AIStreamingText text={text} isStreaming={isStreaming} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
