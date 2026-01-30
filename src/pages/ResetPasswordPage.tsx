@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +9,7 @@ import { Leaf, Lock, Loader2, CheckCircle } from 'lucide-react';
 import { updatePassword } from '@/services/supabase/auth';
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation('auth');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,12 +21,12 @@ export function ResetPasswordPage() {
     setError('');
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+      setError(t('Password must be at least 8 characters long.'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('Passwords do not match.'));
       return;
     }
 
@@ -56,19 +58,19 @@ export function ResetPasswordPage() {
               <Leaf className="h-7 w-7 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold">DPP Manager</h1>
+          <h1 className="text-2xl font-bold">{t('DPP Manager')}</h1>
           <p className="text-muted-foreground text-sm">
-            Digital Product Passports for sustainable products
+            {t('Digital Product Passports for sustainable products')}
           </p>
         </div>
 
         <Card className="w-full max-w-md mx-auto">
           <CardHeader className="text-center">
-            <CardTitle>Set New Password</CardTitle>
+            <CardTitle>{t('Set New Password')}</CardTitle>
             <CardDescription>
               {success
-                ? 'Your password has been changed successfully.'
-                : 'Enter your new password.'}
+                ? t('Your password has been changed successfully.')
+                : t('Enter your new password.')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -84,22 +86,22 @@ export function ResetPasswordPage() {
                   <CheckCircle className="h-12 w-12 text-green-500" />
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
-                  You can now sign in with your new password.
+                  {t('You can now sign in with your new password.')}
                 </p>
                 <Button asChild className="w-full">
-                  <Link to="/login">Go to Sign In</Link>
+                  <Link to="/login">{t('Go to Sign In')}</Link>
                 </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                  <Label htmlFor="new-password">{t('New Password')}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="new-password"
                       type="password"
-                      placeholder="At least 8 characters"
+                      placeholder={t('At least 8 characters')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-9"
@@ -109,13 +111,13 @@ export function ResetPasswordPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Label htmlFor="confirm-password">{t('Confirm Password')}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="confirm-password"
                       type="password"
-                      placeholder="Repeat password"
+                      placeholder={t('Repeat password')}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-9"
@@ -128,14 +130,14 @@ export function ResetPasswordPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('Saving...', { ns: 'common' })}
                     </>
                   ) : (
-                    'Save Password'
+                    t('Save Password')
                   )}
                 </Button>
                 <Button variant="ghost" asChild className="w-full">
-                  <Link to="/login">Back to Sign In</Link>
+                  <Link to="/login">{t('Back to Sign In')}</Link>
                 </Button>
               </form>
             )}

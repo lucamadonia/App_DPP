@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Sparkles, ListChecks, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +24,7 @@ function SkeletonLoader() {
 }
 
 export function AIActionPlan({ productContext, requirements }: AIActionPlanProps) {
+  const { t } = useTranslation('compliance');
   const { text, isStreaming, error, startStream, reset } = useAIStream();
 
   const handleGenerate = () => {
@@ -41,7 +43,7 @@ export function AIActionPlan({ productContext, requirements }: AIActionPlanProps
             <div className="flex items-center justify-center p-2.5 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10">
               <ListChecks className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
-            <span>AI Action Plan</span>
+            <span>{t('AI Action Plan')}</span>
           </div>
           {!text && !isStreaming && (
             <Button
@@ -53,7 +55,7 @@ export function AIActionPlan({ productContext, requirements }: AIActionPlanProps
                 <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               </div>
               <Sparkles className="h-3.5 w-3.5" />
-              Generate Plan
+              {t('Generate Plan')}
             </Button>
           )}
           {text && !isStreaming && (
@@ -64,7 +66,7 @@ export function AIActionPlan({ productContext, requirements }: AIActionPlanProps
               className="gap-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Reset
+              {t('Reset')}
             </Button>
           )}
         </CardTitle>
@@ -76,7 +78,7 @@ export function AIActionPlan({ productContext, requirements }: AIActionPlanProps
               <ListChecks className="h-6 w-6 text-green-400" />
             </div>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Generate a prioritized, chronological action plan with concrete steps, deadlines, and effort estimates.
+              {t('Generate a prioritized, chronological action plan with concrete steps, deadlines, and effort estimates.')}
             </p>
           </div>
         )}

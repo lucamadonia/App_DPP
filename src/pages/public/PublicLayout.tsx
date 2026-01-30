@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { FileText, Loader2 } from 'lucide-react';
 import { getPublicBrandingByProduct } from '@/services/supabase';
@@ -21,6 +22,7 @@ export function usePublicBranding() {
 }
 
 export function PublicLayout() {
+  const { t } = useTranslation('dpp');
   const { gtin, serial } = useParams();
   const [branding, setBranding] = useState<BrandingSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +86,7 @@ export function PublicLayout() {
                   {resolvedBranding.appName}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  Digital Product Passport
+                  {t('Digital Product Passport')}
                 </span>
               </div>
             </Link>
@@ -104,10 +106,10 @@ export function PublicLayout() {
             </p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">
-                Legal Notice
+                {t('Legal Notice')}
               </a>
               <a href="#" className="hover:text-foreground transition-colors">
-                Privacy Policy
+                {t('Privacy Policy')}
               </a>
             </div>
           </div>

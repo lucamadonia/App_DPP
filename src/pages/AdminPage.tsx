@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Globe,
   Tag,
@@ -191,6 +194,8 @@ function toJSONString(value: unknown): string {
 
 // Admin page component
 export function AdminPage() {
+  const { t } = useTranslation('settings');
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState('countries');
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -444,14 +449,14 @@ export function AdminPage() {
 
   // Tab configuration
   const tabs = [
-    { id: 'countries', label: 'Countries', icon: Globe, count: countries.length },
-    { id: 'categories', label: 'Categories', icon: Package, count: categories.length },
-    { id: 'regulations_eu', label: 'EU Regulations', icon: Shield, count: regulations.length },
-    { id: 'pictograms', label: 'Pictograms', icon: Tag, count: pictograms.length },
-    { id: 'recycling_codes', label: 'Recycling Codes', icon: Recycle, count: recyclingCodes.length },
-    { id: 'news', label: 'News', icon: Bell, count: news.length },
-    { id: 'tenants', label: 'Tenants', icon: Building2, count: tenants.length },
-    { id: 'users', label: 'Users', icon: Users, count: users.length },
+    { id: 'countries', label: t('Countries'), icon: Globe, count: countries.length },
+    { id: 'categories', label: t('Categories'), icon: Package, count: categories.length },
+    { id: 'regulations_eu', label: t('EU Regulations'), icon: Shield, count: regulations.length },
+    { id: 'pictograms', label: t('Pictograms'), icon: Tag, count: pictograms.length },
+    { id: 'recycling_codes', label: t('Recycling Codes'), icon: Recycle, count: recyclingCodes.length },
+    { id: 'news', label: t('News'), icon: Bell, count: news.length },
+    { id: 'tenants', label: t('Tenants'), icon: Building2, count: tenants.length },
+    { id: 'users', label: t('Users'), icon: Users, count: users.length },
   ];
 
   // Render functions for tables
@@ -462,12 +467,12 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Flag</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Regulations</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Flag')}</TableHead>
+                <TableHead>{t('Code')}</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Description')}</TableHead>
+                <TableHead>{t('Regulations')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -499,11 +504,11 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Icon</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Sort Order</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Icon')}</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Description')}</TableHead>
+                <TableHead>{t('Sort Order')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -534,12 +539,12 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Symbol</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Mandatory</TableHead>
-                <TableHead>Countries</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Symbol')}</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Category')}</TableHead>
+                <TableHead>{t('Mandatory')}</TableHead>
+                <TableHead>{t('Countries')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -548,7 +553,7 @@ export function AdminPage() {
                   <TableCell className="text-2xl">{pic.symbol}</TableCell>
                   <TableCell className="font-medium">{pic.name}</TableCell>
                   <TableCell><Badge variant="outline">{pic.category}</Badge></TableCell>
-                  <TableCell>{pic.mandatory ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
+                  <TableCell>{pic.mandatory ? <Badge>{t('Yes')}</Badge> : <Badge variant="secondary">{t('No')}</Badge>}</TableCell>
                   <TableCell className="max-w-[150px] truncate">{Array.isArray(pic.countries) ? pic.countries.join(', ') : pic.countries}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -571,12 +576,12 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Symbol</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Material</TableHead>
-                <TableHead>Recyclable</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Code')}</TableHead>
+                <TableHead>{t('Symbol')}</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Material')}</TableHead>
+                <TableHead>{t('Recyclable')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -586,7 +591,7 @@ export function AdminPage() {
                   <TableCell className="text-2xl">{rc.symbol}</TableCell>
                   <TableCell className="font-medium">{rc.name}</TableCell>
                   <TableCell>{rc.fullName}</TableCell>
-                  <TableCell>{rc.recyclable ? <Badge className="bg-success">Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
+                  <TableCell>{rc.recyclable ? <Badge className="bg-success">{t('Yes')}</Badge> : <Badge variant="secondary">{t('No')}</Badge>}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(rc)}>
@@ -608,11 +613,11 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Published</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Title')}</TableHead>
+                <TableHead>{t('Category')}</TableHead>
+                <TableHead>{t('Priority')}</TableHead>
+                <TableHead>{t('Published')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -647,11 +652,11 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Effective From</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Category')}</TableHead>
+                <TableHead>{t('Status')}</TableHead>
+                <TableHead>{t('Effective From')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -661,7 +666,7 @@ export function AdminPage() {
                   <TableCell><Badge variant="outline">{reg.category}</Badge></TableCell>
                   <TableCell>
                     <Badge className={reg.status === 'active' ? 'bg-success' : 'bg-warning'}>
-                      {reg.status === 'active' ? 'Active' : 'Upcoming'}
+                      {reg.status === 'active' ? t('Active') : t('Upcoming')}
                     </Badge>
                   </TableCell>
                   <TableCell>{reg.effectiveDate}</TableCell>
@@ -686,11 +691,11 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Slug')}</TableHead>
+                <TableHead>{t('Country')}</TableHead>
+                <TableHead>{t('Plan')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -725,13 +730,13 @@ export function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Email')}</TableHead>
+                <TableHead>{t('Role')}</TableHead>
+                <TableHead>{t('Status')}</TableHead>
+                <TableHead>{t('Tenant')}</TableHead>
+                <TableHead>{t('Last Login')}</TableHead>
+                <TableHead className="w-[100px]">{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -741,18 +746,18 @@ export function AdminPage() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge className={user.role === 'admin' ? 'bg-primary' : user.role === 'manager' ? 'bg-success' : 'bg-muted'}>
-                      {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : 'User'}
+                      {user.role === 'admin' ? t('Admin') : user.role === 'manager' ? t('Manager') : t('User')}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge className={user.status === 'active' ? 'bg-success' : user.status === 'pending' ? 'bg-warning' : 'bg-destructive'}>
-                      {user.status === 'active' ? 'Active' : user.status === 'pending' ? 'Pending' : 'Inactive'}
+                      {user.status === 'active' ? t('Active') : user.status === 'pending' ? t('Pending') : t('Inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {tenants.find(t => t.id === user.tenant_id)?.name || '-'}
                   </TableCell>
-                  <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-US') : '-'}</TableCell>
+                  <TableCell>{user.lastLogin ? formatDate(user.lastLogin, locale) : '-'}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}>
@@ -782,34 +787,34 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Country Code</Label>
+                <Label>{t('Country Code')}</Label>
                 <Input value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} placeholder="DE" />
               </div>
               <div>
-                <Label>Flag (Emoji)</Label>
+                <Label>{t('Flag (Emoji)')}</Label>
                 <Input value={formData.flag || ''} onChange={(e) => updateForm('flag', e.target.value)} placeholder="🇩🇪" />
               </div>
             </div>
             <div>
-              <Label>Name</Label>
+              <Label>{t('Name')}</Label>
               <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Germany" />
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>{t('Description')}</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Number of Regulations</Label>
+                <Label>{t('Number of Regulations')}</Label>
                 <Input type="number" value={formData.regulations || 0} onChange={(e) => updateForm('regulations', parseInt(e.target.value))} />
               </div>
               <div>
-                <Label>Number of Checklists</Label>
+                <Label>{t('Number of Checklists')}</Label>
                 <Input type="number" value={formData.checklists || 0} onChange={(e) => updateForm('checklists', parseInt(e.target.value))} />
               </div>
             </div>
             <div>
-              <Label>Authorities (JSON Array)</Label>
+              <Label>{t('Authorities (JSON Array)')}</Label>
               <Input value={formData.authorities || '[]'} onChange={(e) => updateForm('authorities', e.target.value)} placeholder='["BAuA", "UBA"]' />
             </div>
           </div>
@@ -820,24 +825,24 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <Label>Icon (Emoji)</Label>
+                <Label>{t('Icon (Emoji)')}</Label>
                 <Input value={formData.icon || ''} onChange={(e) => updateForm('icon', e.target.value)} placeholder="💻" />
               </div>
               <div className="col-span-3">
-                <Label>Name</Label>
+                <Label>{t('Name')}</Label>
                 <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="Electronics" />
               </div>
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>{t('Description')}</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div>
-              <Label>Sort Order</Label>
+              <Label>{t('Sort Order')}</Label>
               <Input type="number" value={formData.sort_order || 0} onChange={(e) => updateForm('sort_order', parseInt(e.target.value))} />
             </div>
             <div>
-              <Label>Regulations (JSON Array)</Label>
+              <Label>{t('Regulations (JSON Array)')}</Label>
               <Input value={formData.regulations || '[]'} onChange={(e) => updateForm('regulations', e.target.value)} placeholder='["WEEE", "RoHS"]' />
             </div>
           </div>
@@ -848,49 +853,49 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <Label>Symbol</Label>
+                <Label>{t('Symbol')}</Label>
                 <Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} placeholder="CE" />
               </div>
               <div className="col-span-3">
-                <Label>Name</Label>
+                <Label>{t('Name')}</Label>
                 <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>{t('Description')}</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Category</Label>
+                <Label>{t('Category')}</Label>
                 <Select value={formData.category || 'safety'} onValueChange={(v) => updateForm('category', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="safety">Safety</SelectItem>
-                    <SelectItem value="recycling">Recycling</SelectItem>
-                    <SelectItem value="chemicals">Chemicals</SelectItem>
-                    <SelectItem value="energy">Energy</SelectItem>
-                    <SelectItem value="durability">Durability</SelectItem>
+                    <SelectItem value="safety">{t('Safety')}</SelectItem>
+                    <SelectItem value="recycling">{t('Recycling')}</SelectItem>
+                    <SelectItem value="chemicals">{t('Chemicals')}</SelectItem>
+                    <SelectItem value="energy">{t('Energy')}</SelectItem>
+                    <SelectItem value="durability">{t('Durability')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2 pt-6">
                 <Checkbox checked={formData.mandatory || false} onCheckedChange={(v) => updateForm('mandatory', v)} />
-                <Label>Mandatory</Label>
+                <Label>{t('Mandatory')}</Label>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Dimensions</Label>
+                <Label>{t('Dimensions')}</Label>
                 <Input value={formData.dimensions || ''} onChange={(e) => updateForm('dimensions', e.target.value)} placeholder="Min. 5mm" />
               </div>
               <div>
-                <Label>Placement</Label>
+                <Label>{t('Placement')}</Label>
                 <Input value={formData.placement || ''} onChange={(e) => updateForm('placement', e.target.value)} placeholder="On product" />
               </div>
             </div>
             <div>
-              <Label>Countries (JSON Array)</Label>
+              <Label>{t('Countries (JSON Array)')}</Label>
               <Input value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} />
             </div>
           </div>
@@ -901,29 +906,29 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label>Code</Label>
+                <Label>{t('Code')}</Label>
                 <Input value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} placeholder="1" />
               </div>
               <div>
-                <Label>Symbol</Label>
+                <Label>{t('Symbol')}</Label>
                 <Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} placeholder="♳" />
               </div>
               <div>
-                <Label>Short Name</Label>
+                <Label>{t('Short Name')}</Label>
                 <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="PET" />
               </div>
             </div>
             <div>
-              <Label>Full Name</Label>
+              <Label>{t('Full Name')}</Label>
               <Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} placeholder="Polyethylene terephthalate" />
             </div>
             <div>
-              <Label>Examples</Label>
+              <Label>{t('Examples')}</Label>
               <Input value={formData.examples || ''} onChange={(e) => updateForm('examples', e.target.value)} placeholder="Beverage bottles" />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox checked={formData.recyclable || false} onCheckedChange={(v) => updateForm('recyclable', v)} />
-              <Label>Recyclable</Label>
+              <Label>{t('Recyclable')}</Label>
             </div>
           </div>
         );
@@ -932,58 +937,58 @@ export function AdminPage() {
         return (
           <div className="grid gap-4">
             <div>
-              <Label>Title</Label>
+              <Label>{t('Title')}</Label>
               <Input value={formData.title || ''} onChange={(e) => updateForm('title', e.target.value)} />
             </div>
             <div>
-              <Label>Summary</Label>
+              <Label>{t('Summary')}</Label>
               <Input value={formData.summary || ''} onChange={(e) => updateForm('summary', e.target.value)} />
             </div>
             <div>
-              <Label>Content</Label>
+              <Label>{t('Content')}</Label>
               <Input value={formData.content || ''} onChange={(e) => updateForm('content', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Category</Label>
+                <Label>{t('Category')}</Label>
                 <Select value={formData.category || 'update'} onValueChange={(v) => updateForm('category', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="regulation">Regulation</SelectItem>
-                    <SelectItem value="deadline">Deadline</SelectItem>
-                    <SelectItem value="update">Update</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="regulation">{t('Regulation')}</SelectItem>
+                    <SelectItem value="deadline">{t('Deadline')}</SelectItem>
+                    <SelectItem value="update">{t('Update')}</SelectItem>
+                    <SelectItem value="warning">{t('Warning')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Priority</Label>
+                <Label>{t('Priority')}</Label>
                 <Select value={formData.priority || 'medium'} onValueChange={(v) => updateForm('priority', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="high">{t('High')}</SelectItem>
+                    <SelectItem value="medium">{t('Medium')}</SelectItem>
+                    <SelectItem value="low">{t('Low')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Published On</Label>
+                <Label>{t('Published On')}</Label>
                 <Input type="date" value={formData.publishedAt || ''} onChange={(e) => updateForm('publishedAt', e.target.value)} />
               </div>
               <div>
-                <Label>Effective Date</Label>
+                <Label>{t('Effective Date')}</Label>
                 <Input type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>Countries (JSON Array)</Label>
+              <Label>{t('Countries (JSON Array)')}</Label>
               <Input value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} />
             </div>
             <div>
-              <Label>Tags (JSON Array)</Label>
+              <Label>{t('Tags (JSON Array)')}</Label>
               <Input value={formData.tags || '[]'} onChange={(e) => updateForm('tags', e.target.value)} placeholder='["ESPR", "DPP"]' />
             </div>
           </div>
@@ -994,57 +999,57 @@ export function AdminPage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Short Name</Label>
+                <Label>{t('Short Name')}</Label>
                 <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="ESPR" />
               </div>
               <div>
-                <Label>Status</Label>
+                <Label>{t('Status')}</Label>
                 <Select value={formData.status || 'active'} onValueChange={(v) => updateForm('status', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="active">{t('Active')}</SelectItem>
+                    <SelectItem value="upcoming">{t('Upcoming')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Full Name</Label>
+              <Label>{t('Full Name')}</Label>
               <Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} />
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>{t('Description')}</Label>
               <Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Category</Label>
+                <Label>{t('Category')}</Label>
                 <Select value={formData.category || 'environment'} onValueChange={(v) => updateForm('category', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="environment">Environment</SelectItem>
-                    <SelectItem value="chemicals">Chemicals</SelectItem>
-                    <SelectItem value="recycling">Recycling</SelectItem>
-                    <SelectItem value="safety">Safety</SelectItem>
-                    <SelectItem value="energy">Energy</SelectItem>
+                    <SelectItem value="environment">{t('Environment')}</SelectItem>
+                    <SelectItem value="chemicals">{t('Chemicals')}</SelectItem>
+                    <SelectItem value="recycling">{t('Recycling')}</SelectItem>
+                    <SelectItem value="safety">{t('Safety')}</SelectItem>
+                    <SelectItem value="energy">{t('Energy')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Effective Date</Label>
+                <Label>{t('Effective Date')}</Label>
                 <Input type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>Application Date</Label>
+              <Label>{t('Application Date')}</Label>
               <Input type="date" value={formData.applicationDate || ''} onChange={(e) => updateForm('applicationDate', e.target.value)} />
             </div>
             <div>
-              <Label>Requirements (JSON Array)</Label>
+              <Label>{t('Requirements (JSON Array)')}</Label>
               <Input value={formData.keyRequirements || '[]'} onChange={(e) => updateForm('keyRequirements', e.target.value)} />
             </div>
             <div>
-              <Label>Affected Products (JSON Array)</Label>
+              <Label>{t('Affected Products (JSON Array)')}</Label>
               <Input value={formData.affectedProducts || '[]'} onChange={(e) => updateForm('affectedProducts', e.target.value)} />
             </div>
           </div>
@@ -1054,24 +1059,24 @@ export function AdminPage() {
         return (
           <div className="grid gap-4">
             <div>
-              <Label>Company Name</Label>
+              <Label>{t('Company Name')}</Label>
               <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
             </div>
             <div>
-              <Label>Slug (URL-friendly)</Label>
+              <Label>{t('Slug (URL-friendly)')}</Label>
               <Input value={formData.slug || ''} onChange={(e) => updateForm('slug', e.target.value)} placeholder="my-company" />
             </div>
             <div>
-              <Label>Address</Label>
+              <Label>{t('Address')}</Label>
               <Input value={formData.address || ''} onChange={(e) => updateForm('address', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Country</Label>
+                <Label>{t('Country')}</Label>
                 <Input value={formData.country || 'DE'} onChange={(e) => updateForm('country', e.target.value)} />
               </div>
               <div>
-                <Label>Plan</Label>
+                <Label>{t('Plan')}</Label>
                 <Select value={formData.plan || 'free'} onValueChange={(v) => updateForm('plan', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1084,11 +1089,11 @@ export function AdminPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>EORI Number</Label>
+                <Label>{t('EORI Number')}</Label>
                 <Input value={formData.eori || ''} onChange={(e) => updateForm('eori', e.target.value)} />
               </div>
               <div>
-                <Label>VAT ID</Label>
+                <Label>{t('VAT ID')}</Label>
                 <Input value={formData.vat || ''} onChange={(e) => updateForm('vat', e.target.value)} />
               </div>
             </div>
@@ -1099,41 +1104,41 @@ export function AdminPage() {
         return (
           <div className="grid gap-4">
             <div>
-              <Label>Name</Label>
+              <Label>{t('Name')}</Label>
               <Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} placeholder="John Doe" />
             </div>
             <div>
-              <Label>Email</Label>
+              <Label>{t('Email')}</Label>
               <Input type="email" value={formData.email || ''} onChange={(e) => updateForm('email', e.target.value)} placeholder="john@example.com" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Role</Label>
+                <Label>{t('Role')}</Label>
                 <Select value={formData.role || 'user'} onValueChange={(v) => updateForm('role', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">{t('Admin')}</SelectItem>
+                    <SelectItem value="manager">{t('Manager')}</SelectItem>
+                    <SelectItem value="user">{t('User')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Status</Label>
+                <Label>{t('Status')}</Label>
                 <Select value={formData.status || 'active'} onValueChange={(v) => updateForm('status', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">{t('Active')}</SelectItem>
+                    <SelectItem value="pending">{t('Pending')}</SelectItem>
+                    <SelectItem value="inactive">{t('Inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Tenant</Label>
+              <Label>{t('Tenant')}</Label>
               <Select value={formData.tenant_id || ''} onValueChange={(v) => updateForm('tenant_id', v)}>
-                <SelectTrigger><SelectValue placeholder="Select tenant" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('Select tenant')} /></SelectTrigger>
                 <SelectContent>
                   {tenants.map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id}>{tenant.name}</SelectItem>
@@ -1144,7 +1149,7 @@ export function AdminPage() {
             {dialogMode === 'create' && (
               <div className="rounded-lg border border-dashed p-4 bg-muted/30">
                 <p className="text-sm text-muted-foreground">
-                  The user will receive an email with instructions to set up their password.
+                  {t('The user will receive an email with instructions to set up their password.')}
                 </p>
               </div>
             )}
@@ -1163,9 +1168,9 @@ export function AdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Admin Dashboard')}</h1>
           <p className="text-muted-foreground">
-            Backend management for all master data
+            {t('Backend management for all master data')}
           </p>
         </div>
       </div>
@@ -1204,7 +1209,7 @@ export function AdminPage() {
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search..."
+                  placeholder={t('Search...', { ns: 'common' })}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -1215,7 +1220,7 @@ export function AdminPage() {
               </Button>
               <Button onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
-                New
+                {t('New')}
               </Button>
             </div>
           </div>
@@ -1236,18 +1241,18 @@ export function AdminPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'Create New' : 'Edit'}: {currentTab?.label}
+              {dialogMode === 'create' ? t('Create New') : t('Edit')}: {currentTab?.label}
             </DialogTitle>
           </DialogHeader>
           {renderForm()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               <X className="mr-2 h-4 w-4" />
-              Cancel
+              {t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save
+              {t('Save', { ns: 'common' })}
             </Button>
           </DialogFooter>
         </DialogContent>

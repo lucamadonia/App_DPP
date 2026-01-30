@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Sparkles, SearchCheck, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +24,7 @@ function SkeletonLoader() {
 }
 
 export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalReqsProps) {
+  const { t } = useTranslation('compliance');
   const { text, isStreaming, error, startStream, reset } = useAIStream();
 
   const handleGenerate = () => {
@@ -41,7 +43,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
             <div className="flex items-center justify-center p-2.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10">
               <SearchCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
-            <span>AI Additional Requirements</span>
+            <span>{t('AI Additional Requirements')}</span>
           </div>
           {!text && !isStreaming && (
             <Button
@@ -53,7 +55,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
                 <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               </div>
               <Sparkles className="h-3.5 w-3.5" />
-              Find Additional Requirements
+              {t('Find Additional Requirements')}
             </Button>
           )}
           {text && !isStreaming && (
@@ -64,7 +66,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
               className="gap-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Reset
+              {t('Reset')}
             </Button>
           )}
         </CardTitle>
@@ -76,7 +78,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
               <SearchCheck className="h-6 w-6 text-amber-400" />
             </div>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              AI identifies industry-specific standards, country-specific requirements, and voluntary certifications that go beyond the standard analysis.
+              {t('AI identifies industry-specific standards, country-specific requirements, and voluntary certifications that go beyond the standard analysis.')}
             </p>
           </div>
         )}

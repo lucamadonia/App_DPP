@@ -468,15 +468,15 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                 <h3 className="font-medium mb-4">{t('Responsible Person (EU Regulation)')}</h3>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Name</label>
+                    <label className="text-sm font-medium">{t('Name')}</label>
                     <Input placeholder="Dr. Jane Smith" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
+                    <label className="text-sm font-medium">{t('Email')}</label>
                     <Input placeholder="compliance@your-company.com" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Phone</label>
+                    <label className="text-sm font-medium">{t('Phone')}</label>
                     <Input placeholder="+49 30 123456789" />
                   </div>
                 </div>
@@ -489,7 +489,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   ) : (
                     <Save className="mr-2 h-4 w-4" />
                   )}
-                  Save
+                  {t('Save', { ns: 'common' })}
                 </Button>
               </div>
             </CardContent>
@@ -509,7 +509,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               <div className="grid gap-6 md:grid-cols-2">
                 {/* App-Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="appName">App Name</Label>
+                  <Label htmlFor="appName">{t('App Name')}</Label>
                   <Input
                     id="appName"
                     placeholder="DPP Manager"
@@ -519,7 +519,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Displayed in the sidebar, breadcrumb, and browser tab
+                    {t('Displayed in the sidebar, breadcrumb, and browser tab')}
                   </p>
                 </div>
 

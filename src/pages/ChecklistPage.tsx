@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CheckCircle2,
   Circle,
@@ -156,6 +157,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function ChecklistPage() {
+  const { t } = useTranslation('compliance');
   const [selectedCountry, setSelectedCountry] = useState('DE');
   const [selectedCategory, setSelectedCategory] = useState('electronics');
   const [searchQuery, setSearchQuery] = useState('');
@@ -281,7 +283,7 @@ export function ChecklistPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading checklist data...</p>
+          <p className="text-muted-foreground">{t('Loading checklist data...')}</p>
         </div>
       </div>
     );
@@ -293,19 +295,19 @@ export function ChecklistPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Compliance Checklist</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('Compliance Checklist')}</h1>
             <p className="text-muted-foreground">
-              Comprehensive, interactive checklist for country-specific requirements
+              {t('Comprehensive, interactive checklist for country-specific requirements')}
             </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline">
               <Printer className="mr-2 h-4 w-4" />
-              Print
+              {t('Print', { ns: 'common' })}
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              PDF Export
+              {t('PDF Export')}
             </Button>
           </div>
         </div>
@@ -314,7 +316,7 @@ export function ChecklistPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Select Country</CardTitle>
+              <CardTitle className="text-base">{t('Select Country')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -341,7 +343,7 @@ export function ChecklistPage() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Product Category</CardTitle>
+              <CardTitle className="text-base">{t('Product Category')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -377,10 +379,10 @@ export function ChecklistPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
-                {criticalItems.length} critical items open
+                {t('{{count}} critical items open', { count: criticalItems.length })}
               </CardTitle>
               <CardDescription>
-                These items have the highest priority and may lead to sales bans
+                {t('These items have the highest priority and may lead to sales bans')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -393,7 +395,7 @@ export function ChecklistPage() {
                 ))}
                 {criticalItems.length > 3 && (
                   <p className="text-sm text-muted-foreground">
-                    + {criticalItems.length - 3} more critical items
+                    {t('+ {{count}} more critical items', { count: criticalItems.length - 3 })}
                   </p>
                 )}
               </div>
@@ -407,22 +409,22 @@ export function ChecklistPage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
-                <span className="font-medium">Compliance Progress</span>
+                <span className="font-medium">{t('Compliance Progress')}</span>
               </div>
               <span className="font-bold text-lg">{progress}%</span>
             </div>
             <Progress value={progress} className="h-3" />
             <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
-              <span>{completedMandatory.length} of {mandatoryItems.length} mandatory items completed</span>
+              <span>{t('{{completed}} of {{total}} mandatory items completed', { completed: completedMandatory.length, total: mandatoryItems.length })}</span>
               {progress === 100 ? (
                 <Badge className="bg-success text-success-foreground">
                   <CheckCircle2 className="mr-1 h-3 w-3" />
-                  Complete
+                  {t('Complete')}
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-warning border-warning">
                   <AlertTriangle className="mr-1 h-3 w-3" />
-                  Incomplete
+                  {t('Incomplete')}
                 </Badge>
               )}
             </div>
@@ -434,7 +436,7 @@ export function ChecklistPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search checklist..."
+              placeholder={t('Search checklist...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -445,7 +447,7 @@ export function ChecklistPage() {
             onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
           >
             <Filter className="mr-2 h-4 w-4" />
-            Open items only
+            {t('Open items only')}
           </Button>
         </div>
 
@@ -454,9 +456,9 @@ export function ChecklistPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No checklist available</h3>
+              <h3 className="text-lg font-medium mb-2">{t('No checklist available')}</h3>
               <p className="text-muted-foreground">
-                No detailed checklist is available yet for this country/category combination.
+                {t('No detailed checklist is available yet for this country/category combination.')}
               </p>
             </CardContent>
           </Card>
@@ -525,18 +527,18 @@ export function ChecklistPage() {
                                         </p>
                                         {item.mandatory && (
                                           <Badge variant="destructive" className="text-xs">
-                                            Required
+                                            {t('Required')}
                                           </Badge>
                                         )}
                                         <Badge className={`text-xs ${priorityColors[item.priority]}`}>
-                                          {item.priority === 'critical' ? 'Critical' :
-                                           item.priority === 'high' ? 'High' :
-                                           item.priority === 'medium' ? 'Medium' : 'Low'}
+                                          {item.priority === 'critical' ? t('Critical') :
+                                           item.priority === 'high' ? t('High') :
+                                           item.priority === 'medium' ? t('Medium') : t('Low')}
                                         </Badge>
                                         {item.documentRequired && (
                                           <Badge variant="outline" className="text-xs">
                                             <FileText className="mr-1 h-3 w-3" />
-                                            Document
+                                            {t('Document')}
                                           </Badge>
                                         )}
                                         {item.deadline && (
@@ -557,7 +559,7 @@ export function ChecklistPage() {
                                       <div>
                                         <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                                           <Info className="h-4 w-4" />
-                                          Detailed Description
+                                          {t('Detailed Description')}
                                         </h4>
                                         <p className="text-sm text-muted-foreground">
                                           {item.detailedDescription}
@@ -568,25 +570,25 @@ export function ChecklistPage() {
                                       <div className="grid gap-4 md:grid-cols-2">
                                         {item.legalBasis && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Legal Basis</h5>
+                                            <h5 className="text-sm font-medium mb-1">{t('Legal Basis')}</h5>
                                             <p className="text-sm text-muted-foreground">{item.legalBasis}</p>
                                           </div>
                                         )}
                                         {item.authority && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Responsible Authority</h5>
+                                            <h5 className="text-sm font-medium mb-1">{t('Responsible Authority')}</h5>
                                             <p className="text-sm text-muted-foreground">{item.authority}</p>
                                           </div>
                                         )}
                                         {item.penalties && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Penalties</h5>
+                                            <h5 className="text-sm font-medium mb-1">{t('Penalties')}</h5>
                                             <p className="text-sm text-destructive">{item.penalties}</p>
                                           </div>
                                         )}
                                         {item.documentTypes && item.documentTypes.length > 0 && (
                                           <div>
-                                            <h5 className="text-sm font-medium mb-1">Required Documents</h5>
+                                            <h5 className="text-sm font-medium mb-1">{t('Required Documents')}</h5>
                                             <div className="flex flex-wrap gap-1">
                                               {item.documentTypes.map(doc => (
                                                 <Badge key={doc} variant="outline" className="text-xs">
@@ -603,7 +605,7 @@ export function ChecklistPage() {
                                         <div>
                                           <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
                                             <HelpCircle className="h-4 w-4" />
-                                            Implementation Tips
+                                            {t('Implementation Tips')}
                                           </h5>
                                           <ul className="space-y-1">
                                             {item.tips.map((tip, idx) => (
@@ -619,7 +621,7 @@ export function ChecklistPage() {
                                       {/* Applicable Products */}
                                       {item.applicableProducts && item.applicableProducts.length > 0 && (
                                         <div>
-                                          <h5 className="text-sm font-medium mb-2">Affected Products</h5>
+                                          <h5 className="text-sm font-medium mb-2">{t('Affected Products')}</h5>
                                           <div className="flex flex-wrap gap-1">
                                             {item.applicableProducts.map(product => (
                                               <Badge key={product} variant="secondary" className="text-xs">
@@ -633,7 +635,7 @@ export function ChecklistPage() {
                                       {/* Links */}
                                       {item.links && item.links.length > 0 && (
                                         <div>
-                                          <h5 className="text-sm font-medium mb-2">Related Links</h5>
+                                          <h5 className="text-sm font-medium mb-2">{t('Related Links')}</h5>
                                           <div className="flex flex-wrap gap-2">
                                             {item.links.map(link => (
                                               <Button key={link.url} variant="outline" size="sm" asChild>

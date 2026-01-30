@@ -1,9 +1,11 @@
 import { useNavigate, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SupabaseAuth } from '@/components/SupabaseAuth';
 import { Leaf } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginPage() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -31,9 +33,9 @@ export function LoginPage() {
               <Leaf className="h-7 w-7 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold">DPP Manager</h1>
+          <h1 className="text-2xl font-bold">{t('DPP Manager')}</h1>
           <p className="text-muted-foreground text-sm">
-            Digital Product Passports for sustainable products
+            {t('Digital Product Passports for sustainable products')}
           </p>
         </div>
 
@@ -46,10 +48,10 @@ export function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground">
-          By signing in you agree to our{' '}
-          <a href="#" className="text-primary hover:underline">Terms of Service</a>
-          {' '}and{' '}
-          <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
+          {t('By signing in you agree to our')}{' '}
+          <a href="#" className="text-primary hover:underline">{t('Terms of Service')}</a>
+          {' '}{t('and')}{' '}
+          <a href="#" className="text-primary hover:underline">{t('Privacy Policy')}</a>.
         </p>
       </div>
     </div>

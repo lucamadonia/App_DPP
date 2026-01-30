@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
  * This page verifies the session and redirects appropriately.
  */
 export function AuthCallbackPage() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { refreshSession } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -79,23 +81,23 @@ export function AuthCallbackPage() {
             )}
           </div>
           <CardTitle>
-            {status === 'loading' && 'Processing authentication...'}
-            {status === 'success' && 'Successfully signed in!'}
-            {status === 'error' && 'Sign in failed'}
+            {status === 'loading' && t('Processing authentication...')}
+            {status === 'success' && t('Successfully signed in!')}
+            {status === 'error' && t('Sign in failed')}
           </CardTitle>
           <CardDescription>
-            {status === 'loading' && 'Please wait a moment.'}
-            {status === 'success' && 'You will be redirected to the dashboard.'}
+            {status === 'loading' && t('Please wait a moment.')}
+            {status === 'success' && t('You will be redirected to the dashboard.')}
             {status === 'error' && error}
           </CardDescription>
         </CardHeader>
         {status === 'error' && (
           <CardContent className="flex flex-col gap-2">
             <Button onClick={() => navigate('/login', { replace: true })}>
-              Back to Sign In
+              {t('Back to Sign In')}
             </Button>
             <Button variant="ghost" onClick={() => navigate('/', { replace: true })}>
-              Go to Homepage
+              {t('Go to Homepage')}
             </Button>
           </CardContent>
         )}

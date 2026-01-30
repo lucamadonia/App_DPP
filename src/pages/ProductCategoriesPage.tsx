@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -403,6 +404,7 @@ const fallbackCategories: Category[] = [
 ];
 
 export function ProductCategoriesPage() {
+  const { t } = useTranslation('products');
   const [searchTerm, setSearchTerm] = useState('');
   const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const [isLoading, setIsLoading] = useState(true);
@@ -441,15 +443,15 @@ export function ProductCategoriesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Product Categories</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Product Categories')}</h1>
           <p className="text-muted-foreground">
-            {categories.length} main categories with {totalSubcategories} subcategories
+            {t('{{count}} main categories with {{subCount}} subcategories', { count: categories.length, subCount: totalSubcategories })}
           </p>
         </div>
         <Link to="/requirements-calculator">
           <Button>
             <Zap className="mr-2 h-4 w-4" />
-            Requirements Calculator
+            {t('Requirements Calculator')}
           </Button>
         </Link>
       </div>
@@ -458,7 +460,7 @@ export function ProductCategoriesPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search category or product..."
+          placeholder={t('Search category or product...')}
           className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -475,7 +477,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{categories.length}</p>
-                <p className="text-sm text-muted-foreground">Main Categories</p>
+                <p className="text-sm text-muted-foreground">{t('Main Categories')}</p>
               </div>
             </div>
           </CardContent>
@@ -488,7 +490,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalSubcategories}</p>
-                <p className="text-sm text-muted-foreground">Subcategories</p>
+                <p className="text-sm text-muted-foreground">{t('Subcategories')}</p>
               </div>
             </div>
           </CardContent>
@@ -501,7 +503,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">27+</p>
-                <p className="text-sm text-muted-foreground">EU Countries Covered</p>
+                <p className="text-sm text-muted-foreground">{t('EU Countries Covered')}</p>
               </div>
             </div>
           </CardContent>
@@ -514,7 +516,7 @@ export function ProductCategoriesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">50+</p>
-                <p className="text-sm text-muted-foreground">Regulations</p>
+                <p className="text-sm text-muted-foreground">{t('Regulations')}</p>
               </div>
             </div>
           </CardContent>
@@ -547,7 +549,7 @@ export function ProductCategoriesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{category.name}</h3>
-                            <Badge variant="secondary">{subcategories.length} Products</Badge>
+                            <Badge variant="secondary">{subcategories.length} {t('Products')}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{category.description}</p>
                         </div>
@@ -571,7 +573,7 @@ export function ProductCategoriesPage() {
                         <div>
                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                             <ShieldCheck className="h-4 w-4" />
-                            Relevant Regulations
+                            {t('Relevant Regulations')}
                           </h4>
                           <div className="flex flex-wrap gap-2">
                             {regulations.map(reg => (
@@ -586,7 +588,7 @@ export function ProductCategoriesPage() {
                         <div>
                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                             <Package className="h-4 w-4" />
-                            Product Types ({subcategories.length})
+                            {t('Product Types')} ({subcategories.length})
                           </h4>
                           <div className="flex flex-wrap gap-2">
                             {subcategories.map(sub => (
@@ -602,13 +604,13 @@ export function ProductCategoriesPage() {
                           <Link to={`/requirements-calculator?category=${category.id}`}>
                             <Button size="sm">
                               <Zap className="mr-2 h-4 w-4" />
-                              Check Requirements
+                              {t('Check Requirements')}
                             </Button>
                           </Link>
                           <Link to={`/checklists?category=${category.id}`}>
                             <Button size="sm" variant="outline">
                               <FileText className="mr-2 h-4 w-4" />
-                              Open Checklist
+                              {t('Open Checklist')}
                             </Button>
                           </Link>
                         </div>
@@ -626,8 +628,8 @@ export function ProductCategoriesPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No categories found</h3>
-            <p className="text-muted-foreground">Try a different search term</p>
+            <h3 className="text-lg font-medium">{t('No categories found')}</h3>
+            <p className="text-muted-foreground">{t('Try a different search term')}</p>
           </CardContent>
         </Card>
       )}

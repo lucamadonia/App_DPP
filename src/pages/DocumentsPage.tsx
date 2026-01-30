@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Search,
   Filter,
@@ -80,6 +83,8 @@ const statusConfig = {
 const documentCategories = ['Conformity', 'Certificate', 'Report', 'Datasheet', 'Test Report'] as const;
 
 export function DocumentsPage() {
+  const { t } = useTranslation('documents');
+  const locale = useLocale();
   const [searchQuery, setSearchQuery] = useState('');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -191,14 +196,14 @@ export function DocumentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Documents & Certificates</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Documents & Certificates')}</h1>
           <p className="text-muted-foreground">
-            Manage all documents for your products
+            {t('Manage all documents for your products')}
           </p>
         </div>
         <Button onClick={() => setIsUploadDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Document
+          {t('Add Document')}
         </Button>
       </div>
 
@@ -207,7 +212,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total
+              {t('Total')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -217,7 +222,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Valid
+              {t('Valid')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -227,7 +232,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Expiring Soon
+              {t('Expiring Soon')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -237,7 +242,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Expired
+              {t('Expired')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -255,8 +260,8 @@ export function DocumentsPage() {
           >
             <div className="text-center">
               <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium">Drag files here</p>
-              <p className="text-xs text-muted-foreground">or click to select</p>
+              <p className="mt-2 text-sm font-medium">{t('Drag files here')}</p>
+              <p className="text-xs text-muted-foreground">{t('or click to select')}</p>
             </div>
           </div>
         </CardContent>
@@ -269,7 +274,7 @@ export function DocumentsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by document or category..."
+                placeholder={t('Search by document or category...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -277,11 +282,11 @@ export function DocumentsPage() {
             </div>
             <Button variant="outline">
               <Filter className="mr-2 h-4 w-4" />
-              Filter
+              {t('Filter', { ns: 'common' })}
             </Button>
             <Button variant="outline">
               <Calendar className="mr-2 h-4 w-4" />
-              Validity Tracker
+              {t('Validity Tracker')}
             </Button>
           </div>
         </CardContent>
@@ -301,12 +306,12 @@ export function DocumentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Uploaded</TableHead>
-                  <TableHead>Valid Until</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Size</TableHead>
+                  <TableHead>{t('Document')}</TableHead>
+                  <TableHead>{t('Category')}</TableHead>
+                  <TableHead>{t('Uploaded')}</TableHead>
+                  <TableHead>{t('Valid Until')}</TableHead>
+                  <TableHead>{t('Status', { ns: 'common' })}</TableHead>
+                  <TableHead>{t('Size')}</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -331,11 +336,11 @@ export function DocumentsPage() {
                         <Badge variant="outline">{doc.category}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-US') : '-'}
+                        {doc.uploadedAt ? formatDate(doc.uploadedAt, locale) : '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {doc.validUntil
-                          ? new Date(doc.validUntil).toLocaleDateString('en-US')
+                          ? formatDate(doc.validUntil, locale)
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -355,11 +360,11 @@ export function DocumentsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>
                               <Eye className="mr-2 h-4 w-4" />
-                              Preview
+                              {t('Preview')}
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Download className="mr-2 h-4 w-4" />
-                              Download
+                              {t('Download', { ns: 'common' })}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -372,7 +377,7 @@ export function DocumentsPage() {
                               ) : (
                                 <Trash2 className="mr-2 h-4 w-4" />
                               )}
-                              Delete
+                              {t('Delete', { ns: 'common' })}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -391,14 +396,14 @@ export function DocumentsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium">No documents found</h3>
+            <h3 className="text-lg font-medium">{t('No documents found')}</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery ? 'Try a different search term' : 'Upload your first document'}
+              {searchQuery ? t('Try a different search term') : t('Upload your first document')}
             </p>
             {!searchQuery && (
               <Button onClick={() => setIsUploadDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Document
+                {t('Add Document')}
               </Button>
             )}
           </CardContent>
@@ -409,15 +414,15 @@ export function DocumentsPage() {
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Document</DialogTitle>
+            <DialogTitle>{t('Add Document')}</DialogTitle>
             <DialogDescription>
-              Add a new document to your product portfolio.
+              {t('Add a new document to your product portfolio.')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Select File</Label>
+              <Label>{t('Select File')}</Label>
               <Input
                 ref={fileInputRef}
                 type="file"
@@ -432,7 +437,7 @@ export function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-name">Document Name</Label>
+              <Label htmlFor="doc-name">{t('Document Name')}</Label>
               <Input
                 id="doc-name"
                 placeholder="e.g. CE_Declaration_of_Conformity.pdf"
@@ -442,7 +447,7 @@ export function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-category">Category</Label>
+              <Label htmlFor="doc-category">{t('Category')}</Label>
               <Select
                 value={newDoc.category}
                 onValueChange={(value) => setNewDoc({ ...newDoc, category: value as Document['category'] })}
@@ -461,7 +466,7 @@ export function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-valid">Valid Until (optional)</Label>
+              <Label htmlFor="doc-valid">{t('Valid Until (optional)')}</Label>
               <Input
                 id="doc-valid"
                 type="date"
@@ -473,7 +478,7 @@ export function DocumentsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setSelectedFile(null); }}>
-              Cancel
+              {t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleCreateDocument} disabled={!newDoc.name || isUploading}>
               {isUploading ? (
@@ -481,7 +486,7 @@ export function DocumentsPage() {
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              {isUploading ? 'Uploading...' : selectedFile ? 'Upload' : 'Add'}
+              {isUploading ? t('Uploading...') : selectedFile ? t('Upload') : t('Add')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Calculator,
   CheckCircle2,
@@ -109,6 +110,7 @@ function useRequirementAnalysis() {
 }
 
 export function RequirementsCalculatorPage() {
+  const { t } = useTranslation('compliance');
   const [productName, setProductName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
@@ -293,20 +295,20 @@ export function RequirementsCalculatorPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Requirements Calculator</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Requirements Calculator')}</h1>
           <p className="text-muted-foreground">
-            Determine all compliance requirements based on your product and target market
+            {t('Determine all compliance requirements based on your product and target market')}
           </p>
         </div>
         {showResults && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowResults(false)}>
               <X className="mr-2 h-4 w-4" />
-              Recalculate
+              {t('Recalculate')}
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              PDF Export
+              {t('PDF Export')}
             </Button>
           </div>
         )}
@@ -319,16 +321,16 @@ export function RequirementsCalculatorPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5" />
-                Product Configuration
+                {t('Product Configuration')}
               </CardTitle>
               <CardDescription>
-                Answer the following questions to determine all relevant requirements
+                {t('Answer the following questions to determine all relevant requirements')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Product Name */}
               <div className="space-y-2">
-                <Label htmlFor="product-name">Product Name (optional)</Label>
+                <Label htmlFor="product-name">{t('Product Name (optional)')}</Label>
                 <Input
                   id="product-name"
                   placeholder="e.g. Smart Home Hub XL-500"
@@ -339,7 +341,7 @@ export function RequirementsCalculatorPage() {
 
               {/* Category */}
               <div className="space-y-2">
-                <Label>Product Category *</Label>
+                <Label>{t('Product Category')} *</Label>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {productCategories.map(cat => (
                     <Button
@@ -361,7 +363,7 @@ export function RequirementsCalculatorPage() {
               {/* Subcategory */}
               {categoryInfo && (
                 <div className="space-y-2">
-                  <Label>Subcategory *</Label>
+                  <Label>{t('Subcategory')} *</Label>
                   <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select subcategory..." />
@@ -377,7 +379,7 @@ export function RequirementsCalculatorPage() {
 
               {/* Target Markets */}
               <div className="space-y-2">
-                <Label>Target Markets (Countries) *</Label>
+                <Label>{t('Target Markets (Countries)')} *</Label>
                 <div className="flex flex-wrap gap-2">
                   {countries.map(country => (
                     <Button
@@ -395,7 +397,7 @@ export function RequirementsCalculatorPage() {
 
               {/* Target Audience */}
               <div className="space-y-2">
-                <Label>Target Audience *</Label>
+                <Label>{t('Target Audience')} *</Label>
                 <div className="flex gap-2">
                   {[
                     { value: 'b2c', label: 'Consumer (B2C)' },
@@ -420,7 +422,7 @@ export function RequirementsCalculatorPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
-                Technical Properties
+                {t('Technical Properties')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -431,13 +433,13 @@ export function RequirementsCalculatorPage() {
                   checked={hasElectronics}
                   onCheckedChange={(checked: boolean) => setHasElectronics(checked)}
                 />
-                <Label htmlFor="has-electronics">Contains electronic components</Label>
+                <Label htmlFor="has-electronics">{t('Contains electronic components')}</Label>
               </div>
 
               {/* Voltage */}
               {hasElectronics && (
                 <div className="space-y-2 pl-6">
-                  <Label>Operating Voltage</Label>
+                  <Label>{t('Operating Voltage')}</Label>
                   <div className="flex gap-2">
                     {[
                       { value: 'none', label: 'None / Battery' },
@@ -464,12 +466,12 @@ export function RequirementsCalculatorPage() {
                   checked={hasBattery}
                   onCheckedChange={(checked: boolean) => setHasBattery(checked)}
                 />
-                <Label htmlFor="has-battery">Contains battery/rechargeable battery</Label>
+                <Label htmlFor="has-battery">{t('Contains battery/rechargeable battery')}</Label>
               </div>
 
               {hasBattery && (
                 <div className="space-y-2 pl-6">
-                  <Label>Battery Type</Label>
+                  <Label>{t('Battery Type')}</Label>
                   <div className="flex gap-2">
                     {[
                       { value: 'removable', label: 'Removable' },
@@ -496,12 +498,12 @@ export function RequirementsCalculatorPage() {
                   checked={hasWireless}
                   onCheckedChange={(checked: boolean) => setHasWireless(checked)}
                 />
-                <Label htmlFor="has-wireless">Contains wireless capabilities</Label>
+                <Label htmlFor="has-wireless">{t('Contains wireless capabilities')}</Label>
               </div>
 
               {hasWireless && (
                 <div className="space-y-2 pl-6">
-                  <Label>Wireless Standards</Label>
+                  <Label>{t('Wireless Standards')}</Label>
                   <div className="flex flex-wrap gap-2">
                     {wirelessTypes.map(wt => (
                       <Button
@@ -524,7 +526,7 @@ export function RequirementsCalculatorPage() {
                   checked={isConnected}
                   onCheckedChange={(checked: boolean) => setIsConnected(checked)}
                 />
-                <Label htmlFor="is-connected">Connected device (IoT, Smart Home)</Label>
+                <Label htmlFor="is-connected">{t('Connected device (IoT, Smart Home)')}</Label>
               </div>
 
               {/* Chemicals */}
@@ -534,7 +536,7 @@ export function RequirementsCalculatorPage() {
                   checked={containsChemicals}
                   onCheckedChange={(checked: boolean) => setContainsChemicals(checked)}
                 />
-                <Label htmlFor="contains-chemicals">Contains chemical substances/mixtures</Label>
+                <Label htmlFor="contains-chemicals">{t('Contains chemical substances/mixtures')}</Label>
               </div>
             </CardContent>
           </Card>
@@ -544,7 +546,7 @@ export function RequirementsCalculatorPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Packaging
+                {t('Packaging')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -554,13 +556,13 @@ export function RequirementsCalculatorPage() {
                   checked={hasPackaging}
                   onCheckedChange={(checked: boolean) => setHasPackaging(checked)}
                 />
-                <Label htmlFor="has-packaging">Product is sold packaged</Label>
+                <Label htmlFor="has-packaging">{t('Product is sold packaged')}</Label>
               </div>
 
               {hasPackaging && (
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base font-semibold">Select packaging materials</Label>
+                    <Label className="text-base font-semibold">{t('Select packaging materials')}</Label>
                     <p className="text-sm text-muted-foreground">
                       Select all materials used in your packaging. The codes correspond to Decision 97/129/EC.
                     </p>
@@ -608,7 +610,7 @@ export function RequirementsCalculatorPage() {
                   {/* Selected Materials Summary */}
                   {selectedPackagingMaterials.length > 0 && (
                     <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
-                      <Label className="text-sm font-medium">Selected Materials ({selectedPackagingMaterials.length})</Label>
+                      <Label className="text-sm font-medium">{t('Selected Materials')} ({selectedPackagingMaterials.length})</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {selectedPackagingMaterials.map(id => {
                           const pm = packagingMaterials.find(m => m.id === id);
@@ -643,14 +645,14 @@ export function RequirementsCalculatorPage() {
             onClick={() => setShowResults(true)}
           >
             <Calculator className="mr-2 h-5 w-5" />
-            Calculate Requirements
+            {t('Calculate Requirements')}
           </Button>
 
           {(!selectedCategory || !selectedSubcategory || selectedCountries.length === 0) && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Please fill in all required fields:{' '}
+                {t('Please fill in all required fields:')}{' '}
                 {[
                   !selectedCategory && 'Category',
                   !selectedSubcategory && 'Subcategory',
@@ -669,17 +671,17 @@ export function RequirementsCalculatorPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
-                Product Summary
+                {t('Product Summary')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Product</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('Product')}</p>
                   <p className="font-medium">{productName || categoryInfo?.name} - {selectedSubcategory}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Target Markets</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('Target Markets')}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedCountries.map(code => {
                       const country = countries.find(c => c.code === code);
@@ -692,7 +694,7 @@ export function RequirementsCalculatorPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Properties</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('Properties')}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {hasElectronics && <Badge variant="secondary">Electronics</Badge>}
                     {hasBattery && <Badge variant="secondary">Battery</Badge>}
@@ -714,7 +716,7 @@ export function RequirementsCalculatorPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{criticalRequirements.length}</p>
-                    <p className="text-sm text-muted-foreground">Critical Requirements</p>
+                    <p className="text-sm text-muted-foreground">{t('Critical Requirements')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -727,7 +729,7 @@ export function RequirementsCalculatorPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{highRequirements.length}</p>
-                    <p className="text-sm text-muted-foreground">High Priority</p>
+                    <p className="text-sm text-muted-foreground">{t('High Priority')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -742,7 +744,7 @@ export function RequirementsCalculatorPage() {
                     <p className="text-2xl font-bold">
                       {requirements.reduce((acc, r) => acc + r.documents.length, 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Documents Required</p>
+                    <p className="text-sm text-muted-foreground">{t('Documents Required')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -757,7 +759,7 @@ export function RequirementsCalculatorPage() {
                     <p className="text-2xl font-bold">
                       {requirements.reduce((acc, r) => acc + r.registrations.length, 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Registrations</p>
+                    <p className="text-sm text-muted-foreground">{t('Registrations')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -778,7 +780,7 @@ export function RequirementsCalculatorPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-5 w-5" />
-                  Critical Requirements (Mandatory before placing on market)
+                  {t('Critical Requirements (Mandatory before placing on market)')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -890,7 +892,7 @@ export function RequirementsCalculatorPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5" />
-                  Additional Requirements
+                  {t('Additional Requirements')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -994,16 +996,16 @@ export function RequirementsCalculatorPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Summary: All Required Documents
+                {t('Summary: All Required Documents')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Document</TableHead>
-                    <TableHead>Requirement</TableHead>
-                    <TableHead>Priority</TableHead>
+                    <TableHead>{t('Document')}</TableHead>
+                    <TableHead>{t('Requirement')}</TableHead>
+                    <TableHead>{t('Priority')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1038,7 +1040,7 @@ export function RequirementsCalculatorPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Tag className="h-5 w-5" />
-                Required Symbols and Markings
+                {t('Required Symbols and Markings')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1053,7 +1055,7 @@ export function RequirementsCalculatorPage() {
                     </div>
                     <div>
                       <p className="font-medium">{symbol}</p>
-                      <p className="text-sm text-muted-foreground">On product/packaging</p>
+                      <p className="text-sm text-muted-foreground">{t('On product/packaging')}</p>
                     </div>
                   </div>
                 ))}

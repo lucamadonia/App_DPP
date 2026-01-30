@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -10,6 +11,8 @@ import {
   Search,
   Loader2,
 } from 'lucide-react';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +58,8 @@ const statusConfig = {
 };
 
 export function CompliancePage() {
+  const { t } = useTranslation('compliance');
+  const locale = useLocale();
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [, setProducts] = useState<ProductListItem[]>([]);
@@ -148,19 +153,19 @@ export function CompliancePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Compliance & Audit</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Compliance & Audit')}</h1>
           <p className="text-muted-foreground">
-            Audit protocols and compliance overview
+            {t('Audit protocols and compliance overview')}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Export Report
+            {t('Export Report')}
           </Button>
           <Button>
             <FileText className="mr-2 h-4 w-4" />
-            EU-Registry Export
+            {t('EU-Registry Export')}
           </Button>
         </div>
       </div>
@@ -170,7 +175,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Compliance Rate
+              {t('Compliance Rate')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -183,7 +188,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Compliant
+              {t('Compliant')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -193,7 +198,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending
+              {t('Pending')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -203,7 +208,7 @@ export function CompliancePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Non-Compliant
+              {t('Non-Compliant')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -217,11 +222,11 @@ export function CompliancePage() {
         <TabsList>
           <TabsTrigger value="checklist">
             <ShieldCheck className="mr-2 h-4 w-4" />
-            Audit Protocol
+            {t('Audit Protocol')}
           </TabsTrigger>
           <TabsTrigger value="audit">
             <FileText className="mr-2 h-4 w-4" />
-            Audit Log
+            {t('Audit Log')}
           </TabsTrigger>
         </TabsList>
 
@@ -229,12 +234,12 @@ export function CompliancePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Compliance Check</CardTitle>
+                <CardTitle>{t('Compliance Check')}</CardTitle>
                 <div className="flex gap-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search..."
+                      placeholder={t('Search...', { ns: 'common' })}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 w-64"
@@ -252,8 +257,8 @@ export function CompliancePage() {
                   <ShieldCheck className="mx-auto h-12 w-12 opacity-30 mb-2" />
                   <p>
                     {complianceItems.length === 0
-                      ? 'No compliance data available. Please create products first.'
-                      : 'No entries match your search.'}
+                      ? t('No compliance data available. Please create products first.')
+                      : t('No entries match your search.')}
                   </p>
                 </div>
               ) : (
@@ -279,9 +284,9 @@ export function CompliancePage() {
                         <div className="flex items-center gap-4">
                           {item.dueDate && (
                             <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Due</p>
+                              <p className="text-sm text-muted-foreground">{t('Due')}</p>
                               <p className="font-medium">
-                                {new Date(item.dueDate).toLocaleDateString('en-US')}
+                                {formatDate(item.dueDate, locale)}
                               </p>
                             </div>
                           )}
@@ -301,16 +306,16 @@ export function CompliancePage() {
         <TabsContent value="audit" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Audit Log</CardTitle>
+              <CardTitle>{t('Audit Log')}</CardTitle>
               <CardDescription>
-                Complete log of all changes
+                {t('Complete log of all changes')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {auditLog.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>No audit entries available.</p>
+                  <p>{t('No audit entries available.')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">

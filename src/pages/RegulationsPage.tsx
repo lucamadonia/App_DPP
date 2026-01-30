@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Globe,
   FileText,
@@ -42,6 +43,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/hooks/use-locale';
 import {
   Accordion,
   AccordionContent,
@@ -81,6 +84,8 @@ const newsPriorityColors: Record<string, string> = {
 };
 
 export function RegulationsPage() {
+  const { t } = useTranslation('compliance');
+  const locale = useLocale();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -172,7 +177,7 @@ export function RegulationsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading regulation data...</p>
+          <p className="text-muted-foreground">{t('Loading regulation data...')}</p>
         </div>
       </div>
     );
@@ -183,19 +188,19 @@ export function RegulationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Regulations & Compliance</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('Regulations & Compliance')}</h1>
           <p className="text-muted-foreground">
-            Comprehensive overview of EU and national regulations, pictograms, and recent developments
+            {t('Comprehensive overview of EU and national regulations, pictograms, and recent developments')}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Export
+            {t('Export', { ns: 'common' })}
           </Button>
           <Button variant="outline">
             <Printer className="mr-2 h-4 w-4" />
-            Print
+            {t('Print', { ns: 'common' })}
           </Button>
         </div>
       </div>
@@ -210,7 +215,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{countries.length}</p>
-                <p className="text-sm text-muted-foreground">Countries covered</p>
+                <p className="text-sm text-muted-foreground">{t('Countries covered')}</p>
               </div>
             </div>
           </CardContent>
@@ -223,7 +228,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{euRegulations.length}</p>
-                <p className="text-sm text-muted-foreground">EU Regulations</p>
+                <p className="text-sm text-muted-foreground">{t('EU Regulations')}</p>
               </div>
             </div>
           </CardContent>
@@ -236,7 +241,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{pictograms.length}</p>
-                <p className="text-sm text-muted-foreground">Pictograms</p>
+                <p className="text-sm text-muted-foreground">{t('Pictograms')}</p>
               </div>
             </div>
           </CardContent>
@@ -249,7 +254,7 @@ export function RegulationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{news.filter(n => n.priority === 'high').length}</p>
-                <p className="text-sm text-muted-foreground">Important Updates</p>
+                <p className="text-sm text-muted-foreground">{t('Important Updates')}</p>
               </div>
             </div>
           </CardContent>
@@ -261,19 +266,19 @@ export function RegulationsPage() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="countries" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            Countries
+            {t('Countries')}
           </TabsTrigger>
           <TabsTrigger value="eu" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            EU Regulations
+            {t('EU Regulations')}
           </TabsTrigger>
           <TabsTrigger value="pictograms" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
-            Pictograms
+            {t('Pictograms')}
           </TabsTrigger>
           <TabsTrigger value="news" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
-            News
+            {t('News')}
           </TabsTrigger>
         </TabsList>
 
@@ -281,9 +286,9 @@ export function RegulationsPage() {
         <TabsContent value="countries" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Country-Specific Regulations</CardTitle>
+              <CardTitle>{t('Country-Specific Regulations')}</CardTitle>
               <CardDescription>
-                Select a country for detailed compliance requirements and national specifics
+                {t('Select a country for detailed compliance requirements and national specifics')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -331,10 +336,10 @@ export function RegulationsPage() {
                   <span className="text-2xl">
                     {countries.find(c => c.code === selectedCountry)?.flag}
                   </span>
-                  Regulations in {countries.find(c => c.code === selectedCountry)?.name}
+                  {t('Regulations in {{country}}', { country: countries.find(c => c.code === selectedCountry)?.name })}
                 </CardTitle>
                 <CardDescription>
-                  Detailed overview of national requirements
+                  {t('Detailed overview of national requirements')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -344,7 +349,7 @@ export function RegulationsPage() {
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-4 text-left">
                           <Badge variant={reg.mandatory ? 'default' : 'secondary'}>
-                            {reg.mandatory ? 'Mandatory' : 'Optional'}
+                            {reg.mandatory ? t('Mandatory') : t('Optional')}
                           </Badge>
                           <div>
                             <p className="font-medium">{reg.name}</p>
@@ -358,21 +363,21 @@ export function RegulationsPage() {
 
                           <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Responsible Authority</p>
+                              <p className="text-sm font-medium">{t('Responsible Authority')}</p>
                               <p className="text-sm text-muted-foreground">{reg.authority}</p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Effective since</p>
+                              <p className="text-sm font-medium">{t('Effective since')}</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(reg.effectiveDate).toLocaleDateString('en-US')}
+                                {formatDate(reg.effectiveDate, locale)}
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Penalties</p>
+                              <p className="text-sm font-medium">{t('Penalties')}</p>
                               <p className="text-sm text-destructive">{reg.penalties}</p>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-sm font-medium">Affected Products</p>
+                              <p className="text-sm font-medium">{t('Affected Products')}</p>
                               <div className="flex flex-wrap gap-1">
                                 {reg.products.map((product) => (
                                   <Badge key={product} variant="outline" className="text-xs">
@@ -398,9 +403,9 @@ export function RegulationsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>EU-wide Regulations</CardTitle>
+                  <CardTitle>{t('EU-wide Regulations')}</CardTitle>
                   <CardDescription>
-                    Valid in all EU member states - Click on a regulation for details
+                    {t('Valid in all EU member states - Click on a regulation for details')}
                   </CardDescription>
                 </div>
                 <div className="relative w-64">
@@ -435,7 +440,7 @@ export function RegulationsPage() {
                                     : 'bg-warning/10 text-warning'
                                 }
                               >
-                                {reg.status === 'active' ? 'Active' : 'Upcoming'}
+                                {reg.status === 'active' ? t('Active') : t('Upcoming')}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-1">
@@ -447,32 +452,32 @@ export function RegulationsPage() {
                       <AccordionContent>
                         <div className="space-y-6 pt-4">
                           <div>
-                            <p className="text-sm font-medium mb-2">Full Name</p>
+                            <p className="text-sm font-medium mb-2">{t('Full Name')}</p>
                             <p className="text-sm text-muted-foreground">{reg.fullName}</p>
                           </div>
 
                           <div>
-                            <p className="text-sm font-medium mb-2">Description</p>
+                            <p className="text-sm font-medium mb-2">{t('Description')}</p>
                             <p className="text-sm text-muted-foreground">{reg.description}</p>
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                              <p className="text-sm font-medium mb-2">Entered into Force</p>
+                              <p className="text-sm font-medium mb-2">{t('Entered into Force')}</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(reg.effectiveDate).toLocaleDateString('en-US')}
+                                {formatDate(reg.effectiveDate, locale)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-sm font-medium mb-2">Application from</p>
+                              <p className="text-sm font-medium mb-2">{t('Application from')}</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(reg.applicationDate).toLocaleDateString('en-US')}
+                                {formatDate(reg.applicationDate, locale)}
                               </p>
                             </div>
                           </div>
 
                           <div>
-                            <p className="text-sm font-medium mb-2">Key Requirements</p>
+                            <p className="text-sm font-medium mb-2">{t('Key Requirements')}</p>
                             <ul className="space-y-1">
                               {reg.keyRequirements.map((req, idx) => (
                                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -484,7 +489,7 @@ export function RegulationsPage() {
                           </div>
 
                           <div>
-                            <p className="text-sm font-medium mb-2">Affected Product Categories</p>
+                            <p className="text-sm font-medium mb-2">{t('Affected Product Categories')}</p>
                             <div className="flex flex-wrap gap-2">
                               {reg.affectedProducts.map((product) => (
                                 <Badge key={product} variant="outline">
@@ -496,13 +501,13 @@ export function RegulationsPage() {
 
                           {Object.keys(reg.dppDeadlines).length > 0 && (
                             <div>
-                              <p className="text-sm font-medium mb-2">DPP Deadlines</p>
+                              <p className="text-sm font-medium mb-2">{t('DPP Deadlines')}</p>
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Product Category</TableHead>
-                                    <TableHead>Deadline</TableHead>
-                                    <TableHead>Remaining</TableHead>
+                                    <TableHead>{t('Product Category')}</TableHead>
+                                    <TableHead>{t('Deadline')}</TableHead>
+                                    <TableHead>{t('Remaining')}</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -511,10 +516,10 @@ export function RegulationsPage() {
                                     return (
                                       <TableRow key={product}>
                                         <TableCell>{product}</TableCell>
-                                        <TableCell>{new Date(deadline).toLocaleDateString('en-US')}</TableCell>
+                                        <TableCell>{formatDate(deadline, locale)}</TableCell>
                                         <TableCell>
                                           <Badge variant={daysRemaining < 365 ? 'destructive' : 'secondary'}>
-                                            {daysRemaining} Days
+                                            {daysRemaining} {t('Days')}
                                           </Badge>
                                         </TableCell>
                                       </TableRow>
@@ -536,8 +541,8 @@ export function RegulationsPage() {
           {/* DPP Timeline */}
           <Card>
             <CardHeader>
-              <CardTitle>DPP Timeline: Important Deadlines</CardTitle>
-              <CardDescription>Overview of upcoming Digital Product Passport deadlines</CardDescription>
+              <CardTitle>{t('DPP Timeline: Important Deadlines')}</CardTitle>
+              <CardDescription>{t('Overview of upcoming Digital Product Passport deadlines')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -559,11 +564,11 @@ export function RegulationsPage() {
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-medium">{item.product}</p>
                           <Badge variant={daysRemaining < 365 ? 'destructive' : daysRemaining < 730 ? 'default' : 'secondary'}>
-                            {daysRemaining} Days
+                            {daysRemaining} {t('Days')}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">
-                          {item.regulation} - {new Date(item.date).toLocaleDateString('en-US')}
+                          {item.regulation} - {formatDate(item.date, locale)}
                         </p>
                         <Progress value={progress} className="h-2" />
                       </div>
@@ -584,7 +589,7 @@ export function RegulationsPage() {
               size="sm"
               onClick={() => setCategoryFilter(null)}
             >
-              All
+              {t('All')}
             </Button>
             {['safety', 'recycling', 'chemicals', 'energy', 'durability'].map((cat) => (
               <Button
@@ -593,20 +598,20 @@ export function RegulationsPage() {
                 size="sm"
                 onClick={() => setCategoryFilter(cat)}
               >
-                {cat === 'safety' && 'Safety'}
-                {cat === 'recycling' && 'Recycling'}
-                {cat === 'chemicals' && 'Chemicals'}
-                {cat === 'energy' && 'Energy'}
-                {cat === 'durability' && 'Durability'}
+                {cat === 'safety' && t('Safety')}
+                {cat === 'recycling' && t('Recycling')}
+                {cat === 'chemicals' && t('Chemicals')}
+                {cat === 'energy' && t('Energy')}
+                {cat === 'durability' && t('Durability')}
               </Button>
             ))}
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Pictograms & Symbols</CardTitle>
+              <CardTitle>{t('Pictograms & Symbols')}</CardTitle>
               <CardDescription>
-                Important markings for your products with detailed requirements
+                {t('Important markings for your products with detailed requirements')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -623,7 +628,7 @@ export function RegulationsPage() {
                           <Badge
                             variant={pictogram.mandatory ? 'default' : 'secondary'}
                           >
-                            {pictogram.mandatory ? 'Mandatory' : 'Voluntary'}
+                            {pictogram.mandatory ? t('Mandatory') : t('Voluntary')}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -640,11 +645,11 @@ export function RegulationsPage() {
                     </p>
                     <div className="grid gap-2 text-xs">
                       <div className="flex items-start gap-2">
-                        <span className="font-medium text-muted-foreground w-20 shrink-0">Dimensions:</span>
+                        <span className="font-medium text-muted-foreground w-20 shrink-0">{t('Dimensions')}:</span>
                         <span>{pictogram.dimensions}</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="font-medium text-muted-foreground w-20 shrink-0">Placement:</span>
+                        <span className="font-medium text-muted-foreground w-20 shrink-0">{t('Placement')}:</span>
                         <span>{pictogram.placement}</span>
                       </div>
                     </div>
@@ -656,19 +661,19 @@ export function RegulationsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recycling Codes per ISO 1043 & 14021</CardTitle>
-              <CardDescription>Material identification codes for packaging and products</CardDescription>
+              <CardTitle>{t('Recycling Codes per ISO 1043 & 14021')}</CardTitle>
+              <CardDescription>{t('Material identification codes for packaging and products')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Symbol</TableHead>
-                    <TableHead>Abbreviation</TableHead>
-                    <TableHead>Material Name</TableHead>
-                    <TableHead>Examples</TableHead>
-                    <TableHead>Recyclable</TableHead>
+                    <TableHead>{t('Code')}</TableHead>
+                    <TableHead>{t('Symbol')}</TableHead>
+                    <TableHead>{t('Abbreviation')}</TableHead>
+                    <TableHead>{t('Material Name')}</TableHead>
+                    <TableHead>{t('Examples')}</TableHead>
+                    <TableHead>{t('Recyclable')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -681,9 +686,9 @@ export function RegulationsPage() {
                       <TableCell className="text-muted-foreground">{code.examples}</TableCell>
                       <TableCell>
                         {code.recyclable ? (
-                          <Badge className="bg-success/10 text-success">Yes</Badge>
+                          <Badge className="bg-success/10 text-success">{t('Yes')}</Badge>
                         ) : (
-                          <Badge variant="secondary">Limited</Badge>
+                          <Badge variant="secondary">{t('Limited')}</Badge>
                         )}
                       </TableCell>
                     </TableRow>
@@ -700,9 +705,9 @@ export function RegulationsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Latest Changes & Deadlines</CardTitle>
+                  <CardTitle>{t('Latest Changes & Deadlines')}</CardTitle>
                   <CardDescription>
-                    Important updates on regulations, new requirements, and upcoming deadlines
+                    {t('Important updates on regulations, new requirements, and upcoming deadlines')}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -721,7 +726,7 @@ export function RegulationsPage() {
                     onClick={() => setPriorityFilter(priorityFilter === 'high' ? null : 'high')}
                   >
                     <AlertTriangle className="mr-1 h-4 w-4" />
-                    Important
+                    {t('Important')}
                   </Button>
                 </div>
               </div>
@@ -758,12 +763,12 @@ export function RegulationsPage() {
                                   </Badge>
                                 ))}
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(item.publishedAt).toLocaleDateString('en-US')}
+                                  {formatDate(item.publishedAt, locale)}
                                 </span>
                               </div>
                             </div>
                             {item.priority === 'high' && (
-                              <Badge variant="destructive">Important</Badge>
+                              <Badge variant="destructive">{t('Important')}</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">
@@ -781,9 +786,9 @@ export function RegulationsPage() {
                             {item.effectiveDate && (
                               <div className="flex items-center gap-2 text-sm">
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Valid from:</span>
+                                <span className="text-muted-foreground">{t('Valid from')}:</span>
                                 <span className="font-medium">
-                                  {new Date(item.effectiveDate).toLocaleDateString('en-US')}
+                                  {formatDate(item.effectiveDate, locale)}
                                 </span>
                               </div>
                             )}
@@ -805,7 +810,7 @@ export function RegulationsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Upcoming Deadlines (next 12 months)
+                {t('Upcoming Deadlines (next 12 months)')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -830,10 +835,10 @@ export function RegulationsPage() {
                         </div>
                         <div className="text-right">
                           <Badge variant={daysRemaining < 90 ? 'destructive' : daysRemaining < 180 ? 'default' : 'secondary'}>
-                            {daysRemaining} Days
+                            {daysRemaining} {t('Days')}
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(item.effectiveDate!).toLocaleDateString('en-US')}
+                            {formatDate(item.effectiveDate!, locale)}
                           </p>
                         </div>
                       </div>

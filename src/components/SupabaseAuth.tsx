@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,7 @@ interface SupabaseAuthProps {
 }
 
 export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: SupabaseAuthProps) {
+  const { t } = useTranslation('auth');
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<'signin' | 'signup' | 'otp' | 'forgot'>(mode);
   const [resetSent, setResetSent] = useState(false);
@@ -191,7 +193,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
         <CardContent>
           <Button onClick={handleSignOut} variant="outline" className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
+            {t('Sign Out', { ns: 'common' })}
           </Button>
         </CardContent>
       </Card>
@@ -203,16 +205,16 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle>
-          {currentView === 'signin' ? 'Sign In' : currentView === 'signup' ? 'Create Account' : currentView === 'forgot' ? 'Forgot Password' : 'Sign In with OTP'}
+          {currentView === 'signin' ? t('Sign In') : currentView === 'signup' ? t('Create Account') : currentView === 'forgot' ? t('Forgot Password') : t('Sign In with OTP')}
         </CardTitle>
         <CardDescription>
           {currentView === 'signin'
-            ? 'Sign in to your DPP Manager account'
+            ? t('Sign in to your DPP Manager account')
             : currentView === 'signup'
-              ? 'Create a new account'
+              ? t('Create a new account')
               : currentView === 'forgot'
-                ? 'Reset your password'
-                : 'Receive a one-time code via email'}
+                ? t('Reset your password')
+                : t('Receive a one-time code via email')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -228,7 +230,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             {!resetSent ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="reset-email">E-Mail</Label>
+                  <Label htmlFor="reset-email">{t('E-Mail')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -245,27 +247,25 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      {t('Sending...')}
                     </>
                   ) : (
                     <>
                       <Mail className="mr-2 h-4 w-4" />
-                      Send Reset Link
+                      {t('Send Reset Link')}
                     </>
                   )}
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground text-center">
-                A password reset email has been sent to <strong>{email}</strong>. Please check your inbox.
-              </p>
+              <p className="text-sm text-muted-foreground text-center" dangerouslySetInnerHTML={{ __html: t('A password reset email has been sent to <strong>{{email}}</strong>. Please check your inbox.', { email }) }} />
             )}
             <Button
               variant="ghost"
               onClick={() => { setResetSent(false); setCurrentView('signin'); }}
               className="w-full"
             >
-              Back to Sign In
+              {t('Back to Sign In')}
             </Button>
           </div>
         ) : /* OTP Flow - Exclusive View */
@@ -274,7 +274,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             {!otpSent ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="otp-email">E-Mail</Label>
+                  <Label htmlFor="otp-email">{t('E-Mail')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -291,12 +291,12 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      {t('Sending...')}
                     </>
                   ) : (
                     <>
                       <KeyRound className="mr-2 h-4 w-4" />
-                      Send Magic Link
+                      {t('Send Magic Link')}
                     </>
                   )}
                 </Button>
@@ -304,10 +304,10 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             ) : (
               <>
                 <p className="text-sm text-muted-foreground text-center">
-                  Link sent to {email}. Click the link in the email or enter the code.
+                  {t('Link sent to {{email}}. Click the link in the email or enter the code.', { email })}
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="otp-code">6-digit Code</Label>
+                  <Label htmlFor="otp-code">{t('6-digit Code')}</Label>
                   <Input
                     id="otp-code"
                     type="text"
@@ -322,10 +322,10 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Verifying...
+                      {t('Verifying...')}
                     </>
                   ) : (
-                    'Verify & Sign In'
+                    t('Verify & Sign In')
                   )}
                 </Button>
               </>
@@ -335,7 +335,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               onClick={() => { setOtpSent(false); setCurrentView('signin'); }}
               className="w-full"
             >
-              Back to Sign In
+              {t('Back to Sign In')}
             </Button>
           </div>
         ) : (
@@ -349,12 +349,12 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continue with Google
+              {t('Continue with Google')}
             </Button>
 
             <Button variant="outline" onClick={() => setCurrentView('otp')} className="w-full">
               <KeyRound className="mr-2 h-4 w-4" />
-              Sign in with Magic Link
+              {t('Sign in with Magic Link')}
             </Button>
 
             <div className="relative">
@@ -362,7 +362,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">or</span>
+                <span className="bg-card px-2 text-muted-foreground">{t('or', { ns: 'common' })}</span>
               </div>
             </div>
 
@@ -370,13 +370,13 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             <form onSubmit={currentView === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
               {currentView === 'signup' && (
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name">{t('Name', { ns: 'common' })}</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="name"
                       type="text"
-                      placeholder="Your Name"
+                      placeholder={t('Your Name')}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="pl-9"
@@ -386,7 +386,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">E-Mail</Label>
+                <Label htmlFor="email">{t('E-Mail')}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -401,7 +401,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Passwort</Label>
+                <Label htmlFor="password">{t('Password')}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -422,7 +422,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                       className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
                       onClick={() => setCurrentView('forgot')}
                     >
-                      Forgot password?
+                      {t('Forgot password?')}
                     </Button>
                   </div>
                 )}
@@ -431,23 +431,23 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 {formLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
+                    {t('Loading...', { ns: 'common' })}
                   </>
                 ) : (
-                  currentView === 'signin' ? 'Sign In' : 'Sign Up'
+                  currentView === 'signin' ? t('Sign In') : t('Sign Up')
                 )}
               </Button>
             </form>
 
             {/* Toggle between sign in/up */}
             <p className="text-center text-sm text-muted-foreground">
-              {currentView === 'signin' ? 'Don\'t have an account? ' : 'Already have an account? '}
+              {currentView === 'signin' ? t("Don't have an account?") : t("Already have an account?")}{' '}
               <Button
                 variant="link"
                 className="p-0 h-auto text-primary"
                 onClick={() => setCurrentView(currentView === 'signin' ? 'signup' : 'signin')}
               >
-                {currentView === 'signin' ? 'Sign Up' : 'Sign In'}
+                {currentView === 'signin' ? t('Sign Up') : t('Sign In')}
               </Button>
             </p>
           </>

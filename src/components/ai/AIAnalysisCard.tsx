@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Sparkles, X } from 'lucide-react';
 import { AIStreamingText } from './AIStreamingText';
 
@@ -19,6 +20,7 @@ function SkeletonLoader() {
 }
 
 export function AIAnalysisCard({ text, isStreaming, error, onClose }: AIAnalysisCardProps) {
+  const { t } = useTranslation('compliance');
   if (!text && !isStreaming && !error) return null;
 
   return (
@@ -32,7 +34,7 @@ export function AIAnalysisCard({ text, isStreaming, error, onClose }: AIAnalysis
             <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 animate-glow-pulse">
               <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            AI Deep Analysis
+            {t('AI Deep Analysis')}
           </div>
           {!isStreaming && (
             <button

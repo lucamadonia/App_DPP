@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle, Sparkles, Trash2, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,11 +20,11 @@ interface AIChatPanelProps {
   requirements: RequirementSummary[];
 }
 
-const SUGGESTED_QUESTIONS = [
+const SUGGESTED_QUESTION_KEYS = [
   'Which standards apply to my product?',
   'What does CE certification cost?',
   'Do I need a notified body?',
-];
+] as const;
 
 function TypingDots() {
   return (
@@ -43,6 +44,7 @@ function TypingDots() {
 }
 
 export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) {
+  const { t } = useTranslation('compliance');
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -77,7 +79,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
       }
       setMessages(prev => [...prev, { role: 'assistant', content: fullText }]);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Error during AI request';
+      const errorMsg = err instanceof Error ? err.message : t('Error during AI request');
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMsg}` }]);
     } finally {
       setIsStreaming(false);
@@ -126,10 +128,10 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                 <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
                   <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                Compliance Assistant
+                {t('Compliance Assistant')}
               </SheetTitle>
               <SheetDescription>
-                Ask questions about your product's requirements.
+                {t("Ask questions about your product's requirements.")}
               </SheetDescription>
             </SheetHeader>
           </div>
@@ -143,16 +145,16 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                     <Sparkles className="h-7 w-7 text-blue-400" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Ask me about compliance requirements.
+                    {t('Ask me about compliance requirements.')}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    {SUGGESTED_QUESTIONS.map((q) => (
+                    {SUGGESTED_QUESTION_KEYS.map((q) => (
                       <button
                         key={q}
-                        onClick={() => handleSuggestionClick(q)}
+                        onClick={() => handleSuggestionClick(t(q))}
                         className="text-xs border rounded-full px-3 py-1.5 text-muted-foreground hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-200 cursor-pointer"
                       >
-                        {q}
+                        {t(q)}
                       </button>
                     ))}
                   </div>
@@ -206,7 +208,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Enter question..."
+                placeholder={t('Enter question...')}
                 disabled={isStreaming}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 py-1.5"
               />
@@ -226,7 +228,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                 className="w-full text-muted-foreground gap-1.5 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Clear Chat
+                {t('Clear Chat')}
               </Button>
             )}
           </div>

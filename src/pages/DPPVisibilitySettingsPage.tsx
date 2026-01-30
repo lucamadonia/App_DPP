@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Eye,
   Save,
@@ -55,6 +56,7 @@ const levelBgColors: Record<VisibilityLevel, string> = {
 };
 
 export function DPPVisibilitySettingsPage() {
+  const { t } = useTranslation('dpp');
   const [config, setConfig] = useState<VisibilityConfigV2>(defaultVisibilityConfigV2);
   const [saved, setSaved] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -134,9 +136,9 @@ export function DPPVisibilitySettingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">DPP Visibility Settings</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('DPP Visibility Settings')}</h1>
           <p className="text-muted-foreground">
-            Define which information is visible to whom
+            {t('Define which information is visible to whom')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -145,12 +147,12 @@ export function DPPVisibilitySettingsPage() {
             {apiStatus === 'online' ? (
               <>
                 <Cloud className="h-3 w-3" />
-                Database
+                {t('Database')}
               </>
             ) : apiStatus === 'offline' ? (
               <>
                 <CloudOff className="h-3 w-3" />
-                Local
+                {t('Local')}
               </>
             ) : (
               <>
@@ -161,23 +163,23 @@ export function DPPVisibilitySettingsPage() {
           </Badge>
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Reset
+            {t('Reset', { ns: 'common' })}
           </Button>
           <Button onClick={handleSave} disabled={!hasChanges || loading}>
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading...
+                {t('Loading...', { ns: 'common' })}
               </>
             ) : saved ? (
               <>
                 <Check className="mr-2 h-4 w-4" />
-                Saved
+                {t('Saved', { ns: 'common' })}
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save
+                {t('Save', { ns: 'common' })}
               </>
             )}
           </Button>
@@ -189,7 +191,7 @@ export function DPPVisibilitySettingsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Info className="h-5 w-5" />
-            Visibility Levels
+            {t('Visibility Levels')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -222,10 +224,10 @@ export function DPPVisibilitySettingsPage() {
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
             <div className="space-y-2">
               <p className="font-medium text-blue-800 dark:text-blue-200">
-                How does visibility work?
+                {t('How does visibility work?')}
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                Visibility is structured <strong>hierarchically</strong>. Higher levels always see everything from the lower levels.
+                {t('Visibility is structured hierarchically. Higher levels always see everything from the lower levels.')}
               </p>
             </div>
           </div>
@@ -235,24 +237,24 @@ export function DPPVisibilitySettingsPage() {
             <div className="flex items-center gap-3 p-3 rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 w-full max-w-md">
               <Users className="h-5 w-5 text-green-600" />
               <div className="flex-1">
-                <p className="font-medium text-green-800 dark:text-green-200">Consumer</p>
-                <p className="text-xs text-green-600 dark:text-green-400">Everyone sees this field (Consumer + Customs + Admin)</p>
+                <p className="font-medium text-green-800 dark:text-green-200">{t('Consumer')}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">{t('Everyone sees this field (Consumer + Customs + Admin)')}</p>
               </div>
             </div>
             <div className="h-4 w-0.5 bg-blue-300 dark:bg-blue-600" />
             <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 w-full max-w-md">
               <ShieldCheck className="h-5 w-5 text-amber-600" />
               <div className="flex-1">
-                <p className="font-medium text-amber-800 dark:text-amber-200">Customs</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400">Only Customs + Admin see this field</p>
+                <p className="font-medium text-amber-800 dark:text-amber-200">{t('Customs')}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">{t('Only Customs + Admin see this field')}</p>
               </div>
             </div>
             <div className="h-4 w-0.5 bg-blue-300 dark:bg-blue-600" />
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-900/30 border border-slate-300 dark:border-slate-700 w-full max-w-md">
               <Lock className="h-5 w-5 text-slate-600" />
               <div className="flex-1">
-                <p className="font-medium text-slate-800 dark:text-slate-200">Internal Only</p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Only Admin sees this field (not public)</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{t('Internal Only')}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{t('Only Admin sees this field (not public)')}</p>
               </div>
             </div>
           </div>
@@ -262,16 +264,16 @@ export function DPPVisibilitySettingsPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-blue-200 dark:border-blue-700">
-                  <th className="text-left py-2 px-3 text-blue-800 dark:text-blue-200">You select</th>
-                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Consumer sees</th>
-                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Customs sees</th>
-                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">Admin sees</th>
+                  <th className="text-left py-2 px-3 text-blue-800 dark:text-blue-200">{t('You select')}</th>
+                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">{t('Consumer sees')}</th>
+                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">{t('Customs sees')}</th>
+                  <th className="text-center py-2 px-3 text-blue-800 dark:text-blue-200">{t('Admin sees')}</th>
                 </tr>
               </thead>
               <tbody className="text-blue-700 dark:text-blue-300">
                 <tr className="border-b border-blue-100 dark:border-blue-800">
                   <td className="py-2 px-3 flex items-center gap-2">
-                    <Users className="h-4 w-4 text-green-500" /> Consumer
+                    <Users className="h-4 w-4 text-green-500" /> {t('Consumer')}
                   </td>
                   <td className="py-2 px-3 text-center text-green-600">✓</td>
                   <td className="py-2 px-3 text-center text-green-600">✓</td>
@@ -279,7 +281,7 @@ export function DPPVisibilitySettingsPage() {
                 </tr>
                 <tr className="border-b border-blue-100 dark:border-blue-800">
                   <td className="py-2 px-3 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-amber-500" /> Customs
+                    <ShieldCheck className="h-4 w-4 text-amber-500" /> {t('Customs')}
                   </td>
                   <td className="py-2 px-3 text-center text-red-500">✗</td>
                   <td className="py-2 px-3 text-center text-green-600">✓</td>
@@ -287,7 +289,7 @@ export function DPPVisibilitySettingsPage() {
                 </tr>
                 <tr>
                   <td className="py-2 px-3 flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-slate-500" /> Internal Only
+                    <Lock className="h-4 w-4 text-slate-500" /> {t('Internal Only')}
                   </td>
                   <td className="py-2 px-3 text-center text-red-500">✗</td>
                   <td className="py-2 px-3 text-center text-red-500">✗</td>
@@ -311,11 +313,11 @@ export function DPPVisibilitySettingsPage() {
                   <div>
                     <CardTitle className="text-lg">{category}</CardTitle>
                     <CardDescription>
-                      {fieldsInCategory.length} fields in this category
+                      {t('{{count}} fields in this category', { count: fieldsInCategory.length })}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Set all to:</span>
+                    <span className="text-sm text-muted-foreground">{t('Set all to:')}</span>
                     <div className="flex gap-1">
                       <Button
                         variant="outline"
@@ -404,10 +406,10 @@ export function DPPVisibilitySettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            Preview
+            {t('Preview')}
           </CardTitle>
           <CardDescription>
-            Test the public pages with current settings
+            {t('Test the public pages with current settings')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -421,10 +423,10 @@ export function DPPVisibilitySettingsPage() {
               <div>
                 <p className="font-medium flex items-center gap-2">
                   <Users className="h-4 w-4 text-green-600" />
-                  Customer View
+                  {t('Customer View')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Shows {countByLevel('consumer')} fields
+                  {t('Shows {{count}} fields', { count: countByLevel('consumer') })}
                 </p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -438,10 +440,10 @@ export function DPPVisibilitySettingsPage() {
               <div>
                 <p className="font-medium flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-amber-600" />
-                  Customs View
+                  {t('Customs View')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Shows {countByLevel('consumer') + countByLevel('customs')} fields
+                  {t('Shows {{count}} fields', { count: countByLevel('consumer') + countByLevel('customs') })}
                 </p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -449,7 +451,7 @@ export function DPPVisibilitySettingsPage() {
           </div>
           <p className="text-xs text-muted-foreground text-center">
             <Lock className="h-3 w-3 inline mr-1" />
-            {countByLevel('internal')} fields are internal only and not shown on any public page
+            {t('{{count}} fields are internal only and not shown on any public page', { count: countByLevel('internal') })}
           </p>
         </CardContent>
       </Card>

@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Package,
@@ -23,6 +25,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 import {
   Sidebar,
@@ -46,111 +49,112 @@ import {
 } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-const mainNavItems = [
-  {
-    title: 'Dashboard',
-    url: '/',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Products',
-    icon: Package,
-    items: [
-      { title: 'All Products', url: '/products' },
-      { title: 'Create New', url: '/products/new' },
-      { title: 'Categories', url: '/products/categories' },
-    ],
-  },
-  {
-    title: 'DPP / Passports',
-    icon: QrCode,
-    items: [
-      { title: 'Overview', url: '/dpp' },
-      { title: 'QR Generator', url: '/dpp/qr-generator' },
-      { title: 'Visibility', url: '/dpp/visibility' },
-      { title: 'Batch Upload', url: '/dpp/batch-upload' },
-    ],
-  },
-  {
-    title: 'Documents',
-    icon: FolderArchive,
-    items: [
-      { title: 'All Documents', url: '/documents' },
-      { title: 'Upload', url: '/documents/upload' },
-      { title: 'Validity Tracker', url: '/documents/tracker' },
-    ],
-  },
-  {
-    title: 'Supply Chain',
-    url: '/supply-chain',
-    icon: Link2,
-    badge: 'Phase 2',
-  },
-  {
-    title: 'Suppliers',
-    url: '/suppliers',
-    icon: Users,
-  },
-  {
-    title: 'Compliance',
-    icon: ShieldCheck,
-    items: [
-      { title: 'Audit Report', url: '/compliance' },
-      { title: 'Export', url: '/compliance/export' },
-      { title: 'Audit Log', url: '/compliance/audit-log' },
-    ],
-  },
-  {
-    title: 'Regulations',
-    icon: Globe,
-    items: [
-      { title: 'Countries', url: '/regulations/countries' },
-      { title: 'EU Regulations', url: '/regulations/eu' },
-      { title: 'Pictograms', url: '/regulations/pictograms' },
-      { title: 'News', url: '/regulations/news' },
-    ],
-  },
-  {
-    title: 'Checklists',
-    url: '/checklists',
-    icon: ClipboardCheck,
-  },
-  {
-    title: 'Requirements Calculator',
-    url: '/requirements-calculator',
-    icon: Calculator,
-    badge: 'New',
-  },
-];
-
-const settingsNavItems = [
-  {
-    title: 'Settings',
-    icon: Settings,
-    items: [
-      { title: 'Company Profile', url: '/settings/company', icon: Building2 },
-      { title: 'Branding', url: '/settings/branding', icon: FolderKanban },
-      { title: 'Users & Roles', url: '/settings/users', icon: Users },
-      { title: 'API Keys', url: '/settings/api-keys', icon: Key },
-    ],
-  },
-  {
-    title: 'Admin Dashboard',
-    url: '/admin',
-    icon: Shield,
-  },
-  {
-    title: 'Help & Support',
-    url: '/help',
-    icon: HelpCircle,
-  },
-];
-
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { branding } = useBranding();
+  const { t } = useTranslation('common');
+
+  const mainNavItems = useMemo(() => [
+    {
+      title: t('Dashboard'),
+      url: '/',
+      icon: LayoutDashboard,
+    },
+    {
+      title: t('Products'),
+      icon: Package,
+      items: [
+        { title: t('All Products'), url: '/products' },
+        { title: t('Create New'), url: '/products/new' },
+        { title: t('Categories'), url: '/products/categories' },
+      ],
+    },
+    {
+      title: t('DPP / Passports'),
+      icon: QrCode,
+      items: [
+        { title: t('Overview'), url: '/dpp' },
+        { title: t('QR Generator'), url: '/dpp/qr-generator' },
+        { title: t('Visibility'), url: '/dpp/visibility' },
+        { title: t('Batch Upload'), url: '/dpp/batch-upload' },
+      ],
+    },
+    {
+      title: t('Documents'),
+      icon: FolderArchive,
+      items: [
+        { title: t('All Documents'), url: '/documents' },
+        { title: t('Upload'), url: '/documents/upload' },
+        { title: t('Validity Tracker'), url: '/documents/tracker' },
+      ],
+    },
+    {
+      title: t('Supply Chain'),
+      url: '/supply-chain',
+      icon: Link2,
+      badge: t('Phase 2'),
+    },
+    {
+      title: t('Suppliers'),
+      url: '/suppliers',
+      icon: Users,
+    },
+    {
+      title: t('Compliance'),
+      icon: ShieldCheck,
+      items: [
+        { title: t('Audit Report'), url: '/compliance' },
+        { title: t('Export'), url: '/compliance/export' },
+        { title: t('Audit Log'), url: '/compliance/audit-log' },
+      ],
+    },
+    {
+      title: t('Regulations'),
+      icon: Globe,
+      items: [
+        { title: t('Countries'), url: '/regulations/countries' },
+        { title: t('EU Regulations'), url: '/regulations/eu' },
+        { title: t('Pictograms'), url: '/regulations/pictograms' },
+        { title: t('News'), url: '/regulations/news' },
+      ],
+    },
+    {
+      title: t('Checklists'),
+      url: '/checklists',
+      icon: ClipboardCheck,
+    },
+    {
+      title: t('Requirements Calculator'),
+      url: '/requirements-calculator',
+      icon: Calculator,
+      badge: t('New'),
+    },
+  ], [t]);
+
+  const settingsNavItems = useMemo(() => [
+    {
+      title: t('Settings'),
+      icon: Settings,
+      items: [
+        { title: t('Company Profile'), url: '/settings/company', icon: Building2 },
+        { title: t('Branding'), url: '/settings/branding', icon: FolderKanban },
+        { title: t('Users & Roles'), url: '/settings/users', icon: Users },
+        { title: t('API Keys'), url: '/settings/api-keys', icon: Key },
+      ],
+    },
+    {
+      title: t('Admin Dashboard'),
+      url: '/admin',
+      icon: Shield,
+    },
+    {
+      title: t('Help & Support'),
+      url: '/help',
+      icon: HelpCircle,
+    },
+  ], [t]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -191,7 +195,7 @@ export function AppSidebar() {
               {branding.appName}
             </span>
             <span className="text-xs text-sidebar-foreground/60">
-              Digital Product Passport
+              {t('Digital Product Passport')}
             </span>
           </div>
         </Link>
@@ -199,7 +203,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('Main Menu')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) =>
@@ -250,7 +254,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('System')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {settingsNavItems.map((item) =>
@@ -316,15 +320,18 @@ export function AppSidebar() {
               </span>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSignOut}
-            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-            title="Sign Out"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <LanguageSwitcher />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+              title={t('Sign Out')}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

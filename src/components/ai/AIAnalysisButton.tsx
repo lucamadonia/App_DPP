@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +9,7 @@ interface AIAnalysisButtonProps {
 }
 
 export function AIAnalysisButton({ onClick, isStreaming, hasResult }: AIAnalysisButtonProps) {
+  const { t } = useTranslation('compliance');
   if (hasResult) return null;
 
   return (
@@ -30,12 +32,12 @@ export function AIAnalysisButton({ onClick, isStreaming, hasResult }: AIAnalysis
       {isStreaming ? (
         <>
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Analyzing...
+          {t('Analyzing...')}
         </>
       ) : (
         <>
           <Sparkles className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-12" />
-          AI Deep Analysis
+          {t('AI Deep Analysis')}
         </>
       )}
     </Button>
