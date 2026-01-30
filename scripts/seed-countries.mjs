@@ -357,7 +357,7 @@ async function main() {
   };
 
   try {
-    await supabaseRequest('countries', {
+    await supabaseRequest('countries?on_conflict=code', {
       method: 'POST',
       headers,
       body: JSON.stringify(COUNTRIES),
