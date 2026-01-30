@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { createProduct, getCategories, getSuppliers, assignProductToSupplier, uploadDocument } from '@/services/supabase';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument } from '@/services/supabase';
 import type { Category, Supplier } from '@/types/database';
 import { useBranding } from '@/contexts/BrandingContext';
 import {
@@ -48,9 +48,12 @@ const steps = [
 ];
 
 export function ProductFormPage() {
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const { branding } = useBranding();
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -63,6 +66,7 @@ export function ProductFormPage() {
   const [isSelfManufacturer, setIsSelfManufacturer] = useState(false);
   const [isSelfImporter, setIsSelfImporter] = useState(false);
   const [selectedSuppliers, setSelectedSuppliers] = useState<Array<{
+    id?: string;
     supplier_id: string;
     role: string;
     is_primary: boolean;
@@ -81,6 +85,72 @@ export function ProductFormPage() {
       getSuppliers().then(setSuppliers),
     ]).catch(console.error).finally(() => setCategoriesLoading(false));
   }, []);
+
+  // Load product data in edit mode
+  useEffect(() => {
+    if (!id) return;
+    setIsLoading(true);
+    Promise.all([
+      getProductById(id),
+      getProductSuppliers(id),
+    ]).then(([product, productSuppliers]) => {
+      if (!product) {
+        setSubmitError('Produkt nicht gefunden.');
+        setIsLoading(false);
+        return;
+      }
+      // Extract main category from "Main / Sub" format
+      const categoryParts = product.category?.includes(' / ')
+        ? product.category.split(' / ')
+        : null;
+      if (categoryParts) {
+        setSelectedMainCategory(categoryParts[0]);
+      } else if (product.category) {
+        setSelectedMainCategory(product.category);
+      }
+
+      setFormData({
+        name: product.name || '',
+        manufacturer: product.manufacturer || '',
+        gtin: product.gtin || '',
+        serialNumber: product.serialNumber || '',
+        category: product.category || '',
+        description: product.description || '',
+        batchNumber: product.batchNumber || '',
+        hsCode: product.hsCode || '',
+        countryOfOrigin: product.countryOfOrigin || '',
+        netWeight: product.netWeight != null ? String(product.netWeight) : '',
+        grossWeight: product.grossWeight != null ? String(product.grossWeight) : '',
+        productionDate: product.productionDate ? product.productionDate.slice(0, 10) : '',
+        expirationDate: product.expirationDate ? product.expirationDate.slice(0, 10) : '',
+        materials: product.materials?.length
+          ? product.materials.map(m => ({
+              name: m.name || '',
+              percentage: m.percentage || 0,
+              recyclable: m.recyclable || false,
+              origin: m.origin || '',
+            }))
+          : [{ name: '', percentage: 0, recyclable: false, origin: '' }],
+        recyclablePercentage: product.recyclability?.recyclablePercentage || 0,
+        recyclingInstructions: product.recyclability?.instructions || '',
+        certifications: (product.certifications || []).map(c => c.name),
+      });
+
+      setSelectedSuppliers(
+        productSuppliers.map(sp => ({
+          id: sp.id,
+          supplier_id: sp.supplier_id,
+          role: sp.role,
+          is_primary: sp.is_primary,
+          lead_time_days: sp.lead_time_days,
+        }))
+      );
+    }).catch(() => {
+      setSubmitError('Fehler beim Laden des Produkts.');
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  }, [id]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -201,7 +271,7 @@ export function ProductFormPage() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await createProduct({
+      const productData = {
         name: formData.name,
         manufacturer: formData.manufacturer,
         gtin: formData.gtin,
@@ -226,24 +296,51 @@ export function ProductFormPage() {
           instructions: formData.recyclingInstructions,
           disposalMethods: [],
         },
-      });
-      if (result.success && result.id) {
-        // Lieferanten zuordnen
-        const supplierAssignments = selectedSuppliers.filter(s => s.supplier_id);
-        for (const assignment of supplierAssignments) {
-          await assignProductToSupplier({
-            supplier_id: assignment.supplier_id,
-            product_id: result.id,
-            role: assignment.role as 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics',
-            is_primary: assignment.is_primary,
-            lead_time_days: assignment.lead_time_days,
-          });
+      };
+
+      if (isEditMode && id) {
+        // Update existing product
+        const result = await updateProduct(id, productData);
+        if (result.success) {
+          // Remove old supplier assignments and create new ones
+          const existingSuppliers = await getProductSuppliers(id);
+          for (const existing of existingSuppliers) {
+            await removeProductFromSupplier(existing.id);
+          }
+          const supplierAssignments = selectedSuppliers.filter(s => s.supplier_id);
+          for (const assignment of supplierAssignments) {
+            await assignProductToSupplier({
+              supplier_id: assignment.supplier_id,
+              product_id: id,
+              role: assignment.role as 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics',
+              is_primary: assignment.is_primary,
+              lead_time_days: assignment.lead_time_days,
+            });
+          }
+          navigate(`/products/${id}`);
+        } else {
+          setSubmitError(result.error || 'Produkt konnte nicht gespeichert werden.');
         }
-        navigate('/products');
-      } else if (result.success) {
-        navigate('/products');
       } else {
-        setSubmitError(result.error || 'Produkt konnte nicht gespeichert werden.');
+        // Create new product
+        const result = await createProduct(productData);
+        if (result.success && result.id) {
+          const supplierAssignments = selectedSuppliers.filter(s => s.supplier_id);
+          for (const assignment of supplierAssignments) {
+            await assignProductToSupplier({
+              supplier_id: assignment.supplier_id,
+              product_id: result.id,
+              role: assignment.role as 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics',
+              is_primary: assignment.is_primary,
+              lead_time_days: assignment.lead_time_days,
+            });
+          }
+          navigate('/products');
+        } else if (result.success) {
+          navigate('/products');
+        } else {
+          setSubmitError(result.error || 'Produkt konnte nicht gespeichert werden.');
+        }
       }
     } catch {
       setSubmitError('Ein unerwarteter Fehler ist aufgetreten.');
@@ -259,18 +356,28 @@ export function ProductFormPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link to="/products">
+          <Link to={isEditMode ? `/products/${id}` : '/products'}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Neues Produkt anlegen</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isEditMode ? 'Produkt bearbeiten' : 'Neues Produkt anlegen'}
+          </h1>
           <p className="text-muted-foreground">
-            Erstellen Sie einen neuen Digital Product Passport
+            {isEditMode
+              ? 'Bearbeiten Sie den Digital Product Passport'
+              : 'Erstellen Sie einen neuen Digital Product Passport'}
           </p>
         </div>
       </div>
 
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-3 text-muted-foreground">Produktdaten werden geladen…</span>
+        </div>
+      ) : (<>
       {/* Progress */}
       <Card>
         <CardContent className="py-4">
@@ -900,7 +1007,7 @@ export function ProductFormPage() {
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}
-              {isSubmitting ? 'Wird gespeichert…' : 'Produkt erstellen'}
+              {isSubmitting ? 'Wird gespeichert…' : isEditMode ? 'Änderungen speichern' : 'Produkt erstellen'}
             </Button>
           )}
         </div>
@@ -911,6 +1018,7 @@ export function ProductFormPage() {
           {submitError}
         </div>
       )}
+      </>)}
     </div>
   );
 }
