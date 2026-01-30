@@ -38,6 +38,7 @@ export interface ProductBatch {
   expirationDate?: string;
   netWeight?: number;
   grossWeight?: number;
+  quantity?: number;
   status: 'draft' | 'live' | 'archived';
   notes?: string;
   // Override fields (null/undefined = inherit from product)

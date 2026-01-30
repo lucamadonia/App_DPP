@@ -216,6 +216,12 @@ export function BatchDetailPage() {
                   <p className="font-medium">{batch.grossWeight} g</p>
                 </div>
               )}
+              {batch.quantity != null && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Quantity</p>
+                  <p className="font-medium">{batch.quantity} pcs</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
                 <Badge variant="secondary" className={status.className}>

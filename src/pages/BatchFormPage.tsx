@@ -41,6 +41,7 @@ export function BatchFormPage() {
     expirationDate: '',
     netWeight: '',
     grossWeight: '',
+    quantity: '',
     status: 'draft' as 'draft' | 'live' | 'archived',
     notes: '',
     // Override fields
@@ -71,6 +72,7 @@ export function BatchFormPage() {
             expirationDate: batch.expirationDate ? batch.expirationDate.slice(0, 10) : '',
             netWeight: batch.netWeight != null ? String(batch.netWeight) : '',
             grossWeight: batch.grossWeight != null ? String(batch.grossWeight) : '',
+            quantity: batch.quantity != null ? String(batch.quantity) : '',
             status: batch.status,
             notes: batch.notes || '',
             descriptionOverride: batch.descriptionOverride || '',
@@ -91,6 +93,7 @@ export function BatchFormPage() {
             expirationDate: batch.expirationDate ? batch.expirationDate.slice(0, 10) : '',
             netWeight: batch.netWeight != null ? String(batch.netWeight) : '',
             grossWeight: batch.grossWeight != null ? String(batch.grossWeight) : '',
+            quantity: batch.quantity != null ? String(batch.quantity) : '',
             status: 'draft',
             notes: batch.notes || '',
             descriptionOverride: batch.descriptionOverride || '',
@@ -161,6 +164,7 @@ export function BatchFormPage() {
         expirationDate: formData.expirationDate || undefined,
         netWeight: formData.netWeight ? parseFloat(formData.netWeight) : undefined,
         grossWeight: formData.grossWeight ? parseFloat(formData.grossWeight) : undefined,
+        quantity: formData.quantity ? parseInt(formData.quantity) : undefined,
         status: formData.status,
         notes: formData.notes || undefined,
         descriptionOverride: overrideDescription ? formData.descriptionOverride || undefined : undefined,
@@ -303,6 +307,17 @@ export function BatchFormPage() {
                 value={formData.grossWeight}
                 onChange={(e) => updateField('grossWeight', e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Quantity (pcs)</label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="e.g. 500"
+                value={formData.quantity}
+                onChange={(e) => updateField('quantity', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Number of products in this batch</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>

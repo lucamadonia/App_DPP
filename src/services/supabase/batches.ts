@@ -26,6 +26,7 @@ function transformBatch(row: any): ProductBatch {
     expirationDate: row.expiration_date || undefined,
     netWeight: row.net_weight != null ? Number(row.net_weight) : undefined,
     grossWeight: row.gross_weight != null ? Number(row.gross_weight) : undefined,
+    quantity: row.quantity != null ? Number(row.quantity) : undefined,
     status: row.status || 'draft',
     notes: row.notes || undefined,
     materialsOverride: row.materials_override as Material[] | undefined,
@@ -136,6 +137,7 @@ export async function createBatch(
     expiration_date: batch.expirationDate || null,
     net_weight: batch.netWeight ?? null,
     gross_weight: batch.grossWeight ?? null,
+    quantity: batch.quantity ?? null,
     status: batch.status || 'draft',
     notes: batch.notes || null,
     materials_override: batch.materialsOverride || null,
@@ -175,6 +177,7 @@ export async function updateBatch(
   if (batch.expirationDate !== undefined) updateData.expiration_date = batch.expirationDate || null;
   if (batch.netWeight !== undefined) updateData.net_weight = batch.netWeight ?? null;
   if (batch.grossWeight !== undefined) updateData.gross_weight = batch.grossWeight ?? null;
+  if (batch.quantity !== undefined) updateData.quantity = batch.quantity ?? null;
   if (batch.status !== undefined) updateData.status = batch.status;
   if (batch.notes !== undefined) updateData.notes = batch.notes || null;
   if (batch.materialsOverride !== undefined) updateData.materials_override = batch.materialsOverride || null;
@@ -234,6 +237,7 @@ export async function duplicateBatch(
     expirationDate: existing.expirationDate,
     netWeight: existing.netWeight,
     grossWeight: existing.grossWeight,
+    quantity: existing.quantity,
     status: 'draft',
     notes: existing.notes,
     materialsOverride: existing.materialsOverride,

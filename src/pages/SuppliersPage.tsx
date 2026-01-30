@@ -259,6 +259,9 @@ export function SuppliersPage() {
     role: 'component',
     is_primary: false,
     lead_time_days: undefined,
+    price_per_unit: undefined,
+    currency: 'EUR',
+    min_order_quantity: undefined,
     notes: '',
   });
 
@@ -427,6 +430,9 @@ export function SuppliersPage() {
         role: productFormData.role || 'component',
         is_primary: productFormData.is_primary || false,
         lead_time_days: productFormData.lead_time_days,
+        price_per_unit: productFormData.price_per_unit,
+        currency: productFormData.currency || 'EUR',
+        min_order_quantity: productFormData.min_order_quantity,
         notes: productFormData.notes,
       });
       if (!result.success) throw new Error('Assignment failed');
@@ -998,9 +1004,15 @@ export function SuppliersPage() {
                             <Package className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}
-                                {sp.is_primary && <Badge variant="secondary" className="ml-1 text-xs">Primary</Badge>}
+                              <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span>{SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}</span>
+                                {sp.price_per_unit != null && (
+                                  <span>{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>
+                                )}
+                                {sp.min_order_quantity != null && (
+                                  <span>Min: {sp.min_order_quantity}</span>
+                                )}
+                                {sp.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
                               </div>
                             </div>
                           </div>
@@ -1503,6 +1515,28 @@ export function SuppliersPage() {
                     <Input type="number" value={productFormData.lead_time_days || ''} onChange={e => updateProductForm('lead_time_days', parseInt(e.target.value) || undefined)} />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Price per Unit</Label>
+                    <Input type="number" step="0.01" placeholder="0.00" value={productFormData.price_per_unit ?? ''} onChange={e => updateProductForm('price_per_unit', e.target.value ? parseFloat(e.target.value) : undefined)} />
+                  </div>
+                  <div>
+                    <Label>Currency</Label>
+                    <Select value={productFormData.currency || 'EUR'} onValueChange={v => updateProductForm('currency', v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="CHF">CHF</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Min. Order Qty</Label>
+                    <Input type="number" min="1" placeholder="e.g. 100" value={productFormData.min_order_quantity ?? ''} onChange={e => updateProductForm('min_order_quantity', e.target.value ? parseInt(e.target.value) : undefined)} />
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <Checkbox id="is_primary" checked={productFormData.is_primary || false} onCheckedChange={v => updateProductForm('is_primary', v)} />
                   <Label htmlFor="is_primary">{t('Primary Supplier')}</Label>
@@ -1526,9 +1560,15 @@ export function SuppliersPage() {
                         <Package className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}
-                            {sp.is_primary && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
+                          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span>{SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}</span>
+                            {sp.price_per_unit != null && (
+                              <span>{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>
+                            )}
+                            {sp.min_order_quantity != null && (
+                              <span>Min: {sp.min_order_quantity}</span>
+                            )}
+                            {sp.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
                           </div>
                         </div>
                       </div>

@@ -210,6 +210,7 @@ CREATE TABLE IF NOT EXISTS product_batches (
     expiration_date DATE,
     net_weight NUMERIC,
     gross_weight NUMERIC,
+    quantity INTEGER,
     status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'live', 'archived')),
     notes TEXT,
     -- Override fields (NULL = inherit from product master data)
