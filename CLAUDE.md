@@ -127,9 +127,60 @@ supabase/
 
 Products store complex data as JSON columns: `materials` (array), `certifications` (array), `carbon_footprint` (object), `recyclability` (object). Customs-relevant scalar fields: `hs_code`, `batch_number`, `country_of_origin`, `net_weight`, `gross_weight`.
 
+## i18n / Internationalization
+
+The app supports **German (de)** and **English (en)** via `i18next` + `react-i18next`. **All UI-visible text must be translated in both languages.**
+
+### Setup
+
+- Config: `src/i18n.ts` (fallback: `en`, detection via localStorage key `dpp-language`)
+- Translation files: `public/locales/{en,de}/{namespace}.json`
+- Loaded at runtime via `i18next-http-backend` from `/locales/{{lng}}/{{ns}}.json`
+
+### Namespaces
+
+| Namespace | Scope |
+|-----------|-------|
+| `common` | Shared UI (buttons, labels, errors, navigation) |
+| `auth` | Login, signup, password reset |
+| `products` | Product CRUD, batch management |
+| `dpp` | Digital Product Passport, QR, public views |
+| `documents` | Document management, uploads |
+| `dashboard` | Dashboard page |
+| `settings` | Settings, suppliers, supply chain, branding |
+| `compliance` | Regulations, checklists |
+
+### Rules (MANDATORY)
+
+1. **Never hardcode UI text** — always use `t('key')` from `useTranslation('namespace')`
+2. **Every new key must be added to BOTH `en` and `de`** translation files — no exceptions
+3. Use the English text as the translation key: `t('Save')`, `t('New Product')`, not `t('save_button')`
+4. Cross-namespace access: `t('Cancel', { ns: 'common' })` for shared keys
+5. Interpolation: `t('Welcome, {{name}}', { name })` — same syntax in both languages
+6. When modifying or adding any UI-facing string, always update both `public/locales/en/{ns}.json` AND `public/locales/de/{ns}.json`
+
+### Example
+
+```tsx
+// In component:
+const { t } = useTranslation('products');
+
+// In JSX:
+<h1>{t('New Product')}</h1>
+<Button>{t('Save', { ns: 'common' })}</Button>
+```
+
+```json
+// public/locales/en/products.json
+{ "New Product": "New Product" }
+
+// public/locales/de/products.json
+{ "New Product": "Neues Produkt" }
+```
+
 ## Conventions
 
-- **Language**: German UI text, English code/comments
+- **Language**: All UI text in both German AND English via i18n (see above). Code/comments in English.
 - **Components**: shadcn/ui from `@/components/ui/`
 - **Imports**: `@/` path alias for `src/` directory
 - **DB access**: Always through `src/services/supabase/*`, never direct
