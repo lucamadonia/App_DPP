@@ -600,6 +600,15 @@ export interface Database {
           risk_level: 'low' | 'medium' | 'high' | null;
           verified: boolean;
           coordinates: string | null;
+          process_type: string | null;
+          transport_mode: string | null;
+          status: string;
+          document_ids: string[] | null;
+          emissions_kg: number | null;
+          duration_days: number | null;
+          notes: string | null;
+          cost: number | null;
+          currency: string;
           created_at: string;
         };
         Insert: {
@@ -616,6 +625,15 @@ export interface Database {
           risk_level?: 'low' | 'medium' | 'high' | null;
           verified?: boolean;
           coordinates?: string | null;
+          process_type?: string | null;
+          transport_mode?: string | null;
+          status?: string;
+          document_ids?: string[] | null;
+          emissions_kg?: number | null;
+          duration_days?: number | null;
+          notes?: string | null;
+          cost?: number | null;
+          currency?: string;
           created_at?: string;
         };
         Update: {
@@ -632,6 +650,15 @@ export interface Database {
           risk_level?: 'low' | 'medium' | 'high' | null;
           verified?: boolean;
           coordinates?: string | null;
+          process_type?: string | null;
+          transport_mode?: string | null;
+          status?: string;
+          document_ids?: string[] | null;
+          emissions_kg?: number | null;
+          duration_days?: number | null;
+          notes?: string | null;
+          cost?: number | null;
+          currency?: string;
           created_at?: string;
         };
       };

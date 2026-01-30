@@ -18,10 +18,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   getTenantBranding,
   getQRCodeSettings,
+  getDPPDesignSettings,
   updateTenantBranding as saveTenantBranding,
   updateQRCodeSettings as saveQRCodeSettings,
+  updateDPPDesignSettings as saveDPPDesignSettings,
 } from '@/services/supabase';
-import type { BrandingSettings, QRCodeDomainSettings } from '@/types/database';
+import type { BrandingSettings, QRCodeDomainSettings, DPPDesignSettings } from '@/types/database';
 import {
   applyPrimaryColor,
   applyFavicon,
@@ -58,11 +60,13 @@ interface BrandingContextType {
   // Raw settings from DB (can be null/undefined)
   rawBranding: BrandingSettings | null;
   rawQRCodeSettings: QRCodeDomainSettings | null;
+  rawDPPDesign: DPPDesignSettings | null;
   // Loading state
   isLoading: boolean;
   // Update functions
   updateBranding: (settings: Partial<BrandingSettings>) => Promise<boolean>;
   updateQRCodeSettings: (settings: Partial<QRCodeDomainSettings>) => Promise<boolean>;
+  updateDPPDesign: (settings: DPPDesignSettings) => Promise<boolean>;
   // Refresh from DB
   refreshBranding: () => Promise<void>;
 }
@@ -97,6 +101,7 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [rawBranding, setRawBranding] = useState<BrandingSettings | null>(null);
   const [rawQRCodeSettings, setRawQRCodeSettings] = useState<QRCodeDomainSettings | null>(null);
+  const [rawDPPDesign, setRawDPPDesign] = useState<DPPDesignSettings | null>(null);
 
   // Resolve branding with fallback values
   const branding: ResolvedBranding = {
@@ -129,16 +134,19 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
 
     setIsLoading(true);
     try {
-      const [brandingData, qrData] = await Promise.all([
+      const [brandingData, qrData, dppDesignData] = await Promise.all([
         getTenantBranding(),
         getQRCodeSettings(),
+        getDPPDesignSettings(),
       ]);
       setRawBranding(brandingData);
       setRawQRCodeSettings(qrData);
+      setRawDPPDesign(dppDesignData);
     } catch (error) {
       console.error('Failed to load branding:', error);
       setRawBranding(null);
       setRawQRCodeSettings(null);
+      setRawDPPDesign(null);
     }
     setIsLoading(false);
   }, [isAuthenticated, tenantId]);
@@ -201,14 +209,28 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
     []
   );
 
+  // Update DPP design settings in database
+  const updateDPPDesign = useCallback(
+    async (settings: DPPDesignSettings): Promise<boolean> => {
+      const result = await saveDPPDesignSettings(settings);
+      if (result.success) {
+        setRawDPPDesign(settings);
+      }
+      return result.success;
+    },
+    []
+  );
+
   const value: BrandingContextType = {
     branding,
     qrCodeSettings,
     rawBranding,
     rawQRCodeSettings,
+    rawDPPDesign,
     isLoading,
     updateBranding,
     updateQRCodeSettings,
+    updateDPPDesign,
     refreshBranding: loadBranding,
   };
 

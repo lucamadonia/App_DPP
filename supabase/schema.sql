@@ -258,6 +258,15 @@ CREATE TABLE IF NOT EXISTS supply_chain_entries (
     risk_level TEXT CHECK (risk_level IN ('low', 'medium', 'high')),
     verified BOOLEAN DEFAULT false,
     coordinates TEXT,
+    process_type TEXT CHECK (process_type IN ('raw_material_sourcing','manufacturing','assembly','quality_control','packaging','warehousing','transport','distribution','customs_clearance')),
+    transport_mode TEXT CHECK (transport_mode IN ('road','rail','sea','air','multimodal')),
+    status TEXT DEFAULT 'completed' CHECK (status IN ('planned','in_progress','completed','delayed','cancelled')),
+    document_ids UUID[] DEFAULT '{}',
+    emissions_kg NUMERIC,
+    duration_days INTEGER,
+    notes TEXT,
+    cost NUMERIC,
+    currency TEXT DEFAULT 'EUR',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

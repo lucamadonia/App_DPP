@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Tenant, TenantSettings, BrandingSettings, QRCodeDomainSettings } from '@/types/database';
+import type { Tenant, TenantSettings, BrandingSettings, QRCodeDomainSettings, DPPDesignSettings } from '@/types/database';
 
 // Transform database row to Tenant type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -382,4 +382,149 @@ export async function getPublicTenantQRSettings(
 
   const settings = data.settings as TenantSettings | null;
   return settings?.qrCode || null;
+}
+
+// ============================================
+// DPP DESIGN FUNCTIONS
+// ============================================
+
+/**
+ * Get DPP design settings for the current tenant
+ */
+export async function getDPPDesignSettings(): Promise<DPPDesignSettings | null> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) {
+    return null;
+  }
+  return tenant.settings?.dppDesign || null;
+}
+
+/**
+ * Update DPP design settings for the current tenant (merge-update)
+ */
+export async function updateDPPDesignSettings(
+  design: Partial<DPPDesignSettings>
+): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    return { success: false, error: 'No tenant set' };
+  }
+
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    return { success: false, error: 'Tenant not found' };
+  }
+
+  const mergedSettings: TenantSettings = {
+    ...tenant.settings,
+    dppDesign: {
+      ...tenant.settings?.dppDesign,
+      ...design,
+      colors: {
+        ...tenant.settings?.dppDesign?.colors,
+        ...design.colors,
+      },
+      typography: {
+        ...tenant.settings?.dppDesign?.typography,
+        ...design.typography,
+      },
+      hero: {
+        ...tenant.settings?.dppDesign?.hero,
+        ...design.hero,
+      },
+      cards: {
+        ...tenant.settings?.dppDesign?.cards,
+        ...design.cards,
+      },
+      sections: {
+        ...tenant.settings?.dppDesign?.sections,
+        ...design.sections,
+      },
+      footer: {
+        ...tenant.settings?.dppDesign?.footer,
+        ...design.footer,
+        socialLinks: {
+          ...tenant.settings?.dppDesign?.footer?.socialLinks,
+          ...design.footer?.socialLinks,
+        },
+      },
+    },
+  };
+
+  return updateTenant(tenantId, { settings: mergedSettings });
+}
+
+/**
+ * Get DPP design settings for a product's tenant (for public pages)
+ */
+export async function getPublicTenantDPPDesign(
+  gtin: string,
+  serial: string
+): Promise<DPPDesignSettings | null> {
+  const { data: product, error: productError } = await supabase
+    .from('products')
+    .select('tenant_id')
+    .eq('gtin', gtin)
+    .eq('serial_number', serial)
+    .single();
+
+  if (productError || !product) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', product.tenant_id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const settings = data.settings as TenantSettings | null;
+  return settings?.dppDesign || null;
+}
+
+/**
+ * Upload a hero image for DPP public pages
+ */
+export async function uploadHeroImage(
+  file: File
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    return { success: false, error: 'No tenant set' };
+  }
+
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    return { success: false, error: 'Invalid file type. Allowed: PNG, JPG, WebP' };
+  }
+
+  const maxSize = 2 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return { success: false, error: 'File too large. Maximum 2MB allowed.' };
+  }
+
+  const ext = file.name.split('.').pop();
+  const filename = `${tenantId}/hero-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('branding')
+    .upload(filename, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (uploadError) {
+    console.error('Hero image upload error:', uploadError);
+    return { success: false, error: uploadError.message };
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('branding')
+    .getPublicUrl(filename);
+
+  return { success: true, url: urlData.publicUrl };
 }

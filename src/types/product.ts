@@ -100,4 +100,8 @@ export interface SupplyChainEntry {
   country: string;
   date: string;
   description: string;
+  processType?: string;
+  transportMode?: string;
+  status?: string;
+  emissionsKg?: number;
 }

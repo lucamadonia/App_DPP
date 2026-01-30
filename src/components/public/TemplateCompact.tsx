@@ -19,11 +19,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
+import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
+import { resolveDesign, getCardStyle, getHeadingStyle, isSectionVisible } from '@/lib/dpp-design-utils';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
+  dppDesign?: DPPDesignSettings | null;
 }
 
 const ratingColors: Record<string, string> = {
@@ -34,9 +37,10 @@ const ratingColors: Record<string, string> = {
   E: 'bg-red-500',
 };
 
-export function TemplateCompact({ product, visibilityV2, view }: DPPTemplateProps) {
+export function TemplateCompact({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
   const { t } = useTranslation('dpp');
   const locale = useLocale();
+  const design = resolveDesign(dppDesign);
 
   const isFieldVisible = (field: string) => {
     if (!visibilityV2) return true;
@@ -44,10 +48,10 @@ export function TemplateCompact({ product, visibilityV2, view }: DPPTemplateProp
   };
 
   if (view === 'customs') {
-    return <CompactCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} />;
+    return <CompactCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} />;
   }
 
-  return <CompactConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} />;
+  return <CompactConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} />;
 }
 
 interface ViewProps {
@@ -55,23 +59,43 @@ interface ViewProps {
   isFieldVisible: (field: string) => boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
+  design: ReturnType<typeof resolveDesign>;
 }
 
 type ConsumerTab = 'materials' | 'co2' | 'recycling' | 'certs' | 'supply';
 type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2';
 
-function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) {
-  const [activeTab, setActiveTab] = useState<ConsumerTab>('materials');
+// Mapping from DPPSectionId to ConsumerTab id
+const sectionToTabMap: Record<DPPSectionId, ConsumerTab> = {
+  materials: 'materials',
+  carbonFootprint: 'co2',
+  recycling: 'recycling',
+  certifications: 'certs',
+  supplyChain: 'supply',
+};
 
-  const tabs: { id: ConsumerTab; label: string; icon: React.ReactNode; visible: boolean }[] = [
-    { id: 'materials', label: t('Material'), icon: <Package className="h-3.5 w-3.5" />, visible: isFieldVisible('materials') && product.materials.length > 0 },
-    { id: 'co2', label: 'CO2', icon: <Leaf className="h-3.5 w-3.5" />, visible: isFieldVisible('carbonFootprint') && !!product.carbonFootprint },
-    { id: 'recycling', label: t('Recycling'), icon: <Recycle className="h-3.5 w-3.5" />, visible: isFieldVisible('recyclability') },
-    { id: 'certs', label: t('Certifications'), icon: <Award className="h-3.5 w-3.5" />, visible: isFieldVisible('certifications') && product.certifications.length > 0 },
-    { id: 'supply', label: t('Supply Chain'), icon: <Truck className="h-3.5 w-3.5" />, visible: isFieldVisible('supplyChainSimple') && product.supplyChain.length > 0 },
-  ];
+function CompactConsumerView({ product, isFieldVisible, t, locale, design }: ViewProps) {
+  const cardStyle = getCardStyle(design.cards);
+  const headingStyle = getHeadingStyle(design.typography, design.colors);
 
-  const visibleTabs = tabs.filter(t => t.visible);
+  // Build all tabs with their config
+  const allTabs: Record<ConsumerTab, { label: string; icon: React.ReactNode; visible: boolean }> = {
+    materials: { label: t('Material'), icon: <Package className="h-3.5 w-3.5" />, visible: isFieldVisible('materials') && product.materials.length > 0 },
+    co2: { label: 'CO2', icon: <Leaf className="h-3.5 w-3.5" />, visible: isFieldVisible('carbonFootprint') && !!product.carbonFootprint },
+    recycling: { label: t('Recycling'), icon: <Recycle className="h-3.5 w-3.5" />, visible: isFieldVisible('recyclability') },
+    certs: { label: t('Certifications'), icon: <Award className="h-3.5 w-3.5" />, visible: isFieldVisible('certifications') && product.certifications.length > 0 },
+    supply: { label: t('Supply Chain'), icon: <Truck className="h-3.5 w-3.5" />, visible: isFieldVisible('supplyChainSimple') && product.supplyChain.length > 0 },
+  };
+
+  // Order tabs according to design.sections.order, filtering by section visibility and data visibility
+  const orderedTabIds: ConsumerTab[] = design.sections.order
+    .filter((sectionId: DPPSectionId) => isSectionVisible(design, sectionId))
+    .map((sectionId: DPPSectionId) => sectionToTabMap[sectionId])
+    .filter((tabId: ConsumerTab) => allTabs[tabId]?.visible);
+
+  const visibleTabs = orderedTabIds.map((id) => ({ id, ...allTabs[id] }));
+
+  const [activeTab, setActiveTab] = useState<ConsumerTab>(visibleTabs[0]?.id ?? 'materials');
 
   return (
     <div className="container mx-auto px-4 py-4 space-y-4 max-w-2xl">
@@ -86,7 +110,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
         )}
         <div className="flex-1 min-w-0">
           {isFieldVisible('name') && (
-            <h1 className="text-lg font-bold truncate">{product.name}</h1>
+            <h1 className="text-lg font-bold truncate" style={headingStyle}>{product.name}</h1>
           )}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {isFieldVisible('manufacturer') && (
@@ -125,7 +149,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
       {/* Tab Content */}
       <div className="min-h-[300px]">
         {activeTab === 'materials' && isFieldVisible('materials') && (
-          <div className="space-y-3">
+          <div className="space-y-3" style={cardStyle}>
             {product.materials.map((material, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -149,7 +173,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
         )}
 
         {activeTab === 'co2' && isFieldVisible('carbonFootprint') && product.carbonFootprint && (
-          <div className="space-y-4">
+          <div className="space-y-4" style={cardStyle}>
             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
               <div>
                 <p className="text-2xl font-bold">{product.carbonFootprint.totalKgCO2} {t('kg CO2')}</p>
@@ -173,7 +197,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
         )}
 
         {activeTab === 'recycling' && isFieldVisible('recyclability') && (
-          <div className="space-y-4">
+          <div className="space-y-4" style={cardStyle}>
             <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
               <div className="text-3xl font-bold text-green-600">
                 {product.recyclability.recyclablePercentage}%
@@ -210,7 +234,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
         )}
 
         {activeTab === 'certs' && isFieldVisible('certifications') && (
-          <div className="space-y-2">
+          <div className="space-y-2" style={cardStyle}>
             {product.certifications.map((cert, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -229,7 +253,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
         )}
 
         {activeTab === 'supply' && isFieldVisible('supplyChainSimple') && (
-          <div className="space-y-2">
+          <div className="space-y-2" style={cardStyle}>
             {product.supplyChain.map((entry, index) => (
               <div key={index} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                 <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
@@ -237,10 +261,19 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{entry.description}</p>
+                  {isFieldVisible('supplyChainProcessType') && entry.processType && (
+                    <p className="text-xs text-primary font-medium">{t(entry.processType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</p>
+                  )}
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {entry.location}, {entry.country}
                   </p>
+                  {isFieldVisible('supplyChainEmissions') && entry.emissionsKg != null && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Leaf className="h-3 w-3" />
+                      {entry.emissionsKg} kg CO₂
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -251,8 +284,10 @@ function CompactConsumerView({ product, isFieldVisible, t, locale }: ViewProps) 
   );
 }
 
-function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
+function CompactCustomsView({ product, isFieldVisible, t, locale, design }: ViewProps) {
   const [activeTab, setActiveTab] = useState<CustomsTab>('customs');
+  const cardStyle = getCardStyle(design.cards);
+  const headingStyle = getHeadingStyle(design.typography, design.colors);
 
   const tabs: { id: CustomsTab; label: string; icon: React.ReactNode; visible: boolean }[] = [
     { id: 'customs', label: t('Customs Data'), icon: <ShieldCheck className="h-3.5 w-3.5" />, visible: true },
@@ -277,7 +312,7 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
         )}
         <div className="flex-1 min-w-0">
           {isFieldVisible('name') && (
-            <h1 className="text-lg font-bold truncate">{product.name}</h1>
+            <h1 className="text-lg font-bold truncate" style={headingStyle}>{product.name}</h1>
           )}
           {isFieldVisible('manufacturer') && (
             <p className="text-sm text-muted-foreground truncate">{product.manufacturer}</p>
@@ -330,9 +365,9 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
       {/* Tab Content */}
       <div className="min-h-[300px]">
         {activeTab === 'customs' && (
-          <div className="space-y-4">
+          <div className="space-y-4" style={cardStyle}>
             <div className="space-y-1">
-              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2">
+              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2" style={headingStyle}>
                 <Globe className="h-3.5 w-3.5" />
                 {t('Product Data')}
               </h4>
@@ -361,7 +396,7 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
             </div>
 
             <div className="space-y-1">
-              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2">
+              <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2" style={headingStyle}>
                 <Building2 className="h-3.5 w-3.5" />
                 {t('Manufacturer Data')}
               </h4>
@@ -392,7 +427,7 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
         )}
 
         {activeTab === 'materials' && isFieldVisible('materials') && (
-          <div className="space-y-2">
+          <div className="space-y-2" style={cardStyle}>
             {product.materials.map((material, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg text-sm">
                 <div className="flex items-center gap-2">
@@ -411,7 +446,7 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
         )}
 
         {activeTab === 'certs' && isFieldVisible('certifications') && (
-          <div className="space-y-2">
+          <div className="space-y-2" style={cardStyle}>
             {product.certifications.map((cert, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -434,15 +469,25 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
         )}
 
         {activeTab === 'supply' && isFieldVisible('supplyChainFull') && (
-          <div className="space-y-2">
+          <div className="space-y-2" style={cardStyle}>
             {product.supplyChain.map((entry, index) => (
               <div key={index} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg text-sm">
                 <Badge variant="outline" className="font-mono text-xs flex-shrink-0">{entry.step}</Badge>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{entry.description}</p>
+                  {isFieldVisible('supplyChainProcessType') && entry.processType && (
+                    <p className="text-xs text-primary font-medium">{t(entry.processType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {entry.location}, {entry.country} | {formatDate(entry.date, locale)}
+                    {isFieldVisible('supplyChainTransport') && entry.transportMode && ` | ${t(entry.transportMode.charAt(0).toUpperCase() + entry.transportMode.slice(1))}`}
                   </p>
+                  {isFieldVisible('supplyChainEmissions') && entry.emissionsKg != null && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Leaf className="h-3 w-3" />
+                      {entry.emissionsKg} kg CO₂
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -450,7 +495,7 @@ function CompactCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
         )}
 
         {activeTab === 'co2' && isFieldVisible('carbonFootprint') && product.carbonFootprint && (
-          <div className="space-y-3">
+          <div className="space-y-3" style={cardStyle}>
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-muted/30 rounded-lg text-center">
                 <p className="text-xl font-bold">{product.carbonFootprint.totalKgCO2}</p>

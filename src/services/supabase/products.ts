@@ -171,6 +171,10 @@ export async function getProductByGtinSerial(
           country: sc.country,
           date: sc.date,
           description: sc.description,
+          processType: sc.process_type || undefined,
+          transportMode: sc.transport_mode || undefined,
+          status: sc.status || undefined,
+          emissionsKg: sc.emissions_kg != null ? Number(sc.emissions_kg) : undefined,
         }));
       }
 
@@ -197,6 +201,10 @@ export async function getProductByGtinSerial(
         country: sc.country,
         date: sc.date,
         description: sc.description,
+        processType: sc.process_type || undefined,
+        transportMode: sc.transport_mode || undefined,
+        status: sc.status || undefined,
+        emissionsKg: sc.emissions_kg != null ? Number(sc.emissions_kg) : undefined,
       }));
     }
 
@@ -237,6 +245,10 @@ export async function getProductById(id: string): Promise<Product | null> {
       country: sc.country,
       date: sc.date,
       description: sc.description,
+      processType: sc.process_type || undefined,
+      transportMode: sc.transport_mode || undefined,
+      status: sc.status || undefined,
+      emissionsKg: sc.emissions_kg != null ? Number(sc.emissions_kg) : undefined,
     }));
   }
 

@@ -77,6 +77,10 @@ export const defaultVisibilityConfigV2: VisibilityConfigV2 = {
     // Lieferkette
     supplyChainSimple: 'consumer',  // Vereinfacht für Verbraucher
     supplyChainFull: 'customs',     // Vollständig nur für Zoll
+    supplyChainProcessType: 'consumer',
+    supplyChainTransport: 'customs',
+    supplyChainEmissions: 'consumer',
+    supplyChainCost: 'internal',
 
     // Identifikatoren - nur für Zoll
     gtin: 'customs',
@@ -127,6 +131,10 @@ export const defaultVisibilityConfig: VisibilityConfig = {
 
     // Lieferkette (vereinfacht)
     supplyChainSimple: true,
+    supplyChainProcessType: true,
+    supplyChainTransport: false,
+    supplyChainEmissions: true,
+    supplyChainCost: false,
 
     // Identifikatoren (für Verbraucher ausgeblendet)
     gtin: false,
@@ -171,6 +179,10 @@ export const defaultVisibilityConfig: VisibilityConfig = {
     // Lieferkette
     supplyChainSimple: true,
     supplyChainFull: true,
+    supplyChainProcessType: true,
+    supplyChainTransport: true,
+    supplyChainEmissions: true,
+    supplyChainCost: false,
 
     // Identifikatoren (für Zoll sichtbar)
     gtin: true,
@@ -230,6 +242,10 @@ export const fieldDefinitions: FieldDefinition[] = [
   // Lieferkette
   { key: 'supplyChainSimple', label: 'Supply Chain (simplified)', category: 'Supply Chain' },
   { key: 'supplyChainFull', label: 'Supply Chain (full)', category: 'Supply Chain' },
+  { key: 'supplyChainProcessType', label: 'Process Type', category: 'Supply Chain' },
+  { key: 'supplyChainTransport', label: 'Transport Mode', category: 'Supply Chain' },
+  { key: 'supplyChainEmissions', label: 'CO2 Emissions per Step', category: 'Supply Chain' },
+  { key: 'supplyChainCost', label: 'Supply Chain Cost', category: 'Supply Chain' },
 
   // Zollrelevante Felder
   { key: 'hsCode', label: 'HS-Code', category: 'Customs Data', description: 'Customs tariff number' },

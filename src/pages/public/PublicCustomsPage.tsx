@@ -10,7 +10,7 @@ import { TemplateCompact } from '@/components/public/TemplateCompact';
 export function PublicCustomsPage() {
   const { t } = useTranslation('dpp');
   const { gtin, serial } = useParams();
-  const { product, visibilityV2, dppTemplate, loading } = usePublicProduct(gtin, serial);
+  const { product, visibilityV2, dppTemplate, dppDesign, loading } = usePublicProduct(gtin, serial);
 
   if (loading) {
     return (
@@ -50,7 +50,7 @@ export function PublicCustomsPage() {
     );
   }
 
-  const templateProps = { product, visibilityV2, view: 'customs' as const };
+  const templateProps = { product, visibilityV2, view: 'customs' as const, dppDesign };
 
   switch (dppTemplate) {
     case 'classic':

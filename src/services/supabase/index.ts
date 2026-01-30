@@ -63,6 +63,7 @@ export {
 // Supply Chain
 export {
   getSupplyChain,
+  getSupplyChainByTenant,
   createSupplyChainEntry,
   updateSupplyChainEntry,
   deleteSupplyChainEntry,
@@ -126,6 +127,10 @@ export {
   uploadBrandingAsset,
   getPublicTenantBranding,
   getPublicBrandingByProduct,
+  getDPPDesignSettings,
+  updateDPPDesignSettings,
+  getPublicTenantDPPDesign,
+  uploadHeroImage,
 } from './tenants';
 
 // Profiles

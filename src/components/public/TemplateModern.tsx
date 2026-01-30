@@ -19,11 +19,15 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
+import type { DPPDesignSettings } from '@/types/database';
+import { resolveDesign, getCardStyle, getHeroStyle, getHeadingStyle, getSectionOrder, isSectionVisible } from '@/lib/dpp-design-utils';
+import { usePublicBranding } from '@/pages/public/PublicLayout';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
+  dppDesign?: DPPDesignSettings | null;
 }
 
 const ratingColors: Record<string, string> = {
@@ -50,9 +54,12 @@ const ratingDescriptions: Record<string, string> = {
   E: 'Well above average',
 };
 
-export function TemplateModern({ product, visibilityV2, view }: DPPTemplateProps) {
+export function TemplateModern({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
   const { t } = useTranslation('dpp');
   const locale = useLocale();
+  const { branding } = usePublicBranding();
+  const design = resolveDesign(dppDesign);
+  const primaryColor = branding?.primaryColor || '#3B82F6';
 
   const isFieldVisible = (field: string) => {
     if (!visibilityV2) return true;
@@ -60,10 +67,10 @@ export function TemplateModern({ product, visibilityV2, view }: DPPTemplateProps
   };
 
   if (view === 'customs') {
-    return <ModernCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} />;
+    return <ModernCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} primaryColor={primaryColor} />;
   }
 
-  return <ModernConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} />;
+  return <ModernConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} primaryColor={primaryColor} />;
 }
 
 interface ViewProps {
@@ -71,14 +78,251 @@ interface ViewProps {
   isFieldVisible: (field: string) => boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
+  design: ReturnType<typeof resolveDesign>;
+  primaryColor: string;
 }
 
-function ModernConsumerView({ product, isFieldVisible, t, locale }: ViewProps) {
+function ModernConsumerView({ product, isFieldVisible, t, locale, design, primaryColor }: ViewProps) {
+  const cardStyle = getCardStyle(design.cards);
+  const heroResult = design.hero.visible ? getHeroStyle(design.hero, primaryColor, design.colors.secondaryColor) : null;
+  const headingStyle = getHeadingStyle(design.typography, design.colors);
+  const sectionOrder = getSectionOrder(design);
+
+  const renderSection = (sectionId: string) => {
+    if (!isSectionVisible(design, sectionId as import('@/types/database').DPPSectionId)) return null;
+    switch (sectionId) {
+      case 'materials': return renderMaterials();
+      case 'carbonFootprint': return renderCarbonFootprint();
+      case 'recycling': return renderRecycling();
+      case 'certifications': return renderCertifications();
+      case 'supplyChain': return renderSupplyChain();
+      default: return null;
+    }
+  };
+
+  const renderMaterials = () => {
+    if (!isFieldVisible('materials') || product.materials.length === 0) return null;
+    return (
+      <div key="materials" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Package className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 style={headingStyle} className="text-xl">{t('Material Composition')}</h2>
+            <p className="text-sm text-muted-foreground">{t('Materials used and their origins')}</p>
+          </div>
+        </div>
+        <div className="space-y-5">
+          {product.materials.map((material, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{material.name}</span>
+                  {material.recyclable && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-950/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-200 dark:ring-green-800">
+                      <Recycle className="h-3 w-3" />
+                      {t('Recyclable')}
+                    </span>
+                  )}
+                </div>
+                <span className="font-bold" style={{ color: primaryColor }}>{material.percentage}%</span>
+              </div>
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${material.percentage}%`, background: `linear-gradient(to right, ${primaryColor}b3, ${primaryColor})` }}
+                />
+              </div>
+              {isFieldVisible('materialOrigins') && material.origin && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {t('Origin')}: {material.origin}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCarbonFootprint = () => {
+    if (!isFieldVisible('carbonFootprint') || !product.carbonFootprint) return null;
+    return (
+      <div key="carbonFootprint" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Leaf className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 style={headingStyle} className="text-xl">{t('Carbon Footprint')}</h2>
+            <p className="text-sm text-muted-foreground">{t('Climate impact across the product lifecycle')}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${ratingColors[product.carbonFootprint.rating]} flex items-center justify-center shadow-lg`}>
+              <span className="text-5xl font-bold text-white">{product.carbonFootprint.rating}</span>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold">{product.carbonFootprint.totalKgCO2} {t('kg CO2')}</p>
+            <p className="text-sm text-muted-foreground">{t(ratingDescriptions[product.carbonFootprint.rating])}</p>
+          </div>
+          <Separator />
+          <div className="grid grid-cols-2 gap-4 w-full">
+            <div className="text-center p-4 bg-muted/50 rounded-xl">
+              <p className="text-2xl font-bold">{product.carbonFootprint.productionKgCO2} kg</p>
+              <p className="text-sm text-muted-foreground">{t('Production')}</p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-xl">
+              <p className="text-2xl font-bold">{product.carbonFootprint.transportKgCO2} kg</p>
+              <p className="text-sm text-muted-foreground">{t('Transport')}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRecycling = () => {
+    if (!isFieldVisible('recyclability')) return null;
+    return (
+      <div key="recycling" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Recycle className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 style={headingStyle} className="text-xl">{t('Recycling & Disposal')}</h2>
+            <p className="text-sm text-muted-foreground">{t('Guide for environmentally friendly disposal')}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-28 h-28">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-green-500" strokeLinecap="round" strokeDasharray={`${product.recyclability.recyclablePercentage * 2.64} 264`} />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl font-bold text-green-600">{product.recyclability.recyclablePercentage}%</span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('Recyclable')}</p>
+          {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
+            <div className="w-full p-4 bg-muted/50 rounded-xl">
+              <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
+                <Info className="h-4 w-4" />
+                {t('Recycling Instructions')}
+              </h4>
+              <p className="text-sm text-muted-foreground">{product.recyclability.instructions}</p>
+            </div>
+          )}
+          {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
+            <div className="w-full">
+              <h4 className="font-medium mb-2 text-sm">{t('Disposal Methods')}</h4>
+              <div className="flex flex-wrap gap-2">
+                {product.recyclability.disposalMethods.map((method, index) => (
+                  <span key={index} className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{method}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCertifications = () => {
+    if (!isFieldVisible('certifications') || product.certifications.length === 0) return null;
+    return (
+      <div key="certifications" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Award className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 style={headingStyle} className="text-xl">{t('Certifications')}</h2>
+            <p className="text-sm text-muted-foreground">{t('Verified quality and sustainability standards')}</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {product.certifications.map((cert, index) => (
+            <div key={index} className="p-4 rounded-xl bg-muted/30 ring-1 ring-black/5 hover:ring-primary/30 transition-all flex flex-col justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">{cert.name}</p>
+                  <p className="text-sm text-muted-foreground">{cert.issuedBy}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">{t('Valid until')}: {formatDate(cert.validUntil, locale)}</p>
+                <Badge variant="secondary" className="text-xs bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400">{t('Valid')}</Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSupplyChain = () => {
+    if (!isFieldVisible('supplyChainSimple') || product.supplyChain.length === 0) return null;
+    return (
+      <div key="supplyChain" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Truck className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 style={headingStyle} className="text-xl">{t('Supply Chain')}</h2>
+            <p className="text-sm text-muted-foreground">{t('The journey of your product from raw material to you')}</p>
+          </div>
+        </div>
+        <div className="space-y-0">
+          {product.supplyChain.map((entry, index) => {
+            const isLast = index === product.supplyChain.length - 1;
+            return (
+              <div key={index} className="flex items-start gap-4">
+                <div className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}b3)` }}>
+                    {entry.step}
+                  </div>
+                  {!isLast && <div className="w-0.5 h-10" style={{ background: `linear-gradient(to bottom, ${primaryColor}66, ${primaryColor}1a)` }} />}
+                </div>
+                <div className="flex-1 pb-2">
+                  <p className="font-medium">{entry.description}</p>
+                  {isFieldVisible('supplyChainProcessType') && entry.processType && (
+                    <p className="text-xs text-primary font-medium mt-0.5">{t(entry.processType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {entry.location}, {entry.country}
+                  </p>
+                  {isFieldVisible('supplyChainEmissions') && entry.emissionsKg != null && (
+                    <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                      <Leaf className="h-3 w-3" />
+                      {entry.emissionsKg} kg CO₂
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 pb-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background">
-        <div className="container mx-auto px-4 py-10 sm:py-16">
+      {heroResult && (
+      <div className="relative overflow-hidden" style={heroResult.style}>
+        {heroResult.overlayStyle && <div style={heroResult.overlayStyle} />}
+        <div className="container mx-auto px-4 py-10 sm:py-16 relative z-10">
           <div className="flex flex-col md:flex-row gap-8 items-center">
             {isFieldVisible('image') && product.imageUrl && (
               <div className="w-full md:w-2/5 flex-shrink-0">
@@ -120,237 +364,27 @@ function ModernConsumerView({ product, isFieldVisible, t, locale }: ViewProps) {
           </div>
         </div>
       </div>
+      )}
 
       <div className="container mx-auto px-4 space-y-8">
-        {/* Materials */}
-        {isFieldVisible('materials') && product.materials.length > 0 && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Package className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">{t('Material Composition')}</h2>
-                <p className="text-sm text-muted-foreground">{t('Materials used and their origins')}</p>
-              </div>
-            </div>
-            <div className="space-y-5">
-              {product.materials.map((material, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{material.name}</span>
-                      {material.recyclable && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-950/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-200 dark:ring-green-800">
-                          <Recycle className="h-3 w-3" />
-                          {t('Recyclable')}
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-bold text-primary">{material.percentage}%</span>
-                  </div>
-                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary/70 to-primary rounded-full transition-all"
-                      style={{ width: `${material.percentage}%` }}
-                    />
-                  </div>
-                  {isFieldVisible('materialOrigins') && material.origin && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {t('Origin')}: {material.origin}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Carbon Footprint + Recycling side by side on desktop */}
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Carbon Footprint */}
-          {isFieldVisible('carbonFootprint') && product.carbonFootprint && (
-            <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Leaf className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold">{t('Carbon Footprint')}</h2>
-                  <p className="text-sm text-muted-foreground">{t('Climate impact across the product lifecycle')}</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-6">
-                {/* Rating Circle */}
-                <div className="relative">
-                  <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${ratingColors[product.carbonFootprint.rating]} flex items-center justify-center shadow-lg`}>
-                    <span className="text-5xl font-bold text-white">{product.carbonFootprint.rating}</span>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{product.carbonFootprint.totalKgCO2} {t('kg CO2')}</p>
-                  <p className="text-sm text-muted-foreground">{t(ratingDescriptions[product.carbonFootprint.rating])}</p>
-                </div>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4 w-full">
-                  <div className="text-center p-4 bg-muted/50 rounded-xl">
-                    <p className="text-2xl font-bold">{product.carbonFootprint.productionKgCO2} kg</p>
-                    <p className="text-sm text-muted-foreground">{t('Production')}</p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-xl">
-                    <p className="text-2xl font-bold">{product.carbonFootprint.transportKgCO2} kg</p>
-                    <p className="text-sm text-muted-foreground">{t('Transport')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Recycling */}
-          {isFieldVisible('recyclability') && (
-            <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Recycle className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold">{t('Recycling & Disposal')}</h2>
-                  <p className="text-sm text-muted-foreground">{t('Guide for environmentally friendly disposal')}</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-6">
-                {/* Circular Percentage */}
-                <div className="relative w-28 h-28">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
-                    <circle
-                      cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8"
-                      className="text-green-500"
-                      strokeLinecap="round"
-                      strokeDasharray={`${product.recyclability.recyclablePercentage * 2.64} 264`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-green-600">{product.recyclability.recyclablePercentage}%</span>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">{t('Recyclable')}</p>
-
-                {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
-                  <div className="w-full p-4 bg-muted/50 rounded-xl">
-                    <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
-                      <Info className="h-4 w-4" />
-                      {t('Recycling Instructions')}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {product.recyclability.instructions}
-                    </p>
-                  </div>
-                )}
-
-                {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
-                  <div className="w-full">
-                    <h4 className="font-medium mb-2 text-sm">{t('Disposal Methods')}</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {product.recyclability.disposalMethods.map((method, index) => (
-                        <span key={index} className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                          {method}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Certifications */}
-        {isFieldVisible('certifications') && product.certifications.length > 0 && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Award className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">{t('Certifications')}</h2>
-                <p className="text-sm text-muted-foreground">{t('Verified quality and sustainability standards')}</p>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {product.certifications.map((cert, index) => (
-                <div key={index} className="p-4 rounded-xl bg-muted/30 ring-1 ring-black/5 hover:ring-primary/30 transition-all flex flex-col justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <ShieldCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold">{cert.name}</p>
-                      <p className="text-sm text-muted-foreground">{cert.issuedBy}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      {t('Valid until')}: {formatDate(cert.validUntil, locale)}
-                    </p>
-                    <Badge variant="secondary" className="text-xs bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400">
-                      {t('Valid')}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Supply Chain */}
-        {isFieldVisible('supplyChainSimple') && product.supplyChain.length > 0 && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Truck className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">{t('Supply Chain')}</h2>
-                <p className="text-sm text-muted-foreground">{t('The journey of your product from raw material to you')}</p>
-              </div>
-            </div>
-            <div className="space-y-0">
-              {product.supplyChain.map((entry, index) => {
-                const isLast = index === product.supplyChain.length - 1;
-                return (
-                  <div key={index} className="flex items-start gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md ${isLast ? 'bg-gradient-to-br from-primary to-primary/70 animate-pulse' : 'bg-gradient-to-br from-primary/80 to-primary/60'}`}>
-                        {entry.step}
-                      </div>
-                      {!isLast && (
-                        <div className="w-0.5 h-10 bg-gradient-to-b from-primary/40 to-primary/10" />
-                      )}
-                    </div>
-                    <div className="flex-1 pb-2">
-                      <p className="font-medium">{entry.description}</p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {entry.location}, {entry.country}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {sectionOrder.map(id => renderSection(id))}
       </div>
     </div>
   );
 }
 
-function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
+function ModernCustomsView({ product, isFieldVisible, t, locale, design, primaryColor }: ViewProps) {
+  const cardStyle = getCardStyle(design.cards);
+  const heroResult = design.hero.visible ? getHeroStyle(design.hero, primaryColor, design.colors.secondaryColor) : null;
+  const headingStyle = getHeadingStyle(design.typography, design.colors);
+
   return (
     <div className="space-y-8 pb-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background">
-        <div className="container mx-auto px-4 py-10 sm:py-16">
+      {heroResult && (
+      <div className="relative overflow-hidden" style={heroResult.style}>
+        {heroResult.overlayStyle && <div style={heroResult.overlayStyle} />}
+        <div className="container mx-auto px-4 py-10 sm:py-16 relative z-10">
           <div className="flex flex-col md:flex-row gap-8 items-center">
             {isFieldVisible('image') && product.imageUrl && (
               <div className="w-full md:w-1/3 flex-shrink-0">
@@ -404,16 +438,17 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
           </div>
         </div>
       </div>
+      )}
 
       <div className="container mx-auto px-4 space-y-8">
         {/* Customs Data */}
-        <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
+        <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-xl bg-primary/10">
               <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">{t('Customs Data')}</h2>
+              <h2 style={headingStyle} className="text-xl">{t('Customs Data')}</h2>
               <p className="text-sm text-muted-foreground">{t('Information for customs clearance and import/export')}</p>
             </div>
           </div>
@@ -481,12 +516,12 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
 
         {/* Materials Table */}
         {isFieldVisible('materials') && product.materials.length > 0 && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
+          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Package className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold">{t('Material Composition')}</h2>
+              <h2 style={headingStyle} className="text-xl">{t('Material Composition')}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -521,12 +556,12 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
 
         {/* Certifications with Downloads */}
         {isFieldVisible('certifications') && product.certifications.length > 0 && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
+          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Award className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold">{t('Certifications')}</h2>
+              <h2 style={headingStyle} className="text-xl">{t('Certifications')}</h2>
             </div>
             <div className="space-y-3">
               {product.certifications.map((cert, index) => (
@@ -554,12 +589,12 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
 
         {/* Full Supply Chain */}
         {isFieldVisible('supplyChainFull') && product.supplyChain.length > 0 && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
+          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Truck className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold">{t('Full Supply Chain')}</h2>
+              <h2 style={headingStyle} className="text-xl">{t('Full Supply Chain')}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -567,9 +602,12 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
                   <tr className="border-b text-left">
                     <th className="py-3 font-medium text-muted-foreground">{t('Step')}</th>
                     <th className="py-3 font-medium text-muted-foreground">{t('Description')}</th>
+                    {isFieldVisible('supplyChainProcessType') && <th className="py-3 font-medium text-muted-foreground">{t('Process Type')}</th>}
                     <th className="py-3 font-medium text-muted-foreground">{t('Location')}</th>
                     <th className="py-3 font-medium text-muted-foreground">{t('Country')}</th>
                     <th className="py-3 font-medium text-muted-foreground">{t('Date')}</th>
+                    {isFieldVisible('supplyChainTransport') && <th className="py-3 font-medium text-muted-foreground">{t('Transport Mode')}</th>}
+                    {isFieldVisible('supplyChainEmissions') && <th className="py-3 font-medium text-muted-foreground">{t('Emissions')}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -579,9 +617,12 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
                         <Badge variant="outline" className="font-mono">{entry.step}</Badge>
                       </td>
                       <td className="py-3 font-medium">{entry.description}</td>
+                      {isFieldVisible('supplyChainProcessType') && <td className="py-3">{entry.processType ? t(entry.processType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : '-'}</td>}
                       <td className="py-3">{entry.location}</td>
                       <td className="py-3">{entry.country}</td>
                       <td className="py-3">{formatDate(entry.date, locale)}</td>
+                      {isFieldVisible('supplyChainTransport') && <td className="py-3">{entry.transportMode ? t(entry.transportMode.charAt(0).toUpperCase() + entry.transportMode.slice(1)) : '-'}</td>}
+                      {isFieldVisible('supplyChainEmissions') && <td className="py-3">{entry.emissionsKg != null ? `${entry.emissionsKg} kg` : '-'}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -592,12 +633,12 @@ function ModernCustomsView({ product, isFieldVisible, t, locale }: ViewProps) {
 
         {/* Carbon Footprint */}
         {isFieldVisible('carbonFootprint') && product.carbonFootprint && (
-          <div className="rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur shadow-sm hover:shadow-md transition-all p-6 sm:p-8 ring-1 ring-black/5">
+          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Leaf className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold">{t('Carbon Footprint')}</h2>
+              <h2 style={headingStyle} className="text-xl">{t('Carbon Footprint')}</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="text-center p-6 bg-muted/50 rounded-xl">

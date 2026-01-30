@@ -1,0 +1,801 @@
+/**
+ * DPP Design Settings Tab
+ *
+ * Full settings UI for customizing the public DPP page design.
+ * Includes theme presets, color palette, typography, hero, cards,
+ * section layout, footer configuration, and live preview.
+ */
+
+import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Save,
+  Check,
+  Loader2,
+  ChevronUp,
+  ChevronDown,
+  Upload,
+  RotateCcw,
+  Package,
+  Leaf,
+  Recycle,
+  Award,
+  Truck,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useBranding } from '@/contexts/BrandingContext';
+import { uploadHeroImage } from '@/services/supabase';
+import type {
+  DPPDesignSettings,
+  DPPSectionId,
+  DPPFontFamily,
+  DPPFontSize,
+  DPPFontWeight,
+  DPPHeroStyle,
+  DPPHeroHeight,
+  DPPBorderRadius,
+  DPPShadowDepth,
+  DPPBorderStyle,
+} from '@/types/database';
+import {
+  DPP_THEME_PRESETS,
+  BORDER_RADIUS_MAP,
+  SHADOW_MAP,
+  FONT_FAMILY_MAP,
+  HEADING_FONT_SIZE_MAP,
+  BODY_FONT_SIZE_MAP,
+  FONT_WEIGHT_MAP,
+} from '@/lib/dpp-design-defaults';
+import { resolveDesign, getCardStyle, getHeroStyle, getHeadingStyle } from '@/lib/dpp-design-utils';
+
+const SECTION_LABELS: Record<DPPSectionId, { icon: React.ReactNode; labelKey: string }> = {
+  materials: { icon: <Package className="h-4 w-4" />, labelKey: 'Materials' },
+  carbonFootprint: { icon: <Leaf className="h-4 w-4" />, labelKey: 'Carbon Footprint' },
+  recycling: { icon: <Recycle className="h-4 w-4" />, labelKey: 'Recycling' },
+  certifications: { icon: <Award className="h-4 w-4" />, labelKey: 'Certifications' },
+  supplyChain: { icon: <Truck className="h-4 w-4" />, labelKey: 'Supply Chain' },
+};
+
+export function DPPDesignTab() {
+  const { t } = useTranslation('settings');
+  const { rawDPPDesign, updateDPPDesign, branding } = useBranding();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+
+  const [designForm, setDesignForm] = useState<DPPDesignSettings>(() => {
+    return rawDPPDesign || {};
+  });
+
+  useEffect(() => {
+    if (rawDPPDesign) {
+      setDesignForm(rawDPPDesign);
+    }
+  }, [rawDPPDesign]);
+
+  const resolved = resolveDesign(designForm);
+  const primaryColor = branding.primaryColor;
+
+  const updateColors = (key: string, value: string) => {
+    setDesignForm(prev => ({
+      ...prev,
+      colors: { ...prev.colors, [key]: value },
+    }));
+  };
+
+  const updateTypography = (key: string, value: string) => {
+    setDesignForm(prev => ({
+      ...prev,
+      typography: { ...prev.typography, [key]: value },
+    }));
+  };
+
+  const updateHero = (key: string, value: unknown) => {
+    setDesignForm(prev => ({
+      ...prev,
+      hero: { ...prev.hero, [key]: value },
+    }));
+  };
+
+  const updateCards = (key: string, value: unknown) => {
+    setDesignForm(prev => ({
+      ...prev,
+      cards: { ...prev.cards, [key]: value },
+    }));
+  };
+
+  const updateFooter = (key: string, value: unknown) => {
+    setDesignForm(prev => ({
+      ...prev,
+      footer: { ...prev.footer, [key]: value },
+    }));
+  };
+
+  const updateSocialLink = (key: string, value: string) => {
+    setDesignForm(prev => ({
+      ...prev,
+      footer: {
+        ...prev.footer,
+        socialLinks: { ...prev.footer?.socialLinks, [key]: value },
+      },
+    }));
+  };
+
+  const updateSectionOrder = (order: DPPSectionId[]) => {
+    setDesignForm(prev => ({
+      ...prev,
+      sections: { ...prev.sections, order },
+    }));
+  };
+
+  const updateSectionConfig = (id: DPPSectionId, key: string, value: boolean) => {
+    setDesignForm(prev => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        configs: {
+          ...prev.sections?.configs,
+          [id]: { ...prev.sections?.configs?.[id], [key]: value },
+        },
+      },
+    }));
+  };
+
+  const applyPreset = (presetKey: string) => {
+    const preset = DPP_THEME_PRESETS[presetKey];
+    if (!preset) return;
+    setDesignForm(prev => ({
+      ...prev,
+      ...preset.settings,
+      preset: presetKey,
+    }));
+  };
+
+  const moveSection = (index: number, direction: 'up' | 'down') => {
+    const order = [...resolved.sections.order];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= order.length) return;
+    [order[index], order[newIndex]] = [order[newIndex], order[index]];
+    updateSectionOrder(order);
+  };
+
+  const handleHeroUpload = async (file: File) => {
+    setIsUploadingHero(true);
+    const result = await uploadHeroImage(file);
+    if (result.success && result.url) {
+      updateHero('backgroundImage', result.url);
+      updateHero('style', 'image');
+    }
+    setIsUploadingHero(false);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaved(false);
+    setSaveError(false);
+    const success = await updateDPPDesign(designForm);
+    setIsSaving(false);
+    if (success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } else {
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 3000);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Theme Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Theme Presets')}</CardTitle>
+          <CardDescription>{t('Quick start with a predefined color scheme')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {Object.entries(DPP_THEME_PRESETS).map(([key, preset]) => (
+              <button
+                key={key}
+                onClick={() => applyPreset(key)}
+                className={`relative p-4 rounded-lg border-2 text-left transition-all hover:shadow-md ${
+                  designForm.preset === key ? 'border-primary ring-2 ring-primary/20' : 'border-muted hover:border-muted-foreground/30'
+                }`}
+              >
+                {designForm.preset === key && (
+                  <span className="absolute top-2 right-2 text-xs font-medium text-primary">{t('Active')}</span>
+                )}
+                <div className="flex gap-1.5 mb-2">
+                  <div className="w-6 h-6 rounded-full" style={{ backgroundColor: preset.preview.primary }} />
+                  <div className="w-6 h-6 rounded-full" style={{ backgroundColor: preset.preview.secondary }} />
+                  <div className="w-6 h-6 rounded-full" style={{ backgroundColor: preset.preview.accent }} />
+                </div>
+                <p className="font-medium text-sm">{t(preset.name)}</p>
+                <p className="text-xs text-muted-foreground">{t(preset.description)}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. Color Palette */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Color Palette')}</CardTitle>
+          <CardDescription>{t('Fine-tune the colors used on your DPP pages')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            {([
+              ['secondaryColor', 'Secondary Color'],
+              ['accentColor', 'Accent Color'],
+              ['pageBackground', 'Page Background'],
+              ['cardBackground', 'Card Background'],
+              ['textColor', 'Text Color'],
+              ['headingColor', 'Heading Color'],
+            ] as const).map(([key, label]) => (
+              <div key={key} className="space-y-2">
+                <Label className="text-sm">{t(label)}</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={resolved.colors[key]}
+                    onChange={(e) => updateColors(key, e.target.value)}
+                    className="w-10 h-10 rounded-md border cursor-pointer"
+                  />
+                  <Input
+                    value={resolved.colors[key]}
+                    onChange={(e) => updateColors(key, e.target.value)}
+                    className="font-mono text-sm flex-1"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => setDesignForm(prev => ({ ...prev, colors: undefined, preset: 'custom' }))}
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            {t('Reset Colors')}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* 3. Typography */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Typography')}</CardTitle>
+          <CardDescription>{t('Configure fonts and text sizes')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t('Font Family')}</Label>
+            <Select
+              value={resolved.typography.fontFamily}
+              onValueChange={(v) => updateTypography('fontFamily', v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">{t('System Default')}</SelectItem>
+                {(['Inter', 'Roboto', 'Poppins', 'Merriweather', 'Playfair Display'] as DPPFontFamily[]).map(f => (
+                  <SelectItem key={f} value={f} style={{ fontFamily: FONT_FAMILY_MAP[f] }}>{f}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{t('Heading Font Size')}</Label>
+              <div className="flex gap-1">
+                {(['small', 'medium', 'large'] as DPPFontSize[]).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => updateTypography('headingFontSize', s)}
+                    className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                      resolved.typography.headingFontSize === s
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    <span style={{ fontSize: HEADING_FONT_SIZE_MAP[s] }}>{t(s.charAt(0).toUpperCase() + s.slice(1) as 'Small' | 'Medium' | 'Large')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('Body Font Size')}</Label>
+              <div className="flex gap-1">
+                {(['small', 'medium', 'large'] as DPPFontSize[]).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => updateTypography('bodyFontSize', s)}
+                    className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                      resolved.typography.bodyFontSize === s
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    <span style={{ fontSize: BODY_FONT_SIZE_MAP[s] }}>{t(s.charAt(0).toUpperCase() + s.slice(1) as 'Small' | 'Medium' | 'Large')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('Heading Font Weight')}</Label>
+            <Select
+              value={resolved.typography.headingFontWeight}
+              onValueChange={(v) => updateTypography('headingFontWeight', v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(['normal', 'semibold', 'bold', 'extrabold'] as DPPFontWeight[]).map(w => (
+                  <SelectItem key={w} value={w} style={{ fontWeight: FONT_WEIGHT_MAP[w] }}>
+                    {t({ normal: 'Normal', semibold: 'Semibold', bold: 'Bold', extrabold: 'Extra Bold' }[w])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 4. Hero / Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Hero / Header')}</CardTitle>
+          <CardDescription>{t('Configure the hero section at the top of your DPP pages')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>{t('Show Hero Section')}</Label>
+            <Switch
+              checked={resolved.hero.visible}
+              onCheckedChange={(v) => updateHero('visible', v)}
+            />
+          </div>
+
+          {resolved.hero.visible && (
+            <>
+              <div className="space-y-2">
+                <Label>{t('Hero Style')}</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    ['gradient', 'Gradient'],
+                    ['solid', 'Solid Color'],
+                    ['image', 'Background Image'],
+                    ['minimal', 'Minimal'],
+                  ] as [DPPHeroStyle, string][]).map(([style, label]) => (
+                    <button
+                      key={style}
+                      onClick={() => updateHero('style', style)}
+                      className={`p-3 rounded-lg border text-center text-sm transition-all ${
+                        resolved.hero.style === style
+                          ? 'border-primary bg-primary/5 font-medium'
+                          : 'border-muted hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      {t(label)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('Hero Height')}</Label>
+                <div className="flex gap-1">
+                  {(['compact', 'normal', 'tall'] as DPPHeroHeight[]).map(h => (
+                    <button
+                      key={h}
+                      onClick={() => updateHero('height', h)}
+                      className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                        resolved.hero.height === h
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {t({ compact: 'Compact', normal: 'Medium', tall: 'Tall' }[h])}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {resolved.hero.style === 'image' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>{t('Upload Hero Image')}</Label>
+                    <div
+                      className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => heroInputRef.current?.click()}
+                    >
+                      {isUploadingHero ? (
+                        <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                      ) : resolved.hero.backgroundImage ? (
+                        <img
+                          src={resolved.hero.backgroundImage}
+                          alt="Hero"
+                          className="h-24 mx-auto rounded object-cover"
+                        />
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">{t('PNG, JPG, WebP up to 2MB')}</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      ref={heroInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleHeroUpload(file);
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('Overlay Opacity')}: {resolved.hero.overlayOpacity}%</Label>
+                    <Slider
+                      value={[resolved.hero.overlayOpacity]}
+                      onValueChange={([v]) => updateHero('overlayOpacity', v)}
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 5. Card Styling */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Card Styling')}</CardTitle>
+          <CardDescription>{t('Customize the appearance of content cards')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t('Border Radius')}</Label>
+            <div className="flex gap-2">
+              {(['none', 'small', 'medium', 'large', 'full'] as DPPBorderRadius[]).map(r => (
+                <button
+                  key={r}
+                  onClick={() => updateCards('borderRadius', r)}
+                  className={`flex-1 p-2 flex flex-col items-center gap-1.5 rounded-lg border transition-all ${
+                    resolved.cards.borderRadius === r
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted hover:border-muted-foreground/30'
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 bg-muted border"
+                    style={{ borderRadius: BORDER_RADIUS_MAP[r] }}
+                  />
+                  <span className="text-xs">{t({ none: 'None', small: 'Small', medium: 'Medium', large: 'Large', full: 'Full' }[r])}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('Shadow Depth')}</Label>
+            <div className="flex gap-2">
+              {(['none', 'subtle', 'medium', 'strong'] as DPPShadowDepth[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => updateCards('shadowDepth', s)}
+                  className={`flex-1 p-2 flex flex-col items-center gap-1.5 rounded-lg border transition-all ${
+                    resolved.cards.shadowDepth === s
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted hover:border-muted-foreground/30'
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 bg-white rounded-md"
+                    style={{ boxShadow: SHADOW_MAP[s] }}
+                  />
+                  <span className="text-xs">{t({ none: 'None', subtle: 'Subtle', medium: 'Medium', strong: 'Strong' }[s])}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('Border Style')}</Label>
+            <div className="flex gap-2">
+              {(['none', 'thin', 'thick'] as DPPBorderStyle[]).map(b => (
+                <button
+                  key={b}
+                  onClick={() => updateCards('borderStyle', b)}
+                  className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                    resolved.cards.borderStyle === b
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {t({ none: 'None', thin: 'Thin', thick: 'Thick' }[b])}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('Background Opacity')}: {resolved.cards.backgroundOpacity}%</Label>
+            <Slider
+              value={[resolved.cards.backgroundOpacity]}
+              onValueChange={([v]) => updateCards('backgroundOpacity', v)}
+              min={0}
+              max={100}
+              step={5}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 6. Section Layout */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Section Layout')}</CardTitle>
+          <CardDescription>{t('Configure the order and visibility of sections')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {resolved.sections.order.map((sectionId, index) => {
+              const section = SECTION_LABELS[sectionId];
+              const config = resolved.sections.configs[sectionId] ?? { visible: true, defaultCollapsed: false };
+              return (
+                <div
+                  key={sectionId}
+                  className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      onClick={() => moveSection(index, 'up')}
+                      disabled={index === 0}
+                      className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                      title={t('Move Up')}
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => moveSection(index, 'down')}
+                      disabled={index === resolved.sections.order.length - 1}
+                      className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                      title={t('Move Down')}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1">
+                    {section.icon}
+                    <span className="font-medium text-sm">{t(section.labelKey)}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">{t('Visible')}</Label>
+                      <Switch
+                        checked={config.visible}
+                        onCheckedChange={(v) => updateSectionConfig(sectionId, 'visible', v)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">{t('Start Collapsed')}</Label>
+                      <Switch
+                        checked={config.defaultCollapsed}
+                        onCheckedChange={(v) => updateSectionConfig(sectionId, 'defaultCollapsed', v)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 7. Footer */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Footer Configuration')}</CardTitle>
+          <CardDescription>{t('Configure footer links and social media')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{t('Legal Notice URL')}</Label>
+              <Input
+                value={resolved.footer.legalNoticeUrl}
+                onChange={(e) => updateFooter('legalNoticeUrl', e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('Privacy Policy URL')}</Label>
+              <Input
+                value={resolved.footer.privacyPolicyUrl}
+                onChange={(e) => updateFooter('privacyPolicyUrl', e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>{t('Show Powered By Text')}</Label>
+            <Switch
+              checked={resolved.footer.showPoweredBy}
+              onCheckedChange={(v) => updateFooter('showPoweredBy', v)}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label>{t('Social Media Links')}</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{t('Website')}</Label>
+                <Input
+                  value={resolved.footer.socialLinks.website}
+                  onChange={(e) => updateSocialLink('website', e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{t('Instagram')}</Label>
+                <Input
+                  value={resolved.footer.socialLinks.instagram}
+                  onChange={(e) => updateSocialLink('instagram', e.target.value)}
+                  placeholder="https://instagram.com/..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{t('LinkedIn')}</Label>
+                <Input
+                  value={resolved.footer.socialLinks.linkedin}
+                  onChange={(e) => updateSocialLink('linkedin', e.target.value)}
+                  placeholder="https://linkedin.com/..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{t('Twitter / X')}</Label>
+                <Input
+                  value={resolved.footer.socialLinks.twitter}
+                  onChange={(e) => updateSocialLink('twitter', e.target.value)}
+                  placeholder="https://x.com/..."
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 8. Live Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Live Preview')}</CardTitle>
+          <CardDescription>{t('This is how your branding appears across the app')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            className="rounded-lg overflow-hidden border"
+            style={{
+              backgroundColor: resolved.colors.pageBackground,
+              fontFamily: FONT_FAMILY_MAP[resolved.typography.fontFamily],
+            }}
+          >
+            {/* Preview Hero */}
+            {resolved.hero.visible && (
+              <div
+                className="p-6"
+                style={getHeroStyle(resolved.hero, primaryColor, resolved.colors.secondaryColor).style}
+              >
+                <h3
+                  className="text-lg mb-1"
+                  style={{
+                    ...getHeadingStyle(resolved.typography, resolved.colors),
+                    color: resolved.hero.style !== 'minimal' ? '#FFFFFF' : resolved.colors.headingColor,
+                  }}
+                >
+                  Product Name
+                </h3>
+                <p
+                  className="text-sm"
+                  style={{
+                    color: resolved.hero.style !== 'minimal' ? 'rgba(255,255,255,0.8)' : resolved.colors.textColor,
+                  }}
+                >
+                  Manufacturer Inc.
+                </p>
+              </div>
+            )}
+
+            {/* Preview Cards */}
+            <div className="p-4 space-y-3">
+              {resolved.sections.order.slice(0, 3).map(sectionId => {
+                const section = SECTION_LABELS[sectionId];
+                const config = resolved.sections.configs[sectionId] ?? { visible: true, defaultCollapsed: false };
+                if (!config.visible) return null;
+                return (
+                  <div key={sectionId} className="p-3" style={getCardStyle(resolved.cards)}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span style={{ color: primaryColor }}>{section.icon}</span>
+                      <span
+                        className="text-sm"
+                        style={{
+                          fontWeight: FONT_WEIGHT_MAP[resolved.typography.headingFontWeight],
+                          color: resolved.colors.headingColor,
+                        }}
+                      >
+                        {t(section.labelKey)}
+                      </span>
+                    </div>
+                    <div
+                      className="h-2 rounded-full w-3/4"
+                      style={{ backgroundColor: `${primaryColor}33` }}
+                    />
+                    <div
+                      className="h-2 rounded-full w-1/2 mt-1.5"
+                      style={{ backgroundColor: `${primaryColor}1a` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Preview Footer */}
+            <div
+              className="p-3 border-t text-center"
+              style={{ color: resolved.colors.textColor }}
+            >
+              <p className="text-xs opacity-60">
+                {resolved.footer.showPoweredBy ? branding.poweredByText : ''}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving} size="lg">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : saved ? (
+            <Check className="h-4 w-4 mr-2" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {saved ? t('DPP Design saved!') : saveError ? t('Failed to save DPP Design') : t('Save DPP Design')}
+        </Button>
+      </div>
+    </div>
+  );
+}

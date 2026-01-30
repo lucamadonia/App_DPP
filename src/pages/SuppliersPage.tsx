@@ -27,13 +27,14 @@ import {
   FileCheck,
   Smartphone,
   Linkedin,
-  FileText,
   Star,
   Users,
   Factory,
   Truck,
   BadgeCheck,
   AlertCircle,
+  CreditCard,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,9 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Progress } from '@/components/ui/progress';
 import {
   getSuppliers,
   createSupplier,
@@ -117,6 +121,7 @@ const SUPPLIER_ROLES: { value: SupplierProduct['role']; label: string }[] = [
 export function SuppliersPage() {
   const { t } = useTranslation('settings');
   const locale = useLocale();
+  const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -541,6 +546,411 @@ export function SuppliersPage() {
     return countries.find(c => c.code === code)?.name || code;
   };
 
+  // Contract status helper
+  const getContractStatus = (supplier: Supplier) => {
+    if (!supplier.contract_end) return null;
+    const now = new Date();
+    const end = new Date(supplier.contract_end);
+    const daysUntilEnd = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysUntilEnd < 0) return { label: t('Contract Expired'), color: 'text-red-600', bg: 'bg-red-100' };
+    if (daysUntilEnd < 30) return { label: t('Contract Expiring Soon'), color: 'text-yellow-600', bg: 'bg-yellow-100' };
+    return { label: t('Contract Active'), color: 'text-green-600', bg: 'bg-green-100' };
+  };
+
+  // Contract progress percentage
+  const getContractProgress = (supplier: Supplier) => {
+    if (!supplier.contract_start || !supplier.contract_end) return 0;
+    const start = new Date(supplier.contract_start).getTime();
+    const end = new Date(supplier.contract_end).getTime();
+    const now = Date.now();
+    if (now >= end) return 100;
+    if (now <= start) return 0;
+    return Math.round(((now - start) / (end - start)) * 100);
+  };
+
+  // Audit status helper
+  const getAuditIndicator = (dateStr?: string, isNext?: boolean) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (isNext) {
+      if (diffDays < 0) return 'bg-red-500';
+      if (diffDays < 30) return 'bg-yellow-500';
+      return 'bg-green-500';
+    }
+    // Last audit
+    const monthsAgo = Math.ceil(-diffDays / 30);
+    if (monthsAgo > 12) return 'bg-red-500';
+    if (monthsAgo > 6) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  // Mask IBAN
+  const maskIban = (iban?: string) => {
+    if (!iban) return '-';
+    if (iban.length <= 8) return iban;
+    return iban.substring(0, 4) + ' **** **** **** ' + iban.substring(iban.length - 4);
+  };
+
+  // Render detail content (shared between Card and Sheet)
+  const renderDetailContent = () => {
+    if (!detailSupplier) return null;
+
+    return (
+      <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="gap-1">
+            <Info className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('Overview')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="contacts" className="gap-1">
+            <User className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('Contacts')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="products" className="gap-1">
+            <Package className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('Products')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-1">
+            <Shield className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('Compliance')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="finance" className="gap-1">
+            <CreditCard className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('Finance')}</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4 mt-4">
+          <div className="flex flex-wrap gap-2">
+            {renderStatusBadge(detailSupplier.status)}
+            {renderRiskBadge(detailSupplier.risk_level)}
+            {detailSupplier.verified && (
+              <Badge className="bg-blue-100 text-blue-800">
+                <Shield className="h-3 w-3 mr-1" />{t('Verified')}
+              </Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-muted-foreground">{t('Quality')}:</span>
+              <div>{renderStars(detailSupplier.quality_rating)}</div>
+            </div>
+            <div>
+              <span className="text-muted-foreground">{t('Delivery')}:</span>
+              <div>{renderStars(detailSupplier.delivery_rating)}</div>
+            </div>
+          </div>
+          <Separator />
+          <div className="space-y-1">
+            <h4 className="font-medium text-sm flex items-center gap-1">
+              <MapPin className="h-4 w-4" /> {t('Address')}
+            </h4>
+            <div className="text-sm text-muted-foreground">
+              {detailSupplier.address && <div>{detailSupplier.address}</div>}
+              {detailSupplier.address_line2 && <div>{detailSupplier.address_line2}</div>}
+              <div>{detailSupplier.postal_code} {detailSupplier.city}</div>
+              {detailSupplier.state && <div>{detailSupplier.state}</div>}
+              <div>{getCountryName(detailSupplier.country)}</div>
+            </div>
+          </div>
+          {detailSupplier.notes && (
+            <>
+              <Separator />
+              <div className="space-y-1">
+                <h4 className="font-medium text-sm">{t('Notes')}</h4>
+                <p className="text-sm text-muted-foreground">{detailSupplier.notes}</p>
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* Contacts Tab */}
+        <TabsContent value="contacts" className="space-y-4 mt-4">
+          {detailSupplier.contact_person && (
+            <div className="p-3 rounded-lg border bg-card">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge>{t('Primary Contact')}</Badge>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="font-medium">{detailSupplier.contact_person}</div>
+                {detailSupplier.contact_position && (
+                  <div className="text-muted-foreground">{detailSupplier.contact_position}</div>
+                )}
+                {detailSupplier.email && (
+                  <div className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    <a href={`mailto:${detailSupplier.email}`} className="text-primary hover:underline">{detailSupplier.email}</a>
+                  </div>
+                )}
+                {detailSupplier.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    <a href={`tel:${detailSupplier.phone}`} className="hover:underline">{detailSupplier.phone}</a>
+                  </div>
+                )}
+                {detailSupplier.mobile && (
+                  <div className="flex items-center gap-1">
+                    <Smartphone className="h-3 w-3" />
+                    <a href={`tel:${detailSupplier.mobile}`} className="hover:underline">{detailSupplier.mobile}</a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {detailSupplier.additional_contacts && detailSupplier.additional_contacts.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">{t('Additional Contacts')}</h4>
+              {detailSupplier.additional_contacts.map((contact, i) => (
+                <div key={i} className="p-2 rounded border text-sm">
+                  <div className="font-medium">{contact.name}</div>
+                  {contact.position && <div className="text-muted-foreground">{contact.position}</div>}
+                  {contact.department && <div className="text-muted-foreground">{contact.department}</div>}
+                  {contact.email && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Mail className="h-3 w-3" />
+                      <a href={`mailto:${contact.email}`} className="text-primary hover:underline text-xs">{contact.email}</a>
+                    </div>
+                  )}
+                  {contact.phone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      <span className="text-xs">{contact.phone}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">{t('Online')}</h4>
+            {detailSupplier.website && (
+              <div className="flex items-center gap-1 text-sm">
+                <Globe className="h-3 w-3" />
+                <a href={detailSupplier.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                  Website <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+            {detailSupplier.linkedin && (
+              <div className="flex items-center gap-1 text-sm">
+                <Linkedin className="h-3 w-3" />
+                <a href={detailSupplier.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                  LinkedIn <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Products Tab */}
+        <TabsContent value="products" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">{detailProducts.length} {t('Products')}</span>
+            <Button variant="outline" size="sm" onClick={() => openProductDialog(detailSupplier)}>
+              <Plus className="h-3 w-3 mr-1" />{t('Assign')}
+            </Button>
+          </div>
+          {detailProducts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">{t('No products assigned')}</p>
+          ) : (
+            <div className="space-y-2">
+              {detailProducts.map(sp => (
+                <div key={sp.id} className="flex items-center justify-between p-2 rounded border bg-card">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
+                      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span>{SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}</span>
+                        {sp.price_per_unit != null && <span>{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>}
+                        {sp.min_order_quantity != null && <span>Min: {sp.min_order_quantity}</span>}
+                        {sp.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Compliance Tab (NEW) */}
+        <TabsContent value="compliance" className="space-y-4 mt-4">
+          {/* Compliance Status */}
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-sm">{t('Compliance Status')}</h4>
+            {renderComplianceBadge(detailSupplier.compliance_status)}
+          </div>
+
+          <Separator />
+
+          {/* Certifications */}
+          {detailSupplier.certifications && detailSupplier.certifications.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm flex items-center gap-1">
+                <FileCheck className="h-4 w-4" /> {t('Certifications')}
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {detailSupplier.certifications.map(cert => (
+                  <Badge key={cert} variant="outline" className="text-xs">{cert}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Audit Information */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">{t('Audit Information')}</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Last Audit')}:</span>
+                <div className="flex items-center gap-2">
+                  <span>{detailSupplier.audit_date ? formatDate(detailSupplier.audit_date, locale) : '-'}</span>
+                  {detailSupplier.audit_date && (
+                    <span className={`w-2.5 h-2.5 rounded-full ${getAuditIndicator(detailSupplier.audit_date, false)}`} />
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Next Audit')}:</span>
+                <div className="flex items-center gap-2">
+                  <span>{detailSupplier.next_audit_date ? formatDate(detailSupplier.next_audit_date, locale) : '-'}</span>
+                  {detailSupplier.next_audit_date && (
+                    <span className={`w-2.5 h-2.5 rounded-full ${getAuditIndicator(detailSupplier.next_audit_date, true)}`} />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Ratings */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">{t('Ratings')}</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Quality')}:</span>
+                <div className="flex items-center gap-2">
+                  {renderStars(detailSupplier.quality_rating)}
+                  {detailSupplier.quality_rating && <span className="text-xs text-muted-foreground">({detailSupplier.quality_rating}/5)</span>}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Delivery')}:</span>
+                <div className="flex items-center gap-2">
+                  {renderStars(detailSupplier.delivery_rating)}
+                  {detailSupplier.delivery_rating && <span className="text-xs text-muted-foreground">({detailSupplier.delivery_rating}/5)</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Legal Information */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">{t('Legal Information')}</h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('Tax ID')}:</span>
+                <span>{detailSupplier.tax_id || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('VAT ID')}:</span>
+                <span>{detailSupplier.vat_id || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('D-U-N-S Number')}:</span>
+                <span>{detailSupplier.duns_number || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('Registration No.')}:</span>
+                <span>{detailSupplier.registration_number || '-'}</span>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Finance Tab (NEW) */}
+        <TabsContent value="finance" className="space-y-4 mt-4">
+          {/* Contract Status */}
+          {(detailSupplier.contract_start || detailSupplier.contract_end) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm">{t('Contract Period')}</h4>
+                {(() => {
+                  const status = getContractStatus(detailSupplier);
+                  if (!status) return null;
+                  return <Badge className={`${status.bg} ${status.color}`}>{status.label}</Badge>;
+                })()}
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <div className="flex justify-between">
+                  <span>{t('Start')}:</span>
+                  <span>{detailSupplier.contract_start ? formatDate(detailSupplier.contract_start, locale) : '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t('End')}:</span>
+                  <span>{detailSupplier.contract_end ? formatDate(detailSupplier.contract_end, locale) : '-'}</span>
+                </div>
+              </div>
+              <Progress value={getContractProgress(detailSupplier)} className="h-2" />
+              <p className="text-xs text-muted-foreground text-right">{getContractProgress(detailSupplier)}%</p>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Payment & Orders */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">{t('Payment & Orders')}</h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('Terms')}:</span>
+                <span>{detailSupplier.payment_terms || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('Min. Order')}:</span>
+                <span>{detailSupplier.min_order_value ? `${detailSupplier.min_order_value.toLocaleString()} ${detailSupplier.currency || 'EUR'}` : '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('Currency')}:</span>
+                <span>{detailSupplier.currency || 'EUR'}</span>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Bank Details */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">{t('Bank Details')}</h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('Bank')}:</span>
+                <span>{detailSupplier.bank_name || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('IBAN')}:</span>
+                <span className="font-mono text-xs">{maskIban(detailSupplier.iban)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('BIC')}:</span>
+                <span>{detailSupplier.bic || '-'}</span>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -786,245 +1196,40 @@ export function SuppliersPage() {
           </CardContent>
         </Card>
 
-        {/* Detail view */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">
-              {detailSupplier ? detailSupplier.name : t('Details')}
-            </CardTitle>
-            {detailSupplier && (
-              <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || t('No code')}</CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            {!detailSupplier ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {t('Select a supplier from the list')}
-              </div>
-            ) : (
-              <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
-                  <TabsTrigger value="contacts">{t('Contacts')}</TabsTrigger>
-                  <TabsTrigger value="products">{t('Products')}</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4 mt-4">
-                  {/* Status & Rating */}
-                  <div className="flex flex-wrap gap-2">
-                    {renderStatusBadge(detailSupplier.status)}
-                    {renderRiskBadge(detailSupplier.risk_level)}
-                    {detailSupplier.verified && (
-                      <Badge className="bg-blue-100 text-blue-800">
-                        <Shield className="h-3 w-3 mr-1" />{t('Verified')}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Ratings */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">{t('Quality')}:</span>
-                      <div>{renderStars(detailSupplier.quality_rating)}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">{t('Delivery')}:</span>
-                      <div>{renderStars(detailSupplier.delivery_rating)}</div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Address */}
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-sm flex items-center gap-1">
-                      <MapPin className="h-4 w-4" /> {t('Address')}
-                    </h4>
-                    <div className="text-sm text-muted-foreground">
-                      {detailSupplier.address && <div>{detailSupplier.address}</div>}
-                      {detailSupplier.address_line2 && <div>{detailSupplier.address_line2}</div>}
-                      <div>{detailSupplier.postal_code} {detailSupplier.city}</div>
-                      {detailSupplier.state && <div>{detailSupplier.state}</div>}
-                      <div>{getCountryName(detailSupplier.country)}</div>
-                    </div>
-                  </div>
-
-                  {/* Certifications */}
-                  {detailSupplier.certifications && detailSupplier.certifications.length > 0 && (
-                    <>
-                      <Separator />
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-sm flex items-center gap-1">
-                          <FileCheck className="h-4 w-4" /> {t('Certifications')}
-                        </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {detailSupplier.certifications.map(cert => (
-                            <Badge key={cert} variant="outline" className="text-xs">{cert}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Contract */}
-                  {(detailSupplier.contract_start || detailSupplier.contract_end) && (
-                    <>
-                      <Separator />
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-sm flex items-center gap-1">
-                          <FileText className="h-4 w-4" /> {t('Contract')}
-                        </h4>
-                        <div className="text-sm text-muted-foreground">
-                          {detailSupplier.contract_start && (
-                            <div>{t('Start')}: {formatDate(detailSupplier.contract_start, locale)}</div>
-                          )}
-                          {detailSupplier.contract_end && (
-                            <div>{t('End')}: {formatDate(detailSupplier.contract_end, locale)}</div>
-                          )}
-                          {detailSupplier.payment_terms && (
-                            <div>{t('Payment Terms')}: {detailSupplier.payment_terms}</div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Notes */}
-                  {detailSupplier.notes && (
-                    <>
-                      <Separator />
-                      <div className="space-y-1">
-                        <h4 className="font-medium text-sm">{t('Notes')}</h4>
-                        <p className="text-sm text-muted-foreground">{detailSupplier.notes}</p>
-                      </div>
-                    </>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="contacts" className="space-y-4 mt-4">
-                  {/* Primary contact */}
-                  {detailSupplier.contact_person && (
-                    <div className="p-3 rounded-lg border bg-card">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge>{t('Primary Contact')}</Badge>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="font-medium">{detailSupplier.contact_person}</div>
-                        {detailSupplier.contact_position && (
-                          <div className="text-muted-foreground">{detailSupplier.contact_position}</div>
-                        )}
-                        {detailSupplier.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <a href={`mailto:${detailSupplier.email}`} className="text-primary hover:underline">
-                              {detailSupplier.email}
-                            </a>
-                          </div>
-                        )}
-                        {detailSupplier.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <a href={`tel:${detailSupplier.phone}`} className="hover:underline">{detailSupplier.phone}</a>
-                          </div>
-                        )}
-                        {detailSupplier.mobile && (
-                          <div className="flex items-center gap-1">
-                            <Smartphone className="h-3 w-3" />
-                            <a href={`tel:${detailSupplier.mobile}`} className="hover:underline">{detailSupplier.mobile}</a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Additional contacts */}
-                  {detailSupplier.additional_contacts && detailSupplier.additional_contacts.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">{t('Additional Contacts')}</h4>
-                      {detailSupplier.additional_contacts.map((contact, i) => (
-                        <div key={i} className="p-2 rounded border text-sm">
-                          <div className="font-medium">{contact.name}</div>
-                          {contact.position && <div className="text-muted-foreground">{contact.position}</div>}
-                          {contact.department && <div className="text-muted-foreground">{contact.department}</div>}
-                          {contact.email && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Mail className="h-3 w-3" />
-                              <a href={`mailto:${contact.email}`} className="text-primary hover:underline text-xs">
-                                {contact.email}
-                              </a>
-                            </div>
-                          )}
-                          {contact.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              <span className="text-xs">{contact.phone}</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Online */}
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">{t('Online')}</h4>
-                    {detailSupplier.website && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Globe className="h-3 w-3" />
-                        <a href={detailSupplier.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                          Website <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                    {detailSupplier.linkedin && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Linkedin className="h-3 w-3" />
-                        <a href={detailSupplier.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                          LinkedIn <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="products" className="space-y-4 mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{detailProducts.length} {t('Products')}</span>
-                    <Button variant="outline" size="sm" onClick={() => openProductDialog(detailSupplier)}>
-                      <Plus className="h-3 w-3 mr-1" />{t('Assign')}
-                    </Button>
-                  </div>
-                  {detailProducts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">{t('No products assigned')}</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {detailProducts.map(sp => (
-                        <div key={sp.id} className="flex items-center justify-between p-2 rounded border bg-card">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
-                              <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                <span>{SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}</span>
-                                {sp.price_per_unit != null && (
-                                  <span>{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>
-                                )}
-                                {sp.min_order_quantity != null && (
-                                  <span>Min: {sp.min_order_quantity}</span>
-                                )}
-                                {sp.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            )}
-          </CardContent>
-        </Card>
+        {/* Detail view - responsive */}
+        {isMobile ? (
+          <Sheet open={!!detailSupplier} onOpenChange={(open) => { if (!open) setDetailSupplier(null); }}>
+            <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>{detailSupplier?.name || t('Details')}</SheetTitle>
+                {detailSupplier && (
+                  <SheetDescription>{detailSupplier.legal_form} | {detailSupplier.code || t('No code')}</SheetDescription>
+                )}
+              </SheetHeader>
+              {detailSupplier && renderDetailContent()}
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">
+                {detailSupplier ? detailSupplier.name : t('Details')}
+              </CardTitle>
+              {detailSupplier && (
+                <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || t('No code')}</CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              {!detailSupplier ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {t('Select a supplier from the list')}
+                </div>
+              ) : (
+                renderDetailContent()
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Dialog: Create/edit supplier */}

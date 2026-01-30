@@ -26,6 +26,15 @@ function transformSupplyChainEntry(row: SupplyChainRow): SupplyChainEntry {
     risk_level: row.risk_level || undefined,
     verified: row.verified,
     coordinates: row.coordinates || undefined,
+    process_type: (row.process_type as SupplyChainEntry['process_type']) || undefined,
+    transport_mode: (row.transport_mode as SupplyChainEntry['transport_mode']) || undefined,
+    status: (row.status as SupplyChainEntry['status']) || undefined,
+    document_ids: row.document_ids || undefined,
+    emissions_kg: row.emissions_kg != null ? Number(row.emissions_kg) : undefined,
+    duration_days: row.duration_days || undefined,
+    notes: row.notes || undefined,
+    cost: row.cost != null ? Number(row.cost) : undefined,
+    currency: row.currency || undefined,
   };
 }
 
@@ -41,6 +50,27 @@ export async function getSupplyChain(productId: string): Promise<SupplyChainEntr
 
   if (error) {
     console.error('Failed to load supply chain:', error);
+    return [];
+  }
+
+  return (data || []).map(transformSupplyChainEntry);
+}
+
+/**
+ * Get all supply chain entries for a tenant (avoids N+1 queries)
+ */
+export async function getSupplyChainByTenant(): Promise<SupplyChainEntry[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data, error } = await supabase
+    .from('supply_chain_entries')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('step', { ascending: true });
+
+  if (error) {
+    console.error('Failed to load supply chain by tenant:', error);
     return [];
   }
 
@@ -71,6 +101,15 @@ export async function createSupplyChainEntry(
     risk_level: entry.risk_level || null,
     verified: entry.verified || false,
     coordinates: entry.coordinates || null,
+    process_type: entry.process_type || null,
+    transport_mode: entry.transport_mode || null,
+    status: entry.status || 'completed',
+    document_ids: entry.document_ids || null,
+    emissions_kg: entry.emissions_kg ?? null,
+    duration_days: entry.duration_days ?? null,
+    notes: entry.notes || null,
+    cost: entry.cost ?? null,
+    currency: entry.currency || 'EUR',
   };
 
   const { data, error } = await supabase
@@ -106,6 +145,15 @@ export async function updateSupplyChainEntry(
   if (entry.risk_level !== undefined) updateData.risk_level = entry.risk_level || null;
   if (entry.verified !== undefined) updateData.verified = entry.verified;
   if (entry.coordinates !== undefined) updateData.coordinates = entry.coordinates || null;
+  if (entry.process_type !== undefined) updateData.process_type = entry.process_type || null;
+  if (entry.transport_mode !== undefined) updateData.transport_mode = entry.transport_mode || null;
+  if (entry.status !== undefined) updateData.status = entry.status || 'completed';
+  if (entry.document_ids !== undefined) updateData.document_ids = entry.document_ids || null;
+  if (entry.emissions_kg !== undefined) updateData.emissions_kg = entry.emissions_kg ?? null;
+  if (entry.duration_days !== undefined) updateData.duration_days = entry.duration_days ?? null;
+  if (entry.notes !== undefined) updateData.notes = entry.notes || null;
+  if (entry.cost !== undefined) updateData.cost = entry.cost ?? null;
+  if (entry.currency !== undefined) updateData.currency = entry.currency || 'EUR';
 
   const { error } = await supabase
     .from('supply_chain_entries')
@@ -173,6 +221,10 @@ export async function getSupplyChainStats(): Promise<{
   unverified: number;
   byCountry: Record<string, number>;
   riskBreakdown: Record<string, number>;
+  byProcessType: Record<string, number>;
+  byStatus: Record<string, number>;
+  totalEmissions: number;
+  totalCost: number;
 }> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) {
@@ -182,12 +234,16 @@ export async function getSupplyChainStats(): Promise<{
       unverified: 0,
       byCountry: {},
       riskBreakdown: {},
+      byProcessType: {},
+      byStatus: {},
+      totalEmissions: 0,
+      totalCost: 0,
     };
   }
 
   const { data, error } = await supabase
     .from('supply_chain_entries')
-    .select('country, verified, risk_level')
+    .select('country, verified, risk_level, process_type, status, emissions_kg, cost')
     .eq('tenant_id', tenantId);
 
   if (error || !data) {
@@ -197,16 +253,36 @@ export async function getSupplyChainStats(): Promise<{
       unverified: 0,
       byCountry: {},
       riskBreakdown: {},
+      byProcessType: {},
+      byStatus: {},
+      totalEmissions: 0,
+      totalCost: 0,
     };
   }
 
   const byCountry: Record<string, number> = {};
   const riskBreakdown: Record<string, number> = { low: 0, medium: 0, high: 0 };
+  const byProcessType: Record<string, number> = {};
+  const byStatus: Record<string, number> = {};
+  let totalEmissions = 0;
+  let totalCost = 0;
 
   data.forEach(entry => {
     byCountry[entry.country] = (byCountry[entry.country] || 0) + 1;
     if (entry.risk_level) {
       riskBreakdown[entry.risk_level] = (riskBreakdown[entry.risk_level] || 0) + 1;
+    }
+    if (entry.process_type) {
+      byProcessType[entry.process_type] = (byProcessType[entry.process_type] || 0) + 1;
+    }
+    if (entry.status) {
+      byStatus[entry.status] = (byStatus[entry.status] || 0) + 1;
+    }
+    if (entry.emissions_kg) {
+      totalEmissions += Number(entry.emissions_kg);
+    }
+    if (entry.cost) {
+      totalCost += Number(entry.cost);
     }
   });
 
@@ -216,5 +292,9 @@ export async function getSupplyChainStats(): Promise<{
     unverified: data.filter(e => !e.verified).length,
     byCountry,
     riskBreakdown,
+    byProcessType,
+    byStatus,
+    totalEmissions,
+    totalCost,
   };
 }

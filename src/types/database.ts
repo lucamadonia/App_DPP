@@ -49,12 +49,90 @@ export interface QRCodeDomainSettings {
   dppTemplate?: 'modern' | 'classic' | 'compact'; // Public DPP page template
 }
 
+// ============================================
+// DPP DESIGN SETTINGS (Tenant-Daten)
+// ============================================
+
+export type DPPFontFamily = 'system' | 'Inter' | 'Roboto' | 'Poppins' | 'Merriweather' | 'Playfair Display';
+export type DPPFontSize = 'small' | 'medium' | 'large';
+export type DPPFontWeight = 'normal' | 'semibold' | 'bold' | 'extrabold';
+export type DPPHeroStyle = 'gradient' | 'solid' | 'image' | 'minimal';
+export type DPPHeroHeight = 'compact' | 'normal' | 'tall';
+export type DPPBorderRadius = 'none' | 'small' | 'medium' | 'large' | 'full';
+export type DPPShadowDepth = 'none' | 'subtle' | 'medium' | 'strong';
+export type DPPBorderStyle = 'none' | 'thin' | 'thick';
+export type DPPSectionId = 'materials' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain';
+
+export interface DPPColorSettings {
+  secondaryColor?: string;
+  accentColor?: string;
+  pageBackground?: string;
+  cardBackground?: string;
+  textColor?: string;
+  headingColor?: string;
+}
+
+export interface DPPTypographySettings {
+  fontFamily?: DPPFontFamily;
+  headingFontSize?: DPPFontSize;
+  bodyFontSize?: DPPFontSize;
+  headingFontWeight?: DPPFontWeight;
+}
+
+export interface DPPHeroSettings {
+  visible?: boolean;
+  style?: DPPHeroStyle;
+  height?: DPPHeroHeight;
+  backgroundImage?: string;
+  overlayOpacity?: number;
+}
+
+export interface DPPCardSettings {
+  borderRadius?: DPPBorderRadius;
+  shadowDepth?: DPPShadowDepth;
+  borderStyle?: DPPBorderStyle;
+  backgroundOpacity?: number;
+}
+
+export interface DPPSectionConfig {
+  visible?: boolean;
+  defaultCollapsed?: boolean;
+}
+
+export interface DPPSectionSettings {
+  order?: DPPSectionId[];
+  configs?: Partial<Record<DPPSectionId, DPPSectionConfig>>;
+}
+
+export interface DPPFooterSettings {
+  legalNoticeUrl?: string;
+  privacyPolicyUrl?: string;
+  showPoweredBy?: boolean;
+  socialLinks?: {
+    website?: string;
+    instagram?: string;
+    linkedin?: string;
+    twitter?: string;
+  };
+}
+
+export interface DPPDesignSettings {
+  colors?: DPPColorSettings;
+  typography?: DPPTypographySettings;
+  hero?: DPPHeroSettings;
+  cards?: DPPCardSettings;
+  sections?: DPPSectionSettings;
+  footer?: DPPFooterSettings;
+  preset?: string;
+}
+
 export interface TenantSettings {
   defaultLanguage?: string;
   qrCodeStyle?: 'standard' | 'branded';
   publicDomain?: string;
   branding?: BrandingSettings;
   qrCode?: QRCodeDomainSettings;
+  dppDesign?: DPPDesignSettings;
 }
 
 // ============================================
@@ -232,6 +310,15 @@ export interface SupplyChainEntry {
   risk_level?: 'low' | 'medium' | 'high';
   verified?: boolean;
   coordinates?: string; // lat,lng
+  process_type?: 'raw_material_sourcing' | 'manufacturing' | 'assembly' | 'quality_control' | 'packaging' | 'warehousing' | 'transport' | 'distribution' | 'customs_clearance';
+  transport_mode?: 'road' | 'rail' | 'sea' | 'air' | 'multimodal';
+  status?: 'planned' | 'in_progress' | 'completed' | 'delayed' | 'cancelled';
+  document_ids?: string[];
+  emissions_kg?: number;
+  duration_days?: number;
+  notes?: string;
+  cost?: number;
+  currency?: string;
 }
 
 // ============================================

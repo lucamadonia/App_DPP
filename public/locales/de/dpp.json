@@ -207,5 +207,10 @@
   "Custom logo active": "Eigenes Logo aktiv",
   "Upload a logo or set one in branding settings": "Laden Sie ein Logo hoch oder legen Sie eines in den Branding-Einstellungen fest",
   "Logo size": "Logo-Größe",
-  "Error correction is automatically set to H (30%) when a logo is embedded to ensure scannability.": "Die Fehlerkorrektur wird automatisch auf H (30%) gesetzt, wenn ein Logo eingebettet ist, um die Scanbarkeit zu gewährleisten."
+  "Error correction is automatically set to H (30%) when a logo is embedded to ensure scannability.": "Die Fehlerkorrektur wird automatisch auf H (30%) gesetzt, wenn ein Logo eingebettet ist, um die Scanbarkeit zu gewährleisten.",
+  "Process Type": "Prozesstyp",
+  "Transport Mode": "Transportmittel",
+  "CO2 Emissions per Step": "CO₂-Emissionen pro Schritt",
+  "Supply Chain Cost": "Lieferkettenkosten",
+  "Emissions": "Emissionen"
 }
