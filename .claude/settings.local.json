@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git diff-tree:*)",
+      "Bash(npm install:*)",
+      "Bash(supabase --version:*)",
+      "Bash(npx supabase:*)",
+      "Bash(node scripts/migrate-batches.mjs:*)",
+      "Bash(where:*)",
+      "Bash(git status:*)",
+      "Bash(node:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add supply chain overhaul, custom domain wizard, and 8 new DPP templates\n\nSupply Chain:\n- Decompose 985-line monolithic SupplyChainPage into 7 focused sub-components\n- Add 3 view modes: Cards \\(product-grouped\\), Table, and Timeline\n- New components: Stats, Filters, ProductCard, StepRow, Timeline, Dialog, EmptyState\n- Animated stat cards, collapsible product cards with progress bars, filter chips\n\nCustom Domain Wizard:\n- 4-step CNAME setup wizard \\(Sheet\\): Enter Domain → Select Provider → Add CNAME → Verify\n- DNS verification via Google DNS-over-HTTPS API with auto-polling\n- Provider-specific instructions for Cloudflare, GoDaddy, Namecheap, Hetzner, IONOS, Strato, AWS Route53\n- Integrated into Settings domain tab\n\nDPP Templates:\n- Add 8 new public DPP templates: Minimal, Technical, Eco-Friendly, Premium, Government, Retail, Scientific, Accessible\n- Separate template selection for customer vs customs views \\(backward-compatible\\)\n- Dual template picker UI in DPP Design settings tab\n- Extended DPPTemplateName type union and QRCodeDomainSettings with new fields\n\nAlso: i18n keys \\(EN+DE\\) for all 3 features, fix pre-existing build errors, add alert-dialog UI component\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(grep:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

@@ -1,8 +1,49 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { getReturnPhotoUrl } from '@/services/supabase';
 import type { RhReturnItem } from '@/types/returns-hub';
+
+function PhotoThumbnails({ paths }: { paths: string[] }) {
+  const [urls, setUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const loaded: string[] = [];
+      for (const path of paths.slice(0, 3)) {
+        const url = await getReturnPhotoUrl(path);
+        if (url) loaded.push(url);
+      }
+      if (!cancelled) setUrls(loaded);
+    }
+    if (paths.length > 0) load();
+    return () => { cancelled = true; };
+  }, [paths]);
+
+  if (paths.length === 0) return <span className="text-muted-foreground">—</span>;
+
+  return (
+    <div className="flex items-center gap-1">
+      {urls.map((url, i) => (
+        <img
+          key={i}
+          src={url}
+          alt=""
+          className="h-8 w-8 rounded object-cover border"
+        />
+      ))}
+      {paths.length > 3 && (
+        <span className="text-xs text-muted-foreground">+{paths.length - 3}</span>
+      )}
+      {urls.length === 0 && paths.length > 0 && (
+        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+      )}
+    </div>
+  );
+}
 
 interface ReturnItemsTableProps {
   items: RhReturnItem[];
@@ -37,6 +78,7 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
             <th className="pb-2 font-medium text-center">{t('Quantity')}</th>
             <th className="pb-2 font-medium text-right">{t('Unit Price')}</th>
             <th className="pb-2 font-medium">{t('Condition')}</th>
+            <th className="pb-2 font-medium">{t('Photos')}</th>
             <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
             {!readonly && <th className="pb-2 font-medium w-10" />}
           </tr>
@@ -65,6 +107,9 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
                     {t(item.condition === 'like_new' ? 'Like New' : item.condition.charAt(0).toUpperCase() + item.condition.slice(1))}
                   </Badge>
                 )}
+              </td>
+              <td className="py-2">
+                <PhotoThumbnails paths={item.photos} />
               </td>
               <td className="py-2 text-right font-medium">
                 {item.refundAmount != null ? `€${item.refundAmount.toFixed(2)}` : '—'}

@@ -30,6 +30,10 @@ const DEFAULT_SETTINGS: ReturnsHubSettings = {
     customCss: '',
     customHtml: {},
   },
+  notifications: {
+    emailEnabled: false,
+    senderName: '',
+  },
 };
 
 export async function getReturnsHubSettings(): Promise<ReturnsHubSettings> {
@@ -73,6 +77,7 @@ export async function updateReturnsHubSettings(
       features: updates.features ? { ...currentRh.features, ...updates.features } : currentRh.features,
       usage: updates.usage ? { ...currentRh.usage, ...updates.usage } : currentRh.usage,
       branding: updates.branding ? { ...currentRh.branding, ...updates.branding } : currentRh.branding,
+      notifications: updates.notifications ? { ...currentRh.notifications, ...updates.notifications } : currentRh.notifications,
     },
   };
 

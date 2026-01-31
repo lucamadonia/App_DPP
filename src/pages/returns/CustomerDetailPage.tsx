@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Mail, Phone, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, Phone, AlertTriangle, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
-import { getRhCustomer, getRhCustomerReturns } from '@/services/supabase';
+import { getRhCustomer, getRhCustomerReturns, updateRhCustomer } from '@/services/supabase';
 import type { RhCustomer, RhReturn } from '@/types/returns-hub';
 
 export function CustomerDetailPage() {
@@ -18,20 +22,68 @@ export function CustomerDetailPage() {
   const [returns, setReturns] = useState<RhReturn[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Edit dialog
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editEmail, setEditEmail] = useState('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editTagsInput, setEditTagsInput] = useState('');
+
+  const loadData = async () => {
     if (!id) return;
-    async function load() {
-      setLoading(true);
-      const [cust, rets] = await Promise.all([
-        getRhCustomer(id!),
-        getRhCustomerReturns(id!),
-      ]);
-      setCustomer(cust);
-      setReturns(rets);
-      setLoading(false);
+    setLoading(true);
+    const [cust, rets] = await Promise.all([
+      getRhCustomer(id),
+      getRhCustomerReturns(id),
+    ]);
+    setCustomer(cust);
+    setReturns(rets);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadData(); }, [id]);
+
+  const openEdit = () => {
+    if (!customer) return;
+    setEditEmail(customer.email);
+    setEditFirstName(customer.firstName || '');
+    setEditLastName(customer.lastName || '');
+    setEditPhone(customer.phone || '');
+    setEditCompany(customer.company || '');
+    setEditNotes(customer.notes || '');
+    setEditTagsInput(customer.tags.join(', '));
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!id || !editEmail.trim()) return;
+    setSaving(true);
+
+    const tags = editTagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const result = await updateRhCustomer(id, {
+      email: editEmail.trim(),
+      firstName: editFirstName.trim() || undefined,
+      lastName: editLastName.trim() || undefined,
+      phone: editPhone.trim() || undefined,
+      company: editCompany.trim() || undefined,
+      notes: editNotes.trim() || undefined,
+      tags,
+    });
+
+    if (result.success) {
+      setEditOpen(false);
+      await loadData();
     }
-    load();
-  }, [id]);
+    setSaving(false);
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -54,6 +106,10 @@ export function CustomerDetailPage() {
           <h1 className="text-2xl font-bold">{t('360° Customer View')}</h1>
           <p className="text-muted-foreground">{fullName}</p>
         </div>
+        <Button variant="outline" onClick={openEdit}>
+          <Pencil className="h-4 w-4 mr-2" />
+          {t('Edit Customer')}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -174,6 +230,59 @@ export function CustomerDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Edit Customer')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('Email')} *</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('First Name')}</Label>
+                <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('Last Name')}</Label>
+                <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('Phone')}</Label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('Company')}</Label>
+                <Input value={editCompany} onChange={(e) => setEditCompany(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('Notes')}</Label>
+              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('Tags (comma-separated)')}</Label>
+              <Input value={editTagsInput} onChange={(e) => setEditTagsInput(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>{t('Cancel')}</Button>
+            <Button onClick={handleSave} disabled={saving || !editEmail.trim()}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

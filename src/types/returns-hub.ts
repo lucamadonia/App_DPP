@@ -267,6 +267,31 @@ export interface RhWorkflowRule {
 // RETURNS HUB - NOTIFICATIONS
 // ============================================
 
+export type RhNotificationEventType =
+  | 'return_confirmed'
+  | 'return_approved'
+  | 'return_rejected'
+  | 'return_shipped'
+  | 'refund_completed'
+  | 'ticket_created'
+  | 'ticket_agent_reply';
+
+export interface RhEmailTemplate {
+  id: string;
+  tenantId: string;
+  eventType: RhNotificationEventType;
+  enabled: boolean;
+  subjectTemplate: string;
+  bodyTemplate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReturnsHubNotificationSettings {
+  emailEnabled: boolean;
+  senderName: string;
+}
+
 export interface RhNotification {
   id: string;
   tenantId: string;
@@ -275,6 +300,7 @@ export interface RhNotification {
   customerId?: string;
   channel: NotificationChannel;
   template?: string;
+  recipientEmail?: string;
   subject?: string;
   content?: string;
   status: NotificationStatus;
@@ -319,6 +345,7 @@ export interface ReturnsHubSettings {
   features: ReturnsHubFeatures;
   usage: ReturnsHubUsage;
   branding: ReturnsHubBranding;
+  notifications: ReturnsHubNotificationSettings;
 }
 
 // ============================================

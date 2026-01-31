@@ -267,3 +267,23 @@ export {
   createRhNotification,
   markRhNotificationSent,
 } from './rh-notifications';
+
+// Returns Hub - Email Templates
+export {
+  getRhEmailTemplates,
+  getRhEmailTemplate,
+  upsertRhEmailTemplate,
+  seedDefaultEmailTemplates,
+} from './rh-email-templates';
+
+// Returns Hub - Notification Triggers
+export {
+  triggerEmailNotification,
+  triggerPublicEmailNotification,
+} from './rh-notification-trigger';
+
+// Returns Hub - Photos
+export {
+  uploadReturnPhoto,
+  getReturnPhotoUrl,
+} from './return-photos';

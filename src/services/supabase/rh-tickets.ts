@@ -4,6 +4,7 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { RhTicket, RhTicketMessage, TicketsFilter, PaginatedResult } from '@/types/returns-hub';
 import { generateTicketNumber } from '@/lib/return-number';
+import { triggerEmailNotification } from './rh-notification-trigger';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformTicket(row: any): RhTicket {
@@ -146,6 +147,25 @@ export async function createRhTicket(
     return { success: false, error: error.message };
   }
 
+  // Trigger ticket_created notification if customer has email
+  if (ticket.customerId) {
+    const { data: customer } = await supabase
+      .from('rh_customers')
+      .select('email')
+      .eq('id', ticket.customerId)
+      .single();
+
+    if (customer?.email) {
+      triggerEmailNotification('ticket_created', {
+        recipientEmail: customer.email,
+        ticketNumber: data.ticket_number,
+        subject: ticket.subject || '',
+        ticketId: data.id,
+        customerId: ticket.customerId,
+      }).catch((err) => console.error('Ticket notification trigger failed:', err));
+    }
+  }
+
   return { success: true, id: data.id, ticketNumber: data.ticket_number };
 }
 
@@ -229,6 +249,25 @@ export async function addRhTicketMessage(
       await updateRhTicket(message.ticketId, {
         firstRespondedAt: new Date().toISOString(),
       });
+    }
+
+    // Trigger agent reply notification if not internal note
+    if (!message.isInternal && ticket?.customerId) {
+      const { data: customer } = await supabase
+        .from('rh_customers')
+        .select('email')
+        .eq('id', ticket.customerId)
+        .single();
+
+      if (customer?.email) {
+        triggerEmailNotification('ticket_agent_reply', {
+          recipientEmail: customer.email,
+          ticketNumber: ticket.ticketNumber,
+          subject: ticket.subject,
+          ticketId: message.ticketId,
+          customerId: ticket.customerId,
+        }).catch((err) => console.error('Agent reply notification failed:', err));
+      }
     }
   }
 

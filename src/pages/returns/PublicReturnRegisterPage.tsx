@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Check, Loader2, Package, Upload, Camera } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Loader2, Package, Upload, Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +40,8 @@ export function PublicReturnRegisterPage() {
   const [reasonText, setReasonText] = useState('');
   const [solution, setSolution] = useState<DesiredSolution>('refund');
   const [shippingMethod, setShippingMethod] = useState('print_label');
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -223,10 +225,45 @@ export function PublicReturnRegisterPage() {
                   <Camera className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">{t('Drag & drop or click to upload')}</p>
                   <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WebP · max 10MB</p>
-                  <Button variant="outline" size="sm" className="mt-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+                      }
+                    }}
+                  />
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="h-4 w-4 mr-1" /> {t('Upload Photos')}
                   </Button>
                 </div>
+                {photoFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      {t('{{count}} photos selected', { count: photoFiles.length })}
+                      {' — '}
+                      {t('Photos will be uploaded after submission')}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {photoFiles.map((file, i) => (
+                        <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-xs">
+                          <span className="max-w-[120px] truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

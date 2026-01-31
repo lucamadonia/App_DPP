@@ -4,8 +4,9 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { RhReturn, ReturnStatus, ReturnsFilter, PaginatedResult, ReturnsHubStats } from '@/types/returns-hub';
+import type { RhReturn, ReturnStatus, ReturnsFilter, PaginatedResult, ReturnsHubStats, RhNotificationEventType } from '@/types/returns-hub';
 import { generateReturnNumber } from '@/lib/return-number';
+import { triggerEmailNotification, triggerPublicEmailNotification } from './rh-notification-trigger';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformReturn(row: any): RhReturn {
@@ -229,6 +230,33 @@ export async function updateReturnStatus(
     });
   }
 
+  // Trigger email notification for relevant status changes
+  const statusToEvent: Partial<Record<ReturnStatus, RhNotificationEventType>> = {
+    APPROVED: 'return_approved',
+    REJECTED: 'return_rejected',
+    SHIPPED: 'return_shipped',
+    REFUND_COMPLETED: 'refund_completed',
+  };
+
+  const eventType = statusToEvent[status];
+  if (eventType) {
+    const ret = await getReturn(id);
+    if (ret) {
+      const email = (ret.metadata as Record<string, unknown>)?.email as string;
+      if (email) {
+        triggerEmailNotification(eventType, {
+          recipientEmail: email,
+          returnNumber: ret.returnNumber,
+          status,
+          reason: comment || ret.reasonText || '',
+          refundAmount: ret.refundAmount != null ? String(ret.refundAmount) : '',
+          returnId: id,
+          customerId: ret.customerId,
+        }).catch((err) => console.error('Notification trigger failed:', err));
+      }
+    }
+  }
+
   return { success: true };
 }
 
@@ -330,6 +358,14 @@ export async function publicCreateReturn(
       email: data.email,
     });
   }
+
+  // Trigger confirmation email via public notification
+  triggerPublicEmailNotification(tenant.id, 'return_confirmed', {
+    recipientEmail: data.email,
+    returnNumber: rn,
+    reason: data.reasonText || data.reasonCategory || '',
+    returnId: ret.id,
+  }).catch((err) => console.error('Public notification trigger failed:', err));
 
   return { success: true, returnNumber: rn };
 }

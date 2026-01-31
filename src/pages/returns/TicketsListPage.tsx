@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getRhTickets } from '@/services/supabase';
-import type { RhTicket, TicketStatus, TicketsFilter, PaginatedResult } from '@/types/returns-hub';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { getRhTickets, createRhTicket, addRhTicketMessage, getRhCustomers } from '@/services/supabase';
+import type { RhTicket, RhCustomer, TicketStatus, TicketsFilter, PaginatedResult } from '@/types/returns-hub';
 
 const statusColors: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-800',
@@ -28,11 +31,22 @@ const statusLabels: Record<TicketStatus, string> = {
 
 export function TicketsListPage() {
   const { t } = useTranslation('returns');
+  const navigate = useNavigate();
   const [result, setResult] = useState<PaginatedResult<RhTicket>>({ data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+
+  // Create ticket dialog
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [customers, setCustomers] = useState<RhCustomer[]>([]);
+  const [subject, setSubject] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [ticketPriority, setTicketPriority] = useState('normal');
+  const [category, setCategory] = useState('');
+  const [initialMessage, setInitialMessage] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,6 +66,44 @@ export function TicketsListPage() {
     return false;
   };
 
+  const openDialog = async () => {
+    setSubject('');
+    setCustomerId('');
+    setTicketPriority('normal');
+    setCategory('');
+    setInitialMessage('');
+    const custResult = await getRhCustomers(undefined, 1, 100);
+    setCustomers(custResult.data);
+    setDialogOpen(true);
+  };
+
+  const handleCreateTicket = async () => {
+    if (!subject.trim()) return;
+    setCreating(true);
+
+    const result = await createRhTicket({
+      subject: subject.trim(),
+      customerId: customerId || undefined,
+      priority: ticketPriority as RhTicket['priority'],
+      category: category || undefined,
+    });
+
+    if (result.success && result.id) {
+      if (initialMessage.trim()) {
+        await addRhTicketMessage({
+          ticketId: result.id,
+          senderType: 'agent',
+          content: initialMessage.trim(),
+          attachments: [],
+          isInternal: false,
+        });
+      }
+      setDialogOpen(false);
+      navigate(`/returns/tickets/${result.id}`);
+    }
+    setCreating(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,7 +111,7 @@ export function TicketsListPage() {
           <h1 className="text-2xl font-bold">{t('Ticket List')}</h1>
           <p className="text-muted-foreground">{result.total} {t('Tickets')}</p>
         </div>
-        <Button disabled>
+        <Button onClick={openDialog}>
           <Plus className="h-4 w-4 mr-2" />
           {t('New Ticket')}
         </Button>
@@ -148,6 +200,78 @@ export function TicketsListPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('New Ticket')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('Subject')} *</Label>
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder={t('Ticket subject...')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('Customer')}</Label>
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('No customer')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('No customer')}</SelectItem>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('Priority')}</Label>
+                <Select value={ticketPriority} onValueChange={setTicketPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">{t('Low')}</SelectItem>
+                    <SelectItem value="normal">{t('Normal')}</SelectItem>
+                    <SelectItem value="high">{t('High')}</SelectItem>
+                    <SelectItem value="urgent">{t('Urgent')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('Category')}</Label>
+                <Input
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder={t('Category')}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('Initial Message')}</Label>
+              <Textarea
+                value={initialMessage}
+                onChange={(e) => setInitialMessage(e.target.value)}
+                placeholder={t('Initial Message')}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel')}</Button>
+            <Button onClick={handleCreateTicket} disabled={creating || !subject.trim()}>
+              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('Create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
