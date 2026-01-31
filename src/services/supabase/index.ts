@@ -206,6 +206,9 @@ export {
   publicCreateReturn,
   publicTrackReturn,
   publicGetTenantName,
+  publicGetTenantBranding,
+  publicUploadReturnPhoto,
+  publicGetReturnItems,
 } from './returns';
 
 // Returns Hub - Return Items

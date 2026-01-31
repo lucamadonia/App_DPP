@@ -424,6 +424,86 @@ export async function publicGetTenantName(tenantSlug: string): Promise<string> {
   return data?.name || '';
 }
 
+export async function publicGetTenantBranding(tenantSlug: string): Promise<{
+  name: string;
+  primaryColor: string;
+  logoUrl: string;
+} | null> {
+  const { data } = await supabase
+    .from('tenants')
+    .select('name, settings')
+    .eq('slug', tenantSlug)
+    .single();
+
+  if (!data) return null;
+
+  const settings = data.settings as Record<string, any> | null;
+  const branding = settings?.returnsHub?.branding;
+
+  return {
+    name: data.name || '',
+    primaryColor: branding?.primaryColor || '#3B82F6',
+    logoUrl: branding?.logoUrl || '',
+  };
+}
+
+export async function publicUploadReturnPhoto(
+  tenantSlug: string,
+  returnId: string,
+  file: File
+): Promise<{ success: boolean; path?: string; error?: string }> {
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('slug', tenantSlug)
+    .single();
+
+  if (!tenant) return { success: false, error: 'Tenant not found' };
+
+  const ext = file.name.split('.').pop() || 'jpg';
+  const filePath = `${tenant.id}/${returnId}/${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from('return-photos')
+    .upload(filePath, file, { contentType: file.type, upsert: false });
+
+  if (error) {
+    console.error('Failed to upload return photo:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, path: filePath };
+}
+
+export async function publicGetReturnItems(returnNumber: string): Promise<Array<{
+  id: string;
+  name: string;
+  quantity: number;
+  condition?: string;
+  photos: string[];
+}>> {
+  const { data: ret } = await supabase
+    .from('rh_returns')
+    .select('id')
+    .eq('return_number', returnNumber.trim())
+    .single();
+
+  if (!ret) return [];
+
+  const { data: items } = await supabase
+    .from('rh_return_items')
+    .select('id, name, quantity, condition, photos')
+    .eq('return_id', ret.id);
+
+  return (items || []).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    condition: item.condition || undefined,
+    photos: item.photos || [],
+  }));
+}
+
 export async function getReturnStats(): Promise<ReturnsHubStats> {
   const tenantId = await getCurrentTenantId();
   const empty: ReturnsHubStats = {

@@ -48,8 +48,10 @@ import { TicketDetailPage } from '@/pages/returns/TicketDetailPage';
 import { ReturnsReportsPage } from '@/pages/returns/ReturnsReportsPage';
 import { ReturnsSettingsPage } from '@/pages/returns/ReturnsSettingsPage';
 import { WorkflowRulesPage } from '@/pages/returns/WorkflowRulesPage';
-import { PublicReturnRegisterPage } from '@/pages/returns/PublicReturnRegisterPage';
-import { PublicReturnTrackingPage } from '@/pages/returns/PublicReturnTrackingPage';
+import { ReturnsPortalLayout } from '@/pages/returns/public/ReturnsPortalLayout';
+import { PublicReturnPortalPage } from '@/pages/returns/public/PublicReturnPortalPage';
+import { PublicReturnRegisterPage } from '@/pages/returns/public/PublicReturnRegisterPage';
+import { PublicReturnTrackingPage } from '@/pages/returns/public/PublicReturnTrackingPage';
 import './index.css';
 
 // Protected Route - redirects to login if not authenticated
@@ -132,9 +134,12 @@ function App() {
           <Route path="01/:gtin/21/:serial/customs" element={<PublicCustomsPage />} />
         </Route>
 
-        {/* Public Returns Hub pages (no auth, no layout wrapper) */}
-        <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
-        <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
+        {/* Public Returns Portal (no auth, shared layout) */}
+        <Route element={<ReturnsPortalLayout />}>
+          <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
+          <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
+          <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
+        </Route>
 
         {/* Admin area with sidebar (protected) */}
         <Route element={<ProtectedRoute />}>
