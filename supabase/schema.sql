@@ -239,7 +239,8 @@ CREATE TABLE IF NOT EXISTS documents (
     valid_until DATE,
     uploaded_at TIMESTAMPTZ DEFAULT NOW(),
     uploaded_by UUID REFERENCES auth.users(id),
-    status TEXT DEFAULT 'valid' CHECK (status IN ('valid', 'expiring', 'expired'))
+    status TEXT DEFAULT 'valid' CHECK (status IN ('valid', 'expiring', 'expired')),
+    visibility TEXT DEFAULT 'internal' CHECK (visibility IN ('internal', 'customs', 'consumer'))
 );
 
 -- Supply Chain Entries

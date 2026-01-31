@@ -39,5 +39,20 @@
   "Uploading...": "Wird hochgeladen...",
   "Upload": "Hochladen",
   "Validity Tracker": "Gültigkeits-Tracker",
-  "Try a different search term": "Versuchen Sie einen anderen Suchbegriff"
+  "Try a different search term": "Versuchen Sie einen anderen Suchbegriff",
+  "Visibility": "Sichtbarkeit",
+  "Internal Only": "Nur intern",
+  "Customs": "Zoll",
+  "Consumer": "Verbraucher",
+  "Upload Document": "Dokument hochladen",
+  "Configure document details before uploading.": "Dokumentdetails vor dem Hochladen konfigurieren.",
+  "Name": "Name",
+  "Category": "Kategorie",
+  "Status": "Status",
+  "All": "Alle",
+  "No documents": "Keine Dokumente",
+  "Upload documents to associate them with this product": "Laden Sie Dokumente hoch, um sie mit diesem Produkt zu verknüpfen",
+  "Are you sure you want to delete this document?": "Sind Sie sicher, dass Sie dieses Dokument löschen möchten?",
+  "{{count}} documents": "{{count}} Dokumente",
+  "Expiring": "Läuft ab"
 }

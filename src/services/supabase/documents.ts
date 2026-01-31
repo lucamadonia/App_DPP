@@ -19,6 +19,7 @@ export interface Document {
   uploadedAt: string;
   uploadedBy?: string;
   status: 'valid' | 'expiring' | 'expired';
+  visibility: 'internal' | 'customs' | 'consumer';
 }
 
 // Transform database row to Document type
@@ -37,6 +38,7 @@ function transformDocument(row: any): Document {
     uploadedAt: row.uploaded_at,
     uploadedBy: row.uploaded_by || undefined,
     status: row.status,
+    visibility: row.visibility || 'internal',
   };
 }
 
@@ -98,6 +100,7 @@ export async function uploadDocument(
     category: string;
     productId?: string;
     validUntil?: string;
+    visibility?: 'internal' | 'customs' | 'consumer';
   }
 ): Promise<{ success: boolean; document?: Document; error?: string }> {
   const tenantId = await getCurrentTenantId();
@@ -158,6 +161,7 @@ export async function uploadDocument(
     size: `${(file.size / 1024).toFixed(1)} KB`,
     valid_until: metadata.validUntil || null,
     status,
+    visibility: metadata.visibility || 'internal',
   };
 
   const { data, error } = await supabase
@@ -197,6 +201,7 @@ export async function createDocument(
     size: doc.size || null,
     valid_until: doc.validUntil || null,
     status: doc.status,
+    visibility: doc.visibility || 'internal',
   };
 
   const { data, error } = await supabase
@@ -227,6 +232,7 @@ export async function updateDocument(
   if (doc.category !== undefined) updateData.category = doc.category;
   if (doc.validUntil !== undefined) updateData.valid_until = doc.validUntil || null;
   if (doc.status !== undefined) updateData.status = doc.status;
+  if (doc.visibility !== undefined) updateData.visibility = doc.visibility;
 
   const { error } = await supabase
     .from('documents')

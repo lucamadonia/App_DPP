@@ -18,6 +18,9 @@ import {
   Clock,
   Loader2,
   Plus,
+  Lock,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,8 +84,15 @@ const statusConfig = {
 };
 
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
+import type { VisibilityLevel } from '@/types/visibility';
 
 const documentCategories = DOCUMENT_CATEGORIES;
+
+const visibilityBadgeConfig: Record<VisibilityLevel, { icon: typeof Lock; label: string; className: string }> = {
+  internal: { icon: Lock, label: 'Internal Only', className: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600' },
+  customs: { icon: ShieldCheck, label: 'Customs', className: 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700' },
+  consumer: { icon: Users, label: 'Consumer', className: 'bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700' },
+};
 
 export function DocumentsPage() {
   const { t } = useTranslation('documents');
@@ -100,6 +110,7 @@ export function DocumentsPage() {
   const [newDoc, setNewDoc] = useState({
     name: '',
     category: 'Conformity' as Document['category'],
+    visibility: 'internal' as VisibilityLevel,
     validUntil: '',
   });
 
@@ -150,13 +161,14 @@ export function DocumentsPage() {
         name: newDoc.name,
         category: newDoc.category,
         validUntil: newDoc.validUntil || undefined,
+        visibility: newDoc.visibility,
       });
 
       if (result.success) {
         const updatedDocs = await getDocuments();
         setDocuments(updatedDocs);
         setIsUploadDialogOpen(false);
-        setNewDoc({ name: '', category: 'Conformity', validUntil: '' });
+        setNewDoc({ name: '', category: 'Conformity', visibility: 'internal', validUntil: '' });
         setSelectedFile(null);
       }
     } else {
@@ -167,13 +179,14 @@ export function DocumentsPage() {
         category: newDoc.category,
         validUntil: newDoc.validUntil || undefined,
         status: 'valid',
+        visibility: newDoc.visibility,
       });
 
       if (result.success) {
         const updatedDocs = await getDocuments();
         setDocuments(updatedDocs);
         setIsUploadDialogOpen(false);
-        setNewDoc({ name: '', category: 'Conformity', validUntil: '' });
+        setNewDoc({ name: '', category: 'Conformity', visibility: 'internal', validUntil: '' });
         setSelectedFile(null);
       }
     }
@@ -310,6 +323,7 @@ export function DocumentsPage() {
                 <TableRow>
                   <TableHead>{t('Document')}</TableHead>
                   <TableHead>{t('Category')}</TableHead>
+                  <TableHead>{t('Visibility')}</TableHead>
                   <TableHead>{t('Uploaded')}</TableHead>
                   <TableHead>{t('Valid Until')}</TableHead>
                   <TableHead>{t('Status', { ns: 'common' })}</TableHead>
@@ -320,6 +334,8 @@ export function DocumentsPage() {
               <TableBody>
                 {filteredDocs.map((doc) => {
                   const status = statusConfig[doc.status as keyof typeof statusConfig] || statusConfig.valid;
+                  const vis = visibilityBadgeConfig[doc.visibility || 'internal'];
+                  const VisIcon = vis.icon;
                   return (
                     <TableRow key={doc.id}>
                       <TableCell>
@@ -336,6 +352,12 @@ export function DocumentsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{doc.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={vis.className}>
+                          <VisIcon className="mr-1 h-3 w-3" />
+                          {t(vis.label)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {doc.uploadedAt ? formatDate(doc.uploadedAt, locale) : '-'}
@@ -463,6 +485,38 @@ export function DocumentsPage() {
                       {cat}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('Visibility')}</Label>
+              <Select
+                value={newDoc.visibility}
+                onValueChange={(value) => setNewDoc({ ...newDoc, visibility: value as VisibilityLevel })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-3.5 w-3.5" />
+                      {t('Internal Only')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="customs">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {t('Customs')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="consumer">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5" />
+                      {t('Consumer')}
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

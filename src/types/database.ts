@@ -308,6 +308,7 @@ export interface Document {
   uploadedAt: string;
   uploadedBy?: string;
   status: 'valid' | 'expiring' | 'expired';
+  visibility: 'internal' | 'customs' | 'consumer';
 }
 
 // ============================================

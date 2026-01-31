@@ -39,5 +39,20 @@
   "Uploading...": "Uploading...",
   "Upload": "Upload",
   "Validity Tracker": "Validity Tracker",
-  "Try a different search term": "Try a different search term"
+  "Try a different search term": "Try a different search term",
+  "Visibility": "Visibility",
+  "Internal Only": "Internal Only",
+  "Customs": "Customs",
+  "Consumer": "Consumer",
+  "Upload Document": "Upload Document",
+  "Configure document details before uploading.": "Configure document details before uploading.",
+  "Name": "Name",
+  "Category": "Category",
+  "Status": "Status",
+  "All": "All",
+  "No documents": "No documents",
+  "Upload documents to associate them with this product": "Upload documents to associate them with this product",
+  "Are you sure you want to delete this document?": "Are you sure you want to delete this document?",
+  "{{count}} documents": "{{count}} documents",
+  "Expiring": "Expiring"
 }

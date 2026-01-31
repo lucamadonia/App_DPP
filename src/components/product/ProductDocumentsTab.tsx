@@ -10,25 +10,40 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Lock,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { getDocuments, uploadDocument, deleteDocument, type Document } from '@/services/supabase';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import type { VisibilityLevel } from '@/types/visibility';
 
 const statusConfig = {
   valid: { icon: CheckCircle2, className: 'text-success', label: 'Valid' },
   expiring: { icon: Clock, className: 'text-warning', label: 'Expiring' },
   expired: { icon: AlertTriangle, className: 'text-destructive', label: 'Expired' },
+};
+
+const visibilityBadgeConfig: Record<VisibilityLevel, { icon: typeof Lock; label: string; className: string }> = {
+  internal: { icon: Lock, label: 'Internal Only', className: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600' },
+  customs: { icon: ShieldCheck, label: 'Customs', className: 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700' },
+  consumer: { icon: Users, label: 'Consumer', className: 'bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700' },
 };
 
 interface Props {
@@ -43,7 +58,14 @@ export function ProductDocumentsTab({ productId }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [uploadCategory, setUploadCategory] = useState<string>('Certificate');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadForm, setUploadForm] = useState({
+    name: '',
+    category: 'Certificate',
+    visibility: 'internal' as VisibilityLevel,
+    validUntil: '',
+  });
 
   useEffect(() => {
     loadDocuments();
@@ -56,15 +78,31 @@ export function ProductDocumentsTab({ productId }: Props) {
     setIsLoading(false);
   };
 
-  const handleUpload = async (file: File) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setUploadForm(prev => ({ ...prev, name: prev.name || file.name }));
+      setIsDialogOpen(true);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !uploadForm.name) return;
     setIsUploading(true);
-    const result = await uploadDocument(file, {
-      name: file.name,
-      category: uploadCategory,
-      productId: productId,
+    const result = await uploadDocument(selectedFile, {
+      name: uploadForm.name,
+      category: uploadForm.category,
+      productId,
+      validUntil: uploadForm.validUntil || undefined,
+      visibility: uploadForm.visibility,
     });
     if (result.success) {
       await loadDocuments();
+      setIsDialogOpen(false);
+      setSelectedFile(null);
+      setUploadForm({ name: '', category: 'Certificate', visibility: 'internal', validUntil: '' });
     }
     setIsUploading(false);
   };
@@ -93,36 +131,18 @@ export function ProductDocumentsTab({ productId }: Props) {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={uploadCategory} onValueChange={setUploadCategory}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DOCUMENT_CATEGORIES.map(cat => (
-                  <SelectItem key={cat} value={cat}>{t(cat)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <input
               ref={fileInputRef}
               type="file"
               accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
               className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleUpload(file);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }}
+              onChange={handleFileSelect}
             />
             <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
             >
-              {isUploading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
+              <Upload className="mr-2 h-4 w-4" />
               {t('Upload')}
             </Button>
           </div>
@@ -169,6 +189,7 @@ export function ProductDocumentsTab({ productId }: Props) {
               <TableRow>
                 <TableHead>{t('Name')}</TableHead>
                 <TableHead>{t('Category')}</TableHead>
+                <TableHead>{t('Visibility')}</TableHead>
                 <TableHead>{t('Status')}</TableHead>
                 <TableHead>{t('Valid Until')}</TableHead>
                 <TableHead>{t('Uploaded')}</TableHead>
@@ -178,6 +199,8 @@ export function ProductDocumentsTab({ productId }: Props) {
             <TableBody>
               {filteredDocs.map((doc) => {
                 const status = statusConfig[doc.status];
+                const vis = visibilityBadgeConfig[doc.visibility || 'internal'];
+                const VisIcon = vis.icon;
                 return (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">
@@ -187,7 +210,13 @@ export function ProductDocumentsTab({ productId }: Props) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{doc.category}</Badge>
+                      <Badge variant="outline">{t(doc.category)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={vis.className}>
+                        <VisIcon className="mr-1 h-3 w-3" />
+                        {t(vis.label)}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -229,6 +258,115 @@ export function ProductDocumentsTab({ productId }: Props) {
           </Table>
         )}
       </CardContent>
+
+      {/* Upload Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+          setSelectedFile(null);
+          setUploadForm({ name: '', category: 'Certificate', visibility: 'internal', validUntil: '' });
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Upload Document')}</DialogTitle>
+            <DialogDescription>
+              {t('Configure document details before uploading.')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {selectedFile && (
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <p className="font-medium">{selectedFile.name}</p>
+                <p className="text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="upload-name">{t('Name')}</Label>
+              <Input
+                id="upload-name"
+                value={uploadForm.name}
+                onChange={(e) => setUploadForm(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('Category')}</Label>
+              <Select
+                value={uploadForm.category}
+                onValueChange={(value) => setUploadForm(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DOCUMENT_CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{t(cat)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('Visibility')}</Label>
+              <Select
+                value={uploadForm.visibility}
+                onValueChange={(value) => setUploadForm(prev => ({ ...prev, visibility: value as VisibilityLevel }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-3.5 w-3.5" />
+                      {t('Internal Only')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="customs">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {t('Customs')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="consumer">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5" />
+                      {t('Consumer')}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="upload-valid-until">{t('Valid Until (optional)')}</Label>
+              <Input
+                id="upload-valid-until"
+                type="date"
+                value={uploadForm.validUntil}
+                onChange={(e) => setUploadForm(prev => ({ ...prev, validUntil: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              {t('Cancel', { ns: 'common' })}
+            </Button>
+            <Button onClick={handleUpload} disabled={!uploadForm.name || isUploading}>
+              {isUploading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              {isUploading ? t('Uploading...') : t('Upload')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
