@@ -97,9 +97,13 @@ export const defaultVisibilityConfigV2: VisibilityConfigV2 = {
     manufacturerVAT: 'customs',
     certificateDownloads: 'customs',
 
-    // Beispiel für interne Felder (können vom Admin hinzugefügt werden)
-    // internalNotes: 'internal',
-    // costPrice: 'internal',
+    // Support
+    supportResources: 'consumer',
+    supportWarranty: 'consumer',
+    supportFaq: 'consumer',
+    supportVideos: 'consumer',
+    supportRepair: 'consumer',
+    supportSpareParts: 'consumer',
   },
 };
 
@@ -255,6 +259,14 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'manufacturerAddress', label: 'Manufacturer Address', category: 'Customs Data' },
   { key: 'manufacturerEORI', label: 'EORI Number', category: 'Customs Data', description: 'Economic Operators Registration and Identification' },
   { key: 'manufacturerVAT', label: 'VAT ID', category: 'Customs Data', description: 'Value Added Tax Identification Number' },
+
+  // Support
+  { key: 'supportResources', label: 'Support Information', category: 'Support' },
+  { key: 'supportWarranty', label: 'Warranty', category: 'Support' },
+  { key: 'supportFaq', label: 'FAQ', category: 'Support' },
+  { key: 'supportVideos', label: 'Videos', category: 'Support' },
+  { key: 'supportRepair', label: 'Repair Information', category: 'Support' },
+  { key: 'supportSpareParts', label: 'Spare Parts', category: 'Support' },
 ];
 
 // Kategorien für die Gruppierung in den Einstellungen
@@ -267,6 +279,7 @@ export const fieldCategories = [
   'Certifications',
   'Supply Chain',
   'Customs Data',
+  'Support',
 ];
 
 // Hilfsfunktion zum Laden der V2-Konfiguration

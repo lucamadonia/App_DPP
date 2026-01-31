@@ -10,6 +10,11 @@ import {
   MapPin,
   ShieldCheck,
   Star,
+  HelpCircle,
+  BookOpen,
+  Video,
+  MessageSquare,
+  Wrench,
 } from 'lucide-react';
 import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
@@ -284,6 +289,170 @@ export function TemplateRetail({ product, visibilityV2, view }: DPPTemplateProps
           </div>
         </div>
       )}
+
+      {/* Support & Service */}
+      {isFieldVisible('supportResources') && product.supportResources && (() => {
+        const sr = product.supportResources!;
+        const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+        if (!hasContent) return null;
+        return (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border">
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle className="h-5 w-5 text-indigo-500" />
+              <div>
+                <h2 className="text-lg font-bold">{t('Support & Service')}</h2>
+                <p className="text-xs text-gray-500">{t('Customer support and product resources')}</p>
+              </div>
+            </div>
+            <div className="space-y-5">
+              {(sr.instructions || sr.assemblyGuide) && (
+                <div className="space-y-3">
+                  {sr.instructions && (
+                    <div className="bg-indigo-50 rounded-xl p-4">
+                      <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                        <BookOpen className="h-4 w-4 text-indigo-500" />
+                        {t('Usage Instructions')}
+                      </h4>
+                      <p className="text-sm text-gray-600">{sr.instructions}</p>
+                    </div>
+                  )}
+                  {sr.assemblyGuide && (
+                    <div className="bg-indigo-50 rounded-xl p-4">
+                      <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                        <BookOpen className="h-4 w-4 text-indigo-500" />
+                        {t('Assembly Guide')}
+                      </h4>
+                      <p className="text-sm text-gray-600">{sr.assemblyGuide}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                    <Video className="h-4 w-4 text-pink-500" />
+                    {t('Videos')}
+                  </h4>
+                  <div className="space-y-2">
+                    {sr.videos.map((v, i) => (
+                      <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-pink-50 rounded-xl hover:bg-pink-100 transition-colors text-sm font-medium text-pink-700">
+                        <Video className="h-4 w-4 flex-shrink-0" />
+                        {v.title}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                    <MessageSquare className="h-4 w-4 text-cyan-500" />
+                    {t('FAQ')}
+                  </h4>
+                  <div className="space-y-2">
+                    {sr.faq.map((item, i) => (
+                      <div key={i} className="bg-cyan-50 rounded-xl p-4">
+                        <p className="font-semibold text-sm text-cyan-800">{item.question}</p>
+                        <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div>
+                  <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                    <ShieldCheck className="h-4 w-4 text-green-500" />
+                    {t('Warranty')}
+                  </h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {sr.warranty.durationMonths != null && (
+                      <div className="bg-green-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-green-600">{t('Warranty Duration')}</p>
+                        <p className="font-bold text-green-700">{t('{{months}} months', { months: sr.warranty.durationMonths })}</p>
+                      </div>
+                    )}
+                    {sr.warranty.contactEmail && (
+                      <div className="bg-green-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-green-600">{t('Contact Email')}</p>
+                        <p className="font-bold text-sm text-green-700">{sr.warranty.contactEmail}</p>
+                      </div>
+                    )}
+                    {sr.warranty.contactPhone && (
+                      <div className="bg-green-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-green-600">{t('Contact Phone')}</p>
+                        <p className="font-bold text-sm text-green-700">{sr.warranty.contactPhone}</p>
+                      </div>
+                    )}
+                    {sr.warranty.terms && (
+                      <div className="bg-green-50 rounded-xl p-3 sm:col-span-2">
+                        <p className="text-xs text-green-600">{t('Warranty Terms')}</p>
+                        <p className="text-sm text-gray-600 mt-1">{sr.warranty.terms}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div>
+                  <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                    <Wrench className="h-4 w-4 text-amber-500" />
+                    {t('Repair Information')}
+                  </h4>
+                  <div className="space-y-2">
+                    {sr.repairInfo.repairGuide && (
+                      <div className="bg-amber-50 rounded-xl p-4">
+                        <p className="text-xs text-amber-600 mb-1">{t('Repair Guide')}</p>
+                        <p className="text-sm text-gray-600">{sr.repairInfo.repairGuide}</p>
+                      </div>
+                    )}
+                    {sr.repairInfo.repairabilityScore != null && (
+                      <div className="bg-amber-50 rounded-xl p-3 flex items-center justify-between">
+                        <span className="text-sm text-amber-700">{t('Repairability Score')}</span>
+                        <span className="font-bold text-lg text-amber-600">{sr.repairInfo.repairabilityScore}/10</span>
+                      </div>
+                    )}
+                    {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                      <div className="bg-amber-50 rounded-xl p-4">
+                        <p className="text-xs text-amber-600 mb-2">{t('Service Centers')}</p>
+                        {sr.repairInfo.serviceCenters.map((c, i) => (
+                          <p key={i} className="text-sm text-gray-600 flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-amber-500" />{c}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                    <Package className="h-4 w-4 text-purple-500" />
+                    {t('Spare Parts')}
+                  </h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {sr.spareParts.map((part, i) => (
+                      <div key={i} className="bg-purple-50 rounded-xl p-4 flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-sm">{part.name}</p>
+                          {part.partNumber && <p className="text-xs text-purple-600">{t('Part Number')}: {part.partNumber}</p>}
+                        </div>
+                        <div className="text-right">
+                          {part.price != null && <p className="font-bold text-sm text-purple-700">{part.price} {part.currency || '€'}</p>}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${part.available !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {part.available !== false ? t('Available') : t('Out of stock')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Customs data */}
       {view === 'customs' && (

@@ -521,5 +521,6 @@
   "Enter the subdomain in the Record name field": "Enter the subdomain in the Record name field",
   "Select Record type: CNAME": "Select Record type: CNAME",
   "Set TTL to 300": "Set TTL to 300",
-  "Click \"Create records\"": "Click \"Create records\""
+  "Click \"Create records\"": "Click \"Create records\"",
+  "Support": "Support"
 }

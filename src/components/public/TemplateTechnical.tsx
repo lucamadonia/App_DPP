@@ -1,6 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import {
+  HelpCircle,
+  BookOpen,
+  Video,
+  MessageSquare,
+  Wrench,
+  ShieldCheck,
+  Package,
+  MapPin,
+} from 'lucide-react';
 import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
@@ -314,6 +324,192 @@ export function TemplateTechnical({ product, visibilityV2, view }: DPPTemplatePr
             </div>
           </div>
         )}
+
+        {/* Support & Service */}
+        {isFieldVisible('supportResources') && product.supportResources && (() => {
+          const sr = product.supportResources!;
+          const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+          if (!hasContent) return null;
+          return (
+            <div className="p-4 sm:p-6 border-t border-gray-200">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-2">
+                <HelpCircle className="h-3.5 w-3.5" />
+                {t('Support & Service')}
+              </h2>
+              <p className="text-[10px] text-gray-400 font-mono mb-4">{t('Customer support and product resources')}</p>
+
+              <div className="space-y-4">
+                {/* Instructions & Assembly Guide */}
+                {(sr.instructions || sr.assemblyGuide) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sr.instructions && (
+                      <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-1">
+                          <BookOpen className="h-3 w-3" />
+                          {t('Usage Instructions')}
+                        </p>
+                        <p className="text-xs text-gray-700 font-mono">{sr.instructions}</p>
+                      </div>
+                    )}
+                    {sr.assemblyGuide && (
+                      <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-1">
+                          <BookOpen className="h-3 w-3" />
+                          {t('Assembly Guide')}
+                        </p>
+                        <p className="text-xs text-gray-700 font-mono">{sr.assemblyGuide}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Videos */}
+                {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-2">
+                      <Video className="h-3 w-3" />
+                      {t('Videos')}
+                    </p>
+                    <div className="space-y-1">
+                      {sr.videos.map((v, i) => (
+                        <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline py-1">
+                          <Video className="h-3 w-3 flex-shrink-0" />{v.title}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* FAQ */}
+                {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-2">
+                      <MessageSquare className="h-3 w-3" />
+                      {t('FAQ')}
+                    </p>
+                    <div className="divide-y divide-gray-100">
+                      {sr.faq.map((item, i) => (
+                        <div key={i} className="py-2">
+                          <p className="font-mono text-xs font-bold text-gray-800">{item.question}</p>
+                          <p className="font-mono text-xs text-gray-600 mt-0.5">{item.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warranty */}
+                {isFieldVisible('supportWarranty') && sr.warranty && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-2">
+                      <ShieldCheck className="h-3 w-3" />
+                      {t('Warranty')}
+                    </p>
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-gray-100">
+                        {sr.warranty.durationMonths != null && (
+                          <tr>
+                            <td className="py-1.5 text-gray-500 font-mono text-xs">{t('Warranty Duration')}</td>
+                            <td className="py-1.5 text-right font-mono text-xs">{t('{{months}} months', { months: sr.warranty.durationMonths })}</td>
+                          </tr>
+                        )}
+                        {sr.warranty.contactEmail && (
+                          <tr>
+                            <td className="py-1.5 text-gray-500 font-mono text-xs">{t('Contact Email')}</td>
+                            <td className="py-1.5 text-right font-mono text-xs">{sr.warranty.contactEmail}</td>
+                          </tr>
+                        )}
+                        {sr.warranty.contactPhone && (
+                          <tr>
+                            <td className="py-1.5 text-gray-500 font-mono text-xs">{t('Contact Phone')}</td>
+                            <td className="py-1.5 text-right font-mono text-xs">{sr.warranty.contactPhone}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                    {sr.warranty.terms && (
+                      <div className="bg-gray-50 p-3 rounded border border-gray-200 mt-2">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Warranty Terms')}</p>
+                        <p className="text-xs text-gray-700 font-mono">{sr.warranty.terms}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Repair Information */}
+                {isFieldVisible('supportRepair') && sr.repairInfo && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-2">
+                      <Wrench className="h-3 w-3" />
+                      {t('Repair Information')}
+                    </p>
+                    {sr.repairInfo.repairGuide && (
+                      <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-2">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Repair Guide')}</p>
+                        <p className="text-xs text-gray-700 font-mono">{sr.repairInfo.repairGuide}</p>
+                      </div>
+                    )}
+                    {sr.repairInfo.repairabilityScore != null && (
+                      <table className="w-full text-sm mb-2">
+                        <tbody>
+                          <tr className="border-b border-gray-100">
+                            <td className="py-1.5 text-gray-500 font-mono text-xs">{t('Repairability Score')}</td>
+                            <td className="py-1.5 text-right font-mono text-xs font-bold">{sr.repairInfo.repairabilityScore}/10</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+                    {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Service Centers')}</p>
+                        {sr.repairInfo.serviceCenters.map((c, i) => (
+                          <p key={i} className="font-mono text-xs text-gray-600 flex items-center gap-1 py-0.5">
+                            <MapPin className="h-3 w-3 flex-shrink-0" />{c}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Spare Parts */}
+                {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1 mb-2">
+                      <Package className="h-3 w-3" />
+                      {t('Spare Parts')}
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b-2 border-gray-300">
+                            <th className="py-2 text-left font-mono text-xs text-gray-600">{t('Spare Parts')}</th>
+                            <th className="py-2 text-left font-mono text-xs text-gray-600">{t('Part Number')}</th>
+                            <th className="py-2 text-right font-mono text-xs text-gray-600">{t('Status')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {sr.spareParts.map((part, i) => (
+                            <tr key={i}>
+                              <td className="py-2 font-mono text-xs font-medium">{part.name}</td>
+                              <td className="py-2 font-mono text-xs text-gray-500">{part.partNumber || '-'}</td>
+                              <td className="py-2 text-right font-mono text-xs">
+                                {part.price != null && <span className="mr-2">{part.price} {part.currency || '€'}</span>}
+                                <span className={part.available !== false ? 'text-green-600' : 'text-red-500'}>
+                                  {part.available !== false ? t('Available') : t('Out of stock')}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

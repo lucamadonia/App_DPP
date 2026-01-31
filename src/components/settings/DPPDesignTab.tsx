@@ -21,6 +21,7 @@ import {
   Recycle,
   Award,
   Truck,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +68,7 @@ const SECTION_LABELS: Record<DPPSectionId, { icon: React.ReactNode; labelKey: st
   recycling: { icon: <Recycle className="h-4 w-4" />, labelKey: 'Recycling' },
   certifications: { icon: <Award className="h-4 w-4" />, labelKey: 'Certifications' },
   supplyChain: { icon: <Truck className="h-4 w-4" />, labelKey: 'Supply Chain' },
+  support: { icon: <HelpCircle className="h-4 w-4" />, labelKey: 'Support' },
 };
 
 const TEMPLATE_OPTIONS: { value: DPPTemplateName; labelKey: string; descKey: string }[] = [
@@ -82,6 +84,194 @@ const TEMPLATE_OPTIONS: { value: DPPTemplateName; labelKey: string; descKey: str
   { value: 'scientific', labelKey: 'Scientific', descKey: 'Data visualization, academic structure' },
   { value: 'accessible', labelKey: 'Accessible', descKey: 'WCAG AAA, extra-large text, high contrast' },
 ];
+
+function TemplateMiniPreview({ template }: { template: DPPTemplateName }) {
+  const base = 'w-full h-[100px] rounded-md overflow-hidden relative';
+
+  switch (template) {
+    case 'modern':
+      return (
+        <div className={base} style={{ background: '#f8fafc' }}>
+          <div style={{ height: 28, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', borderRadius: '0 0 6px 6px' }} />
+          <div className="px-2 pt-2 space-y-1.5">
+            {['#3b82f6', '#8b5cf6', '#6366f1'].map((c, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <div style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: c, flexShrink: 0 }} />
+                <div style={{ height: 14, borderRadius: 6, backgroundColor: '#e2e8f0', flex: 1 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'classic':
+      return (
+        <div className={base} style={{ background: '#fafafa' }}>
+          <div style={{ height: 2, backgroundColor: '#94a3b8', margin: '8px 8px 0' }} />
+          <div className="px-2 pt-2 space-y-1.5">
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ height: 18, border: '1px solid #cbd5e1', borderRadius: 3 }} />
+            ))}
+          </div>
+          <div style={{ height: 1, backgroundColor: '#e2e8f0', margin: '6px 8px 0' }} />
+        </div>
+      );
+
+    case 'compact':
+      return (
+        <div className={base} style={{ background: '#f8fafc' }}>
+          <div className="flex gap-1 px-2 pt-2">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} style={{ height: 3, flex: 1, borderRadius: 2, backgroundColor: i === 0 ? '#3b82f6' : '#cbd5e1' }} />
+            ))}
+          </div>
+          <div className="px-2 pt-2 space-y-1">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="flex gap-1">
+                <div style={{ height: 8, flex: 2, backgroundColor: '#e2e8f0', borderRadius: 2 }} />
+                <div style={{ height: 8, flex: 3, backgroundColor: '#f1f5f9', borderRadius: 2 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'minimal':
+      return (
+        <div className={base} style={{ background: '#ffffff' }}>
+          <div className="flex flex-col items-center pt-5 px-3">
+            <div style={{ width: '60%', height: 10, backgroundColor: '#1e293b', borderRadius: 2, marginBottom: 12 }} />
+            <div style={{ width: '80%', height: 1, backgroundColor: '#e2e8f0', marginBottom: 10 }} />
+            <div style={{ width: '50%', height: 6, backgroundColor: '#f1f5f9', borderRadius: 2, marginBottom: 10 }} />
+            <div style={{ width: '80%', height: 1, backgroundColor: '#e2e8f0', marginBottom: 10 }} />
+            <div style={{ width: '40%', height: 6, backgroundColor: '#f1f5f9', borderRadius: 2 }} />
+          </div>
+        </div>
+      );
+
+    case 'technical':
+      return (
+        <div className={base} style={{ background: '#f1f5f9' }}>
+          <div style={{ height: 22, backgroundColor: '#111827', display: 'flex', alignItems: 'center', padding: '0 6px', gap: 3 }}>
+            <div style={{ width: 16, height: 4, backgroundColor: '#6ee7b7', borderRadius: 1 }} />
+            <div style={{ width: 24, height: 4, backgroundColor: '#4b5563', borderRadius: 1 }} />
+          </div>
+          <div className="px-2 pt-1.5" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3 }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} style={{ height: 3, width: 3, borderRadius: '50%', backgroundColor: '#94a3b8' }} />
+            ))}
+          </div>
+          <div className="px-2 pt-1 space-y-1">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="flex gap-1">
+                <div style={{ width: 20, height: 8, backgroundColor: '#e2e8f0', borderRadius: 2, fontFamily: 'monospace' }} />
+                <div style={{ height: 8, flex: 1, backgroundColor: '#f8fafc', borderRadius: 2 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'eco-friendly':
+      return (
+        <div className={base} style={{ background: '#f0fdf4' }}>
+          <div style={{ height: 26, background: 'linear-gradient(135deg, #16a34a, #22c55e)', borderRadius: '0 0 6px 6px', position: 'relative' }}>
+            <div style={{ position: 'absolute', right: 6, top: 5, width: 14, height: 14, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.25)' }} />
+          </div>
+          <div className="px-2 pt-2 space-y-1.5">
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ height: 16, backgroundColor: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: 4 }} />
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'premium':
+      return (
+        <div className={base} style={{ background: '#030712' }}>
+          <div style={{ height: 2, background: 'linear-gradient(90deg, #d97706, #f59e0b)', margin: '10px 8px 0' }} />
+          <div style={{ width: '50%', height: 8, backgroundColor: '#1f2937', borderRadius: 2, margin: '8px auto 0' }} />
+          <div className="px-3 pt-2 space-y-1.5">
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ height: 14, backgroundColor: '#111827', border: '1px solid #1f2937', borderRadius: 3 }} />
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'government':
+      return (
+        <div className={base} style={{ background: '#ffffff' }}>
+          <div style={{ height: 3, backgroundColor: '#1e3a5f', margin: '6px 6px 0' }} />
+          <div className="px-2 pt-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} style={{ height: 22, border: '1px solid #cbd5e1', borderRadius: 2 }} />
+            ))}
+          </div>
+          <div style={{ height: 3, backgroundColor: '#1e3a5f', margin: '6px 6px 0' }} />
+        </div>
+      );
+
+    case 'retail':
+      return (
+        <div className={base} style={{ background: '#fafafa' }}>
+          <div className="flex gap-2 p-2">
+            <div style={{ width: 36, height: 36, backgroundColor: '#e2e8f0', borderRadius: 8, flexShrink: 0 }} />
+            <div className="flex-1 pt-1 space-y-1">
+              <div style={{ height: 6, width: '70%', backgroundColor: '#334155', borderRadius: 2 }} />
+              <div className="flex gap-0.5">
+                {[0, 1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: i < 4 ? '#facc15' : '#e2e8f0' }} />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1 px-2">
+            {['#3b82f6', '#10b981', '#f59e0b'].map((c, i) => (
+              <div key={i} style={{ height: 10, flex: 1, backgroundColor: c, borderRadius: 4, opacity: 0.8 }} />
+            ))}
+          </div>
+          <div className="px-2 pt-1.5 space-y-1">
+            {[0, 1].map(i => (
+              <div key={i} style={{ height: 12, backgroundColor: '#f1f5f9', borderRadius: 4 }} />
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'scientific':
+      return (
+        <div className={base} style={{ background: '#ffffff' }}>
+          <div className="px-2 pt-2 space-y-1.5">
+            {['1.', '2.', '3.'].map((num, i) => (
+              <div key={i}>
+                <div className="flex items-center gap-1">
+                  <span style={{ fontSize: 7, fontWeight: 700, color: '#64748b', lineHeight: 1, flexShrink: 0 }}>{num}</span>
+                  <div style={{ height: 6, flex: 1, backgroundColor: '#e2e8f0', borderRadius: 2 }} />
+                </div>
+                <div style={{ height: 1, backgroundColor: '#f1f5f9', marginTop: 4, marginLeft: 12 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'accessible':
+      return (
+        <div className={base} style={{ background: '#ffffff', border: '3px solid #000000' }}>
+          <div className="px-2 pt-2 space-y-2">
+            <div style={{ height: 10, width: '70%', backgroundColor: '#000000', borderRadius: 2 }} />
+            <div style={{ height: 8, width: '90%', backgroundColor: '#374151', borderRadius: 2 }} />
+            <div style={{ height: 8, width: '80%', backgroundColor: '#374151', borderRadius: 2 }} />
+            <div style={{ height: 8, width: '60%', backgroundColor: '#374151', borderRadius: 2 }} />
+          </div>
+        </div>
+      );
+
+    default:
+      return <div className={base} style={{ background: '#f1f5f9' }} />;
+  }
+}
 
 export function DPPDesignTab() {
   const { t } = useTranslation('settings');
@@ -254,19 +444,24 @@ export function DPPDesignTab() {
             <div className="space-y-3">
               <Label className="text-sm font-medium">{t('Customer Template')}</Label>
               <p className="text-xs text-muted-foreground">{t('Template shown to consumers scanning the QR code')}</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                 {TEMPLATE_OPTIONS.map((tmpl) => (
                   <button
                     key={tmpl.value}
                     onClick={() => setTemplateCustomer(tmpl.value)}
-                    className={`p-3 rounded-lg border-2 text-left transition-all text-sm ${
+                    className={`rounded-lg border-2 text-left transition-all text-sm overflow-hidden ${
                       templateCustomer === tmpl.value
                         ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                         : 'border-muted hover:border-muted-foreground/30'
                     }`}
                   >
-                    <p className="font-medium">{t(tmpl.labelKey, { ns: 'dpp' })}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t(tmpl.descKey, { ns: 'dpp' })}</p>
+                    <div className="p-1.5 pb-0">
+                      <TemplateMiniPreview template={tmpl.value} />
+                    </div>
+                    <div className="p-2 pt-1.5">
+                      <p className="font-medium">{t(tmpl.labelKey, { ns: 'dpp' })}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{t(tmpl.descKey, { ns: 'dpp' })}</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -276,19 +471,24 @@ export function DPPDesignTab() {
             <div className="space-y-3">
               <Label className="text-sm font-medium">{t('Customs Template')}</Label>
               <p className="text-xs text-muted-foreground">{t('Template shown to customs authorities')}</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                 {TEMPLATE_OPTIONS.map((tmpl) => (
                   <button
                     key={tmpl.value}
                     onClick={() => setTemplateCustoms(tmpl.value)}
-                    className={`p-3 rounded-lg border-2 text-left transition-all text-sm ${
+                    className={`rounded-lg border-2 text-left transition-all text-sm overflow-hidden ${
                       templateCustoms === tmpl.value
                         ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                         : 'border-muted hover:border-muted-foreground/30'
                     }`}
                   >
-                    <p className="font-medium">{t(tmpl.labelKey, { ns: 'dpp' })}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t(tmpl.descKey, { ns: 'dpp' })}</p>
+                    <div className="p-1.5 pb-0">
+                      <TemplateMiniPreview template={tmpl.value} />
+                    </div>
+                    <div className="p-2 pt-1.5">
+                      <p className="font-medium">{t(tmpl.labelKey, { ns: 'dpp' })}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{t(tmpl.descKey, { ns: 'dpp' })}</p>
+                    </div>
                   </button>
                 ))}
               </div>

@@ -356,6 +356,177 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
         </section>
       )}
 
+      {/* Support & Service */}
+      {isFieldVisible('supportResources') && product.supportResources && (() => {
+        const sr = product.supportResources!;
+        const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+        if (!hasContent) return null;
+        return (
+          <section>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              {nextSection()}. {t('Support & Service')}
+            </h2>
+            <p className="text-sm text-gray-600 mb-3">{t('Customer support and product resources')}</p>
+            <div className="space-y-6">
+              {(sr.instructions || sr.assemblyGuide) && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border border-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Category')}</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Description')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sr.instructions && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Usage Instructions')}</td>
+                          <td className="py-2 px-3 text-gray-700">{sr.instructions}</td>
+                        </tr>
+                      )}
+                      {sr.assemblyGuide && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Assembly Guide')}</td>
+                          <td className="py-2 px-3 text-gray-700">{sr.assemblyGuide}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border border-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Videos')}</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">URL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sr.videos.map((v, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="py-2 px-3 text-gray-500">{i + 1}</td>
+                          <td className="py-2 px-3 font-medium">{v.title}</td>
+                          <td className="py-2 px-3"><a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{v.url}</a></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border border-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('FAQ')}</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Value')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sr.faq.map((item, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="py-2 px-3 text-gray-500">{i + 1}</td>
+                          <td className="py-2 px-3 font-medium">{item.question}</td>
+                          <td className="py-2 px-3 text-gray-600">{item.answer}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border border-gray-200">
+                    <tbody>
+                      {sr.warranty.durationMonths != null && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Warranty Duration')}</td>
+                          <td className="py-2 px-3 font-mono">{t('{{months}} months', { months: sr.warranty.durationMonths })}</td>
+                        </tr>
+                      )}
+                      {sr.warranty.contactEmail && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Contact Email')}</td>
+                          <td className="py-2 px-3">{sr.warranty.contactEmail}</td>
+                        </tr>
+                      )}
+                      {sr.warranty.contactPhone && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Contact Phone')}</td>
+                          <td className="py-2 px-3">{sr.warranty.contactPhone}</td>
+                        </tr>
+                      )}
+                      {sr.warranty.terms && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Warranty Terms')}</td>
+                          <td className="py-2 px-3 text-gray-700">{sr.warranty.terms}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border border-gray-200">
+                    <tbody>
+                      {sr.repairInfo.repairGuide && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Repair Guide')}</td>
+                          <td className="py-2 px-3 text-gray-700">{sr.repairInfo.repairGuide}</td>
+                        </tr>
+                      )}
+                      {sr.repairInfo.repairabilityScore != null && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Repairability Score')}</td>
+                          <td className="py-2 px-3 font-bold">{sr.repairInfo.repairabilityScore}/10</td>
+                        </tr>
+                      )}
+                      {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Service Centers')}</td>
+                          <td className="py-2 px-3 text-gray-700">{sr.repairInfo.serviceCenters.join('; ')}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border border-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Spare Parts')}</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Part Number')}</th>
+                        <th className="py-2 px-3 text-right font-semibold text-gray-700 border-b border-gray-200">{t('Value')}</th>
+                        <th className="py-2 px-3 text-center font-semibold text-gray-700 border-b border-gray-200">{t('Available')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sr.spareParts.map((part, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="py-2 px-3 text-gray-500">{i + 1}</td>
+                          <td className="py-2 px-3 font-medium">{part.name}</td>
+                          <td className="py-2 px-3 font-mono">{part.partNumber || '-'}</td>
+                          <td className="py-2 px-3 text-right">{part.price != null ? `${part.price} ${part.currency || '€'}` : '-'}</td>
+                          <td className="py-2 px-3 text-center">{part.available !== false ? t('Yes') : t('No')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
+
       {/* References / Footer */}
       <footer className="border-t-2 border-gray-300 pt-6">
         <h2 className="text-lg font-bold text-gray-900 mb-3">

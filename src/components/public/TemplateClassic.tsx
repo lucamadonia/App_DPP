@@ -13,6 +13,11 @@ import {
   Building2,
   ShieldCheck,
   Globe,
+  HelpCircle,
+  BookOpen,
+  Video,
+  MessageSquare,
+  Wrench,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -85,8 +90,114 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
       case 'recycling': return renderRecycling();
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
+      case 'support': return renderSupport();
       default: return null;
     }
+  };
+
+  const renderSupport = () => {
+    if (!isFieldVisible('supportResources') || !product.supportResources) return null;
+    const sr = product.supportResources;
+    const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+    if (!hasContent) return null;
+    return (
+      <Card key="support" style={cardStyle}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2" style={headingStyle}>
+            <HelpCircle className="h-5 w-5" />
+            {t('Support & Service')}
+          </CardTitle>
+          <CardDescription>{t('Customer support and product resources')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {(sr.instructions || sr.assemblyGuide) && (
+            <div className="space-y-3">
+              {sr.instructions && (
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
+                  <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                </div>
+              )}
+              {sr.assemblyGuide && (
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
+                  <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                </div>
+              )}
+            </div>
+          )}
+          {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2"><Video className="h-4 w-4" />{t('Videos')}</h4>
+              <div className="space-y-2">
+                {sr.videos.map((v, i) => (
+                  <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors text-sm font-medium text-primary">
+                    <Video className="h-4 w-4 flex-shrink-0" />{v.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" />{t('FAQ')}</h4>
+              <div className="space-y-3">
+                {sr.faq.map((item, i) => (
+                  <div key={i} className="p-4 border rounded-lg">
+                    <p className="font-medium text-sm">{item.question}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {isFieldVisible('supportWarranty') && sr.warranty && (
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4" />{t('Warranty')}</h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {sr.warranty.durationMonths != null && (
+                  <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Warranty Duration')}</span><span className="font-medium">{t('{{months}} months', { months: sr.warranty.durationMonths })}</span></div>
+                )}
+                {sr.warranty.contactEmail && (
+                  <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Contact Email')}</span><span className="font-medium">{sr.warranty.contactEmail}</span></div>
+                )}
+                {sr.warranty.contactPhone && (
+                  <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Contact Phone')}</span><span className="font-medium">{sr.warranty.contactPhone}</span></div>
+                )}
+              </div>
+              {sr.warranty.terms && (
+                <div className="mt-3 p-3 border rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Warranty Terms')}</p><p className="text-sm">{sr.warranty.terms}</p></div>
+              )}
+            </div>
+          )}
+          {isFieldVisible('supportRepair') && sr.repairInfo && (
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
+              {sr.repairInfo.repairGuide && <p className="text-sm text-muted-foreground mb-2">{sr.repairInfo.repairGuide}</p>}
+              {sr.repairInfo.repairabilityScore != null && (
+                <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Repairability Score')}</span><span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span></div>
+              )}
+              {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                <div className="mt-2"><p className="text-sm font-medium mb-1">{t('Service Centers')}</p>{sr.repairInfo.serviceCenters.map((c, i) => <p key={i} className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{c}</p>)}</div>
+              )}
+            </div>
+          )}
+          {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2"><Package className="h-4 w-4" />{t('Spare Parts')}</h4>
+              <div className="space-y-2">
+                {sr.spareParts.map((part, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div><p className="font-medium text-sm">{part.name}</p>{part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}</div>
+                    <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderMaterials = () => {

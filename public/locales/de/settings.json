@@ -520,5 +520,6 @@
   "Enter the subdomain in the Record name field": "Geben Sie die Subdomain im Feld Eintragsname ein",
   "Select Record type: CNAME": "Wählen Sie Eintragstyp: CNAME",
   "Set TTL to 300": "Setzen Sie TTL auf 300",
-  "Click \"Create records\"": "Klicken Sie auf „Einträge erstellen""
+  "Click \"Create records\"": "Klicken Sie auf „Einträge erstellen"",
+  "Support": "Support"
 }

@@ -191,3 +191,76 @@ export {
   copyVisibilitySettingsToProduct,
   getPublicVisibilitySettings,
 } from './visibility';
+
+// Returns Hub - Returns
+export {
+  getReturns,
+  getReturn,
+  getReturnByNumber,
+  createReturn,
+  updateReturn,
+  updateReturnStatus,
+  approveReturn,
+  rejectReturn,
+  getReturnStats,
+} from './returns';
+
+// Returns Hub - Return Items
+export {
+  getReturnItems,
+  addReturnItem,
+  updateReturnItem,
+  removeReturnItem,
+} from './return-items';
+
+// Returns Hub - Return Timeline
+export {
+  getReturnTimeline,
+  addTimelineEntry,
+} from './return-timeline';
+
+// Returns Hub - Customers
+export {
+  getRhCustomers,
+  getRhCustomer,
+  createRhCustomer,
+  updateRhCustomer,
+  getRhCustomerReturns,
+} from './rh-customers';
+
+// Returns Hub - Tickets
+export {
+  getRhTickets,
+  getRhTicket,
+  createRhTicket,
+  updateRhTicket,
+  getRhTicketMessages,
+  addRhTicketMessage,
+  assignRhTicket,
+} from './rh-tickets';
+
+// Returns Hub - Settings
+export {
+  getReturnsHubSettings,
+  updateReturnsHubSettings,
+  getReturnReasons,
+  createReturnReason,
+  updateReturnReason,
+  deleteReturnReason,
+  getPublicReturnReasons,
+} from './rh-settings';
+
+// Returns Hub - Workflows
+export {
+  getRhWorkflowRules,
+  createRhWorkflowRule,
+  updateRhWorkflowRule,
+  deleteRhWorkflowRule,
+} from './rh-workflows';
+
+// Returns Hub - Notifications
+export {
+  getRhNotifications,
+  createRhNotification,
+  markRhNotificationSent,
+} from './rh-notifications';

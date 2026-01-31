@@ -5,6 +5,8 @@
  * Unterteilt in Master-Daten (shared) und Tenant-Daten (mandantenspezifisch).
  */
 
+import type { ReturnsHubSettings } from './returns-hub';
+
 // ============================================
 // TENANT (Mandant)
 // ============================================
@@ -72,7 +74,7 @@ export type DPPHeroHeight = 'compact' | 'normal' | 'tall';
 export type DPPBorderRadius = 'none' | 'small' | 'medium' | 'large' | 'full';
 export type DPPShadowDepth = 'none' | 'subtle' | 'medium' | 'strong';
 export type DPPBorderStyle = 'none' | 'thin' | 'thick';
-export type DPPSectionId = 'materials' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain';
+export type DPPSectionId = 'materials' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain' | 'support';
 
 export interface DPPColorSettings {
   secondaryColor?: string;
@@ -144,6 +146,7 @@ export interface TenantSettings {
   branding?: BrandingSettings;
   qrCode?: QRCodeDomainSettings;
   dppDesign?: DPPDesignSettings;
+  returnsHub?: ReturnsHubSettings;
 }
 
 // ============================================
@@ -664,3 +667,4 @@ export interface ActivityLogEntry {
 // Re-export from product.ts for convenience (Material is defined locally, so we only export the others)
 export type { Product, CarbonFootprint, RecyclabilityInfo } from './product';
 export type { SupplyChainEntry as ProductSupplyChainEntry } from './product';
+export type { ReturnsHubSettings } from './returns-hub';

@@ -243,6 +243,135 @@ export function TemplateMinimal({ product, visibilityV2, view }: DPPTemplateProp
           </div>
         </section>
       )}
+
+      {/* Support & Service */}
+      {isFieldVisible('supportResources') && product.supportResources && (() => {
+        const sr = product.supportResources!;
+        const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+        if (!hasContent) return null;
+        return (
+          <section className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold">{t('Support & Service')}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{t('Customer support and product resources')}</p>
+            </div>
+            <div className="space-y-10">
+              {sr.instructions && (
+                <div className="space-y-2">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Usage Instructions')}</h3>
+                  <p className="text-sm leading-relaxed text-foreground/80">{sr.instructions}</p>
+                </div>
+              )}
+              {sr.assemblyGuide && (
+                <div className="space-y-2">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Assembly Guide')}</h3>
+                  <p className="text-sm leading-relaxed text-foreground/80">{sr.assemblyGuide}</p>
+                </div>
+              )}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Videos')}</h3>
+                  <div className="space-y-2">
+                    {sr.videos.map((v, i) => (
+                      <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="block py-2 text-sm font-medium hover:underline underline-offset-4">
+                        {v.title}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('FAQ')}</h3>
+                  <div className="space-y-4">
+                    {sr.faq.map((item, i) => (
+                      <div key={i} className="space-y-1">
+                        <p className="font-medium text-sm">{item.question}</p>
+                        <p className="text-sm text-muted-foreground">{item.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div className="space-y-3">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Warranty')}</h3>
+                  <div className="space-y-3">
+                    {sr.warranty.durationMonths != null && (
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">{t('Warranty Duration')}</span>
+                        <span>{t('{{months}} months', { months: sr.warranty.durationMonths })}</span>
+                      </div>
+                    )}
+                    {sr.warranty.contactEmail && (
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">{t('Contact Email')}</span>
+                        <span className="text-sm">{sr.warranty.contactEmail}</span>
+                      </div>
+                    )}
+                    {sr.warranty.contactPhone && (
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">{t('Contact Phone')}</span>
+                        <span>{sr.warranty.contactPhone}</span>
+                      </div>
+                    )}
+                    {sr.warranty.terms && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">{sr.warranty.terms}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div className="space-y-3">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Repair Information')}</h3>
+                  <div className="space-y-3">
+                    {sr.repairInfo.repairGuide && (
+                      <p className="text-sm leading-relaxed text-foreground/80">{sr.repairInfo.repairGuide}</p>
+                    )}
+                    {sr.repairInfo.repairabilityScore != null && (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-light">{sr.repairInfo.repairabilityScore}</span>
+                        <span className="text-muted-foreground">/10 {t('Repairability Score')}</span>
+                      </div>
+                    )}
+                    {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">{t('Service Centers')}</p>
+                        {sr.repairInfo.serviceCenters.map((c, i) => (
+                          <p key={i} className="text-sm text-foreground/80">{c}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Spare Parts')}</h3>
+                  <div className="space-y-4">
+                    {sr.spareParts.map((part, i) => (
+                      <div key={i} className="flex justify-between items-center py-2">
+                        <div>
+                          <span className="font-medium text-sm">{part.name}</span>
+                          {part.partNumber && (
+                            <span className="ml-2 text-xs text-muted-foreground">{part.partNumber}</span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {part.price != null && <span className="text-sm font-light mr-3">{part.price} {part.currency || '€'}</span>}
+                          <span className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'} border-b border-dashed`}>
+                            {part.available !== false ? t('Available') : t('Out of stock')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
     </div>
   );
 }

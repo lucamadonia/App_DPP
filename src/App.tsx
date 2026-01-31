@@ -37,6 +37,19 @@ import { SupplyChainPage } from '@/pages/SupplyChainPage';
 import { SuppliersPage } from '@/pages/SuppliersPage';
 import { BatchFormPage } from '@/pages/BatchFormPage';
 import { BatchDetailPage } from '@/pages/BatchDetailPage';
+import { ReturnsHubDashboardPage } from '@/pages/returns/ReturnsHubDashboardPage';
+import { ReturnsListPage } from '@/pages/returns/ReturnsListPage';
+import { CreateReturnPage } from '@/pages/returns/CreateReturnPage';
+import { ReturnDetailPage } from '@/pages/returns/ReturnDetailPage';
+import { CustomersListPage } from '@/pages/returns/CustomersListPage';
+import { CustomerDetailPage } from '@/pages/returns/CustomerDetailPage';
+import { TicketsListPage } from '@/pages/returns/TicketsListPage';
+import { TicketDetailPage } from '@/pages/returns/TicketDetailPage';
+import { ReturnsReportsPage } from '@/pages/returns/ReturnsReportsPage';
+import { ReturnsSettingsPage } from '@/pages/returns/ReturnsSettingsPage';
+import { WorkflowRulesPage } from '@/pages/returns/WorkflowRulesPage';
+import { PublicReturnRegisterPage } from '@/pages/returns/PublicReturnRegisterPage';
+import { PublicReturnTrackingPage } from '@/pages/returns/PublicReturnTrackingPage';
 import './index.css';
 
 // Protected Route - redirects to login if not authenticated
@@ -119,6 +132,10 @@ function App() {
           <Route path="01/:gtin/21/:serial/customs" element={<PublicCustomsPage />} />
         </Route>
 
+        {/* Public Returns Hub pages (no auth, no layout wrapper) */}
+        <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
+        <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
+
         {/* Admin area with sidebar (protected) */}
         <Route element={<ProtectedRoute />}>
           <Route index element={<DashboardPage />} />
@@ -147,6 +164,19 @@ function App() {
           {/* Supply Chain */}
           <Route path="supply-chain" element={<SupplyChainPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
+
+          {/* Returns Hub */}
+          <Route path="returns" element={<ReturnsHubDashboardPage />} />
+          <Route path="returns/list" element={<ReturnsListPage />} />
+          <Route path="returns/new" element={<CreateReturnPage />} />
+          <Route path="returns/:id" element={<ReturnDetailPage />} />
+          <Route path="returns/customers" element={<CustomersListPage />} />
+          <Route path="returns/customers/:id" element={<CustomerDetailPage />} />
+          <Route path="returns/tickets" element={<TicketsListPage />} />
+          <Route path="returns/tickets/:id" element={<TicketDetailPage />} />
+          <Route path="returns/reports" element={<ReturnsReportsPage />} />
+          <Route path="returns/settings" element={<ReturnsSettingsPage />} />
+          <Route path="returns/workflows" element={<WorkflowRulesPage />} />
 
           {/* Compliance */}
           <Route path="compliance" element={<CompliancePage />} />

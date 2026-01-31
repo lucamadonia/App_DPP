@@ -14,6 +14,9 @@ import {
   Building2,
   ShieldCheck,
   Globe,
+  HelpCircle,
+  BookOpen,
+  Video,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,7 +65,7 @@ interface ViewProps {
   design: ReturnType<typeof resolveDesign>;
 }
 
-type ConsumerTab = 'materials' | 'co2' | 'recycling' | 'certs' | 'supply';
+type ConsumerTab = 'materials' | 'co2' | 'recycling' | 'certs' | 'supply' | 'support';
 type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2';
 
 // Mapping from DPPSectionId to ConsumerTab id
@@ -72,6 +75,7 @@ const sectionToTabMap: Record<DPPSectionId, ConsumerTab> = {
   recycling: 'recycling',
   certifications: 'certs',
   supplyChain: 'supply',
+  support: 'support',
 };
 
 function CompactConsumerView({ product, isFieldVisible, t, locale, design }: ViewProps) {
@@ -85,6 +89,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
     recycling: { label: t('Recycling'), icon: <Recycle className="h-3.5 w-3.5" />, visible: isFieldVisible('recyclability') },
     certs: { label: t('Certifications'), icon: <Award className="h-3.5 w-3.5" />, visible: isFieldVisible('certifications') && product.certifications.length > 0 },
     supply: { label: t('Supply Chain'), icon: <Truck className="h-3.5 w-3.5" />, visible: isFieldVisible('supplyChainSimple') && product.supplyChain.length > 0 },
+    support: { label: t('Support & Service'), icon: <HelpCircle className="h-3.5 w-3.5" />, visible: isFieldVisible('supportResources') && !!product.supportResources && !!(product.supportResources.instructions || product.supportResources.assemblyGuide || (product.supportResources.videos && product.supportResources.videos.length > 0) || (product.supportResources.faq && product.supportResources.faq.length > 0) || product.supportResources.warranty || product.supportResources.repairInfo || (product.supportResources.spareParts && product.supportResources.spareParts.length > 0)) },
   };
 
   // Order tabs according to design.sections.order, filtering by section visibility and data visibility
@@ -279,6 +284,82 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
             ))}
           </div>
         )}
+
+        {activeTab === 'support' && isFieldVisible('supportResources') && product.supportResources && (() => {
+          const sr = product.supportResources!;
+          return (
+            <div className="space-y-3" style={cardStyle}>
+              {(sr.instructions || sr.assemblyGuide) && (
+                <div className="space-y-2">
+                  {sr.instructions && (
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Usage Instructions')}</p>
+                      <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                    </div>
+                  )}
+                  {sr.assemblyGuide && (
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Assembly Guide')}</p>
+                      <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div className="space-y-1.5">
+                  {sr.videos.map((v, i) => (
+                    <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg text-sm font-medium text-primary hover:bg-muted/50 transition-colors">
+                      <Video className="h-3.5 w-3.5 flex-shrink-0" />{v.title}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div className="space-y-2">
+                  {sr.faq.map((item, i) => (
+                    <div key={i} className="p-3 bg-muted/30 rounded-lg">
+                      <p className="font-medium text-sm">{item.question}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div className="space-y-1">
+                  {sr.warranty.durationMonths != null && (
+                    <div className="flex justify-between py-2 border-b text-sm"><span className="text-muted-foreground">{t('Warranty Duration')}</span><span className="font-medium">{t('{{months}} months', { months: sr.warranty.durationMonths })}</span></div>
+                  )}
+                  {sr.warranty.contactEmail && (
+                    <div className="flex justify-between py-2 border-b text-sm"><span className="text-muted-foreground">{t('Contact Email')}</span><span className="font-medium">{sr.warranty.contactEmail}</span></div>
+                  )}
+                  {sr.warranty.contactPhone && (
+                    <div className="flex justify-between py-2 border-b text-sm"><span className="text-muted-foreground">{t('Contact Phone')}</span><span className="font-medium">{sr.warranty.contactPhone}</span></div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div className="space-y-2">
+                  {sr.repairInfo.repairabilityScore != null && (
+                    <div className="flex justify-between p-3 bg-muted/30 rounded-lg text-sm"><span>{t('Repairability Score')}</span><span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span></div>
+                  )}
+                  {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                    <div className="p-3 bg-muted/30 rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Service Centers')}</p>{sr.repairInfo.serviceCenters.map((c, i) => <p key={i} className="text-sm flex items-center gap-1"><MapPin className="h-3 w-3" />{c}</p>)}</div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div className="space-y-1.5">
+                  {sr.spareParts.map((part, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div><p className="font-medium text-sm">{part.name}</p>{part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}</div>
+                      <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

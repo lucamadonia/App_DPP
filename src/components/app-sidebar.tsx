@@ -22,6 +22,7 @@ import {
   Shield,
   LogOut,
   Newspaper,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -101,6 +102,19 @@ export function AppSidebar() {
       title: t('Suppliers'),
       url: '/suppliers',
       icon: Users,
+    },
+    {
+      title: t('Returns Hub'),
+      icon: RotateCcw,
+      items: [
+        { title: t('Dashboard'), url: '/returns' },
+        { title: t('Returns'), url: '/returns/list' },
+        { title: t('Customers'), url: '/returns/customers' },
+        { title: t('Tickets'), url: '/returns/tickets' },
+        { title: t('Reports'), url: '/returns/reports' },
+        { title: t('Workflows'), url: '/returns/workflows' },
+        { title: t('Settings'), url: '/returns/settings' },
+      ],
     },
     {
       title: t('Compliance'),

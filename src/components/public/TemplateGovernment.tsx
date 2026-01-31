@@ -1,6 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import {
+  HelpCircle,
+  BookOpen,
+  Video,
+  MessageSquare,
+  Wrench,
+  ShieldCheck,
+  Package,
+  MapPin,
+} from 'lucide-react';
 import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
@@ -329,6 +339,192 @@ export function TemplateGovernment({ product, visibilityV2, view }: DPPTemplateP
           </div>
         </div>
       )}
+
+      {/* Support & Service Section */}
+      {isFieldVisible('supportResources') && product.supportResources && (() => {
+        const sr = product.supportResources!;
+        const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+        if (!hasContent) return null;
+        return (
+          <div className="border-2 border-gray-800">
+            <div className="bg-gray-800 text-white px-6 py-3">
+              <h2 className="font-bold uppercase tracking-wide text-sm flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                {t('Support & Service')}
+              </h2>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-xs text-gray-500 -mt-2">{t('Customer support and product resources')}</p>
+
+              {/* Instructions & Assembly Guide */}
+              {(sr.instructions || sr.assemblyGuide) && (
+                <div className="space-y-4">
+                  {sr.instructions && (
+                    <div className="border-2 border-gray-300 p-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 flex items-center gap-1">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        {t('Usage Instructions')}
+                      </h4>
+                      <p className="text-sm text-gray-700">{sr.instructions}</p>
+                    </div>
+                  )}
+                  {sr.assemblyGuide && (
+                    <div className="border-2 border-gray-300 p-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 flex items-center gap-1">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        {t('Assembly Guide')}
+                      </h4>
+                      <p className="text-sm text-gray-700">{sr.assemblyGuide}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Videos */}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div className="border-2 border-gray-300 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 flex items-center gap-1">
+                    <Video className="h-3.5 w-3.5" />
+                    {t('Videos')}
+                  </h4>
+                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    {sr.videos.map((v, i) => (
+                      <li key={i}>
+                        <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline font-medium">
+                          {v.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* FAQ */}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div className="border-2 border-gray-300 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-3 flex items-center gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {t('FAQ')}
+                  </h4>
+                  <div className="space-y-3">
+                    {sr.faq.map((item, i) => (
+                      <div key={i} className="border-b border-gray-200 pb-2">
+                        <p className="font-medium text-sm">{item.question}</p>
+                        <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Warranty */}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div className="border-2 border-gray-300 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-3 flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    {t('Warranty')}
+                  </h4>
+                  <div className="space-y-0">
+                    {sr.warranty.durationMonths != null && (
+                      <div className="flex justify-between py-2 border-b border-gray-200 text-sm">
+                        <span className="text-gray-600">{t('Warranty Duration')}:</span>
+                        <span className="font-medium">{t('{{months}} months', { months: sr.warranty.durationMonths })}</span>
+                      </div>
+                    )}
+                    {sr.warranty.contactEmail && (
+                      <div className="flex justify-between py-2 border-b border-gray-200 text-sm">
+                        <span className="text-gray-600">{t('Contact Email')}:</span>
+                        <span className="font-medium">{sr.warranty.contactEmail}</span>
+                      </div>
+                    )}
+                    {sr.warranty.contactPhone && (
+                      <div className="flex justify-between py-2 border-b border-gray-200 text-sm">
+                        <span className="text-gray-600">{t('Contact Phone')}:</span>
+                        <span className="font-medium">{sr.warranty.contactPhone}</span>
+                      </div>
+                    )}
+                  </div>
+                  {sr.warranty.terms && (
+                    <div className="mt-3 border-2 border-gray-200 p-3">
+                      <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">{t('Warranty Terms')}</p>
+                      <p className="text-sm text-gray-700">{sr.warranty.terms}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Repair Information */}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div className="border-2 border-gray-300 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-3 flex items-center gap-1">
+                    <Wrench className="h-3.5 w-3.5" />
+                    {t('Repair Information')}
+                  </h4>
+                  {sr.repairInfo.repairGuide && (
+                    <div className="border-2 border-gray-200 p-3 mb-3">
+                      <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">{t('Repair Guide')}</p>
+                      <p className="text-sm text-gray-700">{sr.repairInfo.repairGuide}</p>
+                    </div>
+                  )}
+                  {sr.repairInfo.repairabilityScore != null && (
+                    <div className="flex justify-between py-2 border-b border-gray-200 text-sm mb-2">
+                      <span className="text-gray-600">{t('Repairability Score')}:</span>
+                      <span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span>
+                    </div>
+                  )}
+                  {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2">{t('Service Centers')}</p>
+                      <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                        {sr.repairInfo.serviceCenters.map((c, i) => (
+                          <li key={i} className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-gray-500 flex-shrink-0" />{c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Spare Parts */}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div className="border-2 border-gray-300 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-3 flex items-center gap-1">
+                    <Package className="h-3.5 w-3.5" />
+                    {t('Spare Parts')}
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-gray-400">
+                          <th className="py-2 text-left font-bold text-xs uppercase tracking-wider text-gray-600">{t('Spare Parts')}</th>
+                          <th className="py-2 text-left font-bold text-xs uppercase tracking-wider text-gray-600">{t('Part Number')}</th>
+                          <th className="py-2 text-right font-bold text-xs uppercase tracking-wider text-gray-600">{t('Status')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sr.spareParts.map((part, i) => (
+                          <tr key={i} className="border-b border-gray-200">
+                            <td className="py-2 font-medium">{part.name}</td>
+                            <td className="py-2 font-mono text-gray-600">{part.partNumber || '-'}</td>
+                            <td className="py-2 text-right">
+                              {part.price != null && <span className="mr-2 font-medium">{part.price} {part.currency || '€'}</span>}
+                              <span className={part.available !== false ? 'text-green-600' : 'text-red-500'}>
+                                {part.available !== false ? t('Available') : t('Out of stock')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Document footer stamp */}
       <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-300">
