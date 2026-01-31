@@ -34,7 +34,7 @@ import {
   fieldCategories,
   visibilityLevels,
 } from '@/types/visibility';
-import { getVisibilitySettings, saveVisibilitySettings } from '@/services/api';
+import { getVisibilitySettings, saveVisibilitySettings } from '@/services/supabase';
 
 // Icons für Sichtbarkeitsstufen
 const levelIcons: Record<VisibilityLevel, React.ReactNode> = {
@@ -110,12 +110,12 @@ export function DPPVisibilitySettingsPage() {
     setSaved(false);
   };
 
-  // Speichern (async mit API)
+  // Speichern (async mit Supabase)
   const handleSave = async () => {
-    const success = await saveVisibilitySettings(config);
+    const result = await saveVisibilitySettings(config);
     setSaved(true);
     setHasChanges(false);
-    setApiStatus(success ? 'online' : 'offline');
+    setApiStatus(result.success ? 'online' : 'offline');
     setTimeout(() => setSaved(false), 3000);
   };
 

@@ -352,14 +352,11 @@ export function ProductPage() {
           </div>
 
           {/* Images Gallery */}
-          {productImages.length > 1 && (
-            <ProductImagesGallery
-              productId={product.id}
-              images={productImages}
-              onImagesChange={setProductImages}
-              readOnly
-            />
-          )}
+          <ProductImagesGallery
+            productId={product.id}
+            images={productImages}
+            onImagesChange={setProductImages}
+          />
         </TabsContent>
 
         {/* Batches Tab */}

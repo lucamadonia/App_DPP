@@ -1,17 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument } from '@/services/supabase';
+import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages } from '@/services/supabase';
 import type { Category, Supplier, ProductRegistrations, SupportResources } from '@/types/database';
 import { REGISTRATION_FIELDS } from '@/lib/registration-fields';
+import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
+import { CERTIFICATION_CATEGORIES } from '@/lib/certification-options';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
+import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
 import { useBranding } from '@/contexts/BrandingContext';
+import type { ProductImage } from '@/types/database';
+import type { VisibilityLevel } from '@/types/visibility';
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   ChevronsUpDown,
   Package,
+  ImageIcon,
   Leaf,
   ShieldCheck,
   FileText,
@@ -22,14 +28,18 @@ import {
   Loader2,
   Upload,
   Headphones,
+  Lock,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -45,6 +55,7 @@ const SUPPLIER_ROLES = [
 
 const steps = [
   { id: 'master-data', title: 'Basic Data', icon: Package },
+  { id: 'images', title: 'Images', icon: ImageIcon },
   { id: 'sustainability', title: 'Sustainability', icon: Leaf },
   { id: 'compliance', title: 'Compliance', icon: ShieldCheck },
   { id: 'documents', title: 'Documents', icon: FileText },
@@ -79,11 +90,22 @@ export function ProductFormPage() {
     lead_time_days?: number;
   }>>([]);
 
+  // Product images state
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
+
   // Document upload state
   const docFileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadedDocs, setUploadedDocs] = useState<Array<{ name: string; size: string }>>([]);
+  const [uploadedDocs, setUploadedDocs] = useState<Array<{ name: string; size: string; category: string; visibility: string }>>([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
+  const [pendingDocFile, setPendingDocFile] = useState<File | null>(null);
+  const [docUploadForm, setDocUploadForm] = useState({
+    name: '',
+    category: 'Certificate',
+    visibility: 'internal' as VisibilityLevel,
+    validUntil: '',
+  });
 
   useEffect(() => {
     Promise.all([
@@ -99,7 +121,8 @@ export function ProductFormPage() {
     Promise.all([
       getProductById(id),
       getProductSuppliers(id),
-    ]).then(([product, productSuppliers]) => {
+      getProductImages(id),
+    ]).then(([product, productSuppliers, images]) => {
       if (!product) {
         setSubmitError('Product not found.');
         setIsLoading(false);
@@ -133,7 +156,11 @@ export function ProductFormPage() {
           : [{ name: '', percentage: 0, recyclable: false, origin: '' }],
         recyclablePercentage: product.recyclability?.recyclablePercentage || 0,
         recyclingInstructions: product.recyclability?.instructions || '',
-        certifications: (product.certifications || []).map(c => c.name),
+        certifications: (product.certifications || []).map(c => ({
+          name: c.name,
+          issuedBy: c.issuedBy || '',
+          validUntil: c.validUntil || '',
+        })),
         registrations: product.registrations || {},
         supportResources: product.supportResources || {},
       });
@@ -147,6 +174,7 @@ export function ProductFormPage() {
           lead_time_days: sp.lead_time_days,
         }))
       );
+      setProductImages(images);
     }).catch(() => {
       setSubmitError('Error loading product.');
     }).finally(() => {
@@ -165,7 +193,7 @@ export function ProductFormPage() {
     materials: [{ name: '', percentage: 0, recyclable: false, origin: '' }],
     recyclablePercentage: 0,
     recyclingInstructions: '',
-    certifications: [] as string[],
+    certifications: [] as Array<{ name: string; issuedBy: string; validUntil: string }>,
     registrations: {} as ProductRegistrations,
     supportResources: {} as SupportResources,
   });
@@ -227,22 +255,39 @@ export function ProductFormPage() {
     ));
   };
 
-  // Document upload handler
-  const handleDocUpload = async (file: File) => {
+  // Document upload handler — opens dialog instead of uploading directly
+  const openDocDialog = (file: File) => {
+    setPendingDocFile(file);
+    setDocUploadForm(prev => ({ ...prev, name: file.name }));
+    setIsDocDialogOpen(true);
+  };
+
+  const handleDocUpload = async () => {
+    if (!pendingDocFile || !docUploadForm.name) return;
     setIsUploadingDoc(true);
-    const result = await uploadDocument(file, {
-      name: file.name,
-      category: 'Datenblatt',
+    const result = await uploadDocument(pendingDocFile, {
+      name: docUploadForm.name,
+      category: docUploadForm.category,
+      visibility: docUploadForm.visibility,
+      validUntil: docUploadForm.validUntil || undefined,
     });
     if (result.success) {
-      setUploadedDocs((prev) => [...prev, { name: file.name, size: `${(file.size / 1024).toFixed(1)} KB` }]);
+      setUploadedDocs((prev) => [...prev, {
+        name: docUploadForm.name,
+        size: `${(pendingDocFile.size / 1024).toFixed(1)} KB`,
+        category: docUploadForm.category,
+        visibility: docUploadForm.visibility,
+      }]);
+      setIsDocDialogOpen(false);
+      setPendingDocFile(null);
+      setDocUploadForm({ name: '', category: 'Certificate', visibility: 'internal', validUntil: '' });
     }
     setIsUploadingDoc(false);
   };
 
   const handleDocFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) handleDocUpload(file);
+    if (file) openDocDialog(file);
     if (docFileInputRef.current) docFileInputRef.current.value = '';
   };
 
@@ -250,7 +295,7 @@ export function ProductFormPage() {
     event.preventDefault();
     setIsDragOver(false);
     const file = event.dataTransfer.files?.[0];
-    if (file) handleDocUpload(file);
+    if (file) openDocDialog(file);
   };
 
   const nextStep = () => {
@@ -278,10 +323,10 @@ export function ProductFormPage() {
         hsCode: formData.hsCode || undefined,
         countryOfOrigin: formData.countryOfOrigin || undefined,
         materials: formData.materials,
-        certifications: formData.certifications.map((name) => ({
-          name,
-          issuedBy: '',
-          validUntil: '',
+        certifications: formData.certifications.map((cert) => ({
+          name: cert.name,
+          issuedBy: cert.issuedBy,
+          validUntil: cert.validUntil,
         })),
         recyclability: {
           recyclablePercentage: formData.recyclablePercentage,
@@ -419,11 +464,12 @@ export function ProductFormPage() {
           </CardTitle>
           <CardDescription>
             {currentStep === 0 && t('Enter basic product information')}
-            {currentStep === 1 && t('Define materials and sustainability data')}
-            {currentStep === 2 && t('Add certifications and compliance data')}
-            {currentStep === 3 && t('Upload relevant documents')}
-            {currentStep === 4 && t('Add support resources, FAQ, warranty, and repair information')}
-            {currentStep === 5 && t('Assign suppliers and economic operators')}
+            {currentStep === 1 && t('Manage product images')}
+            {currentStep === 2 && t('Define materials and sustainability data')}
+            {currentStep === 3 && t('Add certifications and compliance data')}
+            {currentStep === 4 && t('Upload relevant documents')}
+            {currentStep === 5 && t('Add support resources, FAQ, warranty, and repair information')}
+            {currentStep === 6 && t('Assign suppliers and economic operators')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -606,8 +652,29 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 2: Sustainability */}
+          {/* Step 2: Images */}
           {currentStep === 1 && (
+            <div className="space-y-6">
+              {isEditMode && id ? (
+                <ProductImagesGallery
+                  productId={id}
+                  images={productImages}
+                  onImagesChange={setProductImages}
+                />
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                  <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-medium">{t('Images available after saving')}</h3>
+                  <p className="text-muted-foreground mt-1">
+                    {t('Product images can be uploaded after the product has been created.')}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Sustainability */}
+          {currentStep === 2 && (
             <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -699,48 +766,97 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 3: Compliance */}
-          {currentStep === 2 && (
+          {/* Step 4: Compliance */}
+          {currentStep === 3 && (
             <div className="space-y-6">
-              <div>
-                <h3 className="font-medium mb-4">{t('Certifications')}</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {[
-                    'CE-Kennzeichnung',
-                    'EU Ecolabel',
-                    'OEKO-TEX Standard 100',
-                    'Fair Trade',
-                    'GRS (Global Recycled Standard)',
-                    'GOTS (Global Organic Textile Standard)',
-                    'FSC',
-                    'Blauer Engel',
-                  ].map((cert) => (
-                    <label
-                      key={cert}
-                      className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-muted/50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.certifications.includes(cert)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              certifications: [...prev.certifications, cert],
-                            }));
-                          } else {
-                            setFormData((prev) => ({
-                              ...prev,
-                              certifications: prev.certifications.filter((c) => c !== cert),
-                            }));
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <span className="font-medium">{cert}</span>
-                    </label>
-                  ))}
+              {CERTIFICATION_CATEGORIES.map((category) => (
+                <div key={category.label}>
+                  <h3 className="font-medium mb-3">{t(category.label)}</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {category.options.map((opt) => {
+                      const certEntry = formData.certifications.find(c => c.name === opt.name);
+                      const isChecked = Boolean(certEntry);
+                      return (
+                        <div key={opt.name} className="border rounded-lg">
+                          <label className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    certifications: [...prev.certifications, { name: opt.name, issuedBy: '', validUntil: '' }],
+                                  }));
+                                } else {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    certifications: prev.certifications.filter((c) => c.name !== opt.name),
+                                  }));
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <span className="font-medium">{opt.name}</span>
+                          </label>
+                          {isChecked && certEntry && (
+                            <div className="px-4 pb-4 grid gap-3 sm:grid-cols-2">
+                              <div className="space-y-1">
+                                <label className="text-xs text-muted-foreground">{t('Issued By')}</label>
+                                <Input
+                                  placeholder={t('e.g. TÜV Süd')}
+                                  value={certEntry.issuedBy}
+                                  onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    certifications: prev.certifications.map(c =>
+                                      c.name === opt.name ? { ...c, issuedBy: e.target.value } : c
+                                    ),
+                                  }))}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs text-muted-foreground">{t('Valid Until')}</label>
+                                <Input
+                                  type="date"
+                                  value={certEntry.validUntil}
+                                  onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    certifications: prev.certifications.map(c =>
+                                      c.name === opt.name ? { ...c, validUntil: e.target.value } : c
+                                    ),
+                                  }))}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+              ))}
+
+              <Separator />
+
+              {/* Custom certification */}
+              <div>
+                <h3 className="font-medium mb-3">{t('Custom Certification')}</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const name = prompt(t('Enter certification name'));
+                    if (name && !formData.certifications.some(c => c.name === name)) {
+                      setFormData(prev => ({
+                        ...prev,
+                        certifications: [...prev.certifications, { name, issuedBy: '', validUntil: '' }],
+                      }));
+                    }
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('Add Custom Certification')}
+                </Button>
               </div>
 
               {formData.certifications.length > 0 && (
@@ -750,8 +866,19 @@ export function ProductFormPage() {
                     <h3 className="font-medium mb-4">{t('Selected Certifications')}</h3>
                     <div className="flex flex-wrap gap-2">
                       {formData.certifications.map((cert) => (
-                        <Badge key={cert} variant="secondary">
-                          {cert}
+                        <Badge key={cert.name} variant="secondary" className="gap-1">
+                          {cert.name}
+                          {cert.issuedBy && <span className="text-muted-foreground">({cert.issuedBy})</span>}
+                          <button
+                            type="button"
+                            className="ml-1 hover:text-destructive"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              certifications: prev.certifications.filter(c => c.name !== cert.name),
+                            }))}
+                          >
+                            ×
+                          </button>
                         </Badge>
                       ))}
                     </div>
@@ -761,8 +888,8 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 4: Documents */}
-          {currentStep === 3 && (
+          {/* Step 5: Documents */}
+          {currentStep === 4 && (
             <div className="space-y-6">
               <input
                 ref={docFileInputRef}
@@ -807,7 +934,9 @@ export function ProductFormPage() {
                         <FileText className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">{doc.size}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {doc.size} · {doc.category} · {doc.visibility}
+                          </p>
                         </div>
                       </div>
                       <Button
@@ -835,16 +964,16 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 5: Support Resources */}
-          {currentStep === 4 && (
+          {/* Step 6: Support Resources */}
+          {currentStep === 5 && (
             <ProductSupportTab
               supportResources={formData.supportResources}
               onChange={(resources) => setFormData(prev => ({ ...prev, supportResources: resources }))}
             />
           )}
 
-          {/* Step 6: Suppliers */}
-          {currentStep === 5 && (
+          {/* Step 7: Suppliers */}
+          {currentStep === 6 && (
             <div className="space-y-6">
               {/* Own Company */}
               <div>
@@ -1022,6 +1151,115 @@ export function ProductFormPage() {
           {submitError}
         </div>
       )}
+
+      {/* Document Upload Dialog */}
+      <Dialog open={isDocDialogOpen} onOpenChange={(open) => {
+        setIsDocDialogOpen(open);
+        if (!open) {
+          setPendingDocFile(null);
+          setDocUploadForm({ name: '', category: 'Certificate', visibility: 'internal', validUntil: '' });
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Upload Document')}</DialogTitle>
+            <DialogDescription>
+              {t('Configure document details before uploading.')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {pendingDocFile && (
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <p className="font-medium">{pendingDocFile.name}</p>
+                <p className="text-muted-foreground">{(pendingDocFile.size / 1024).toFixed(1)} KB</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="doc-upload-name">{t('Name')}</Label>
+              <Input
+                id="doc-upload-name"
+                value={docUploadForm.name}
+                onChange={(e) => setDocUploadForm(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('Category')}</Label>
+              <Select
+                value={docUploadForm.category}
+                onValueChange={(value) => setDocUploadForm(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DOCUMENT_CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{t(cat, { ns: 'documents' })}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('Visibility')}</Label>
+              <Select
+                value={docUploadForm.visibility}
+                onValueChange={(value) => setDocUploadForm(prev => ({ ...prev, visibility: value as VisibilityLevel }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-3.5 w-3.5" />
+                      {t('Internal Only')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="customs">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {t('Customs')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="consumer">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5" />
+                      {t('Consumer')}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="doc-upload-valid-until">{t('Valid Until (optional)')}</Label>
+              <Input
+                id="doc-upload-valid-until"
+                type="date"
+                value={docUploadForm.validUntil}
+                onChange={(e) => setDocUploadForm(prev => ({ ...prev, validUntil: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDocDialogOpen(false)}>
+              {t('Cancel', { ns: 'common' })}
+            </Button>
+            <Button onClick={handleDocUpload} disabled={!docUploadForm.name || isUploadingDoc}>
+              {isUploadingDoc ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              {isUploadingDoc ? t('Uploading...') : t('Upload')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </>)}
     </div>
   );
