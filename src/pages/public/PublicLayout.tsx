@@ -1,7 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link, useParams } from 'react-router-dom';
-import { FileText, Loader2, Globe, Instagram } from 'lucide-react';
+import { FileText, Loader2, Globe, Instagram, Languages } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { getPublicBrandingByProduct } from '@/services/supabase';
 import { getPublicTenantQRSettings, getPublicTenantDPPDesign } from '@/services/supabase/tenants';
 import type { BrandingSettings, DPPDesignSettings } from '@/types/database';
@@ -30,8 +31,25 @@ export function usePublicBranding() {
 }
 
 export function PublicLayout() {
-  const { t } = useTranslation('dpp');
+  const { t, i18n } = useTranslation('dpp');
   const { gtin, serial } = useParams();
+  const currentLang = i18n.language?.startsWith('de') ? 'de' : 'en';
+
+  // Default public pages to English (unless user has a stored preference)
+  useEffect(() => {
+    const stored = localStorage.getItem('dpp-language');
+    if (!stored) {
+      i18n.changeLanguage('en');
+      document.documentElement.lang = 'en';
+    }
+  }, [i18n]);
+
+  const toggleLanguage = () => {
+    const newLang = currentLang === 'de' ? 'en' : 'de';
+    i18n.changeLanguage(newLang);
+    document.documentElement.lang = newLang;
+    localStorage.setItem('dpp-language', newLang);
+  };
   const [branding, setBranding] = useState<BrandingSettings | null>(null);
   const [dppTemplate, setDppTemplate] = useState<DPPTemplate>('modern');
   const [dppDesign, setDppDesign] = useState<DPPDesignSettings | null>(null);
@@ -128,6 +146,16 @@ export function PublicLayout() {
                 </span>
               </div>
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleLanguage}
+              className="gap-1.5"
+              title={currentLang === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}
+            >
+              <Languages className="h-4 w-4" />
+              {currentLang === 'de' ? 'DE' : 'EN'}
+            </Button>
           </div>
         </header>
 

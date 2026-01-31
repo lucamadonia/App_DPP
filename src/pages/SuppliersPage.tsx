@@ -1544,20 +1544,20 @@ export function SuppliersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Quality (1-5)</Label>
-                  <Select value={String(formData.quality_rating || '')} onValueChange={v => updateForm('quality_rating', v ? parseInt(v) : undefined)}>
+                  <Select value={formData.quality_rating ? String(formData.quality_rating) : 'none'} onValueChange={v => updateForm('quality_rating', v === 'none' ? undefined : parseInt(v))}>
                     <SelectTrigger><SelectValue placeholder="Rate" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Rating</SelectItem>
+                      <SelectItem value="none">No Rating</SelectItem>
                       {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n} Stars</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Delivery Reliability (1-5)</Label>
-                  <Select value={String(formData.delivery_rating || '')} onValueChange={v => updateForm('delivery_rating', v ? parseInt(v) : undefined)}>
+                  <Select value={formData.delivery_rating ? String(formData.delivery_rating) : 'none'} onValueChange={v => updateForm('delivery_rating', v === 'none' ? undefined : parseInt(v))}>
                     <SelectTrigger><SelectValue placeholder="Rate" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Rating</SelectItem>
+                      <SelectItem value="none">No Rating</SelectItem>
                       {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n} Stars</SelectItem>)}
                     </SelectContent>
                   </Select>

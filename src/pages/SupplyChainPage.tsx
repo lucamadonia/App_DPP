@@ -151,6 +151,17 @@ export function SupplyChainPage() {
     setIsLoading(false);
   };
 
+  // Helper functions (defined before memos that use them)
+  const getProductName = (productId: string) => {
+    return products.find(p => p.id === productId)?.name || 'Unknown Product';
+  };
+
+  const getSupplierName = (entry: SupplyChainEntry) => {
+    const id = entry.supplier_id || entry.supplier;
+    if (!id) return null;
+    return suppliers.find(s => s.id === id)?.name || id;
+  };
+
   // Calculate statistics
   const stats = useMemo(() => {
     const total = supplyChainEntries.length;
@@ -329,16 +340,6 @@ export function SupplyChainPage() {
         {t(config.label)}
       </span>
     );
-  };
-
-  const getProductName = (productId: string) => {
-    return products.find(p => p.id === productId)?.name || 'Unknown Product';
-  };
-
-  const getSupplierName = (entry: SupplyChainEntry) => {
-    const id = entry.supplier_id || entry.supplier;
-    if (!id) return null;
-    return suppliers.find(s => s.id === id)?.name || id;
   };
 
   return (
