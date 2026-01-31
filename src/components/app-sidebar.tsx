@@ -21,6 +21,7 @@ import {
   Calculator,
   Shield,
   LogOut,
+  Newspaper,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -117,8 +118,12 @@ export function AppSidebar() {
         { title: t('Countries'), url: '/regulations/countries' },
         { title: t('EU Regulations'), url: '/regulations/eu' },
         { title: t('Pictograms'), url: '/regulations/pictograms' },
-        { title: t('News'), url: '/regulations/news' },
       ],
+    },
+    {
+      title: t('News'),
+      url: '/news',
+      icon: Newspaper,
     },
     {
       title: t('Checklists'),

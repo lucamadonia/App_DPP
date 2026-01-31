@@ -48,6 +48,7 @@ import type {
   DPPBorderRadius,
   DPPShadowDepth,
   DPPBorderStyle,
+  DPPTemplateName,
 } from '@/types/database';
 import {
   DPP_THEME_PRESETS,
@@ -68,14 +69,55 @@ const SECTION_LABELS: Record<DPPSectionId, { icon: React.ReactNode; labelKey: st
   supplyChain: { icon: <Truck className="h-4 w-4" />, labelKey: 'Supply Chain' },
 };
 
+const TEMPLATE_OPTIONS: { value: DPPTemplateName; labelKey: string; descKey: string }[] = [
+  { value: 'modern', labelKey: 'Modern', descKey: 'Hero header, glassmorphism cards, animations' },
+  { value: 'classic', labelKey: 'Classic', descKey: 'Clean cards, structured sections, professional' },
+  { value: 'compact', labelKey: 'Compact', descKey: 'Tab layout, mobile-first, minimal whitespace' },
+  { value: 'minimal', labelKey: 'Minimal', descKey: 'Ultra-clean, whitespace-heavy, large typography' },
+  { value: 'technical', labelKey: 'Technical', descKey: 'Data-dense, monospace accents, engineer-focused' },
+  { value: 'eco-friendly', labelKey: 'Eco-Friendly', descKey: 'Green tones, sustainability metrics prominent' },
+  { value: 'premium', labelKey: 'Premium', descKey: 'Dark theme, gold accents, luxury feel' },
+  { value: 'government', labelKey: 'Government', descKey: 'Formal layout, document-style, reference numbers' },
+  { value: 'retail', labelKey: 'Retail', descKey: 'Consumer-friendly, large images, colorful badges' },
+  { value: 'scientific', labelKey: 'Scientific', descKey: 'Data visualization, academic structure' },
+  { value: 'accessible', labelKey: 'Accessible', descKey: 'WCAG AAA, extra-large text, high contrast' },
+];
+
 export function DPPDesignTab() {
   const { t } = useTranslation('settings');
-  const { rawDPPDesign, updateDPPDesign, branding } = useBranding();
+  const { rawDPPDesign, updateDPPDesign, branding, qrCodeSettings, updateQRCodeSettings } = useBranding();
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const heroInputRef = useRef<HTMLInputElement>(null);
+  const [templateCustomer, setTemplateCustomer] = useState<DPPTemplateName>(
+    (qrCodeSettings as { dppTemplateCustomer?: DPPTemplateName }).dppTemplateCustomer ||
+    (qrCodeSettings as { dppTemplate?: DPPTemplateName }).dppTemplate ||
+    'modern'
+  );
+  const [templateCustoms, setTemplateCustoms] = useState<DPPTemplateName>(
+    (qrCodeSettings as { dppTemplateCustoms?: DPPTemplateName }).dppTemplateCustoms ||
+    (qrCodeSettings as { dppTemplate?: DPPTemplateName }).dppTemplate ||
+    'modern'
+  );
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
+
+  const handleSaveTemplates = async () => {
+    setIsSavingTemplate(true);
+    try {
+      await updateQRCodeSettings({
+        dppTemplateCustomer: templateCustomer,
+        dppTemplateCustoms: templateCustoms,
+      });
+      setTemplateSaved(true);
+      setTimeout(() => setTemplateSaved(false), 2000);
+    } catch (e) {
+      console.error('Error saving template settings:', e);
+    }
+    setIsSavingTemplate(false);
+  };
 
   const [designForm, setDesignForm] = useState<DPPDesignSettings>(() => {
     return rawDPPDesign || {};
@@ -200,6 +242,74 @@ export function DPPDesignTab() {
 
   return (
     <div className="space-y-6">
+      {/* 0. Template Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('DPP Page Template')}</CardTitle>
+          <CardDescription>{t('Choose different templates for customer and customs views')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Customer Template */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">{t('Customer Template')}</Label>
+              <p className="text-xs text-muted-foreground">{t('Template shown to consumers scanning the QR code')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {TEMPLATE_OPTIONS.map((tmpl) => (
+                  <button
+                    key={tmpl.value}
+                    onClick={() => setTemplateCustomer(tmpl.value)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all text-sm ${
+                      templateCustomer === tmpl.value
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <p className="font-medium">{t(tmpl.labelKey, { ns: 'dpp' })}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t(tmpl.descKey, { ns: 'dpp' })}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customs Template */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">{t('Customs Template')}</Label>
+              <p className="text-xs text-muted-foreground">{t('Template shown to customs authorities')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {TEMPLATE_OPTIONS.map((tmpl) => (
+                  <button
+                    key={tmpl.value}
+                    onClick={() => setTemplateCustoms(tmpl.value)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all text-sm ${
+                      templateCustoms === tmpl.value
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <p className="font-medium">{t(tmpl.labelKey, { ns: 'dpp' })}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t(tmpl.descKey, { ns: 'dpp' })}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={handleSaveTemplates} disabled={isSavingTemplate}>
+              {isSavingTemplate ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : templateSaved ? (
+                <Check className="mr-2 h-4 w-4 text-green-500" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {templateSaved ? t('Saved!') : t('Save Templates')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 1. Theme Presets */}
       <Card>
         <CardHeader>

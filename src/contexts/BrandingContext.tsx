@@ -23,7 +23,7 @@ import {
   updateQRCodeSettings as saveQRCodeSettings,
   updateDPPDesignSettings as saveDPPDesignSettings,
 } from '@/services/supabase';
-import type { BrandingSettings, QRCodeDomainSettings, DPPDesignSettings } from '@/types/database';
+import type { BrandingSettings, QRCodeDomainSettings, DPPDesignSettings, DPPTemplateName } from '@/types/database';
 import {
   applyPrimaryColor,
   applyFavicon,
@@ -49,7 +49,7 @@ interface ResolvedQRCodeSettings {
   resolver: 'local' | 'gs1' | 'custom';
   foregroundColor: string;
   backgroundColor: string;
-  dppTemplate: 'modern' | 'classic' | 'compact';
+  dppTemplate: DPPTemplateName;
 }
 
 interface BrandingContextType {

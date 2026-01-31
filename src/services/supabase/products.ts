@@ -6,6 +6,7 @@
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { Product, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry } from '@/types/product';
+import type { ProductRegistrations, SupportResources } from '@/types/database';
 
 // Transform database row to Product type (master data only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +39,8 @@ function transformProduct(row: any): Product {
     manufacturerAddress: row.manufacturer_address || undefined,
     manufacturerEORI: row.manufacturer_eori || undefined,
     manufacturerVAT: row.manufacturer_vat || undefined,
+    registrations: (row.registrations as ProductRegistrations) || undefined,
+    supportResources: (row.support_resources as SupportResources) || undefined,
   };
 }
 
@@ -294,6 +297,8 @@ export async function createProduct(
     manufacturer_address: product.manufacturerAddress || null,
     manufacturer_eori: product.manufacturerEORI || null,
     manufacturer_vat: product.manufacturerVAT || null,
+    registrations: product.registrations || {},
+    support_resources: product.supportResources || {},
   };
 
   const { data, error } = await supabase
@@ -359,6 +364,8 @@ export async function updateProduct(
   if (product.manufacturerAddress !== undefined) updateData.manufacturer_address = product.manufacturerAddress || null;
   if (product.manufacturerEORI !== undefined) updateData.manufacturer_eori = product.manufacturerEORI || null;
   if (product.manufacturerVAT !== undefined) updateData.manufacturer_vat = product.manufacturerVAT || null;
+  if (product.registrations !== undefined) updateData.registrations = product.registrations || {};
+  if (product.supportResources !== undefined) updateData.support_resources = product.supportResources || {};
 
   const { error } = await supabase
     .from('products')

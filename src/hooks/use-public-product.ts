@@ -3,14 +3,16 @@ import { type Product } from '@/types/product';
 import { type VisibilityConfigV2, defaultVisibilityConfigV2 } from '@/types/visibility';
 import { getProductByGtinSerial, getPublicVisibilitySettings } from '@/services/supabase';
 import { getPublicTenantQRSettings, getPublicTenantDPPDesign } from '@/services/supabase/tenants';
-import type { DPPDesignSettings } from '@/types/database';
+import type { DPPDesignSettings, DPPTemplateName } from '@/types/database';
 
-export type DPPTemplate = 'modern' | 'classic' | 'compact';
+export type DPPTemplate = DPPTemplateName;
 
 export function usePublicProduct(gtin?: string, serial?: string) {
   const [product, setProduct] = useState<Product | null>(null);
   const [visibilityV2, setVisibilityV2] = useState<VisibilityConfigV2 | null>(null);
   const [dppTemplate, setDppTemplate] = useState<DPPTemplate>('modern');
+  const [dppTemplateCustomer, setDppTemplateCustomer] = useState<DPPTemplate>('modern');
+  const [dppTemplateCustoms, setDppTemplateCustoms] = useState<DPPTemplate>('modern');
   const [dppDesign, setDppDesign] = useState<DPPDesignSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +35,12 @@ export function usePublicProduct(gtin?: string, serial?: string) {
           getPublicTenantDPPDesign(gtin, serial),
         ]);
         setVisibilityV2(visibility);
-        if (qrSettings?.dppTemplate) {
-          setDppTemplate(qrSettings.dppTemplate as DPPTemplate);
+        if (qrSettings) {
+          // Legacy fallback: use dppTemplate if specific ones aren't set
+          const fallback = (qrSettings.dppTemplate as DPPTemplate) || 'modern';
+          setDppTemplate(fallback);
+          setDppTemplateCustomer((qrSettings.dppTemplateCustomer as DPPTemplate) || fallback);
+          setDppTemplateCustoms((qrSettings.dppTemplateCustoms as DPPTemplate) || fallback);
         }
         setDppDesign(designSettings);
       } catch (error) {
@@ -49,5 +55,5 @@ export function usePublicProduct(gtin?: string, serial?: string) {
     loadData();
   }, [gtin, serial]);
 
-  return { product, visibilityV2, dppTemplate, dppDesign, loading };
+  return { product, visibilityV2, dppTemplate, dppTemplateCustomer, dppTemplateCustoms, dppDesign, loading };
 }

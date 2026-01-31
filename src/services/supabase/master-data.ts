@@ -144,6 +144,12 @@ function transformEURegulation(row: EURegulationRow): EURegulation {
     affectedProducts: row.affected_products,
     dppDeadlines: row.dpp_deadlines as Record<string, string>,
     link: row.link || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    penalties: (row as any).penalties || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    enforcementBody: (row as any).enforcement_body || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    officialReference: (row as any).official_reference || undefined,
   };
 }
 
@@ -321,6 +327,10 @@ function transformChecklistTemplate(row: ChecklistTemplateRow): ChecklistTemplat
     applicableProducts: row.applicable_products || undefined,
     priority: row.priority,
     sort_order: row.sort_order || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    regulationId: (row as any).regulation_id || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    requiredDocumentCategories: (row as any).required_document_categories || undefined,
   };
 }
 
@@ -375,6 +385,10 @@ function transformNewsItem(row: NewsItemRow): NewsItem {
     priority: row.priority,
     tags: row.tags,
     link: row.link || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    imageUrl: (row as any).image_url || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    source: (row as any).source || undefined,
   };
 }
 

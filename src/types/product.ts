@@ -1,3 +1,5 @@
+import type { ProductRegistrations, SupportResources, ProductImage } from './database';
+
 export interface Product {
   id: string;
   name: string;
@@ -26,6 +28,11 @@ export interface Product {
   manufacturerAddress?: string;
   manufacturerEORI?: string; // Economic Operators Registration and Identification
   manufacturerVAT?: string; // Umsatzsteuer-Identifikationsnummer
+
+  // Feature Pack extensions
+  registrations?: ProductRegistrations;
+  supportResources?: SupportResources;
+  images?: ProductImage[];
 }
 
 export interface ProductBatch {

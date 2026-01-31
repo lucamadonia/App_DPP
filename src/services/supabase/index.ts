@@ -140,10 +140,48 @@ export {
   getProfiles,
   updateProfile,
   updateCurrentProfile,
+  updateProfileRole,
+  deactivateUser,
+  reactivateUser,
+  getAdminCount,
   inviteUser,
   removeUserFromTenant,
   type Profile,
 } from './profiles';
+
+// Product Images
+export {
+  getProductImages,
+  uploadProductImages,
+  deleteProductImage,
+  reorderProductImages,
+  setPrimaryImage,
+  updateImageCaption,
+} from './product-images';
+
+// Invitations
+export {
+  getInvitations,
+  createInvitation,
+  cancelInvitation,
+  resendInvitation,
+  deleteInvitation,
+} from './invitations';
+
+// Activity Log
+export {
+  getActivityLog,
+  logActivity,
+} from './activity-log';
+
+// Compliance
+export {
+  getComplianceOverview,
+  getComplianceScores,
+  type ComplianceOverview,
+  type ComplianceScore,
+  type ComplianceWarning,
+} from './compliance';
 
 // Visibility
 export {

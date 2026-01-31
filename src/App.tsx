@@ -32,6 +32,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { AdminPage } from '@/pages/AdminPage';
+import { NewsPage } from '@/pages/NewsPage';
 import { SupplyChainPage } from '@/pages/SupplyChainPage';
 import { SuppliersPage } from '@/pages/SuppliersPage';
 import { BatchFormPage } from '@/pages/BatchFormPage';
@@ -153,6 +154,7 @@ function App() {
           <Route path="compliance/audit-log" element={<CompliancePage />} />
 
           {/* Regulations & Checklists */}
+          <Route path="news" element={<NewsPage />} />
           <Route path="regulations" element={<RegulationsPage />} />
           <Route path="regulations/countries" element={<RegulationsPage />} />
           <Route path="regulations/eu" element={<RegulationsPage />} />

@@ -3,10 +3,8 @@ import { useTranslation } from 'react-i18next';
 import {
   Globe,
   FileText,
-  AlertTriangle,
   CheckCircle2,
   Clock,
-  ExternalLink,
   Search,
   ChevronRight,
   Bell,
@@ -68,19 +66,9 @@ const categoryIcons: Record<string, React.ElementType> = {
   recycling: Recycle,
   energy: Zap,
   durability: Clock,
-};
-
-const newsIcons: Record<string, React.ElementType> = {
-  regulation: FileText,
-  deadline: Clock,
-  update: Bell,
-  warning: AlertTriangle,
-};
-
-const newsPriorityColors: Record<string, string> = {
-  high: 'bg-destructive/10 text-destructive border-destructive/20',
-  medium: 'bg-warning/10 text-warning border-warning/20',
-  low: 'bg-muted text-muted-foreground',
+  sustainability: Leaf,
+  digital: Globe,
+  trade: FileText,
 };
 
 export function RegulationsPage() {
@@ -89,7 +77,6 @@ export function RegulationsPage() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Data from Supabase
@@ -157,13 +144,6 @@ export function RegulationsPage() {
 
     loadData();
   }, []);
-
-  const filteredNews = news.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.summary.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPriority = !priorityFilter || item.priority === priorityFilter;
-    return matchesSearch && matchesPriority;
-  });
 
   const filteredPictograms = pictograms.filter(p => {
     const matchesCategory = !categoryFilter || p.category === categoryFilter;
@@ -263,7 +243,7 @@ export function RegulationsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="countries">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="countries" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
             {t('Countries')}
@@ -275,10 +255,6 @@ export function RegulationsPage() {
           <TabsTrigger value="pictograms" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
             {t('Pictograms')}
-          </TabsTrigger>
-          <TabsTrigger value="news" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            {t('News')}
           </TabsTrigger>
         </TabsList>
 
@@ -399,6 +375,31 @@ export function RegulationsPage() {
 
         {/* EU Regulations Tab */}
         <TabsContent value="eu" className="space-y-6">
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={categoryFilter === null ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCategoryFilter(null)}
+            >
+              {t('All')}
+            </Button>
+            {['environment', 'chemicals', 'recycling', 'safety', 'energy', 'sustainability', 'digital', 'trade', 'labeling'].map((cat) => {
+              const CatIcon = categoryIcons[cat] || FileText;
+              return (
+                <Button
+                  key={cat}
+                  variant={categoryFilter === cat ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                >
+                  <CatIcon className="mr-1 h-3 w-3" />
+                  {t(cat.charAt(0).toUpperCase() + cat.slice(1))}
+                </Button>
+              );
+            })}
+          </div>
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -421,7 +422,7 @@ export function RegulationsPage() {
             </CardHeader>
             <CardContent>
               <Accordion type="multiple" className="w-full">
-                {euRegulations.map((reg) => {
+                {euRegulations.filter(r => !categoryFilter || r.category === categoryFilter).map((reg) => {
                   const Icon = categoryIcons[reg.category] || FileText;
                   return (
                     <AccordionItem key={reg.id} value={reg.id}>
@@ -497,6 +498,28 @@ export function RegulationsPage() {
                                 </Badge>
                               ))}
                             </div>
+                          </div>
+
+                          {/* Penalties, Enforcement Body, Official Reference */}
+                          <div className="grid gap-4 md:grid-cols-3">
+                            {(reg as any).penalties && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">{t('Penalties')}</p>
+                                <p className="text-sm text-destructive">{(reg as any).penalties}</p>
+                              </div>
+                            )}
+                            {(reg as any).enforcementBody && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">{t('Enforcement Body')}</p>
+                                <p className="text-sm text-muted-foreground">{(reg as any).enforcementBody}</p>
+                              </div>
+                            )}
+                            {(reg as any).officialReference && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">{t('Official Reference')}</p>
+                                <p className="text-sm text-muted-foreground">{(reg as any).officialReference}</p>
+                              </div>
+                            )}
                           </div>
 
                           {Object.keys(reg.dppDeadlines).length > 0 && (
@@ -699,155 +722,6 @@ export function RegulationsPage() {
           </Card>
         </TabsContent>
 
-        {/* News Tab */}
-        <TabsContent value="news" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{t('Latest Changes & Deadlines')}</CardTitle>
-                  <CardDescription>
-                    {t('Important updates on regulations, new requirements, and upcoming deadlines')}
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <Button
-                    variant={priorityFilter === 'high' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setPriorityFilter(priorityFilter === 'high' ? null : 'high')}
-                  >
-                    <AlertTriangle className="mr-1 h-4 w-4" />
-                    {t('Important')}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredNews.map((item) => {
-                  const Icon = newsIcons[item.category] || Bell;
-                  return (
-                    <div
-                      key={item.id}
-                      className={`p-4 rounded-lg border ${newsPriorityColors[item.priority]}`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                            item.category === 'warning'
-                              ? 'bg-destructive/20 text-destructive'
-                              : item.category === 'deadline'
-                                ? 'bg-warning/20 text-warning'
-                                : 'bg-primary/20 text-primary'
-                          }`}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between gap-4 mb-2">
-                            <div>
-                              <p className="font-medium">{item.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {item.countries.map((c) => (
-                                  <Badge key={c} variant="outline" className="text-xs">
-                                    {c}
-                                  </Badge>
-                                ))}
-                                <span className="text-xs text-muted-foreground">
-                                  {formatDate(item.publishedAt, locale)}
-                                </span>
-                              </div>
-                            </div>
-                            {item.priority === 'high' && (
-                              <Badge variant="destructive">{t('Important')}</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {item.summary}
-                          </p>
-                          <p className="text-sm mb-3">{item.content}</p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-wrap gap-1">
-                              {item.tags.map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                            {item.effectiveDate && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">{t('Valid from')}:</span>
-                                <span className="font-medium">
-                                  {formatDate(item.effectiveDate, locale)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Deadlines Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                {t('Upcoming Deadlines (next 12 months)')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {news
-                  .filter(n => n.effectiveDate && new Date(n.effectiveDate) > new Date() && new Date(n.effectiveDate) < new Date(Date.now() + 365 * 24 * 60 * 60 * 1000))
-                  .sort((a, b) => new Date(a.effectiveDate!).getTime() - new Date(b.effectiveDate!).getTime())
-                  .map((item) => {
-                    const daysRemaining = Math.ceil((new Date(item.effectiveDate!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                    return (
-                      <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded bg-background">
-                            <Calendar className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.countries.join(', ')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={daysRemaining < 90 ? 'destructive' : daysRemaining < 180 ? 'default' : 'secondary'}>
-                            {daysRemaining} {t('Days')}
-                          </Badge>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDate(item.effectiveDate!, locale)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );

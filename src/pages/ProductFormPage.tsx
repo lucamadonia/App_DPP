@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument } from '@/services/supabase';
-import type { Category, Supplier } from '@/types/database';
+import type { Category, Supplier, ProductRegistrations, SupportResources } from '@/types/database';
+import { REGISTRATION_FIELDS } from '@/lib/registration-fields';
+import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { useBranding } from '@/contexts/BrandingContext';
 import {
   ArrowLeft,
@@ -19,6 +21,7 @@ import {
   Trash2,
   Loader2,
   Upload,
+  Headphones,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +48,7 @@ const steps = [
   { id: 'sustainability', title: 'Sustainability', icon: Leaf },
   { id: 'compliance', title: 'Compliance', icon: ShieldCheck },
   { id: 'documents', title: 'Documents', icon: FileText },
+  { id: 'support', title: 'Support', icon: Headphones },
   { id: 'suppliers', title: 'Suppliers', icon: Truck },
 ];
 
@@ -130,6 +134,8 @@ export function ProductFormPage() {
         recyclablePercentage: product.recyclability?.recyclablePercentage || 0,
         recyclingInstructions: product.recyclability?.instructions || '',
         certifications: (product.certifications || []).map(c => c.name),
+        registrations: product.registrations || {},
+        supportResources: product.supportResources || {},
       });
 
       setSelectedSuppliers(
@@ -160,6 +166,8 @@ export function ProductFormPage() {
     recyclablePercentage: 0,
     recyclingInstructions: '',
     certifications: [] as string[],
+    registrations: {} as ProductRegistrations,
+    supportResources: {} as SupportResources,
   });
 
   const updateField = (field: string, value: string | number | boolean) => {
@@ -280,6 +288,8 @@ export function ProductFormPage() {
           instructions: formData.recyclingInstructions,
           disposalMethods: [],
         },
+        registrations: formData.registrations,
+        supportResources: formData.supportResources,
       };
 
       if (isEditMode && id) {
@@ -412,7 +422,8 @@ export function ProductFormPage() {
             {currentStep === 1 && t('Define materials and sustainability data')}
             {currentStep === 2 && t('Add certifications and compliance data')}
             {currentStep === 3 && t('Upload relevant documents')}
-            {currentStep === 4 && t('Assign suppliers and economic operators')}
+            {currentStep === 4 && t('Add support resources, FAQ, warranty, and repair information')}
+            {currentStep === 5 && t('Assign suppliers and economic operators')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -552,6 +563,46 @@ export function ProductFormPage() {
                   </div>
                 </>
               )}
+
+              <Separator className="md:col-span-2" />
+              <h3 className="font-medium md:col-span-2">{t('Registration Numbers')}</h3>
+
+              {REGISTRATION_FIELDS.filter(f => f.type !== 'tags').map((field) => (
+                <div key={field.key} className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <field.icon className="h-4 w-4 text-muted-foreground" />
+                    {t(field.label)}
+                  </label>
+                  {field.type === 'select' ? (
+                    <Select
+                      value={(formData.registrations as Record<string, string>)[field.key] || ''}
+                      onValueChange={(v) => setFormData(prev => ({
+                        ...prev,
+                        registrations: { ...prev.registrations, [field.key]: v },
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t(field.placeholder)} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options?.map(opt => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      placeholder={field.placeholder}
+                      value={(formData.registrations as Record<string, string>)[field.key] || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        registrations: { ...prev.registrations, [field.key]: e.target.value },
+                      }))}
+                    />
+                  )}
+                  <p className="text-xs text-muted-foreground">{t(field.tooltip)}</p>
+                </div>
+              ))}
             </div>
           )}
 
@@ -784,8 +835,16 @@ export function ProductFormPage() {
             </div>
           )}
 
-          {/* Step 5: Suppliers */}
+          {/* Step 5: Support Resources */}
           {currentStep === 4 && (
+            <ProductSupportTab
+              supportResources={formData.supportResources}
+              onChange={(resources) => setFormData(prev => ({ ...prev, supportResources: resources }))}
+            />
+          )}
+
+          {/* Step 6: Suppliers */}
+          {currentStep === 5 && (
             <div className="space-y-6">
               {/* Own Company */}
               <div>

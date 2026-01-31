@@ -13,6 +13,10 @@ export interface Profile {
   name: string | null;
   avatarUrl: string | null;
   role: 'admin' | 'editor' | 'viewer';
+  status: 'active' | 'inactive' | 'pending';
+  lastLogin: string | null;
+  invitedBy: string | null;
+  invitedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +31,10 @@ function transformProfile(row: any): Profile {
     name: row.name || null,
     avatarUrl: row.avatar_url || null,
     role: row.role || 'viewer',
+    status: row.status || 'active',
+    lastLogin: row.last_login || null,
+    invitedBy: row.invited_by || null,
+    invitedAt: row.invited_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -159,6 +167,88 @@ export async function inviteUser(
   }
 
   return { success: true };
+}
+
+/**
+ * Update a user's role with last-admin protection
+ */
+export async function updateProfileRole(
+  userId: string,
+  role: 'admin' | 'editor' | 'viewer'
+): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  // Last admin protection
+  if (role !== 'admin') {
+    const adminCount = await getAdminCount();
+    const currentProfile = await getProfile(userId);
+    if (currentProfile?.role === 'admin' && adminCount <= 1) {
+      return { success: false, error: 'Cannot change the role of the last admin.' };
+    }
+  }
+
+  return updateProfile(userId, { role });
+}
+
+/**
+ * Deactivate a user
+ */
+export async function deactivateUser(userId: string): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  // Last admin protection
+  const profile = await getProfile(userId);
+  if (profile?.role === 'admin') {
+    const adminCount = await getAdminCount();
+    if (adminCount <= 1) {
+      return { success: false, error: 'Cannot deactivate the last admin.' };
+    }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ status: 'inactive', updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .eq('tenant_id', tenantId);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/**
+ * Reactivate a user
+ */
+export async function reactivateUser(userId: string): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ status: 'active', updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .eq('tenant_id', tenantId);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/**
+ * Get count of active admins in the current tenant
+ */
+export async function getAdminCount(): Promise<number> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return 0;
+
+  const { count } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('role', 'admin')
+    .neq('status', 'inactive');
+
+  return count || 0;
 }
 
 /**

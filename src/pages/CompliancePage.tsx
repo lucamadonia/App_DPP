@@ -10,6 +10,7 @@ import {
   Filter,
   Search,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
@@ -19,25 +20,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getChecklistStats, getProducts, type ProductListItem } from '@/services/supabase';
-
-interface ComplianceItem {
-  id: string;
-  product: string;
-  requirement: string;
-  status: 'compliant' | 'pending' | 'non-compliant';
-  dueDate: string | null;
-  lastChecked: string | null;
-}
-
-interface AuditLogEntry {
-  id: string;
-  action: string;
-  user: string;
-  product: string;
-  timestamp: string;
-  details: string;
-}
+import {
+  getComplianceOverview,
+  getComplianceScores,
+  type ComplianceOverview,
+  type ComplianceScore,
+} from '@/services/supabase';
+import { getActivityLog } from '@/services/supabase/activity-log';
+import type { ActivityLogEntry } from '@/types/database';
 
 const statusConfig = {
   compliant: {
@@ -62,82 +52,28 @@ export function CompliancePage() {
   const locale = useLocale();
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [, setProducts] = useState<ProductListItem[]>([]);
-  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
-  const [, setChecklistStats] = useState({
-    total: 0,
-    completed: 0,
-    inProgress: 0,
-    pending: 0,
-    notApplicable: 0,
-    completionPercentage: 0,
-  });
+  const [overview, setOverview] = useState<ComplianceOverview | null>(null);
+  const [scores, setScores] = useState<ComplianceScore[]>([]);
+  const [auditLog, setAuditLog] = useState<ActivityLogEntry[]>([]);
 
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-
-      const [productsData, statsData] = await Promise.all([
-        getProducts(),
-        getChecklistStats(),
+      const [overviewData, scoresData, logData] = await Promise.all([
+        getComplianceOverview(),
+        getComplianceScores(),
+        getActivityLog({ limit: 50 }),
       ]);
-
-      setProducts(productsData);
-      setChecklistStats(statsData);
-
-      // Generate compliance items based on products
-      const items: ComplianceItem[] = [];
-      productsData.forEach((product, index) => {
-        items.push({
-          id: `${product.id}-ce`,
-          product: product.name,
-          requirement: 'CE Marking',
-          status: 'compliant',
-          dueDate: null,
-          lastChecked: new Date().toISOString().split('T')[0],
-        });
-        items.push({
-          id: `${product.id}-reach`,
-          product: product.name,
-          requirement: 'REACH Regulation',
-          status: index === 0 ? 'compliant' : 'pending',
-          dueDate: index === 0 ? null : '2026-02-15',
-          lastChecked: index === 0 ? new Date().toISOString().split('T')[0] : null,
-        });
-      });
-
-      setComplianceItems(items);
-
-      // Generate basic audit log
-      const log: AuditLogEntry[] = productsData.slice(0, 4).map((product, index) => ({
-        id: `audit-${index}`,
-        action: index === 0 ? 'Document uploaded' : index === 1 ? 'Status changed' : 'Product updated',
-        user: 'admin@company.de',
-        product: product.name,
-        timestamp: new Date(Date.now() - index * 86400000).toISOString().replace('T', ' ').substring(0, 19),
-        details: index === 0 ? 'CE_Declaration_of_Conformity.pdf' : 'Compliance status updated',
-      }));
-
-      setAuditLog(log);
+      setOverview(overviewData);
+      setScores(scoresData);
+      setAuditLog(logData);
       setIsLoading(false);
     }
-
     loadData();
   }, []);
 
-  const stats = {
-    total: complianceItems.length,
-    compliant: complianceItems.filter((i) => i.status === 'compliant').length,
-    pending: complianceItems.filter((i) => i.status === 'pending').length,
-    nonCompliant: complianceItems.filter((i) => i.status === 'non-compliant').length,
-  };
-
-  const complianceRate = stats.total > 0 ? Math.round((stats.compliant / stats.total) * 100) : 0;
-
-  const filteredItems = complianceItems.filter((item) =>
-    item.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.requirement.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredScores = scores.filter(s =>
+    s.productName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -147,6 +83,9 @@ export function CompliancePage() {
       </div>
     );
   }
+
+  const complianceRate = overview?.overallRate ?? 0;
+  const warnings = overview?.warnings ?? [];
 
   return (
     <div className="space-y-6">
@@ -192,7 +131,7 @@ export function CompliancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{stats.compliant}</div>
+            <div className="text-2xl font-bold text-success">{overview?.compliant ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -202,7 +141,7 @@ export function CompliancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{stats.pending}</div>
+            <div className="text-2xl font-bold text-warning">{overview?.pending ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -212,10 +151,44 @@ export function CompliancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.nonCompliant}</div>
+            <div className="text-2xl font-bold text-destructive">{overview?.nonCompliant ?? 0}</div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Warnings Banner */}
+      {warnings.length > 0 && (
+        <Card className="border-warning">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-warning text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              {t('Active Warnings')} ({warnings.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {warnings.slice(0, 10).map((warning, index) => (
+              <div
+                key={index}
+                className={`flex items-center gap-2 text-sm ${
+                  warning.severity === 'high' ? 'text-destructive' : 'text-warning'
+                }`}
+              >
+                {warning.severity === 'high' ? (
+                  <XCircle className="h-4 w-4 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                )}
+                <span>{warning.message}</span>
+                {warning.dueDate && (
+                  <Badge variant="outline" className="ml-auto">
+                    {formatDate(warning.dueDate, locale)}
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="checklist">
@@ -252,46 +225,47 @@ export function CompliancePage() {
               </div>
             </CardHeader>
             <CardContent>
-              {filteredItems.length === 0 ? (
+              {filteredScores.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <ShieldCheck className="mx-auto h-12 w-12 opacity-30 mb-2" />
                   <p>
-                    {complianceItems.length === 0
+                    {scores.length === 0
                       ? t('No compliance data available. Please create products first.')
                       : t('No entries match your search.')}
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredItems.map((item) => {
-                    const status = statusConfig[item.status as keyof typeof statusConfig];
+                  {filteredScores.map((score) => {
+                    const status = score.overallScore >= 80 ? 'compliant'
+                      : score.overallScore >= 50 ? 'pending'
+                      : 'non-compliant';
+                    const config = statusConfig[status];
                     return (
                       <div
-                        key={item.id}
+                        key={score.productId}
                         className="flex items-center justify-between p-4 rounded-lg border"
                       >
                         <div className="flex items-center gap-4">
-                          <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-full ${status.className}`}
-                          >
-                            <status.icon className="h-5 w-5" />
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${config.className}`}>
+                            <config.icon className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="font-medium">{item.requirement}</p>
-                            <p className="text-sm text-muted-foreground">{item.product}</p>
+                            <p className="font-medium">{score.productName}</p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                              <span>{t('Documents')}: {score.documentScore}%</span>
+                              <span>{t('Checklists')}: {score.checklistScore}%</span>
+                              <span>{t('Certificates')}: {score.certificateScore}%</span>
+                              <span>{t('Registrations')}: {score.registrationScore}%</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          {item.dueDate && (
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground">{t('Due')}</p>
-                              <p className="font-medium">
-                                {formatDate(item.dueDate, locale)}
-                              </p>
-                            </div>
-                          )}
-                          <Badge variant="outline" className={status.className}>
-                            {status.label}
+                          <div className="text-right">
+                            <p className="text-2xl font-bold">{score.overallScore}%</p>
+                          </div>
+                          <Badge variant="outline" className={config.className}>
+                            {t(config.label)}
                           </Badge>
                         </div>
                       </div>
@@ -330,15 +304,15 @@ export function CompliancePage() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <p className="font-medium">{entry.action}</p>
-                          <span className="text-sm text-muted-foreground font-mono">
-                            {entry.timestamp}
+                          <span className="text-sm text-muted-foreground">
+                            {formatDate(entry.createdAt, locale)}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {entry.product} · {entry.details}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          by {entry.user}
+                          {entry.entityType}
+                          {entry.details && Object.keys(entry.details).length > 0 && (
+                            <> · {JSON.stringify(entry.details).substring(0, 100)}</>
+                          )}
                         </p>
                       </div>
                     </div>

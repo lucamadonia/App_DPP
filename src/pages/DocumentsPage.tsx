@@ -80,7 +80,9 @@ const statusConfig = {
   },
 };
 
-const documentCategories = ['Conformity', 'Certificate', 'Report', 'Datasheet', 'Test Report'] as const;
+import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
+
+const documentCategories = DOCUMENT_CATEGORIES;
 
 export function DocumentsPage() {
   const { t } = useTranslation('documents');

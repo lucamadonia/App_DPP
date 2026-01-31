@@ -321,12 +321,22 @@ export function ChecklistPage() {
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-                  { code: 'FR', name: 'France', flag: '🇫🇷' },
-                  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
-                  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-                  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-                  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
+                  { code: 'DE', name: t('Germany'), flag: '🇩🇪' },
+                  { code: 'FR', name: t('France'), flag: '🇫🇷' },
+                  { code: 'AT', name: t('Austria'), flag: '🇦🇹' },
+                  { code: 'IT', name: t('Italy'), flag: '🇮🇹' },
+                  { code: 'ES', name: t('Spain'), flag: '🇪🇸' },
+                  { code: 'NL', name: t('Netherlands'), flag: '🇳🇱' },
+                  { code: 'GB', name: t('United Kingdom'), flag: '🇬🇧' },
+                  { code: 'US', name: t('United States'), flag: '🇺🇸' },
+                  { code: 'CH', name: t('Switzerland'), flag: '🇨🇭' },
+                  { code: 'PL', name: t('Poland'), flag: '🇵🇱' },
+                  { code: 'CZ', name: t('Czech Republic'), flag: '🇨🇿' },
+                  { code: 'SE', name: t('Sweden'), flag: '🇸🇪' },
+                  { code: 'DK', name: t('Denmark'), flag: '🇩🇰' },
+                  { code: 'BE', name: t('Belgium'), flag: '🇧🇪' },
+                  { code: 'PT', name: t('Portugal'), flag: '🇵🇹' },
+                  { code: 'IE', name: t('Ireland'), flag: '🇮🇪' },
                 ].map((country) => (
                   <Button
                     key={country.code}
@@ -348,16 +358,21 @@ export function ChecklistPage() {
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { id: 'electronics', name: 'Electronics', icon: '💻' },
-                  { id: 'textiles', name: 'Textiles', icon: '👕' },
-                  { id: 'batteries', name: 'Batteries', icon: '🔋' },
-                  { id: 'furniture', name: 'Furniture', icon: '🛋️' },
-                  { id: 'toys', name: 'Toys', icon: '🧸' },
-                  { id: 'packaging', name: 'Packaging', icon: '📦' },
-                  { id: 'cosmetics', name: 'Cosmetics', icon: '💄' },
-                  { id: 'food', name: 'Food', icon: '🍎' },
-                  { id: 'construction', name: 'Construction Materials', icon: '🧱' },
-                  { id: 'machinery', name: 'Machinery', icon: '⚙️' },
+                  { id: 'electronics', name: t('Electronics'), icon: '💻' },
+                  { id: 'textiles', name: t('Textiles'), icon: '👕' },
+                  { id: 'batteries', name: t('Batteries'), icon: '🔋' },
+                  { id: 'furniture', name: t('Furniture'), icon: '🛋️' },
+                  { id: 'toys', name: t('Toys'), icon: '🧸' },
+                  { id: 'packaging', name: t('Packaging'), icon: '📦' },
+                  { id: 'cosmetics', name: t('Cosmetics'), icon: '💄' },
+                  { id: 'food', name: t('Food'), icon: '🍎' },
+                  { id: 'construction', name: t('Construction Materials'), icon: '🧱' },
+                  { id: 'machinery', name: t('Machinery'), icon: '⚙️' },
+                  { id: 'medical_devices', name: t('Medical Devices'), icon: '🏥' },
+                  { id: 'automotive', name: t('Automotive'), icon: '🚗' },
+                  { id: 'chemicals', name: t('Chemical Products'), icon: '🧪' },
+                  { id: 'food_supplements', name: t('Food Supplements'), icon: '💊' },
+                  { id: 'pet_products', name: t('Pet Products'), icon: '🐾' },
                 ].map((cat) => (
                   <Button
                     key={cat.id}

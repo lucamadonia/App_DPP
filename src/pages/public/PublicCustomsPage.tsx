@@ -6,11 +6,19 @@ import { usePublicProduct } from '@/hooks/use-public-product';
 import { TemplateModern } from '@/components/public/TemplateModern';
 import { TemplateClassic } from '@/components/public/TemplateClassic';
 import { TemplateCompact } from '@/components/public/TemplateCompact';
+import { TemplateMinimal } from '@/components/public/TemplateMinimal';
+import { TemplateTechnical } from '@/components/public/TemplateTechnical';
+import { TemplateEcoFriendly } from '@/components/public/TemplateEcoFriendly';
+import { TemplatePremium } from '@/components/public/TemplatePremium';
+import { TemplateGovernment } from '@/components/public/TemplateGovernment';
+import { TemplateRetail } from '@/components/public/TemplateRetail';
+import { TemplateScientific } from '@/components/public/TemplateScientific';
+import { TemplateAccessible } from '@/components/public/TemplateAccessible';
 
 export function PublicCustomsPage() {
   const { t } = useTranslation('dpp');
   const { gtin, serial } = useParams();
-  const { product, visibilityV2, dppTemplate, dppDesign, loading } = usePublicProduct(gtin, serial);
+  const { product, visibilityV2, dppTemplateCustoms, dppDesign, loading } = usePublicProduct(gtin, serial);
 
   if (loading) {
     return (
@@ -52,11 +60,27 @@ export function PublicCustomsPage() {
 
   const templateProps = { product, visibilityV2, view: 'customs' as const, dppDesign };
 
-  switch (dppTemplate) {
+  switch (dppTemplateCustoms) {
     case 'classic':
       return <TemplateClassic {...templateProps} />;
     case 'compact':
       return <TemplateCompact {...templateProps} />;
+    case 'minimal':
+      return <TemplateMinimal {...templateProps} />;
+    case 'technical':
+      return <TemplateTechnical {...templateProps} />;
+    case 'eco-friendly':
+      return <TemplateEcoFriendly {...templateProps} />;
+    case 'premium':
+      return <TemplatePremium {...templateProps} />;
+    case 'government':
+      return <TemplateGovernment {...templateProps} />;
+    case 'retail':
+      return <TemplateRetail {...templateProps} />;
+    case 'scientific':
+      return <TemplateScientific {...templateProps} />;
+    case 'accessible':
+      return <TemplateAccessible {...templateProps} />;
     case 'modern':
     default:
       return <TemplateModern {...templateProps} />;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import { UsersTab } from '@/components/settings/UsersTab';
 import {
   Building2,
   Palette,
@@ -14,7 +15,6 @@ import {
   Copy,
   Eye,
   EyeOff,
-  Shield,
   Loader2,
   RefreshCw,
   Check,
@@ -48,16 +48,15 @@ import {
 import {
   getCurrentTenant,
   updateCurrentTenant,
-  getProfiles,
   uploadBrandingAsset,
   getProducts,
-  type Profile,
   type ProductListItem,
 } from '@/services/supabase';
 import { useBranding } from '@/contexts/BrandingContext';
 import type { Tenant, BrandingSettings } from '@/types/database';
 import { validateDomain, validatePathPrefix, normalizeDomain, buildDomainUrl } from '@/lib/domain-utils';
 import { DPPDesignTab } from '@/components/settings/DPPDesignTab';
+import { CustomDomainWizard } from '@/components/settings/CustomDomainWizard';
 
 const apiKeys = [
   { id: '1', name: 'ERP Integration', key: 'dpp_live_sk_...7x9a', created: '2024-06-15', lastUsed: '2026-01-27' },
@@ -73,7 +72,6 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const [isSavingBranding, setIsSavingBranding] = useState(false);
   const [brandingSaved, setBrandingSaved] = useState(false);
   const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [users, setUsers] = useState<Profile[]>([]);
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
@@ -91,6 +89,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const [domainSaved, setDomainSaved] = useState(false);
   const [domainError, setDomainError] = useState<string | null>(null);
   const [pathPrefixError, setPathPrefixError] = useState<string | null>(null);
+  const [domainWizardOpen, setDomainWizardOpen] = useState(false);
 
   // Get branding context
   const { rawBranding, updateBranding, refreshBranding, qrCodeSettings, updateQRCodeSettings } = useBranding();
@@ -127,9 +126,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     async function loadData() {
       setIsLoading(true);
 
-      const [tenantData, usersData, productsData] = await Promise.all([
+      const [tenantData, productsData] = await Promise.all([
         getCurrentTenant(),
-        getProfiles(),
         getProducts(),
       ]);
 
@@ -144,7 +142,6 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         });
       }
 
-      setUsers(usersData);
       setProducts(productsData);
       setIsLoading(false);
     }
@@ -1174,6 +1171,36 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             </CardContent>
           </Card>
 
+          {/* Connect Custom Domain Wizard */}
+          {domainForm.resolver === 'custom' && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">{t('CNAME Setup Wizard')}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {t('Step-by-step guide to connect your domain via CNAME record')}
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={() => setDomainWizardOpen(true)}>
+                    <Globe className="mr-2 h-4 w-4" />
+                    {t('Connect Custom Domain')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <CustomDomainWizard
+            open={domainWizardOpen}
+            onOpenChange={setDomainWizardOpen}
+            currentDomain={domainForm.customDomain}
+            onDomainVerified={(domain) => {
+              setDomainForm(prev => ({ ...prev, customDomain: domain }));
+              setDomainWizardOpen(false);
+            }}
+          />
+
           {/* Custom Domain Settings */}
           {domainForm.resolver === 'custom' && (
             <Card>
@@ -1310,97 +1337,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
         {/* Users */}
         <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{t('Users & Roles')}</CardTitle>
-                  <CardDescription>
-                    {t('Manage access rights for your team')}
-                  </CardDescription>
-                </div>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('Invite User')}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {users.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>{t('No other users in this tenant')}</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Name')}</TableHead>
-                      <TableHead>{t('Email')}</TableHead>
-                      <TableHead>{t('Role')}</TableHead>
-                      <TableHead>{t('Status')}</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name || 'Unknown'}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={user.role === 'admin' ? 'default' : 'secondary'}
-                          >
-                            <Shield className="mr-1 h-3 w-3" />
-                            {user.role === 'admin' ? t('Admin') : user.role === 'editor' ? t('Editor') : t('Viewer')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-success">
-                            {t('Active')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Roles')}</CardTitle>
-              <CardDescription>{t('Defined access rights')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium">{t('Admin')}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {t('Full access to all features including settings and user management')}
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium">{t('Editor')}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {t('Can create, edit, and publish products and DPPs')}
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium">{t('Viewer')}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {t('Read-only access to products and reports')}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <UsersTab />
         </TabsContent>
 
         {/* API-Keys */}

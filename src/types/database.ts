@@ -39,6 +39,13 @@ export interface BrandingSettings {
 // QR-CODE DOMAIN SETTINGS (Tenant-Daten)
 // ============================================
 
+export type DPPTemplateName =
+  | 'modern' | 'classic' | 'compact'
+  | 'minimal' | 'technical' | 'eco-friendly' | 'premium'
+  | 'government' | 'retail' | 'scientific' | 'accessible';
+
+export type DomainVerificationStatus = 'pending' | 'verified' | 'failed';
+
 export interface QRCodeDomainSettings {
   customDomain?: string;      // z.B. "dpp.meinefirma.de"
   pathPrefix?: string;        // z.B. "/passport"
@@ -46,7 +53,11 @@ export interface QRCodeDomainSettings {
   resolver?: 'local' | 'gs1' | 'custom';
   foregroundColor?: string;   // QR-Code Vordergrundfarbe
   backgroundColor?: string;   // QR-Code Hintergrundfarbe
-  dppTemplate?: 'modern' | 'classic' | 'compact'; // Public DPP page template
+  dppTemplate?: DPPTemplateName; // Public DPP page template (legacy, fallback)
+  dppTemplateCustomer?: DPPTemplateName; // Template for customer/consumer view
+  dppTemplateCustoms?: DPPTemplateName;  // Template for customs/authority view
+  domainStatus?: DomainVerificationStatus;
+  domainVerifiedAt?: string;
 }
 
 // ============================================
@@ -174,7 +185,7 @@ export interface EURegulation {
   name: string;
   fullName: string;
   description: string;
-  category: 'environment' | 'chemicals' | 'recycling' | 'safety' | 'energy';
+  category: 'environment' | 'chemicals' | 'recycling' | 'safety' | 'energy' | 'sustainability' | 'digital' | 'trade' | 'labeling';
   status: 'active' | 'upcoming';
   effectiveDate: string;
   applicationDate: string;
@@ -182,6 +193,9 @@ export interface EURegulation {
   affectedProducts: string[];
   dppDeadlines: Record<string, string>; // Produktkategorie -> Datum
   link?: string;
+  penalties?: string;
+  enforcementBody?: string;
+  officialReference?: string;
 }
 
 export interface NationalRegulation {
@@ -253,6 +267,8 @@ export interface ChecklistTemplate {
   applicableProducts?: string[];
   priority: 'critical' | 'high' | 'medium' | 'low';
   sort_order?: number;
+  regulationId?: string;
+  requiredDocumentCategories?: string[];
 }
 
 // ============================================
@@ -264,13 +280,15 @@ export interface NewsItem {
   title: string;
   summary: string;
   content: string;
-  category: 'regulation' | 'deadline' | 'update' | 'warning';
+  category: 'regulation' | 'deadline' | 'update' | 'warning' | 'recall' | 'standard' | 'guidance' | 'consultation';
   countries: string[];
   publishedAt: string;
   effectiveDate?: string;
   priority: 'high' | 'medium' | 'low';
   tags: string[];
   link?: string;
+  imageUrl?: string;
+  source?: string;
 }
 
 // ============================================
@@ -283,7 +301,7 @@ export interface Document {
   product_id?: string;
   name: string;
   type: 'pdf' | 'image' | 'other';
-  category: 'Konformität' | 'Zertifikat' | 'Bericht' | 'Datenblatt' | 'Testbericht';
+  category: string;
   url?: string;
   size?: string;
   validUntil?: string;
@@ -530,6 +548,116 @@ export interface CacheEntry<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+}
+
+// ============================================
+// PRODUCT REGISTRATIONS
+// ============================================
+
+export interface ProductRegistrations {
+  weeeNumber?: string;
+  eprelNumber?: string;
+  reachNumber?: string;
+  clpClassification?: string[];
+  scipNumber?: string;
+  ceDeclarationRef?: string;
+  rohsDeclarationRef?: string;
+  lucidNumber?: string;
+  eprNumbers?: Record<string, string>;
+  udi?: string;
+  energyLabelClass?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+}
+
+// ============================================
+// PRODUCT SUPPORT RESOURCES
+// ============================================
+
+export interface VideoLink {
+  title: string;
+  url: string;
+  type: 'youtube' | 'vimeo' | 'direct';
+}
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export interface WarrantyInfo {
+  durationMonths?: number;
+  terms?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+}
+
+export interface RepairInfo {
+  repairGuide?: string;
+  serviceCenters?: string[];
+  repairabilityScore?: number;
+}
+
+export interface SparePart {
+  name: string;
+  partNumber?: string;
+  price?: number;
+  currency?: string;
+  available?: boolean;
+}
+
+export interface SupportResources {
+  instructions?: string;
+  assemblyGuide?: string;
+  videos?: VideoLink[];
+  faq?: FAQItem[];
+  warranty?: WarrantyInfo;
+  repairInfo?: RepairInfo;
+  spareParts?: SparePart[];
+}
+
+// ============================================
+// PRODUCT IMAGES
+// ============================================
+
+export interface ProductImage {
+  id: string;
+  productId: string;
+  url: string;
+  storagePath?: string;
+  caption?: string;
+  sortOrder: number;
+  isPrimary: boolean;
+}
+
+// ============================================
+// INVITATIONS
+// ============================================
+
+export interface Invitation {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: 'admin' | 'editor' | 'viewer';
+  name?: string;
+  message?: string;
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  invitedBy?: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
+export interface ActivityLogEntry {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  details: Record<string, unknown>;
+  createdAt: string;
 }
 
 // Re-export from product.ts for convenience (Material is defined locally, so we only export the others)

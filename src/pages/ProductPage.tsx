@@ -16,7 +16,6 @@ import {
   History,
   Recycle,
   MapPin,
-  Award,
   Truck,
   CheckCircle2,
   AlertTriangle,
@@ -30,6 +29,7 @@ import {
   Clock,
   Archive,
   Settings2,
+  Headphones,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,11 +52,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getProductById, getProductSuppliersWithDetails } from '@/services/supabase';
+import { getProductById, getProductSuppliersWithDetails, getProductImages } from '@/services/supabase';
 import { getBatches, deleteBatch } from '@/services/supabase/batches';
 import type { Product } from '@/types/product';
 import type { BatchListItem } from '@/types/product';
-import type { SupplierProduct } from '@/types/database';
+import type { SupplierProduct, ProductImage } from '@/types/database';
+import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
+import { ProductDocumentsTab } from '@/components/product/ProductDocumentsTab';
+import { ProductSupportTab } from '@/components/product/ProductSupportTab';
+import { ProductComplianceTab } from '@/components/product/ProductComplianceTab';
 
 const SUPPLIER_ROLE_LABELS: Record<string, string> = {
   manufacturer: 'Manufacturer',
@@ -85,6 +89,7 @@ export function ProductPage() {
   const [productSuppliers, setProductSuppliers] = useState<Array<SupplierProduct & { supplier_name: string; supplier_country: string }>>([]);
   const [batches, setBatches] = useState<BatchListItem[]>([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
 
   useEffect(() => {
     async function loadProduct() {
@@ -97,9 +102,10 @@ export function ProductPage() {
       setIsLoading(true);
       setError(null);
 
-      const [data, suppliersData] = await Promise.all([
+      const [data, suppliersData, imagesData] = await Promise.all([
         getProductById(id),
         getProductSuppliersWithDetails(id),
+        getProductImages(id),
       ]);
       if (data) {
         setProduct(data);
@@ -107,6 +113,7 @@ export function ProductPage() {
         setError('Product not found');
       }
       setProductSuppliers(suppliersData);
+      setProductImages(imagesData);
       setIsLoading(false);
 
       // Load batches
@@ -260,6 +267,10 @@ export function ProductPage() {
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Documents')}</span>
           </TabsTrigger>
+          <TabsTrigger value="support" className="flex items-center gap-2 flex-shrink-0">
+            <Headphones className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('Support')}</span>
+          </TabsTrigger>
           <TabsTrigger value="lieferanten" className="flex items-center gap-2 flex-shrink-0">
             <Truck className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Suppliers')}</span>
@@ -323,9 +334,9 @@ export function ProductPage() {
                 <CardTitle>{t('Product Image')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {product.imageUrl ? (
+                {(productImages.length > 0 ? productImages.find(i => i.isPrimary)?.url || productImages[0]?.url : product.imageUrl) ? (
                   <img
-                    src={product.imageUrl}
+                    src={productImages.length > 0 ? (productImages.find(i => i.isPrimary)?.url || productImages[0]?.url) : product.imageUrl}
                     alt={product.name}
                     className="aspect-square rounded-lg object-cover"
                   />
@@ -339,6 +350,16 @@ export function ProductPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Images Gallery */}
+          {productImages.length > 1 && (
+            <ProductImagesGallery
+              productId={product.id}
+              images={productImages}
+              onImagesChange={setProductImages}
+              readOnly
+            />
+          )}
         </TabsContent>
 
         {/* Batches Tab */}
@@ -614,75 +635,21 @@ export function ProductPage() {
 
         {/* Compliance Tab */}
         <TabsContent value="konformitaet" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-warning" />
-                {t('Certifications')}
-              </CardTitle>
-              <CardDescription>{t('Valid certificates and declarations of conformity')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {product.certifications && product.certifications.length > 0 ? (
-                <div className="space-y-4">
-                  {product.certifications.map((cert, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                          <Award className="h-5 w-5 text-warning" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{cert.name}</p>
-                          <p className="text-sm text-muted-foreground">{cert.issuedBy}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">{t('Valid until')}</p>
-                          <p className="font-medium">
-                            {formatDate(cert.validUntil, locale)}
-                          </p>
-                        </div>
-                        {cert.certificateUrl && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={cert.certificateUrl} target="_blank" rel="noopener noreferrer">
-                              <Download className="mr-2 h-4 w-4" />
-                              PDF
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Award className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                  <p>{t('No certifications recorded')}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ProductComplianceTab product={product} />
         </TabsContent>
 
         {/* Documents Tab */}
         <TabsContent value="dokumente">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Documents & Certificates')}</CardTitle>
-              <CardDescription>{t('All uploaded documents for this product')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex h-48 items-center justify-center rounded-lg border-2 border-dashed">
-                <div className="text-center">
-                  <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {t('Drag files here or click to upload')}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ProductDocumentsTab productId={product.id} />
+        </TabsContent>
+
+        {/* Support Tab */}
+        <TabsContent value="support" className="space-y-6">
+          <ProductSupportTab
+            supportResources={product.supportResources || {}}
+            onChange={() => {}}
+            readOnly
+          />
         </TabsContent>
 
         {/* Suppliers Tab */}
