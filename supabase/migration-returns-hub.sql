@@ -267,6 +267,67 @@ USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()))
 WITH CHECK (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
 
 -- ============================================
+-- PUBLIC / ANON ACCESS POLICIES
+-- (for public return registration and tracking portals)
+-- ============================================
+
+-- rh_return_reasons: anon can read active reasons (needed for public registration form)
+DROP POLICY IF EXISTS "Public read active return reasons" ON rh_return_reasons;
+CREATE POLICY "Public read active return reasons"
+ON rh_return_reasons FOR SELECT
+TO anon
+USING (active = true);
+
+-- rh_returns: anon can insert new returns (public registration)
+DROP POLICY IF EXISTS "Public insert returns" ON rh_returns;
+CREATE POLICY "Public insert returns"
+ON rh_returns FOR INSERT
+TO anon
+WITH CHECK (true);
+
+-- rh_returns: anon can read returns by return_number (public tracking)
+DROP POLICY IF EXISTS "Public read returns by number" ON rh_returns;
+CREATE POLICY "Public read returns by number"
+ON rh_returns FOR SELECT
+TO anon
+USING (true);
+
+-- rh_return_items: anon can insert items (public registration)
+DROP POLICY IF EXISTS "Public insert return items" ON rh_return_items;
+CREATE POLICY "Public insert return items"
+ON rh_return_items FOR INSERT
+TO anon
+WITH CHECK (true);
+
+-- rh_return_timeline: anon can insert timeline entries (public registration)
+DROP POLICY IF EXISTS "Public insert return timeline" ON rh_return_timeline;
+CREATE POLICY "Public insert return timeline"
+ON rh_return_timeline FOR INSERT
+TO anon
+WITH CHECK (true);
+
+-- rh_return_timeline: anon can read timeline (public tracking)
+DROP POLICY IF EXISTS "Public read return timeline" ON rh_return_timeline;
+CREATE POLICY "Public read return timeline"
+ON rh_return_timeline FOR SELECT
+TO anon
+USING (true);
+
+-- rh_customers: anon can insert customers (public registration creates customer)
+DROP POLICY IF EXISTS "Public insert customers" ON rh_customers;
+CREATE POLICY "Public insert customers"
+ON rh_customers FOR INSERT
+TO anon
+WITH CHECK (true);
+
+-- rh_customers: anon can read customers by email (public registration dedup)
+DROP POLICY IF EXISTS "Public read customers" ON rh_customers;
+CREATE POLICY "Public read customers"
+ON rh_customers FOR SELECT
+TO anon
+USING (true);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 

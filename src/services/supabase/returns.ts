@@ -247,6 +247,147 @@ export async function rejectReturn(
   return updateReturnStatus(id, 'REJECTED', reason, actorId);
 }
 
+// ============================================
+// PUBLIC ACCESS (no auth needed)
+// ============================================
+
+export async function publicCreateReturn(
+  tenantSlug: string,
+  data: {
+    orderNumber?: string;
+    email: string;
+    reasonCategory?: string;
+    reasonText?: string;
+    desiredSolution: string;
+    shippingMethod: string;
+    items: Array<{ name: string; quantity: number }>;
+  }
+): Promise<{ success: boolean; returnNumber?: string; error?: string }> {
+  // Get tenant by slug
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id, settings')
+    .eq('slug', tenantSlug)
+    .single();
+
+  if (!tenant) return { success: false, error: 'Tenant not found' };
+
+  const prefix = (tenant.settings as any)?.returnsHub?.prefix || 'RET';
+  const rn = generateReturnNumber(prefix);
+
+  const { data: ret, error } = await supabase
+    .from('rh_returns')
+    .insert({
+      tenant_id: tenant.id,
+      return_number: rn,
+      status: 'CREATED',
+      order_id: data.orderNumber || null,
+      reason_category: data.reasonCategory || null,
+      reason_text: data.reasonText || null,
+      desired_solution: data.desiredSolution,
+      shipping_method: data.shippingMethod,
+      priority: 'normal',
+      metadata: { source: 'public_portal', email: data.email },
+    })
+    .select('id')
+    .single();
+
+  if (error || !ret) {
+    console.error('Failed to create public return:', error);
+    return { success: false, error: error?.message || 'Insert failed' };
+  }
+
+  // Add items
+  for (const item of data.items.filter(i => i.name.trim())) {
+    await supabase.from('rh_return_items').insert({
+      return_id: ret.id,
+      tenant_id: tenant.id,
+      name: item.name,
+      quantity: item.quantity,
+    });
+  }
+
+  // Add timeline entry
+  await supabase.from('rh_return_timeline').insert({
+    return_id: ret.id,
+    tenant_id: tenant.id,
+    status: 'CREATED',
+    comment: 'Return registered via customer portal',
+    actor_type: 'customer',
+  });
+
+  // Create or find customer
+  const { data: existingCustomer } = await supabase
+    .from('rh_customers')
+    .select('id')
+    .eq('tenant_id', tenant.id)
+    .eq('email', data.email)
+    .single();
+
+  if (!existingCustomer) {
+    await supabase.from('rh_customers').insert({
+      tenant_id: tenant.id,
+      email: data.email,
+    });
+  }
+
+  return { success: true, returnNumber: rn };
+}
+
+export async function publicTrackReturn(
+  returnNumber: string,
+  email?: string
+): Promise<{ returnData: RhReturn | null; timeline: Array<{ id: string; returnId: string; tenantId: string; status: string; comment?: string; actorType: string; metadata: Record<string, unknown>; createdAt: string }> }> {
+  const { data: ret } = await supabase
+    .from('rh_returns')
+    .select('*')
+    .eq('return_number', returnNumber.trim())
+    .single();
+
+  if (!ret) return { returnData: null, timeline: [] };
+
+  // Verify email if provided
+  const meta = ret.metadata as Record<string, unknown> | null;
+  if (email && meta?.email && meta.email !== email) {
+    return { returnData: null, timeline: [] };
+  }
+
+  // Transform but strip internal data
+  const transformed = transformReturn(ret);
+  transformed.internalNotes = undefined;
+  transformed.customsData = undefined;
+  transformed.metadata = {};
+
+  // Load timeline
+  const { data: tlData } = await supabase
+    .from('rh_return_timeline')
+    .select('*')
+    .eq('return_id', ret.id)
+    .order('created_at', { ascending: true });
+
+  const timeline = (tlData || []).map((row: any) => ({
+    id: row.id,
+    returnId: row.return_id,
+    tenantId: row.tenant_id,
+    status: row.status,
+    comment: row.comment || undefined,
+    actorType: row.actor_type || 'system',
+    metadata: {},
+    createdAt: row.created_at,
+  }));
+
+  return { returnData: transformed, timeline };
+}
+
+export async function publicGetTenantName(tenantSlug: string): Promise<string> {
+  const { data } = await supabase
+    .from('tenants')
+    .select('name')
+    .eq('slug', tenantSlug)
+    .single();
+  return data?.name || '';
+}
+
 export async function getReturnStats(): Promise<ReturnsHubStats> {
   const tenantId = await getCurrentTenantId();
   const empty: ReturnsHubStats = {
@@ -260,17 +401,33 @@ export async function getReturnStats(): Promise<ReturnsHubStats> {
 
   const { data: returns } = await supabase
     .from('rh_returns')
-    .select('id, status, reason_category, refund_amount, created_at')
+    .select('id, status, reason_category, refund_amount, created_at, updated_at')
     .eq('tenant_id', tenantId);
 
   if (!returns?.length) return empty;
 
   const today = new Date().toISOString().split('T')[0];
   const openStatuses = ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED', 'SHIPPED', 'DELIVERED', 'INSPECTION_IN_PROGRESS', 'REFUND_PROCESSING'];
+  const closedStatuses = ['COMPLETED', 'REFUND_COMPLETED', 'REJECTED', 'CANCELLED'];
 
   const openReturns = returns.filter(r => openStatuses.includes(r.status)).length;
   const todayReceived = returns.filter(r => r.created_at?.startsWith(today)).length;
   const refundVolume = returns.reduce((sum, r) => sum + (Number(r.refund_amount) || 0), 0);
+
+  // Calculate avgProcessingDays from completed returns
+  const completedReturns = returns.filter(r => closedStatuses.includes(r.status) && r.created_at && r.updated_at);
+  let avgProcessingDays = 0;
+  if (completedReturns.length > 0) {
+    const totalDays = completedReturns.reduce((sum, r) => {
+      const created = new Date(r.created_at).getTime();
+      const updated = new Date(r.updated_at).getTime();
+      return sum + (updated - created) / (1000 * 60 * 60 * 24);
+    }, 0);
+    avgProcessingDays = Math.round((totalDays / completedReturns.length) * 10) / 10;
+  }
+
+  // Calculate return rate (completed / total)
+  const returnRate = returns.length > 0 ? Math.round((completedReturns.length / returns.length) * 100) : 0;
 
   const returnsByStatus = {} as Record<string, number>;
   const returnsByReason = {} as Record<string, number>;
@@ -301,8 +458,8 @@ export async function getReturnStats(): Promise<ReturnsHubStats> {
   return {
     openReturns,
     todayReceived,
-    avgProcessingDays: 0, // Would need completed returns with timestamps to calculate
-    returnRate: 0,
+    avgProcessingDays,
+    returnRate,
     refundVolume,
     slaCompliance: 100,
     openTickets: openTickets || 0,

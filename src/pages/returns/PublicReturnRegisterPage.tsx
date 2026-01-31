@@ -8,9 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getPublicReturnReasons } from '@/services/supabase';
-import { supabase } from '@/lib/supabase';
-import { generateReturnNumber } from '@/lib/return-number';
+import { getPublicReturnReasons, publicCreateReturn, publicGetTenantName } from '@/services/supabase';
 import type { RhReturnReason, DesiredSolution } from '@/types/returns-hub';
 
 const STEPS = ['Identification', 'Select Items', 'Return Reason', 'Upload Photos', 'Preferred Solution', 'Shipping', 'Confirmation'];
@@ -47,15 +45,12 @@ export function PublicReturnRegisterPage() {
     async function load() {
       setLoading(true);
       if (tenantSlug) {
-        const r = await getPublicReturnReasons(tenantSlug);
+        const [r, name] = await Promise.all([
+          getPublicReturnReasons(tenantSlug),
+          publicGetTenantName(tenantSlug),
+        ]);
         setReasons(r);
-        // Load tenant name
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('name')
-          .eq('slug', tenantSlug)
-          .single();
-        if (tenant) setTenantName(tenant.name);
+        setTenantName(name);
       }
       setLoading(false);
     }
@@ -66,75 +61,18 @@ export function PublicReturnRegisterPage() {
     if (!tenantSlug) return;
     setSubmitting(true);
 
-    // Get tenant ID
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('id, settings')
-      .eq('slug', tenantSlug)
-      .single();
+    const result = await publicCreateReturn(tenantSlug, {
+      orderNumber: orderNumber || undefined,
+      email,
+      reasonCategory: reasonCategory || undefined,
+      reasonText: reasonText || undefined,
+      desiredSolution: solution,
+      shippingMethod,
+      items: items.filter(i => i.selected && i.name.trim()),
+    });
 
-    if (!tenant) {
-      setSubmitting(false);
-      return;
-    }
-
-    const prefix = tenant.settings?.returnsHub?.prefix || 'RET';
-    const rn = generateReturnNumber(prefix);
-
-    // Insert return (public, uses tenant_id directly)
-    const { data: ret, error } = await supabase
-      .from('rh_returns')
-      .insert({
-        tenant_id: tenant.id,
-        return_number: rn,
-        status: 'CREATED',
-        order_id: orderNumber || null,
-        reason_category: reasonCategory || null,
-        reason_text: reasonText || null,
-        desired_solution: solution,
-        shipping_method: shippingMethod,
-        priority: 'normal',
-        metadata: { source: 'public_portal', email },
-      })
-      .select('id')
-      .single();
-
-    if (!error && ret) {
-      // Add items
-      for (const item of items.filter(i => i.selected && i.name.trim())) {
-        await supabase.from('rh_return_items').insert({
-          return_id: ret.id,
-          tenant_id: tenant.id,
-          name: item.name,
-          quantity: item.quantity,
-        });
-      }
-
-      // Add timeline
-      await supabase.from('rh_return_timeline').insert({
-        return_id: ret.id,
-        tenant_id: tenant.id,
-        status: 'CREATED',
-        comment: 'Return registered via customer portal',
-        actor_type: 'customer',
-      });
-
-      // Create or find customer
-      const { data: existingCustomer } = await supabase
-        .from('rh_customers')
-        .select('id')
-        .eq('tenant_id', tenant.id)
-        .eq('email', email)
-        .single();
-
-      if (!existingCustomer) {
-        await supabase.from('rh_customers').insert({
-          tenant_id: tenant.id,
-          email,
-        });
-      }
-
-      setReturnNumber(rn);
+    if (result.success && result.returnNumber) {
+      setReturnNumber(result.returnNumber);
       setSubmitted(true);
     }
     setSubmitting(false);

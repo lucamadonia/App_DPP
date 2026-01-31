@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { ReturnTimeline } from '@/components/returns/ReturnTimeline';
-import { supabase } from '@/lib/supabase';
-import type { RhReturn, RhReturnTimeline as TimelineType, ReturnStatus } from '@/types/returns-hub';
+import { publicTrackReturn } from '@/services/supabase';
+import type { RhReturn, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
 
 export function PublicReturnTrackingPage() {
   const { t } = useTranslation('returns');
@@ -18,18 +18,15 @@ export function PublicReturnTrackingPage() {
   const [error, setError] = useState('');
   const [returnData, setReturnData] = useState<RhReturn | null>(null);
   const [timeline, setTimeline] = useState<TimelineType[]>([]);
+
   const handleSearch = async () => {
     if (!returnNumber.trim()) return;
     setLoading(true);
     setError('');
 
-    const { data: ret } = await supabase
-      .from('rh_returns')
-      .select('*')
-      .eq('return_number', returnNumber.trim())
-      .single();
+    const result = await publicTrackReturn(returnNumber.trim(), email || undefined);
 
-    if (!ret) {
+    if (!result.returnData) {
       setReturnData(null);
       setTimeline([]);
       setError(t('Return not found'));
@@ -37,69 +34,8 @@ export function PublicReturnTrackingPage() {
       return;
     }
 
-    // Verify email matches (via metadata or customer)
-    const meta = ret.metadata as Record<string, unknown> | null;
-    if (email && meta?.email && meta.email !== email) {
-      setReturnData(null);
-      setTimeline([]);
-      setError(t('Return not found'));
-      setLoading(false);
-      return;
-    }
-
-    // Transform
-    const transformed: RhReturn = {
-      id: ret.id,
-      tenantId: ret.tenant_id,
-      returnNumber: ret.return_number,
-      status: ret.status as ReturnStatus,
-      customerId: ret.customer_id || undefined,
-      orderId: ret.order_id || undefined,
-      orderDate: ret.order_date || undefined,
-      reasonCategory: ret.reason_category || undefined,
-      reasonSubcategory: ret.reason_subcategory || undefined,
-      reasonText: ret.reason_text || undefined,
-      desiredSolution: ret.desired_solution || undefined,
-      shippingMethod: ret.shipping_method || undefined,
-      trackingNumber: ret.tracking_number || undefined,
-      labelUrl: ret.label_url || undefined,
-      labelExpiresAt: ret.label_expires_at || undefined,
-      inspectionResult: ret.inspection_result || undefined,
-      refundAmount: ret.refund_amount != null ? Number(ret.refund_amount) : undefined,
-      refundMethod: ret.refund_method || undefined,
-      refundReference: ret.refund_reference || undefined,
-      refundedAt: ret.refunded_at || undefined,
-      priority: ret.priority,
-      assignedTo: ret.assigned_to || undefined,
-      internalNotes: undefined, // Don't expose internal notes publicly
-      customsData: undefined,
-      metadata: {},
-      createdAt: ret.created_at,
-      updatedAt: ret.updated_at,
-    };
-
-    setReturnData(transformed);
-
-    // Load timeline
-    const { data: tlData } = await supabase
-      .from('rh_return_timeline')
-      .select('*')
-      .eq('return_id', ret.id)
-      .order('created_at', { ascending: true });
-
-    const tl: TimelineType[] = (tlData || []).map((row: any) => ({
-      id: row.id,
-      returnId: row.return_id,
-      tenantId: row.tenant_id,
-      status: row.status,
-      comment: row.comment || undefined,
-      actorId: undefined,
-      actorType: row.actor_type || 'system',
-      metadata: {},
-      createdAt: row.created_at,
-    }));
-
-    setTimeline(tl);
+    setReturnData(result.returnData);
+    setTimeline(result.timeline as TimelineType[]);
     setLoading(false);
   };
 

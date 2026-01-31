@@ -203,6 +203,9 @@ export {
   approveReturn,
   rejectReturn,
   getReturnStats,
+  publicCreateReturn,
+  publicTrackReturn,
+  publicGetTenantName,
 } from './returns';
 
 // Returns Hub - Return Items
