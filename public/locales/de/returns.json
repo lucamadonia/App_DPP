@@ -617,5 +617,12 @@
   "Enter return ID": "Retouren-ID eingeben",
   "Ticket updated": "Ticket aktualisiert",
   "Export Tickets CSV": "Tickets als CSV exportieren",
-  "The selected ticket will be closed and its messages moved to this ticket.": "Das ausgewählte Ticket wird geschlossen und seine Nachrichten in dieses Ticket verschoben."
+  "The selected ticket will be closed and its messages moved to this ticket.": "Das ausgewählte Ticket wird geschlossen und seine Nachrichten in dieses Ticket verschoben.",
+  "Default SLA times for new tickets": "Standard-SLA-Zeiten für neue Tickets",
+  "Text templates for quick ticket replies": "Textvorlagen für schnelle Ticket-Antworten",
+  "Response title...": "Titel der Vorlage...",
+  "Response text...": "Vorlagentext...",
+  "Add": "Hinzufügen",
+  "Title": "Titel",
+  "Content": "Inhalt"
 }

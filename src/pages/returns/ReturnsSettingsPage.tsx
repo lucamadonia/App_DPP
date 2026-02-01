@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Save, Plus, Trash2, Mail, Pencil } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, Mail, Pencil, Copy, Check, ExternalLink, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,8 +17,9 @@ import {
   getReturnsHubSettings, updateReturnsHubSettings,
   getReturnReasons, createReturnReason, updateReturnReason, deleteReturnReason,
   getRhEmailTemplates, upsertRhEmailTemplate, seedDefaultEmailTemplates,
+  getCurrentTenant, getCannedResponses, saveCannedResponses,
 } from '@/services/supabase';
-import type { ReturnsHubSettings, RhReturnReason, RhEmailTemplate } from '@/types/returns-hub';
+import type { ReturnsHubSettings, RhReturnReason, RhEmailTemplate, RhCannedResponse } from '@/types/returns-hub';
 
 export function ReturnsSettingsPage() {
   const { t } = useTranslation('returns');
@@ -33,18 +34,45 @@ export function ReturnsSettingsPage() {
   const [editBody, setEditBody] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [seedingTemplates, setSeedingTemplates] = useState(false);
+  const [tenantSlug, setTenantSlug] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  // Canned responses
+  const [cannedResponses, setCannedResponses] = useState<RhCannedResponse[]>([]);
+  const [newResponseTitle, setNewResponseTitle] = useState('');
+  const [newResponseContent, setNewResponseContent] = useState('');
+  const [editingResponse, setEditingResponse] = useState<RhCannedResponse | null>(null);
+  const [editResponseTitle, setEditResponseTitle] = useState('');
+  const [editResponseContent, setEditResponseContent] = useState('');
+  const [savingResponses, setSavingResponses] = useState(false);
+
+  // SLA defaults
+  const [slaFirstResponseHours, setSlaFirstResponseHours] = useState('4');
+  const [slaResolutionHours, setSlaResolutionHours] = useState('24');
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [s, r, et] = await Promise.all([
+      const [s, r, et, tenant, cr] = await Promise.all([
         getReturnsHubSettings(),
         getReturnReasons(),
         getRhEmailTemplates(),
+        getCurrentTenant(),
+        getCannedResponses(),
       ]);
       setSettings(s);
       setReasons(r);
       setEmailTemplates(et);
+      setCannedResponses(cr);
+      if (tenant) setTenantSlug(tenant.slug || tenant.id);
+      // Load SLA defaults from settings
+      if (s?.features) {
+        const slaSettings = (s as any).slaDefaults;
+        if (slaSettings) {
+          setSlaFirstResponseHours(String(slaSettings.firstResponseHours || 4));
+          setSlaResolutionHours(String(slaSettings.resolutionHours || 24));
+        }
+      }
       setLoading(false);
     }
     load();
@@ -131,6 +159,64 @@ export function ReturnsSettingsPage() {
     setEmailTemplates(et);
   };
 
+  // Canned response handlers
+  const handleAddCannedResponse = async () => {
+    if (!newResponseTitle.trim() || !newResponseContent.trim()) return;
+    setSavingResponses(true);
+    const newResponse: RhCannedResponse = {
+      id: crypto.randomUUID(),
+      title: newResponseTitle.trim(),
+      content: newResponseContent.trim(),
+    };
+    const updated = [...cannedResponses, newResponse];
+    await saveCannedResponses(updated);
+    setCannedResponses(updated);
+    setNewResponseTitle('');
+    setNewResponseContent('');
+    setSavingResponses(false);
+  };
+
+  const handleDeleteCannedResponse = async (id: string) => {
+    setSavingResponses(true);
+    const updated = cannedResponses.filter((r) => r.id !== id);
+    await saveCannedResponses(updated);
+    setCannedResponses(updated);
+    setSavingResponses(false);
+  };
+
+  const handleOpenEditResponse = (response: RhCannedResponse) => {
+    setEditingResponse(response);
+    setEditResponseTitle(response.title);
+    setEditResponseContent(response.content);
+  };
+
+  const handleSaveEditResponse = async () => {
+    if (!editingResponse) return;
+    setSavingResponses(true);
+    const updated = cannedResponses.map((r) =>
+      r.id === editingResponse.id
+        ? { ...r, title: editResponseTitle.trim(), content: editResponseContent.trim() }
+        : r
+    );
+    await saveCannedResponses(updated);
+    setCannedResponses(updated);
+    setEditingResponse(null);
+    setSavingResponses(false);
+  };
+
+  const handleSaveSlaDefaults = async () => {
+    if (!settings) return;
+    setSaving(true);
+    await updateReturnsHubSettings({
+      ...settings,
+      slaDefaults: {
+        firstResponseHours: parseInt(slaFirstResponseHours) || 4,
+        resolutionHours: parseInt(slaResolutionHours) || 24,
+      },
+    } as any);
+    setSaving(false);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
@@ -150,6 +236,7 @@ export function ReturnsSettingsPage() {
           <TabsTrigger value="reasons">{t('Return Reasons')}</TabsTrigger>
           <TabsTrigger value="license">{t('License')}</TabsTrigger>
           <TabsTrigger value="branding">{t('Branding')}</TabsTrigger>
+          <TabsTrigger value="tickets">{t('Tickets')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('Notifications')}</TabsTrigger>
         </TabsList>
 
@@ -323,12 +410,155 @@ export function ReturnsSettingsPage() {
                   />
                 </div>
               </div>
+
+              {tenantSlug && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="space-y-2">
+                    <Label>{t('Portal URL')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('Share this link with your customers')}</p>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={`${window.location.origin}/returns/portal/${tenantSlug}`}
+                        className="font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/returns/portal/${tenantSlug}`);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      >
+                        {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <a href={`/returns/portal/${tenantSlug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                      <ExternalLink className="h-3.5 w-3.5" /> {t('Returns Portal')}
+                    </a>
+                    <a href={`/returns/portal/${tenantSlug}/register`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                      <ExternalLink className="h-3.5 w-3.5" /> {t('Register Return')}
+                    </a>
+                    <a href={`/returns/portal/${tenantSlug}/track`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                      <ExternalLink className="h-3.5 w-3.5" /> {t('Track Return')}
+                    </a>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end">
                 <Button onClick={handleSaveSettings} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   {t('Save')}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tickets" className="mt-4 space-y-4">
+          {/* SLA Defaults */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t('SLA')}</CardTitle>
+              <CardDescription>{t('Default SLA times for new tickets')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('SLA First Response')} ({t('hours')})</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={slaFirstResponseHours}
+                    onChange={(e) => setSlaFirstResponseHours(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('SLA Resolution')} ({t('hours')})</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={slaResolutionHours}
+                    onChange={(e) => setSlaResolutionHours(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleSaveSlaDefaults} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  {t('Save')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Canned Responses */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquareText className="h-4 w-4" />
+                {t('Canned Responses')}
+              </CardTitle>
+              <CardDescription>{t('Text templates for quick ticket replies')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+                <div className="space-y-2">
+                  <Label>{t('Title')}</Label>
+                  <Input
+                    value={newResponseTitle}
+                    onChange={(e) => setNewResponseTitle(e.target.value)}
+                    placeholder={t('Response title...')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('Content')}</Label>
+                  <Textarea
+                    value={newResponseContent}
+                    onChange={(e) => setNewResponseContent(e.target.value)}
+                    placeholder={t('Response text...')}
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleAddCannedResponse}
+                    disabled={!newResponseTitle.trim() || !newResponseContent.trim() || savingResponses}
+                    size="sm"
+                  >
+                    {savingResponses ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                    {t('Add')}
+                  </Button>
+                </div>
+              </div>
+
+              {cannedResponses.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">{t('No canned responses')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {cannedResponses.map((resp) => (
+                    <div key={resp.id} className="flex items-start justify-between p-3 rounded-lg border">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{resp.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resp.content}</p>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenEditResponse(resp)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCannedResponse(resp.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -452,6 +682,32 @@ export function ReturnsSettingsPage() {
             <Button variant="outline" onClick={() => setEditingTemplate(null)}>{t('Cancel')}</Button>
             <Button onClick={handleSaveTemplate} disabled={savingTemplate}>
               {savingTemplate ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              {t('Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Canned Response Dialog */}
+      <Dialog open={!!editingResponse} onOpenChange={(open) => !open && setEditingResponse(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('Edit')} — {editingResponse?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('Title')}</Label>
+              <Input value={editResponseTitle} onChange={(e) => setEditResponseTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('Content')}</Label>
+              <Textarea value={editResponseContent} onChange={(e) => setEditResponseContent(e.target.value)} rows={5} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingResponse(null)}>{t('Cancel')}</Button>
+            <Button onClick={handleSaveEditResponse} disabled={savingResponses || !editResponseTitle.trim() || !editResponseContent.trim()}>
+              {savingResponses ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               {t('Save')}
             </Button>
           </DialogFooter>

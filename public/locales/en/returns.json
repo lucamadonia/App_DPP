@@ -617,5 +617,12 @@
   "Enter return ID": "Enter return ID",
   "Ticket updated": "Ticket updated",
   "Export Tickets CSV": "Export Tickets CSV",
-  "The selected ticket will be closed and its messages moved to this ticket.": "The selected ticket will be closed and its messages moved to this ticket."
+  "The selected ticket will be closed and its messages moved to this ticket.": "The selected ticket will be closed and its messages moved to this ticket.",
+  "Default SLA times for new tickets": "Default SLA times for new tickets",
+  "Text templates for quick ticket replies": "Text templates for quick ticket replies",
+  "Response title...": "Response title...",
+  "Response text...": "Response text...",
+  "Add": "Add",
+  "Title": "Title",
+  "Content": "Content"
 }
