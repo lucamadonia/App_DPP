@@ -1,13 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Search, Filter, MoreHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
+import { SkeletonTable } from '@/components/returns/SkeletonTable';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { PaginationBar } from '@/components/returns/PaginationBar';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { relativeTime } from '@/lib/animations';
 import { getReturns } from '@/services/supabase';
+import { Package } from 'lucide-react';
 import type { RhReturn, ReturnStatus, ReturnsFilter, PaginatedResult } from '@/types/returns-hub';
 
 const ALL_STATUSES: ReturnStatus[] = [
@@ -17,7 +27,8 @@ const ALL_STATUSES: ReturnStatus[] = [
 ];
 
 export function ReturnsListPage() {
-  const { t } = useTranslation('returns');
+  const { t, i18n } = useTranslation('returns');
+  const navigate = useNavigate();
   const [result, setResult] = useState<PaginatedResult<RhReturn>>({
     data: [], total: 0, page: 1, pageSize: 20, totalPages: 0,
   });
@@ -44,8 +55,13 @@ export function ReturnsListPage() {
     loadReturns();
   };
 
+  const activeFilters: string[] = [];
+  if (statusFilter !== 'all') activeFilters.push(statusFilter.replace(/_/g, ' '));
+
+  const rowVisibility = useStaggeredList(result.data.length, { interval: 40 });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('Returns')}</h1>
@@ -91,14 +107,31 @@ export function ReturnsListPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-muted-foreground">{t('Active Filters')}:</span>
+              {activeFilters.map((f) => (
+                <Badge key={f} variant="secondary" className="text-xs capitalize gap-1">
+                  {f}
+                  <button onClick={() => { setStatusFilter('all'); setPage(1); }}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <SkeletonTable rows={8} columns={6} />
           ) : result.data.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">{t('No returns found')}</p>
+            <EmptyState
+              icon={Package}
+              title={t('No returns found')}
+              description={t('No results match your filters')}
+            />
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -111,24 +144,45 @@ export function ReturnsListPage() {
                       <th className="pb-2 font-medium">{t('Date')}</th>
                       <th className="pb-2 font-medium">{t('Desired Solution')}</th>
                       <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
+                      <th className="pb-2 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {result.data.map((ret) => (
-                      <tr key={ret.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer">
-                        <td className="py-3">
-                          <Link to={`/returns/${ret.id}`} className="text-primary hover:underline font-medium">
-                            {ret.returnNumber}
-                          </Link>
+                    {result.data.map((ret, i) => (
+                      <tr
+                        key={ret.id}
+                        className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
+                          rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                        }`}
+                        style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
+                        onClick={() => navigate(`/returns/${ret.id}`)}
+                      >
+                        <td className="py-3 relative">
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <span className="text-primary font-medium pl-2">{ret.returnNumber}</span>
                         </td>
-                        <td className="py-3">
-                          <ReturnStatusBadge status={ret.status} />
-                        </td>
+                        <td className="py-3"><ReturnStatusBadge status={ret.status} /></td>
                         <td className="py-3 capitalize">{t(ret.priority.charAt(0).toUpperCase() + ret.priority.slice(1))}</td>
-                        <td className="py-3 text-muted-foreground">{new Date(ret.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
                         <td className="py-3 capitalize">{ret.desiredSolution ? t(ret.desiredSolution.charAt(0).toUpperCase() + ret.desiredSolution.slice(1)) : '—'}</td>
                         <td className="py-3 text-right font-medium">
-                          {ret.refundAmount != null ? `€${ret.refundAmount.toFixed(2)}` : '—'}
+                          {ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '—'}
+                        </td>
+                        <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/returns/${ret.id}`)}>
+                                {t('View')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>{t('Change Status')}</DropdownMenuItem>
+                              <DropdownMenuItem>{t('Assign')}</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -136,29 +190,11 @@ export function ReturnsListPage() {
                 </table>
               </div>
 
-              {result.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {page} / {result.totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.min(result.totalPages, p + 1))}
-                    disabled={page >= result.totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <PaginationBar
+                page={page}
+                totalPages={result.totalPages}
+                onPageChange={setPage}
+              />
             </>
           )}
         </CardContent>

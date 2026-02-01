@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, CheckCircle2, XCircle, Search, CreditCard } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
-import { ReturnTimeline } from '@/components/returns/ReturnTimeline';
+import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
+import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { ReturnItemsTable } from '@/components/returns/ReturnItemsTable';
+import { SkeletonTable } from '@/components/returns/SkeletonTable';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { relativeTime } from '@/lib/animations';
 import {
   getReturn, getReturnItems, getReturnTimeline,
   updateReturnStatus, updateReturn,
@@ -18,7 +22,7 @@ import type { RhReturn, RhReturnItem, RhReturnTimeline as TimelineType } from '@
 export function ReturnDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation('returns');
+  const { t, i18n } = useTranslation('returns');
 
   const [returnData, setReturnData] = useState<RhReturn | null>(null);
   const [items, setItems] = useState<RhReturnItem[]>([]);
@@ -49,7 +53,6 @@ export function ReturnDetailPage() {
     if (!id) return;
     setActionLoading(true);
     await updateReturnStatus(id, status as any, comment);
-    // Reload
     const [ret, tl] = await Promise.all([getReturn(id), getReturnTimeline(id)]);
     setReturnData(ret);
     setTimeline(tl);
@@ -70,17 +73,48 @@ export function ReturnDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6 animate-fade-in-up">
+        {/* Skeleton header */}
+        <div className="flex items-center gap-4">
+          <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 bg-muted rounded w-48 animate-pulse" />
+            <div className="h-4 bg-muted rounded w-72 animate-pulse" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+            <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+        {/* Skeleton pipeline */}
+        <Card>
+          <CardContent className="py-6 animate-pulse">
+            <div className="flex items-center gap-2">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="flex items-center flex-1">
+                  <div className="h-8 w-8 rounded-full bg-muted" />
+                  {i < 5 && <div className="flex-1 h-0.5 bg-muted mx-1" />}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Skeleton tabs content */}
+        <SkeletonTable rows={4} columns={4} />
       </div>
     );
   }
 
   if (!returnData) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">{t('Return not found')}</p>
-        <Link to="/returns/list" className="text-primary hover:underline text-sm mt-2 block">{t('Back to list')}</Link>
+      <div className="animate-fade-in-up">
+        <EmptyState
+          icon={Package}
+          title={t('Return not found')}
+          description={t('The return you are looking for does not exist')}
+          actionLabel={t('Back to list')}
+          onAction={() => navigate('/returns/list')}
+        />
       </div>
     );
   }
@@ -91,7 +125,7 @@ export function ReturnDetailPage() {
   const canRefund = ['INSPECTION_IN_PROGRESS', 'APPROVED'].includes(returnData.status);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/list')}>
           <ArrowLeft className="h-4 w-4" />
@@ -103,7 +137,7 @@ export function ReturnDetailPage() {
             <Badge variant="outline" className="capitalize">{t(returnData.priority.charAt(0).toUpperCase() + returnData.priority.slice(1))}</Badge>
           </div>
           <p className="text-muted-foreground text-sm">
-            {t('Created')} {new Date(returnData.createdAt).toLocaleString()}
+            {t('Created')} {relativeTime(returnData.createdAt, i18n.language)}
             {returnData.orderId && ` · ${t('Order ID')}: ${returnData.orderId}`}
           </p>
         </div>
@@ -126,6 +160,13 @@ export function ReturnDetailPage() {
         </div>
       </div>
 
+      {/* Status Pipeline */}
+      <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+        <CardContent className="py-4">
+          <StatusPipeline status={returnData.status} />
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
@@ -136,7 +177,7 @@ export function ReturnDetailPage() {
 
         <TabsContent value="overview" className="space-y-4 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
+            <Card className="animate-fade-in-up" style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Return Information')}</CardTitle>
               </CardHeader>
@@ -148,7 +189,7 @@ export function ReturnDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Shipping & Refund')}</CardTitle>
               </CardHeader>
@@ -162,7 +203,7 @@ export function ReturnDetailPage() {
           </div>
 
           {canRefund && (
-            <Card>
+            <Card className="animate-fade-in-up" style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Process Refund')}</CardTitle>
               </CardHeader>
@@ -187,7 +228,7 @@ export function ReturnDetailPage() {
           )}
 
           {returnData.internalNotes && (
-            <Card>
+            <Card className="animate-fade-in-up" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Internal Notes')}</CardTitle>
               </CardHeader>
@@ -199,7 +240,7 @@ export function ReturnDetailPage() {
         </TabsContent>
 
         <TabsContent value="items" className="mt-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardContent className="pt-4">
               <ReturnItemsTable items={items} readonly />
             </CardContent>
@@ -207,15 +248,15 @@ export function ReturnDetailPage() {
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardContent className="pt-4">
-              <ReturnTimeline entries={timeline} />
+              <AnimatedTimeline entries={timeline} />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="customs" className="mt-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">{t('Customs Information')}</CardTitle>
             </CardHeader>

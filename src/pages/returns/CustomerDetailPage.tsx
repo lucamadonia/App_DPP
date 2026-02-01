@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Mail, Phone, AlertTriangle, Pencil } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, Phone, Pencil, Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,13 +11,17 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { relativeTime } from '@/lib/animations';
 import { getRhCustomer, getRhCustomerReturns, updateRhCustomer } from '@/services/supabase';
 import type { RhCustomer, RhReturn } from '@/types/returns-hub';
 
 export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation('returns');
+  const { t, i18n } = useTranslation('returns');
   const [customer, setCustomer] = useState<RhCustomer | null>(null);
   const [returns, setReturns] = useState<RhReturn[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,19 +89,66 @@ export function CustomerDetailPage() {
     setSaving(false);
   };
 
+  // Animated values
+  const animTotalReturns = useAnimatedNumber(customer?.returnStats.totalReturns ?? 0, { duration: 800 });
+  const animTotalValue = useAnimatedNumber(customer?.returnStats.totalValue ?? 0, { duration: 800, delay: 100 });
+  const animReturnRate = useAnimatedNumber(customer?.returnStats.returnRate ?? 0, { duration: 800, delay: 200, decimals: 1 });
+  const animRiskScore = useAnimatedNumber(customer?.riskScore ?? 0, { duration: 1000, delay: 150 });
+  const rowVisibility = useStaggeredList(returns.length, { interval: 40 });
+
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="space-y-6 animate-fade-in-up">
+        <div className="flex items-center gap-4">
+          <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 bg-muted rounded w-56 animate-pulse" />
+            <div className="h-4 bg-muted rounded w-36 animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="pt-4 pb-4 animate-pulse space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-muted" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-muted rounded w-24" />
+                    <div className="h-3 bg-muted rounded w-32" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!customer) {
-    return <div className="text-center py-12"><p className="text-muted-foreground">{t('Customer not found')}</p></div>;
+    return (
+      <div className="animate-fade-in-up">
+        <EmptyState
+          icon={Users}
+          title={t('Customer not found')}
+          actionLabel={t('Back to list')}
+          onAction={() => navigate('/returns/customers')}
+        />
+      </div>
+    );
   }
 
   const fullName = [customer.firstName, customer.lastName].filter(Boolean).join(' ') || customer.email;
   const riskColor = customer.riskScore >= 70 ? 'text-red-600' : customer.riskScore >= 40 ? 'text-yellow-600' : 'text-green-600';
+  const riskBgColor = customer.riskScore >= 70 ? 'stroke-red-500' : customer.riskScore >= 40 ? 'stroke-yellow-500' : 'stroke-green-500';
+
+  // SVG ring parameters
+  const ringRadius = 40;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const riskProgress = Math.min((customer.riskScore / 100) * ringCircumference, ringCircumference);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/customers')}>
           <ArrowLeft className="h-4 w-4" />
@@ -106,6 +157,10 @@ export function CustomerDetailPage() {
           <h1 className="text-2xl font-bold">{t('360° Customer View')}</h1>
           <p className="text-muted-foreground">{fullName}</p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate('/returns/new')}>
+          <Plus className="h-4 w-4 mr-1" />
+          {t('New Return')}
+        </Button>
         <Button variant="outline" onClick={openEdit}>
           <Pencil className="h-4 w-4 mr-2" />
           {t('Edit Customer')}
@@ -113,7 +168,7 @@ export function CustomerDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
           <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Customer Profile')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3">
@@ -137,32 +192,44 @@ export function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}>
           <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Return Statistics')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold">{customer.returnStats.totalReturns}</p>
+                <p className="text-2xl font-bold">{animTotalReturns}</p>
                 <p className="text-xs text-muted-foreground">{t('Total Returns')}</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold">€{customer.returnStats.totalValue.toFixed(0)}</p>
+                <p className="text-2xl font-bold">{'\u20AC'}{animTotalValue}</p>
                 <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
               </div>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-2xl font-bold">{customer.returnStats.returnRate.toFixed(1)}%</p>
+              <p className="text-2xl font-bold">{animReturnRate}%</p>
               <p className="text-xs text-muted-foreground">{t('Return Rate')}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
           <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Risk Score')}</CardTitle></CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-4">
-            <div className={`flex items-center gap-2 ${riskColor}`}>
-              <AlertTriangle className="h-8 w-8" />
-              <span className="text-4xl font-bold">{customer.riskScore}</span>
+            <div className="relative">
+              <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+                <circle cx="50" cy="50" r={ringRadius} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/40" />
+                <circle
+                  cx="50" cy="50" r={ringRadius} fill="none"
+                  strokeWidth="6" strokeLinecap="round"
+                  className={riskBgColor}
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringCircumference - riskProgress}
+                  style={{ transition: 'stroke-dashoffset 1s ease-out' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-2xl font-bold ${riskColor}`}>{animRiskScore}</span>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               {customer.riskScore >= 70 ? t('High') : customer.riskScore >= 40 ? t('Normal') : t('Low')} {t('Risk')}
@@ -178,45 +245,65 @@ export function CustomerDetailPage() {
         </TabsList>
 
         <TabsContent value="returns" className="mt-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardContent className="pt-4">
               {returns.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('No returns found')}</p>
+                <EmptyState
+                  icon={Users}
+                  title={t('No returns found')}
+                  description={t('This customer has no return history')}
+                />
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left">
-                      <th className="pb-2 font-medium">{t('Return Number')}</th>
-                      <th className="pb-2 font-medium">{t('Status')}</th>
-                      <th className="pb-2 font-medium">{t('Date')}</th>
-                      <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {returns.map(ret => (
-                      <tr key={ret.id} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="py-2"><Link to={`/returns/${ret.id}`} className="text-primary hover:underline">{ret.returnNumber}</Link></td>
-                        <td className="py-2"><ReturnStatusBadge status={ret.status} /></td>
-                        <td className="py-2 text-muted-foreground">{new Date(ret.createdAt).toLocaleDateString()}</td>
-                        <td className="py-2 text-right">{ret.refundAmount != null ? `€${ret.refundAmount.toFixed(2)}` : '—'}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-2 font-medium">{t('Return Number')}</th>
+                        <th className="pb-2 font-medium">{t('Status')}</th>
+                        <th className="pb-2 font-medium">{t('Date')}</th>
+                        <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {returns.map((ret, i) => (
+                        <tr
+                          key={ret.id}
+                          className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
+                            rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                          }`}
+                          style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
+                          onClick={() => navigate(`/returns/${ret.id}`)}
+                        >
+                          <td className="py-2.5 relative">
+                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <span className="text-primary hover:underline font-medium pl-2">{ret.returnNumber}</span>
+                          </td>
+                          <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
+                          <td className="py-2.5 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
+                          <td className="py-2.5 text-right font-medium">{ret.refundAmount != null ? `€${ret.refundAmount.toFixed(2)}` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="addresses" className="mt-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardContent className="pt-4">
               {customer.addresses.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('No data available')}</p>
+                <EmptyState
+                  icon={Users}
+                  title={t('No data available')}
+                  description={t('No addresses on file')}
+                />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {customer.addresses.map((addr, i) => (
-                    <div key={i} className="p-3 rounded-lg border">
+                    <div key={i} className="p-3 rounded-lg border hover:shadow-sm transition-shadow">
                       <Badge variant="outline" className="mb-2 capitalize">{addr.type}</Badge>
                       <p className="text-sm">{addr.street}</p>
                       <p className="text-sm">{addr.postalCode} {addr.city}</p>

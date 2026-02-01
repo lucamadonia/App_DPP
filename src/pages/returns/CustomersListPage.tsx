@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Loader2, LayoutList, LayoutGrid, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { SkeletonTable } from '@/components/returns/SkeletonTable';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { PaginationBar } from '@/components/returns/PaginationBar';
+import { CustomerGridCard } from '@/components/returns/CustomerGridCard';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { getRhCustomers, createRhCustomer } from '@/services/supabase';
 import type { RhCustomer, PaginatedResult } from '@/types/returns-hub';
 
@@ -21,6 +26,7 @@ export function CustomersListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   // Create customer dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -83,8 +89,34 @@ export function CustomersListPage() {
     setCreating(false);
   };
 
+  const rowVisibility = useStaggeredList(result.data.length, { interval: 40 });
+
+  // Skeleton for grid view
+  const GridSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }, (_, i) => (
+        <Card key={i}>
+          <CardContent className="pt-5 pb-4 px-4 animate-pulse">
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted rounded w-24" />
+                <div className="h-3 bg-muted rounded w-32" />
+              </div>
+              <div className="h-16 w-16 rounded-full bg-muted" />
+            </div>
+            <div className="flex gap-3 mt-4 pt-3 border-t">
+              <div className="flex-1 h-8 bg-muted rounded" />
+              <div className="flex-1 h-8 bg-muted rounded" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('Customer List')}</h1>
@@ -98,24 +130,63 @@ export function CustomersListPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder={t('Search by name, email, company...')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (setPage(1), load())}
-            />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder={t('Search by name, email, company...')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (setPage(1), load())}
+              />
+            </div>
+            <div className="flex border rounded-md">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-r-none"
+                onClick={() => setViewMode('table')}
+              >
+                <LayoutList className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-l-none"
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            viewMode === 'grid' ? <GridSkeleton /> : <SkeletonTable rows={6} columns={6} />
           ) : result.data.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">{t('No customers found')}</p>
+            <EmptyState
+              icon={Users}
+              title={t('No customers found')}
+              description={t('Get started by creating your first return')}
+              actionLabel={t('New Customer')}
+              onAction={openDialog}
+            />
+          ) : viewMode === 'grid' ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {result.data.map((cust, i) => (
+                  <div
+                    key={cust.id}
+                    className={`${rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+                    style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out' }}
+                  >
+                    <CustomerGridCard customer={cust} />
+                  </div>
+                ))}
+              </div>
+              <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
+            </>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -131,19 +202,25 @@ export function CustomersListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.data.map((cust) => {
+                    {result.data.map((cust, i) => {
                       const name = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
                       return (
-                        <tr key={cust.id} className="border-b last:border-0 hover:bg-muted/50">
-                          <td className="py-3">
-                            <Link to={`/returns/customers/${cust.id}`} className="text-primary hover:underline font-medium">
-                              {name}
-                            </Link>
+                        <tr
+                          key={cust.id}
+                          className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
+                            rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                          }`}
+                          style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
+                          onClick={() => navigate(`/returns/customers/${cust.id}`)}
+                        >
+                          <td className="py-3 relative">
+                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <span className="text-primary font-medium pl-2">{name}</span>
                           </td>
                           <td className="py-3 text-muted-foreground">{cust.email}</td>
                           <td className="py-3">{cust.company || '—'}</td>
                           <td className="py-3 text-center">{cust.returnStats.totalReturns}</td>
-                          <td className="py-3 text-right">€{cust.returnStats.totalValue.toFixed(2)}</td>
+                          <td className="py-3 text-right">{'\u20AC'}{cust.returnStats.totalValue.toFixed(2)}</td>
                           <td className="py-3 text-center">
                             <Badge variant="outline" className={riskColor(cust.riskScore)}>
                               {cust.riskScore}
@@ -155,17 +232,7 @@ export function CustomersListPage() {
                   </tbody>
                 </table>
               </div>
-              {result.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground">{page} / {result.totalPages}</span>
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(result.totalPages, p + 1))} disabled={page >= result.totalPages}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
             </>
           )}
         </CardContent>

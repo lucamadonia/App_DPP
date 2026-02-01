@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Search, Filter, Loader2, ChevronLeft, ChevronRight,
-  LayoutList, LayoutGrid, Download, ArrowUpDown, ArrowUp, ArrowDown, X,
+  Plus, Search, Filter, Loader2,
+  LayoutList, LayoutGrid, Download, ArrowUpDown, ArrowUp, ArrowDown, X, MessageSquareText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,12 @@ import { TicketAssigneeSelect } from '@/components/returns/TicketAssigneeSelect'
 import { TicketTagsEditor } from '@/components/returns/TicketTagsEditor';
 import { TicketFilterPanel } from '@/components/returns/TicketFilterPanel';
 import { TicketKanbanBoard } from '@/components/returns/TicketKanbanBoard';
+import { SkeletonTable } from '@/components/returns/SkeletonTable';
+import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { PaginationBar } from '@/components/returns/PaginationBar';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { relativeTime } from '@/lib/animations';
 import type {
   RhTicket, RhCustomer, TicketStatus, TicketStats, TicketsFilter, TicketSortField,
   PaginatedResult,
@@ -35,7 +41,7 @@ const statusLabels: Record<TicketStatus, string> = {
 };
 
 export function TicketsListPage() {
-  const { t } = useTranslation('returns');
+  const { t, i18n } = useTranslation('returns');
   const navigate = useNavigate();
 
   // Data
@@ -224,8 +230,10 @@ export function TicketsListPage() {
     setCreating(false);
   };
 
+  const rowVisibility = useStaggeredList(result.data.length, { interval: 40 });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -245,7 +253,7 @@ export function TicketsListPage() {
       </div>
 
       {/* KPI Cards */}
-      <TicketKPICards stats={stats} />
+      {loading ? <SkeletonKPICards count={4} /> : <TicketKPICards stats={stats} />}
 
       {/* Toolbar */}
       <Card>
@@ -330,11 +338,36 @@ export function TicketsListPage() {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            viewMode === 'kanban' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-8 bg-muted rounded animate-pulse" />
+                    {Array.from({ length: 3 }, (_, j) => (
+                      <Card key={j}>
+                        <CardContent className="p-3 animate-pulse space-y-2">
+                          <div className="h-3 bg-muted rounded w-16" />
+                          <div className="h-4 bg-muted rounded w-full" />
+                          <div className="h-3 bg-muted rounded w-20" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <SkeletonTable rows={8} columns={10} />
+            )
           ) : viewMode === 'kanban' ? (
             <TicketKanbanBoard tickets={result.data} onStatusChange={handleKanbanStatusChange} />
           ) : result.data.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">{t('No tickets found')}</p>
+            <EmptyState
+              icon={MessageSquareText}
+              title={t('No tickets found')}
+              description={t('No results match your filters')}
+              actionLabel={t('New Ticket')}
+              onAction={openDialog}
+            />
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -367,18 +400,24 @@ export function TicketsListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.data.map((ticket) => (
-                      <tr key={ticket.id} className="border-b last:border-0 hover:bg-muted/50">
+                    {result.data.map((ticket, i) => (
+                      <tr
+                        key={ticket.id}
+                        className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
+                          rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                        }`}
+                        style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
+                        onClick={() => navigate(`/returns/tickets/${ticket.id}`)}
+                      >
                         <td className="py-3 pr-2" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedIds.has(ticket.id)}
                             onCheckedChange={() => toggleSelect(ticket.id)}
                           />
                         </td>
-                        <td className="py-3">
-                          <Link to={`/returns/tickets/${ticket.id}`} className="text-primary hover:underline font-medium">
-                            {ticket.ticketNumber}
-                          </Link>
+                        <td className="py-3 relative">
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <span className="text-primary font-medium pl-2">{ticket.ticketNumber}</span>
                         </td>
                         <td className="py-3 max-w-xs truncate">{ticket.subject}</td>
                         <td className="py-3">
@@ -407,7 +446,9 @@ export function TicketsListPage() {
                         <td className="py-3">
                           <TicketTagsEditor tags={ticket.tags} readOnly />
                         </td>
-                        <td className="py-3 text-muted-foreground text-xs">{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 text-muted-foreground text-xs">
+                          {relativeTime(ticket.createdAt, i18n.language)}
+                        </td>
                         <td className="py-3">
                           <TicketSLABadge ticket={ticket} className="text-[10px]" />
                         </td>
@@ -416,13 +457,7 @@ export function TicketsListPage() {
                   </tbody>
                 </table>
               </div>
-              {result.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}><ChevronLeft className="h-4 w-4" /></Button>
-                  <span className="text-sm text-muted-foreground">{page} / {result.totalPages}</span>
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(result.totalPages, p + 1))} disabled={page >= result.totalPages}><ChevronRight className="h-4 w-4" /></Button>
-                </div>
-              )}
+              <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
             </>
           )}
         </CardContent>

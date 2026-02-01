@@ -59,7 +59,9 @@ export async function triggerEmailNotification(
 
     // Render subject and body
     const renderedSubject = renderTemplate(template.subjectTemplate, ctx);
-    const renderedBody = renderTemplate(template.bodyTemplate, ctx);
+    const renderedBody = template.htmlTemplate
+      ? renderTemplate(template.htmlTemplate, ctx)
+      : renderTemplate(template.bodyTemplate, ctx);
 
     // Create notification record (Edge Function picks it up via DB webhook)
     const tenantId = await getCurrentTenantId();
@@ -80,6 +82,7 @@ export async function triggerEmailNotification(
         status: 'pending',
         metadata: {
           senderName: settings.notifications.senderName || '',
+          isHtml: !!template.htmlTemplate,
         },
       })
       .select('id')
@@ -127,7 +130,9 @@ export async function triggerPublicEmailNotification(
 
     // Render
     const renderedSubject = renderTemplate(template.subjectTemplate, ctx);
-    const renderedBody = renderTemplate(template.bodyTemplate, ctx);
+    const renderedBody = template.htmlTemplate
+      ? renderTemplate(template.htmlTemplate, ctx)
+      : renderTemplate(template.bodyTemplate, ctx);
 
     // Create notification record
     const { error } = await supabase
@@ -145,6 +150,7 @@ export async function triggerPublicEmailNotification(
         status: 'pending',
         metadata: {
           senderName: rhSettings.notifications.senderName || '',
+          isHtml: !!template.htmlTemplate,
         },
       });
 

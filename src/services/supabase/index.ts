@@ -295,6 +295,7 @@ export {
   getRhEmailTemplate,
   upsertRhEmailTemplate,
   seedDefaultEmailTemplates,
+  resetRhEmailTemplateToDefault,
 } from './rh-email-templates';
 
 // Returns Hub - Notification Triggers

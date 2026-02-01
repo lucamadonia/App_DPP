@@ -244,3 +244,41 @@ code, .font-mono {
 .animate-confetti-fall { animation: confetti-fall 1.5s ease-in forwards; }
 .animate-check-draw { animation: check-draw 0.6s ease-out forwards; stroke-dasharray: 100; stroke-dashoffset: 100; }
 .animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
+
+/* Returns Hub Redesign Animations */
+@keyframes stagger-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes number-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes draw-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-stagger-fade-in { animation: stagger-fade-in 0.35s ease-out both; }
+.animate-number-pop { animation: number-pop 0.3s ease-out; }
+.animate-bar-grow { animation: bar-grow 0.7s ease-out both; transform-origin: left; }
+.animate-draw-line { animation: draw-line 1.5s ease-out both; stroke-dasharray: 1000; }
+
+/* Email Template Editor Animations */
+@keyframes stagger-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes block-insert {
+  from { opacity: 0; max-height: 0; transform: scaleY(0.8); }
+  to { opacity: 1; max-height: 500px; transform: scaleY(1); }
+}
+@keyframes selected-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.15); }
+}

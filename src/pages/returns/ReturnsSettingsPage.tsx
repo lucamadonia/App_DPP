@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Save, Plus, Trash2, Mail, Pencil, Copy, Check, ExternalLink, MessageSquareText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Save, Plus, Trash2, Mail, Pencil, Copy, Check, ExternalLink, MessageSquareText, ArrowRight, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,27 +14,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
 import {
   getReturnsHubSettings, updateReturnsHubSettings,
   getReturnReasons, createReturnReason, updateReturnReason, deleteReturnReason,
-  getRhEmailTemplates, upsertRhEmailTemplate, seedDefaultEmailTemplates,
   getCurrentTenant, getCannedResponses, saveCannedResponses,
 } from '@/services/supabase';
-import type { ReturnsHubSettings, RhReturnReason, RhEmailTemplate, RhCannedResponse } from '@/types/returns-hub';
+import type { ReturnsHubSettings, RhReturnReason, RhCannedResponse } from '@/types/returns-hub';
 
 export function ReturnsSettingsPage() {
   const { t } = useTranslation('returns');
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<ReturnsHubSettings | null>(null);
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
-  const [emailTemplates, setEmailTemplates] = useState<RhEmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [editingTemplate, setEditingTemplate] = useState<RhEmailTemplate | null>(null);
-  const [editSubject, setEditSubject] = useState('');
-  const [editBody, setEditBody] = useState('');
-  const [savingTemplate, setSavingTemplate] = useState(false);
-  const [seedingTemplates, setSeedingTemplates] = useState(false);
   const [tenantSlug, setTenantSlug] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -53,19 +50,16 @@ export function ReturnsSettingsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [s, r, et, tenant, cr] = await Promise.all([
+      const [s, r, tenant, cr] = await Promise.all([
         getReturnsHubSettings(),
         getReturnReasons(),
-        getRhEmailTemplates(),
         getCurrentTenant(),
         getCannedResponses(),
       ]);
       setSettings(s);
       setReasons(r);
-      setEmailTemplates(et);
       setCannedResponses(cr);
       if (tenant) setTenantSlug(tenant.slug || tenant.id);
-      // Load SLA defaults from settings
       if (s?.features) {
         const slaSettings = (s as any).slaDefaults;
         if (slaSettings) {
@@ -119,47 +113,6 @@ export function ReturnsSettingsPage() {
     setSaving(false);
   };
 
-  const handleSeedTemplates = async () => {
-    setSeedingTemplates(true);
-    await seedDefaultEmailTemplates();
-    const et = await getRhEmailTemplates();
-    setEmailTemplates(et);
-    setSeedingTemplates(false);
-  };
-
-  const handleOpenEditTemplate = (tmpl: RhEmailTemplate) => {
-    setEditingTemplate(tmpl);
-    setEditSubject(tmpl.subjectTemplate);
-    setEditBody(tmpl.bodyTemplate);
-  };
-
-  const handleSaveTemplate = async () => {
-    if (!editingTemplate) return;
-    setSavingTemplate(true);
-    await upsertRhEmailTemplate({
-      eventType: editingTemplate.eventType,
-      enabled: editingTemplate.enabled,
-      subjectTemplate: editSubject,
-      bodyTemplate: editBody,
-    });
-    const et = await getRhEmailTemplates();
-    setEmailTemplates(et);
-    setEditingTemplate(null);
-    setSavingTemplate(false);
-  };
-
-  const handleToggleTemplate = async (tmpl: RhEmailTemplate, enabled: boolean) => {
-    await upsertRhEmailTemplate({
-      eventType: tmpl.eventType,
-      enabled,
-      subjectTemplate: tmpl.subjectTemplate,
-      bodyTemplate: tmpl.bodyTemplate,
-    });
-    const et = await getRhEmailTemplates();
-    setEmailTemplates(et);
-  };
-
-  // Canned response handlers
   const handleAddCannedResponse = async () => {
     if (!newResponseTitle.trim() || !newResponseContent.trim()) return;
     setSavingResponses(true);
@@ -217,14 +170,39 @@ export function ReturnsSettingsPage() {
     setSaving(false);
   };
 
+  const reasonVisibility = useStaggeredList(reasons.length, { interval: 40 });
+  const responseVisibility = useStaggeredList(cannedResponses.length, { interval: 40 });
+
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="space-y-6 animate-fade-in-up">
+        <div className="space-y-2">
+          <div className="h-6 bg-muted rounded w-32 animate-pulse" />
+          <div className="h-4 bg-muted rounded w-56 animate-pulse" />
+        </div>
+        <div className="h-10 bg-muted rounded w-96 animate-pulse" />
+        <Card>
+          <CardContent className="pt-6 animate-pulse space-y-4">
+            <div className="h-4 bg-muted rounded w-48" />
+            <div className="h-9 bg-muted rounded" />
+            <div className="h-9 bg-muted rounded" />
+            <div className="h-9 bg-muted rounded w-24 ml-auto" />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!settings) return null;
 
+  // License usage gauge
+  const usagePercent = settings.maxReturnsPerMonth > 0
+    ? Math.min((settings.usage.returnsThisMonth / settings.maxReturnsPerMonth) * 100, 100)
+    : 0;
+  const usageColor = usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-yellow-500' : 'bg-green-500';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div>
         <h1 className="text-2xl font-bold">{t('Settings')}</h1>
         <p className="text-muted-foreground">{t('Configure your Returns Hub')}</p>
@@ -241,7 +219,7 @@ export function ReturnsSettingsPage() {
         </TabsList>
 
         <TabsContent value="general" className="mt-4 space-y-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-base">{t('General')}</CardTitle>
               <CardDescription>{t('Basic Returns Hub configuration')}</CardDescription>
@@ -285,7 +263,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="reasons" className="mt-4 space-y-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-base">{t('Return Reasons')}</CardTitle>
               <CardDescription>{t('Configure return reason categories')}</CardDescription>
@@ -304,11 +282,21 @@ export function ReturnsSettingsPage() {
               </div>
 
               {reasons.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('No return reasons configured')}</p>
+                <EmptyState
+                  icon={Settings2}
+                  title={t('No return reasons configured')}
+                  description={t('Add reason categories for your returns')}
+                />
               ) : (
                 <div className="space-y-2">
-                  {reasons.map((reason) => (
-                    <div key={reason.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  {reasons.map((reason, i) => (
+                    <div
+                      key={reason.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border hover:shadow-sm transition-all duration-200 ${
+                        reasonVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                      }`}
+                      style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.2s ease' }}
+                    >
                       <div className="flex items-center gap-3">
                         <Switch checked={reason.active} onCheckedChange={(v) => handleToggleReason(reason.id, v)} />
                         <div>
@@ -337,7 +325,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="license" className="mt-4 space-y-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-base">{t('License')}</CardTitle>
               <CardDescription>{t('Your current plan and usage')}</CardDescription>
@@ -347,9 +335,16 @@ export function ReturnsSettingsPage() {
                 <Badge className="text-lg px-3 py-1 capitalize">{settings.plan}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted">
+                <div className="p-3 rounded-lg bg-muted space-y-2">
                   <p className="text-sm text-muted-foreground">{t('Returns this month')}</p>
                   <p className="text-2xl font-bold">{settings.usage.returnsThisMonth} <span className="text-sm font-normal text-muted-foreground">{t('of {{max}} included', { max: settings.maxReturnsPerMonth })}</span></p>
+                  {/* Usage gauge */}
+                  <div className="h-2 bg-muted-foreground/10 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${usageColor} rounded-full transition-all duration-700`}
+                      style={{ width: `${usagePercent}%` }}
+                    />
+                  </div>
                 </div>
                 <div className="p-3 rounded-lg bg-muted">
                   <p className="text-sm text-muted-foreground">{t('Admin users')}</p>
@@ -370,7 +365,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="branding" className="mt-4 space-y-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-base">{t('Branding')}</CardTitle>
               <CardDescription>{t('Customize the customer portal appearance')}</CardDescription>
@@ -461,8 +456,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="tickets" className="mt-4 space-y-4">
-          {/* SLA Defaults */}
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-base">{t('SLA')}</CardTitle>
               <CardDescription>{t('Default SLA times for new tickets')}</CardDescription>
@@ -497,8 +491,7 @@ export function ReturnsSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Canned Responses */}
-          <Card>
+          <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <MessageSquareText className="h-4 w-4" />
@@ -538,11 +531,21 @@ export function ReturnsSettingsPage() {
               </div>
 
               {cannedResponses.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('No canned responses')}</p>
+                <EmptyState
+                  icon={MessageSquareText}
+                  title={t('No canned responses')}
+                  description={t('Add templates for quick ticket replies')}
+                />
               ) : (
                 <div className="space-y-2">
-                  {cannedResponses.map((resp) => (
-                    <div key={resp.id} className="flex items-start justify-between p-3 rounded-lg border">
+                  {cannedResponses.map((resp, i) => (
+                    <div
+                      key={resp.id}
+                      className={`flex items-start justify-between p-3 rounded-lg border hover:shadow-sm transition-all duration-200 ${
+                        responseVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                      }`}
+                      style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.2s ease' }}
+                    >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{resp.title}</p>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resp.content}</p>
@@ -564,7 +567,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-4 space-y-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Mail className="h-4 w-4" />
@@ -608,85 +611,26 @@ export function ReturnsSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
             <CardHeader>
               <CardTitle className="text-base">{t('Email Templates Configuration')}</CardTitle>
               <CardDescription>{t('Configure email templates for different events')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{t('Initialize default email templates for all event types')}</p>
-                <Button variant="outline" onClick={handleSeedTemplates} disabled={seedingTemplates}>
-                  {seedingTemplates ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  {t('Initialize Templates')}
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                <div>
+                  <p className="font-medium text-sm">{t('Email Template Editor')}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('Visual editor with 15 templates, block editor, and live preview')}</p>
+                </div>
+                <Button onClick={() => navigate('/returns/email-templates')} className="gap-1.5">
+                  {t('Open Email Template Editor')}
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
-
-              <div className="rounded-md border p-3 bg-muted/50">
-                <p className="text-xs font-medium mb-1">{t('Available Variables')}</p>
-                <p className="text-xs text-muted-foreground font-mono">
-                  {'{{customerName}}, {{returnNumber}}, {{status}}, {{reason}}, {{refundAmount}}, {{ticketNumber}}, {{subject}}, {{trackingUrl}}'}
-                </p>
-              </div>
-
-              {emailTemplates.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('No email templates configured')}</p>
-              ) : (
-                <div className="space-y-2">
-                  {emailTemplates.map((tmpl) => (
-                    <div key={tmpl.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          checked={tmpl.enabled}
-                          onCheckedChange={(v) => handleToggleTemplate(tmpl, v)}
-                        />
-                        <div>
-                          <span className="font-medium text-sm">{t(tmpl.eventType)}</span>
-                          <p className="text-xs text-muted-foreground truncate max-w-md">{tmpl.subjectTemplate}</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenEditTemplate(tmpl)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && setEditingTemplate(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('Edit Template')} — {editingTemplate ? t(editingTemplate.eventType) : ''}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('Subject')}</Label>
-              <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Body')}</Label>
-              <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={8} />
-            </div>
-            <div className="rounded-md border p-3 bg-muted/50">
-              <p className="text-xs font-medium mb-1">{t('Available Variables')}</p>
-              <p className="text-xs text-muted-foreground font-mono">
-                {'{{customerName}}, {{returnNumber}}, {{status}}, {{reason}}, {{refundAmount}}, {{ticketNumber}}, {{subject}}, {{trackingUrl}}'}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingTemplate(null)}>{t('Cancel')}</Button>
-            <Button onClick={handleSaveTemplate} disabled={savingTemplate}>
-              {savingTemplate ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              {t('Save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Canned Response Dialog */}
       <Dialog open={!!editingResponse} onOpenChange={(open) => !open && setEditingResponse(null)}>

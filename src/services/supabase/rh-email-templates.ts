@@ -3,6 +3,7 @@
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { RhEmailTemplate, RhNotificationEventType } from '@/types/returns-hub';
+import { DEFAULT_TEMPLATES as TEMPLATE_DEFAULTS } from '@/components/returns/email-editor/emailTemplateDefaults';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformEmailTemplate(row: any): RhEmailTemplate {
@@ -13,59 +14,17 @@ function transformEmailTemplate(row: any): RhEmailTemplate {
     enabled: row.enabled ?? true,
     subjectTemplate: row.subject_template,
     bodyTemplate: row.body_template,
+    category: row.category || 'returns',
+    name: row.name || row.event_type,
+    description: row.description || '',
+    designConfig: row.design_config || {},
+    htmlTemplate: row.html_template || '',
+    previewText: row.preview_text || '',
+    sortOrder: row.sort_order || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
-
-const DEFAULT_TEMPLATES: Array<{
-  eventType: RhNotificationEventType;
-  subjectTemplate: string;
-  bodyTemplate: string;
-}> = [
-  {
-    eventType: 'return_confirmed',
-    subjectTemplate: 'Return {{returnNumber}} - Confirmation',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nYour return {{returnNumber}} has been registered.\n\nReason: {{reason}}\n\nWe will process your request and keep you updated.\n\nBest regards',
-  },
-  {
-    eventType: 'return_approved',
-    subjectTemplate: 'Return {{returnNumber}} - Approved',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nYour return {{returnNumber}} has been approved.\n\nPlease ship the item(s) back to us. You can track the status at any time.\n\nBest regards',
-  },
-  {
-    eventType: 'return_rejected',
-    subjectTemplate: 'Return {{returnNumber}} - Rejected',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nUnfortunately, your return {{returnNumber}} has been rejected.\n\nReason: {{reason}}\n\nIf you have any questions, please contact our support team.\n\nBest regards',
-  },
-  {
-    eventType: 'return_shipped',
-    subjectTemplate: 'Return {{returnNumber}} - Shipment Update',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nYour return {{returnNumber}} shipment has been updated.\n\nTracking: {{trackingUrl}}\n\nBest regards',
-  },
-  {
-    eventType: 'refund_completed',
-    subjectTemplate: 'Return {{returnNumber}} - Refund Completed',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nThe refund for your return {{returnNumber}} has been completed.\n\nAmount: {{refundAmount}}\n\nThe amount will be credited to your original payment method.\n\nBest regards',
-  },
-  {
-    eventType: 'ticket_created',
-    subjectTemplate: 'Ticket {{ticketNumber}} - {{subject}}',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nYour support ticket {{ticketNumber}} has been created.\n\nSubject: {{subject}}\n\nOur team will respond as soon as possible.\n\nBest regards',
-  },
-  {
-    eventType: 'ticket_agent_reply',
-    subjectTemplate: 'Ticket {{ticketNumber}} - New Reply',
-    bodyTemplate:
-      'Dear {{customerName}},\n\nThere is a new reply on your support ticket {{ticketNumber}}.\n\nPlease check your ticket for the latest update.\n\nBest regards',
-  },
-];
 
 export async function getRhEmailTemplates(): Promise<RhEmailTemplate[]> {
   const tenantId = await getCurrentTenantId();
@@ -75,7 +34,7 @@ export async function getRhEmailTemplates(): Promise<RhEmailTemplate[]> {
     .from('rh_email_templates')
     .select('*')
     .eq('tenant_id', tenantId)
-    .order('event_type');
+    .order('sort_order', { ascending: true });
 
   if (error) {
     console.error('Failed to load email templates:', error);
@@ -118,24 +77,40 @@ export async function getRhEmailTemplateByTenantId(
 }
 
 export async function upsertRhEmailTemplate(
-  template: Pick<RhEmailTemplate, 'eventType' | 'enabled' | 'subjectTemplate' | 'bodyTemplate'>
+  template: Pick<RhEmailTemplate, 'eventType' | 'enabled' | 'subjectTemplate' | 'bodyTemplate'> & {
+    designConfig?: Record<string, unknown>;
+    htmlTemplate?: string;
+    previewText?: string;
+    name?: string;
+    description?: string;
+    category?: string;
+    sortOrder?: number;
+  }
 ): Promise<{ success: boolean; error?: string }> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { success: false, error: 'No tenant set' };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row: Record<string, any> = {
+    tenant_id: tenantId,
+    event_type: template.eventType,
+    enabled: template.enabled,
+    subject_template: template.subjectTemplate,
+    body_template: template.bodyTemplate,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (template.designConfig !== undefined) row.design_config = template.designConfig;
+  if (template.htmlTemplate !== undefined) row.html_template = template.htmlTemplate;
+  if (template.previewText !== undefined) row.preview_text = template.previewText;
+  if (template.name !== undefined) row.name = template.name;
+  if (template.description !== undefined) row.description = template.description;
+  if (template.category !== undefined) row.category = template.category;
+  if (template.sortOrder !== undefined) row.sort_order = template.sortOrder;
+
   const { error } = await supabase
     .from('rh_email_templates')
-    .upsert(
-      {
-        tenant_id: tenantId,
-        event_type: template.eventType,
-        enabled: template.enabled,
-        subject_template: template.subjectTemplate,
-        body_template: template.bodyTemplate,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'tenant_id,event_type' }
-    );
+    .upsert(row, { onConflict: 'tenant_id,event_type' });
 
   if (error) {
     console.error('Failed to upsert email template:', error);
@@ -150,7 +125,7 @@ export async function seedDefaultEmailTemplates(): Promise<{ success: boolean; c
   if (!tenantId) return { success: false, count: 0, error: 'No tenant set' };
 
   let count = 0;
-  for (const tmpl of DEFAULT_TEMPLATES) {
+  for (const tmpl of TEMPLATE_DEFAULTS) {
     const { error } = await supabase
       .from('rh_email_templates')
       .upsert(
@@ -160,6 +135,11 @@ export async function seedDefaultEmailTemplates(): Promise<{ success: boolean; c
           enabled: true,
           subject_template: tmpl.subjectTemplate,
           body_template: tmpl.bodyTemplate,
+          category: tmpl.category,
+          name: tmpl.name,
+          description: tmpl.description,
+          design_config: tmpl.designConfig as unknown as Record<string, unknown>,
+          sort_order: tmpl.sortOrder,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'tenant_id,event_type', ignoreDuplicates: true }
@@ -169,4 +149,23 @@ export async function seedDefaultEmailTemplates(): Promise<{ success: boolean; c
   }
 
   return { success: true, count };
+}
+
+export async function resetRhEmailTemplateToDefault(
+  eventType: RhNotificationEventType
+): Promise<{ success: boolean; error?: string }> {
+  const defaultTmpl = TEMPLATE_DEFAULTS.find((t) => t.eventType === eventType);
+  if (!defaultTmpl) return { success: false, error: 'No default template found' };
+
+  return upsertRhEmailTemplate({
+    eventType: defaultTmpl.eventType,
+    enabled: true,
+    subjectTemplate: defaultTmpl.subjectTemplate,
+    bodyTemplate: defaultTmpl.bodyTemplate,
+    designConfig: defaultTmpl.designConfig as unknown as Record<string, unknown>,
+    name: defaultTmpl.name,
+    description: defaultTmpl.description,
+    category: defaultTmpl.category,
+    sortOrder: defaultTmpl.sortOrder,
+  });
 }

@@ -272,9 +272,19 @@ export type RhNotificationEventType =
   | 'return_approved'
   | 'return_rejected'
   | 'return_shipped'
+  | 'return_label_ready'
+  | 'return_inspection_complete'
   | 'refund_completed'
+  | 'exchange_shipped'
   | 'ticket_created'
-  | 'ticket_agent_reply';
+  | 'ticket_agent_reply'
+  | 'ticket_resolved'
+  | 'welcome_email'
+  | 'voucher_issued'
+  | 'feedback_request'
+  | 'return_reminder';
+
+export type EmailTemplateCategory = 'returns' | 'tickets' | 'general';
 
 export interface RhEmailTemplate {
   id: string;
@@ -283,6 +293,13 @@ export interface RhEmailTemplate {
   enabled: boolean;
   subjectTemplate: string;
   bodyTemplate: string;
+  category: EmailTemplateCategory;
+  name: string;
+  description: string;
+  designConfig: Record<string, unknown>;
+  htmlTemplate: string;
+  previewText: string;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }

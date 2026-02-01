@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Download } from 'lucide-react';
+import { Download, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReturnKPICards } from '@/components/returns/ReturnKPICards';
 import { ReturnCharts } from '@/components/returns/ReturnCharts';
+import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { getReturnStats, getReturns } from '@/services/supabase';
 import type { ReturnsHubStats, RhReturn } from '@/types/returns-hub';
 
@@ -52,10 +56,6 @@ export function ReturnsReportsPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-  }
-
   const emptyStats: ReturnsHubStats = {
     openReturns: 0, todayReceived: 0, avgProcessingDays: 0,
     returnRate: 0, refundVolume: 0, slaCompliance: 100, openTickets: 0,
@@ -64,8 +64,18 @@ export function ReturnsReportsPage() {
     dailyReturns: [],
   };
 
+  const animRefundVolume = useAnimatedNumber(stats?.refundVolume ?? 0, { duration: 900, decimals: 2 });
+  const refundsCount = returns.filter(r => r.refundAmount).length;
+  const animRefundsProcessed = useAnimatedNumber(refundsCount, { duration: 800, delay: 100 });
+  const avgRefund = refundsCount > 0 ? (stats?.refundVolume ?? 0) / refundsCount : 0;
+  const animAvgRefund = useAnimatedNumber(avgRefund, { duration: 800, delay: 200, decimals: 2 });
+
+  const reasonEntries = Object.entries(stats?.returnsByReason || {}).sort(([, a], [, b]) => b - a);
+  const reasonVisibility = useStaggeredList(reasonEntries.length, { interval: 60, initialDelay: 100 });
+  const refundCardVisibility = useStaggeredList(3, { interval: 80, initialDelay: 100 });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('Reports')}</h1>
@@ -94,31 +104,59 @@ export function ReturnsReportsPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-4 space-y-4">
-          <ReturnKPICards stats={stats || emptyStats} />
-          <ReturnCharts stats={stats || emptyStats} />
+          {loading ? (
+            <>
+              <SkeletonKPICards />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="pt-6 animate-pulse">
+                      <div className="h-32 bg-muted rounded" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <ReturnKPICards stats={stats || emptyStats} />
+              <ReturnCharts stats={stats || emptyStats} />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="reasons" className="mt-4">
-          <Card>
+          <Card className="animate-fade-in-up">
             <CardHeader><CardTitle className="text-base">{t('Return Reasons')}</CardTitle></CardHeader>
             <CardContent>
-              {Object.keys(stats?.returnsByReason || {}).length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('No data available')}</p>
+              {reasonEntries.length === 0 ? (
+                <EmptyState
+                  icon={BarChart3}
+                  title={t('No data available')}
+                  description={t('Return reason data will appear here')}
+                />
               ) : (
                 <div className="space-y-3">
-                  {Object.entries(stats!.returnsByReason)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([reason, count]) => (
-                      <div key={reason} className="flex items-center justify-between p-3 rounded-lg border">
-                        <span className="font-medium">{reason}</span>
-                        <div className="flex items-center gap-3">
-                          <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${(count / returns.length) * 100}%` }} />
-                          </div>
-                          <span className="text-sm font-medium w-16 text-right">{count} ({((count / returns.length) * 100).toFixed(0)}%)</span>
+                  {reasonEntries.map(([reason, count], i) => (
+                    <div
+                      key={reason}
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-300 ${
+                        reasonVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                      }`}
+                      style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+                    >
+                      <span className="font-medium">{reason}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full animate-bar-grow"
+                            style={{ width: `${(count / returns.length) * 100}%` }}
+                          />
                         </div>
+                        <span className="text-sm font-medium w-16 text-right">{count} ({((count / returns.length) * 100).toFixed(0)}%)</span>
                       </div>
-                    ))}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -127,28 +165,24 @@ export function ReturnsReportsPage() {
 
         <TabsContent value="refunds" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-4 text-center">
-                <p className="text-3xl font-bold">{'\u20AC'}{(stats?.refundVolume || 0).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</p>
-                <p className="text-sm text-muted-foreground">{t('Total Refunds')}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4 text-center">
-                <p className="text-3xl font-bold">{returns.filter(r => r.refundAmount).length}</p>
-                <p className="text-sm text-muted-foreground">{t('Refunds Processed')}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4 text-center">
-                <p className="text-3xl font-bold">
-                  {'\u20AC'}{returns.filter(r => r.refundAmount).length > 0
-                    ? ((stats?.refundVolume || 0) / returns.filter(r => r.refundAmount).length).toFixed(2)
-                    : '0.00'}
-                </p>
-                <p className="text-sm text-muted-foreground">{t('Average Refund')}</p>
-              </CardContent>
-            </Card>
+            {[
+              { value: `\u20AC${animRefundVolume}`, label: t('Total Refunds') },
+              { value: animRefundsProcessed, label: t('Refunds Processed') },
+              { value: `\u20AC${animAvgRefund}`, label: t('Average Refund') },
+            ].map((item, i) => (
+              <Card
+                key={item.label}
+                className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${
+                  refundCardVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                }`}
+                style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out, box-shadow 0.2s ease' }}
+              >
+                <CardContent className="pt-4 text-center">
+                  <p className="text-3xl font-bold">{item.value}</p>
+                  <p className="text-sm text-muted-foreground">{item.label}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
       </Tabs>

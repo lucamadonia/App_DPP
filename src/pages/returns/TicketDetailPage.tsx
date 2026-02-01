@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Printer, RotateCcw, X, GitMerge } from 'lucide-react';
+import { ArrowLeft, Loader2, Printer, RotateCcw, X, GitMerge, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,9 @@ import { TicketSLABadge } from '@/components/returns/TicketSLABadge';
 import { TicketAssigneeSelect } from '@/components/returns/TicketAssigneeSelect';
 import { TicketTagsEditor } from '@/components/returns/TicketTagsEditor';
 import { TicketActivityLog } from '@/components/returns/TicketActivityLog';
+import { SLAProgressBar } from '@/components/returns/SLAProgressBar';
+import { EmptyState } from '@/components/returns/EmptyState';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
 import {
   getRhTicket, getRhTickets, getRhTicketMessages, addRhTicketMessage, updateRhTicket, getRhCustomer,
   logTicketActivity, mergeTickets,
@@ -198,18 +201,68 @@ export function TicketDetailPage() {
     setActivityKey((k) => k + 1);
   };
 
+  const sidebarVisibility = useStaggeredList(8, { interval: 50, initialDelay: 200 });
+
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="space-y-6 animate-fade-in-up">
+        <div className="flex items-center gap-4">
+          <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 bg-muted rounded w-40 animate-pulse" />
+            <div className="h-4 bg-muted rounded w-64 animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardContent className="pt-6 animate-pulse">
+                <div className="space-y-4">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-muted rounded w-24" />
+                        <div className="h-12 bg-muted rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-4 pb-4 animate-pulse">
+                  <div className="h-4 bg-muted rounded w-20 mb-2" />
+                  <div className="h-8 bg-muted rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!ticket) {
-    return <div className="text-center py-12"><p className="text-muted-foreground">{t('Ticket not found')}</p></div>;
+    return (
+      <div className="animate-fade-in-up">
+        <EmptyState
+          icon={MessageSquareText}
+          title={t('Ticket not found')}
+          actionLabel={t('Back to list')}
+          onAction={() => navigate('/returns/tickets')}
+        />
+      </div>
+    );
   }
 
   const isClosedOrResolved = ticket.status === 'resolved' || ticket.status === 'closed';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/tickets')}>
@@ -258,7 +311,7 @@ export function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Thread */}
         <div className="lg:col-span-2">
-          <Card className="h-[600px] flex flex-col">
+          <Card className="h-[600px] flex flex-col animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
             <CardHeader className="pb-2 flex-shrink-0">
               <CardTitle className="text-sm">{t('Communication')}</CardTitle>
             </CardHeader>
@@ -276,7 +329,10 @@ export function TicketDetailPage() {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Assignment */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[0] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Assignee')}</CardTitle></CardHeader>
             <CardContent>
               <TicketAssigneeSelect
@@ -287,7 +343,10 @@ export function TicketDetailPage() {
           </Card>
 
           {/* Priority */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[1] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Priority')}</CardTitle></CardHeader>
             <CardContent>
               <Select value={ticket.priority} onValueChange={handlePriorityChange}>
@@ -309,10 +368,16 @@ export function TicketDetailPage() {
           </Card>
 
           {/* SLA */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[2] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('SLA')}</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <TicketSLABadge ticket={ticket} />
+              {ticket.slaResolutionAt && (
+                <SLAProgressBar ticket={ticket} />
+              )}
               {ticket.firstRespondedAt && (
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">{t('First Responded')}</span>
@@ -329,7 +394,10 @@ export function TicketDetailPage() {
           </Card>
 
           {/* Tags */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[3] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Tags')}</CardTitle></CardHeader>
             <CardContent>
               <TicketTagsEditor tags={ticket.tags} onChange={handleTagsChange} />
@@ -337,7 +405,10 @@ export function TicketDetailPage() {
           </Card>
 
           {/* Category */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[4] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Category')}</CardTitle></CardHeader>
             <CardContent>
               <Input
@@ -349,7 +420,10 @@ export function TicketDetailPage() {
           </Card>
 
           {/* Timestamps */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[5] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Ticket Details')}</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -370,10 +444,20 @@ export function TicketDetailPage() {
           </Card>
 
           {/* Customer */}
-          {customer && <CustomerCard customer={customer} />}
+          {customer && (
+            <div
+              className={`transition-all duration-300 ${sidebarVisibility[6] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+              style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+            >
+              <CustomerCard customer={customer} />
+            </div>
+          )}
 
           {/* Activity Log */}
-          <Card>
+          <Card
+            className={`transition-all duration-300 ${sidebarVisibility[7] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
+          >
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Activity Log')}</CardTitle></CardHeader>
             <CardContent>
               <TicketActivityLog ticketId={ticket.id} refreshKey={activityKey} />
