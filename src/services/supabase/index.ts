@@ -280,6 +280,8 @@ export {
   createRhWorkflowRule,
   updateRhWorkflowRule,
   deleteRhWorkflowRule,
+  serializeWorkflowGraph,
+  deserializeWorkflowGraph,
 } from './rh-workflows';
 
 // Returns Hub - Notifications

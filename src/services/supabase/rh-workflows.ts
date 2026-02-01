@@ -3,6 +3,40 @@
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { RhWorkflowRule } from '@/types/returns-hub';
+import type { WorkflowGraph } from '@/types/workflow-builder';
+
+/**
+ * Serialize a WorkflowGraph into the conditions/actions JSONB columns.
+ * The graph is stored in `conditions` with `_graphVersion: 2`.
+ * `actions` is kept as a summary array for backward compat with list views.
+ */
+export function serializeWorkflowGraph(
+  graph: WorkflowGraph
+): { conditions: Record<string, unknown>; actions: RhWorkflowRule['actions'] } {
+  const actionNodes = graph.nodes.filter((n) => n.type === 'action');
+  const actions = actionNodes.map((n) => {
+    const data = n.data as { actionType: string; params: Record<string, unknown> };
+    return { type: data.actionType as RhWorkflowRule['actions'][number]['type'], params: data.params };
+  });
+
+  return {
+    conditions: graph as unknown as Record<string, unknown>,
+    actions,
+  };
+}
+
+/**
+ * Deserialize from DB columns back to a WorkflowGraph.
+ * Returns null for legacy (non-graph) rules.
+ */
+export function deserializeWorkflowGraph(
+  conditions: Record<string, unknown>
+): WorkflowGraph | null {
+  if (conditions && (conditions as { _graphVersion?: number })._graphVersion === 2) {
+    return conditions as unknown as WorkflowGraph;
+  }
+  return null;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformWorkflowRule(row: any): RhWorkflowRule {

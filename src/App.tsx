@@ -48,6 +48,7 @@ import { TicketDetailPage } from '@/pages/returns/TicketDetailPage';
 import { ReturnsReportsPage } from '@/pages/returns/ReturnsReportsPage';
 import { ReturnsSettingsPage } from '@/pages/returns/ReturnsSettingsPage';
 import { WorkflowRulesPage } from '@/pages/returns/WorkflowRulesPage';
+import { WorkflowBuilderPage } from '@/components/returns/workflow-builder/WorkflowBuilderPage';
 import { EmailTemplateEditorPage } from '@/components/returns/email-editor/EmailTemplateEditorPage';
 import { ReturnsPortalLayout } from '@/pages/returns/public/ReturnsPortalLayout';
 import { PublicReturnPortalPage } from '@/pages/returns/public/PublicReturnPortalPage';
@@ -215,6 +216,7 @@ function App() {
           <Route path="returns/settings" element={<ReturnsSettingsPage />} />
           <Route path="returns/email-templates" element={<EmailTemplateEditorPage />} />
           <Route path="returns/workflows" element={<WorkflowRulesPage />} />
+          <Route path="returns/workflows/:id/builder" element={<WorkflowBuilderPage />} />
 
           {/* Compliance */}
           <Route path="compliance" element={<CompliancePage />} />
