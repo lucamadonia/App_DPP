@@ -70,7 +70,10 @@ export async function executeWorkflowsForEvent(
   try {
     // Feature gate
     const settings = await getReturnsHubSettings();
-    if (!settings.features?.workflowRules) return;
+    if (!settings.features?.workflowRules) {
+      console.warn('[workflow-engine] Workflow rules feature is disabled in tenant settings — skipping execution.');
+      return;
+    }
 
     // Load active rules for this trigger
     const { data: rules, error } = await supabase

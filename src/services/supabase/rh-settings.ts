@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS: ReturnsHubSettings = {
     apiAccess: 'none',
     webhooks: false,
     customsIntegration: false,
-    workflowRules: false,
+    workflowRules: true,
   },
   usage: {
     returnsThisMonth: 0,
