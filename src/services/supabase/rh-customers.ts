@@ -113,6 +113,10 @@ export async function updateRhCustomer(
   id: string,
   updates: Partial<RhCustomer>
 ): Promise<{ success: boolean; error?: string }> {
+  // Capture previous state for workflow triggers
+  const needsPreviousState = updates.riskScore !== undefined || updates.tags !== undefined;
+  const previousCustomer = needsPreviousState ? await getRhCustomer(id) : null;
+
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -136,6 +140,40 @@ export async function updateRhCustomer(
   if (error) {
     console.error('Failed to update customer:', error);
     return { success: false, error: error.message };
+  }
+
+  // Fire workflow events for relevant changes (fire-and-forget)
+  if (previousCustomer) {
+    const tenantId = previousCustomer.tenantId;
+
+    // Risk score changed
+    if (updates.riskScore !== undefined && previousCustomer.riskScore !== updates.riskScore) {
+      import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+        executeWorkflowsForEvent('customer_risk_changed', {
+          tenantId,
+          eventType: 'customer_risk_changed',
+          customerId: id,
+          customer: previousCustomer,
+          previousRiskScore: previousCustomer.riskScore,
+        });
+      }).catch(console.error);
+    }
+
+    // Tag added
+    if (updates.tags !== undefined) {
+      const newTags = updates.tags.filter((t) => !previousCustomer.tags.includes(t));
+      if (newTags.length > 0) {
+        import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+          executeWorkflowsForEvent('customer_tag_added', {
+            tenantId,
+            eventType: 'customer_tag_added',
+            customerId: id,
+            customer: previousCustomer,
+            previousTags: previousCustomer.tags,
+          });
+        }).catch(console.error);
+      }
+    }
   }
 
   return { success: true };

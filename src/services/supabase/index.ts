@@ -286,6 +286,12 @@ export {
   deserializeWorkflowGraph,
 } from './rh-workflows';
 
+// Returns Hub - Workflow Engine
+export {
+  executeWorkflowsForEvent,
+  type WorkflowEventContext,
+} from './rh-workflow-engine';
+
 // Returns Hub - Notifications
 export {
   getRhNotifications,

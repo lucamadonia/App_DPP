@@ -161,6 +161,15 @@ export async function createReturn(
     return { success: false, error: error.message };
   }
 
+  // Fire workflow event (fire-and-forget, dynamic import to avoid circular dep)
+  import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+    executeWorkflowsForEvent('return_created', {
+      tenantId,
+      eventType: 'return_created',
+      returnId: data.id,
+    });
+  }).catch(console.error);
+
   return { success: true, id: data.id, returnNumber: data.return_number };
 }
 
@@ -214,6 +223,10 @@ export async function updateReturnStatus(
   comment?: string,
   actorId?: string
 ): Promise<{ success: boolean; error?: string }> {
+  // Capture previous state before update (for workflow context)
+  const previousReturn = await getReturn(id);
+  const previousStatus = previousReturn?.status;
+
   const result = await updateReturn(id, { status });
   if (!result.success) return result;
 
@@ -255,6 +268,19 @@ export async function updateReturnStatus(
         }).catch((err) => console.error('Notification trigger failed:', err));
       }
     }
+  }
+
+  // Fire workflow event for status change (fire-and-forget)
+  if (tenantId && previousStatus !== status) {
+    import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+      executeWorkflowsForEvent('return_status_changed', {
+        tenantId: tenantId!,
+        eventType: 'return_status_changed',
+        returnId: id,
+        return: previousReturn || undefined,
+        previousStatus,
+      });
+    }).catch(console.error);
   }
 
   return { success: true };

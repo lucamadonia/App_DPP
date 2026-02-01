@@ -182,6 +182,16 @@ export async function createRhTicket(
     }
   }
 
+  // Fire workflow event (fire-and-forget, dynamic import to avoid circular dep)
+  import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+    executeWorkflowsForEvent('ticket_created', {
+      tenantId,
+      eventType: 'ticket_created',
+      ticketId: data.id,
+      customerId: ticket.customerId,
+    });
+  }).catch(console.error);
+
   return { success: true, id: data.id, ticketNumber: data.ticket_number };
 }
 
@@ -189,6 +199,9 @@ export async function updateRhTicket(
   id: string,
   updates: Partial<RhTicket>
 ): Promise<{ success: boolean; error?: string }> {
+  // Capture previous state for workflow triggers
+  const previousTicket = updates.status !== undefined ? await getRhTicket(id) : null;
+
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -212,6 +225,23 @@ export async function updateRhTicket(
   if (error) {
     console.error('Failed to update ticket:', error);
     return { success: false, error: error.message };
+  }
+
+  // Fire workflow event if status changed (fire-and-forget)
+  if (previousTicket && updates.status && previousTicket.status !== updates.status) {
+    const tenantId = await getCurrentTenantId();
+    if (tenantId) {
+      import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+        executeWorkflowsForEvent('ticket_status_changed', {
+          tenantId,
+          eventType: 'ticket_status_changed',
+          ticketId: id,
+          ticket: previousTicket,
+          customerId: previousTicket.customerId,
+          previousStatus: previousTicket.status,
+        });
+      }).catch(console.error);
+    }
   }
 
   return { success: true };
