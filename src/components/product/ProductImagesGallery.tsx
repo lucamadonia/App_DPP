@@ -23,13 +23,21 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
   const { t } = useTranslation('products');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
 
   const handleUpload = async (files: FileList) => {
+    setUploadError(null);
     setIsUploading(true);
-    const newImages = await uploadProductImages(Array.from(files), productId);
-    onImagesChange([...images, ...newImages]);
-    setIsUploading(false);
+    try {
+      const newImages = await uploadProductImages(Array.from(files), productId);
+      onImagesChange([...images, ...newImages]);
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      setUploadError(err instanceof Error ? err.message : t('Image upload failed'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDelete = async (imageId: string) => {
@@ -89,6 +97,11 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
         </div>
       </CardHeader>
       <CardContent>
+        {uploadError && (
+          <div className="mb-4 rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            {uploadError}
+          </div>
+        )}
         {images.length === 0 ? (
           <div
             className={`flex h-48 items-center justify-center rounded-lg border-2 border-dashed ${

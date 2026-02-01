@@ -35,28 +35,60 @@ END $$;
 ALTER TABLE rh_email_templates ENABLE ROW LEVEL SECURITY;
 
 -- Tenant users can read their own templates
-CREATE POLICY "rh_email_templates_select" ON rh_email_templates
-    FOR SELECT USING (
-        tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'rh_email_templates' AND policyname = 'rh_email_templates_select'
+    ) THEN
+        CREATE POLICY "rh_email_templates_select" ON rh_email_templates
+            FOR SELECT USING (
+                tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+            );
+    END IF;
+END $$;
 
 -- Tenant users can insert templates for their tenant
-CREATE POLICY "rh_email_templates_insert" ON rh_email_templates
-    FOR INSERT WITH CHECK (
-        tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'rh_email_templates' AND policyname = 'rh_email_templates_insert'
+    ) THEN
+        CREATE POLICY "rh_email_templates_insert" ON rh_email_templates
+            FOR INSERT WITH CHECK (
+                tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+            );
+    END IF;
+END $$;
 
 -- Tenant users can update their own templates
-CREATE POLICY "rh_email_templates_update" ON rh_email_templates
-    FOR UPDATE USING (
-        tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'rh_email_templates' AND policyname = 'rh_email_templates_update'
+    ) THEN
+        CREATE POLICY "rh_email_templates_update" ON rh_email_templates
+            FOR UPDATE USING (
+                tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+            );
+    END IF;
+END $$;
 
 -- Tenant users can delete their own templates
-CREATE POLICY "rh_email_templates_delete" ON rh_email_templates
-    FOR DELETE USING (
-        tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'rh_email_templates' AND policyname = 'rh_email_templates_delete'
+    ) THEN
+        CREATE POLICY "rh_email_templates_delete" ON rh_email_templates
+            FOR DELETE USING (
+                tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+            );
+    END IF;
+END $$;
 
 -- ============================================
 -- RLS Policy for anon INSERT on rh_notifications

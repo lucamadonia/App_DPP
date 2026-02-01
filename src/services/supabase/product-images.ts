@@ -53,8 +53,7 @@ export async function uploadProductImages(
       .upload(fileName, file);
 
     if (uploadError) {
-      console.error('Failed to upload image:', uploadError);
-      continue;
+      throw new Error(`Failed to upload image "${file.name}": ${uploadError.message}`);
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -74,7 +73,11 @@ export async function uploadProductImages(
       .select('*')
       .single();
 
-    if (!error && data) {
+    if (error) {
+      throw new Error(`Failed to save image record: ${error.message}`);
+    }
+
+    if (data) {
       results.push(transformProductImage(data));
     }
   }
