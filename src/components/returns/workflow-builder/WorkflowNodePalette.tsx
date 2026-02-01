@@ -4,8 +4,10 @@ import {
   Zap, GitBranch, Play, Clock,
   ChevronRight, ChevronDown,
   Package, TicketCheck, Users, Mail, Webhook,
+  CheckCircle, XCircle, UserPlus, StickyNote,
+  AlertTriangle, Bell, ListPlus, Edit, Tag,
 } from 'lucide-react';
-import type { WorkflowNodeType } from '@/types/workflow-builder';
+import type { WorkflowNodeType, WorkflowActionType, TriggerEventType } from '@/types/workflow-builder';
 
 interface PaletteItem {
   type: WorkflowNodeType;
@@ -13,6 +15,8 @@ interface PaletteItem {
   icon: typeof Zap;
   color: string;
   defaultLabel?: string;
+  actionType?: WorkflowActionType;
+  eventType?: TriggerEventType;
 }
 
 interface PaletteCategory {
@@ -28,12 +32,18 @@ const CATEGORIES: PaletteCategory[] = [
     label: 'Triggers',
     icon: Zap,
     items: [
-      { type: 'trigger', label: 'Return Created', icon: Zap, color: '#10B981', defaultLabel: 'Return Created' },
-      { type: 'trigger', label: 'Status Changed', icon: Zap, color: '#10B981', defaultLabel: 'Status Changed' },
-      { type: 'trigger', label: 'Return Overdue', icon: Zap, color: '#10B981', defaultLabel: 'Return Overdue' },
-      { type: 'trigger', label: 'Ticket Created', icon: Zap, color: '#10B981', defaultLabel: 'Ticket Created' },
-      { type: 'trigger', label: 'Scheduled', icon: Clock, color: '#10B981', defaultLabel: 'Scheduled' },
-      { type: 'trigger', label: 'Manual', icon: Zap, color: '#10B981', defaultLabel: 'Manual Trigger' },
+      { type: 'trigger', label: 'Return Created', icon: Zap, color: '#10B981', defaultLabel: 'Return Created', eventType: 'return_created' },
+      { type: 'trigger', label: 'Status Changed', icon: Zap, color: '#10B981', defaultLabel: 'Status Changed', eventType: 'return_status_changed' },
+      { type: 'trigger', label: 'Return Overdue', icon: AlertTriangle, color: '#10B981', defaultLabel: 'Return Overdue', eventType: 'return_overdue' },
+      { type: 'trigger', label: 'Ticket Created', icon: TicketCheck, color: '#10B981', defaultLabel: 'Ticket Created', eventType: 'ticket_created' },
+      { type: 'trigger', label: 'Ticket Status Changed', icon: TicketCheck, color: '#10B981', defaultLabel: 'Ticket Status Changed', eventType: 'ticket_status_changed' },
+      { type: 'trigger', label: 'Ticket Overdue', icon: AlertTriangle, color: '#10B981', defaultLabel: 'Ticket Overdue', eventType: 'ticket_overdue' },
+      { type: 'trigger', label: 'Risk Score Changed', icon: Users, color: '#10B981', defaultLabel: 'Risk Score Changed', eventType: 'customer_risk_changed' },
+      { type: 'trigger', label: 'Customer Tag Added', icon: Tag, color: '#10B981', defaultLabel: 'Customer Tag Added', eventType: 'customer_tag_added' },
+      { type: 'trigger', label: 'Daily Schedule', icon: Clock, color: '#10B981', defaultLabel: 'Daily Schedule', eventType: 'scheduled_daily' },
+      { type: 'trigger', label: 'Weekly Schedule', icon: Clock, color: '#10B981', defaultLabel: 'Weekly Schedule', eventType: 'scheduled_weekly' },
+      { type: 'trigger', label: 'Monthly Schedule', icon: Clock, color: '#10B981', defaultLabel: 'Monthly Schedule', eventType: 'scheduled_monthly' },
+      { type: 'trigger', label: 'Manual Trigger', icon: Play, color: '#10B981', defaultLabel: 'Manual Trigger', eventType: 'manual' },
     ],
   },
   {
@@ -50,12 +60,13 @@ const CATEGORIES: PaletteCategory[] = [
     label: 'Return Actions',
     icon: Package,
     items: [
-      { type: 'action', label: 'Set Status', icon: Play, color: '#3B82F6', defaultLabel: 'Set Status' },
-      { type: 'action', label: 'Approve', icon: Play, color: '#3B82F6', defaultLabel: 'Approve' },
-      { type: 'action', label: 'Reject', icon: Play, color: '#3B82F6', defaultLabel: 'Reject' },
-      { type: 'action', label: 'Assign', icon: Play, color: '#3B82F6', defaultLabel: 'Assign' },
-      { type: 'action', label: 'Set Priority', icon: Play, color: '#3B82F6', defaultLabel: 'Set Priority' },
-      { type: 'action', label: 'Add Note', icon: Play, color: '#3B82F6', defaultLabel: 'Add Note' },
+      { type: 'action', label: 'Set Status', icon: Play, color: '#3B82F6', defaultLabel: 'Set Status', actionType: 'set_status' },
+      { type: 'action', label: 'Approve', icon: CheckCircle, color: '#3B82F6', defaultLabel: 'Approve', actionType: 'approve' },
+      { type: 'action', label: 'Reject', icon: XCircle, color: '#3B82F6', defaultLabel: 'Reject', actionType: 'reject' },
+      { type: 'action', label: 'Assign', icon: UserPlus, color: '#3B82F6', defaultLabel: 'Assign', actionType: 'assign' },
+      { type: 'action', label: 'Set Priority', icon: AlertTriangle, color: '#3B82F6', defaultLabel: 'Set Priority', actionType: 'set_priority' },
+      { type: 'action', label: 'Add Note', icon: StickyNote, color: '#3B82F6', defaultLabel: 'Add Note', actionType: 'add_note' },
+      { type: 'action', label: 'Update Field', icon: Edit, color: '#3B82F6', defaultLabel: 'Update Field', actionType: 'update_field' },
     ],
   },
   {
@@ -63,10 +74,12 @@ const CATEGORIES: PaletteCategory[] = [
     label: 'Ticket Actions',
     icon: TicketCheck,
     items: [
-      { type: 'action', label: 'Create Ticket', icon: Play, color: '#3B82F6', defaultLabel: 'Create Ticket' },
-      { type: 'action', label: 'Ticket Status', icon: Play, color: '#3B82F6', defaultLabel: 'Ticket Status' },
-      { type: 'action', label: 'Ticket Message', icon: Play, color: '#3B82F6', defaultLabel: 'Ticket Message' },
-      { type: 'action', label: 'Ticket Tag', icon: Play, color: '#3B82F6', defaultLabel: 'Ticket Tag' },
+      { type: 'action', label: 'Create Ticket', icon: ListPlus, color: '#3B82F6', defaultLabel: 'Create Ticket', actionType: 'ticket_create' },
+      { type: 'action', label: 'Ticket Status', icon: Play, color: '#3B82F6', defaultLabel: 'Ticket Status', actionType: 'ticket_set_status' },
+      { type: 'action', label: 'Ticket Priority', icon: AlertTriangle, color: '#3B82F6', defaultLabel: 'Ticket Priority', actionType: 'ticket_set_priority' },
+      { type: 'action', label: 'Ticket Assign', icon: UserPlus, color: '#3B82F6', defaultLabel: 'Ticket Assign', actionType: 'ticket_assign' },
+      { type: 'action', label: 'Ticket Message', icon: StickyNote, color: '#3B82F6', defaultLabel: 'Ticket Message', actionType: 'ticket_add_message' },
+      { type: 'action', label: 'Ticket Tag', icon: Tag, color: '#3B82F6', defaultLabel: 'Ticket Tag', actionType: 'ticket_add_tag' },
     ],
   },
   {
@@ -74,9 +87,9 @@ const CATEGORIES: PaletteCategory[] = [
     label: 'Customer Actions',
     icon: Users,
     items: [
-      { type: 'action', label: 'Update Risk Score', icon: Play, color: '#3B82F6', defaultLabel: 'Update Risk Score' },
-      { type: 'action', label: 'Customer Tag', icon: Play, color: '#3B82F6', defaultLabel: 'Customer Tag' },
-      { type: 'action', label: 'Update Notes', icon: Play, color: '#3B82F6', defaultLabel: 'Update Notes' },
+      { type: 'action', label: 'Update Risk Score', icon: AlertTriangle, color: '#3B82F6', defaultLabel: 'Update Risk Score', actionType: 'customer_update_risk_score' },
+      { type: 'action', label: 'Customer Tag', icon: Tag, color: '#3B82F6', defaultLabel: 'Customer Tag', actionType: 'customer_add_tag' },
+      { type: 'action', label: 'Update Notes', icon: StickyNote, color: '#3B82F6', defaultLabel: 'Update Notes', actionType: 'customer_update_notes' },
     ],
   },
   {
@@ -84,9 +97,9 @@ const CATEGORIES: PaletteCategory[] = [
     label: 'Notifications',
     icon: Mail,
     items: [
-      { type: 'action', label: 'Send Email Template', icon: Mail, color: '#3B82F6', defaultLabel: 'Send Email Template' },
-      { type: 'action', label: 'Send Custom Email', icon: Mail, color: '#3B82F6', defaultLabel: 'Send Custom Email' },
-      { type: 'action', label: 'Internal Notification', icon: Mail, color: '#3B82F6', defaultLabel: 'Internal Notification' },
+      { type: 'action', label: 'Send Email Template', icon: Mail, color: '#3B82F6', defaultLabel: 'Send Email Template', actionType: 'email_send_template' },
+      { type: 'action', label: 'Send Custom Email', icon: Mail, color: '#3B82F6', defaultLabel: 'Send Custom Email', actionType: 'email_send_custom' },
+      { type: 'action', label: 'Internal Notification', icon: Bell, color: '#3B82F6', defaultLabel: 'Internal Notification', actionType: 'notification_internal' },
     ],
   },
   {
@@ -94,8 +107,8 @@ const CATEGORIES: PaletteCategory[] = [
     label: 'Utility',
     icon: Webhook,
     items: [
-      { type: 'action', label: 'Webhook', icon: Webhook, color: '#3B82F6', defaultLabel: 'Webhook' },
-      { type: 'action', label: 'Timeline Entry', icon: Play, color: '#3B82F6', defaultLabel: 'Timeline Entry' },
+      { type: 'action', label: 'Webhook', icon: Webhook, color: '#3B82F6', defaultLabel: 'Webhook', actionType: 'webhook_call' },
+      { type: 'action', label: 'Timeline Entry', icon: ListPlus, color: '#3B82F6', defaultLabel: 'Timeline Entry', actionType: 'timeline_add_entry' },
     ],
   },
 ];
@@ -110,10 +123,13 @@ function PaletteDraggableItem({ item }: PaletteDraggableItemProps) {
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
-      e.dataTransfer.setData(
-        'application/json',
-        JSON.stringify({ type: item.type, label: item.defaultLabel || item.label })
-      );
+      const dragData = {
+        type: item.type,
+        label: item.defaultLabel || item.label,
+        ...(item.actionType && { actionType: item.actionType }),
+        ...(item.eventType && { eventType: item.eventType }),
+      };
+      e.dataTransfer.setData('application/json', JSON.stringify(dragData));
       e.dataTransfer.effectAllowed = 'copy';
     },
     [item]

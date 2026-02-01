@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle, X } from 'lucide-react';
 import type {
   WorkflowGraph,
   WorkflowNode as NodeType,
@@ -16,12 +17,30 @@ import {
   deserializeWorkflowGraph,
 } from '@/services/supabase/rh-workflows';
 import type { RhWorkflowRule } from '@/types/returns-hub';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { WorkflowCanvas } from './WorkflowCanvas';
 import { WorkflowNodePalette } from './WorkflowNodePalette';
 import { WorkflowNodeConfig } from './WorkflowNodeConfig';
 import { WorkflowToolbar } from './WorkflowToolbar';
 import { WorkflowMinimap } from './WorkflowMinimap';
-import { generateEdgeId, autoLayoutGraph, createNode } from './workflowUtils';
+import {
+  generateEdgeId,
+  autoLayoutGraph,
+  createNode,
+  validateWorkflow,
+  computeFitToView,
+} from './workflowUtils';
+import type { ValidationError } from './workflowUtils';
 
 const DEFAULT_VIEWPORT: CanvasViewport = { x: 40, y: 40, zoom: 1 };
 
@@ -37,7 +56,6 @@ function createEmptyGraph(): WorkflowGraph {
 /** Build a default graph for a legacy workflow rule (with just a trigger) */
 function buildLegacyGraph(rule: RhWorkflowRule): WorkflowGraph {
   const triggerNode = createNode('trigger', { x: 80, y: 120 }, rule.triggerType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
-  // Set the trigger event type based on the legacy triggerType
   const eventMap: Record<string, string> = {
     return_created: 'return_created',
     status_changed: 'return_status_changed',
@@ -68,6 +86,15 @@ export function WorkflowBuilderPage() {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [viewport, setViewport] = useState<CanvasViewport>(DEFAULT_VIEWPORT);
 
+  // Validation & error state
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showValidationBanner, setShowValidationBanner] = useState(false);
+
+  // Unsaved changes dialog
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const pendingNavigationRef = useRef<string | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,13 +112,11 @@ export function WorkflowBuilderPage() {
       setRule(found);
       setName(found.name);
 
-      // Try to deserialize graph
       const existingGraph = deserializeWorkflowGraph(found.conditions);
       if (existingGraph) {
         setGraph(existingGraph);
         setViewport(existingGraph.viewport);
       } else {
-        // Legacy rule: build a default graph
         const legacy = buildLegacyGraph(found);
         setGraph(legacy);
       }
@@ -99,18 +124,35 @@ export function WorkflowBuilderPage() {
     })();
   }, [id, navigate]);
 
+  // ---- Beforeunload warning ----
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  // ---- Re-validate on graph changes ----
+  useEffect(() => {
+    const errors = validateWorkflow(graph);
+    setValidationErrors(errors);
+  }, [graph]);
+
   // ---- Graph mutation helpers ----
   const updateGraph = useCallback((updater: (prev: WorkflowGraph) => WorkflowGraph) => {
     setGraph((prev) => {
       const next = updater(prev);
       setIsDirty(true);
+      setSaveError(null);
       return next;
     });
   }, []);
 
   const handleAddNode = useCallback(
     (node: NodeType) => {
-      // Enforce max 1 trigger
       if (node.type === 'trigger') {
         const existingTrigger = graph.nodes.find((n) => n.type === 'trigger');
         if (existingTrigger) return;
@@ -174,11 +216,10 @@ export function WorkflowBuilderPage() {
     if (edgeId) setSelectedNodeId(null);
   }, []);
 
-  // ---- Delete selected edge with keyboard ----
+  // ---- Delete selected edge/node with keyboard ----
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        // Don't delete when focused on inputs
         const tag = (e.target as HTMLElement).tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
@@ -197,29 +238,62 @@ export function WorkflowBuilderPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [selectedEdgeId, selectedNodeId, handleDeleteNode, updateGraph]);
 
-  // ---- Save ----
+  // ---- Back navigation with unsaved warning ----
+  const handleBack = useCallback(() => {
+    if (isDirty) {
+      pendingNavigationRef.current = '/returns/workflows';
+      setShowUnsavedDialog(true);
+    } else {
+      navigate('/returns/workflows');
+    }
+  }, [isDirty, navigate]);
+
+  const handleConfirmLeave = useCallback(() => {
+    setShowUnsavedDialog(false);
+    if (pendingNavigationRef.current) {
+      navigate(pendingNavigationRef.current);
+      pendingNavigationRef.current = null;
+    }
+  }, [navigate]);
+
+  // ---- Save with validation ----
   const handleSave = useCallback(async () => {
     if (!rule) return;
+
+    // Validate before saving
+    const errors = validateWorkflow(graph);
+    setValidationErrors(errors);
+    if (errors.length > 0) {
+      setShowValidationBanner(true);
+      return;
+    }
+
     setSaving(true);
+    setSaveError(null);
 
-    const graphToSave: WorkflowGraph = { ...graph, viewport };
-    const { conditions, actions } = serializeWorkflowGraph(graphToSave);
+    try {
+      const graphToSave: WorkflowGraph = { ...graph, viewport };
+      const { conditions, actions } = serializeWorkflowGraph(graphToSave);
 
-    // Derive triggerType from the trigger node
-    const triggerNode = graph.nodes.find((n) => n.type === 'trigger');
-    const triggerType = triggerNode
-      ? (triggerNode.data as { eventType: string }).eventType
-      : rule.triggerType;
+      const triggerNode = graph.nodes.find((n) => n.type === 'trigger');
+      const triggerType = triggerNode
+        ? (triggerNode.data as { eventType: string }).eventType
+        : rule.triggerType;
 
-    await updateRhWorkflowRule(rule.id, {
-      name,
-      triggerType,
-      conditions,
-      actions,
-    });
+      await updateRhWorkflowRule(rule.id, {
+        name,
+        triggerType,
+        conditions,
+        actions,
+      });
 
-    setIsDirty(false);
-    setSaving(false);
+      setIsDirty(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setSaveError(message);
+    } finally {
+      setSaving(false);
+    }
   }, [rule, graph, viewport, name]);
 
   // ---- Toolbar actions ----
@@ -232,8 +306,12 @@ export function WorkflowBuilderPage() {
   }, []);
 
   const handleZoomReset = useCallback(() => {
-    setViewport({ x: 40, y: 40, zoom: 1 });
-  }, []);
+    const el = containerRef.current;
+    const w = el?.clientWidth ?? 800;
+    const h = el?.clientHeight ?? 600;
+    const fit = computeFitToView(graph.nodes, w, h);
+    setViewport(fit);
+  }, [graph.nodes]);
 
   const handleAutoLayout = useCallback(() => {
     updateGraph((g) => autoLayoutGraph(g));
@@ -273,7 +351,6 @@ export function WorkflowBuilderPage() {
         }
       };
       reader.readAsText(file);
-      // Reset so same file can be re-imported
       e.target.value = '';
     },
     []
@@ -327,7 +404,9 @@ export function WorkflowBuilderPage() {
         isDirty={isDirty}
         saving={saving}
         zoom={viewport.zoom}
+        validationErrorCount={validationErrors.length}
         onNameChange={(n) => { setName(n); setIsDirty(true); }}
+        onBack={handleBack}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
@@ -336,6 +415,43 @@ export function WorkflowBuilderPage() {
         onExport={handleExport}
         onImport={handleImport}
       />
+
+      {/* Validation errors banner */}
+      {showValidationBanner && validationErrors.length > 0 && (
+        <div className="bg-destructive/10 border-b border-destructive/20 px-3 py-2 flex items-center gap-2 shrink-0">
+          <AlertTriangle size={14} className="text-destructive shrink-0" />
+          <div className="flex-1 text-xs text-destructive">
+            <span className="font-medium">{t('Cannot save')}:</span>{' '}
+            {validationErrors.map((e) => e.message).join('; ')}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 text-destructive"
+            onClick={() => setShowValidationBanner(false)}
+          >
+            <X size={12} />
+          </Button>
+        </div>
+      )}
+
+      {/* Save error banner */}
+      {saveError && (
+        <div className="bg-destructive/10 border-b border-destructive/20 px-3 py-2 flex items-center gap-2 shrink-0">
+          <AlertTriangle size={14} className="text-destructive shrink-0" />
+          <div className="flex-1 text-xs text-destructive">
+            <span className="font-medium">{t('Save failed')}:</span> {saveError}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 text-destructive"
+            onClick={() => setSaveError(null)}
+          >
+            <X size={12} />
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Node palette */}
@@ -372,6 +488,24 @@ export function WorkflowBuilderPage() {
           />
         )}
       </div>
+
+      {/* Unsaved changes dialog */}
+      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Unsaved Changes')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('You have unsaved changes. Are you sure you want to leave? Your changes will be lost.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmLeave} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('Leave without saving')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

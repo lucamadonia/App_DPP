@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ZoomIn, ZoomOut, Maximize2,
-  LayoutGrid, Save, Download, Upload,
+  LayoutGrid, Save, Download, Upload, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +19,9 @@ interface WorkflowToolbarProps {
   isDirty: boolean;
   saving: boolean;
   zoom: number;
+  validationErrorCount?: number;
   onNameChange: (name: string) => void;
+  onBack: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
@@ -36,7 +37,9 @@ export function WorkflowToolbar({
   isDirty,
   saving,
   zoom,
+  validationErrorCount = 0,
   onNameChange,
+  onBack,
   onZoomIn,
   onZoomOut,
   onZoomReset,
@@ -46,12 +49,11 @@ export function WorkflowToolbar({
   onImport,
 }: WorkflowToolbarProps) {
   const { t } = useTranslation('returns');
-  const navigate = useNavigate();
 
   return (
     <div className="h-12 border-b bg-card flex items-center gap-2 px-3 shrink-0">
       {/* Back button */}
-      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate('/returns/workflows')}>
+      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onBack}>
         <ArrowLeft size={16} />
       </Button>
 
@@ -71,6 +73,12 @@ export function WorkflowToolbar({
           {t('Unsaved')}
         </Badge>
       )}
+      {validationErrorCount > 0 && (
+        <Badge variant="destructive" className="text-[10px] h-5 gap-1">
+          <AlertTriangle size={10} />
+          {validationErrorCount} {validationErrorCount === 1 ? t('Error') : t('Errors')}
+        </Badge>
+      )}
 
       <div className="flex-1" />
 
@@ -83,7 +91,7 @@ export function WorkflowToolbar({
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onZoomIn}>
           <ZoomIn size={14} />
         </Button>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onZoomReset}>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onZoomReset} title={t('Fit to View')}>
           <Maximize2 size={14} />
         </Button>
       </div>

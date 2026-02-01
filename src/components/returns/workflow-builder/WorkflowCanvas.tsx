@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
-import type { WorkflowGraph, WorkflowNode as NodeType, Position, WorkflowNodeType } from '@/types/workflow-builder';
+import { useTranslation } from 'react-i18next';
+import type { WorkflowGraph, WorkflowNode as NodeType, Position, PaletteItemDragData } from '@/types/workflow-builder';
 import { NODE_WIDTH, NODE_HEIGHT } from '@/types/workflow-builder';
 import { WorkflowNode } from './WorkflowNode';
 import { WorkflowEdge, TempEdge } from './WorkflowEdge';
-import { createNode } from './workflowUtils';
+import { createNode, snapToGrid } from './workflowUtils';
 
 interface WorkflowCanvasProps {
   graph: WorkflowGraph;
@@ -34,10 +35,11 @@ export function WorkflowCanvas({
   viewport,
   onViewportChange,
 }: WorkflowCanvasProps) {
+  const { t } = useTranslation('returns');
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Drag state
-  const [dragging, setDragging] = useState<{ nodeId: string; offset: Position } | null>(null);
+  // Drag state — offset is in canvas-space
+  const [dragging, setDragging] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null);
   const [panning, setPanning] = useState<{ startX: number; startY: number; vpX: number; vpY: number } | null>(null);
 
   // Connection drawing state
@@ -87,11 +89,12 @@ export function WorkflowCanvas({
         return;
       }
       if (dragging) {
-        const pos = screenToCanvas(e.clientX, e.clientY);
-        onMoveNode(dragging.nodeId, {
-          x: pos.x - dragging.offset.x / viewport.zoom,
-          y: pos.y - dragging.offset.y / viewport.zoom,
+        const canvasPos = screenToCanvas(e.clientX, e.clientY);
+        const newPos = snapToGrid({
+          x: canvasPos.x - dragging.offsetX,
+          y: canvasPos.y - dragging.offsetY,
         });
+        onMoveNode(dragging.nodeId, newPos);
         return;
       }
       if (connecting) {
@@ -106,7 +109,6 @@ export function WorkflowCanvas({
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
       if (connecting) {
-        // Check if we landed on an input handle
         const pos = screenToCanvas(e.clientX, e.clientY);
         const targetNode = graph.nodes.find(
           (n) =>
@@ -119,7 +121,6 @@ export function WorkflowCanvas({
         );
 
         if (targetNode) {
-          // Validate: no self-loops, no duplicates
           const isDuplicate = graph.edges.some(
             (edge) =>
               edge.source === connecting.sourceId &&
@@ -146,7 +147,6 @@ export function WorkflowCanvas({
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, viewport.zoom * delta));
 
-      // Zoom towards cursor
       const svg = svgRef.current;
       if (!svg) return;
       const rect = svg.getBoundingClientRect();
@@ -168,12 +168,13 @@ export function WorkflowCanvas({
       const raw = e.dataTransfer.getData('application/json');
       if (!raw) return;
       try {
-        const { type, label } = JSON.parse(raw) as { type: WorkflowNodeType; label: string };
+        const dragData = JSON.parse(raw) as PaletteItemDragData;
         const pos = screenToCanvas(e.clientX, e.clientY);
-        // Center the node on the drop point
-        pos.x -= NODE_WIDTH / 2;
-        pos.y -= NODE_HEIGHT / 2;
-        const node = createNode(type, pos, label);
+        const snapped = snapToGrid({
+          x: pos.x - NODE_WIDTH / 2,
+          y: pos.y - NODE_HEIGHT / 2,
+        });
+        const node = createNode(dragData.type, snapped, dragData.label, dragData);
         onAddNode(node);
       } catch {
         // invalid data
@@ -188,11 +189,19 @@ export function WorkflowCanvas({
   }, []);
 
   // ---- Node interaction callbacks ----
+  // New: receives the raw MouseEvent, computes offset in canvas coords
   const handleNodeDragStart = useCallback(
-    (nodeId: string, offset: Position) => {
-      setDragging({ nodeId, offset });
+    (nodeId: string, startEvent: React.MouseEvent) => {
+      const canvasPos = screenToCanvas(startEvent.clientX, startEvent.clientY);
+      const node = graph.nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      setDragging({
+        nodeId,
+        offsetX: canvasPos.x - node.position.x,
+        offsetY: canvasPos.y - node.position.y,
+      });
     },
-    []
+    [graph.nodes, screenToCanvas]
   );
 
   const handleConnectionStart = useCallback(
@@ -228,6 +237,7 @@ export function WorkflowCanvas({
     : null;
 
   const gridScaled = GRID_SIZE * viewport.zoom;
+  const isEmpty = graph.nodes.length === 0;
 
   return (
     <svg
@@ -262,6 +272,40 @@ export function WorkflowCanvas({
       </defs>
       <rect width="100%" height="100%" fill="var(--color-background, #f8fafc)" />
       <rect width="100%" height="100%" fill="url(#grid-dots)" />
+
+      {/* Empty state */}
+      {isEmpty && (
+        <foreignObject x="0" y="0" width="100%" height="100%">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '32px',
+                borderRadius: '12px',
+                border: '2px dashed var(--color-border, #e2e8f0)',
+                backgroundColor: 'var(--color-card, rgba(255,255,255,0.6))',
+                maxWidth: '360px',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-foreground, #1a1a2e)', marginBottom: 8 }}>
+                {t('Drag nodes from palette')}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-muted-foreground, #64748b)' }}>
+                {t('Start by dragging a trigger node onto the canvas, then add conditions and actions.')}
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+      )}
 
       {/* Transformed content */}
       <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.zoom})`}>

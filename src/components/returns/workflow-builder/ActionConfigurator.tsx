@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmailActionConfig } from './EmailActionConfig';
+import { FieldPicker } from './FieldPicker';
 import type { ActionNodeData, WorkflowActionType } from '@/types/workflow-builder';
 
 interface ActionConfiguratorProps {
@@ -288,6 +290,53 @@ function ActionParams({
         </div>
       );
 
+    case 'approve':
+    case 'reject':
+      return (
+        <div className="space-y-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('Reason')}</Label>
+            <Input
+              className="h-8 text-xs"
+              placeholder={t('Optional reason')}
+              value={String(params.reason ?? '')}
+              onChange={(e) => onChange({ ...params, reason: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('Customer Message')}</Label>
+            <Textarea
+              className="text-xs min-h-[60px]"
+              placeholder={t('Message to customer (supports {{variables}})')}
+              value={String(params.customerMessage ?? '')}
+              onChange={(e) => onChange({ ...params, customerMessage: e.target.value })}
+            />
+          </div>
+        </div>
+      );
+
+    case 'update_field':
+      return (
+        <div className="space-y-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('Field')}</Label>
+            <FieldPicker
+              value={String(params.field ?? '')}
+              onChange={(field) => onChange({ ...params, field })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('New Value')}</Label>
+            <Input
+              className="h-8 text-xs"
+              placeholder={t('Value (supports {{variables}})')}
+              value={String(params.value ?? '')}
+              onChange={(e) => onChange({ ...params, value: e.target.value })}
+            />
+          </div>
+        </div>
+      );
+
     case 'webhook_call':
       return (
         <div className="space-y-2">
@@ -313,8 +362,30 @@ function ActionParams({
                 <SelectItem value="POST">POST</SelectItem>
                 <SelectItem value="GET">GET</SelectItem>
                 <SelectItem value="PUT">PUT</SelectItem>
+                <SelectItem value="PATCH">PATCH</SelectItem>
+                <SelectItem value="DELETE">DELETE</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('Headers')}</Label>
+            <Textarea
+              className="text-xs min-h-[60px] font-mono"
+              placeholder={"Content-Type: application/json\nAuthorization: Bearer {{token}}"}
+              value={String(params.headers ?? '')}
+              onChange={(e) => onChange({ ...params, headers: e.target.value })}
+            />
+            <p className="text-[10px] text-muted-foreground">{t('One header per line (Key: Value)')}</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('Body Payload')}</Label>
+            <Textarea
+              className="text-xs min-h-[80px] font-mono"
+              placeholder={'{\n  "returnId": "{{returnNumber}}",\n  "status": "{{status}}"\n}'}
+              value={String(params.body ?? '')}
+              onChange={(e) => onChange({ ...params, body: e.target.value })}
+            />
+            <p className="text-[10px] text-muted-foreground">{t('Use {{variable}} syntax for dynamic values')}</p>
           </div>
         </div>
       );
@@ -332,9 +403,13 @@ function ActionParams({
         </div>
       );
 
-    // approve, reject, update_field have no extra params or minimal
     default:
-      return null;
+      return (
+        <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+          <Info size={14} className="text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">{t('No additional configuration required')}</span>
+        </div>
+      );
   }
 }
 

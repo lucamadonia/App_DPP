@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -16,11 +17,23 @@ import type {
 } from '@/types/workflow-builder';
 import { NODE_COLORS } from '@/types/workflow-builder';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ACTION_TYPE_LABELS, TRIGGER_TYPE_LABELS } from './workflowUtils';
 
 interface WorkflowNodeConfigProps {
   node: WorkflowNode;
   onUpdate: (node: WorkflowNode) => void;
   onDelete: (id: string) => void;
+}
+
+/** Check if the label matches any auto-generated label */
+function isAutoLabel(label: string): boolean {
+  const allAutoLabels = new Set([
+    ...Object.values(ACTION_TYPE_LABELS),
+    ...Object.values(TRIGGER_TYPE_LABELS),
+    'Condition',
+    'Delay',
+  ]);
+  return allAutoLabels.has(label);
 }
 
 export function WorkflowNodeConfig({ node, onUpdate, onDelete }: WorkflowNodeConfigProps) {
@@ -31,13 +44,29 @@ export function WorkflowNodeConfig({ node, onUpdate, onDelete }: WorkflowNodeCon
     onUpdate({ ...node, label });
   };
 
+  // Auto-update label when subtype changes, but only if label is still an auto-generated one
+  const handleDataChange = useCallback(
+    (data: TriggerNodeData | ConditionNodeData | ActionNodeData | DelayNodeData) => {
+      let newLabel = node.label;
+      if (isAutoLabel(node.label)) {
+        if (node.type === 'action' && 'actionType' in data) {
+          newLabel = ACTION_TYPE_LABELS[(data as ActionNodeData).actionType] || node.label;
+        } else if (node.type === 'trigger' && 'eventType' in data) {
+          newLabel = TRIGGER_TYPE_LABELS[(data as TriggerNodeData).eventType] || node.label;
+        }
+      }
+      onUpdate({ ...node, data, label: newLabel });
+    },
+    [node, onUpdate]
+  );
+
   const renderConfigurator = () => {
     switch (node.type) {
       case 'trigger':
         return (
           <TriggerConfigurator
             data={node.data as TriggerNodeData}
-            onChange={(data) => onUpdate({ ...node, data })}
+            onChange={handleDataChange}
           />
         );
       case 'condition':
@@ -51,7 +80,7 @@ export function WorkflowNodeConfig({ node, onUpdate, onDelete }: WorkflowNodeCon
         return (
           <ActionConfigurator
             data={node.data as ActionNodeData}
-            onChange={(data) => onUpdate({ ...node, data })}
+            onChange={handleDataChange}
           />
         );
       case 'delay':

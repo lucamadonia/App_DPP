@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { TriggerNodeData, TriggerEventType } from '@/types/workflow-builder';
+import { Button } from '@/components/ui/button';
+import { FieldPicker, resolveField } from './FieldPicker';
+import type { TriggerNodeData, TriggerEventType, TriggerFilter, ConditionOperator } from '@/types/workflow-builder';
 
 interface TriggerConfiguratorProps {
   data: TriggerNodeData;
@@ -47,11 +50,37 @@ const TRIGGER_GROUPS = [
   },
 ];
 
+const FILTER_OPERATORS: { value: ConditionOperator; label: string }[] = [
+  { value: 'equals', label: 'Equals' },
+  { value: 'not_equals', label: 'Not Equals' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'greater_than', label: 'Greater Than' },
+  { value: 'less_than', label: 'Less Than' },
+  { value: 'in', label: 'In List' },
+  { value: 'is_empty', label: 'Is Empty' },
+  { value: 'is_not_empty', label: 'Is Not Empty' },
+];
+
 const isScheduled = (et: TriggerEventType) =>
   et === 'scheduled_daily' || et === 'scheduled_weekly' || et === 'scheduled_monthly';
 
 export function TriggerConfigurator({ data, onChange }: TriggerConfiguratorProps) {
   const { t } = useTranslation('returns');
+  const filters = data.filters || [];
+
+  const handleAddFilter = () => {
+    const newFilter: TriggerFilter = { field: '', operator: 'equals', value: '' };
+    onChange({ ...data, filters: [...filters, newFilter] });
+  };
+
+  const handleUpdateFilter = (index: number, updated: TriggerFilter) => {
+    const next = filters.map((f, i) => (i === index ? updated : f));
+    onChange({ ...data, filters: next });
+  };
+
+  const handleRemoveFilter = (index: number) => {
+    onChange({ ...data, filters: filters.filter((_, i) => i !== index) });
+  };
 
   return (
     <div className="space-y-3">
@@ -141,6 +170,87 @@ export function TriggerConfigurator({ data, onChange }: TriggerConfiguratorProps
           )}
         </div>
       )}
+
+      {/* Trigger Filters */}
+      <div className="space-y-2">
+        <Label className="text-xs">{t('Trigger Filters')}</Label>
+        {filters.length === 0 && (
+          <p className="text-[10px] text-muted-foreground">{t('No filters — triggers for all events')}</p>
+        )}
+        {filters.map((filter, index) => {
+          const resolved = filter.field ? resolveField(filter.field) : undefined;
+          const hasEnum = resolved?.enumValues && resolved.enumValues.length > 0;
+          const noValueNeeded = filter.operator === 'is_empty' || filter.operator === 'is_not_empty';
+          return (
+            <div key={index} className="space-y-1.5 p-2 bg-muted rounded-md">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium flex-1">
+                  {t('Filter')} {index + 1}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 text-destructive"
+                  onClick={() => handleRemoveFilter(index)}
+                >
+                  <Trash2 size={12} />
+                </Button>
+              </div>
+              <FieldPicker
+                value={filter.field}
+                onChange={(field) => handleUpdateFilter(index, { ...filter, field })}
+              />
+              <Select
+                value={filter.operator}
+                onValueChange={(v) => handleUpdateFilter(index, { ...filter, operator: v as ConditionOperator })}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FILTER_OPERATORS.map((op) => (
+                    <SelectItem key={op.value} value={op.value}>
+                      {t(op.label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!noValueNeeded && (
+                hasEnum ? (
+                  <Select
+                    value={String(filter.value ?? '')}
+                    onValueChange={(v) => handleUpdateFilter(index, { ...filter, value: v })}
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue placeholder={t('Select Value')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {resolved!.enumValues!.map((v) => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    className="h-7 text-xs"
+                    placeholder={t('Value')}
+                    value={String(filter.value ?? '')}
+                    onChange={(e) => handleUpdateFilter(index, { ...filter, value: e.target.value })}
+                  />
+                )
+              )}
+            </div>
+          );
+        })}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs w-full gap-1"
+          onClick={handleAddFilter}
+        >
+          <Plus size={12} /> {t('Add Filter')}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,21 +1,62 @@
-import { useCallback } from 'react';
-import { Zap, GitBranch, Play, Clock } from 'lucide-react';
-import type { WorkflowNode as NodeType, WorkflowNodeType, Position } from '@/types/workflow-builder';
+import { useCallback, useMemo } from 'react';
+import {
+  Zap, GitBranch, Play, Clock,
+  CheckCircle, XCircle, Mail, Webhook,
+  UserPlus, StickyNote, AlertTriangle,
+  Bell, ListPlus, Edit, Tag, TicketCheck,
+} from 'lucide-react';
+import type { WorkflowNode as NodeType, WorkflowNodeType, ActionNodeData, TriggerNodeData, WorkflowActionType, TriggerEventType } from '@/types/workflow-builder';
 import { NODE_COLORS, NODE_WIDTH, NODE_HEIGHT } from '@/types/workflow-builder';
+import { ACTION_TYPE_LABELS, TRIGGER_TYPE_LABELS } from './workflowUtils';
 
 interface WorkflowNodeProps {
   node: NodeType;
   selected: boolean;
   onSelect: (id: string) => void;
-  onDragStart: (id: string, offset: Position) => void;
+  onDragStart: (id: string, startEvent: React.MouseEvent) => void;
   onConnectionStart: (nodeId: string, handle?: 'true' | 'false') => void;
 }
 
-const ICONS: Record<WorkflowNodeType, typeof Zap> = {
+const BASE_ICONS: Record<WorkflowNodeType, typeof Zap> = {
   trigger: Zap,
   condition: GitBranch,
   action: Play,
   delay: Clock,
+};
+
+const ACTION_ICONS: Partial<Record<WorkflowActionType, typeof Zap>> = {
+  approve: CheckCircle,
+  reject: XCircle,
+  assign: UserPlus,
+  add_note: StickyNote,
+  update_field: Edit,
+  set_priority: AlertTriangle,
+  ticket_create: ListPlus,
+  ticket_assign: UserPlus,
+  ticket_add_message: StickyNote,
+  ticket_set_priority: AlertTriangle,
+  ticket_add_tag: Tag,
+  email_send_template: Mail,
+  email_send_custom: Mail,
+  notification_internal: Bell,
+  webhook_call: Webhook,
+  timeline_add_entry: ListPlus,
+  customer_add_tag: Tag,
+  customer_update_risk_score: AlertTriangle,
+  customer_update_notes: StickyNote,
+};
+
+const TRIGGER_ICONS: Partial<Record<TriggerEventType, typeof Zap>> = {
+  return_overdue: AlertTriangle,
+  ticket_created: TicketCheck,
+  ticket_status_changed: TicketCheck,
+  ticket_overdue: AlertTriangle,
+  customer_risk_changed: AlertTriangle,
+  customer_tag_added: Tag,
+  scheduled_daily: Clock,
+  scheduled_weekly: Clock,
+  scheduled_monthly: Clock,
+  manual: Play,
 };
 
 const HANDLE_RADIUS = 6;
@@ -28,18 +69,37 @@ export function WorkflowNode({
   onConnectionStart,
 }: WorkflowNodeProps) {
   const color = NODE_COLORS[node.type];
-  const Icon = ICONS[node.type];
+
+  // Resolve subtype-specific icon and label
+  const { Icon, subtypeLabel } = useMemo(() => {
+    if (node.type === 'action') {
+      const actionType = (node.data as ActionNodeData).actionType;
+      return {
+        Icon: ACTION_ICONS[actionType] || BASE_ICONS.action,
+        subtypeLabel: ACTION_TYPE_LABELS[actionType] || 'Action',
+      };
+    }
+    if (node.type === 'trigger') {
+      const eventType = (node.data as TriggerNodeData).eventType;
+      return {
+        Icon: TRIGGER_ICONS[eventType] || BASE_ICONS.trigger,
+        subtypeLabel: TRIGGER_TYPE_LABELS[eventType] || 'Trigger',
+      };
+    }
+    return {
+      Icon: BASE_ICONS[node.type],
+      subtypeLabel: node.type.charAt(0).toUpperCase() + node.type.slice(1),
+    };
+  }, [node.type, node.data]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest('.handle')) return;
       e.stopPropagation();
       onSelect(node.id);
-      const offsetX = e.clientX - node.position.x;
-      const offsetY = e.clientY - node.position.y;
-      onDragStart(node.id, { x: offsetX, y: offsetY });
+      onDragStart(node.id, e);
     },
-    [node.id, node.position, onSelect, onDragStart]
+    [node.id, onSelect, onDragStart]
   );
 
   const handleOutputMouseDown = useCallback(
@@ -74,13 +134,6 @@ export function WorkflowNode({
         stroke={selected ? '#6366f1' : 'var(--color-border, #e2e8f0)'}
         strokeWidth={selected ? 2 : 1}
       />
-      {/* Color accent bar */}
-      <rect width={NODE_WIDTH} height={4} rx={2} fill={color} y={0} clipPath="inset(0 0 0 0 round 8px 8px 0 0)" />
-      <rect width={NODE_WIDTH} height={4} fill={color} y={0} rx={0}>
-        <clipPath id={`clip-${node.id}`}>
-          <rect width={NODE_WIDTH} height={4} rx={8} />
-        </clipPath>
-      </rect>
       {/* Rounded top accent */}
       <path
         d={`M 8 0 H ${NODE_WIDTH - 8} Q ${NODE_WIDTH} 0 ${NODE_WIDTH} 4 H 0 Q 0 0 8 0 Z`}
@@ -131,10 +184,9 @@ export function WorkflowNode({
               style={{
                 fontSize: 10,
                 color: 'var(--color-muted-foreground, #64748b)',
-                textTransform: 'capitalize',
               }}
             >
-              {node.type}
+              {subtypeLabel}
             </div>
           </div>
         </div>
