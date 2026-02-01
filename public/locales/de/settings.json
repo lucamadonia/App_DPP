@@ -401,6 +401,8 @@
   "Pending": "Ausstehend",
   "Can create, edit and manage products, documents, and supply chain": "Kann Produkte, Dokumente und Lieferkette erstellen, bearbeiten und verwalten",
   "Read-only access to all data and reports": "Nur-Lese-Zugriff auf alle Daten und Berichte",
+  "User already has an account and was added to your organization directly.": "Der Benutzer hat bereits ein Konto und wurde direkt zu Ihrer Organisation hinzugefügt.",
+  "Invitation created, but the email could not be sent. The user can still register manually.": "Einladung erstellt, aber die E-Mail konnte nicht gesendet werden. Der Benutzer kann sich weiterhin manuell registrieren.",
 
   "Cards": "Karten",
   "Are you sure you want to delete this entry?": "Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?",

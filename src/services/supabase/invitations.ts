@@ -8,6 +8,7 @@ import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { Invitation } from '@/types/database';
 
 type WriteResult = { success: boolean; error?: string };
+type InviteResult = WriteResult & { emailSent?: boolean; userAlreadyExists?: boolean };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformInvitation(row: any): Invitation {
@@ -48,7 +49,7 @@ export async function createInvitation(invitation: {
   role: 'admin' | 'editor' | 'viewer';
   name?: string;
   message?: string;
-}): Promise<WriteResult> {
+}): Promise<InviteResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { success: false, error: 'No tenant set' };
 
@@ -71,7 +72,26 @@ export async function createInvitation(invitation: {
     return { success: false, error: error.message };
   }
 
-  return { success: true };
+  // Call Edge Function to create auth user + send invitation email
+  const { data: fnData, error: fnError } = await supabase.functions.invoke('invite-user', {
+    body: {
+      email: invitation.email,
+      role: invitation.role,
+      name: invitation.name || undefined,
+    },
+  });
+
+  if (fnError) {
+    // Invitation record exists but email failed — still return success with warning
+    console.error('invite-user edge function error:', fnError);
+    return { success: true, emailSent: false, userAlreadyExists: false };
+  }
+
+  return {
+    success: true,
+    emailSent: fnData?.emailSent ?? false,
+    userAlreadyExists: fnData?.userAlreadyExists ?? false,
+  };
 }
 
 export async function cancelInvitation(id: string): Promise<WriteResult> {
@@ -84,7 +104,18 @@ export async function cancelInvitation(id: string): Promise<WriteResult> {
   return { success: true };
 }
 
-export async function resendInvitation(id: string): Promise<WriteResult> {
+export async function resendInvitation(id: string): Promise<InviteResult> {
+  // Load invitation data for the edge function call
+  const { data: inv, error: loadError } = await supabase
+    .from('invitations')
+    .select('email, role, name')
+    .eq('id', id)
+    .single();
+
+  if (loadError || !inv) {
+    return { success: false, error: loadError?.message || 'Invitation not found' };
+  }
+
   const { error } = await supabase
     .from('invitations')
     .update({
@@ -94,7 +125,26 @@ export async function resendInvitation(id: string): Promise<WriteResult> {
     .eq('id', id);
 
   if (error) return { success: false, error: error.message };
-  return { success: true };
+
+  // Re-send via Edge Function
+  const { data: fnData, error: fnError } = await supabase.functions.invoke('invite-user', {
+    body: {
+      email: inv.email,
+      role: inv.role,
+      name: inv.name || undefined,
+    },
+  });
+
+  if (fnError) {
+    console.error('invite-user edge function error (resend):', fnError);
+    return { success: true, emailSent: false, userAlreadyExists: false };
+  }
+
+  return {
+    success: true,
+    emailSent: fnData?.emailSent ?? false,
+    userAlreadyExists: fnData?.userAlreadyExists ?? false,
+  };
 }
 
 export async function deleteInvitation(id: string): Promise<WriteResult> {
