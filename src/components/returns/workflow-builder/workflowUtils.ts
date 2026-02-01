@@ -3,11 +3,15 @@ import type {
   WorkflowNode,
   Position,
   WorkflowNodeType,
+  WorkflowActionType,
+  TriggerEventType,
   TriggerNodeData,
   ConditionNodeData,
   ActionNodeData,
   DelayNodeData,
+  PaletteItemDragData,
 } from '@/types/workflow-builder';
+import { GRID_SNAP_SIZE } from '@/types/workflow-builder';
 
 // ---- ID Generation ----
 
@@ -20,6 +24,94 @@ export function generateNodeId(): string {
 export function generateEdgeId(): string {
   _counter += 1;
   return `edge_${Date.now().toString(36)}_${_counter.toString(36)}`;
+}
+
+// ---- Label lookup maps ----
+
+export const ACTION_TYPE_LABELS: Record<WorkflowActionType, string> = {
+  set_status: 'Set Status',
+  set_priority: 'Set Priority',
+  assign: 'Assign',
+  approve: 'Approve',
+  reject: 'Reject',
+  add_note: 'Add Note',
+  update_field: 'Update Field',
+  ticket_create: 'Create Ticket',
+  ticket_set_status: 'Ticket Status',
+  ticket_set_priority: 'Ticket Priority',
+  ticket_assign: 'Ticket Assign',
+  ticket_add_message: 'Ticket Message',
+  ticket_add_tag: 'Ticket Tag',
+  customer_update_risk_score: 'Update Risk Score',
+  customer_add_tag: 'Customer Tag',
+  customer_update_notes: 'Update Notes',
+  email_send_template: 'Send Email Template',
+  email_send_custom: 'Send Custom Email',
+  notification_internal: 'Internal Notification',
+  timeline_add_entry: 'Timeline Entry',
+  webhook_call: 'Webhook',
+};
+
+export const TRIGGER_TYPE_LABELS: Record<TriggerEventType, string> = {
+  return_created: 'Return Created',
+  return_status_changed: 'Status Changed',
+  return_overdue: 'Return Overdue',
+  ticket_created: 'Ticket Created',
+  ticket_status_changed: 'Ticket Status Changed',
+  ticket_overdue: 'Ticket Overdue',
+  customer_risk_changed: 'Risk Score Changed',
+  customer_tag_added: 'Customer Tag Added',
+  scheduled_daily: 'Daily Schedule',
+  scheduled_weekly: 'Weekly Schedule',
+  scheduled_monthly: 'Monthly Schedule',
+  manual: 'Manual Trigger',
+};
+
+// ---- Snap to grid ----
+
+export function snapToGrid(position: Position, gridSize: number = GRID_SNAP_SIZE): Position {
+  return {
+    x: Math.round(position.x / gridSize) * gridSize,
+    y: Math.round(position.y / gridSize) * gridSize,
+  };
+}
+
+// ---- Fit to view ----
+
+export function computeFitToView(
+  nodes: WorkflowNode[],
+  canvasW: number,
+  canvasH: number,
+  padding: number = 60
+): { x: number; y: number; zoom: number } {
+  if (nodes.length === 0) return { x: 40, y: 40, zoom: 1 };
+
+  const NODE_W = 220;
+  const NODE_H = 72;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.position.x);
+    minY = Math.min(minY, n.position.y);
+    maxX = Math.max(maxX, n.position.x + NODE_W);
+    maxY = Math.max(maxY, n.position.y + NODE_H);
+  }
+
+  const graphW = maxX - minX;
+  const graphH = maxY - minY;
+  const availableW = canvasW - padding * 2;
+  const availableH = canvasH - padding * 2;
+
+  if (availableW <= 0 || availableH <= 0) return { x: 40, y: 40, zoom: 1 };
+
+  const zoom = Math.min(1.5, Math.max(0.25, Math.min(availableW / graphW, availableH / graphH)));
+
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const x = canvasW / 2 - cx * zoom;
+  const y = canvasH / 2 - cy * zoom;
+
+  return { x, y, zoom };
 }
 
 // ---- Validation ----
@@ -79,6 +171,33 @@ export function validateWorkflow(graph: WorkflowGraph): ValidationError[] {
         nodeId: cn.id,
         message: `Condition "${cn.label}" needs both True and False branches`,
       });
+    }
+  }
+
+  // Cycle detection via DFS
+  const adjacency = new Map<string, string[]>();
+  for (const edge of graph.edges) {
+    if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+    adjacency.get(edge.source)!.push(edge.target);
+  }
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map<string, number>();
+  for (const node of graph.nodes) color.set(node.id, WHITE);
+
+  function dfs(nodeId: string): boolean {
+    color.set(nodeId, GRAY);
+    for (const neighbor of adjacency.get(nodeId) || []) {
+      if (color.get(neighbor) === GRAY) return true; // back edge = cycle
+      if (color.get(neighbor) === WHITE && dfs(neighbor)) return true;
+    }
+    color.set(nodeId, BLACK);
+    return false;
+  }
+
+  for (const node of graph.nodes) {
+    if (color.get(node.id) === WHITE && dfs(node.id)) {
+      errors.push({ message: 'Workflow contains a cycle — this may cause infinite loops' });
+      break;
     }
   }
 
@@ -193,13 +312,26 @@ export function createDefaultNodeData(type: WorkflowNodeType) {
 export function createNode(
   type: WorkflowNodeType,
   position: Position,
-  label: string
+  label: string,
+  dataOverrides?: Partial<PaletteItemDragData>
 ): WorkflowNode {
+  const data = createDefaultNodeData(type);
+
+  // Apply overrides from palette drag data
+  if (dataOverrides) {
+    if (type === 'action' && dataOverrides.actionType) {
+      (data as ActionNodeData).actionType = dataOverrides.actionType;
+    }
+    if (type === 'trigger' && dataOverrides.eventType) {
+      (data as TriggerNodeData).eventType = dataOverrides.eventType;
+    }
+  }
+
   return {
     id: generateNodeId(),
     type,
     position,
-    data: createDefaultNodeData(type),
+    data,
     label,
   };
 }

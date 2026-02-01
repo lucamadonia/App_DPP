@@ -2,7 +2,7 @@
  * Email Template Editor - TypeScript Types
  */
 
-export type EmailBlockType = 'text' | 'button' | 'divider' | 'spacer' | 'info-box';
+export type EmailBlockType = 'text' | 'button' | 'divider' | 'spacer' | 'info-box' | 'image' | 'social-links' | 'columns' | 'hero';
 
 export interface EmailTextBlock {
   type: 'text';
@@ -43,12 +43,65 @@ export interface EmailInfoBoxBlock {
   borderColor: string;
 }
 
+export interface EmailImageBlock {
+  type: 'image';
+  id: string;
+  src: string;
+  alt: string;
+  width: number;
+  alignment: 'left' | 'center' | 'right';
+  linkUrl: string;
+  borderRadius: number;
+}
+
+export type SocialPlatform = 'facebook' | 'twitter' | 'instagram' | 'linkedin' | 'youtube' | 'tiktok' | 'website' | 'email';
+
+export interface EmailSocialLinksBlock {
+  type: 'social-links';
+  id: string;
+  alignment: 'left' | 'center' | 'right';
+  iconSize: 24 | 32 | 40;
+  iconStyle: 'colored' | 'dark' | 'light';
+  links: Array<{ platform: SocialPlatform; url: string }>;
+}
+
+export interface EmailColumnsBlock {
+  type: 'columns';
+  id: string;
+  columnCount: 2 | 3;
+  columns: Array<{ blocks: EmailBlock[]; width?: string }>;
+  gap: number;
+}
+
+export interface EmailHeroBlock {
+  type: 'hero';
+  id: string;
+  backgroundImage: string;
+  backgroundColor: string;
+  overlayOpacity: number;
+  minHeight: number;
+  title: string;
+  subtitle: string;
+  titleColor: string;
+  subtitleColor: string;
+  ctaText: string;
+  ctaUrl: string;
+  ctaBackgroundColor: string;
+  ctaTextColor: string;
+  ctaBorderRadius: number;
+  alignment: 'left' | 'center' | 'right';
+}
+
 export type EmailBlock =
   | EmailTextBlock
   | EmailButtonBlock
   | EmailDividerBlock
   | EmailSpacerBlock
-  | EmailInfoBoxBlock;
+  | EmailInfoBoxBlock
+  | EmailImageBlock
+  | EmailSocialLinksBlock
+  | EmailColumnsBlock
+  | EmailHeroBlock;
 
 export interface EmailHeaderConfig {
   enabled: boolean;
@@ -176,4 +229,22 @@ export const TEMPLATE_VARIABLES: Record<string, TemplateVariable[]> = {
   ],
 };
 
-export type WizardStep = 'gallery' | 'editor' | 'design' | 'preview';
+// Editor state types
+
+export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
+
+export type SettingsPanelTab = 'preview' | 'block-settings' | 'design-settings';
+
+export interface EditorHistoryEntry {
+  designConfig: EmailDesignConfig;
+  subject: string;
+  timestamp: number;
+}
+
+export interface DragState {
+  isDragging: boolean;
+  sourceIndex: number | null;
+  targetIndex: number | null;
+  dragType: 'reorder' | 'insert' | null;
+  insertBlockType: EmailBlockType | null;
+}

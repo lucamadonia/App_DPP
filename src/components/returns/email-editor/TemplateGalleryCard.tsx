@@ -1,9 +1,13 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import type { RhEmailTemplate, EmailTemplateCategory } from '@/types/returns-hub';
+import type { EmailDesignConfig } from './emailEditorTypes';
+import { getDefaultTemplate } from './emailTemplateDefaults';
+import { renderEmailHtml } from './emailHtmlRenderer';
 
 interface TemplateGalleryCardProps {
   template: RhEmailTemplate;
@@ -21,22 +25,57 @@ const CATEGORY_COLORS: Record<EmailTemplateCategory, string> = {
 export function TemplateGalleryCard({ template, index, onEdit, onToggleEnabled }: TemplateGalleryCardProps) {
   const { t } = useTranslation('returns');
 
+  // Generate real mini preview HTML
+  const previewHtml = useMemo(() => {
+    const storedConfig = template.designConfig as unknown as EmailDesignConfig;
+    const config = storedConfig?.blocks?.length > 0
+      ? storedConfig
+      : getDefaultTemplate(template.eventType)?.designConfig;
+    if (!config) return '';
+    return renderEmailHtml(config);
+  }, [template]);
+
   return (
     <div
-      className="group relative rounded-xl border bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+      className="group relative rounded-xl border bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      {/* Mini preview area */}
-      <div className="h-28 rounded-t-xl bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center overflow-hidden px-4">
-        <div className="w-full max-w-[200px] bg-white rounded shadow-sm p-2 scale-[0.6] origin-center">
-          <div className="h-3 rounded bg-slate-800 mb-1.5" />
-          <div className="space-y-1 px-1">
-            <div className="h-1.5 w-3/4 rounded-full bg-muted" />
-            <div className="h-1.5 w-full rounded-full bg-muted" />
-            <div className="h-1.5 w-2/3 rounded-full bg-muted" />
-            <div className="h-3 w-16 rounded bg-primary/30 mx-auto mt-1" />
+      {/* Mini iframe preview */}
+      <div className="h-32 rounded-t-xl bg-gradient-to-br from-muted/30 to-muted/60 overflow-hidden relative">
+        {previewHtml ? (
+          <div className="w-full h-full overflow-hidden">
+            <iframe
+              srcDoc={previewHtml}
+              title={template.name || template.eventType}
+              sandbox="allow-same-origin"
+              className="w-full border-0 pointer-events-none"
+              style={{
+                height: '400px',
+                transform: 'scale(0.3)',
+                transformOrigin: 'top center',
+                width: '333%',
+                marginLeft: '-116.5%',
+              }}
+            />
           </div>
-          <div className="h-2 rounded bg-muted/50 mt-1.5" />
+        ) : (
+          <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
+            {t('Preview')}
+          </div>
+        )}
+        {/* Gradient overlay at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card/80 to-transparent" />
+
+        {/* Edit overlay on hover */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+          <Button
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 transition-opacity gap-1.5 shadow-lg"
+            onClick={() => onEdit(template)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {t('Edit')}
+          </Button>
         </div>
       </div>
 
@@ -65,10 +104,6 @@ export function TemplateGalleryCard({ template, index, onEdit, onToggleEnabled }
               {template.enabled ? t('Active') : t('Inactive')}
             </span>
           </div>
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => onEdit(template)}>
-            <Pencil className="h-3 w-3" />
-            {t('Edit')}
-          </Button>
         </div>
       </div>
     </div>

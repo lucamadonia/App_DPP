@@ -2,7 +2,34 @@
  * Supabase Returns Hub Settings Service
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { ReturnsHubSettings, RhReturnReason } from '@/types/returns-hub';
+import type { ReturnsHubSettings, RhReturnReason, CustomerPortalSettings } from '@/types/returns-hub';
+
+export const DEFAULT_CUSTOMER_PORTAL_SETTINGS: CustomerPortalSettings = {
+  enabled: false,
+  allowSelfRegistration: true,
+  requireEmailVerification: true,
+  enableMagicLink: true,
+  features: {
+    createReturns: true,
+    viewTickets: true,
+    createTickets: true,
+    editProfile: true,
+    viewOrderHistory: true,
+    downloadLabels: true,
+  },
+  branding: {
+    inheritFromReturnsHub: true,
+    primaryColor: '#3B82F6',
+    logoUrl: '',
+    welcomeMessage: '',
+    footerText: '',
+  },
+  security: {
+    sessionTimeoutMinutes: 60,
+    maxLoginAttempts: 5,
+  },
+  showGettingStartedGuide: true,
+};
 
 const DEFAULT_SETTINGS: ReturnsHubSettings = {
   enabled: false,
@@ -35,6 +62,7 @@ const DEFAULT_SETTINGS: ReturnsHubSettings = {
     senderName: '',
     emailLocale: 'en',
   },
+  customerPortal: DEFAULT_CUSTOMER_PORTAL_SETTINGS,
 };
 
 export async function getReturnsHubSettings(): Promise<ReturnsHubSettings> {
@@ -79,6 +107,21 @@ export async function updateReturnsHubSettings(
       usage: updates.usage ? { ...currentRh.usage, ...updates.usage } : currentRh.usage,
       branding: updates.branding ? { ...currentRh.branding, ...updates.branding } : currentRh.branding,
       notifications: updates.notifications ? { ...currentRh.notifications, ...updates.notifications } : currentRh.notifications,
+      customerPortal: updates.customerPortal
+        ? {
+            ...currentRh.customerPortal,
+            ...updates.customerPortal,
+            features: updates.customerPortal.features
+              ? { ...currentRh.customerPortal?.features, ...updates.customerPortal.features }
+              : currentRh.customerPortal?.features || DEFAULT_CUSTOMER_PORTAL_SETTINGS.features,
+            branding: updates.customerPortal.branding
+              ? { ...currentRh.customerPortal?.branding, ...updates.customerPortal.branding }
+              : currentRh.customerPortal?.branding || DEFAULT_CUSTOMER_PORTAL_SETTINGS.branding,
+            security: updates.customerPortal.security
+              ? { ...currentRh.customerPortal?.security, ...updates.customerPortal.security }
+              : currentRh.customerPortal?.security || DEFAULT_CUSTOMER_PORTAL_SETTINGS.security,
+          }
+        : currentRh.customerPortal || DEFAULT_CUSTOMER_PORTAL_SETTINGS,
     },
   };
 

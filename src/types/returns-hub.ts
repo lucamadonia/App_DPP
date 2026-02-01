@@ -356,6 +356,39 @@ export interface ReturnsHubBranding {
   customHtml: Record<string, string>;
 }
 
+export interface CustomerPortalFeatureToggles {
+  createReturns: boolean;
+  viewTickets: boolean;
+  createTickets: boolean;
+  editProfile: boolean;
+  viewOrderHistory: boolean;
+  downloadLabels: boolean;
+}
+
+export interface CustomerPortalBrandingOverrides {
+  inheritFromReturnsHub: boolean;
+  primaryColor: string;
+  logoUrl: string;
+  welcomeMessage: string;
+  footerText: string;
+}
+
+export interface CustomerPortalSecuritySettings {
+  sessionTimeoutMinutes: number;
+  maxLoginAttempts: number;
+}
+
+export interface CustomerPortalSettings {
+  enabled: boolean;
+  allowSelfRegistration: boolean;
+  requireEmailVerification: boolean;
+  enableMagicLink: boolean;
+  features: CustomerPortalFeatureToggles;
+  branding: CustomerPortalBrandingOverrides;
+  security: CustomerPortalSecuritySettings;
+  showGettingStartedGuide: boolean;
+}
+
 export interface ReturnsHubSettings {
   enabled: boolean;
   plan: 'starter' | 'professional' | 'business' | 'enterprise';
@@ -366,6 +399,7 @@ export interface ReturnsHubSettings {
   usage: ReturnsHubUsage;
   branding: ReturnsHubBranding;
   notifications: ReturnsHubNotificationSettings;
+  customerPortal?: CustomerPortalSettings;
 }
 
 // ============================================

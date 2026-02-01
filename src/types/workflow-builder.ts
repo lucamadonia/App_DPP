@@ -233,3 +233,15 @@ export const NODE_COLORS: Record<WorkflowNodeType, string> = {
 
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 72;
+export const GRID_SNAP_SIZE = 20;
+
+// ============================================
+// DRAG DATA (from Palette to Canvas)
+// ============================================
+
+export interface PaletteItemDragData {
+  type: WorkflowNodeType;
+  label: string;
+  actionType?: WorkflowActionType;
+  eventType?: TriggerEventType;
+}

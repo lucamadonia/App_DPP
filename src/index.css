@@ -282,3 +282,45 @@ code, .font-mono {
   0%, 100% { box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3); }
   50% { box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.15); }
 }
+@keyframes block-delete {
+  from { opacity: 1; max-height: 500px; transform: scaleY(1); }
+  to { opacity: 0; max-height: 0; transform: scaleY(0); }
+}
+@keyframes panel-slide-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes picker-fade-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes save-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+@keyframes drop-zone-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes insert-handle-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+@keyframes canvas-dot-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes drag-ghost-float {
+  0%, 100% { transform: scale(0.85) rotate(0.5deg); }
+  50% { transform: scale(0.87) rotate(-0.5deg); }
+}
+
+.animate-block-delete { animation: block-delete 0.25s ease-out forwards; overflow: hidden; }
+.animate-panel-slide-in { animation: panel-slide-in 0.2s ease-out; }
+.animate-picker-fade-in { animation: picker-fade-in 0.15s ease-out; }
+.animate-save-pulse { animation: save-pulse 0.5s ease-out; }
+.animate-drop-zone-glow { animation: drop-zone-glow 0.8s ease-in-out infinite; }
+.animate-insert-handle-pulse { animation: insert-handle-pulse 1.5s ease-in-out infinite; }
+.animate-canvas-dot-fade { animation: canvas-dot-fade 0.5s ease-out; }
+.animate-drag-ghost-float { animation: drag-ghost-float 1s ease-in-out infinite; }

@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { CustomerPortalSettingsTab } from '@/components/returns/CustomerPortalSettingsTab';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import {
   getReturnsHubSettings, updateReturnsHubSettings,
@@ -216,6 +217,7 @@ export function ReturnsSettingsPage() {
           <TabsTrigger value="branding">{t('Branding')}</TabsTrigger>
           <TabsTrigger value="tickets">{t('Tickets')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('Notifications')}</TabsTrigger>
+          <TabsTrigger value="portal">{t('Customer Portal')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-4 space-y-4">
@@ -645,6 +647,16 @@ export function ReturnsSettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="portal" className="mt-4 space-y-4">
+          <CustomerPortalSettingsTab
+            settings={settings!}
+            setSettings={setSettings}
+            tenantSlug={tenantSlug}
+            saving={saving}
+            onSave={handleSaveSettings}
+          />
         </TabsContent>
       </Tabs>
 

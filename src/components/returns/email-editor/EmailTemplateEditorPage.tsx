@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Save, RotateCcw, LayoutGrid, Blocks, Palette, Eye } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -10,20 +10,51 @@ import {
   getRhEmailTemplates, upsertRhEmailTemplate, seedDefaultEmailTemplates,
 } from '@/services/supabase';
 import type { RhEmailTemplate } from '@/types/returns-hub';
-import type { EmailDesignConfig, WizardStep } from './emailEditorTypes';
+import type { EmailDesignConfig, EmailBlock, EmailBlockType, SettingsPanelTab } from './emailEditorTypes';
 import { getDefaultTemplate, getDefaultDesignConfig } from './emailTemplateDefaults';
 import { renderEmailHtml } from './emailHtmlRenderer';
 import { TemplateGallery } from './TemplateGallery';
-import { BlockEditor } from './BlockEditor';
+import { EditorToolbar } from './EditorToolbar';
+import { EditorLayout } from './EditorLayout';
+import { BlockInsertSidebar } from './BlockInsertSidebar';
+import { BlockInsertHandle } from './BlockInsertHandle';
+import { CanvasBlock } from './CanvasBlock';
+import { BlockSettingsPanel } from './BlockSettingsPanel';
 import { DesignSettingsPanel } from './DesignSettingsPanel';
-import { TemplatePreview } from './TemplatePreview';
+import { LivePreview } from './LivePreview';
+import { SubjectLineEditor } from './SubjectLineEditor';
+import { VariableInserter } from './VariableInserter';
+import { useEditorHistory } from './hooks/useEditorHistory';
+import { useDragReorder } from './hooks/useDragReorder';
+import { useAutosave } from './hooks/useAutosave';
 
-const WIZARD_STEPS: Array<{ key: WizardStep; icon: typeof LayoutGrid; label: string }> = [
-  { key: 'gallery', icon: LayoutGrid, label: 'Templates' },
-  { key: 'editor', icon: Blocks, label: 'Content' },
-  { key: 'design', icon: Palette, label: 'Design' },
-  { key: 'preview', icon: Eye, label: 'Preview' },
-];
+function makeId(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function createDefaultBlock(type: EmailBlockType): EmailBlock {
+  const id = makeId();
+  switch (type) {
+    case 'text':
+      return { type: 'text', id, content: 'New text block' };
+    case 'button':
+      return { type: 'button', id, text: 'Click Here', url: '#', alignment: 'center', backgroundColor: '#3b82f6', textColor: '#ffffff', borderRadius: 6 };
+    case 'divider':
+      return { type: 'divider', id, color: '#e5e7eb', thickness: 1 };
+    case 'spacer':
+      return { type: 'spacer', id, height: 16 };
+    case 'info-box':
+      return { type: 'info-box', id, label: 'Label', value: 'Value', backgroundColor: '#f0f9ff', borderColor: '#3b82f6' };
+    case 'image':
+      return { type: 'image', id, src: '', alt: '', width: 400, alignment: 'center', linkUrl: '', borderRadius: 0 };
+    case 'social-links':
+      return { type: 'social-links', id, alignment: 'center', iconSize: 32, iconStyle: 'colored', links: [{ platform: 'facebook', url: '' }, { platform: 'twitter', url: '' }, { platform: 'instagram', url: '' }] };
+    case 'columns':
+      return { type: 'columns', id, columnCount: 2, columns: [{ blocks: [] }, { blocks: [] }, { blocks: [] }], gap: 16 };
+    case 'hero':
+      return { type: 'hero', id, backgroundImage: '', backgroundColor: '#1e293b', overlayOpacity: 0.3, minHeight: 200, title: 'Hero Title', subtitle: 'Subtitle text', titleColor: '#ffffff', subtitleColor: '#e2e8f0', ctaText: 'Learn More', ctaUrl: '#', ctaBackgroundColor: '#3b82f6', ctaTextColor: '#ffffff', ctaBorderRadius: 6, alignment: 'center' };
+  }
+}
 
 export function EmailTemplateEditorPage() {
   const { t } = useTranslation('returns');
@@ -33,8 +64,7 @@ export function EmailTemplateEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Wizard state
-  const [step, setStep] = useState<WizardStep>('gallery');
+  // Editor state
   const [editingTemplate, setEditingTemplate] = useState<RhEmailTemplate | null>(null);
   const [editSubject, setEditSubject] = useState('');
   const [editDesignConfig, setEditDesignConfig] = useState<EmailDesignConfig>(getDefaultDesignConfig());
@@ -44,10 +74,29 @@ export function EmailTemplateEditorPage() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingNavAction, setPendingNavAction] = useState<(() => void) | null>(null);
 
+  // Split-pane editor state
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<SettingsPanelTab>('preview');
+  const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Change counter to trigger autosave
+  const changeCounterRef = useRef(0);
+  const [changeCounter, setChangeCounter] = useState(0);
+
+  // Hooks
+  const history = useEditorHistory(editDesignConfig, editSubject);
+
+  const isLocale = editLocale !== 'en';
+  const localeContent = isLocale ? editDesignConfig.locales?.[editLocale] : undefined;
+  const blocks = localeContent?.blocks || editDesignConfig.blocks;
+  const currentSubject = (isLocale && localeContent?.subjectTemplate) || editSubject;
+
+  const dragReorder = useDragReorder(blocks.length);
+
+  // Load templates
   const loadTemplates = useCallback(async () => {
     setLoading(true);
     let data = await getRhEmailTemplates();
-    // Always seed to ensure all 15 templates exist with latest locale content
     if (data.length < 15) {
       await seedDefaultEmailTemplates();
       data = await getRhEmailTemplates();
@@ -60,43 +109,12 @@ export function EmailTemplateEditorPage() {
     loadTemplates();
   }, [loadTemplates]);
 
-  const handleEditTemplate = (tmpl: RhEmailTemplate) => {
-    setEditingTemplate(tmpl);
-    setEditSubject(tmpl.subjectTemplate);
-    setEditPreviewText(tmpl.previewText || '');
-
-    // Parse design config or use default for this event type
-    const storedConfig = tmpl.designConfig as unknown as EmailDesignConfig;
-    if (storedConfig?.blocks?.length > 0) {
-      setEditDesignConfig(storedConfig);
-    } else {
-      const defaultTmpl = getDefaultTemplate(tmpl.eventType);
-      setEditDesignConfig(defaultTmpl?.designConfig || getDefaultDesignConfig());
-    }
-
-    setEditLocale('en');
-    setHasChanges(false);
-    setStep('editor');
-  };
-
-  const handleToggleEnabled = async (tmpl: RhEmailTemplate, enabled: boolean) => {
-    await upsertRhEmailTemplate({
-      eventType: tmpl.eventType,
-      enabled,
-      subjectTemplate: tmpl.subjectTemplate,
-      bodyTemplate: tmpl.bodyTemplate,
-    });
-    await loadTemplates();
-  };
-
-  const handleSave = async () => {
+  // Save function for autosave
+  const handleSave = useCallback(async () => {
     if (!editingTemplate) return;
     setSaving(true);
 
-    // Generate HTML from design config (default EN)
     const htmlTemplate = renderEmailHtml(editDesignConfig, editPreviewText);
-
-    // Generate plain text body from blocks for backwards compatibility
     const bodyText = editDesignConfig.blocks
       .filter((b) => b.type === 'text')
       .map((b) => (b as { content: string }).content)
@@ -119,67 +137,233 @@ export function EmailTemplateEditorPage() {
     await loadTemplates();
     setHasChanges(false);
     setSaving(false);
-  };
+  }, [editingTemplate, editDesignConfig, editPreviewText, editSubject, loadTemplates]);
 
-  const handleResetToDefault = () => {
+  const autosave = useAutosave(handleSave, changeCounter > 0 && hasChanges);
+
+  // Block operations
+  const updateBlocks = useCallback((newBlocks: EmailBlock[]) => {
+    if (isLocale) {
+      const updatedLocales = { ...editDesignConfig.locales };
+      updatedLocales[editLocale] = { ...updatedLocales[editLocale], blocks: newBlocks };
+      const newConfig = { ...editDesignConfig, locales: updatedLocales };
+      setEditDesignConfig(newConfig);
+      history.push(newConfig, editSubject);
+    } else {
+      const newConfig = { ...editDesignConfig, blocks: newBlocks };
+      setEditDesignConfig(newConfig);
+      history.push(newConfig, editSubject);
+    }
+    setHasChanges(true);
+    changeCounterRef.current += 1;
+    setChangeCounter(changeCounterRef.current);
+  }, [isLocale, editLocale, editDesignConfig, editSubject, history]);
+
+  const handleAddBlock = useCallback((blockType: EmailBlockType, atIndex?: number) => {
+    const block = createDefaultBlock(blockType);
+    const newBlocks = [...blocks];
+    if (atIndex !== undefined) {
+      newBlocks.splice(atIndex, 0, block);
+    } else {
+      newBlocks.push(block);
+    }
+    updateBlocks(newBlocks);
+    const idx = atIndex !== undefined ? atIndex : newBlocks.length - 1;
+    setSelectedBlockIndex(idx);
+    setRightPanelTab('block-settings');
+  }, [blocks, updateBlocks]);
+
+  const handleUpdateBlock = useCallback((index: number, block: EmailBlock) => {
+    const newBlocks = [...blocks];
+    newBlocks[index] = block;
+    updateBlocks(newBlocks);
+  }, [blocks, updateBlocks]);
+
+  const handleDeleteBlock = useCallback((index: number) => {
+    const newBlocks = blocks.filter((_, i) => i !== index);
+    updateBlocks(newBlocks);
+    setSelectedBlockIndex(null);
+    if (newBlocks.length === 0) setRightPanelTab('preview');
+  }, [blocks, updateBlocks]);
+
+  const handleDuplicateBlock = useCallback((index: number) => {
+    const original = blocks[index];
+    const duplicate = { ...original, id: makeId() };
+    const newBlocks = [...blocks];
+    newBlocks.splice(index + 1, 0, duplicate);
+    updateBlocks(newBlocks);
+    setSelectedBlockIndex(index + 1);
+  }, [blocks, updateBlocks]);
+
+  const handleMoveUp = useCallback((index: number) => {
+    if (index === 0) return;
+    const newBlocks = [...blocks];
+    [newBlocks[index - 1], newBlocks[index]] = [newBlocks[index], newBlocks[index - 1]];
+    updateBlocks(newBlocks);
+    setSelectedBlockIndex(index - 1);
+  }, [blocks, updateBlocks]);
+
+  const handleMoveDown = useCallback((index: number) => {
+    if (index === blocks.length - 1) return;
+    const newBlocks = [...blocks];
+    [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
+    updateBlocks(newBlocks);
+    setSelectedBlockIndex(index + 1);
+  }, [blocks, updateBlocks]);
+
+  const handleDesignConfigChange = useCallback((config: EmailDesignConfig) => {
+    setEditDesignConfig(config);
+    history.push(config, editSubject);
+    setHasChanges(true);
+    changeCounterRef.current += 1;
+    setChangeCounter(changeCounterRef.current);
+  }, [editSubject, history]);
+
+  const handleSubjectChange = useCallback((subject: string) => {
+    if (isLocale) {
+      const updatedLocales = { ...editDesignConfig.locales };
+      updatedLocales[editLocale] = { ...updatedLocales[editLocale], subjectTemplate: subject };
+      const newConfig = { ...editDesignConfig, locales: updatedLocales };
+      setEditDesignConfig(newConfig);
+      history.push(newConfig, editSubject);
+    } else {
+      setEditSubject(subject);
+      history.push(editDesignConfig, subject);
+    }
+    setHasChanges(true);
+    changeCounterRef.current += 1;
+    setChangeCounter(changeCounterRef.current);
+  }, [isLocale, editLocale, editDesignConfig, editSubject, history]);
+
+  const handleInsertVariable = useCallback((variable: string) => {
+    if (selectedBlockIndex === null) return;
+    const block = blocks[selectedBlockIndex];
+    if (block.type === 'text') {
+      handleUpdateBlock(selectedBlockIndex, { ...block, content: block.content + variable });
+    } else if (block.type === 'info-box') {
+      handleUpdateBlock(selectedBlockIndex, { ...block, value: block.value + variable });
+    } else if (block.type === 'button') {
+      handleUpdateBlock(selectedBlockIndex, { ...block, text: block.text + variable });
+    }
+  }, [selectedBlockIndex, blocks, handleUpdateBlock]);
+
+  // Undo/Redo handlers
+  const handleUndo = useCallback(() => {
+    const entry = history.undo();
+    if (entry) {
+      setEditDesignConfig(entry.designConfig);
+      setEditSubject(entry.subject);
+      setHasChanges(true);
+    }
+  }, [history]);
+
+  const handleRedo = useCallback(() => {
+    const entry = history.redo();
+    if (entry) {
+      setEditDesignConfig(entry.designConfig);
+      setEditSubject(entry.subject);
+      setHasChanges(true);
+    }
+  }, [history]);
+
+  // Reset
+  const handleResetToDefault = useCallback(() => {
     if (!editingTemplate) return;
     const defaultTmpl = getDefaultTemplate(editingTemplate.eventType);
     if (defaultTmpl) {
       setEditSubject(defaultTmpl.subjectTemplate);
       setEditDesignConfig(defaultTmpl.designConfig);
+      history.reset(defaultTmpl.designConfig, defaultTmpl.subjectTemplate);
       setHasChanges(true);
+      changeCounterRef.current += 1;
+      setChangeCounter(changeCounterRef.current);
     }
-  };
+  }, [editingTemplate, history]);
 
-  const handleDesignConfigChange = (config: EmailDesignConfig) => {
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!editingTemplate) return;
+
+    const handler = (e: KeyboardEvent) => {
+      const isCmd = e.metaKey || e.ctrlKey;
+      if (isCmd && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (isCmd && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        handleRedo();
+      } else if (isCmd && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      } else if (isCmd && e.key === 'd' && selectedBlockIndex !== null) {
+        e.preventDefault();
+        handleDuplicateBlock(selectedBlockIndex);
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockIndex !== null) {
+        // Only if not focused on an input
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+          e.preventDefault();
+          handleDeleteBlock(selectedBlockIndex);
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedBlockIndex(null);
+        setRightPanelTab('preview');
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [editingTemplate, selectedBlockIndex, handleUndo, handleRedo, handleSave, handleDuplicateBlock, handleDeleteBlock]);
+
+  // Template editing
+  const handleEditTemplate = (tmpl: RhEmailTemplate) => {
+    setEditingTemplate(tmpl);
+    setEditSubject(tmpl.subjectTemplate);
+    setEditPreviewText(tmpl.previewText || '');
+
+    const storedConfig = tmpl.designConfig as unknown as EmailDesignConfig;
+    const config = storedConfig?.blocks?.length > 0
+      ? storedConfig
+      : (getDefaultTemplate(tmpl.eventType)?.designConfig || getDefaultDesignConfig());
     setEditDesignConfig(config);
-    setHasChanges(true);
+    history.reset(config, tmpl.subjectTemplate);
+
+    setEditLocale('en');
+    setHasChanges(false);
+    setSelectedBlockIndex(null);
+    setRightPanelTab('preview');
+    setViewportMode('desktop');
+    changeCounterRef.current = 0;
+    setChangeCounter(0);
   };
 
-  const handleSubjectChange = (subject: string) => {
-    setEditSubject(subject);
-    setHasChanges(true);
+  const handleToggleEnabled = async (tmpl: RhEmailTemplate, enabled: boolean) => {
+    await upsertRhEmailTemplate({
+      eventType: tmpl.eventType,
+      enabled,
+      subjectTemplate: tmpl.subjectTemplate,
+      bodyTemplate: tmpl.bodyTemplate,
+    });
+    await loadTemplates();
   };
 
   const handleNavigateBack = () => {
-    if (step === 'gallery') {
-      if (hasChanges) {
-        setShowUnsavedDialog(true);
-        setPendingNavAction(() => () => navigate('/returns/settings'));
-      } else {
-        navigate('/returns/settings');
-      }
-    } else if (step === 'editor') {
-      if (hasChanges) {
-        setShowUnsavedDialog(true);
-        setPendingNavAction(() => () => { setStep('gallery'); setEditingTemplate(null); setHasChanges(false); });
-      } else {
-        setStep('gallery');
+    if (!editingTemplate) {
+      navigate('/returns/settings');
+    } else if (hasChanges) {
+      setShowUnsavedDialog(true);
+      setPendingNavAction(() => () => {
         setEditingTemplate(null);
-      }
-    } else if (step === 'design') {
-      setStep('editor');
-    } else if (step === 'preview') {
-      setStep('design');
+        setHasChanges(false);
+        setSelectedBlockIndex(null);
+      });
+    } else {
+      setEditingTemplate(null);
+      setSelectedBlockIndex(null);
     }
   };
 
-  const handleStepClick = (targetStep: WizardStep) => {
-    if (targetStep === 'gallery' && step !== 'gallery') {
-      if (hasChanges) {
-        setShowUnsavedDialog(true);
-        setPendingNavAction(() => () => { setStep('gallery'); setEditingTemplate(null); setHasChanges(false); });
-      } else {
-        setStep('gallery');
-        setEditingTemplate(null);
-      }
-    } else if (editingTemplate) {
-      setStep(targetStep);
-    }
-  };
-
-  const stepIndex = WIZARD_STEPS.findIndex((s) => s.key === step);
-
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -188,126 +372,227 @@ export function EmailTemplateEditorPage() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+  // Gallery view (no template being edited)
+  if (!editingTemplate) {
+    return (
+      <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleNavigateBack}>
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost" size="icon" onClick={() => navigate('/returns/settings')}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{t('Email Template Editor')}</h1>
-            <p className="text-sm text-muted-foreground">
-              {editingTemplate
-                ? t(editingTemplate.name || editingTemplate.eventType)
-                : t('Manage your email templates')}
-            </p>
+            <p className="text-sm text-muted-foreground">{t('Manage your email templates')}</p>
           </div>
         </div>
-        {editingTemplate && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleResetToDefault} className="gap-1.5">
-              <RotateCcw className="h-3.5 w-3.5" />
-              {t('Reset')}
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving || !hasChanges} className="gap-1.5">
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              {t('Save')}
-            </Button>
-          </div>
-        )}
+        <TemplateGallery
+          templates={templates}
+          onEdit={handleEditTemplate}
+          onToggleEnabled={handleToggleEnabled}
+        />
       </div>
+    );
+  }
 
-      {/* Step indicator */}
-      {editingTemplate && (
-        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit">
-          {WIZARD_STEPS.map((ws, i) => (
-            <button
-              key={ws.key}
-              onClick={() => handleStepClick(ws.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                i === stepIndex
-                  ? 'bg-background text-foreground shadow-sm'
-                  : i < stepIndex
-                  ? 'text-primary hover:bg-background/50 cursor-pointer'
-                  : 'text-muted-foreground cursor-pointer hover:bg-background/50'
-              }`}
-            >
-              <ws.icon className="h-3.5 w-3.5" />
-              {t(ws.label)}
-            </button>
-          ))}
-        </div>
-      )}
+  // Split-pane editor view
+  const selectedBlock = selectedBlockIndex !== null ? blocks[selectedBlockIndex] : null;
 
-      {/* Step content */}
-      <div className={step !== 'gallery' ? 'animate-slide-in-right' : ''}>
-        {step === 'gallery' && (
-          <TemplateGallery
-            templates={templates}
-            onEdit={handleEditTemplate}
-            onToggleEnabled={handleToggleEnabled}
+  return (
+    <div className="flex flex-col h-[calc(100vh-4rem)] -m-6">
+      {/* Glassmorphism toolbar */}
+      <EditorToolbar
+        templateName={editingTemplate.name || editingTemplate.eventType}
+        locale={editLocale}
+        onLocaleChange={setEditLocale}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onSave={handleSave}
+        onReset={handleResetToDefault}
+        onBack={handleNavigateBack}
+        saving={saving}
+        saveStatus={autosave.status}
+        viewportMode={viewportMode}
+        onViewportChange={setViewportMode}
+      />
+
+      {/* Split-pane layout */}
+      <EditorLayout
+        sidebar={
+          <BlockInsertSidebar
+            onDragStart={dragReorder.handleSidebarDragStart}
+            onAddBlock={(type) => handleAddBlock(type)}
           />
-        )}
+        }
+        canvas={
+          <div className="w-full max-w-[600px]">
+            {/* Subject line */}
+            <div className="bg-background rounded-lg border p-4 mb-3 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">{t('Email Body')} ({editLocale.toUpperCase()})</span>
+                <VariableInserter eventType={editingTemplate.eventType} onInsert={handleInsertVariable} />
+              </div>
+              <SubjectLineEditor
+                value={currentSubject}
+                onChange={handleSubjectChange}
+                eventType={editingTemplate.eventType}
+              />
+            </div>
 
-        {step === 'editor' && editingTemplate && (
-          <div className="max-w-3xl">
-            <BlockEditor
-              subject={editSubject}
-              onSubjectChange={handleSubjectChange}
-              designConfig={editDesignConfig}
-              onDesignConfigChange={handleDesignConfigChange}
-              eventType={editingTemplate.eventType}
-              locale={editLocale}
-              onLocaleChange={setEditLocale}
-            />
-            <div className="flex justify-end mt-6">
-              <Button onClick={() => setStep('design')} className="gap-1.5">
-                {t('Next')}: {t('Design')}
-              </Button>
+            {/* Blocks canvas */}
+            <div className="bg-background rounded-lg border shadow-sm overflow-hidden">
+              {blocks.length === 0 ? (
+                <div
+                  className="py-16 text-center text-muted-foreground border-2 border-dashed rounded-lg m-4"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    dragReorder.handleDragOver(0);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const data = e.dataTransfer.getData('text/plain');
+                    if (data && !data.startsWith('reorder:')) {
+                      handleAddBlock(data as EmailBlockType, 0);
+                    }
+                    dragReorder.handleDragEnd();
+                  }}
+                >
+                  <p className="text-sm">{t('Add blocks to build your email')}</p>
+                  <p className="text-xs mt-1">{t('Drag to reorder')}</p>
+                </div>
+              ) : (
+                <div className="p-4 space-y-0">
+                  {/* Insert handle before first block */}
+                  <BlockInsertHandle
+                    onInsert={(type) => handleAddBlock(type, 0)}
+                    onDragOver={() => dragReorder.handleDragOver(0)}
+                    showDropZone={dragReorder.dragState.isDragging && dragReorder.dragState.targetIndex === 0}
+                  />
+
+                  {blocks.map((block, index) => (
+                    <div
+                      key={block.id}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dragReorder.handleDragOver(index + 1);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const data = e.dataTransfer.getData('text/plain');
+                        if (data.startsWith('reorder:')) {
+                          const fromIndex = parseInt(data.split(':')[1]);
+                          const newBlocks = [...blocks];
+                          const [moved] = newBlocks.splice(fromIndex, 1);
+                          const toIndex = index > fromIndex ? index : index + 1;
+                          newBlocks.splice(toIndex > newBlocks.length ? newBlocks.length : toIndex, 0, moved);
+                          updateBlocks(newBlocks);
+                          setSelectedBlockIndex(toIndex > newBlocks.length ? newBlocks.length - 1 : toIndex);
+                        } else if (data) {
+                          handleAddBlock(data as EmailBlockType, index + 1);
+                        }
+                        dragReorder.handleDragEnd();
+                      }}
+                    >
+                      <CanvasBlock
+                        block={block}
+                        index={index}
+                        isSelected={selectedBlockIndex === index}
+                        isFirst={index === 0}
+                        isLast={index === blocks.length - 1}
+                        isDragSource={dragReorder.dragState.sourceIndex === index}
+                        onSelect={() => {
+                          setSelectedBlockIndex(selectedBlockIndex === index ? null : index);
+                          setRightPanelTab(selectedBlockIndex === index ? 'preview' : 'block-settings');
+                        }}
+                        onMoveUp={() => handleMoveUp(index)}
+                        onMoveDown={() => handleMoveDown(index)}
+                        onDuplicate={() => handleDuplicateBlock(index)}
+                        onDelete={() => handleDeleteBlock(index)}
+                        onDragStart={() => dragReorder.handleDragStart(index)}
+                      />
+
+                      {/* Insert handle after each block */}
+                      <BlockInsertHandle
+                        onInsert={(type) => handleAddBlock(type, index + 1)}
+                        onDragOver={() => dragReorder.handleDragOver(index + 1)}
+                        showDropZone={dragReorder.dragState.isDragging && dragReorder.dragState.targetIndex === index + 1}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        )}
-
-        {step === 'design' && editingTemplate && (
-          <div className="max-w-2xl">
-            <DesignSettingsPanel
-              designConfig={editDesignConfig}
-              onChange={handleDesignConfigChange}
-            />
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setStep('editor')} className="gap-1.5">
-                {t('Back')}: {t('Content')}
-              </Button>
-              <Button onClick={() => setStep('preview')} className="gap-1.5">
-                {t('Next')}: {t('Preview')}
-              </Button>
+        }
+        rightPane={
+          <div>
+            {/* Tab switcher */}
+            <div className="flex items-center gap-0.5 p-1 border-b bg-muted/30">
+              <button
+                className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  rightPanelTab === 'preview' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+                }`}
+                onClick={() => setRightPanelTab('preview')}
+              >
+                {t('Preview')}
+              </button>
+              <button
+                className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  rightPanelTab === 'block-settings' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+                }`}
+                onClick={() => setRightPanelTab('block-settings')}
+                disabled={!selectedBlock}
+              >
+                {t('Block Settings')}
+              </button>
+              <button
+                className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  rightPanelTab === 'design-settings' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+                }`}
+                onClick={() => setRightPanelTab('design-settings')}
+              >
+                {t('Design')}
+              </button>
             </div>
-          </div>
-        )}
 
-        {step === 'preview' && editingTemplate && (
-          <div className="max-w-3xl">
-            <TemplatePreview
-              designConfig={editDesignConfig}
-              previewText={editPreviewText}
-              eventType={editingTemplate.eventType}
-              locale={editLocale}
-              onLocaleChange={setEditLocale}
-            />
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setStep('design')} className="gap-1.5">
-                {t('Back')}: {t('Design')}
-              </Button>
-              <Button onClick={handleSave} disabled={saving || !hasChanges} className="gap-1.5">
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                {t('Save')}
-              </Button>
-            </div>
+            {/* Panel content */}
+            {rightPanelTab === 'preview' && (
+              <LivePreview
+                designConfig={editDesignConfig}
+                previewText={editPreviewText}
+                eventType={editingTemplate.eventType}
+                locale={editLocale}
+                viewportMode={viewportMode}
+              />
+            )}
+
+            {rightPanelTab === 'block-settings' && selectedBlock && (
+              <BlockSettingsPanel
+                block={selectedBlock}
+                onChange={(b) => handleUpdateBlock(selectedBlockIndex!, b)}
+              />
+            )}
+
+            {rightPanelTab === 'block-settings' && !selectedBlock && (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                {t('Click a block to edit its settings')}
+              </div>
+            )}
+
+            {rightPanelTab === 'design-settings' && (
+              <div className="p-4 animate-panel-slide-in">
+                <DesignSettingsPanel
+                  designConfig={editDesignConfig}
+                  onChange={handleDesignConfigChange}
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        }
+      />
 
       {/* Unsaved changes dialog */}
       <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>

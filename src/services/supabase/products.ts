@@ -67,6 +67,26 @@ function mergeProductWithBatch(product: Product, batch: any): Product {
   };
 }
 
+/**
+ * Enrich product.imageUrl from product_images table if the legacy field is empty.
+ * Picks the primary image first, otherwise the first image by sort_order.
+ */
+async function enrichImageUrl(product: Product, productId: string): Promise<void> {
+  if (product.imageUrl) return;
+
+  const { data: images } = await supabase
+    .from('product_images')
+    .select('url, is_primary')
+    .eq('product_id', productId)
+    .order('is_primary', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .limit(1);
+
+  if (images && images.length > 0) {
+    product.imageUrl = images[0].url;
+  }
+}
+
 export interface ProductListItem {
   id: string;
   name: string;
@@ -181,6 +201,7 @@ export async function getProductByGtinSerial(
         }));
       }
 
+      await enrichImageUrl(merged, productRow.id);
       return merged;
     }
   }
@@ -211,6 +232,7 @@ export async function getProductByGtinSerial(
       }));
     }
 
+    await enrichImageUrl(product, legacyRow.id);
     return product;
   }
 
