@@ -30,18 +30,28 @@ export async function getRhEmailTemplates(): Promise<RhEmailTemplate[]> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return [];
 
-  const { data, error } = await supabase
+  // Try with sort_order first; fall back if column doesn't exist
+  let result = await supabase
     .from('rh_email_templates')
     .select('*')
     .eq('tenant_id', tenantId)
     .order('sort_order', { ascending: true });
 
-  if (error) {
-    console.error('Failed to load email templates:', error);
+  if (result.error?.code === '42703') {
+    // sort_order column missing - fall back to event_type ordering
+    result = await supabase
+      .from('rh_email_templates')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('event_type', { ascending: true });
+  }
+
+  if (result.error) {
+    console.error('Failed to load email templates:', result.error);
     return [];
   }
 
-  return (data || []).map((row: any) => transformEmailTemplate(row));
+  return (result.data || []).map((row: any) => transformEmailTemplate(row));
 }
 
 export async function getRhEmailTemplate(
@@ -108,9 +118,24 @@ export async function upsertRhEmailTemplate(
   if (template.category !== undefined) row.category = template.category;
   if (template.sortOrder !== undefined) row.sort_order = template.sortOrder;
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from('rh_email_templates')
     .upsert(row, { onConflict: 'tenant_id,event_type' });
+
+  // If columns don't exist, retry with only base columns
+  if (error?.code === '42703') {
+    const baseRow = {
+      tenant_id: tenantId,
+      event_type: template.eventType,
+      enabled: template.enabled,
+      subject_template: template.subjectTemplate,
+      body_template: template.bodyTemplate,
+      updated_at: new Date().toISOString(),
+    };
+    ({ error } = await supabase
+      .from('rh_email_templates')
+      .upsert(baseRow, { onConflict: 'tenant_id,event_type' }));
+  }
 
   if (error) {
     console.error('Failed to upsert email template:', error);
@@ -124,31 +149,47 @@ export async function seedDefaultEmailTemplates(): Promise<{ success: boolean; c
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { success: false, count: 0, error: 'No tenant set' };
 
+  // Check if new columns exist by testing one
+  const hasNewColumns = await checkColumnExists(tenantId);
+
   let count = 0;
   for (const tmpl of TEMPLATE_DEFAULTS) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row: Record<string, any> = {
+      tenant_id: tenantId,
+      event_type: tmpl.eventType,
+      enabled: true,
+      subject_template: tmpl.subjectTemplate,
+      body_template: tmpl.bodyTemplate,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only include new columns if the migration has been applied
+    if (hasNewColumns) {
+      row.category = tmpl.category;
+      row.name = tmpl.name;
+      row.description = tmpl.description;
+      row.design_config = tmpl.designConfig as unknown as Record<string, unknown>;
+      row.sort_order = tmpl.sortOrder;
+    }
+
     const { error } = await supabase
       .from('rh_email_templates')
-      .upsert(
-        {
-          tenant_id: tenantId,
-          event_type: tmpl.eventType,
-          enabled: true,
-          subject_template: tmpl.subjectTemplate,
-          body_template: tmpl.bodyTemplate,
-          category: tmpl.category,
-          name: tmpl.name,
-          description: tmpl.description,
-          design_config: tmpl.designConfig as unknown as Record<string, unknown>,
-          sort_order: tmpl.sortOrder,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'tenant_id,event_type' }
-      );
+      .upsert(row, { onConflict: 'tenant_id,event_type' });
 
     if (!error) count++;
   }
 
   return { success: true, count };
+}
+
+async function checkColumnExists(tenantId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('rh_email_templates')
+    .select('sort_order')
+    .eq('tenant_id', tenantId)
+    .limit(0);
+  return !error || error.code !== '42703';
 }
 
 export async function resetRhEmailTemplateToDefault(
