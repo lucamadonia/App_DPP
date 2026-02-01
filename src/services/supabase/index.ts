@@ -243,7 +243,25 @@ export {
   getRhTicketMessages,
   addRhTicketMessage,
   assignRhTicket,
+  deleteRhTicket,
+  getTicketStats,
+  bulkUpdateTickets,
+  getTicketActivity,
+  logTicketActivity,
+  mergeTickets,
 } from './rh-tickets';
+
+// Returns Hub - Ticket Attachments
+export {
+  uploadTicketAttachment,
+  getTicketAttachmentUrl,
+} from './rh-ticket-attachments';
+
+// Returns Hub - Canned Responses
+export {
+  getCannedResponses,
+  saveCannedResponses,
+} from './rh-canned-responses';
 
 // Returns Hub - Settings
 export {

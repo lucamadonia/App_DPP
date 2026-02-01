@@ -379,6 +379,48 @@ export interface ReturnsFilter {
   search?: string;
 }
 
+export type SlaStatus = 'met' | 'at_risk' | 'breached' | 'none';
+export type TicketSortField = 'created_at' | 'updated_at' | 'priority' | 'status' | 'sla_resolution_at';
+export type TicketActivityAction =
+  | 'status_changed'
+  | 'priority_changed'
+  | 'assigned'
+  | 'unassigned'
+  | 'tags_changed'
+  | 'category_changed'
+  | 'merged'
+  | 'reopened'
+  | 'closed_with_reason';
+
+export interface TicketStats {
+  open: number;
+  inProgress: number;
+  waiting: number;
+  resolved: number;
+  closed: number;
+  overdue: number;
+  avgFirstResponseMinutes: number;
+  avgResolutionMinutes: number;
+}
+
+export interface RhTicketActivity {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  action: TicketActivityAction;
+  entityType: 'ticket';
+  entityId: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface RhCannedResponse {
+  id: string;
+  title: string;
+  content: string;
+  category?: string;
+}
+
 export interface TicketsFilter {
   status?: TicketStatus[];
   priority?: ReturnPriority[];
@@ -386,6 +428,13 @@ export interface TicketsFilter {
   customerId?: string;
   returnId?: string;
   search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  slaStatus?: SlaStatus[];
+  tags?: string[];
+  category?: string;
+  sortBy?: TicketSortField;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface PaginationParams {
