@@ -46,15 +46,13 @@ export function EmailTemplateEditorPage() {
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
-    const data = await getRhEmailTemplates();
-    // If no templates, seed defaults first
-    if (data.length === 0) {
+    let data = await getRhEmailTemplates();
+    // Always seed to ensure all 15 templates exist with latest locale content
+    if (data.length < 15) {
       await seedDefaultEmailTemplates();
-      const seeded = await getRhEmailTemplates();
-      setTemplates(seeded);
-    } else {
-      setTemplates(data);
+      data = await getRhEmailTemplates();
     }
+    setTemplates(data);
     setLoading(false);
   }, []);
 

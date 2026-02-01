@@ -142,7 +142,7 @@ export async function seedDefaultEmailTemplates(): Promise<{ success: boolean; c
           sort_order: tmpl.sortOrder,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'tenant_id,event_type', ignoreDuplicates: true }
+        { onConflict: 'tenant_id,event_type' }
       );
 
     if (!error) count++;
