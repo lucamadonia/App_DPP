@@ -6,6 +6,14 @@ import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import type { CustomerPortalProfile } from '@/types/customer-portal';
 import type { RhReturnReason } from '@/types/returns-hub';
 
+export interface TenantOverride {
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  primaryColor: string;
+  logoUrl: string;
+}
+
 export interface CustomerPortalContextType {
   tenantSlug: string;
   tenantId: string;
@@ -22,9 +30,14 @@ export interface CustomerPortalContextType {
 
 export const CustomerPortalContext = createContext<CustomerPortalContextType | null>(null);
 
-export function CustomerPortalProvider({ children }: { children: ReactNode }) {
+interface CustomerPortalProviderProps {
+  children: ReactNode;
+  tenantOverride?: TenantOverride;
+}
+
+export function CustomerPortalProvider({ children, tenantOverride }: CustomerPortalProviderProps) {
   const { tenantSlug: paramSlug } = useParams<{ tenantSlug: string }>();
-  const tenantSlug = paramSlug || '';
+  const tenantSlug = tenantOverride?.tenantSlug || paramSlug || '';
 
   const [tenantId, setTenantId] = useState('');
   const [tenantName, setTenantName] = useState('');
@@ -50,6 +63,20 @@ export function CustomerPortalProvider({ children }: { children: ReactNode }) {
   // Load branding
   useEffect(() => {
     async function loadBranding() {
+      // Use override data if provided (custom domain mode)
+      if (tenantOverride) {
+        setTenantId(tenantOverride.tenantId);
+        setTenantName(tenantOverride.tenantName);
+        setPrimaryColor(tenantOverride.primaryColor);
+        setLogoUrl(tenantOverride.logoUrl);
+        if (tenantOverride.primaryColor) {
+          applyPrimaryColor(tenantOverride.primaryColor);
+        }
+        const reasonsData = await getCustomerReturnReasons(tenantOverride.tenantId);
+        setReasons(reasonsData);
+        return;
+      }
+
       if (!tenantSlug) {
         setIsLoading(false);
         return;
@@ -74,7 +101,7 @@ export function CustomerPortalProvider({ children }: { children: ReactNode }) {
       }
     }
     loadBranding();
-  }, [tenantSlug]);
+  }, [tenantSlug, tenantOverride]);
 
   // Check auth state
   useEffect(() => {

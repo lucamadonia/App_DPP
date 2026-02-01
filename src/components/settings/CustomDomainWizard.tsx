@@ -31,6 +31,8 @@ interface CustomDomainWizardProps {
   onOpenChange: (open: boolean) => void;
   currentDomain?: string;
   onDomainVerified: (domain: string) => void;
+  purposeDescription?: string;
+  domainPlaceholder?: string;
 }
 
 type WizardStep = 'enter-domain' | 'select-provider' | 'add-cname' | 'verify';
@@ -40,6 +42,8 @@ export function CustomDomainWizard({
   onOpenChange,
   currentDomain,
   onDomainVerified,
+  purposeDescription,
+  domainPlaceholder,
 }: CustomDomainWizardProps) {
   const { t } = useTranslation('settings');
   const [step, setStep] = useState<WizardStep>('enter-domain');
@@ -143,7 +147,7 @@ export function CustomDomainWizard({
             {t('Connect Custom Domain')}
           </SheetTitle>
           <SheetDescription>
-            {t('Connect your own domain for public DPP pages')}
+            {purposeDescription || t('Connect your own domain for public DPP pages')}
           </SheetDescription>
         </SheetHeader>
 
@@ -173,7 +177,7 @@ export function CustomDomainWizard({
             <div className="space-y-2">
               <Label>{t('Your Domain')}</Label>
               <Input
-                placeholder="dpp.your-company.com"
+                placeholder={domainPlaceholder || 'dpp.your-company.com'}
                 value={domain}
                 onChange={(e) => handleDomainInput(e.target.value)}
                 className={domainError ? 'border-destructive' : ''}

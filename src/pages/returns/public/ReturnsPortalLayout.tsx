@@ -18,7 +18,19 @@ export interface ReturnsPortalContextType {
 
 export const ReturnsPortalContext = createContext<ReturnsPortalContextType | null>(null);
 
-export function ReturnsPortalLayout() {
+interface TenantOverride {
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  primaryColor: string;
+  logoUrl: string;
+}
+
+interface ReturnsPortalLayoutProps {
+  tenantOverride?: TenantOverride;
+}
+
+export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps = {}) {
   const { tenantSlug: paramSlug } = useParams<{ tenantSlug: string }>();
   const { t, i18n } = useTranslation('returns');
   const currentLang = i18n.language?.startsWith('de') ? 'de' : 'en';
@@ -29,8 +41,8 @@ export function ReturnsPortalLayout() {
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Extract tenantSlug from any nested route param
-  const tenantSlug = paramSlug || '';
+  // Extract tenantSlug from any nested route param or override
+  const tenantSlug = tenantOverride?.tenantSlug || paramSlug || '';
 
   useEffect(() => {
     const stored = localStorage.getItem('dpp-language');
@@ -49,6 +61,20 @@ export function ReturnsPortalLayout() {
 
   useEffect(() => {
     async function loadBranding() {
+      // Use override data if provided (custom domain mode)
+      if (tenantOverride) {
+        setTenantName(tenantOverride.tenantName);
+        setPrimaryColor(tenantOverride.primaryColor);
+        setLogoUrl(tenantOverride.logoUrl);
+        if (tenantOverride.primaryColor) {
+          applyPrimaryColor(tenantOverride.primaryColor);
+        }
+        const reasonsData = await getPublicReturnReasons(tenantOverride.tenantSlug);
+        setReasons(reasonsData);
+        setIsLoading(false);
+        return;
+      }
+
       if (!tenantSlug) {
         setIsLoading(false);
         return;
@@ -73,7 +99,7 @@ export function ReturnsPortalLayout() {
       setIsLoading(false);
     }
     loadBranding();
-  }, [tenantSlug]);
+  }, [tenantSlug, tenantOverride]);
 
   if (isLoading) {
     return (
@@ -95,7 +121,7 @@ export function ReturnsPortalLayout() {
         <header className="bg-white border-b sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
             <Link
-              to={`/returns/portal/${tenantSlug}`}
+              to={tenantOverride ? '/' : `/returns/portal/${tenantSlug}`}
               className="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
               {logoUrl ? (

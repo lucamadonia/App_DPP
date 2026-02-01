@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/breadcrumb';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { BrandingProvider, useBranding } from '@/contexts/BrandingContext';
+import { useCustomDomainDetection } from '@/hooks/useCustomDomainDetection';
+import { CustomDomainPortal } from '@/components/CustomDomainPortal';
+import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductPage } from '@/pages/ProductPage';
@@ -129,12 +132,41 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
-function App() {
-  return (
-    <AuthProvider>
-      <BrandingProvider>
+function CustomDomainGate() {
+  const { t } = useTranslation('common');
+  const { isCustomDomain, isResolving, resolution } = useCustomDomainDetection();
+
+  if (isResolving) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">{t('Loading...')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isCustomDomain) {
+    if (resolution) {
+      return (
         <BrowserRouter>
-          <Routes>
+          <CustomDomainPortal resolution={resolution} />
+        </BrowserRouter>
+      );
+    }
+    // Custom domain but not resolved (not found or error)
+    return <DomainNotFoundPage />;
+  }
+
+  // Normal app routing
+  return <NormalAppRoutes />;
+}
+
+function NormalAppRoutes() {
+  return (
+    <BrowserRouter>
+      <Routes>
         {/* Login & Auth */}
         <Route path="login" element={<LoginPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
@@ -245,9 +277,17 @@ function App() {
 
           {/* Admin */}
           <Route path="admin" element={<AdminPage />} />
-          </Route>
-        </Routes>
-        </BrowserRouter>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrandingProvider>
+        <CustomDomainGate />
       </BrandingProvider>
     </AuthProvider>
   );

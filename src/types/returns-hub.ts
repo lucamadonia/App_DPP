@@ -389,6 +389,14 @@ export interface CustomerPortalSettings {
   showGettingStartedGuide: boolean;
 }
 
+export interface PortalDomainSettings {
+  customDomain: string;
+  portalType: 'returns' | 'customer' | 'both';
+  domainStatus: 'pending' | 'verified' | 'failed';
+  domainVerifiedAt?: string;
+  vercelDomainAdded?: boolean;
+}
+
 export interface ReturnsHubSettings {
   enabled: boolean;
   plan: 'starter' | 'professional' | 'business' | 'enterprise';
@@ -400,6 +408,7 @@ export interface ReturnsHubSettings {
   branding: ReturnsHubBranding;
   notifications: ReturnsHubNotificationSettings;
   customerPortal?: CustomerPortalSettings;
+  portalDomain?: PortalDomainSettings;
 }
 
 // ============================================

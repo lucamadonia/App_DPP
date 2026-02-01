@@ -2,7 +2,7 @@
  * Supabase Returns Hub Settings Service
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { ReturnsHubSettings, RhReturnReason, CustomerPortalSettings } from '@/types/returns-hub';
+import type { ReturnsHubSettings, RhReturnReason, CustomerPortalSettings, PortalDomainSettings } from '@/types/returns-hub';
 
 export const DEFAULT_CUSTOMER_PORTAL_SETTINGS: CustomerPortalSettings = {
   enabled: false,
@@ -237,6 +237,79 @@ export async function deleteReturnReason(id: string): Promise<{ success: boolean
 
   if (error) {
     console.error('Failed to delete return reason:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// ============================================
+// PORTAL DOMAIN SETTINGS
+// ============================================
+
+export async function updatePortalDomainSettings(
+  domain: PortalDomainSettings
+): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .single();
+
+  const currentSettings = tenant?.settings || {};
+  const currentRh = currentSettings.returnsHub || DEFAULT_SETTINGS;
+
+  const newSettings = {
+    ...currentSettings,
+    returnsHub: {
+      ...currentRh,
+      portalDomain: domain,
+    },
+  };
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ settings: newSettings })
+    .eq('id', tenantId);
+
+  if (error) {
+    console.error('Failed to update portal domain settings:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+export async function removePortalDomain(): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .single();
+
+  const currentSettings = tenant?.settings || {};
+  const currentRh = currentSettings.returnsHub || DEFAULT_SETTINGS;
+
+  const { portalDomain: _, ...rhWithoutDomain } = currentRh;
+
+  const newSettings = {
+    ...currentSettings,
+    returnsHub: rhWithoutDomain,
+  };
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ settings: newSettings })
+    .eq('id', tenantId);
+
+  if (error) {
+    console.error('Failed to remove portal domain:', error);
     return { success: false, error: error.message };
   }
 

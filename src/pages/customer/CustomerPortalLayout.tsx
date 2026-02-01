@@ -3,7 +3,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { Package, Languages, Loader2, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CustomerPortalProvider } from '@/contexts/CustomerPortalContext';
+import { CustomerPortalProvider, type TenantOverride } from '@/contexts/CustomerPortalContext';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { CustomerNav } from '@/components/customer/CustomerNav';
 
@@ -48,7 +48,7 @@ function CustomerPortalContent() {
               </Button>
             )}
             <Link
-              to={`/customer/${tenantSlug}`}
+              to={tenantSlug && !window.location.hostname.includes(tenantSlug) ? `/customer/${tenantSlug}` : '/portal'}
               className="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
               {logoUrl ? (
@@ -134,9 +134,13 @@ function CustomerPortalContent() {
   );
 }
 
-export function CustomerPortalLayout() {
+interface CustomerPortalLayoutProps {
+  tenantOverride?: TenantOverride;
+}
+
+export function CustomerPortalLayout({ tenantOverride }: CustomerPortalLayoutProps = {}) {
   return (
-    <CustomerPortalProvider>
+    <CustomerPortalProvider tenantOverride={tenantOverride}>
       <CustomerPortalContent />
     </CustomerPortalProvider>
   );

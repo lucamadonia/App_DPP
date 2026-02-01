@@ -267,6 +267,8 @@ export {
 export {
   getReturnsHubSettings,
   updateReturnsHubSettings,
+  updatePortalDomainSettings,
+  removePortalDomain,
   getReturnReasons,
   createReturnReason,
   updateReturnReason,
@@ -311,6 +313,19 @@ export {
   uploadReturnPhoto,
   getReturnPhotoUrl,
 } from './return-photos';
+
+// Domain Resolution
+export {
+  resolveTenantByDomain,
+  isDomainAvailable,
+  type DomainResolutionResult,
+} from './domain-resolution';
+
+// Vercel Domain Management
+export {
+  addDomainToVercel,
+  removeDomainFromVercel,
+} from './vercel-domain';
 
 // Customer Portal
 export {

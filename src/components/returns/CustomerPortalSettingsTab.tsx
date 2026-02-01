@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { ReturnsHubSettings, CustomerPortalSettings } from '@/types/returns-hub';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
+import { PortalDomainSettingsCard } from '@/components/returns/PortalDomainSettingsCard';
 
 interface CustomerPortalSettingsTabProps {
   settings: ReturnsHubSettings;
@@ -255,6 +256,12 @@ export function CustomerPortalSettingsTab({ settings, setSettings, tenantSlug, s
           <SaveButton />
         </CardContent>
       </Card>
+
+      {/* Card 5: Custom Domain */}
+      <PortalDomainSettingsCard
+        settings={settings}
+        onSettingsChange={setSettings}
+      />
     </>
   );
 }
