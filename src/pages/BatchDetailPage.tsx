@@ -14,6 +14,7 @@ import {
   Settings2,
   Copy,
   Trash2,
+  BrainCircuit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -134,6 +135,12 @@ export function BatchDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to={`/products/${productId}?tab=ai-check&batchId=${batchId}`}>
+              <BrainCircuit className="mr-2 h-4 w-4" />
+              AI Check
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link to={`/products/${productId}/batches/new?duplicate=${batchId}`}>
               <Copy className="mr-2 h-4 w-4" />

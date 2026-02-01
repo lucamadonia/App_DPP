@@ -333,6 +333,14 @@ export {
   removeDomainFromVercel,
 } from './vercel-domain';
 
+// AI Compliance Checks
+export {
+  saveComplianceCheck,
+  getComplianceChecks,
+  getComplianceCheck,
+  deleteComplianceCheck,
+} from './ai-compliance-checks';
+
 // Customer Portal
 export {
   getCustomerContext,

@@ -30,6 +30,7 @@ import {
   Archive,
   Settings2,
   Headphones,
+  BrainCircuit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,7 @@ import { ProductImagesGallery } from '@/components/product/ProductImagesGallery'
 import { ProductDocumentsTab } from '@/components/product/ProductDocumentsTab';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductComplianceTab } from '@/components/product/ProductComplianceTab';
+import { AIComplianceCheckTab } from '@/components/compliance-check/AIComplianceCheckTab';
 
 const SUPPLIER_ROLE_LABELS: Record<string, string> = {
   manufacturer: 'Manufacturer',
@@ -282,6 +284,10 @@ export function ProductPage() {
           <TabsTrigger value="historie" className="flex items-center gap-2 flex-shrink-0">
             <History className="h-4 w-4" />
             <span className="hidden sm:inline">{t('History')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai-check" className="flex items-center gap-2 flex-shrink-0">
+            <BrainCircuit className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('AI Check', { ns: 'compliance' })}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -830,6 +836,11 @@ export function ProductPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* AI Compliance Check Tab */}
+        <TabsContent value="ai-check" className="space-y-6">
+          <AIComplianceCheckTab product={product} />
         </TabsContent>
       </Tabs>
     </div>
