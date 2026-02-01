@@ -7,7 +7,8 @@ import {
 const KNOWN_HOSTS = [
   'localhost',
   '127.0.0.1',
-  'dpp-manager.vercel.app',
+  'app-dpp.vercel.app',
+  'dpp-app.fambliss.eu',
 ];
 
 const SESSION_CACHE_PREFIX = 'domain-resolution:';

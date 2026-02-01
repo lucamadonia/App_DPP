@@ -28,7 +28,7 @@ node scripts/setup-storage.mjs
 - **Backend**: Supabase (PostgreSQL + Auth + Storage + RLS)
 - **Icons**: Lucide React
 - **Hosting**: Vercel (auto-deploy on push to main)
-- **Production**: https://dpp-manager.vercel.app
+- **Production**: https://dpp-app.fambliss.eu (Vercel: https://app-dpp.vercel.app)
 
 ## Architecture
 
