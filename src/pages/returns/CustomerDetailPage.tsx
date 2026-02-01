@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Mail, Phone, Pencil, Users, Plus } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, Phone, Pencil, Users, Plus, Globe, Shield, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { relativeTime } from '@/lib/animations';
 import { getRhCustomer, getRhCustomerReturns, updateRhCustomer } from '@/services/supabase';
+import { supabase } from '@/lib/supabase';
 import type { RhCustomer, RhReturn } from '@/types/returns-hub';
 
 export function CustomerDetailPage() {
@@ -37,6 +38,13 @@ export function CustomerDetailPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editTagsInput, setEditTagsInput] = useState('');
 
+  // Portal status
+  const [portalProfile, setPortalProfile] = useState<{ lastLoginAt?: string; emailVerified?: boolean } | null>(null);
+  // CRM fields
+  const [lifecycleStage, setLifecycleStage] = useState<string>('active');
+  const [satisfactionScore, setSatisfactionScore] = useState<number | null>(null);
+  const [commPrefs, setCommPrefs] = useState<{ email: boolean; sms: boolean; marketing: boolean }>({ email: true, sms: false, marketing: false });
+
   const loadData = async () => {
     if (!id) return;
     setLoading(true);
@@ -46,6 +54,29 @@ export function CustomerDetailPage() {
     ]);
     setCustomer(cust);
     setReturns(rets);
+
+    // Load portal profile status
+    if (cust) {
+      const { data: portalData } = await supabase
+        .from('rh_customer_profiles')
+        .select('last_login_at, email_verified')
+        .eq('customer_id', id)
+        .single();
+      setPortalProfile(portalData ? { lastLoginAt: portalData.last_login_at, emailVerified: portalData.email_verified } : null);
+
+      // Load CRM fields
+      const { data: crmData } = await supabase
+        .from('rh_customers')
+        .select('lifecycle_stage, satisfaction_score, communication_preferences')
+        .eq('id', id)
+        .single();
+      if (crmData) {
+        setLifecycleStage(crmData.lifecycle_stage || 'active');
+        setSatisfactionScore(crmData.satisfaction_score != null ? Number(crmData.satisfaction_score) : null);
+        setCommPrefs(crmData.communication_preferences || { email: true, sms: false, marketing: false });
+      }
+    }
+
     setLoading(false);
   };
 
@@ -234,6 +265,69 @@ export function CustomerDetailPage() {
             <p className="text-sm text-muted-foreground mt-2">
               {customer.riskScore >= 70 ? t('High') : customer.riskScore >= 40 ? t('Normal') : t('Low')} {t('Risk')}
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Portal Status & CRM Info */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="animate-fade-in-up" style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" /> {t('Portal Status')}</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t('Portal Account')}</span>
+              {portalProfile ? (
+                <Badge variant="default" className="text-[10px] bg-green-100 text-green-700">{t('Active')}</Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px]">{t('No Account')}</Badge>
+              )}
+            </div>
+            {portalProfile && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Email Verified')}</span>
+                  <span>{portalProfile.emailVerified ? '\u2705' : '\u274C'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Last Login')}</span>
+                  <span className="text-xs">{portalProfile.lastLoginAt ? new Date(portalProfile.lastLoginAt).toLocaleDateString() : '\u2014'}</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="animate-fade-in-up" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" /> {t('Lifecycle')}</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t('Stage')}</span>
+              <Badge variant="outline" className="capitalize text-xs">{lifecycleStage}</Badge>
+            </div>
+            {satisfactionScore != null && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Satisfaction')}</span>
+                <span className="font-medium">{satisfactionScore}/5</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="animate-fade-in-up" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Heart className="h-4 w-4" /> {t('Communication')}</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t('Email')}</span>
+              <span>{commPrefs.email ? '\u2705' : '\u274C'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">SMS</span>
+              <span>{commPrefs.sms ? '\u2705' : '\u274C'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t('Marketing')}</span>
+              <span>{commPrefs.marketing ? '\u2705' : '\u274C'}</span>
+            </div>
           </CardContent>
         </Card>
       </div>

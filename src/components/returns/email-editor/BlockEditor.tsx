@@ -13,6 +13,8 @@ interface BlockEditorProps {
   designConfig: EmailDesignConfig;
   onDesignConfigChange: (config: EmailDesignConfig) => void;
   eventType: RhNotificationEventType;
+  locale: string;
+  onLocaleChange: (locale: string) => void;
 }
 
 export function BlockEditor({
@@ -21,13 +23,34 @@ export function BlockEditor({
   designConfig,
   onDesignConfigChange,
   eventType,
+  locale,
+  onLocaleChange,
 }: BlockEditorProps) {
   const { t } = useTranslation('returns');
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  const blocks = designConfig.blocks;
+  const isLocale = locale !== 'en';
+  const localeContent = isLocale ? designConfig.locales?.[locale] : undefined;
+  const blocks = localeContent?.blocks || designConfig.blocks;
+  const currentSubject = (isLocale && localeContent?.subjectTemplate) || subject;
 
   const updateBlocks = (newBlocks: EmailBlock[]) => {
-    onDesignConfigChange({ ...designConfig, blocks: newBlocks });
+    if (isLocale) {
+      const updatedLocales = { ...designConfig.locales };
+      updatedLocales[locale] = { ...updatedLocales[locale], blocks: newBlocks };
+      onDesignConfigChange({ ...designConfig, locales: updatedLocales });
+    } else {
+      onDesignConfigChange({ ...designConfig, blocks: newBlocks });
+    }
+  };
+
+  const handleSubjectChange = (val: string) => {
+    if (isLocale) {
+      const updatedLocales = { ...designConfig.locales };
+      updatedLocales[locale] = { ...updatedLocales[locale], subjectTemplate: val };
+      onDesignConfigChange({ ...designConfig, locales: updatedLocales });
+    } else {
+      onSubjectChange(val);
+    }
   };
 
   const handleAddBlock = (block: EmailBlock) => {
@@ -87,14 +110,34 @@ export function BlockEditor({
 
   return (
     <div className="space-y-4">
+      {/* Language toggle */}
+      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit">
+        <button
+          onClick={() => onLocaleChange('en')}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            locale === 'en' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+          }`}
+        >
+          EN
+        </button>
+        <button
+          onClick={() => onLocaleChange('de')}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            locale === 'de' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+          }`}
+        >
+          DE
+        </button>
+      </div>
+
       <SubjectLineEditor
-        value={subject}
-        onChange={onSubjectChange}
+        value={currentSubject}
+        onChange={handleSubjectChange}
         eventType={eventType}
       />
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">{t('Email Body')}</h3>
+        <h3 className="text-sm font-medium">{t('Email Body')} ({locale.toUpperCase()})</h3>
         <VariableInserter eventType={eventType} onInsert={handleInsertVariable} />
       </div>
 

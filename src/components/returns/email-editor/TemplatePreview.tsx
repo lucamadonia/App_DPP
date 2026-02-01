@@ -13,14 +13,16 @@ interface TemplatePreviewProps {
   designConfig: EmailDesignConfig;
   previewText: string;
   eventType: RhNotificationEventType;
+  locale: string;
+  onLocaleChange: (locale: string) => void;
 }
 
-export function TemplatePreview({ designConfig, previewText, eventType }: TemplatePreviewProps) {
+export function TemplatePreview({ designConfig, previewText, eventType, locale, onLocaleChange }: TemplatePreviewProps) {
   const { t } = useTranslation('returns');
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [useSampleData, setUseSampleData] = useState(true);
 
-  const rawHtml = useMemo(() => renderEmailHtml(designConfig, previewText), [designConfig, previewText]);
+  const rawHtml = useMemo(() => renderEmailHtml(designConfig, previewText, locale), [designConfig, previewText, locale]);
 
   const displayHtml = useMemo(() => {
     if (!useSampleData) return rawHtml;
@@ -56,13 +58,33 @@ export function TemplatePreview({ designConfig, previewText, eventType }: Templa
             {t('Mobile')}
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={useSampleData}
-            onCheckedChange={setUseSampleData}
-            className="scale-75"
-          />
-          <Label className="text-xs">{t('Sample Data')}</Label>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 p-0.5 bg-muted rounded-md">
+            <button
+              onClick={() => onLocaleChange('en')}
+              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                locale === 'en' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => onLocaleChange('de')}
+              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                locale === 'de' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/50'
+              }`}
+            >
+              DE
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={useSampleData}
+              onCheckedChange={setUseSampleData}
+              className="scale-75"
+            />
+            <Label className="text-xs">{t('Sample Data')}</Label>
+          </div>
         </div>
       </div>
 

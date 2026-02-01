@@ -278,11 +278,13 @@ export type RhNotificationEventType =
   | 'exchange_shipped'
   | 'ticket_created'
   | 'ticket_agent_reply'
+  | 'ticket_customer_reply'
   | 'ticket_resolved'
   | 'welcome_email'
   | 'voucher_issued'
   | 'feedback_request'
-  | 'return_reminder';
+  | 'return_reminder'
+  | 'return_status_update';
 
 export type EmailTemplateCategory = 'returns' | 'tickets' | 'general';
 
@@ -307,6 +309,7 @@ export interface RhEmailTemplate {
 export interface ReturnsHubNotificationSettings {
   emailEnabled: boolean;
   senderName: string;
+  emailLocale: string;
 }
 
 export interface RhNotification {

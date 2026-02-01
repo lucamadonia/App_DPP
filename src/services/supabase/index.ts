@@ -309,3 +309,24 @@ export {
   uploadReturnPhoto,
   getReturnPhotoUrl,
 } from './return-photos';
+
+// Customer Portal
+export {
+  getCustomerContext,
+  isCustomerUser,
+  customerSignUp,
+  customerSendMagicLink,
+  getCustomerProfile,
+  updateCustomerProfile,
+  getCustomerReturns,
+  getCustomerReturn,
+  createCustomerReturn,
+  getCustomerTickets,
+  getCustomerTicket,
+  createCustomerTicket,
+  getCustomerTicketMessages,
+  sendCustomerMessage,
+  getCustomerDashboardStats,
+  getCustomerReturnReasons,
+  getCustomerPortalBranding,
+} from './customer-portal';

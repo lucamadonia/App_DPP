@@ -77,11 +77,18 @@ export interface EmailLayoutConfig {
   baseFontSize: number;
 }
 
+export interface EmailLocaleContent {
+  blocks: EmailBlock[];
+  subjectTemplate?: string;
+  footerText?: string;
+}
+
 export interface EmailDesignConfig {
   layout: EmailLayoutConfig;
   header: EmailHeaderConfig;
   blocks: EmailBlock[];
   footer: EmailFooterConfig;
+  locales?: Record<string, EmailLocaleContent>;
 }
 
 export type EmailTemplateCategory = 'returns' | 'tickets' | 'general';

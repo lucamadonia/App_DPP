@@ -6,6 +6,8 @@
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { RhNotificationEventType } from '@/types/returns-hub';
+import type { EmailDesignConfig } from '@/components/returns/email-editor/emailEditorTypes';
+import { renderEmailHtml } from '@/components/returns/email-editor/emailHtmlRenderer';
 import { getReturnsHubSettings } from './rh-settings';
 import { getRhEmailTemplate, getRhEmailTemplateByTenantId } from './rh-email-templates';
 
@@ -57,11 +59,24 @@ export async function triggerEmailNotification(
       return { success: true, skipped: true };
     }
 
-    // Render subject and body
-    const renderedSubject = renderTemplate(template.subjectTemplate, ctx);
-    const renderedBody = template.htmlTemplate
-      ? renderTemplate(template.htmlTemplate, ctx)
-      : renderTemplate(template.bodyTemplate, ctx);
+    // Resolve email locale from settings
+    const emailLocale = settings.notifications?.emailLocale || 'en';
+
+    // Render subject (locale-aware) and body
+    const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
+    const localeContent = designConfig?.locales?.[emailLocale];
+    const subjectToRender = localeContent?.subjectTemplate || template.subjectTemplate;
+    const renderedSubject = renderTemplate(subjectToRender, ctx);
+
+    // Prefer rendering from designConfig with locale, fall back to stored htmlTemplate, then bodyTemplate
+    let renderedBody: string;
+    if (designConfig?.blocks?.length) {
+      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), ctx);
+    } else if (template.htmlTemplate) {
+      renderedBody = renderTemplate(template.htmlTemplate, ctx);
+    } else {
+      renderedBody = renderTemplate(template.bodyTemplate, ctx);
+    }
 
     // Create notification record (Edge Function picks it up via DB webhook)
     const tenantId = await getCurrentTenantId();
@@ -82,7 +97,8 @@ export async function triggerEmailNotification(
         status: 'pending',
         metadata: {
           senderName: settings.notifications.senderName || '',
-          isHtml: !!template.htmlTemplate,
+          isHtml: true,
+          locale: emailLocale,
         },
       })
       .select('id')
@@ -128,11 +144,23 @@ export async function triggerPublicEmailNotification(
       return { success: true, skipped: true };
     }
 
-    // Render
-    const renderedSubject = renderTemplate(template.subjectTemplate, ctx);
-    const renderedBody = template.htmlTemplate
-      ? renderTemplate(template.htmlTemplate, ctx)
-      : renderTemplate(template.bodyTemplate, ctx);
+    // Resolve email locale from settings
+    const emailLocale = rhSettings?.notifications?.emailLocale || 'en';
+
+    // Render subject (locale-aware) and body
+    const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
+    const localeContent = designConfig?.locales?.[emailLocale];
+    const subjectToRender = localeContent?.subjectTemplate || template.subjectTemplate;
+    const renderedSubject = renderTemplate(subjectToRender, ctx);
+
+    let renderedBody: string;
+    if (designConfig?.blocks?.length) {
+      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), ctx);
+    } else if (template.htmlTemplate) {
+      renderedBody = renderTemplate(template.htmlTemplate, ctx);
+    } else {
+      renderedBody = renderTemplate(template.bodyTemplate, ctx);
+    }
 
     // Create notification record
     const { error } = await supabase
@@ -150,7 +178,8 @@ export async function triggerPublicEmailNotification(
         status: 'pending',
         metadata: {
           senderName: rhSettings.notifications.senderName || '',
-          isHtml: !!template.htmlTemplate,
+          isHtml: true,
+          locale: emailLocale,
         },
       });
 

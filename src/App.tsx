@@ -53,6 +53,18 @@ import { ReturnsPortalLayout } from '@/pages/returns/public/ReturnsPortalLayout'
 import { PublicReturnPortalPage } from '@/pages/returns/public/PublicReturnPortalPage';
 import { PublicReturnRegisterPage } from '@/pages/returns/public/PublicReturnRegisterPage';
 import { PublicReturnTrackingPage } from '@/pages/returns/public/PublicReturnTrackingPage';
+import { CustomerPortalLayout } from '@/pages/customer/CustomerPortalLayout';
+import { CustomerProtectedRoute } from '@/pages/customer/CustomerProtectedRoute';
+import { CustomerLoginPage } from '@/pages/customer/CustomerLoginPage';
+import { CustomerRegisterPage } from '@/pages/customer/CustomerRegisterPage';
+import { CustomerAuthCallbackPage } from '@/pages/customer/CustomerAuthCallbackPage';
+import { CustomerDashboardPage } from '@/pages/customer/CustomerDashboardPage';
+import { CustomerReturnsListPage } from '@/pages/customer/CustomerReturnsListPage';
+import { CustomerReturnDetailPage } from '@/pages/customer/CustomerReturnDetailPage';
+import { CustomerNewReturnPage } from '@/pages/customer/CustomerNewReturnPage';
+import { CustomerTicketsListPage } from '@/pages/customer/CustomerTicketsListPage';
+import { CustomerTicketDetailPage } from '@/pages/customer/CustomerTicketDetailPage';
+import { CustomerProfilePage } from '@/pages/customer/CustomerProfilePage';
 import './index.css';
 
 // Protected Route - redirects to login if not authenticated
@@ -140,6 +152,25 @@ function App() {
           <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
           <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
           <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
+        </Route>
+
+        {/* Customer Portal (tenant-branded, own auth) */}
+        <Route path="customer/:tenantSlug" element={<CustomerPortalLayout />}>
+          {/* Public customer pages (no customer auth needed) */}
+          <Route path="login" element={<CustomerLoginPage />} />
+          <Route path="register" element={<CustomerRegisterPage />} />
+          <Route path="auth/callback" element={<CustomerAuthCallbackPage />} />
+
+          {/* Protected customer pages */}
+          <Route element={<CustomerProtectedRoute />}>
+            <Route index element={<CustomerDashboardPage />} />
+            <Route path="returns" element={<CustomerReturnsListPage />} />
+            <Route path="returns/new" element={<CustomerNewReturnPage />} />
+            <Route path="returns/:id" element={<CustomerReturnDetailPage />} />
+            <Route path="tickets" element={<CustomerTicketsListPage />} />
+            <Route path="tickets/:id" element={<CustomerTicketDetailPage />} />
+            <Route path="profile" element={<CustomerProfilePage />} />
+          </Route>
         </Route>
 
         {/* Admin area with sidebar (protected) */}

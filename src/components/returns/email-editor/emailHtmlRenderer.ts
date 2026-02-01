@@ -1,6 +1,7 @@
 /**
  * Email HTML Renderer - Pure function: EmailDesignConfig -> inline-CSS HTML string
  * Generates email-client compatible HTML with inline styles.
+ * Supports locale-specific blocks: pass locale='de' to render German content.
  */
 import type { EmailDesignConfig, EmailBlock } from './emailEditorTypes';
 
@@ -51,9 +52,21 @@ function renderBlock(block: EmailBlock, baseFontSize: number): string {
   }
 }
 
-export function renderEmailHtml(config: EmailDesignConfig, previewText?: string): string {
-  const { layout, header, blocks, footer } = config;
+/**
+ * Render email HTML from design config.
+ * @param config - The design configuration
+ * @param previewText - Optional email preheader text
+ * @param locale - Optional locale code (e.g. 'de') to use locale-specific blocks
+ */
+export function renderEmailHtml(config: EmailDesignConfig, previewText?: string, locale?: string): string {
+  const { layout, header, footer } = config;
   const fontSize = layout.baseFontSize || 14;
+
+  // Resolve locale-specific content
+  const localeContent = locale && config.locales?.[locale];
+  const blocks = localeContent?.blocks || config.blocks;
+  const footerText = localeContent?.footerText || footer.text;
+  const htmlLang = locale || 'en';
 
   const headerHtml = header.enabled
     ? `<tr>
@@ -71,7 +84,7 @@ export function renderEmailHtml(config: EmailDesignConfig, previewText?: string)
   const footerHtml = footer.enabled
     ? `<tr>
         <td style="background-color:${footer.backgroundColor};padding:16px 32px;text-align:center;border-radius:0 0 ${layout.borderRadius}px ${layout.borderRadius}px;border-top:1px solid #e5e7eb;">
-          <p style="margin:0 0 8px;font-size:12px;color:${footer.textColor};">${escapeHtml(footer.text)}</p>
+          <p style="margin:0 0 8px;font-size:12px;color:${footer.textColor};">${escapeHtml(footerText)}</p>
           ${footer.links.length > 0
             ? `<p style="margin:0;font-size:12px;">${footer.links.map((l) => `<a href="${escapeHtml(l.url)}" style="color:${footer.textColor};text-decoration:underline;margin:0 8px;">${escapeHtml(l.label)}</a>`).join('')}</p>`
             : ''
@@ -85,7 +98,7 @@ export function renderEmailHtml(config: EmailDesignConfig, previewText?: string)
     : '';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${htmlLang}">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
