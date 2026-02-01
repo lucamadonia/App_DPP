@@ -356,8 +356,9 @@ export function isFieldVisibleForView(
   field: string,
   view: 'consumer' | 'customs' | 'internal'
 ): boolean {
-  const level = config.fields[field];
-  if (!level) return false;
+  // Fall back to default visibility if field not in config
+  const level = config.fields[field] || defaultVisibilityConfigV2.fields[field];
+  if (!level) return true; // Unknown fields default to visible
 
   switch (view) {
     case 'consumer':
