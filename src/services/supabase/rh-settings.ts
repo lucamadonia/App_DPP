@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS: ReturnsHubSettings = {
   notifications: {
     emailEnabled: false,
     senderName: '',
+    emailLocale: 'en',
   },
 };
 

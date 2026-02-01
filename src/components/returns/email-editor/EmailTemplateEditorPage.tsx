@@ -39,6 +39,7 @@ export function EmailTemplateEditorPage() {
   const [editSubject, setEditSubject] = useState('');
   const [editDesignConfig, setEditDesignConfig] = useState<EmailDesignConfig>(getDefaultDesignConfig());
   const [editPreviewText, setEditPreviewText] = useState('');
+  const [editLocale, setEditLocale] = useState('en');
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingNavAction, setPendingNavAction] = useState<(() => void) | null>(null);
@@ -75,6 +76,7 @@ export function EmailTemplateEditorPage() {
       setEditDesignConfig(defaultTmpl?.designConfig || getDefaultDesignConfig());
     }
 
+    setEditLocale('en');
     setHasChanges(false);
     setStep('editor');
   };
@@ -93,7 +95,7 @@ export function EmailTemplateEditorPage() {
     if (!editingTemplate) return;
     setSaving(true);
 
-    // Generate HTML from design config
+    // Generate HTML from design config (default EN)
     const htmlTemplate = renderEmailHtml(editDesignConfig, editPreviewText);
 
     // Generate plain text body from blocks for backwards compatibility
@@ -259,6 +261,8 @@ export function EmailTemplateEditorPage() {
               designConfig={editDesignConfig}
               onDesignConfigChange={handleDesignConfigChange}
               eventType={editingTemplate.eventType}
+              locale={editLocale}
+              onLocaleChange={setEditLocale}
             />
             <div className="flex justify-end mt-6">
               <Button onClick={() => setStep('design')} className="gap-1.5">
@@ -291,6 +295,8 @@ export function EmailTemplateEditorPage() {
               designConfig={editDesignConfig}
               previewText={editPreviewText}
               eventType={editingTemplate.eventType}
+              locale={editLocale}
+              onLocaleChange={setEditLocale}
             />
             <div className="flex justify-between mt-6">
               <Button variant="outline" onClick={() => setStep('design')} className="gap-1.5">

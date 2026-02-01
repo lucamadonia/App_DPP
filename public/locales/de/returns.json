@@ -736,5 +736,7 @@
   "Add templates for quick ticket replies": "Fügen Sie Vorlagen für schnelle Ticket-Antworten hinzu",
   "Return reason data will appear here": "Retourengrund-Daten werden hier angezeigt",
   "No results match your filters": "Keine Ergebnisse für Ihre Filter",
-  "Get started by creating your first return": "Erstellen Sie Ihre erste Retoure"
+  "Get started by creating your first return": "Erstellen Sie Ihre erste Retoure",
+  "Email Language": "E-Mail-Sprache",
+  "Language used for automated email notifications sent to customers": "Sprache für automatische E-Mail-Benachrichtigungen an Kunden"
 }

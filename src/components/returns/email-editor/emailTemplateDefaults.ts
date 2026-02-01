@@ -3,7 +3,7 @@
  * Pure data file, no React dependencies.
  */
 import type { RhNotificationEventType, EmailTemplateCategory } from '@/types/returns-hub';
-import type { EmailDesignConfig, EmailLocaleContent } from './emailEditorTypes';
+import type { EmailDesignConfig } from './emailEditorTypes';
 
 function makeId(): string {
   return Math.random().toString(36).slice(2, 10);

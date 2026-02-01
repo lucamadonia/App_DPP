@@ -736,5 +736,7 @@
   "Add templates for quick ticket replies": "Add templates for quick ticket replies",
   "Return reason data will appear here": "Return reason data will appear here",
   "No results match your filters": "No results match your filters",
-  "Get started by creating your first return": "Get started by creating your first return"
+  "Get started by creating your first return": "Get started by creating your first return",
+  "Email Language": "Email Language",
+  "Language used for automated email notifications sent to customers": "Language used for automated email notifications sent to customers"
 }

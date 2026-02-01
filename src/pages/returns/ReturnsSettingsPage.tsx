@@ -602,6 +602,22 @@ export function ReturnsSettingsPage() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>{t('Email Language')}</Label>
+                <p className="text-xs text-muted-foreground">{t('Language used for automated email notifications sent to customers')}</p>
+                <select
+                  className="flex h-9 w-full max-w-xs rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  value={settings.notifications?.emailLocale ?? 'en'}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    notifications: { ...settings.notifications, emailLocale: e.target.value },
+                  })}
+                >
+                  <option value="en">English</option>
+                  <option value="de">Deutsch</option>
+                </select>
+              </div>
+
               <div className="flex justify-end">
                 <Button onClick={handleSaveNotificationSettings} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}

@@ -63,7 +63,7 @@ export function renderEmailHtml(config: EmailDesignConfig, previewText?: string,
   const fontSize = layout.baseFontSize || 14;
 
   // Resolve locale-specific content
-  const localeContent = locale && config.locales?.[locale];
+  const localeContent = locale ? config.locales?.[locale] : undefined;
   const blocks = localeContent?.blocks || config.blocks;
   const footerText = localeContent?.footerText || footer.text;
   const htmlLang = locale || 'en';
