@@ -74,7 +74,7 @@ export type DPPHeroHeight = 'compact' | 'normal' | 'tall';
 export type DPPBorderRadius = 'none' | 'small' | 'medium' | 'large' | 'full';
 export type DPPShadowDepth = 'none' | 'subtle' | 'medium' | 'strong';
 export type DPPBorderStyle = 'none' | 'thin' | 'thick';
-export type DPPSectionId = 'materials' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain' | 'support';
+export type DPPSectionId = 'materials' | 'packaging' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain' | 'support';
 
 export interface DPPColorSettings {
   secondaryColor?: string;

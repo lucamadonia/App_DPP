@@ -1,6 +1,4 @@
-import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
-import { useLocale } from '@/hooks/use-locale';
 import {
   Package,
   Leaf,
@@ -24,10 +22,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
-import { resolveDesign, getCardStyle, getHeadingStyle, getSectionOrder, isSectionVisible } from '@/lib/dpp-design-utils';
+import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+import { RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 
 interface DPPTemplateProps {
   product: Product;
@@ -36,56 +35,28 @@ interface DPPTemplateProps {
   dppDesign?: DPPDesignSettings | null;
 }
 
-const ratingColors: Record<string, string> = {
-  A: 'bg-green-500',
-  B: 'bg-lime-500',
-  C: 'bg-yellow-500',
-  D: 'bg-orange-500',
-  E: 'bg-red-500',
-};
-
-const ratingDescriptions: Record<string, string> = {
-  A: 'Excellent - well below average',
-  B: 'Good - below average',
-  C: 'Average',
-  D: 'Above average',
-  E: 'Well above average',
-};
-
 export function TemplateClassic({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
-  const { t } = useTranslation('dpp');
-  const locale = useLocale();
-  const design = resolveDesign(dppDesign);
-
-  const isFieldVisible = (field: string) => {
-    if (!visibilityV2) return true;
-    return isFieldVisibleForView(visibilityV2, field, view);
-  };
+  const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <ClassicCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} />;
+    return <ClassicCustomsView data={data} />;
   }
 
-  return <ClassicConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} />;
+  return <ClassicConsumerView data={data} />;
 }
 
 interface ViewProps {
-  product: Product;
-  isFieldVisible: (field: string) => boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
-  locale: string;
-  design: ReturnType<typeof resolveDesign>;
+  data: ReturnType<typeof useDPPTemplateData>;
 }
 
-function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: ViewProps) {
-  const cardStyle = getCardStyle(design.cards);
-  const headingStyle = getHeadingStyle(design.typography, design.colors);
-  const sectionOrder = getSectionOrder(design);
+function ClassicConsumerView({ data }: ViewProps) {
+  const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
+  const { card: cardStyle, heading: headingStyle } = styles;
 
-  const renderSection = (sectionId: string) => {
-    if (!isSectionVisible(design, sectionId as import('@/types/database').DPPSectionId)) return null;
-    switch (sectionId) {
+  const renderSection = (section: RenderableSection) => {
+    switch (section.id) {
       case 'materials': return renderMaterials();
+      case 'packaging': return renderPackaging();
       case 'carbonFootprint': return renderCarbonFootprint();
       case 'recycling': return renderRecycling();
       case 'certifications': return renderCertifications();
@@ -96,10 +67,7 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
   };
 
   const renderSupport = () => {
-    if (!isFieldVisible('supportResources') || !product.supportResources) return null;
-    const sr = product.supportResources;
-    const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
-    if (!hasContent) return null;
+    const sr = product.supportResources!;
     return (
       <Card key="support" style={cardStyle}>
         <CardHeader>
@@ -201,7 +169,6 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
   };
 
   const renderMaterials = () => {
-    if (!isFieldVisible('materials') || product.materials.length === 0) return null;
     return (
       <Card key="materials" style={cardStyle}>
         <CardHeader>
@@ -225,7 +192,7 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
                 </tr>
               </thead>
               <tbody>
-                {product.materials.map((material, index) => (
+                {getProductMaterials(product).map((material, index) => (
                   <tr key={index} className="border-b last:border-b-0">
                     <td className="py-3 font-medium">{material.name}</td>
                     <td className="py-3 text-right">{material.percentage}%</td>
@@ -256,8 +223,56 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
     );
   };
 
+  const renderPackaging = () => {
+    const packagingMats = getPackagingMaterials(product);
+    return (
+      <div key="packaging" className="border rounded-xl overflow-hidden" style={cardStyle}>
+        <div className="p-6">
+          <h2 style={headingStyle} className="text-xl mb-1">{t('Packaging Materials')}</h2>
+          <p className="text-sm text-muted-foreground mb-6">{t('Packaging materials and recycling information')}</p>
+          {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && (
+            <div className="space-y-4">
+              {packagingMats.map((material, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <span className="font-medium">{material.name}</span>
+                      {isFieldVisible('materialOrigins') && material.origin && (
+                        <p className="text-xs text-muted-foreground">{t('Origin')}: {material.origin}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {material.recyclable && (
+                      <span className="text-xs text-green-600 flex items-center gap-1"><Recycle className="h-3 w-3" />{t('Recyclable')}</span>
+                    )}
+                    <span className="font-semibold">{material.percentage}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">{t('Packaging recyclable')}</span>
+                <span className="font-semibold">{product.recyclability.packagingRecyclablePercentage}%</span>
+              </div>
+            </div>
+          )}
+          {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium mb-1">{t('Packaging Recycling')}</p>
+              <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderCarbonFootprint = () => {
-    if (!isFieldVisible('carbonFootprint') || !product.carbonFootprint) return null;
     return (
       <Card key="carbonFootprint" style={cardStyle}>
         <CardHeader>
@@ -270,23 +285,23 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <div
-              className={`w-16 h-16 rounded-full ${ratingColors[product.carbonFootprint.rating]} text-white flex items-center justify-center text-3xl font-bold`}
+              className={`w-16 h-16 rounded-full ${RATING_BG_COLORS[product.carbonFootprint!.rating]} text-white flex items-center justify-center text-3xl font-bold`}
             >
-              {product.carbonFootprint.rating}
+              {product.carbonFootprint!.rating}
             </div>
             <div>
-              <p className="font-semibold text-lg">{product.carbonFootprint.totalKgCO2} {t('kg CO2')}</p>
-              <p className="text-sm text-muted-foreground">{t(ratingDescriptions[product.carbonFootprint.rating])}</p>
+              <p className="font-semibold text-lg">{product.carbonFootprint!.totalKgCO2} {t('kg CO2')}</p>
+              <p className="text-sm text-muted-foreground">{t(RATING_DESCRIPTIONS[product.carbonFootprint!.rating])}</p>
             </div>
           </div>
           <Separator />
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold">{product.carbonFootprint.productionKgCO2} kg</p>
+              <p className="text-2xl font-bold">{product.carbonFootprint!.productionKgCO2} kg</p>
               <p className="text-sm text-muted-foreground">{t('Production')}</p>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold">{product.carbonFootprint.transportKgCO2} kg</p>
+              <p className="text-2xl font-bold">{product.carbonFootprint!.transportKgCO2} kg</p>
               <p className="text-sm text-muted-foreground">{t('Transport')}</p>
             </div>
           </div>
@@ -296,7 +311,6 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
   };
 
   const renderRecycling = () => {
-    if (!isFieldVisible('recyclability')) return null;
     return (
       <Card key="recycling" style={cardStyle}>
         <CardHeader>
@@ -343,7 +357,6 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
   };
 
   const renderCertifications = () => {
-    if (!isFieldVisible('certifications') || product.certifications.length === 0) return null;
     return (
       <Card key="certifications" style={cardStyle}>
         <CardHeader>
@@ -379,7 +392,6 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
   };
 
   const renderSupplyChain = () => {
-    if (!isFieldVisible('supplyChainSimple') || product.supplyChain.length === 0) return null;
     return (
       <Card key="supplyChain" style={cardStyle}>
         <CardHeader>
@@ -450,7 +462,7 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
                   <Badge variant="outline">{product.category}</Badge>
                 )}
                 {isFieldVisible('carbonRating') && product.carbonFootprint && (
-                  <Badge className={`${ratingColors[product.carbonFootprint.rating]} text-white`}>
+                  <Badge className={`${RATING_BG_COLORS[product.carbonFootprint.rating]} text-white`}>
                     {t('CO2 Rating')}: {product.carbonFootprint.rating}
                   </Badge>
                 )}
@@ -466,14 +478,14 @@ function ClassicConsumerView({ product, isFieldVisible, t, locale, design }: Vie
         </CardContent>
       </Card>
 
-      {sectionOrder.map(id => renderSection(id))}
+      {consumerSections.map(s => renderSection(s))}
     </div>
   );
 }
 
-function ClassicCustomsView({ product, isFieldVisible, t, locale, design }: ViewProps) {
-  const cardStyle = getCardStyle(design.cards);
-  const headingStyle = getHeadingStyle(design.typography, design.colors);
+function ClassicCustomsView({ data }: ViewProps) {
+  const { product, isFieldVisible, t, locale, styles } = data;
+  const { card: cardStyle, heading: headingStyle } = styles;
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -749,6 +761,111 @@ function ClassicCustomsView({ product, isFieldVisible, t, locale, design }: View
           </CardContent>
         </Card>
       )}
+
+      {/* Support & Service */}
+      {isFieldVisible('supportResources') && product.supportResources && (() => {
+        const sr = product.supportResources!;
+        const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+        if (!hasContent) return null;
+        return (
+          <Card style={cardStyle}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2" style={headingStyle}>
+                <HelpCircle className="h-5 w-5" />
+                {t('Support & Service')}
+              </CardTitle>
+              <CardDescription>{t('Customer support and product resources')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(sr.instructions || sr.assemblyGuide) && (
+                <div className="space-y-3">
+                  {sr.instructions && (
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
+                      <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                    </div>
+                  )}
+                  {sr.assemblyGuide && (
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
+                      <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><Video className="h-4 w-4" />{t('Videos')}</h4>
+                  <div className="space-y-2">
+                    {sr.videos.map((v, i) => (
+                      <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors text-sm font-medium text-primary">
+                        <Video className="h-4 w-4 flex-shrink-0" />{v.title}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" />{t('FAQ')}</h4>
+                  <div className="space-y-3">
+                    {sr.faq.map((item, i) => (
+                      <div key={i} className="p-4 border rounded-lg">
+                        <p className="font-medium text-sm">{item.question}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4" />{t('Warranty')}</h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {sr.warranty.durationMonths != null && (
+                      <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Warranty Duration')}</span><span className="font-medium">{t('{{months}} months', { months: sr.warranty.durationMonths })}</span></div>
+                    )}
+                    {sr.warranty.contactEmail && (
+                      <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Contact Email')}</span><span className="font-medium">{sr.warranty.contactEmail}</span></div>
+                    )}
+                    {sr.warranty.contactPhone && (
+                      <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Contact Phone')}</span><span className="font-medium">{sr.warranty.contactPhone}</span></div>
+                    )}
+                  </div>
+                  {sr.warranty.terms && (
+                    <div className="mt-3 p-3 border rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Warranty Terms')}</p><p className="text-sm">{sr.warranty.terms}</p></div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
+                  {sr.repairInfo.repairGuide && <p className="text-sm text-muted-foreground mb-2">{sr.repairInfo.repairGuide}</p>}
+                  {sr.repairInfo.repairabilityScore != null && (
+                    <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Repairability Score')}</span><span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span></div>
+                  )}
+                  {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                    <div className="mt-2"><p className="text-sm font-medium mb-1">{t('Service Centers')}</p>{sr.repairInfo.serviceCenters.map((c, i) => <p key={i} className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{c}</p>)}</div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2"><Package className="h-4 w-4" />{t('Spare Parts')}</h4>
+                  <div className="space-y-2">
+                    {sr.spareParts.map((part, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div><p className="font-medium text-sm">{part.name}</p>{part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}</div>
+                        <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }

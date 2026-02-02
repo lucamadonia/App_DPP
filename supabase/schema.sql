@@ -623,6 +623,10 @@ CREATE POLICY "Users can view visibility settings in their tenant"
     ON visibility_settings FOR SELECT
     USING (tenant_id = get_user_tenant_id());
 
+CREATE POLICY "Public can view visibility settings for DPP"
+    ON visibility_settings FOR SELECT
+    USING (true);
+
 CREATE POLICY "Editors can manage visibility settings"
     ON visibility_settings FOR ALL
     USING (

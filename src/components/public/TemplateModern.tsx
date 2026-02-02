@@ -1,6 +1,4 @@
-import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
-import { useLocale } from '@/hooks/use-locale';
 import {
   Package,
   Leaf,
@@ -22,10 +20,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
-import { resolveDesign, getCardStyle, getHeroStyle, getHeadingStyle, getSectionOrder, isSectionVisible } from '@/lib/dpp-design-utils';
+import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+import { RATING_GRADIENT_COLORS, RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { usePublicBranding } from '@/pages/public/PublicLayout';
 
 interface DPPTemplateProps {
@@ -35,68 +34,31 @@ interface DPPTemplateProps {
   dppDesign?: DPPDesignSettings | null;
 }
 
-const ratingColors: Record<string, string> = {
-  A: 'from-green-400 to-green-600',
-  B: 'from-lime-400 to-lime-600',
-  C: 'from-yellow-400 to-yellow-600',
-  D: 'from-orange-400 to-orange-600',
-  E: 'from-red-400 to-red-600',
-};
-
-const ratingBgColors: Record<string, string> = {
-  A: 'bg-green-500',
-  B: 'bg-lime-500',
-  C: 'bg-yellow-500',
-  D: 'bg-orange-500',
-  E: 'bg-red-500',
-};
-
-const ratingDescriptions: Record<string, string> = {
-  A: 'Excellent - well below average',
-  B: 'Good - below average',
-  C: 'Average',
-  D: 'Above average',
-  E: 'Well above average',
-};
-
 export function TemplateModern({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
-  const { t } = useTranslation('dpp');
-  const locale = useLocale();
   const { branding } = usePublicBranding();
-  const design = resolveDesign(dppDesign);
   const primaryColor = branding?.primaryColor || '#3B82F6';
-
-  const isFieldVisible = (field: string) => {
-    if (!visibilityV2) return true;
-    return isFieldVisibleForView(visibilityV2, field, view);
-  };
+  const data = useDPPTemplateData(product, visibilityV2, view, dppDesign, primaryColor);
 
   if (view === 'customs') {
-    return <ModernCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} primaryColor={primaryColor} />;
+    return <ModernCustomsView data={data} primaryColor={primaryColor} />;
   }
 
-  return <ModernConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} primaryColor={primaryColor} />;
+  return <ModernConsumerView data={data} primaryColor={primaryColor} />;
 }
 
 interface ViewProps {
-  product: Product;
-  isFieldVisible: (field: string) => boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
-  locale: string;
-  design: ReturnType<typeof resolveDesign>;
+  data: ReturnType<typeof useDPPTemplateData>;
   primaryColor: string;
 }
 
-function ModernConsumerView({ product, isFieldVisible, t, locale, design, primaryColor }: ViewProps) {
-  const cardStyle = getCardStyle(design.cards);
-  const heroResult = design.hero.visible ? getHeroStyle(design.hero, primaryColor, design.colors.secondaryColor) : null;
-  const headingStyle = getHeadingStyle(design.typography, design.colors);
-  const sectionOrder = getSectionOrder(design);
+function ModernConsumerView({ data, primaryColor }: ViewProps) {
+  const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
+  const { card: cardStyle, heading: headingStyle, hero: heroResult } = styles;
 
-  const renderSection = (sectionId: string) => {
-    if (!isSectionVisible(design, sectionId as import('@/types/database').DPPSectionId)) return null;
-    switch (sectionId) {
+  const renderSection = (section: RenderableSection) => {
+    switch (section.id) {
       case 'materials': return renderMaterials();
+      case 'packaging': return renderPackaging();
       case 'carbonFootprint': return renderCarbonFootprint();
       case 'recycling': return renderRecycling();
       case 'certifications': return renderCertifications();
@@ -107,10 +69,7 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
   };
 
   const renderSupport = () => {
-    if (!isFieldVisible('supportResources') || !product.supportResources) return null;
-    const sr = product.supportResources;
-    const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
-    if (!hasContent) return null;
+    const sr = product.supportResources!;
     return (
       <div key="support" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
@@ -211,7 +170,7 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
                       {part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}
                     </div>
                     <div className="text-right">
-                      {part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}
+                      {part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '\u20AC'}</p>}
                       <p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p>
                     </div>
                   </div>
@@ -225,7 +184,6 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
   };
 
   const renderMaterials = () => {
-    if (!isFieldVisible('materials') || product.materials.length === 0) return null;
     return (
       <div key="materials" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
@@ -238,7 +196,7 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
           </div>
         </div>
         <div className="space-y-5">
-          {product.materials.map((material, index) => (
+          {getProductMaterials(product).map((material, index) => (
             <div key={index} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -271,8 +229,71 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
     );
   };
 
+  const renderPackaging = () => {
+    const packagingMats = getPackagingMaterials(product);
+    return (
+      <div key="packaging" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Package className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 style={headingStyle} className="text-xl">{t('Packaging Materials')}</h2>
+            <p className="text-sm text-muted-foreground">{t('Packaging materials and recycling information')}</p>
+          </div>
+        </div>
+        <div className="space-y-5">
+          {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && packagingMats.map((material, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{material.name}</span>
+                  {material.recyclable && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-950/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-200 dark:ring-green-800">
+                      <Recycle className="h-3 w-3" />
+                      {t('Recyclable')}
+                    </span>
+                  )}
+                </div>
+                <span className="font-bold" style={{ color: primaryColor }}>{material.percentage}%</span>
+              </div>
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${material.percentage}%`, background: `linear-gradient(to right, ${primaryColor}b3, ${primaryColor})` }}
+                />
+              </div>
+              {isFieldVisible('materialOrigins') && material.origin && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {t('Origin')}: {material.origin}
+                </p>
+              )}
+            </div>
+          ))}
+          {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
+            <div className="mt-4 p-4 bg-muted/50 rounded-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{t('Packaging recyclable')}</span>
+                <span className="font-bold" style={{ color: primaryColor }}>{product.recyclability.packagingRecyclablePercentage}%</span>
+              </div>
+            </div>
+          )}
+          {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
+            <div className="p-4 bg-muted/50 rounded-xl">
+              <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
+                <Info className="h-4 w-4" />
+                {t('Packaging Recycling')}
+              </h4>
+              <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderCarbonFootprint = () => {
-    if (!isFieldVisible('carbonFootprint') || !product.carbonFootprint) return null;
     return (
       <div key="carbonFootprint" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
@@ -286,22 +307,22 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
         </div>
         <div className="flex flex-col items-center gap-6">
           <div className="relative">
-            <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${ratingColors[product.carbonFootprint.rating]} flex items-center justify-center shadow-lg`}>
-              <span className="text-5xl font-bold text-white">{product.carbonFootprint.rating}</span>
+            <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${RATING_GRADIENT_COLORS[product.carbonFootprint!.rating]} flex items-center justify-center shadow-lg`}>
+              <span className="text-5xl font-bold text-white">{product.carbonFootprint!.rating}</span>
             </div>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold">{product.carbonFootprint.totalKgCO2} {t('kg CO2')}</p>
-            <p className="text-sm text-muted-foreground">{t(ratingDescriptions[product.carbonFootprint.rating])}</p>
+            <p className="text-2xl font-bold">{product.carbonFootprint!.totalKgCO2} {t('kg CO2')}</p>
+            <p className="text-sm text-muted-foreground">{t(RATING_DESCRIPTIONS[product.carbonFootprint!.rating])}</p>
           </div>
           <Separator />
           <div className="grid grid-cols-2 gap-4 w-full">
             <div className="text-center p-4 bg-muted/50 rounded-xl">
-              <p className="text-2xl font-bold">{product.carbonFootprint.productionKgCO2} kg</p>
+              <p className="text-2xl font-bold">{product.carbonFootprint!.productionKgCO2} kg</p>
               <p className="text-sm text-muted-foreground">{t('Production')}</p>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-xl">
-              <p className="text-2xl font-bold">{product.carbonFootprint.transportKgCO2} kg</p>
+              <p className="text-2xl font-bold">{product.carbonFootprint!.transportKgCO2} kg</p>
               <p className="text-sm text-muted-foreground">{t('Transport')}</p>
             </div>
           </div>
@@ -311,7 +332,6 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
   };
 
   const renderRecycling = () => {
-    if (!isFieldVisible('recyclability')) return null;
     return (
       <div key="recycling" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
@@ -359,7 +379,6 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
   };
 
   const renderCertifications = () => {
-    if (!isFieldVisible('certifications') || product.certifications.length === 0) return null;
     return (
       <div key="certifications" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
@@ -393,7 +412,6 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
   };
 
   const renderSupplyChain = () => {
-    if (!isFieldVisible('supplyChainSimple') || product.supplyChain.length === 0) return null;
     return (
       <div key="supplyChain" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
@@ -428,7 +446,7 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
                   {isFieldVisible('supplyChainEmissions') && entry.emissionsKg != null && (
                     <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
                       <Leaf className="h-3 w-3" />
-                      {entry.emissionsKg} kg CO₂
+                      {entry.emissionsKg} kg CO2
                     </p>
                   )}
                 </div>
@@ -470,7 +488,7 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
                   </span>
                 )}
                 {isFieldVisible('carbonRating') && product.carbonFootprint && (
-                  <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium text-white ${ratingBgColors[product.carbonFootprint.rating]}`}>
+                  <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium text-white ${RATING_BG_COLORS[product.carbonFootprint.rating]}`}>
                     CO2: {product.carbonFootprint.rating}
                   </span>
                 )}
@@ -491,16 +509,15 @@ function ModernConsumerView({ product, isFieldVisible, t, locale, design, primar
       )}
 
       <div className="container mx-auto px-4 space-y-8">
-        {sectionOrder.map(id => renderSection(id))}
+        {consumerSections.map(s => renderSection(s))}
       </div>
     </div>
   );
 }
 
-function ModernCustomsView({ product, isFieldVisible, t, locale, design, primaryColor }: ViewProps) {
-  const cardStyle = getCardStyle(design.cards);
-  const heroResult = design.hero.visible ? getHeroStyle(design.hero, primaryColor, design.colors.secondaryColor) : null;
-  const headingStyle = getHeadingStyle(design.typography, design.colors);
+function ModernCustomsView({ data, primaryColor }: ViewProps) {
+  const { product, isFieldVisible, t, locale, styles } = data;
+  const { card: cardStyle, heading: headingStyle, hero: heroResult } = styles;
 
   return (
     <div className="space-y-8 pb-8">
@@ -639,7 +656,7 @@ function ModernCustomsView({ product, isFieldVisible, t, locale, design, primary
         </div>
 
         {/* Materials Table */}
-        {isFieldVisible('materials') && product.materials.length > 0 && (
+        {isFieldVisible('materials') && getProductMaterials(product).length > 0 && (
           <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -658,7 +675,7 @@ function ModernCustomsView({ product, isFieldVisible, t, locale, design, primary
                   </tr>
                 </thead>
                 <tbody>
-                  {product.materials.map((material, index) => (
+                  {getProductMaterials(product).map((material, index) => (
                     <tr key={index} className="border-b last:border-b-0">
                       <td className="py-3 font-medium">{material.name}</td>
                       <td className="py-3 text-right font-mono">{material.percentage}%</td>
@@ -780,6 +797,124 @@ function ModernCustomsView({ product, isFieldVisible, t, locale, design, primary
             </div>
           </div>
         )}
+
+        {/* Support & Service */}
+        {isFieldVisible('supportResources') && product.supportResources && (() => {
+          const sr = product.supportResources!;
+          const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
+          if (!hasContent) return null;
+          return (
+            <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <HelpCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 style={headingStyle} className="text-xl">{t('Support & Service')}</h2>
+                  <p className="text-sm text-muted-foreground">{t('Customer support and product resources')}</p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                {(sr.instructions || sr.assemblyGuide) && (
+                  <div className="space-y-3">
+                    {sr.instructions && (
+                      <div className="p-4 bg-muted/50 rounded-xl">
+                        <h4 className="font-medium mb-2 flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
+                        <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                      </div>
+                    )}
+                    {sr.assemblyGuide && (
+                      <div className="p-4 bg-muted/50 rounded-xl">
+                        <h4 className="font-medium mb-2 flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
+                        <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Video className="h-4 w-4" />{t('Videos')}</h4>
+                    <div className="space-y-2">
+                      {sr.videos.map((v, i) => (
+                        <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl ring-1 ring-black/5 hover:ring-primary/30 transition-all text-sm font-medium" style={{ color: primaryColor }}>
+                          <Video className="h-4 w-4 flex-shrink-0" />
+                          {v.title}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><MessageSquare className="h-4 w-4" />{t('FAQ')}</h4>
+                    <div className="space-y-3">
+                      {sr.faq.map((item, i) => (
+                        <div key={i} className="p-4 bg-muted/30 rounded-xl">
+                          <p className="font-medium text-sm">{item.question}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isFieldVisible('supportWarranty') && sr.warranty && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4" />{t('Warranty')}</h4>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {sr.warranty.durationMonths != null && (
+                        <div className="p-3 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground">{t('Warranty Duration')}</p><p className="font-medium text-sm">{t('{{months}} months', { months: sr.warranty.durationMonths })}</p></div>
+                      )}
+                      {sr.warranty.contactEmail && (
+                        <div className="p-3 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground">{t('Contact Email')}</p><p className="font-medium text-sm">{sr.warranty.contactEmail}</p></div>
+                      )}
+                      {sr.warranty.contactPhone && (
+                        <div className="p-3 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground">{t('Contact Phone')}</p><p className="font-medium text-sm">{sr.warranty.contactPhone}</p></div>
+                      )}
+                      {sr.warranty.terms && (
+                        <div className="p-3 bg-muted/50 rounded-xl sm:col-span-2"><p className="text-xs text-muted-foreground">{t('Warranty Terms')}</p><p className="text-sm mt-1">{sr.warranty.terms}</p></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {isFieldVisible('supportRepair') && sr.repairInfo && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
+                    <div className="space-y-2">
+                      {sr.repairInfo.repairGuide && (
+                        <div className="p-4 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground mb-1">{t('Repair Guide')}</p><p className="text-sm">{sr.repairInfo.repairGuide}</p></div>
+                      )}
+                      {sr.repairInfo.repairabilityScore != null && (
+                        <div className="p-3 bg-muted/50 rounded-xl flex items-center justify-between"><span className="text-sm">{t('Repairability Score')}</span><span className="font-bold text-lg" style={{ color: primaryColor }}>{sr.repairInfo.repairabilityScore}/10</span></div>
+                      )}
+                      {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                        <div className="p-4 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground mb-2">{t('Service Centers')}</p>{sr.repairInfo.serviceCenters.map((c, i) => <p key={i} className="text-sm flex items-center gap-1"><MapPin className="h-3 w-3" />{c}</p>)}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Package className="h-4 w-4" />{t('Spare Parts')}</h4>
+                    <div className="space-y-2">
+                      {sr.spareParts.map((part, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl ring-1 ring-black/5">
+                          <div>
+                            <p className="font-medium text-sm">{part.name}</p>
+                            {part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}
+                          </div>
+                          <div className="text-right">
+                            {part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '\u20AC'}</p>}
+                            <p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

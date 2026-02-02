@@ -40,9 +40,10 @@ export const DEFAULT_DPP_DESIGN: Required<DPPDesignSettings> = {
     backgroundOpacity: 100,
   },
   sections: {
-    order: ['materials', 'carbonFootprint', 'recycling', 'certifications', 'supplyChain', 'support'],
+    order: ['materials', 'packaging', 'carbonFootprint', 'recycling', 'certifications', 'supplyChain', 'support'],
     configs: {
       materials: { visible: true, defaultCollapsed: false },
+      packaging: { visible: true, defaultCollapsed: false },
       carbonFootprint: { visible: true, defaultCollapsed: false },
       recycling: { visible: true, defaultCollapsed: false },
       certifications: { visible: true, defaultCollapsed: false },

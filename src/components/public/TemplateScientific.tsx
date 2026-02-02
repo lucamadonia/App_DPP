@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
-import { useLocale } from '@/hooks/use-locale';
-import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
+import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+import { RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 
 interface DPPTemplateProps {
   product: Product;
@@ -12,22 +12,498 @@ interface DPPTemplateProps {
   dppDesign?: DPPDesignSettings | null;
 }
 
-const ratingDescriptions: Record<string, string> = {
-  A: 'Excellent - well below average',
-  B: 'Good - below average',
-  C: 'Average',
-  D: 'Above average',
-  E: 'Well above average',
-};
+export function TemplateScientific({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+  const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
-export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateProps) {
-  const { t } = useTranslation('dpp');
-  const locale = useLocale();
+  if (view === 'customs') {
+    return <ScientificCustomsView data={data} />;
+  }
 
-  const isFieldVisible = (field: string) => {
-    if (!visibilityV2) return true;
-    return isFieldVisibleForView(visibilityV2, field, view);
+  return <ScientificConsumerView data={data} />;
+}
+
+interface ViewProps {
+  data: ReturnType<typeof useDPPTemplateData>;
+}
+
+function ScientificConsumerView({ data }: ViewProps) {
+  const { product, isFieldVisible, consumerSections, t, locale } = data;
+
+  // Description is rendered outside the consumerSections loop and gets section number 1 if visible
+  const hasDescription = isFieldVisible('description') && product.description;
+  // Track section numbering: description takes slot 1 if present, then consumerSections continue
+  let descriptionSectionNumber = 0;
+  if (hasDescription) {
+    descriptionSectionNumber = 1;
+  }
+
+  const renderSection = (section: RenderableSection, sectionNumber: number) => {
+    switch (section.id) {
+      case 'materials': return renderMaterials(sectionNumber);
+      case 'packaging': return renderPackaging(sectionNumber);
+      case 'carbonFootprint': return renderCarbonFootprint(sectionNumber);
+      case 'recycling': return renderRecycling(sectionNumber);
+      case 'certifications': return renderCertifications(sectionNumber);
+      case 'supplyChain': return renderSupplyChain(sectionNumber);
+      case 'support': return renderSupport(sectionNumber);
+      default: return null;
+    }
   };
+
+  const renderMaterials = (num: number) => (
+    <section key="materials">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">
+        {num}. {t('Material Composition')}
+      </h2>
+      <p className="text-sm text-gray-600 mb-3">{t('Materials used and their origins')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Material')}</th>
+              <th className="py-2 px-3 text-right font-semibold text-gray-700 border-b border-gray-200">{t('Share')} (%)</th>
+              <th className="py-2 px-3 text-center font-semibold text-gray-700 border-b border-gray-200">{t('Recyclable')}</th>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Origin')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {getProductMaterials(product).map((material, index) => (
+              <tr key={index} className="border-b border-gray-100">
+                <td className="py-2 px-3 font-medium">{material.name}</td>
+                <td className="py-2 px-3 text-right font-mono">{material.percentage}</td>
+                <td className="py-2 px-3 text-center">{material.recyclable ? t('Yes') : t('No')}</td>
+                <td className="py-2 px-3 text-gray-600">{material.origin || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
+  const renderPackaging = (num: number) => {
+    const packagingMats = getPackagingMaterials(product);
+    return (
+      <section key="packaging">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">
+          {num}. {t('Packaging Materials')}
+        </h2>
+        {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && (
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b-2">
+                <th className="py-2 text-left font-semibold">{t('Material')}</th>
+                <th className="py-2 text-right font-semibold">{t('Share')}</th>
+                <th className="py-2 text-center font-semibold">{t('Recyclable')}</th>
+                {isFieldVisible('materialOrigins') && <th className="py-2 text-left font-semibold">{t('Origin')}</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {packagingMats.map((m, i) => (
+                <tr key={i} className="border-b">
+                  <td className="py-2">{m.name}</td>
+                  <td className="py-2 text-right font-mono">{m.percentage}%</td>
+                  <td className="py-2 text-center">{m.recyclable ? '\u2713' : '\u2717'}</td>
+                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '\u2014'}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
+          <p className="mt-3 text-sm"><strong>{t('Packaging recyclable')}:</strong> {product.recyclability.packagingRecyclablePercentage}%</p>
+        )}
+        {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
+          <p className="mt-2 text-sm text-muted-foreground"><em>{product.recyclability.packagingInstructions}</em></p>
+        )}
+      </section>
+    );
+  };
+
+  const renderCarbonFootprint = (num: number) => (
+    <section key="carbonFootprint">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">
+        {num}. {t('Carbon Footprint')}
+      </h2>
+      <p className="text-sm text-gray-600 mb-3">{t('Climate impact across the product lifecycle')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Metric')}</th>
+              <th className="py-2 px-3 text-right font-semibold text-gray-700 border-b border-gray-200">{t('Value')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 px-3">{t('Total')} CO2</td>
+              <td className="py-2 px-3 text-right font-mono">{product.carbonFootprint!.totalKgCO2} kg</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 px-3">{t('Production')} CO2</td>
+              <td className="py-2 px-3 text-right font-mono">{product.carbonFootprint!.productionKgCO2} kg</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 px-3">{t('Transport')} CO2</td>
+              <td className="py-2 px-3 text-right font-mono">{product.carbonFootprint!.transportKgCO2} kg</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 px-3">{t('CO2 Rating')}</td>
+              <td className="py-2 px-3 text-right font-bold">{product.carbonFootprint!.rating} &mdash; {t(RATING_DESCRIPTIONS[product.carbonFootprint!.rating])}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
+  const renderRecycling = (num: number) => (
+    <section key="recycling">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">
+        {num}. {t('Recycling & Disposal')}
+      </h2>
+      <p className="text-sm text-gray-600 mb-3">{t('Guide for environmentally friendly disposal')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200">
+          <tbody>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Recyclable')}</td>
+              <td className="py-2 px-3 font-mono">{product.recyclability.recyclablePercentage}%</td>
+            </tr>
+            {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
+              <tr className="border-b border-gray-100">
+                <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Recycling Instructions')}</td>
+                <td className="py-2 px-3 text-gray-700">{product.recyclability.instructions}</td>
+              </tr>
+            )}
+            {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
+              <tr className="border-b border-gray-100">
+                <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Disposal Methods')}</td>
+                <td className="py-2 px-3 text-gray-700">{product.recyclability.disposalMethods.join(', ')}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
+  const renderCertifications = (num: number) => (
+    <section key="certifications">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">
+        {num}. {t('Certifications')}
+      </h2>
+      <p className="text-sm text-gray-600 mb-3">{t('Verified quality and sustainability standards')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Certifications')}</th>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Issued By')}</th>
+              <th className="py-2 px-3 text-right font-semibold text-gray-700 border-b border-gray-200">{t('Valid until')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {product.certifications.map((cert, index) => (
+              <tr key={index} className="border-b border-gray-100">
+                <td className="py-2 px-3 text-gray-500">{index + 1}</td>
+                <td className="py-2 px-3 font-medium">{cert.name}</td>
+                <td className="py-2 px-3 text-gray-600">{cert.issuedBy}</td>
+                <td className="py-2 px-3 text-right">{formatDate(cert.validUntil, locale)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
+  const renderSupplyChain = (num: number) => (
+    <section key="supplyChain">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">
+        {num}. {t('Supply Chain')}
+      </h2>
+      <p className="text-sm text-gray-600 mb-3">{t('The journey of your product from raw material to you')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Step')}</th>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Description')}</th>
+              <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Location')}</th>
+              {isFieldVisible('supplyChainEmissions') && (
+                <th className="py-2 px-3 text-right font-semibold text-gray-700 border-b border-gray-200">{t('Emissions')}</th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {product.supplyChain.map((entry, index) => (
+              <tr key={index} className="border-b border-gray-100">
+                <td className="py-2 px-3 font-mono">{entry.step}</td>
+                <td className="py-2 px-3">{entry.description}</td>
+                <td className="py-2 px-3 text-gray-600">{entry.location}, {entry.country}</td>
+                {isFieldVisible('supplyChainEmissions') && (
+                  <td className="py-2 px-3 text-right font-mono">{entry.emissionsKg != null ? `${entry.emissionsKg} kg` : '-'}</td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
+  const renderSupport = (num: number) => {
+    const sr = product.supportResources!;
+    return (
+      <section key="support">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">
+          {num}. {t('Support & Service')}
+        </h2>
+        <p className="text-sm text-gray-600 mb-3">{t('Customer support and product resources')}</p>
+        <div className="space-y-6">
+          {(sr.instructions || sr.assemblyGuide) && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Category')}</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Description')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sr.instructions && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Usage Instructions')}</td>
+                      <td className="py-2 px-3 text-gray-700">{sr.instructions}</td>
+                    </tr>
+                  )}
+                  {sr.assemblyGuide && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Assembly Guide')}</td>
+                      <td className="py-2 px-3 text-gray-700">{sr.assemblyGuide}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Videos')}</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">URL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sr.videos.map((v, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2 px-3 text-gray-500">{i + 1}</td>
+                      <td className="py-2 px-3 font-medium">{v.title}</td>
+                      <td className="py-2 px-3"><a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{v.url}</a></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('FAQ')}</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Value')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sr.faq.map((item, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2 px-3 text-gray-500">{i + 1}</td>
+                      <td className="py-2 px-3 font-medium">{item.question}</td>
+                      <td className="py-2 px-3 text-gray-600">{item.answer}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isFieldVisible('supportWarranty') && sr.warranty && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-200">
+                <tbody>
+                  {sr.warranty.durationMonths != null && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Warranty Duration')}</td>
+                      <td className="py-2 px-3 font-mono">{t('{{months}} months', { months: sr.warranty.durationMonths })}</td>
+                    </tr>
+                  )}
+                  {sr.warranty.contactEmail && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Contact Email')}</td>
+                      <td className="py-2 px-3">{sr.warranty.contactEmail}</td>
+                    </tr>
+                  )}
+                  {sr.warranty.contactPhone && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Contact Phone')}</td>
+                      <td className="py-2 px-3">{sr.warranty.contactPhone}</td>
+                    </tr>
+                  )}
+                  {sr.warranty.terms && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Warranty Terms')}</td>
+                      <td className="py-2 px-3 text-gray-700">{sr.warranty.terms}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isFieldVisible('supportRepair') && sr.repairInfo && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-200">
+                <tbody>
+                  {sr.repairInfo.repairGuide && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Repair Guide')}</td>
+                      <td className="py-2 px-3 text-gray-700">{sr.repairInfo.repairGuide}</td>
+                    </tr>
+                  )}
+                  {sr.repairInfo.repairabilityScore != null && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Repairability Score')}</td>
+                      <td className="py-2 px-3 font-bold">{sr.repairInfo.repairabilityScore}/10</td>
+                    </tr>
+                  )}
+                  {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Service Centers')}</td>
+                      <td className="py-2 px-3 text-gray-700">{sr.repairInfo.serviceCenters.join('; ')}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">#</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Spare Parts')}</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Part Number')}</th>
+                    <th className="py-2 px-3 text-right font-semibold text-gray-700 border-b border-gray-200">{t('Value')}</th>
+                    <th className="py-2 px-3 text-center font-semibold text-gray-700 border-b border-gray-200">{t('Available')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sr.spareParts.map((part, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2 px-3 text-gray-500">{i + 1}</td>
+                      <td className="py-2 px-3 font-medium">{part.name}</td>
+                      <td className="py-2 px-3 font-mono">{part.partNumber || '-'}</td>
+                      <td className="py-2 px-3 text-right">{part.price != null ? `${part.price} ${part.currency || '\u20AC'}` : '-'}</td>
+                      <td className="py-2 px-3 text-center">{part.available !== false ? t('Yes') : t('No')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  // Compute the total section count for the references footer
+  const totalSections = (hasDescription ? 1 : 0) + consumerSections.length;
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      {/* Title Block */}
+      <header className="border-b-2 border-gray-300 pb-6 space-y-4">
+        <div className="flex flex-col md:flex-row gap-6">
+          {isFieldVisible('image') && product.imageUrl && (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="w-full md:w-48 h-48 object-cover rounded border border-gray-300"
+            />
+          )}
+          <div className="flex-1">
+            {isFieldVisible('name') && (
+              <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+            )}
+            {isFieldVisible('manufacturer') && (
+              <p className="text-gray-600 mt-1">{product.manufacturer}</p>
+            )}
+            {isFieldVisible('category') && (
+              <p className="text-sm text-gray-500 mt-1">{product.category}</p>
+            )}
+
+            {/* Metadata table */}
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {isFieldVisible('gtin') && (
+                <>
+                  <span className="text-gray-500">GTIN:</span>
+                  <span className="font-mono">{product.gtin}</span>
+                </>
+              )}
+              {isFieldVisible('serialNumber') && (
+                <>
+                  <span className="text-gray-500">{t('Serial Number')}:</span>
+                  <span className="font-mono">{product.serialNumber}</span>
+                </>
+              )}
+              <span className="text-gray-500">{t('Production Date')}:</span>
+              <span>{formatDate(product.productionDate, locale)}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Abstract / Description */}
+      {hasDescription && (
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-3">
+            {descriptionSectionNumber}. {t('Description')}
+          </h2>
+          <p className="text-gray-700 leading-relaxed max-w-none">{product.description}</p>
+        </section>
+      )}
+
+      {/* Consumer sections (dynamic order from DPP Design) */}
+      {consumerSections.map((s, index) => {
+        const sectionNumber = (hasDescription ? 1 : 0) + index + 1;
+        return renderSection(s, sectionNumber);
+      })}
+
+      {/* References / Footer */}
+      <footer className="border-t-2 border-gray-300 pt-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-3">
+          {totalSections + 1}. {t('References')}
+        </h2>
+        <div className="text-sm text-gray-600 space-y-1">
+          <p>[1] {t('Digital Product Passport')} &mdash; GTIN: {product.gtin}</p>
+          <p>[2] {t('Production Date')}: {formatDate(product.productionDate, locale)}</p>
+          {product.manufacturer && (
+            <p>[3] {t('Manufacturer Data')}: {product.manufacturer}</p>
+          )}
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function ScientificCustomsView({ data }: ViewProps) {
+  const { product, isFieldVisible, t, locale } = data;
 
   let sectionNumber = 0;
   const nextSection = () => {
@@ -72,13 +548,13 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
                   <span className="font-mono">{product.serialNumber}</span>
                 </>
               )}
-              {view === 'customs' && isFieldVisible('batchNumber') && product.batchNumber && (
+              {isFieldVisible('batchNumber') && product.batchNumber && (
                 <>
                   <span className="text-gray-500">{t('Batch Number')}:</span>
                   <span className="font-mono">{product.batchNumber}</span>
                 </>
               )}
-              {view === 'customs' && isFieldVisible('hsCode') && product.hsCode && (
+              {isFieldVisible('hsCode') && product.hsCode && (
                 <>
                   <span className="text-gray-500">{t('HS Code')}:</span>
                   <span className="font-mono">{product.hsCode}</span>
@@ -102,77 +578,75 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
       )}
 
       {/* Customs Data */}
-      {view === 'customs' && (
-        <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {t('Customs Data')}
-          </h2>
-          <div className="grid gap-8 md:grid-cols-2">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                {t('Product Data')}
-              </h3>
-              <table className="w-full text-sm">
-                <tbody>
-                  {isFieldVisible('countryOfOrigin') && product.countryOfOrigin && (
-                    <tr className="border-b border-gray-100">
-                      <td className="py-1.5 text-gray-500">{t('Country of Origin')}</td>
-                      <td className="py-1.5 text-right">{product.countryOfOrigin}</td>
-                    </tr>
-                  )}
-                  {isFieldVisible('netWeight') && product.netWeight && (
-                    <tr className="border-b border-gray-100">
-                      <td className="py-1.5 text-gray-500">{t('Net Weight')}</td>
-                      <td className="py-1.5 text-right">{product.netWeight} g</td>
-                    </tr>
-                  )}
-                  {isFieldVisible('grossWeight') && product.grossWeight && (
-                    <tr className="border-b border-gray-100">
-                      <td className="py-1.5 text-gray-500">{t('Gross Weight')}</td>
-                      <td className="py-1.5 text-right">{product.grossWeight} g</td>
-                    </tr>
-                  )}
+      <section>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">
+          {nextSection()}. {t('Customs Data')}
+        </h2>
+        <div className="grid gap-8 md:grid-cols-2">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
+              {t('Product Data')}
+            </h3>
+            <table className="w-full text-sm">
+              <tbody>
+                {isFieldVisible('countryOfOrigin') && product.countryOfOrigin && (
                   <tr className="border-b border-gray-100">
-                    <td className="py-1.5 text-gray-500">{t('Production Date')}</td>
-                    <td className="py-1.5 text-right">{formatDate(product.productionDate, locale)}</td>
+                    <td className="py-1.5 text-gray-500">{t('Country of Origin')}</td>
+                    <td className="py-1.5 text-right">{product.countryOfOrigin}</td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                {t('Manufacturer Data')}
-              </h3>
-              <table className="w-full text-sm">
-                <tbody>
+                )}
+                {isFieldVisible('netWeight') && product.netWeight && (
                   <tr className="border-b border-gray-100">
-                    <td className="py-1.5 text-gray-500">{t('Company')}</td>
-                    <td className="py-1.5 text-right">{product.manufacturer}</td>
+                    <td className="py-1.5 text-gray-500">{t('Net Weight')}</td>
+                    <td className="py-1.5 text-right">{product.netWeight} g</td>
                   </tr>
-                  {isFieldVisible('manufacturerAddress') && product.manufacturerAddress && (
-                    <tr className="border-b border-gray-100">
-                      <td className="py-1.5 text-gray-500">{t('Address')}</td>
-                      <td className="py-1.5 text-right text-xs">{product.manufacturerAddress}</td>
-                    </tr>
-                  )}
-                  {isFieldVisible('manufacturerEORI') && product.manufacturerEORI && (
-                    <tr className="border-b border-gray-100">
-                      <td className="py-1.5 text-gray-500">{t('EORI Number')}</td>
-                      <td className="py-1.5 text-right font-mono">{product.manufacturerEORI}</td>
-                    </tr>
-                  )}
-                  {isFieldVisible('manufacturerVAT') && product.manufacturerVAT && (
-                    <tr className="border-b border-gray-100">
-                      <td className="py-1.5 text-gray-500">{t('VAT ID')}</td>
-                      <td className="py-1.5 text-right font-mono">{product.manufacturerVAT}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                )}
+                {isFieldVisible('grossWeight') && product.grossWeight && (
+                  <tr className="border-b border-gray-100">
+                    <td className="py-1.5 text-gray-500">{t('Gross Weight')}</td>
+                    <td className="py-1.5 text-right">{product.grossWeight} g</td>
+                  </tr>
+                )}
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-500">{t('Production Date')}</td>
+                  <td className="py-1.5 text-right">{formatDate(product.productionDate, locale)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </section>
-      )}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
+              {t('Manufacturer Data')}
+            </h3>
+            <table className="w-full text-sm">
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-500">{t('Company')}</td>
+                  <td className="py-1.5 text-right">{product.manufacturer}</td>
+                </tr>
+                {isFieldVisible('manufacturerAddress') && product.manufacturerAddress && (
+                  <tr className="border-b border-gray-100">
+                    <td className="py-1.5 text-gray-500">{t('Address')}</td>
+                    <td className="py-1.5 text-right text-xs">{product.manufacturerAddress}</td>
+                  </tr>
+                )}
+                {isFieldVisible('manufacturerEORI') && product.manufacturerEORI && (
+                  <tr className="border-b border-gray-100">
+                    <td className="py-1.5 text-gray-500">{t('EORI Number')}</td>
+                    <td className="py-1.5 text-right font-mono">{product.manufacturerEORI}</td>
+                  </tr>
+                )}
+                {isFieldVisible('manufacturerVAT') && product.manufacturerVAT && (
+                  <tr className="border-b border-gray-100">
+                    <td className="py-1.5 text-gray-500">{t('VAT ID')}</td>
+                    <td className="py-1.5 text-right font-mono">{product.manufacturerVAT}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       {/* Materials */}
       {isFieldVisible('materials') && product.materials.length > 0 && (
@@ -236,7 +710,7 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="py-2 px-3">{t('CO2 Rating')}</td>
-                  <td className="py-2 px-3 text-right font-bold">{product.carbonFootprint.rating} &mdash; {t(ratingDescriptions[product.carbonFootprint.rating])}</td>
+                  <td className="py-2 px-3 text-right font-bold">{product.carbonFootprint.rating} &mdash; {t(RATING_DESCRIPTIONS[product.carbonFootprint.rating])}</td>
                 </tr>
               </tbody>
             </table>
@@ -309,10 +783,10 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
       )}
 
       {/* Supply Chain */}
-      {isFieldVisible(view === 'customs' ? 'supplyChainFull' : 'supplyChainSimple') && product.supplyChain.length > 0 && (
+      {isFieldVisible('supplyChainFull') && product.supplyChain.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {view === 'customs' ? t('Full Supply Chain') : t('Supply Chain')}
+            {nextSection()}. {t('Full Supply Chain')}
           </h2>
           <p className="text-sm text-gray-600 mb-3">{t('The journey of your product from raw material to you')}</p>
           <div className="overflow-x-auto">
@@ -322,10 +796,8 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
                   <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Step')}</th>
                   <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Description')}</th>
                   <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Location')}</th>
-                  {view === 'customs' && (
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Date')}</th>
-                  )}
-                  {view === 'customs' && isFieldVisible('supplyChainTransport') && (
+                  <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Date')}</th>
+                  {isFieldVisible('supplyChainTransport') && (
                     <th className="py-2 px-3 text-left font-semibold text-gray-700 border-b border-gray-200">{t('Transport Mode')}</th>
                   )}
                   {isFieldVisible('supplyChainEmissions') && (
@@ -339,10 +811,8 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
                     <td className="py-2 px-3 font-mono">{entry.step}</td>
                     <td className="py-2 px-3">{entry.description}</td>
                     <td className="py-2 px-3 text-gray-600">{entry.location}, {entry.country}</td>
-                    {view === 'customs' && (
-                      <td className="py-2 px-3">{formatDate(entry.date, locale)}</td>
-                    )}
-                    {view === 'customs' && isFieldVisible('supplyChainTransport') && (
+                    <td className="py-2 px-3">{formatDate(entry.date, locale)}</td>
+                    {isFieldVisible('supplyChainTransport') && (
                       <td className="py-2 px-3">{entry.transportMode ? t(entry.transportMode.charAt(0).toUpperCase() + entry.transportMode.slice(1)) : '-'}</td>
                     )}
                     {isFieldVisible('supplyChainEmissions') && (
@@ -514,7 +984,7 @@ export function TemplateScientific({ product, visibilityV2, view }: DPPTemplateP
                           <td className="py-2 px-3 text-gray-500">{i + 1}</td>
                           <td className="py-2 px-3 font-medium">{part.name}</td>
                           <td className="py-2 px-3 font-mono">{part.partNumber || '-'}</td>
-                          <td className="py-2 px-3 text-right">{part.price != null ? `${part.price} ${part.currency || '€'}` : '-'}</td>
+                          <td className="py-2 px-3 text-right">{part.price != null ? `${part.price} ${part.currency || '\u20AC'}` : '-'}</td>
                           <td className="py-2 px-3 text-center">{part.available !== false ? t('Yes') : t('No')}</td>
                         </tr>
                       ))}

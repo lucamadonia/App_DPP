@@ -273,5 +273,11 @@
   "Edit": "Edit",
   "View": "View",
   "Delete": "Delete",
-  "Created": "Created"
+  "Created": "Created",
+  "Product Materials": "Product Materials",
+  "Packaging Materials": "Packaging Materials",
+  "Add Packaging Material": "Add Packaging Material",
+  "Packaging Recyclability (%)": "Packaging Recyclability (%)",
+  "Packaging Recycling Instructions": "Packaging Recycling Instructions",
+  "Disposal instructions for packaging...": "Disposal instructions for packaging..."
 }

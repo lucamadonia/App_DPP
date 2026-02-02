@@ -62,6 +62,12 @@ export const defaultVisibilityConfigV2: VisibilityConfigV2 = {
     materials: 'consumer',
     materialOrigins: 'consumer',
 
+    // Verpackung - öffentlich für Verbraucher
+    packagingMaterials: 'consumer',
+    packagingRecyclability: 'consumer',
+    packagingRecyclingInstructions: 'consumer',
+    packagingDisposalMethods: 'consumer',
+
     // Nachhaltigkeit - öffentlich für Verbraucher
     carbonFootprint: 'consumer',
     carbonRating: 'consumer',
@@ -121,6 +127,12 @@ export const defaultVisibilityConfig: VisibilityConfig = {
     materials: true,
     materialOrigins: true,
 
+    // Verpackung
+    packagingMaterials: true,
+    packagingRecyclability: true,
+    packagingRecyclingInstructions: true,
+    packagingDisposalMethods: true,
+
     // Nachhaltigkeit
     carbonFootprint: true,
     carbonRating: true,
@@ -167,6 +179,12 @@ export const defaultVisibilityConfig: VisibilityConfig = {
     // Materialien
     materials: true,
     materialOrigins: true,
+
+    // Verpackung
+    packagingMaterials: true,
+    packagingRecyclability: true,
+    packagingRecyclingInstructions: true,
+    packagingDisposalMethods: true,
 
     // Nachhaltigkeit
     carbonFootprint: true,
@@ -230,6 +248,12 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'materials', label: 'Material Composition', category: 'Materials' },
   { key: 'materialOrigins', label: 'Material Origin', category: 'Materials' },
 
+  // Verpackung
+  { key: 'packagingMaterials', label: 'Packaging Materials', category: 'Packaging' },
+  { key: 'packagingRecyclability', label: 'Packaging Recyclability (%)', category: 'Packaging' },
+  { key: 'packagingRecyclingInstructions', label: 'Packaging Recycling Instructions', category: 'Packaging' },
+  { key: 'packagingDisposalMethods', label: 'Packaging Disposal Methods', category: 'Packaging' },
+
   // Nachhaltigkeit
   { key: 'carbonFootprint', label: 'Carbon Footprint (kg)', category: 'Sustainability' },
   { key: 'carbonRating', label: 'CO2 Rating (A-E)', category: 'Sustainability' },
@@ -274,6 +298,7 @@ export const fieldCategories = [
   'Basic Data',
   'Identifiers',
   'Materials',
+  'Packaging',
   'Sustainability',
   'Recycling',
   'Certifications',

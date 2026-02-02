@@ -273,5 +273,11 @@
   "Edit": "Bearbeiten",
   "View": "Anzeigen",
   "Delete": "Löschen",
-  "Created": "Erstellt"
+  "Created": "Erstellt",
+  "Product Materials": "Produktmaterialien",
+  "Packaging Materials": "Verpackungsmaterialien",
+  "Add Packaging Material": "Verpackungsmaterial hinzufügen",
+  "Packaging Recyclability (%)": "Verpackungsrecyclingfähigkeit (%)",
+  "Packaging Recycling Instructions": "Recyclinganweisungen Verpackung",
+  "Disposal instructions for packaging...": "Entsorgungshinweise für Verpackung..."
 }

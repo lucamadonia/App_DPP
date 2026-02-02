@@ -53,6 +53,7 @@ import { ReturnsSettingsPage } from '@/pages/returns/ReturnsSettingsPage';
 import { WorkflowRulesPage } from '@/pages/returns/WorkflowRulesPage';
 import { WorkflowBuilderPage } from '@/components/returns/workflow-builder/WorkflowBuilderPage';
 import { EmailTemplateEditorPage } from '@/components/returns/email-editor/EmailTemplateEditorPage';
+import { LandingPage } from '@/pages/LandingPage';
 import { ReturnsPortalLayout } from '@/pages/returns/public/ReturnsPortalLayout';
 import { PublicReturnPortalPage } from '@/pages/returns/public/PublicReturnPortalPage';
 import { PublicReturnRegisterPage } from '@/pages/returns/public/PublicReturnRegisterPage';
@@ -167,6 +168,9 @@ function NormalAppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing Page */}
+        <Route path="landing" element={<LandingPage />} />
+
         {/* Login & Auth */}
         <Route path="login" element={<LoginPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />

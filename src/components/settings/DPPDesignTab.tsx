@@ -64,6 +64,7 @@ import { resolveDesign, getCardStyle, getHeroStyle, getHeadingStyle } from '@/li
 
 const SECTION_LABELS: Record<DPPSectionId, { icon: React.ReactNode; labelKey: string }> = {
   materials: { icon: <Package className="h-4 w-4" />, labelKey: 'Materials' },
+  packaging: { icon: <Package className="h-4 w-4" />, labelKey: 'Packaging' },
   carbonFootprint: { icon: <Leaf className="h-4 w-4" />, labelKey: 'Carbon Footprint' },
   recycling: { icon: <Recycle className="h-4 w-4" />, labelKey: 'Recycling' },
   certifications: { icon: <Award className="h-4 w-4" />, labelKey: 'Certifications' },

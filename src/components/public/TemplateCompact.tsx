@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
-import { useLocale } from '@/hooks/use-locale';
 import {
   Package,
   Leaf,
@@ -20,10 +18,11 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
-import { resolveDesign, getCardStyle, getHeadingStyle, isSectionVisible } from '@/lib/dpp-design-utils';
+import { useDPPTemplateData } from '@/hooks/use-dpp-template-data';
+import { RATING_BG_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 
 interface DPPTemplateProps {
   product: Product;
@@ -32,75 +31,44 @@ interface DPPTemplateProps {
   dppDesign?: DPPDesignSettings | null;
 }
 
-const ratingColors: Record<string, string> = {
-  A: 'bg-green-500',
-  B: 'bg-lime-500',
-  C: 'bg-yellow-500',
-  D: 'bg-orange-500',
-  E: 'bg-red-500',
-};
-
 export function TemplateCompact({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
-  const { t } = useTranslation('dpp');
-  const locale = useLocale();
-  const design = resolveDesign(dppDesign);
-
-  const isFieldVisible = (field: string) => {
-    if (!visibilityV2) return true;
-    return isFieldVisibleForView(visibilityV2, field, view);
-  };
+  const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <CompactCustomsView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} />;
+    return <CompactCustomsView data={data} />;
   }
 
-  return <CompactConsumerView product={product} isFieldVisible={isFieldVisible} t={t} locale={locale} design={design} />;
+  return <CompactConsumerView data={data} />;
 }
 
 interface ViewProps {
-  product: Product;
-  isFieldVisible: (field: string) => boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
-  locale: string;
-  design: ReturnType<typeof resolveDesign>;
+  data: ReturnType<typeof useDPPTemplateData>;
 }
 
-type ConsumerTab = 'materials' | 'co2' | 'recycling' | 'certs' | 'supply' | 'support';
-type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2';
-
-// Mapping from DPPSectionId to ConsumerTab id
-const sectionToTabMap: Record<DPPSectionId, ConsumerTab> = {
-  materials: 'materials',
-  carbonFootprint: 'co2',
-  recycling: 'recycling',
-  certifications: 'certs',
-  supplyChain: 'supply',
-  support: 'support',
+// Tab config per DPPSectionId for consumer view
+const SECTION_TAB_CONFIG: Record<DPPSectionId, { label: string; icon: React.ReactNode }> = {
+  materials: { label: 'Material', icon: <Package className="h-3.5 w-3.5" /> },
+  packaging: { label: 'Packaging', icon: <Package className="h-3.5 w-3.5" /> },
+  carbonFootprint: { label: 'CO2', icon: <Leaf className="h-3.5 w-3.5" /> },
+  recycling: { label: 'Recycling', icon: <Recycle className="h-3.5 w-3.5" /> },
+  certifications: { label: 'Certifications', icon: <Award className="h-3.5 w-3.5" /> },
+  supplyChain: { label: 'Supply Chain', icon: <Truck className="h-3.5 w-3.5" /> },
+  support: { label: 'Support & Service', icon: <HelpCircle className="h-3.5 w-3.5" /> },
 };
 
-function CompactConsumerView({ product, isFieldVisible, t, locale, design }: ViewProps) {
-  const cardStyle = getCardStyle(design.cards);
-  const headingStyle = getHeadingStyle(design.typography, design.colors);
+type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2' | 'support';
 
-  // Build all tabs with their config
-  const allTabs: Record<ConsumerTab, { label: string; icon: React.ReactNode; visible: boolean }> = {
-    materials: { label: t('Material'), icon: <Package className="h-3.5 w-3.5" />, visible: isFieldVisible('materials') && product.materials.length > 0 },
-    co2: { label: 'CO2', icon: <Leaf className="h-3.5 w-3.5" />, visible: isFieldVisible('carbonFootprint') && !!product.carbonFootprint },
-    recycling: { label: t('Recycling'), icon: <Recycle className="h-3.5 w-3.5" />, visible: isFieldVisible('recyclability') },
-    certs: { label: t('Certifications'), icon: <Award className="h-3.5 w-3.5" />, visible: isFieldVisible('certifications') && product.certifications.length > 0 },
-    supply: { label: t('Supply Chain'), icon: <Truck className="h-3.5 w-3.5" />, visible: isFieldVisible('supplyChainSimple') && product.supplyChain.length > 0 },
-    support: { label: t('Support & Service'), icon: <HelpCircle className="h-3.5 w-3.5" />, visible: isFieldVisible('supportResources') && !!product.supportResources && !!(product.supportResources.instructions || product.supportResources.assemblyGuide || (product.supportResources.videos && product.supportResources.videos.length > 0) || (product.supportResources.faq && product.supportResources.faq.length > 0) || product.supportResources.warranty || product.supportResources.repairInfo || (product.supportResources.spareParts && product.supportResources.spareParts.length > 0)) },
-  };
+function CompactConsumerView({ data }: ViewProps) {
+  const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
+  const { card: cardStyle, heading: headingStyle } = styles;
 
-  // Order tabs according to design.sections.order, filtering by section visibility and data visibility
-  const orderedTabIds: ConsumerTab[] = design.sections.order
-    .filter((sectionId: DPPSectionId) => isSectionVisible(design, sectionId))
-    .map((sectionId: DPPSectionId) => sectionToTabMap[sectionId])
-    .filter((tabId: ConsumerTab) => allTabs[tabId]?.visible);
+  // Build visible tabs from consumerSections (already ordered, filtered by visibility + data)
+  const visibleTabs = consumerSections.map((section) => {
+    const config = SECTION_TAB_CONFIG[section.id];
+    return { id: section.id, label: t(config.label), icon: config.icon };
+  });
 
-  const visibleTabs = orderedTabIds.map((id) => ({ id, ...allTabs[id] }));
-
-  const [activeTab, setActiveTab] = useState<ConsumerTab>(visibleTabs[0]?.id ?? 'materials');
+  const [activeTab, setActiveTab] = useState<DPPSectionId>(visibleTabs[0]?.id ?? 'materials');
 
   return (
     <div className="container mx-auto px-4 py-4 space-y-4 max-w-2xl">
@@ -127,7 +95,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
           </div>
         </div>
         {isFieldVisible('carbonRating') && product.carbonFootprint && (
-          <span className={`${ratingColors[product.carbonFootprint.rating]} text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0`}>
+          <span className={`${RATING_BG_COLORS[product.carbonFootprint.rating]} text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0`}>
             {product.carbonFootprint.rating}
           </span>
         )}
@@ -155,7 +123,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
       <div className="min-h-[300px]">
         {activeTab === 'materials' && isFieldVisible('materials') && (
           <div className="space-y-3" style={cardStyle}>
-            {product.materials.map((material, index) => (
+            {getProductMaterials(product).map((material, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">{material.name}</span>
@@ -177,14 +145,42 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
           </div>
         )}
 
-        {activeTab === 'co2' && isFieldVisible('carbonFootprint') && product.carbonFootprint && (
+        {activeTab === 'packaging' && (() => {
+          const packagingMats = getPackagingMaterials(product);
+          return (
+            <div key="packaging" className="p-4" style={cardStyle}>
+              <h3 style={headingStyle} className="text-lg mb-3 flex items-center gap-2"><Package className="h-4 w-4" />{t('Packaging Materials')}</h3>
+              {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && (
+                <div className="space-y-2">
+                  {packagingMats.map((material, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span>{material.name}</span>
+                        {material.recyclable && <Recycle className="h-3 w-3 text-green-500" />}
+                      </div>
+                      <span className="font-medium">{material.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
+                <p className="text-sm mt-3">{t('Packaging recyclable')}: <span className="font-medium">{product.recyclability.packagingRecyclablePercentage}%</span></p>
+              )}
+              {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
+                <p className="text-sm text-muted-foreground mt-2">{product.recyclability.packagingInstructions}</p>
+              )}
+            </div>
+          );
+        })()}
+
+        {activeTab === 'carbonFootprint' && isFieldVisible('carbonFootprint') && product.carbonFootprint && (
           <div className="space-y-4" style={cardStyle}>
             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
               <div>
                 <p className="text-2xl font-bold">{product.carbonFootprint.totalKgCO2} {t('kg CO2')}</p>
                 <p className="text-sm text-muted-foreground">{t('Total')}</p>
               </div>
-              <div className={`w-14 h-14 rounded-full ${ratingColors[product.carbonFootprint.rating]} text-white flex items-center justify-center text-2xl font-bold`}>
+              <div className={`w-14 h-14 rounded-full ${RATING_BG_COLORS[product.carbonFootprint.rating]} text-white flex items-center justify-center text-2xl font-bold`}>
                 {product.carbonFootprint.rating}
               </div>
             </div>
@@ -238,7 +234,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
           </div>
         )}
 
-        {activeTab === 'certs' && isFieldVisible('certifications') && (
+        {activeTab === 'certifications' && isFieldVisible('certifications') && (
           <div className="space-y-2" style={cardStyle}>
             {product.certifications.map((cert, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -257,7 +253,7 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
           </div>
         )}
 
-        {activeTab === 'supply' && isFieldVisible('supplyChainSimple') && (
+        {activeTab === 'supplyChain' && isFieldVisible('supplyChainSimple') && (
           <div className="space-y-2" style={cardStyle}>
             {product.supplyChain.map((entry, index) => (
               <div key={index} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
@@ -365,10 +361,10 @@ function CompactConsumerView({ product, isFieldVisible, t, locale, design }: Vie
   );
 }
 
-function CompactCustomsView({ product, isFieldVisible, t, locale, design }: ViewProps) {
+function CompactCustomsView({ data }: ViewProps) {
+  const { product, isFieldVisible, t, locale, styles, supportHasContent } = data;
+  const { card: cardStyle, heading: headingStyle } = styles;
   const [activeTab, setActiveTab] = useState<CustomsTab>('customs');
-  const cardStyle = getCardStyle(design.cards);
-  const headingStyle = getHeadingStyle(design.typography, design.colors);
 
   const tabs: { id: CustomsTab; label: string; icon: React.ReactNode; visible: boolean }[] = [
     { id: 'customs', label: t('Customs Data'), icon: <ShieldCheck className="h-3.5 w-3.5" />, visible: true },
@@ -376,6 +372,7 @@ function CompactCustomsView({ product, isFieldVisible, t, locale, design }: View
     { id: 'certs', label: t('Certifications'), icon: <Award className="h-3.5 w-3.5" />, visible: isFieldVisible('certifications') && product.certifications.length > 0 },
     { id: 'supply', label: t('Supply Chain'), icon: <Truck className="h-3.5 w-3.5" />, visible: isFieldVisible('supplyChainFull') && product.supplyChain.length > 0 },
     { id: 'co2', label: 'CO2', icon: <Leaf className="h-3.5 w-3.5" />, visible: isFieldVisible('carbonFootprint') && !!product.carbonFootprint },
+    { id: 'support', label: t('Support & Service'), icon: <HelpCircle className="h-3.5 w-3.5" />, visible: isFieldVisible('supportResources') && supportHasContent },
   ];
 
   const visibleTabs = tabs.filter(t => t.visible);
@@ -593,6 +590,82 @@ function CompactCustomsView({ product, isFieldVisible, t, locale, design }: View
             </div>
           </div>
         )}
+
+        {activeTab === 'support' && isFieldVisible('supportResources') && product.supportResources && (() => {
+          const sr = product.supportResources!;
+          return (
+            <div className="space-y-3" style={cardStyle}>
+              {(sr.instructions || sr.assemblyGuide) && (
+                <div className="space-y-2">
+                  {sr.instructions && (
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Usage Instructions')}</p>
+                      <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                    </div>
+                  )}
+                  {sr.assemblyGuide && (
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Assembly Guide')}</p>
+                      <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
+                <div className="space-y-1.5">
+                  {sr.videos.map((v, i) => (
+                    <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg text-sm font-medium text-primary hover:bg-muted/50 transition-colors">
+                      <Video className="h-3.5 w-3.5 flex-shrink-0" />{v.title}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {isFieldVisible('supportFaq') && sr.faq && sr.faq.length > 0 && (
+                <div className="space-y-2">
+                  {sr.faq.map((item, i) => (
+                    <div key={i} className="p-3 bg-muted/30 rounded-lg">
+                      <p className="font-medium text-sm">{item.question}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isFieldVisible('supportWarranty') && sr.warranty && (
+                <div className="space-y-1">
+                  {sr.warranty.durationMonths != null && (
+                    <div className="flex justify-between py-2 border-b text-sm"><span className="text-muted-foreground">{t('Warranty Duration')}</span><span className="font-medium">{t('{{months}} months', { months: sr.warranty.durationMonths })}</span></div>
+                  )}
+                  {sr.warranty.contactEmail && (
+                    <div className="flex justify-between py-2 border-b text-sm"><span className="text-muted-foreground">{t('Contact Email')}</span><span className="font-medium">{sr.warranty.contactEmail}</span></div>
+                  )}
+                  {sr.warranty.contactPhone && (
+                    <div className="flex justify-between py-2 border-b text-sm"><span className="text-muted-foreground">{t('Contact Phone')}</span><span className="font-medium">{sr.warranty.contactPhone}</span></div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportRepair') && sr.repairInfo && (
+                <div className="space-y-2">
+                  {sr.repairInfo.repairabilityScore != null && (
+                    <div className="flex justify-between p-3 bg-muted/30 rounded-lg text-sm"><span>{t('Repairability Score')}</span><span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span></div>
+                  )}
+                  {sr.repairInfo.serviceCenters && sr.repairInfo.serviceCenters.length > 0 && (
+                    <div className="p-3 bg-muted/30 rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Service Centers')}</p>{sr.repairInfo.serviceCenters.map((c, i) => <p key={i} className="text-sm flex items-center gap-1"><MapPin className="h-3 w-3" />{c}</p>)}</div>
+                  )}
+                </div>
+              )}
+              {isFieldVisible('supportSpareParts') && sr.spareParts && sr.spareParts.length > 0 && (
+                <div className="space-y-1.5">
+                  {sr.spareParts.map((part, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div><p className="font-medium text-sm">{part.name}</p>{part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}</div>
+                      <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

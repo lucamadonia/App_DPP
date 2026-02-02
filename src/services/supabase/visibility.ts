@@ -14,7 +14,7 @@ function transformVisibilitySettings(row: any): VisibilityConfigV2 {
   return {
     id: row.id,
     version: row.version || 2,
-    fields: (row.fields as FieldVisibilityConfig) || defaultVisibilityConfigV2.fields,
+    fields: { ...defaultVisibilityConfigV2.fields, ...(row.fields as FieldVisibilityConfig) },
   };
 }
 
@@ -160,23 +160,61 @@ export async function copyVisibilitySettingsToProduct(
 
 /**
  * Get visibility settings for a public product view (by GTIN/Serial)
- * This bypasses tenant check since it's for public access
+ * This bypasses tenant check since it's for public access.
+ * Two-step lookup: find product by GTIN, then batch by serial_number.
+ * Falls back to legacy direct product lookup for backwards compatibility.
  */
 export async function getPublicVisibilitySettings(
   gtin: string,
   serial: string
 ): Promise<VisibilityConfigV2> {
-  // First get the product to find the tenant
-  const { data: product, error: productError } = await supabase
+  let productId: string | null = null;
+  let tenantId: string | null = null;
+
+  // Step 1: Find products by GTIN
+  const { data: productRows } = await supabase
     .from('products')
     .select('id, tenant_id')
-    .eq('gtin', gtin)
-    .eq('serial_number', serial)
-    .single();
+    .eq('gtin', gtin);
 
-  if (productError || !product) {
+  if (productRows && productRows.length > 0) {
+    // Step 2: Try to find a batch with the given serial number
+    for (const row of productRows) {
+      const { data: batchRow } = await supabase
+        .from('product_batches')
+        .select('id')
+        .eq('product_id', row.id)
+        .eq('serial_number', serial)
+        .single();
+
+      if (batchRow) {
+        productId = row.id;
+        tenantId = row.tenant_id;
+        break;
+      }
+    }
+
+    // Fallback: legacy lookup (serial_number on products table)
+    if (!productId) {
+      const { data: legacyProduct } = await supabase
+        .from('products')
+        .select('id, tenant_id')
+        .eq('gtin', gtin)
+        .eq('serial_number', serial)
+        .single();
+
+      if (legacyProduct) {
+        productId = legacyProduct.id;
+        tenantId = legacyProduct.tenant_id;
+      }
+    }
+  }
+
+  if (!productId || !tenantId) {
     return defaultVisibilityConfigV2;
   }
+
+  const product = { id: productId, tenant_id: tenantId };
 
   // Try product-specific settings first
   const { data: productSettings } = await supabase

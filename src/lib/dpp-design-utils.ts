@@ -94,6 +94,7 @@ export function resolveDesign(design?: DPPDesignSettings | null): ResolvedDPPDes
         recycling: { ...dsc.recycling, ...d.sections?.configs?.recycling },
         certifications: { ...dsc.certifications, ...d.sections?.configs?.certifications },
         supplyChain: { ...dsc.supplyChain, ...d.sections?.configs?.supplyChain },
+        support: { ...dsc.support, ...d.sections?.configs?.support },
       },
     },
     footer: {

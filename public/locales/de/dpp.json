@@ -257,5 +257,10 @@
   "Part Number": "Teilenummer",
   "Available": "Verfügbar",
   "Out of stock": "Nicht auf Lager",
-  "Status": "Status"
+  "Status": "Status",
+  "Packaging": "Verpackung",
+  "Packaging Materials": "Verpackungsmaterialien",
+  "Packaging materials and recycling information": "Verpackungsmaterialien und Recyclinginformationen",
+  "Packaging Recycling": "Verpackungsrecycling",
+  "Packaging recyclable": "Verpackung recycelbar"
 }

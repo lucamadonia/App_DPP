@@ -79,6 +79,7 @@ export interface Material {
   percentage: number;
   recyclable: boolean;
   origin?: string;
+  type?: 'product' | 'packaging';
 }
 
 export interface Certification {
@@ -99,6 +100,9 @@ export interface RecyclabilityInfo {
   recyclablePercentage: number;
   instructions: string;
   disposalMethods: string[];
+  packagingRecyclablePercentage?: number;
+  packagingInstructions?: string;
+  packagingDisposalMethods?: string[];
 }
 
 export interface SupplyChainEntry {

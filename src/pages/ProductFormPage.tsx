@@ -138,6 +138,8 @@ export function ProductFormPage() {
         setSelectedMainCategory(product.category);
       }
 
+      const productMats = (product.materials || []).filter(m => !m.type || m.type === 'product');
+      const packagingMats = (product.materials || []).filter(m => m.type === 'packaging');
       setFormData({
         name: product.name || '',
         manufacturer: product.manufacturer || '',
@@ -146,8 +148,8 @@ export function ProductFormPage() {
         description: product.description || '',
         hsCode: product.hsCode || '',
         countryOfOrigin: product.countryOfOrigin || '',
-        materials: product.materials?.length
-          ? product.materials.map(m => ({
+        materials: productMats.length
+          ? productMats.map(m => ({
               name: m.name || '',
               percentage: m.percentage || 0,
               recyclable: m.recyclable || false,
@@ -156,6 +158,16 @@ export function ProductFormPage() {
           : [{ name: '', percentage: 0, recyclable: false, origin: '' }],
         recyclablePercentage: product.recyclability?.recyclablePercentage || 0,
         recyclingInstructions: product.recyclability?.instructions || '',
+        packagingMaterials: packagingMats.length
+          ? packagingMats.map(m => ({
+              name: m.name || '',
+              percentage: m.percentage || 0,
+              recyclable: m.recyclable || false,
+              origin: m.origin || '',
+            }))
+          : [{ name: '', percentage: 0, recyclable: false, origin: '' }],
+        packagingRecyclablePercentage: product.recyclability?.packagingRecyclablePercentage || 0,
+        packagingRecyclingInstructions: product.recyclability?.packagingInstructions || '',
         certifications: (product.certifications || []).map(c => ({
           name: c.name,
           issuedBy: c.issuedBy || '',
@@ -193,6 +205,9 @@ export function ProductFormPage() {
     materials: [{ name: '', percentage: 0, recyclable: false, origin: '' }],
     recyclablePercentage: 0,
     recyclingInstructions: '',
+    packagingMaterials: [{ name: '', percentage: 0, recyclable: false, origin: '' }],
+    packagingRecyclablePercentage: 0,
+    packagingRecyclingInstructions: '',
     certifications: [] as Array<{ name: string; issuedBy: string; validUntil: string }>,
     registrations: {} as ProductRegistrations,
     supportResources: {} as SupportResources,
@@ -220,6 +235,27 @@ export function ProductFormPage() {
     setFormData((prev) => ({
       ...prev,
       materials: prev.materials.map((m, i) => (i === index ? { ...m, [field]: value } : m)),
+    }));
+  };
+
+  const addPackagingMaterial = () => {
+    setFormData((prev) => ({
+      ...prev,
+      packagingMaterials: [...prev.packagingMaterials, { name: '', percentage: 0, recyclable: false, origin: '' }],
+    }));
+  };
+
+  const removePackagingMaterial = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      packagingMaterials: prev.packagingMaterials.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updatePackagingMaterial = (index: number, field: string, value: string | number | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      packagingMaterials: prev.packagingMaterials.map((m, i) => (i === index ? { ...m, [field]: value } : m)),
     }));
   };
 
@@ -314,6 +350,16 @@ export function ProductFormPage() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      // Merge product + packaging materials with type tags
+      const mergedMaterials = [
+        ...formData.materials
+          .filter(m => m.name.trim())
+          .map(m => ({ ...m, type: 'product' as const })),
+        ...formData.packagingMaterials
+          .filter(m => m.name.trim())
+          .map(m => ({ ...m, type: 'packaging' as const })),
+      ];
+
       const productData = {
         name: formData.name,
         manufacturer: formData.manufacturer,
@@ -322,7 +368,7 @@ export function ProductFormPage() {
         description: formData.description,
         hsCode: formData.hsCode || undefined,
         countryOfOrigin: formData.countryOfOrigin || undefined,
-        materials: formData.materials,
+        materials: mergedMaterials,
         certifications: formData.certifications.map((cert) => ({
           name: cert.name,
           issuedBy: cert.issuedBy,
@@ -332,6 +378,9 @@ export function ProductFormPage() {
           recyclablePercentage: formData.recyclablePercentage,
           instructions: formData.recyclingInstructions,
           disposalMethods: [],
+          packagingRecyclablePercentage: formData.packagingRecyclablePercentage,
+          packagingInstructions: formData.packagingRecyclingInstructions,
+          packagingDisposalMethods: [],
         },
         registrations: formData.registrations,
         supportResources: formData.supportResources,
@@ -676,9 +725,10 @@ export function ProductFormPage() {
           {/* Step 3: Sustainability */}
           {currentStep === 2 && (
             <div className="space-y-6">
+              {/* Section 1: Product Materials */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">{t('Material Composition')}</h3>
+                  <h3 className="font-medium">{t('Product Materials')}</h3>
                   <Button variant="outline" size="sm" onClick={addMaterial}>
                     <Plus className="mr-2 h-4 w-4" />
                     {t('Add Material')}
@@ -742,6 +792,7 @@ export function ProductFormPage() {
 
               <Separator />
 
+              {/* Section 2: Product Recyclability */}
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('Total Recyclability (%)')}</label>
@@ -760,6 +811,101 @@ export function ProductFormPage() {
                     placeholder={t('Disposal instructions for consumers...')}
                     value={formData.recyclingInstructions}
                     onChange={(e) => updateField('recyclingInstructions', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 3: Packaging Materials */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    {t('Packaging Materials')}
+                  </h3>
+                  <Button variant="outline" size="sm" onClick={addPackagingMaterial}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('Add Packaging Material')}
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  {formData.packagingMaterials.map((material, index) => (
+                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('Material')}</label>
+                        <Input
+                          placeholder={t('e.g. Recycled PET')}
+                          value={material.name}
+                          onChange={(e) => updatePackagingMaterial(index, 'name', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('Share (%)')}</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={material.percentage}
+                          onChange={(e) => updatePackagingMaterial(index, 'percentage', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('Origin')}</label>
+                        <Input
+                          placeholder="e.g. Germany"
+                          value={material.origin}
+                          onChange={(e) => updatePackagingMaterial(index, 'origin', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('Recyclable')}</label>
+                        <div className="flex items-center h-10">
+                          <input
+                            type="checkbox"
+                            checked={material.recyclable}
+                            onChange={(e) => updatePackagingMaterial(index, 'recyclable', e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="ml-2 text-sm">{t('Yes')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removePackagingMaterial(index)}
+                          disabled={formData.packagingMaterials.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 4: Packaging Recyclability */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t('Packaging Recyclability (%)')}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.packagingRecyclablePercentage}
+                    onChange={(e) => updateField('packagingRecyclablePercentage', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium">{t('Packaging Recycling Instructions')}</label>
+                  <textarea
+                    className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder={t('Disposal instructions for packaging...')}
+                    value={formData.packagingRecyclingInstructions}
+                    onChange={(e) => updateField('packagingRecyclingInstructions', e.target.value)}
                   />
                 </div>
               </div>
