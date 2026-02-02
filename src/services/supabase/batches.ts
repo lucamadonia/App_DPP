@@ -27,6 +27,10 @@ function transformBatch(row: any): ProductBatch {
     netWeight: row.net_weight != null ? Number(row.net_weight) : undefined,
     grossWeight: row.gross_weight != null ? Number(row.gross_weight) : undefined,
     quantity: row.quantity != null ? Number(row.quantity) : undefined,
+    pricePerUnit: row.price_per_unit != null ? Number(row.price_per_unit) : undefined,
+    currency: row.currency || undefined,
+    supplierId: row.supplier_id || undefined,
+    supplierName: row.suppliers?.name || undefined,
     status: row.status || 'draft',
     notes: row.notes || undefined,
     materialsOverride: row.materials_override as Material[] | undefined,
@@ -55,6 +59,11 @@ function transformBatchListItem(row: any): BatchListItem {
     batchNumber: row.batch_number || undefined,
     serialNumber: row.serial_number,
     productionDate: row.production_date,
+    quantity: row.quantity != null ? Number(row.quantity) : undefined,
+    pricePerUnit: row.price_per_unit != null ? Number(row.price_per_unit) : undefined,
+    currency: row.currency || undefined,
+    supplierId: row.supplier_id || undefined,
+    supplierName: row.suppliers?.name || undefined,
     status: row.status || 'draft',
     hasOverrides,
     createdAt: row.created_at,
@@ -67,7 +76,7 @@ function transformBatchListItem(row: any): BatchListItem {
 export async function getBatches(productId: string): Promise<BatchListItem[]> {
   const { data, error } = await supabase
     .from('product_batches')
-    .select('*')
+    .select('*, suppliers(name)')
     .eq('product_id', productId)
     .order('created_at', { ascending: false });
 
@@ -85,7 +94,7 @@ export async function getBatches(productId: string): Promise<BatchListItem[]> {
 export async function getBatchById(id: string): Promise<ProductBatch | null> {
   const { data, error } = await supabase
     .from('product_batches')
-    .select('*')
+    .select('*, suppliers(name)')
     .eq('id', id)
     .single();
 
@@ -138,6 +147,9 @@ export async function createBatch(
     net_weight: batch.netWeight ?? null,
     gross_weight: batch.grossWeight ?? null,
     quantity: batch.quantity ?? null,
+    price_per_unit: batch.pricePerUnit ?? null,
+    currency: batch.currency || null,
+    supplier_id: batch.supplierId || null,
     status: batch.status || 'draft',
     notes: batch.notes || null,
     materials_override: batch.materialsOverride || null,
@@ -178,6 +190,9 @@ export async function updateBatch(
   if (batch.netWeight !== undefined) updateData.net_weight = batch.netWeight ?? null;
   if (batch.grossWeight !== undefined) updateData.gross_weight = batch.grossWeight ?? null;
   if (batch.quantity !== undefined) updateData.quantity = batch.quantity ?? null;
+  if (batch.pricePerUnit !== undefined) updateData.price_per_unit = batch.pricePerUnit ?? null;
+  if (batch.currency !== undefined) updateData.currency = batch.currency || null;
+  if (batch.supplierId !== undefined) updateData.supplier_id = batch.supplierId || null;
   if (batch.status !== undefined) updateData.status = batch.status;
   if (batch.notes !== undefined) updateData.notes = batch.notes || null;
   if (batch.materialsOverride !== undefined) updateData.materials_override = batch.materialsOverride || null;
@@ -238,6 +253,9 @@ export async function duplicateBatch(
     netWeight: existing.netWeight,
     grossWeight: existing.grossWeight,
     quantity: existing.quantity,
+    pricePerUnit: existing.pricePerUnit,
+    currency: existing.currency,
+    supplierId: existing.supplierId,
     status: 'draft',
     notes: existing.notes,
     materialsOverride: existing.materialsOverride,
@@ -302,7 +320,7 @@ export async function getAllBatches(): Promise<Array<BatchListItem & { productNa
 
   const { data, error } = await supabase
     .from('product_batches')
-    .select('*, products!inner(name, gtin)')
+    .select('*, products!inner(name, gtin), suppliers(name)')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
@@ -316,5 +334,59 @@ export async function getAllBatches(): Promise<Array<BatchListItem & { productNa
     ...transformBatchListItem(row),
     productName: row.products.name,
     gtin: row.products.gtin,
+  }));
+}
+
+export interface SupplierBatchCost {
+  supplierId: string;
+  supplierName: string;
+  totalBatches: number;
+  totalQuantity: number;
+  totalCost: number;
+  currency: string;
+  avgPricePerUnit: number;
+}
+
+/**
+ * Get batch costs aggregated by supplier for a product
+ */
+export async function getBatchCostsBySupplier(productId: string): Promise<SupplierBatchCost[]> {
+  const { data, error } = await supabase
+    .from('product_batches')
+    .select('quantity, price_per_unit, currency, supplier_id, suppliers(name)')
+    .eq('product_id', productId)
+    .not('supplier_id', 'is', null);
+
+  if (error || !data) {
+    console.error('Failed to load batch costs:', error);
+    return [];
+  }
+
+  const grouped = new Map<string, { name: string; batches: number; qty: number; cost: number; currency: string }>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of data as any[]) {
+    const sid = row.supplier_id as string;
+    const sname = row.suppliers?.name || 'Unknown';
+    const qty = Number(row.quantity) || 0;
+    const ppu = Number(row.price_per_unit) || 0;
+    const cur = (row.currency as string) || 'EUR';
+    const existing = grouped.get(sid);
+    if (existing) {
+      existing.batches += 1;
+      existing.qty += qty;
+      existing.cost += ppu * qty;
+    } else {
+      grouped.set(sid, { name: sname, batches: 1, qty, cost: ppu * qty, currency: cur });
+    }
+  }
+
+  return Array.from(grouped.entries()).map(([supplierId, v]) => ({
+    supplierId,
+    supplierName: v.name,
+    totalBatches: v.batches,
+    totalQuantity: v.qty,
+    totalCost: v.cost,
+    currency: v.currency,
+    avgPricePerUnit: v.qty > 0 ? v.cost / v.qty : 0,
   }));
 }

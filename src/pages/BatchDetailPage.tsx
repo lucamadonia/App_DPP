@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
   Edit,
@@ -15,6 +17,8 @@ import {
   Copy,
   Trash2,
   BrainCircuit,
+  DollarSign,
+  Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getProductById } from '@/services/supabase';
 import { getBatchById, deleteBatch } from '@/services/supabase/batches';
+import { formatCurrency } from '@/lib/format';
 import type { Product, ProductBatch } from '@/types/product';
 
 const statusConfig = {
@@ -31,6 +36,8 @@ const statusConfig = {
 };
 
 export function BatchDetailPage() {
+  const { t } = useTranslation('products');
+  const locale = useLocale();
   const { id: productId, batchId } = useParams<{ id: string; batchId: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [batch, setBatch] = useState<ProductBatch | null>(null);
@@ -253,6 +260,47 @@ export function BatchDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Pricing & Supplier */}
+        {(batch.pricePerUnit != null || batch.supplierName) && (
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                {t('Pricing & Supplier')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                {batch.pricePerUnit != null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t('Price per Unit')}</p>
+                    <p className="font-medium">{formatCurrency(batch.pricePerUnit, batch.currency || 'EUR', locale)}</p>
+                  </div>
+                )}
+                {batch.pricePerUnit != null && batch.quantity != null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t('Total Price')}</p>
+                    <p className="text-xl font-bold text-primary">
+                      {formatCurrency(batch.pricePerUnit * batch.quantity, batch.currency || 'EUR', locale)}
+                    </p>
+                  </div>
+                )}
+                {batch.supplierName && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">{t('Supplier')}</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      {batch.supplierName}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Public Links */}
         <Card>
           <CardHeader>

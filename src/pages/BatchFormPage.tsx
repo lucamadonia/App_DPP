@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
   Save,
@@ -7,17 +9,24 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getProductById } from '@/services/supabase';
+import { getProductById, getProductSuppliersWithDetails } from '@/services/supabase';
 import { getBatchById, createBatch, updateBatch } from '@/services/supabase/batches';
+import { formatCurrency } from '@/lib/format';
 import type { Product, Material } from '@/types/product';
+import type { SupplierProduct } from '@/types/database';
+
+const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'] as const;
 
 export function BatchFormPage() {
+  const { t } = useTranslation('products');
+  const locale = useLocale();
   const { id: productId, batchId } = useParams<{ id: string; batchId: string }>();
   const [searchParams] = useSearchParams();
   const duplicateFromId = searchParams.get('duplicate');
@@ -25,6 +34,7 @@ export function BatchFormPage() {
   const navigate = useNavigate();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [productSuppliers, setProductSuppliers] = useState<Array<SupplierProduct & { supplier_name: string; supplier_country: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -42,6 +52,9 @@ export function BatchFormPage() {
     netWeight: '',
     grossWeight: '',
     quantity: '',
+    pricePerUnit: '',
+    currency: 'EUR',
+    supplierId: '',
     status: 'draft' as 'draft' | 'live' | 'archived',
     notes: '',
     // Override fields
@@ -54,13 +67,23 @@ export function BatchFormPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const totalPrice = useMemo(() => {
+    const qty = parseInt(formData.quantity) || 0;
+    const ppu = parseFloat(formData.pricePerUnit) || 0;
+    return qty * ppu;
+  }, [formData.quantity, formData.pricePerUnit]);
+
   useEffect(() => {
     async function loadData() {
       if (!productId) return;
       setIsLoading(true);
 
-      const productData = await getProductById(productId);
+      const [productData, suppliersData] = await Promise.all([
+        getProductById(productId),
+        getProductSuppliersWithDetails(productId),
+      ]);
       setProduct(productData);
+      setProductSuppliers(suppliersData);
 
       if (isEditMode && batchId) {
         const batch = await getBatchById(batchId);
@@ -73,6 +96,9 @@ export function BatchFormPage() {
             netWeight: batch.netWeight != null ? String(batch.netWeight) : '',
             grossWeight: batch.grossWeight != null ? String(batch.grossWeight) : '',
             quantity: batch.quantity != null ? String(batch.quantity) : '',
+            pricePerUnit: batch.pricePerUnit != null ? String(batch.pricePerUnit) : '',
+            currency: batch.currency || 'EUR',
+            supplierId: batch.supplierId || '',
             status: batch.status,
             notes: batch.notes || '',
             descriptionOverride: batch.descriptionOverride || '',
@@ -94,6 +120,9 @@ export function BatchFormPage() {
             netWeight: batch.netWeight != null ? String(batch.netWeight) : '',
             grossWeight: batch.grossWeight != null ? String(batch.grossWeight) : '',
             quantity: batch.quantity != null ? String(batch.quantity) : '',
+            pricePerUnit: batch.pricePerUnit != null ? String(batch.pricePerUnit) : '',
+            currency: batch.currency || 'EUR',
+            supplierId: batch.supplierId || '',
             status: 'draft',
             notes: batch.notes || '',
             descriptionOverride: batch.descriptionOverride || '',
@@ -165,6 +194,9 @@ export function BatchFormPage() {
         netWeight: formData.netWeight ? parseFloat(formData.netWeight) : undefined,
         grossWeight: formData.grossWeight ? parseFloat(formData.grossWeight) : undefined,
         quantity: formData.quantity ? parseInt(formData.quantity) : undefined,
+        pricePerUnit: formData.pricePerUnit ? parseFloat(formData.pricePerUnit) : undefined,
+        currency: formData.currency || undefined,
+        supplierId: formData.supplierId || undefined,
         status: formData.status,
         notes: formData.notes || undefined,
         descriptionOverride: overrideDescription ? formData.descriptionOverride || undefined : undefined,
@@ -342,6 +374,82 @@ export function BatchFormPage() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Pricing & Supplier */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            {t('Pricing & Supplier')}
+          </CardTitle>
+          <CardDescription>{t('Unit price, currency and supplier for this batch')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2 lg:col-span-2">
+              <label className="text-sm font-medium">{t('Supplier')}</label>
+              <Select
+                value={formData.supplierId}
+                onValueChange={(v) => updateField('supplierId', v === '_none' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('Select supplier...')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">—</SelectItem>
+                  {productSuppliers.map((sp) => (
+                    <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
+                      {sp.supplier_name} ({sp.supplier_country})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('Price per Unit')}</label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData.pricePerUnit}
+                  onChange={(e) => updateField('pricePerUnit', e.target.value)}
+                  className="pr-14"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                  {formData.currency}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('Currency')}</label>
+              <Select value={formData.currency} onValueChange={(v) => updateField('currency', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {totalPrice > 0 && (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-xs text-muted-foreground">{t('Total Price')}</p>
+                <p className="text-lg font-bold">{formatCurrency(totalPrice, formData.currency, locale)}</p>
+              </div>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {formData.quantity} {t('pcs')} × {formatCurrency(parseFloat(formData.pricePerUnit) || 0, formData.currency, locale)}
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
 

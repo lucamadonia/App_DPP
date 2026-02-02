@@ -33,6 +33,26 @@ export interface Product {
   registrations?: ProductRegistrations;
   supportResources?: SupportResources;
   images?: ProductImage[];
+
+  // Multi-language translations
+  translations?: Record<string, TranslatableProductFields>;
+
+  // Manufacturer/Importer supplier references
+  manufacturerSupplierId?: string | null;
+  importerSupplierId?: string | null;
+
+  // Product Sets / Bundles
+  productType?: 'single' | 'set';
+  components?: ProductComponent[];
+  aggregationOverrides?: AggregationOverrides;
+}
+
+export interface TranslatableProductFields {
+  name?: string;
+  description?: string;
+  recyclingInstructions?: string;
+  packagingInstructions?: string;
+  supportResources?: Partial<SupportResources>;
 }
 
 export interface ProductBatch {
@@ -46,6 +66,10 @@ export interface ProductBatch {
   netWeight?: number;
   grossWeight?: number;
   quantity?: number;
+  pricePerUnit?: number;
+  currency?: string;
+  supplierId?: string;
+  supplierName?: string;
   status: 'draft' | 'live' | 'archived';
   notes?: string;
   // Override fields (null/undefined = inherit from product)
@@ -64,6 +88,11 @@ export interface BatchListItem {
   batchNumber?: string;
   serialNumber: string;
   productionDate: string;
+  quantity?: number;
+  pricePerUnit?: number;
+  currency?: string;
+  supplierId?: string;
+  supplierName?: string;
   status: 'draft' | 'live' | 'archived';
   hasOverrides: boolean;
   createdAt: string;
@@ -115,4 +144,40 @@ export interface SupplyChainEntry {
   transportMode?: string;
   status?: string;
   emissionsKg?: number;
+}
+
+// ============================================
+// PRODUCT SETS / BUNDLES
+// ============================================
+
+export interface ProductComponent {
+  id: string;
+  parentProductId: string;
+  componentProductId: string;
+  quantity: number;
+  sortOrder: number;
+  notes?: string;
+  componentProduct?: ProductComponentSummary;
+}
+
+export interface ProductComponentSummary {
+  id: string;
+  name: string;
+  gtin: string;
+  manufacturer: string;
+  category: string;
+  imageUrl?: string;
+  materials: Material[];
+  carbonFootprint?: CarbonFootprint;
+  recyclability: RecyclabilityInfo;
+  netWeight?: number;
+  grossWeight?: number;
+}
+
+export interface AggregationOverrides {
+  materials?: boolean;
+  carbonFootprint?: boolean;
+  recyclability?: boolean;
+  netWeight?: boolean;
+  grossWeight?: boolean;
 }

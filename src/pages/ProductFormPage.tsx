@@ -2,14 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages } from '@/services/supabase';
-import type { Category, Supplier, ProductRegistrations, SupportResources } from '@/types/database';
+import { getCurrentTenant } from '@/services/supabase/tenants';
+import type { Category, Supplier, ProductRegistrations, SupportResources, Tenant } from '@/types/database';
+import type { TranslatableProductFields } from '@/types/product';
 import { REGISTRATION_FIELDS } from '@/lib/registration-fields';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import { CERTIFICATION_CATEGORIES } from '@/lib/certification-options';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
+import { LanguageSwitcher } from '@/components/product/LanguageSwitcher';
+import { ProductComponentsStep, type ComponentEntry } from '@/components/product/ProductComponentsStep';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useBranding } from '@/contexts/BrandingContext';
 import type { ProductImage } from '@/types/database';
+import type { AggregationOverrides } from '@/types/product';
+import { getProductComponents, addProductComponent, removeProductComponent, updateProductComponent } from '@/services/supabase';
 import type { VisibilityLevel } from '@/types/visibility';
 import {
   ArrowLeft,
@@ -30,6 +37,10 @@ import {
   Headphones,
   Lock,
   Users,
+  Building2,
+  Layers,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +64,7 @@ const SUPPLIER_ROLES = [
   { value: 'logistics', label: 'Logistics' },
 ];
 
-const steps = [
+const BASE_STEPS = [
   { id: 'master-data', title: 'Basic Data', icon: Package },
   { id: 'images', title: 'Images', icon: ImageIcon },
   { id: 'sustainability', title: 'Sustainability', icon: Leaf },
@@ -62,6 +73,8 @@ const steps = [
   { id: 'support', title: 'Support', icon: Headphones },
   { id: 'suppliers', title: 'Suppliers', icon: Truck },
 ];
+
+const COMPONENTS_STEP = { id: 'components', title: 'Components', icon: Layers };
 
 export function ProductFormPage() {
   const { t } = useTranslation('products');
@@ -78,17 +91,37 @@ export function ProductFormPage() {
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
 
+  // Multi-language state
+  const [activeLanguage, setActiveLanguage] = useState<string>('default');
+  const [translations, setTranslations] = useState<Record<string, Partial<TranslatableProductFields>>>({});
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const productLanguages = tenant?.settings?.productLanguages || ['en', 'de'];
+
   // Supplier state
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isSelfManufacturer, setIsSelfManufacturer] = useState(false);
   const [isSelfImporter, setIsSelfImporter] = useState(false);
+  const [manufacturerSupplierId, setManufacturerSupplierId] = useState<string>('');
+  const [importerSupplierId, setImporterSupplierId] = useState<string>('');
   const [selectedSuppliers, setSelectedSuppliers] = useState<Array<{
     id?: string;
     supplier_id: string;
     role: string;
     is_primary: boolean;
     lead_time_days?: number;
+    price_per_unit?: number;
+    currency?: string;
   }>>([]);
+
+  // Product type (single vs set/bundle)
+  const [productType, setProductType] = useState<'single' | 'set'>('single');
+  const [components, setComponents] = useState<ComponentEntry[]>([]);
+  const [aggregationOverrides, setAggregationOverrides] = useState<AggregationOverrides>({});
+
+  // Dynamic steps: insert "Components" after "Basic Data" when type is 'set'
+  const steps = productType === 'set'
+    ? [BASE_STEPS[0], COMPONENTS_STEP, ...BASE_STEPS.slice(1)]
+    : BASE_STEPS;
 
   // Product images state
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
@@ -111,6 +144,7 @@ export function ProductFormPage() {
     Promise.all([
       getCategories().then(setCategories),
       getSuppliers().then(setSuppliers),
+      getCurrentTenant().then(setTenant),
     ]).catch(console.error).finally(() => setCategoriesLoading(false));
   }, []);
 
@@ -122,7 +156,8 @@ export function ProductFormPage() {
       getProductById(id),
       getProductSuppliers(id),
       getProductImages(id),
-    ]).then(([product, productSuppliers, images]) => {
+      getProductComponents(id),
+    ]).then(([product, productSuppliers, images, existingComponents]) => {
       if (!product) {
         setSubmitError('Product not found.');
         setIsLoading(false);
@@ -177,6 +212,9 @@ export function ProductFormPage() {
         supportResources: product.supportResources || {},
       });
 
+      setTranslations(product.translations || {});
+      setManufacturerSupplierId(product.manufacturerSupplierId || '');
+      setImporterSupplierId(product.importerSupplierId || '');
       setSelectedSuppliers(
         productSuppliers.map(sp => ({
           id: sp.id,
@@ -184,9 +222,27 @@ export function ProductFormPage() {
           role: sp.role,
           is_primary: sp.is_primary,
           lead_time_days: sp.lead_time_days,
+          price_per_unit: sp.price_per_unit,
+          currency: sp.currency,
         }))
       );
       setProductImages(images);
+      setProductType(product.productType || 'single');
+      setAggregationOverrides(product.aggregationOverrides || {});
+      setComponents(existingComponents.map(c => ({
+        tempId: c.id,
+        dbId: c.id,
+        productId: c.componentProductId,
+        productName: c.componentProduct?.name || '',
+        productGtin: c.componentProduct?.gtin || '',
+        productManufacturer: c.componentProduct?.manufacturer || '',
+        productImageUrl: c.componentProduct?.imageUrl,
+        productCategory: c.componentProduct?.category || '',
+        quantity: c.quantity,
+        sortOrder: c.sortOrder,
+        notes: c.notes,
+        materials: c.componentProduct,
+      })));
     }).catch(() => {
       setSubmitError('Error loading product.');
     }).finally(() => {
@@ -384,6 +440,11 @@ export function ProductFormPage() {
         },
         registrations: formData.registrations,
         supportResources: formData.supportResources,
+        translations: translations,
+        manufacturerSupplierId: (manufacturerSupplierId && manufacturerSupplierId !== '_tenant' && manufacturerSupplierId !== '_none') ? manufacturerSupplierId : null,
+        importerSupplierId: (importerSupplierId && importerSupplierId !== '_tenant' && importerSupplierId !== '_none') ? importerSupplierId : null,
+        productType,
+        aggregationOverrides: productType === 'set' ? aggregationOverrides : {},
       };
 
       if (isEditMode && id) {
@@ -403,7 +464,29 @@ export function ProductFormPage() {
               role: assignment.role as 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics',
               is_primary: assignment.is_primary,
               lead_time_days: assignment.lead_time_days,
+              price_per_unit: assignment.price_per_unit,
+              currency: assignment.currency,
             });
+          }
+          // Save components for sets
+          if (productType === 'set') {
+            // Remove components that are no longer in the list
+            const existingComps = await getProductComponents(id);
+            const currentIds = new Set(components.map(c => c.dbId).filter(Boolean));
+            for (const ec of existingComps) {
+              if (!currentIds.has(ec.id)) {
+                await removeProductComponent(ec.id);
+              }
+            }
+            // Add new components and update existing ones
+            for (let i = 0; i < components.length; i++) {
+              const comp = components[i];
+              if (comp.dbId) {
+                await updateProductComponent(comp.dbId, { quantity: comp.quantity, sortOrder: i });
+              } else {
+                await addProductComponent(id, comp.productId, comp.quantity);
+              }
+            }
           }
           navigate(`/products/${id}`);
         } else {
@@ -421,7 +504,15 @@ export function ProductFormPage() {
               role: assignment.role as 'manufacturer' | 'importeur' | 'component' | 'raw_material' | 'packaging' | 'logistics',
               is_primary: assignment.is_primary,
               lead_time_days: assignment.lead_time_days,
+              price_per_unit: assignment.price_per_unit,
+              currency: assignment.currency,
             });
+          }
+          // Save components for sets
+          if (productType === 'set') {
+            for (let i = 0; i < components.length; i++) {
+              await addProductComponent(result.id, components[i].productId, components[i].quantity);
+            }
           }
           // Redirect to create first batch for this product
           navigate(`/products/${result.id}/batches/new`);
@@ -439,6 +530,7 @@ export function ProductFormPage() {
   };
 
   const progress = ((currentStep + 1) / steps.length) * 100;
+  const currentStepId = steps[currentStep]?.id;
 
   return (
     <div className="space-y-6">
@@ -501,6 +593,22 @@ export function ProductFormPage() {
         </CardContent>
       </Card>
 
+      {/* Language Switcher */}
+      {(currentStepId === 'master-data' || currentStepId === 'sustainability' || currentStepId === 'support') && productLanguages.length > 0 && (
+        <Card>
+          <CardContent className="py-3">
+            <LanguageSwitcher
+              activeLanguage={activeLanguage}
+              onLanguageChange={setActiveLanguage}
+              availableLanguages={productLanguages}
+              translatedLanguages={Object.keys(translations).filter(lang =>
+                translations[lang] && Object.values(translations[lang]).some(v => v && (typeof v === 'string' ? v.length > 0 : true))
+              )}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Form Steps */}
       <Card>
         <CardHeader>
@@ -512,18 +620,19 @@ export function ProductFormPage() {
             {steps[currentStep].title}
           </CardTitle>
           <CardDescription>
-            {currentStep === 0 && t('Enter basic product information')}
-            {currentStep === 1 && t('Manage product images')}
-            {currentStep === 2 && t('Define materials and sustainability data')}
-            {currentStep === 3 && t('Add certifications and compliance data')}
-            {currentStep === 4 && t('Upload relevant documents')}
-            {currentStep === 5 && t('Add support resources, FAQ, warranty, and repair information')}
-            {currentStep === 6 && t('Assign suppliers and economic operators')}
+            {currentStepId === 'master-data' && t('Enter basic product information')}
+            {currentStepId === 'components' && t('Select products to include in this set')}
+            {currentStepId === 'images' && t('Manage product images')}
+            {currentStepId === 'sustainability' && t('Define materials and sustainability data')}
+            {currentStepId === 'compliance' && t('Add certifications and compliance data')}
+            {currentStepId === 'documents' && t('Upload relevant documents')}
+            {currentStepId === 'support' && t('Add support resources, FAQ, warranty, and repair information')}
+            {currentStepId === 'suppliers' && t('Assign suppliers and economic operators')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Step 1: Basic Data */}
-          {currentStep === 0 && (
+          {currentStepId === 'master-data' && (
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('Product Name')} *</label>
@@ -620,12 +729,63 @@ export function ProductFormPage() {
               )}
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">{t('Description')}</label>
-                <textarea
-                  className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder={t('Product description...')}
-                  value={formData.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                />
+                {activeLanguage === 'default' ? (
+                  <RichTextEditor
+                    value={formData.description}
+                    onChange={(html) => updateField('description', html)}
+                    placeholder={t('Product description...')}
+                    minHeight="6rem"
+                  />
+                ) : (
+                  <RichTextEditor
+                    value={translations[activeLanguage]?.description || ''}
+                    onChange={(html) => setTranslations(prev => ({
+                      ...prev,
+                      [activeLanguage]: { ...prev[activeLanguage], description: html },
+                    }))}
+                    placeholder={t('Product description...')}
+                    minHeight="6rem"
+                  />
+                )}
+              </div>
+
+              <Separator className="md:col-span-2" />
+
+              {/* Product Type Toggle */}
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-sm font-medium">{t('Product Type')}</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setProductType('single')}
+                    className={cn(
+                      'flex-1 p-3 rounded-lg border-2 text-left transition-all',
+                      productType === 'single'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted hover:border-muted-foreground/25'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      <span className="font-medium text-sm">{t('Single Product')}</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductType('set')}
+                    className={cn(
+                      'flex-1 p-3 rounded-lg border-2 text-left transition-all',
+                      productType === 'set'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted hover:border-muted-foreground/25'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4" />
+                      <span className="font-medium text-sm">{t('Product Set / Bundle')}</span>
+                    </div>
+                  </button>
+                </div>
               </div>
 
               <Separator className="md:col-span-2" />
@@ -701,8 +861,18 @@ export function ProductFormPage() {
             </div>
           )}
 
+          {/* Components Step (only for sets) */}
+          {currentStepId === 'components' && (
+            <ProductComponentsStep
+              components={components}
+              setComponents={setComponents}
+              parentProductId={id}
+              aggregationOverrides={aggregationOverrides}
+            />
+          )}
+
           {/* Step 2: Images */}
-          {currentStep === 1 && (
+          {currentStepId === 'images' && (
             <div className="space-y-6">
               {isEditMode && id ? (
                 <ProductImagesGallery
@@ -723,8 +893,48 @@ export function ProductFormPage() {
           )}
 
           {/* Step 3: Sustainability */}
-          {currentStep === 2 && (
+          {currentStepId === 'sustainability' && (
             <div className="space-y-6">
+              {/* Set Aggregation Override Banner */}
+              {productType === 'set' && components.length > 0 && (
+                <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">{t('Aggregated from {{count}} components', { count: components.length })}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {t('Data is auto-aggregated from components. Toggle overrides to enter manual data instead.')}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {(['materials', 'carbonFootprint', 'recyclability', 'netWeight', 'grossWeight'] as const).map(field => (
+                      <button
+                        key={field}
+                        type="button"
+                        onClick={() => setAggregationOverrides(prev => ({ ...prev, [field]: !prev[field] }))}
+                        className={cn(
+                          'flex items-center gap-2 p-2 rounded-md border text-xs transition-all',
+                          aggregationOverrides[field]
+                            ? 'border-amber-300 bg-amber-50 text-amber-800'
+                            : 'border-muted bg-background text-muted-foreground'
+                        )}
+                      >
+                        {aggregationOverrides[field] ? (
+                          <ToggleRight className="h-3.5 w-3.5" />
+                        ) : (
+                          <ToggleLeft className="h-3.5 w-3.5" />
+                        )}
+                        <span className="capitalize">
+                          {field === 'carbonFootprint' ? 'CO₂' : field === 'netWeight' ? t('Net Weight') : field === 'grossWeight' ? t('Gross Weight') : t(field.charAt(0).toUpperCase() + field.slice(1))}
+                        </span>
+                        <Badge variant="outline" className="ml-auto text-[10px]">
+                          {aggregationOverrides[field] ? t('Manual') : t('Auto')}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Section 1: Product Materials */}
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -806,12 +1016,24 @@ export function ProductFormPage() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">{t('Recycling Instructions')}</label>
-                  <textarea
-                    className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder={t('Disposal instructions for consumers...')}
-                    value={formData.recyclingInstructions}
-                    onChange={(e) => updateField('recyclingInstructions', e.target.value)}
-                  />
+                  {activeLanguage === 'default' ? (
+                    <RichTextEditor
+                      value={formData.recyclingInstructions}
+                      onChange={(html) => updateField('recyclingInstructions', html)}
+                      placeholder={t('Disposal instructions for consumers...')}
+                      minHeight="5rem"
+                    />
+                  ) : (
+                    <RichTextEditor
+                      value={translations[activeLanguage]?.recyclingInstructions || ''}
+                      onChange={(html) => setTranslations(prev => ({
+                        ...prev,
+                        [activeLanguage]: { ...prev[activeLanguage], recyclingInstructions: html },
+                      }))}
+                      placeholder={t('Disposal instructions for consumers...')}
+                      minHeight="5rem"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -901,19 +1123,31 @@ export function ProductFormPage() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">{t('Packaging Recycling Instructions')}</label>
-                  <textarea
-                    className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder={t('Disposal instructions for packaging...')}
-                    value={formData.packagingRecyclingInstructions}
-                    onChange={(e) => updateField('packagingRecyclingInstructions', e.target.value)}
-                  />
+                  {activeLanguage === 'default' ? (
+                    <RichTextEditor
+                      value={formData.packagingRecyclingInstructions}
+                      onChange={(html) => updateField('packagingRecyclingInstructions', html)}
+                      placeholder={t('Disposal instructions for packaging...')}
+                      minHeight="5rem"
+                    />
+                  ) : (
+                    <RichTextEditor
+                      value={translations[activeLanguage]?.packagingInstructions || ''}
+                      onChange={(html) => setTranslations(prev => ({
+                        ...prev,
+                        [activeLanguage]: { ...prev[activeLanguage], packagingInstructions: html },
+                      }))}
+                      placeholder={t('Disposal instructions for packaging...')}
+                      minHeight="5rem"
+                    />
+                  )}
                 </div>
               </div>
             </div>
           )}
 
           {/* Step 4: Compliance */}
-          {currentStep === 3 && (
+          {currentStepId === 'compliance' && (
             <div className="space-y-6">
               {CERTIFICATION_CATEGORIES.map((category) => (
                 <div key={category.label}>
@@ -1035,7 +1269,7 @@ export function ProductFormPage() {
           )}
 
           {/* Step 5: Documents */}
-          {currentStep === 4 && (
+          {currentStepId === 'documents' && (
             <div className="space-y-6">
               <input
                 ref={docFileInputRef}
@@ -1111,7 +1345,7 @@ export function ProductFormPage() {
           )}
 
           {/* Step 6: Support Resources */}
-          {currentStep === 5 && (
+          {currentStepId === 'support' && (
             <ProductSupportTab
               supportResources={formData.supportResources}
               onChange={(resources) => setFormData(prev => ({ ...prev, supportResources: resources }))}
@@ -1119,44 +1353,119 @@ export function ProductFormPage() {
           )}
 
           {/* Step 7: Suppliers */}
-          {currentStep === 6 && (
+          {currentStepId === 'suppliers' && (
             <div className="space-y-6">
-              {/* Own Company */}
+              {/* Manufacturer Company Selection */}
               <div>
-                <h3 className="font-medium mb-4">{t('Own Company')}</h3>
-                <div className="space-y-3 p-4 border rounded-lg">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isSelfManufacturer}
-                      onChange={(e) => setIsSelfManufacturer(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <span className="font-medium">
-                      {t('{{company}} is manufacturer of this product', { company: branding.appName || t('Own Company') })}
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isSelfImporter}
-                      onChange={(e) => setIsSelfImporter(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <span className="font-medium">
-                      {t('{{company}} is importer of this product', { company: branding.appName || t('Own Company') })}
-                    </span>
-                  </label>
-                  {(isSelfManufacturer || isSelfImporter) && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {isSelfManufacturer && (
-                        <Badge variant="secondary">{t('Manufacturer (self)')}</Badge>
-                      )}
-                      {isSelfImporter && (
-                        <Badge variant="secondary">{t('Importer (self)')}</Badge>
-                      )}
-                    </div>
-                  )}
+                <h3 className="font-medium mb-4 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  {t('Manufacturer / Importer')}
+                </h3>
+                <div className="space-y-4 p-4 border rounded-lg">
+                  {/* Manufacturer */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('Select Company')} ({t('is Manufacturer')})</label>
+                    <Select
+                      value={manufacturerSupplierId || '_none'}
+                      onValueChange={(v) => {
+                        const val = v === '_none' ? '' : v;
+                        setManufacturerSupplierId(val);
+                        if (val === '_tenant' && tenant) {
+                          setFormData(prev => ({
+                            ...prev,
+                            manufacturer: branding.appName || tenant.name || '',
+                          }));
+                          updateField('manufacturer', branding.appName || tenant.name || '');
+                        } else if (val && val !== '_tenant') {
+                          const supplier = suppliers.find(s => s.id === val);
+                          if (supplier) {
+                            setFormData(prev => ({
+                              ...prev,
+                              manufacturer: supplier.name || '',
+                            }));
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('Select Company')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">{t('No company assigned')}</SelectItem>
+                        <SelectItem value="_tenant">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5" />
+                            {branding.appName || tenant?.name || t('Own Company')}
+                          </div>
+                        </SelectItem>
+                        {suppliers.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name} ({s.country})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {manufacturerSupplierId && manufacturerSupplierId !== '_none' && (
+                      <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                        {manufacturerSupplierId === '_tenant' ? (
+                          <span>{t('Auto-fill from company data')}: {branding.appName || tenant?.name}</span>
+                        ) : (
+                          <span>{t('Auto-fill from company data')}: {suppliers.find(s => s.id === manufacturerSupplierId)?.name}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Importer */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('Select Company')} ({t('is Importer')})</label>
+                    <Select
+                      value={importerSupplierId || '_none'}
+                      onValueChange={(v) => setImporterSupplierId(v === '_none' ? '' : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('Select Company')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">{t('No company assigned')}</SelectItem>
+                        <SelectItem value="_tenant">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5" />
+                            {branding.appName || tenant?.name || t('Own Company')}
+                          </div>
+                        </SelectItem>
+                        {suppliers.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name} ({s.country})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Legacy checkboxes for backward compat */}
+                  <div className="flex flex-wrap gap-4 pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={isSelfManufacturer}
+                        onChange={(e) => setIsSelfManufacturer(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      {t('is Manufacturer')}
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={isSelfImporter}
+                        onChange={(e) => setIsSelfImporter(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      {t('is Importer')}
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -1183,7 +1492,7 @@ export function ProductFormPage() {
                 ) : (
                   <div className="space-y-4">
                     {selectedSuppliers.map((assignment, index) => (
-                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
+                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-7 p-4 border rounded-lg">
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-sm font-medium">{t('Supplier')}</label>
                           <Select
@@ -1227,8 +1536,36 @@ export function ProductFormPage() {
                             min="0"
                             value={assignment.lead_time_days || ''}
                             onChange={(e) => updateSupplierAssignment(index, 'lead_time_days', parseInt(e.target.value) || undefined)}
-                            placeholder="e.g. 14"
+                            placeholder={t('e.g. 14')}
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">{t('Price per Unit')}</label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={assignment.price_per_unit ?? ''}
+                            onChange={(e) => updateSupplierAssignment(index, 'price_per_unit', e.target.value ? parseFloat(e.target.value) : undefined)}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">{t('Currency')}</label>
+                          <Select
+                            value={assignment.currency || 'EUR'}
+                            onValueChange={(v) => updateSupplierAssignment(index, 'currency', v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="CHF">CHF</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium">{t('Options')}</label>

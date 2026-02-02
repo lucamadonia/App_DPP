@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
@@ -31,6 +31,9 @@ import {
   Settings2,
   Headphones,
   BrainCircuit,
+  DollarSign,
+  Hash,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,9 +56,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getProductById, getProductSuppliersWithDetails, getProductImages } from '@/services/supabase';
-import { getBatches, deleteBatch } from '@/services/supabase/batches';
-import type { Product } from '@/types/product';
+import { getProductById, getProductSuppliersWithDetails, getProductImages, getProductComponents, getProductsContaining } from '@/services/supabase';
+import { getBatches, deleteBatch, getBatchCostsBySupplier } from '@/services/supabase/batches';
+import type { SupplierBatchCost } from '@/services/supabase/batches';
+import type { Product, ProductComponent } from '@/types/product';
 import type { BatchListItem } from '@/types/product';
 import type { SupplierProduct, ProductImage } from '@/types/database';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
@@ -92,6 +96,9 @@ export function ProductPage() {
   const [batches, setBatches] = useState<BatchListItem[]>([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
+  const [components, setComponents] = useState<ProductComponent[]>([]);
+  const [usedInSets, setUsedInSets] = useState<Array<{ id: string; name: string }>>([]);
+  const [supplierCosts, setSupplierCosts] = useState<SupplierBatchCost[]>([]);
 
   useEffect(() => {
     async function loadProduct() {
@@ -116,12 +123,24 @@ export function ProductPage() {
       }
       setProductSuppliers(suppliersData);
       setProductImages(imagesData);
+
+      // Load components if this is a set, or "used in" for single products
+      if (data?.productType === 'set') {
+        getProductComponents(id).then(setComponents).catch(console.error);
+      } else {
+        getProductsContaining(id).then(setUsedInSets).catch(console.error);
+      }
+
       setIsLoading(false);
 
-      // Load batches
+      // Load batches + supplier costs
       setBatchesLoading(true);
-      const batchData = await getBatches(id);
+      const [batchData, costData] = await Promise.all([
+        getBatches(id),
+        getBatchCostsBySupplier(id),
+      ]);
       setBatches(batchData);
+      setSupplierCosts(costData);
       setBatchesLoading(false);
     }
 
@@ -183,9 +202,20 @@ export function ProductPage() {
                 <CheckCircle2 className="mr-1 h-3 w-3" />
                 Live
               </Badge>
+              {product.productType === 'set' && (
+                <Badge variant="outline" className="border-primary text-primary">
+                  <Layers className="mr-1 h-3 w-3" />
+                  {t('Set')}
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground">
               {product.manufacturer} · {product.category}
+              {usedInSets.length > 0 && (
+                <span className="ml-2 text-xs">
+                  · {t('Used as component in {{count}} sets', { count: usedInSets.length })}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -257,6 +287,15 @@ export function ProductPage() {
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{batches.length}</Badge>
             )}
           </TabsTrigger>
+          {product.productType === 'set' && (
+            <TabsTrigger value="components" className="flex items-center gap-2 flex-shrink-0">
+              <Package className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('Components')}</span>
+              {components.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{components.length}</Badge>
+              )}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="nachhaltigkeit" className="flex items-center gap-2 flex-shrink-0">
             <Leaf className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Sustainability')}</span>
@@ -367,6 +406,64 @@ export function ProductPage() {
 
         {/* Batches Tab */}
         <TabsContent value="batches" className="space-y-6">
+          {/* KPI Cards */}
+          {batches.length > 0 && (() => {
+            const totalQty = batches.reduce((s, b) => s + (b.quantity || 0), 0);
+            const totalValue = batches.reduce((s, b) => s + ((b.pricePerUnit || 0) * (b.quantity || 0)), 0);
+            const batchesWithPrice = batches.filter(b => b.pricePerUnit != null && b.quantity);
+            const avgPrice = batchesWithPrice.length > 0
+              ? batchesWithPrice.reduce((s, b) => s + (b.pricePerUnit || 0), 0) / batchesWithPrice.length
+              : 0;
+            return (
+              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <Hash className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">{t('Total Batches')}</p>
+                        <p className="text-2xl font-bold">{batches.length}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <Layers className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">{t('Total Quantity')}</p>
+                        <p className="text-2xl font-bold">{totalQty.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
+                        <p className="text-2xl font-bold">{totalValue > 0 ? formatCurrency(totalValue, 'EUR', locale) : '—'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">{t('Avg. Price/Unit')}</p>
+                        <p className="text-2xl font-bold">{avgPrice > 0 ? formatCurrency(avgPrice, 'EUR', locale) : '—'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -411,15 +508,18 @@ export function ProductPage() {
                       <TableHead>{t('Serial Number')}</TableHead>
                       <TableHead>{t('Batch Number')}</TableHead>
                       <TableHead>{t('Production Date')}</TableHead>
+                      <TableHead>{t('Supplier')}</TableHead>
+                      <TableHead>{t('Price/Unit')}</TableHead>
+                      <TableHead>{t('Total Price')}</TableHead>
                       <TableHead>{t('Status')}</TableHead>
                       <TableHead>{t('Overrides')}</TableHead>
-                      <TableHead>{t('Created')}</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {batches.map((batch) => {
                       const status = batchStatusConfig[batch.status];
+                      const batchTotal = (batch.pricePerUnit || 0) * (batch.quantity || 0);
                       return (
                         <TableRow key={batch.id}>
                           <TableCell>
@@ -436,6 +536,19 @@ export function ProductPage() {
                           <TableCell className="text-muted-foreground">
                             {formatDate(batch.productionDate, locale)}
                           </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {batch.supplierName || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {batch.pricePerUnit != null
+                              ? formatCurrency(batch.pricePerUnit, batch.currency || 'EUR', locale)
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {batchTotal > 0
+                              ? formatCurrency(batchTotal, batch.currency || 'EUR', locale)
+                              : '-'}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className={status.className}>
                               <status.icon className="mr-1 h-3 w-3" />
@@ -451,9 +564,6 @@ export function ProductPage() {
                             ) : (
                               <span className="text-muted-foreground text-sm">{t('Inherited')}</span>
                             )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(batch.createdAt, locale)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -668,42 +778,67 @@ export function ProductPage() {
             <CardContent>
               {productSuppliers.length > 0 ? (
                 <div className="space-y-4">
-                  {productSuppliers.map((sp) => (
-                    <div key={sp.id} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <Truck className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{sp.supplier_name}</p>
-                            {sp.is_primary && (
-                              <Badge variant="secondary">{t('Primary Supplier')}</Badge>
+                  {productSuppliers.map((sp) => {
+                    const cost = supplierCosts.find(c => c.supplierId === sp.supplier_id);
+                    return (
+                      <div key={sp.id}>
+                        <div className="flex items-center justify-between p-4 rounded-lg border">
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{sp.supplier_name}</p>
+                                {sp.is_primary && (
+                                  <Badge variant="secondary">{t('Primary Supplier')}</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {sp.supplier_country} · {SUPPLIER_ROLE_LABELS[sp.role] || sp.role}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm">
+                            {sp.lead_time_days != null && (
+                              <div className="text-right">
+                                <p className="text-muted-foreground">{t('Lead Time')}</p>
+                                <p className="font-medium">{sp.lead_time_days} {t('days')}</p>
+                              </div>
+                            )}
+                            {sp.price_per_unit != null && (
+                              <div className="text-right">
+                                <p className="text-muted-foreground">{t('Price/Unit')}</p>
+                                <p className="font-medium">
+                                  {formatCurrency(sp.price_per_unit, sp.currency || 'EUR', locale)}
+                                </p>
+                              </div>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {sp.supplier_country} · {SUPPLIER_ROLE_LABELS[sp.role] || sp.role}
-                          </p>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-6 text-sm">
-                        {sp.lead_time_days != null && (
-                          <div className="text-right">
-                            <p className="text-muted-foreground">{t('Lead Time')}</p>
-                            <p className="font-medium">{sp.lead_time_days} {t('days')}</p>
+                        {cost && (
+                          <div className="ml-14 mt-1 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+                            <div>
+                              <p className="text-xs text-muted-foreground">{t('Total Batches')}</p>
+                              <p className="font-medium">{cost.totalBatches}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">{t('Total Quantity')}</p>
+                              <p className="font-medium">{cost.totalQuantity.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">{t('Total Cost')}</p>
+                              <p className="font-medium">{formatCurrency(cost.totalCost, cost.currency, locale)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">{t('Avg. Price/Unit')}</p>
+                              <p className="font-medium">{formatCurrency(cost.avgPricePerUnit, cost.currency, locale)}</p>
+                            </div>
                           </div>
                         )}
-                        {sp.price_per_unit != null && (
-                          <div className="text-right">
-                            <p className="text-muted-foreground">{t('Price/Unit')}</p>
-                            <p className="font-medium">
-                              {sp.price_per_unit} {sp.currency || 'EUR'}
-                            </p>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -837,6 +972,64 @@ export function ProductPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Components Tab (Sets only) */}
+        {product.productType === 'set' && (
+          <TabsContent value="components" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  {t('Components')}
+                  <Badge variant="secondary">{components.length}</Badge>
+                </CardTitle>
+                <CardDescription>{t('Products included in this set')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {components.length === 0 ? (
+                  <p className="text-muted-foreground text-sm py-4 text-center">{t('No components added yet')}</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('Product')}</TableHead>
+                        <TableHead>{t('GTIN')}</TableHead>
+                        <TableHead>{t('Category')}</TableHead>
+                        <TableHead className="text-center">{t('Quantity')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {components.map(comp => {
+                        const cp = comp.componentProduct;
+                        return (
+                          <TableRow key={comp.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                {cp?.imageUrl ? (
+                                  <img src={cp.imageUrl} alt={cp.name} className="h-8 w-8 rounded object-cover" />
+                                ) : (
+                                  <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <Link to={`/products/${comp.componentProductId}`} className="font-medium hover:underline">
+                                  {cp?.name || comp.componentProductId}
+                                </Link>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{cp?.gtin || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground">{cp?.category || '-'}</TableCell>
+                            <TableCell className="text-center">{comp.quantity}×</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* AI Compliance Check Tab */}
         <TabsContent value="ai-check" className="space-y-6">
