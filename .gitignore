@@ -30,3 +30,12 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Office temp files
+~$*
+
+# Supabase temp
+supabase/.temp/
+
+# Windows artifacts
+nul
