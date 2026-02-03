@@ -1,4 +1,5 @@
 import { formatDate } from '@/lib/format';
+import { SafeHtml } from '@/components/ui/safe-html';
 import {
   Package,
   Leaf,
@@ -18,7 +19,9 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { RATING_BG_COLORS, RATING_STARS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 
 interface DPPTemplateProps {
   product: Product;
@@ -55,6 +58,9 @@ function RetailConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} cardStyle={styles.card} headingStyle={styles.heading} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -173,7 +179,7 @@ function RetailConsumerView({ data }: ViewProps) {
         {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
           <div className="mt-3 p-3 bg-muted/50 rounded-lg">
             <p className="text-sm font-medium mb-1">{t('Packaging Recycling')}</p>
-            <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+            <SafeHtml html={product.recyclability.packagingInstructions} className="text-sm text-muted-foreground" />
           </div>
         )}
       </div>
@@ -199,7 +205,7 @@ function RetailConsumerView({ data }: ViewProps) {
           </div>
           <div className="flex-1">
             {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
-              <p className="text-sm text-gray-600">{product.recyclability.instructions}</p>
+              <SafeHtml html={product.recyclability.instructions} className="text-sm text-gray-600" />
             )}
           </div>
         </div>
@@ -292,7 +298,7 @@ function RetailConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-4 w-4 text-indigo-500" />
                     {t('Usage Instructions')}
                   </h4>
-                  <p className="text-sm text-gray-600">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-sm text-gray-600" />
                 </div>
               )}
               {sr.assemblyGuide && (
@@ -301,7 +307,7 @@ function RetailConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-4 w-4 text-indigo-500" />
                     {t('Assembly Guide')}
                   </h4>
-                  <p className="text-sm text-gray-600">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-sm text-gray-600" />
                 </div>
               )}
             </div>
@@ -332,7 +338,7 @@ function RetailConsumerView({ data }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="bg-cyan-50 rounded-xl p-4">
                     <p className="font-semibold text-sm text-cyan-800">{item.question}</p>
-                    <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-gray-600 mt-1" />
                   </div>
                 ))}
               </div>
@@ -366,7 +372,7 @@ function RetailConsumerView({ data }: ViewProps) {
                 {sr.warranty.terms && (
                   <div className="bg-green-50 rounded-xl p-3 sm:col-span-2">
                     <p className="text-xs text-green-600">{t('Warranty Terms')}</p>
-                    <p className="text-sm text-gray-600 mt-1">{sr.warranty.terms}</p>
+                    <SafeHtml html={sr.warranty.terms} className="text-sm text-gray-600 mt-1" />
                   </div>
                 )}
               </div>
@@ -382,7 +388,7 @@ function RetailConsumerView({ data }: ViewProps) {
                 {sr.repairInfo.repairGuide && (
                   <div className="bg-amber-50 rounded-xl p-4">
                     <p className="text-xs text-amber-600 mb-1">{t('Repair Guide')}</p>
-                    <p className="text-sm text-gray-600">{sr.repairInfo.repairGuide}</p>
+                    <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-gray-600" />
                   </div>
                 )}
                 {sr.repairInfo.repairabilityScore != null && (
@@ -418,7 +424,7 @@ function RetailConsumerView({ data }: ViewProps) {
                       {part.partNumber && <p className="text-xs text-purple-600">{t('Part Number')}: {part.partNumber}</p>}
                     </div>
                     <div className="text-right">
-                      {part.price != null && <p className="font-bold text-sm text-purple-700">{part.price} {part.currency || '€'}</p>}
+                      {part.price != null && <p className="font-bold text-sm text-purple-700">{part.price} {part.currency || 'â‚¬'}</p>}
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${part.available !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {part.available !== false ? t('Available') : t('Out of stock')}
                       </span>
@@ -503,7 +509,7 @@ function RetailConsumerView({ data }: ViewProps) {
       {/* Description */}
       {isFieldVisible('description') && product.description && (
         <div className="bg-gray-50 rounded-2xl p-6">
-          <p className="text-gray-700 leading-relaxed">{product.description}</p>
+          <SafeHtml html={product.description} className="text-gray-700 leading-relaxed" />
         </div>
       )}
 
@@ -585,7 +591,7 @@ function RetailCustomsView({ data }: ViewProps) {
       {/* Description */}
       {isFieldVisible('description') && product.description && (
         <div className="bg-gray-50 rounded-2xl p-6">
-          <p className="text-gray-700 leading-relaxed">{product.description}</p>
+          <SafeHtml html={product.description} className="text-gray-700 leading-relaxed" />
         </div>
       )}
 
@@ -678,7 +684,7 @@ function RetailCustomsView({ data }: ViewProps) {
             </div>
             <div className="flex-1">
               {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
-                <p className="text-sm text-gray-600">{product.recyclability.instructions}</p>
+                <SafeHtml html={product.recyclability.instructions} className="text-sm text-gray-600" />
               )}
             </div>
           </div>
@@ -774,7 +780,7 @@ function RetailCustomsView({ data }: ViewProps) {
                         <BookOpen className="h-4 w-4 text-indigo-500" />
                         {t('Usage Instructions')}
                       </h4>
-                      <p className="text-sm text-gray-600">{sr.instructions}</p>
+                      <SafeHtml html={sr.instructions} className="text-sm text-gray-600" />
                     </div>
                   )}
                   {sr.assemblyGuide && (
@@ -783,7 +789,7 @@ function RetailCustomsView({ data }: ViewProps) {
                         <BookOpen className="h-4 w-4 text-indigo-500" />
                         {t('Assembly Guide')}
                       </h4>
-                      <p className="text-sm text-gray-600">{sr.assemblyGuide}</p>
+                      <SafeHtml html={sr.assemblyGuide} className="text-sm text-gray-600" />
                     </div>
                   )}
                 </div>
@@ -814,7 +820,7 @@ function RetailCustomsView({ data }: ViewProps) {
                     {sr.faq.map((item, i) => (
                       <div key={i} className="bg-cyan-50 rounded-xl p-4">
                         <p className="font-semibold text-sm text-cyan-800">{item.question}</p>
-                        <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
+                        <SafeHtml html={item.answer} className="text-sm text-gray-600 mt-1" />
                       </div>
                     ))}
                   </div>
@@ -848,7 +854,7 @@ function RetailCustomsView({ data }: ViewProps) {
                     {sr.warranty.terms && (
                       <div className="bg-green-50 rounded-xl p-3 sm:col-span-2">
                         <p className="text-xs text-green-600">{t('Warranty Terms')}</p>
-                        <p className="text-sm text-gray-600 mt-1">{sr.warranty.terms}</p>
+                        <SafeHtml html={sr.warranty.terms} className="text-sm text-gray-600 mt-1" />
                       </div>
                     )}
                   </div>
@@ -864,7 +870,7 @@ function RetailCustomsView({ data }: ViewProps) {
                     {sr.repairInfo.repairGuide && (
                       <div className="bg-amber-50 rounded-xl p-4">
                         <p className="text-xs text-amber-600 mb-1">{t('Repair Guide')}</p>
-                        <p className="text-sm text-gray-600">{sr.repairInfo.repairGuide}</p>
+                        <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-gray-600" />
                       </div>
                     )}
                     {sr.repairInfo.repairabilityScore != null && (
@@ -900,7 +906,7 @@ function RetailCustomsView({ data }: ViewProps) {
                           {part.partNumber && <p className="text-xs text-purple-600">{t('Part Number')}: {part.partNumber}</p>}
                         </div>
                         <div className="text-right">
-                          {part.price != null && <p className="font-bold text-sm text-purple-700">{part.price} {part.currency || '€'}</p>}
+                          {part.price != null && <p className="font-bold text-sm text-purple-700">{part.price} {part.currency || 'â‚¬'}</p>}
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${part.available !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {part.available !== false ? t('Available') : t('Out of stock')}
                           </span>

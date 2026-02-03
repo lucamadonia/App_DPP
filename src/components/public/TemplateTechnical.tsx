@@ -1,4 +1,5 @@
 import { formatDate } from '@/lib/format';
+import { SafeHtml } from '@/components/ui/safe-html';
 import {
   HelpCircle,
   BookOpen,
@@ -13,7 +14,9 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 
 interface DPPTemplateProps {
   product: Product;
@@ -48,6 +51,9 @@ function TechnicalConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -104,8 +110,8 @@ function TechnicalConsumerView({ data }: ViewProps) {
                 <tr key={i} className="border-b last:border-0">
                   <td className="py-2 font-mono">{m.name}</td>
                   <td className="py-2 text-right font-mono">{m.percentage}%</td>
-                  <td className="py-2 text-center">{m.recyclable ? '✓' : '—'}</td>
-                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '—'}</td>}
+                  <td className="py-2 text-center">{m.recyclable ? 'âœ“' : 'â€”'}</td>
+                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || 'â€”'}</td>}
                 </tr>
               ))}
             </tbody>
@@ -118,7 +124,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
           </div>
         )}
         {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
-          <p className="mt-3 text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+          <SafeHtml html={product.recyclability.packagingInstructions} className="mt-3 text-sm text-muted-foreground" />
         )}
       </div>
     );
@@ -162,7 +168,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
           {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
             <div className="sm:col-span-2 bg-gray-50 p-3 rounded border border-gray-200">
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Recycling Instructions')}</p>
-              <p className="text-xs text-gray-700 font-mono">{product.recyclability.instructions}</p>
+              <SafeHtml html={product.recyclability.instructions} className="text-xs text-gray-700 font-mono" />
             </div>
           )}
         </div>
@@ -266,7 +272,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-3 w-3" />
                     {t('Usage Instructions')}
                   </p>
-                  <p className="text-xs text-gray-700 font-mono">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-xs text-gray-700 font-mono" />
                 </div>
               )}
               {sr.assemblyGuide && (
@@ -275,7 +281,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-3 w-3" />
                     {t('Assembly Guide')}
                   </p>
-                  <p className="text-xs text-gray-700 font-mono">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-xs text-gray-700 font-mono" />
                 </div>
               )}
             </div>
@@ -309,7 +315,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="py-2">
                     <p className="font-mono text-xs font-bold text-gray-800">{item.question}</p>
-                    <p className="font-mono text-xs text-gray-600 mt-0.5">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="font-mono text-xs text-gray-600 mt-0.5" />
                   </div>
                 ))}
               </div>
@@ -348,7 +354,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
               {sr.warranty.terms && (
                 <div className="bg-gray-50 p-3 rounded border border-gray-200 mt-2">
                   <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Warranty Terms')}</p>
-                  <p className="text-xs text-gray-700 font-mono">{sr.warranty.terms}</p>
+                  <SafeHtml html={sr.warranty.terms} className="text-xs text-gray-700 font-mono" />
                 </div>
               )}
             </div>
@@ -364,7 +370,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
               {sr.repairInfo.repairGuide && (
                 <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-2">
                   <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Repair Guide')}</p>
-                  <p className="text-xs text-gray-700 font-mono">{sr.repairInfo.repairGuide}</p>
+                  <SafeHtml html={sr.repairInfo.repairGuide} className="text-xs text-gray-700 font-mono" />
                 </div>
               )}
               {sr.repairInfo.repairabilityScore != null && (
@@ -412,7 +418,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
                         <td className="py-2 font-mono text-xs font-medium">{part.name}</td>
                         <td className="py-2 font-mono text-xs text-gray-500">{part.partNumber || '-'}</td>
                         <td className="py-2 text-right font-mono text-xs">
-                          {part.price != null && <span className="mr-2">{part.price} {part.currency || '€'}</span>}
+                          {part.price != null && <span className="mr-2">{part.price} {part.currency || 'â‚¬'}</span>}
                           <span className={part.available !== false ? 'text-green-600' : 'text-red-500'}>
                             {part.available !== false ? t('Available') : t('Out of stock')}
                           </span>
@@ -465,7 +471,7 @@ function TechnicalConsumerView({ data }: ViewProps) {
         {isFieldVisible('description') && product.description && (
           <div className="p-4 sm:p-6 border-b border-gray-200">
             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">{t('Description')}</h2>
-            <p className="text-sm text-gray-700">{product.description}</p>
+            <SafeHtml html={product.description} className="text-sm text-gray-700" />
           </div>
         )}
 
@@ -542,7 +548,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
         {isFieldVisible('description') && product.description && (
           <div className="p-4 sm:p-6 border-b border-gray-200">
             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">{t('Description')}</h2>
-            <p className="text-sm text-gray-700">{product.description}</p>
+            <SafeHtml html={product.description} className="text-sm text-gray-700" />
           </div>
         )}
 
@@ -675,7 +681,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
               {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
                 <div className="sm:col-span-2 bg-gray-50 p-3 rounded border border-gray-200">
                   <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Recycling Instructions')}</p>
-                  <p className="text-xs text-gray-700 font-mono">{product.recyclability.instructions}</p>
+                  <SafeHtml html={product.recyclability.instructions} className="text-xs text-gray-700 font-mono" />
                 </div>
               )}
             </div>
@@ -787,7 +793,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                           <BookOpen className="h-3 w-3" />
                           {t('Usage Instructions')}
                         </p>
-                        <p className="text-xs text-gray-700 font-mono">{sr.instructions}</p>
+                        <SafeHtml html={sr.instructions} className="text-xs text-gray-700 font-mono" />
                       </div>
                     )}
                     {sr.assemblyGuide && (
@@ -796,7 +802,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                           <BookOpen className="h-3 w-3" />
                           {t('Assembly Guide')}
                         </p>
-                        <p className="text-xs text-gray-700 font-mono">{sr.assemblyGuide}</p>
+                        <SafeHtml html={sr.assemblyGuide} className="text-xs text-gray-700 font-mono" />
                       </div>
                     )}
                   </div>
@@ -830,7 +836,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                       {sr.faq.map((item, i) => (
                         <div key={i} className="py-2">
                           <p className="font-mono text-xs font-bold text-gray-800">{item.question}</p>
-                          <p className="font-mono text-xs text-gray-600 mt-0.5">{item.answer}</p>
+                          <SafeHtml html={item.answer} className="font-mono text-xs text-gray-600 mt-0.5" />
                         </div>
                       ))}
                     </div>
@@ -869,7 +875,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                     {sr.warranty.terms && (
                       <div className="bg-gray-50 p-3 rounded border border-gray-200 mt-2">
                         <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Warranty Terms')}</p>
-                        <p className="text-xs text-gray-700 font-mono">{sr.warranty.terms}</p>
+                        <SafeHtml html={sr.warranty.terms} className="text-xs text-gray-700 font-mono" />
                       </div>
                     )}
                   </div>
@@ -885,7 +891,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                     {sr.repairInfo.repairGuide && (
                       <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-2">
                         <p className="text-[10px] uppercase tracking-wider text-gray-500 font-mono mb-1">{t('Repair Guide')}</p>
-                        <p className="text-xs text-gray-700 font-mono">{sr.repairInfo.repairGuide}</p>
+                        <SafeHtml html={sr.repairInfo.repairGuide} className="text-xs text-gray-700 font-mono" />
                       </div>
                     )}
                     {sr.repairInfo.repairabilityScore != null && (
@@ -933,7 +939,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                               <td className="py-2 font-mono text-xs font-medium">{part.name}</td>
                               <td className="py-2 font-mono text-xs text-gray-500">{part.partNumber || '-'}</td>
                               <td className="py-2 text-right font-mono text-xs">
-                                {part.price != null && <span className="mr-2">{part.price} {part.currency || '€'}</span>}
+                                {part.price != null && <span className="mr-2">{part.price} {part.currency || 'â‚¬'}</span>}
                                 <span className={part.available !== false ? 'text-green-600' : 'text-red-500'}>
                                   {part.available !== false ? t('Available') : t('Out of stock')}
                                 </span>

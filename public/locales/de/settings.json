@@ -523,5 +523,7 @@
   "Select Record type: CNAME": "Wählen Sie Eintragstyp: CNAME",
   "Set TTL to 300": "Setzen Sie TTL auf 300",
   "Click \"Create records\"": "Klicken Sie auf „Einträge erstellen"",
-  "Support": "Support"
+  "Support": "Support",
+  "Product Languages": "Produktsprachen",
+  "Configure which languages are available for product content": "Verfügbare Sprachen für Produktinhalte konfigurieren"
 }

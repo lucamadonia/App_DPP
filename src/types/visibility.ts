@@ -103,6 +103,9 @@ export const defaultVisibilityConfigV2: VisibilityConfigV2 = {
     manufacturerVAT: 'customs',
     certificateDownloads: 'customs',
 
+    // Set Components
+    setComponents: 'consumer',
+
     // Support
     supportResources: 'consumer',
     supportWarranty: 'consumer',
@@ -151,6 +154,9 @@ export const defaultVisibilityConfig: VisibilityConfig = {
     supplyChainTransport: false,
     supplyChainEmissions: true,
     supplyChainCost: false,
+
+    // Set Components
+    setComponents: true,
 
     // Identifikatoren (für Verbraucher ausgeblendet)
     gtin: false,
@@ -205,6 +211,9 @@ export const defaultVisibilityConfig: VisibilityConfig = {
     supplyChainTransport: true,
     supplyChainEmissions: true,
     supplyChainCost: false,
+
+    // Set Components
+    setComponents: true,
 
     // Identifikatoren (für Zoll sichtbar)
     gtin: true,
@@ -284,6 +293,9 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'manufacturerEORI', label: 'EORI Number', category: 'Customs Data', description: 'Economic Operators Registration and Identification' },
   { key: 'manufacturerVAT', label: 'VAT ID', category: 'Customs Data', description: 'Value Added Tax Identification Number' },
 
+  // Set Components
+  { key: 'setComponents', label: 'Set Components', category: 'Set / Bundle', description: 'Components of a product set' },
+
   // Support
   { key: 'supportResources', label: 'Support Information', category: 'Support' },
   { key: 'supportWarranty', label: 'Warranty', category: 'Support' },
@@ -303,6 +315,7 @@ export const fieldCategories = [
   'Recycling',
   'Certifications',
   'Supply Chain',
+  'Set / Bundle',
   'Customs Data',
   'Support',
 ];

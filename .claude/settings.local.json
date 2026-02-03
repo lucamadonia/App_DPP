@@ -19,7 +19,16 @@
       "Bash(grep:*)",
       "Bash(npm run lint:*)",
       "Bash(npx eslint:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(^d \")",
+      "Bash(ls:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(git push:*)",
+      "Bash(test:*)",
+      "Bash(git stash:*)",
+      "Bash(git pull:*)",
+      "Bash(powershell:*)"
     ]
   }
 }

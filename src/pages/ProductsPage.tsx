@@ -228,12 +228,19 @@ export function ProductsPage() {
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
-                        <Link
-                          to={`/products/${product.id}`}
-                          className="font-medium hover:text-primary hover:underline"
-                        >
-                          {product.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/products/${product.id}`}
+                            className="font-medium hover:text-primary hover:underline"
+                          >
+                            {product.name}
+                          </Link>
+                          {product.productType === 'set' && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {t('Set')}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <code className="font-mono text-sm">{product.gtin}</code>

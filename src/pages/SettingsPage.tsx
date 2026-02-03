@@ -37,6 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -52,6 +53,8 @@ import {
   getProducts,
   type ProductListItem,
 } from '@/services/supabase';
+import { updateTenantSettings } from '@/services/supabase/tenants';
+import { LANGUAGE_OPTIONS } from '@/components/product/LanguageSwitcher';
 import { useBranding } from '@/contexts/BrandingContext';
 import type { Tenant, BrandingSettings } from '@/types/database';
 import { validateDomain, validatePathPrefix, normalizeDomain, buildDomainUrl } from '@/lib/domain-utils';
@@ -518,6 +521,68 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     <Input placeholder="+49 30 123456789" />
                   </div>
                 </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="font-medium mb-2 flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  {t('Product Languages')}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t('Configure which languages are available for product content')}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(tenant?.settings?.productLanguages || ['en', 'de']).map((lang) => {
+                    const langInfo = LANGUAGE_OPTIONS[lang];
+                    return (
+                      <Badge key={lang} variant="secondary" className="gap-1.5">
+                        <span className="uppercase text-xs font-bold">{lang}</span>
+                        {langInfo?.label || lang}
+                        <button
+                          type="button"
+                          className="ml-1 hover:text-destructive"
+                          onClick={async () => {
+                            const current = tenant?.settings?.productLanguages || ['en', 'de'];
+                            if (current.length <= 1) return;
+                            const updated = current.filter((l: string) => l !== lang);
+                            await updateTenantSettings({ productLanguages: updated });
+                            const refreshed = await getCurrentTenant();
+                            if (refreshed) setTenant(refreshed);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <Select
+                  value=""
+                  onValueChange={async (lang) => {
+                    if (!lang) return;
+                    const current = tenant?.settings?.productLanguages || ['en', 'de'];
+                    if (current.includes(lang)) return;
+                    await updateTenantSettings({ productLanguages: [...current, lang] });
+                    const refreshed = await getCurrentTenant();
+                    if (refreshed) setTenant(refreshed);
+                  }}
+                >
+                  <SelectTrigger className="w-60">
+                    <SelectValue placeholder={t('Add Language')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(LANGUAGE_OPTIONS)
+                      .filter(([code]) => !(tenant?.settings?.productLanguages || ['en', 'de']).includes(code))
+                      .map(([code, info]) => (
+                        <SelectItem key={code} value={code}>
+                          <span className="uppercase text-xs font-bold mr-2">{code}</span>
+                          {info.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex justify-end">

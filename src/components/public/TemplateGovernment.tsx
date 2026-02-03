@@ -1,4 +1,5 @@
 import { formatDate } from '@/lib/format';
+import { SafeHtml } from '@/components/ui/safe-html';
 import {
   HelpCircle,
   BookOpen,
@@ -13,7 +14,9 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 
 interface DPPTemplateProps {
   product: Product;
@@ -48,6 +51,9 @@ function GovernmentConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -108,7 +114,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
                   <td className="py-2">{m.name}</td>
                   <td className="py-2 text-right">{m.percentage}%</td>
                   <td className="py-2 text-center">{m.recyclable ? t('Yes') : t('No')}</td>
-                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '—'}</td>}
+                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || 'â€”'}</td>}
                 </tr>
               ))}
             </tbody>
@@ -123,7 +129,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
         {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
           <div className="mt-3 p-3 bg-muted/50 rounded">
             <p className="text-sm font-medium mb-1">{t('Packaging Recycling')}</p>
-            <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+            <SafeHtml html={product.recyclability.packagingInstructions} className="text-sm text-muted-foreground" />
           </div>
         )}
         </div>
@@ -174,7 +180,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
         {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
           <div className="border-2 border-gray-300 p-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2">{t('Recycling Instructions')}</h4>
-            <p className="text-sm text-gray-700">{product.recyclability.instructions}</p>
+            <SafeHtml html={product.recyclability.instructions} className="text-sm text-gray-700" />
           </div>
         )}
         {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
@@ -279,7 +285,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-3.5 w-3.5" />
                     {t('Usage Instructions')}
                   </h4>
-                  <p className="text-sm text-gray-700">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-sm text-gray-700" />
                 </div>
               )}
               {sr.assemblyGuide && (
@@ -288,7 +294,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-3.5 w-3.5" />
                     {t('Assembly Guide')}
                   </h4>
-                  <p className="text-sm text-gray-700">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-sm text-gray-700" />
                 </div>
               )}
             </div>
@@ -324,7 +330,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="border-b border-gray-200 pb-2">
                     <p className="font-medium text-sm">{item.question}</p>
-                    <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-gray-600 mt-1" />
                   </div>
                 ))}
               </div>
@@ -361,7 +367,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
               {sr.warranty.terms && (
                 <div className="mt-3 border-2 border-gray-200 p-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">{t('Warranty Terms')}</p>
-                  <p className="text-sm text-gray-700">{sr.warranty.terms}</p>
+                  <SafeHtml html={sr.warranty.terms} className="text-sm text-gray-700" />
                 </div>
               )}
             </div>
@@ -377,7 +383,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
               {sr.repairInfo.repairGuide && (
                 <div className="border-2 border-gray-200 p-3 mb-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">{t('Repair Guide')}</p>
-                  <p className="text-sm text-gray-700">{sr.repairInfo.repairGuide}</p>
+                  <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-gray-700" />
                 </div>
               )}
               {sr.repairInfo.repairabilityScore != null && (
@@ -498,7 +504,7 @@ function GovernmentConsumerView({ data }: ViewProps) {
         {isFieldVisible('description') && product.description && (
           <div className="mt-6 pt-4 border-t-2 border-gray-300">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2">{t('Description')}</h3>
-            <p className="text-sm text-gray-700">{product.description}</p>
+            <SafeHtml html={product.description} className="text-sm text-gray-700" />
           </div>
         )}
       </div>
@@ -586,7 +592,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
         {isFieldVisible('description') && product.description && (
           <div className="mt-6 pt-4 border-t-2 border-gray-300">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2">{t('Description')}</h3>
-            <p className="text-sm text-gray-700">{product.description}</p>
+            <SafeHtml html={product.description} className="text-sm text-gray-700" />
           </div>
         )}
       </div>
@@ -730,7 +736,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
             {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
               <div className="border-2 border-gray-300 p-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2">{t('Recycling Instructions')}</h4>
-                <p className="text-sm text-gray-700">{product.recyclability.instructions}</p>
+                <SafeHtml html={product.recyclability.instructions} className="text-sm text-gray-700" />
               </div>
             )}
             {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
@@ -841,7 +847,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
                         <BookOpen className="h-3.5 w-3.5" />
                         {t('Usage Instructions')}
                       </h4>
-                      <p className="text-sm text-gray-700">{sr.instructions}</p>
+                      <SafeHtml html={sr.instructions} className="text-sm text-gray-700" />
                     </div>
                   )}
                   {sr.assemblyGuide && (
@@ -850,7 +856,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
                         <BookOpen className="h-3.5 w-3.5" />
                         {t('Assembly Guide')}
                       </h4>
-                      <p className="text-sm text-gray-700">{sr.assemblyGuide}</p>
+                      <SafeHtml html={sr.assemblyGuide} className="text-sm text-gray-700" />
                     </div>
                   )}
                 </div>
@@ -884,7 +890,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
                     {sr.faq.map((item, i) => (
                       <div key={i} className="border-b border-gray-200 pb-2">
                         <p className="font-medium text-sm">{item.question}</p>
-                        <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
+                        <SafeHtml html={item.answer} className="text-sm text-gray-600 mt-1" />
                       </div>
                     ))}
                   </div>
@@ -920,7 +926,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
                   {sr.warranty.terms && (
                     <div className="mt-3 border-2 border-gray-200 p-3">
                       <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">{t('Warranty Terms')}</p>
-                      <p className="text-sm text-gray-700">{sr.warranty.terms}</p>
+                      <SafeHtml html={sr.warranty.terms} className="text-sm text-gray-700" />
                     </div>
                   )}
                 </div>
@@ -935,7 +941,7 @@ function GovernmentCustomsView({ data }: ViewProps) {
                   {sr.repairInfo.repairGuide && (
                     <div className="border-2 border-gray-200 p-3 mb-3">
                       <p className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">{t('Repair Guide')}</p>
-                      <p className="text-sm text-gray-700">{sr.repairInfo.repairGuide}</p>
+                      <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-gray-700" />
                     </div>
                   )}
                   {sr.repairInfo.repairabilityScore != null && (

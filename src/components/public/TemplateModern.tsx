@@ -18,6 +18,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { VisibilityConfigV2 } from '@/types/visibility';
@@ -25,6 +26,7 @@ import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
 import { RATING_GRADIENT_COLORS, RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { usePublicBranding } from '@/pages/public/PublicLayout';
 
 interface DPPTemplateProps {
@@ -64,6 +66,9 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} cardStyle={cardStyle} headingStyle={headingStyle} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -87,13 +92,13 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
               {sr.instructions && (
                 <div className="p-4 bg-muted/50 rounded-xl">
                   <h4 className="font-medium mb-2 flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
-                  <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-sm text-muted-foreground" />
                 </div>
               )}
               {sr.assemblyGuide && (
                 <div className="p-4 bg-muted/50 rounded-xl">
                   <h4 className="font-medium mb-2 flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
-                  <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-sm text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -118,7 +123,7 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="p-4 bg-muted/30 rounded-xl">
                     <p className="font-medium text-sm">{item.question}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-muted-foreground mt-1" />
                   </div>
                 ))}
               </div>
@@ -138,7 +143,7 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
                   <div className="p-3 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground">{t('Contact Phone')}</p><p className="font-medium text-sm">{sr.warranty.contactPhone}</p></div>
                 )}
                 {sr.warranty.terms && (
-                  <div className="p-3 bg-muted/50 rounded-xl sm:col-span-2"><p className="text-xs text-muted-foreground">{t('Warranty Terms')}</p><p className="text-sm mt-1">{sr.warranty.terms}</p></div>
+                  <div className="p-3 bg-muted/50 rounded-xl sm:col-span-2"><p className="text-xs text-muted-foreground">{t('Warranty Terms')}</p><SafeHtml html={sr.warranty.terms} className="text-sm mt-1" /></div>
                 )}
               </div>
             </div>
@@ -148,7 +153,7 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
               <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
               <div className="space-y-2">
                 {sr.repairInfo.repairGuide && (
-                  <div className="p-4 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground mb-1">{t('Repair Guide')}</p><p className="text-sm">{sr.repairInfo.repairGuide}</p></div>
+                  <div className="p-4 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground mb-1">{t('Repair Guide')}</p><SafeHtml html={sr.repairInfo.repairGuide} className="text-sm" /></div>
                 )}
                 {sr.repairInfo.repairabilityScore != null && (
                   <div className="p-3 bg-muted/50 rounded-xl flex items-center justify-between"><span className="text-sm">{t('Repairability Score')}</span><span className="font-bold text-lg" style={{ color: primaryColor }}>{sr.repairInfo.repairabilityScore}/10</span></div>
@@ -285,7 +290,7 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
                 <Info className="h-4 w-4" />
                 {t('Packaging Recycling')}
               </h4>
-              <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+              <SafeHtml html={product.recyclability.packagingInstructions} className="text-sm text-muted-foreground" />
             </div>
           )}
         </div>
@@ -360,7 +365,7 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
                 <Info className="h-4 w-4" />
                 {t('Recycling Instructions')}
               </h4>
-              <p className="text-sm text-muted-foreground">{product.recyclability.instructions}</p>
+              <SafeHtml html={product.recyclability.instructions} className="text-sm text-muted-foreground" />
             </div>
           )}
           {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
@@ -500,7 +505,7 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
                 </p>
               )}
               {isFieldVisible('description') && (
-                <p className="text-foreground/80 text-lg leading-relaxed max-w-xl">{product.description}</p>
+                <SafeHtml html={product.description} className="text-foreground/80 text-lg leading-relaxed max-w-xl" />
               )}
             </div>
           </div>
@@ -820,13 +825,13 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
                     {sr.instructions && (
                       <div className="p-4 bg-muted/50 rounded-xl">
                         <h4 className="font-medium mb-2 flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
-                        <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                        <SafeHtml html={sr.instructions} className="text-sm text-muted-foreground" />
                       </div>
                     )}
                     {sr.assemblyGuide && (
                       <div className="p-4 bg-muted/50 rounded-xl">
                         <h4 className="font-medium mb-2 flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
-                        <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                        <SafeHtml html={sr.assemblyGuide} className="text-sm text-muted-foreground" />
                       </div>
                     )}
                   </div>
@@ -851,7 +856,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
                       {sr.faq.map((item, i) => (
                         <div key={i} className="p-4 bg-muted/30 rounded-xl">
                           <p className="font-medium text-sm">{item.question}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                          <SafeHtml html={item.answer} className="text-sm text-muted-foreground mt-1" />
                         </div>
                       ))}
                     </div>
@@ -871,7 +876,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
                         <div className="p-3 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground">{t('Contact Phone')}</p><p className="font-medium text-sm">{sr.warranty.contactPhone}</p></div>
                       )}
                       {sr.warranty.terms && (
-                        <div className="p-3 bg-muted/50 rounded-xl sm:col-span-2"><p className="text-xs text-muted-foreground">{t('Warranty Terms')}</p><p className="text-sm mt-1">{sr.warranty.terms}</p></div>
+                        <div className="p-3 bg-muted/50 rounded-xl sm:col-span-2"><p className="text-xs text-muted-foreground">{t('Warranty Terms')}</p><SafeHtml html={sr.warranty.terms} className="text-sm mt-1" /></div>
                       )}
                     </div>
                   </div>
@@ -881,7 +886,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
                     <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
                     <div className="space-y-2">
                       {sr.repairInfo.repairGuide && (
-                        <div className="p-4 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground mb-1">{t('Repair Guide')}</p><p className="text-sm">{sr.repairInfo.repairGuide}</p></div>
+                        <div className="p-4 bg-muted/50 rounded-xl"><p className="text-xs text-muted-foreground mb-1">{t('Repair Guide')}</p><SafeHtml html={sr.repairInfo.repairGuide} className="text-sm" /></div>
                       )}
                       {sr.repairInfo.repairabilityScore != null && (
                         <div className="p-3 bg-muted/50 rounded-xl flex items-center justify-between"><span className="text-sm">{t('Repairability Score')}</span><span className="font-bold text-lg" style={{ color: primaryColor }}>{sr.repairInfo.repairabilityScore}/10</span></div>

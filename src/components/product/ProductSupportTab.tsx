@@ -1,6 +1,23 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   BookOpen,
   Video,
   HelpCircle,
@@ -10,6 +27,7 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import type { SupportResources, VideoLink, FAQItem, SparePart } from '@/types/database';
 
 interface Props {
@@ -25,9 +44,97 @@ interface Props {
   readOnly?: boolean;
 }
 
+function SortableFAQItem({
+  item,
+  index,
+  onUpdateQuestion,
+  onUpdateAnswer,
+  onRemove,
+  readOnly,
+}: {
+  item: FAQItem;
+  index: number;
+  onUpdateQuestion: (value: string) => void;
+  onUpdateAnswer: (value: string) => void;
+  onRemove: () => void;
+  readOnly?: boolean;
+}) {
+  const { t } = useTranslation('products');
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `faq-${index}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="border rounded-lg overflow-hidden"
+    >
+      <div className="flex items-start gap-3 p-4">
+        {/* Drag handle + number */}
+        {!readOnly && (
+          <div
+            className="flex flex-col items-center gap-1 pt-1 cursor-grab active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+          {index + 1}
+        </div>
+        <div className="flex-1 space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium">{t('Question')}</label>
+            <Input
+              value={item.question}
+              onChange={(e) => onUpdateQuestion(e.target.value)}
+              placeholder={t('Enter question...')}
+              disabled={readOnly}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium">{t('Answer')}</label>
+            <RichTextEditor
+              value={item.answer}
+              onChange={onUpdateAnswer}
+              placeholder={t('Enter answer...')}
+              disabled={readOnly}
+              minHeight="5rem"
+              compact
+            />
+          </div>
+        </div>
+        {!readOnly && (
+          <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={onRemove}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ProductSupportTab({ supportResources, onChange, readOnly }: Props) {
   const { t } = useTranslation('products');
   const [activeSection, setActiveSection] = useState<string>('instructions');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const update = (field: string, value: unknown) => {
     onChange({ ...supportResources, [field]: value });
@@ -64,6 +171,15 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
   };
   const updateFAQ = (index: number, field: string, value: string) => {
     update('faq', faq.map((f: FAQItem, i: number) => i === index ? { ...f, [field]: value } : f));
+  };
+
+  const handleFAQDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = parseInt(String(active.id).replace('faq-', ''));
+    const newIndex = parseInt(String(over.id).replace('faq-', ''));
+    update('faq', arrayMove(faq, oldIndex, newIndex));
   };
 
   // Spare parts management
@@ -108,22 +224,22 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('Usage Instructions')}</label>
-              <textarea
-                className="flex min-h-32 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder={t('Enter usage instructions (Markdown supported)...')}
+              <RichTextEditor
                 value={supportResources.instructions || ''}
-                onChange={(e) => update('instructions', e.target.value)}
+                onChange={(html) => update('instructions', html)}
+                placeholder={t('Enter usage instructions...')}
                 disabled={readOnly}
+                minHeight="8rem"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('Assembly Guide')}</label>
-              <textarea
-                className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder={t('Enter assembly/installation guide...')}
+              <RichTextEditor
                 value={supportResources.assemblyGuide || ''}
-                onChange={(e) => update('assemblyGuide', e.target.value)}
+                onChange={(html) => update('assemblyGuide', html)}
+                placeholder={t('Enter assembly/installation guide...')}
                 disabled={readOnly}
+                minHeight="6rem"
               />
             </div>
           </CardContent>
@@ -230,6 +346,12 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
                   <HelpCircle className="h-5 w-5 text-primary" />
                   {t('Frequently Asked Questions')}
                 </CardTitle>
+                {faq.length > 1 && !readOnly && (
+                  <CardDescription className="flex items-center gap-1 mt-1">
+                    <GripVertical className="h-3 w-3" />
+                    {t('Drag to reorder')}
+                  </CardDescription>
+                )}
               </div>
               {!readOnly && (
                 <Button variant="outline" size="sm" onClick={addFAQ}>
@@ -245,36 +367,30 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
                 {t('No FAQ entries yet')}
               </p>
             ) : (
-              faq.map((item: FAQItem, index: number) => (
-                <div key={index} className="p-4 border rounded-lg space-y-3">
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 space-y-1">
-                      <label className="text-xs font-medium">{t('Question')}</label>
-                      <Input
-                        value={item.question}
-                        onChange={(e) => updateFAQ(index, 'question', e.target.value)}
-                        placeholder={t('Enter question...')}
-                        disabled={readOnly}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleFAQDragEnd}
+              >
+                <SortableContext
+                  items={faq.map((_: FAQItem, i: number) => `faq-${i}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-4">
+                    {faq.map((item: FAQItem, index: number) => (
+                      <SortableFAQItem
+                        key={`faq-${index}`}
+                        item={item}
+                        index={index}
+                        onUpdateQuestion={(v) => updateFAQ(index, 'question', v)}
+                        onUpdateAnswer={(v) => updateFAQ(index, 'answer', v)}
+                        onRemove={() => removeFAQ(index)}
+                        readOnly={readOnly}
                       />
-                    </div>
-                    {!readOnly && (
-                      <Button variant="ghost" size="icon" className="mt-5" onClick={() => removeFAQ(index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
+                    ))}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Answer')}</label>
-                    <textarea
-                      className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={item.answer}
-                      onChange={(e) => updateFAQ(index, 'answer', e.target.value)}
-                      placeholder={t('Enter answer...')}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-              ))
+                </SortableContext>
+              </DndContext>
             )}
           </CardContent>
         </Card>
@@ -332,15 +448,15 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">{t('Warranty Terms')}</label>
-                <textarea
-                  className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <RichTextEditor
                   value={supportResources.warranty?.terms || ''}
-                  onChange={(e) => update('warranty', {
+                  onChange={(html) => update('warranty', {
                     ...supportResources.warranty,
-                    terms: e.target.value,
+                    terms: html,
                   })}
                   placeholder={t('Enter warranty terms and conditions...')}
                   disabled={readOnly}
+                  minHeight="6rem"
                 />
               </div>
             </div>
@@ -360,15 +476,15 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('Repair Guide')}</label>
-              <textarea
-                className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <RichTextEditor
                 value={supportResources.repairInfo?.repairGuide || ''}
-                onChange={(e) => update('repairInfo', {
+                onChange={(html) => update('repairInfo', {
                   ...supportResources.repairInfo,
-                  repairGuide: e.target.value,
+                  repairGuide: html,
                 })}
                 placeholder={t('Enter repair instructions...')}
                 disabled={readOnly}
+                minHeight="6rem"
               />
             </div>
             <div className="space-y-2">

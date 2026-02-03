@@ -12,6 +12,7 @@ import { useLocale } from '@/hooks/use-locale';
 import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
+import { getTranslatedProduct } from '@/hooks/use-public-product';
 import {
   resolveDesign,
   getCardStyle,
@@ -115,6 +116,10 @@ const SECTION_CHECKS: Record<
     field: 'supportResources',
     hasData: (_p, sh) => sh,
   },
+  components: {
+    field: 'setComponents',
+    hasData: (p) => p.productType === 'set' && (p.components?.length ?? 0) > 0,
+  },
 };
 
 // ============================================
@@ -131,6 +136,9 @@ export function useDPPTemplateData(
   const { t } = useTranslation('dpp');
   const locale = useLocale();
 
+  // 0. Apply translations for current locale
+  const translatedProduct = getTranslatedProduct(product, locale);
+
   // 1. Resolve design (merge with defaults)
   const design = resolveDesign(dppDesign);
 
@@ -141,7 +149,7 @@ export function useDPPTemplateData(
   };
 
   // 3. Pre-compute support content flag
-  const supportHasContent = hasSupportContent(product.supportResources);
+  const supportHasContent = hasSupportContent(translatedProduct.supportResources);
 
   // 4. Build ordered, filtered consumer sections
   const consumerSections: RenderableSection[] = getSectionOrder(design)
@@ -150,7 +158,7 @@ export function useDPPTemplateData(
       return (
         isSectionVisible(design, id) &&
         isFieldVisible(check.field) &&
-        check.hasData(product, supportHasContent)
+        check.hasData(translatedProduct, supportHasContent)
       );
     })
     .map((id) => ({
@@ -176,7 +184,7 @@ export function useDPPTemplateData(
     styles,
     t,
     locale,
-    product,
+    product: translatedProduct,
     view,
   };
 }

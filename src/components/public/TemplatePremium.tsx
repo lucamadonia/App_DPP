@@ -13,7 +13,10 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { RATING_TEXT_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 interface DPPTemplateProps {
   product: Product;
@@ -50,6 +53,9 @@ function PremiumConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} cardStyle={styles.card} headingStyle={styles.heading} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -137,7 +143,7 @@ function PremiumConsumerView({ data }: ViewProps) {
           </div>
         )}
         {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
-          <p className="mt-3 text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+          <SafeHtml html={product.recyclability.packagingInstructions} className="mt-3 text-sm text-muted-foreground" />
         )}
       </div>
     );
@@ -160,7 +166,7 @@ function PremiumConsumerView({ data }: ViewProps) {
           </div>
         </div>
         {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
-          <p className="mt-4 text-sm text-gray-400 border-t border-gray-800 pt-4">{product.recyclability.instructions}</p>
+          <SafeHtml html={product.recyclability.instructions} className="mt-4 text-sm text-gray-400 border-t border-gray-800 pt-4" />
         )}
         {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
@@ -245,7 +251,7 @@ function PremiumConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-4 w-4 text-amber-400" />
                     {t('Usage Instructions')}
                   </h4>
-                  <p className="text-sm text-gray-400">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-sm text-gray-400" />
                 </div>
               )}
               {sr.assemblyGuide && (
@@ -254,7 +260,7 @@ function PremiumConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-4 w-4 text-amber-400" />
                     {t('Assembly Guide')}
                   </h4>
-                  <p className="text-sm text-gray-400">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-sm text-gray-400" />
                 </div>
               )}
             </div>
@@ -288,7 +294,7 @@ function PremiumConsumerView({ data }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="bg-gray-950/50 rounded-lg p-4 border border-amber-400/10">
                     <p className="text-sm font-semibold">{item.question}</p>
-                    <p className="text-sm text-gray-400 mt-1">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-gray-400 mt-1" />
                   </div>
                 ))}
               </div>
@@ -325,7 +331,7 @@ function PremiumConsumerView({ data }: ViewProps) {
               {sr.warranty.terms && (
                 <div className="mt-3 bg-gray-950/50 rounded-lg p-4 border border-amber-400/10">
                   <p className="text-xs text-amber-400/60 mb-1">{t('Warranty Terms')}</p>
-                  <p className="text-sm text-gray-400">{sr.warranty.terms}</p>
+                  <SafeHtml html={sr.warranty.terms} className="text-sm text-gray-400" />
                 </div>
               )}
             </div>
@@ -341,7 +347,7 @@ function PremiumConsumerView({ data }: ViewProps) {
               {sr.repairInfo.repairGuide && (
                 <div className="bg-gray-950/50 rounded-lg p-4 border border-amber-400/10 mb-3">
                   <p className="text-xs text-amber-400/60 mb-1">{t('Repair Guide')}</p>
-                  <p className="text-sm text-gray-400">{sr.repairInfo.repairGuide}</p>
+                  <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-gray-400" />
                 </div>
               )}
               {sr.repairInfo.repairabilityScore != null && (
@@ -422,7 +428,7 @@ function PremiumConsumerView({ data }: ViewProps) {
             <p className="text-gray-400 text-lg">{product.manufacturer}</p>
           )}
           {isFieldVisible('description') && product.description && (
-            <p className="mt-6 text-gray-300 max-w-2xl mx-auto leading-relaxed">{product.description}</p>
+            <SafeHtml html={product.description} className="mt-6 text-gray-300 max-w-2xl mx-auto leading-relaxed" />
           )}
         </div>
       </div>
@@ -466,7 +472,7 @@ function PremiumCustomsView({ data }: ViewProps) {
             <p className="text-gray-400 text-lg">{product.manufacturer}</p>
           )}
           {isFieldVisible('description') && product.description && (
-            <p className="mt-6 text-gray-300 max-w-2xl mx-auto leading-relaxed">{product.description}</p>
+            <SafeHtml html={product.description} className="mt-6 text-gray-300 max-w-2xl mx-auto leading-relaxed" />
           )}
         </div>
       </div>
@@ -570,7 +576,7 @@ function PremiumCustomsView({ data }: ViewProps) {
               </div>
             </div>
             {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
-              <p className="mt-4 text-sm text-gray-400 border-t border-gray-800 pt-4">{product.recyclability.instructions}</p>
+              <SafeHtml html={product.recyclability.instructions} className="mt-4 text-sm text-gray-400 border-t border-gray-800 pt-4" />
             )}
             {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4">
@@ -658,7 +664,7 @@ function PremiumCustomsView({ data }: ViewProps) {
                           <BookOpen className="h-4 w-4 text-amber-400" />
                           {t('Usage Instructions')}
                         </h4>
-                        <p className="text-sm text-gray-400">{sr.instructions}</p>
+                        <SafeHtml html={sr.instructions} className="text-sm text-gray-400" />
                       </div>
                     )}
                     {sr.assemblyGuide && (
@@ -667,7 +673,7 @@ function PremiumCustomsView({ data }: ViewProps) {
                           <BookOpen className="h-4 w-4 text-amber-400" />
                           {t('Assembly Guide')}
                         </h4>
-                        <p className="text-sm text-gray-400">{sr.assemblyGuide}</p>
+                        <SafeHtml html={sr.assemblyGuide} className="text-sm text-gray-400" />
                       </div>
                     )}
                   </div>
@@ -701,7 +707,7 @@ function PremiumCustomsView({ data }: ViewProps) {
                       {sr.faq.map((item, i) => (
                         <div key={i} className="bg-gray-950/50 rounded-lg p-4 border border-amber-400/10">
                           <p className="text-sm font-semibold">{item.question}</p>
-                          <p className="text-sm text-gray-400 mt-1">{item.answer}</p>
+                          <SafeHtml html={item.answer} className="text-sm text-gray-400 mt-1" />
                         </div>
                       ))}
                     </div>
@@ -738,7 +744,7 @@ function PremiumCustomsView({ data }: ViewProps) {
                     {sr.warranty.terms && (
                       <div className="mt-3 bg-gray-950/50 rounded-lg p-4 border border-amber-400/10">
                         <p className="text-xs text-amber-400/60 mb-1">{t('Warranty Terms')}</p>
-                        <p className="text-sm text-gray-400">{sr.warranty.terms}</p>
+                        <SafeHtml html={sr.warranty.terms} className="text-sm text-gray-400" />
                       </div>
                     )}
                   </div>
@@ -754,7 +760,7 @@ function PremiumCustomsView({ data }: ViewProps) {
                     {sr.repairInfo.repairGuide && (
                       <div className="bg-gray-950/50 rounded-lg p-4 border border-amber-400/10 mb-3">
                         <p className="text-xs text-amber-400/60 mb-1">{t('Repair Guide')}</p>
-                        <p className="text-sm text-gray-400">{sr.repairInfo.repairGuide}</p>
+                        <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-gray-400" />
                       </div>
                     )}
                     {sr.repairInfo.repairabilityScore != null && (

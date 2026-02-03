@@ -22,7 +22,10 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
 import { useDPPTemplateData } from '@/hooks/use-dpp-template-data';
+
 import { RATING_BG_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 interface DPPTemplateProps {
   product: Product;
@@ -54,6 +57,7 @@ const SECTION_TAB_CONFIG: Record<DPPSectionId, { label: string; icon: React.Reac
   certifications: { label: 'Certifications', icon: <Award className="h-3.5 w-3.5" /> },
   supplyChain: { label: 'Supply Chain', icon: <Truck className="h-3.5 w-3.5" /> },
   support: { label: 'Support & Service', icon: <HelpCircle className="h-3.5 w-3.5" /> },
+  components: { label: 'Components', icon: <Package className="h-3.5 w-3.5" /> },
 };
 
 type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2' | 'support';
@@ -167,7 +171,7 @@ function CompactConsumerView({ data }: ViewProps) {
                 <p className="text-sm mt-3">{t('Packaging recyclable')}: <span className="font-medium">{product.recyclability.packagingRecyclablePercentage}%</span></p>
               )}
               {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
-                <p className="text-sm text-muted-foreground mt-2">{product.recyclability.packagingInstructions}</p>
+                <SafeHtml html={product.recyclability.packagingInstructions} className="text-sm text-muted-foreground mt-2" />
               )}
             </div>
           );
@@ -220,7 +224,7 @@ function CompactConsumerView({ data }: ViewProps) {
                   <Info className="h-3.5 w-3.5" />
                   {t('Recycling Instructions')}
                 </p>
-                <p className="text-sm text-muted-foreground">{product.recyclability.instructions}</p>
+                <SafeHtml html={product.recyclability.instructions} className="text-sm text-muted-foreground" />
               </div>
             )}
 
@@ -272,7 +276,7 @@ function CompactConsumerView({ data }: ViewProps) {
                   {isFieldVisible('supplyChainEmissions') && entry.emissionsKg != null && (
                     <p className="text-xs text-green-600 flex items-center gap-1">
                       <Leaf className="h-3 w-3" />
-                      {entry.emissionsKg} kg CO₂
+                      {entry.emissionsKg} kg COâ‚‚
                     </p>
                   )}
                 </div>
@@ -290,13 +294,13 @@ function CompactConsumerView({ data }: ViewProps) {
                   {sr.instructions && (
                     <div className="p-3 bg-muted/30 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Usage Instructions')}</p>
-                      <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                      <SafeHtml html={sr.instructions} className="text-sm text-muted-foreground" />
                     </div>
                   )}
                   {sr.assemblyGuide && (
                     <div className="p-3 bg-muted/30 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Assembly Guide')}</p>
-                      <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                      <SafeHtml html={sr.assemblyGuide} className="text-sm text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -315,7 +319,7 @@ function CompactConsumerView({ data }: ViewProps) {
                   {sr.faq.map((item, i) => (
                     <div key={i} className="p-3 bg-muted/30 rounded-lg">
                       <p className="font-medium text-sm">{item.question}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                      <SafeHtml html={item.answer} className="text-sm text-muted-foreground mt-1" />
                     </div>
                   ))}
                 </div>
@@ -348,7 +352,7 @@ function CompactConsumerView({ data }: ViewProps) {
                   {sr.spareParts.map((part, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div><p className="font-medium text-sm">{part.name}</p>{part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}</div>
-                      <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
+                      <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || 'â‚¬'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
                     </div>
                   ))}
                 </div>
@@ -356,6 +360,10 @@ function CompactConsumerView({ data }: ViewProps) {
             </div>
           );
         })()}
+
+        {activeTab === 'components' && product.productType === 'set' && product.components?.length && (
+          <DPPSetComponentsSection components={product.components} cardStyle={cardStyle} headingStyle={headingStyle} t={t} />
+        )}
       </div>
     </div>
   );
@@ -563,7 +571,7 @@ function CompactCustomsView({ data }: ViewProps) {
                   {isFieldVisible('supplyChainEmissions') && entry.emissionsKg != null && (
                     <p className="text-xs text-green-600 flex items-center gap-1">
                       <Leaf className="h-3 w-3" />
-                      {entry.emissionsKg} kg CO₂
+                      {entry.emissionsKg} kg COâ‚‚
                     </p>
                   )}
                 </div>
@@ -600,13 +608,13 @@ function CompactCustomsView({ data }: ViewProps) {
                   {sr.instructions && (
                     <div className="p-3 bg-muted/30 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Usage Instructions')}</p>
-                      <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                      <SafeHtml html={sr.instructions} className="text-sm text-muted-foreground" />
                     </div>
                   )}
                   {sr.assemblyGuide && (
                     <div className="p-3 bg-muted/30 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-1.5 mb-1"><BookOpen className="h-3.5 w-3.5" />{t('Assembly Guide')}</p>
-                      <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                      <SafeHtml html={sr.assemblyGuide} className="text-sm text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -625,7 +633,7 @@ function CompactCustomsView({ data }: ViewProps) {
                   {sr.faq.map((item, i) => (
                     <div key={i} className="p-3 bg-muted/30 rounded-lg">
                       <p className="font-medium text-sm">{item.question}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                      <SafeHtml html={item.answer} className="text-sm text-muted-foreground mt-1" />
                     </div>
                   ))}
                 </div>
@@ -658,7 +666,7 @@ function CompactCustomsView({ data }: ViewProps) {
                   {sr.spareParts.map((part, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div><p className="font-medium text-sm">{part.name}</p>{part.partNumber && <p className="text-xs text-muted-foreground">{t('Part Number')}: {part.partNumber}</p>}</div>
-                      <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || '€'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
+                      <div className="text-right">{part.price != null && <p className="font-medium text-sm">{part.price} {part.currency || 'â‚¬'}</p>}<p className={`text-xs ${part.available !== false ? 'text-green-600' : 'text-red-500'}`}>{part.available !== false ? t('Available') : t('Out of stock')}</p></div>
                     </div>
                   ))}
                 </div>

@@ -3,7 +3,10 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 interface DPPTemplateProps {
   product: Product;
@@ -46,6 +49,9 @@ function ScientificConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications(sectionNumber);
       case 'supplyChain': return renderSupplyChain(sectionNumber);
       case 'support': return renderSupport(sectionNumber);
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -114,7 +120,7 @@ function ScientificConsumerView({ data }: ViewProps) {
           <p className="mt-3 text-sm"><strong>{t('Packaging recyclable')}:</strong> {product.recyclability.packagingRecyclablePercentage}%</p>
         )}
         {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
-          <p className="mt-2 text-sm text-muted-foreground"><em>{product.recyclability.packagingInstructions}</em></p>
+          <SafeHtml html={product.recyclability.packagingInstructions} className="mt-2 text-sm text-muted-foreground italic" />
         )}
       </section>
     );
@@ -173,7 +179,7 @@ function ScientificConsumerView({ data }: ViewProps) {
             {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
               <tr className="border-b border-gray-100">
                 <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Recycling Instructions')}</td>
-                <td className="py-2 px-3 text-gray-700">{product.recyclability.instructions}</td>
+                <td className="py-2 px-3"><SafeHtml html={product.recyclability.instructions} className="text-gray-700" /></td>
               </tr>
             )}
             {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
@@ -276,13 +282,13 @@ function ScientificConsumerView({ data }: ViewProps) {
                   {sr.instructions && (
                     <tr className="border-b border-gray-100">
                       <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Usage Instructions')}</td>
-                      <td className="py-2 px-3 text-gray-700">{sr.instructions}</td>
+                      <td className="py-2 px-3"><SafeHtml html={sr.instructions} className="text-gray-700" /></td>
                     </tr>
                   )}
                   {sr.assemblyGuide && (
                     <tr className="border-b border-gray-100">
                       <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Assembly Guide')}</td>
-                      <td className="py-2 px-3 text-gray-700">{sr.assemblyGuide}</td>
+                      <td className="py-2 px-3"><SafeHtml html={sr.assemblyGuide} className="text-gray-700" /></td>
                     </tr>
                   )}
                 </tbody>
@@ -326,7 +332,7 @@ function ScientificConsumerView({ data }: ViewProps) {
                     <tr key={i} className="border-b border-gray-100">
                       <td className="py-2 px-3 text-gray-500">{i + 1}</td>
                       <td className="py-2 px-3 font-medium">{item.question}</td>
-                      <td className="py-2 px-3 text-gray-600">{item.answer}</td>
+                      <td className="py-2 px-3"><SafeHtml html={item.answer} className="text-gray-600" /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -358,7 +364,7 @@ function ScientificConsumerView({ data }: ViewProps) {
                   {sr.warranty.terms && (
                     <tr className="border-b border-gray-100">
                       <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Warranty Terms')}</td>
-                      <td className="py-2 px-3 text-gray-700">{sr.warranty.terms}</td>
+                      <td className="py-2 px-3"><SafeHtml html={sr.warranty.terms} className="text-gray-700" /></td>
                     </tr>
                   )}
                 </tbody>
@@ -372,7 +378,7 @@ function ScientificConsumerView({ data }: ViewProps) {
                   {sr.repairInfo.repairGuide && (
                     <tr className="border-b border-gray-100">
                       <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Repair Guide')}</td>
-                      <td className="py-2 px-3 text-gray-700">{sr.repairInfo.repairGuide}</td>
+                      <td className="py-2 px-3"><SafeHtml html={sr.repairInfo.repairGuide} className="text-gray-700" /></td>
                     </tr>
                   )}
                   {sr.repairInfo.repairabilityScore != null && (
@@ -475,7 +481,7 @@ function ScientificConsumerView({ data }: ViewProps) {
           <h2 className="text-lg font-bold text-gray-900 mb-3">
             {descriptionSectionNumber}. {t('Description')}
           </h2>
-          <p className="text-gray-700 leading-relaxed max-w-none">{product.description}</p>
+          <SafeHtml html={product.description} className="text-gray-700 leading-relaxed max-w-none" />
         </section>
       )}
 
@@ -573,7 +579,7 @@ function ScientificCustomsView({ data }: ViewProps) {
           <h2 className="text-lg font-bold text-gray-900 mb-3">
             {nextSection()}. {t('Description')}
           </h2>
-          <p className="text-gray-700 leading-relaxed max-w-none">{product.description}</p>
+          <SafeHtml html={product.description} className="text-gray-700 leading-relaxed max-w-none" />
         </section>
       )}
 
@@ -735,7 +741,7 @@ function ScientificCustomsView({ data }: ViewProps) {
                 {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
                   <tr className="border-b border-gray-100">
                     <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Recycling Instructions')}</td>
-                    <td className="py-2 px-3 text-gray-700">{product.recyclability.instructions}</td>
+                    <td className="py-2 px-3"><SafeHtml html={product.recyclability.instructions} className="text-gray-700" /></td>
                   </tr>
                 )}
                 {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
@@ -851,13 +857,13 @@ function ScientificCustomsView({ data }: ViewProps) {
                       {sr.instructions && (
                         <tr className="border-b border-gray-100">
                           <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Usage Instructions')}</td>
-                          <td className="py-2 px-3 text-gray-700">{sr.instructions}</td>
+                          <td className="py-2 px-3"><SafeHtml html={sr.instructions} className="text-gray-700" /></td>
                         </tr>
                       )}
                       {sr.assemblyGuide && (
                         <tr className="border-b border-gray-100">
                           <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Assembly Guide')}</td>
-                          <td className="py-2 px-3 text-gray-700">{sr.assemblyGuide}</td>
+                          <td className="py-2 px-3"><SafeHtml html={sr.assemblyGuide} className="text-gray-700" /></td>
                         </tr>
                       )}
                     </tbody>
@@ -901,7 +907,7 @@ function ScientificCustomsView({ data }: ViewProps) {
                         <tr key={i} className="border-b border-gray-100">
                           <td className="py-2 px-3 text-gray-500">{i + 1}</td>
                           <td className="py-2 px-3 font-medium">{item.question}</td>
-                          <td className="py-2 px-3 text-gray-600">{item.answer}</td>
+                          <td className="py-2 px-3"><SafeHtml html={item.answer} className="text-gray-600" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -933,7 +939,7 @@ function ScientificCustomsView({ data }: ViewProps) {
                       {sr.warranty.terms && (
                         <tr className="border-b border-gray-100">
                           <td className="py-2 px-3 bg-gray-50 font-semibold">{t('Warranty Terms')}</td>
-                          <td className="py-2 px-3 text-gray-700">{sr.warranty.terms}</td>
+                          <td className="py-2 px-3"><SafeHtml html={sr.warranty.terms} className="text-gray-700" /></td>
                         </tr>
                       )}
                     </tbody>
@@ -947,7 +953,7 @@ function ScientificCustomsView({ data }: ViewProps) {
                       {sr.repairInfo.repairGuide && (
                         <tr className="border-b border-gray-100">
                           <td className="py-2 px-3 bg-gray-50 font-semibold w-1/3">{t('Repair Guide')}</td>
-                          <td className="py-2 px-3 text-gray-700">{sr.repairInfo.repairGuide}</td>
+                          <td className="py-2 px-3"><SafeHtml html={sr.repairInfo.repairGuide} className="text-gray-700" /></td>
                         </tr>
                       )}
                       {sr.repairInfo.repairabilityScore != null && (

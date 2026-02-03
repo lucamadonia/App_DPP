@@ -27,6 +27,8 @@ import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
 import { RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 interface DPPTemplateProps {
   product: Product;
@@ -62,6 +64,9 @@ function ClassicConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} cardStyle={cardStyle} headingStyle={headingStyle} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -83,13 +88,13 @@ function ClassicConsumerView({ data }: ViewProps) {
               {sr.instructions && (
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
-                  <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-sm text-muted-foreground" />
                 </div>
               )}
               {sr.assemblyGuide && (
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
-                  <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-sm text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -113,7 +118,7 @@ function ClassicConsumerView({ data }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="p-4 border rounded-lg">
                     <p className="font-medium text-sm">{item.question}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-muted-foreground mt-1" />
                   </div>
                 ))}
               </div>
@@ -134,14 +139,14 @@ function ClassicConsumerView({ data }: ViewProps) {
                 )}
               </div>
               {sr.warranty.terms && (
-                <div className="mt-3 p-3 border rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Warranty Terms')}</p><p className="text-sm">{sr.warranty.terms}</p></div>
+                <div className="mt-3 p-3 border rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Warranty Terms')}</p><SafeHtml html={sr.warranty.terms} className="text-sm" /></div>
               )}
             </div>
           )}
           {isFieldVisible('supportRepair') && sr.repairInfo && (
             <div>
               <h4 className="font-medium mb-2 flex items-center gap-2"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
-              {sr.repairInfo.repairGuide && <p className="text-sm text-muted-foreground mb-2">{sr.repairInfo.repairGuide}</p>}
+              {sr.repairInfo.repairGuide && <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-muted-foreground mb-2" />}
               {sr.repairInfo.repairabilityScore != null && (
                 <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Repairability Score')}</span><span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span></div>
               )}
@@ -264,7 +269,7 @@ function ClassicConsumerView({ data }: ViewProps) {
           {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
             <div className="mt-4 p-3 bg-muted/50 rounded-lg">
               <p className="text-sm font-medium mb-1">{t('Packaging Recycling')}</p>
-              <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+              <SafeHtml html={product.recyclability.packagingInstructions} className="text-sm text-muted-foreground" />
             </div>
           )}
         </div>
@@ -337,7 +342,7 @@ function ClassicConsumerView({ data }: ViewProps) {
                 <Info className="h-4 w-4" />
                 {t('Recycling Instructions')}
               </h4>
-              <p className="text-sm text-muted-foreground">{product.recyclability.instructions}</p>
+              <SafeHtml html={product.recyclability.instructions} className="text-sm text-muted-foreground" />
             </div>
           )}
 
@@ -470,7 +475,7 @@ function ClassicConsumerView({ data }: ViewProps) {
               {isFieldVisible('description') && (
                 <>
                   <Separator />
-                  <p className="text-foreground/90">{product.description}</p>
+                  <SafeHtml html={product.description} className="text-foreground/90" />
                 </>
               )}
             </div>
@@ -782,13 +787,13 @@ function ClassicCustomsView({ data }: ViewProps) {
                   {sr.instructions && (
                     <div className="p-4 border rounded-lg">
                       <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Usage Instructions')}</h4>
-                      <p className="text-sm text-muted-foreground">{sr.instructions}</p>
+                      <SafeHtml html={sr.instructions} className="text-sm text-muted-foreground" />
                     </div>
                   )}
                   {sr.assemblyGuide && (
                     <div className="p-4 border rounded-lg">
                       <h4 className="font-medium mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" />{t('Assembly Guide')}</h4>
-                      <p className="text-sm text-muted-foreground">{sr.assemblyGuide}</p>
+                      <SafeHtml html={sr.assemblyGuide} className="text-sm text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -812,7 +817,7 @@ function ClassicCustomsView({ data }: ViewProps) {
                     {sr.faq.map((item, i) => (
                       <div key={i} className="p-4 border rounded-lg">
                         <p className="font-medium text-sm">{item.question}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{item.answer}</p>
+                        <SafeHtml html={item.answer} className="text-sm text-muted-foreground mt-1" />
                       </div>
                     ))}
                   </div>
@@ -833,14 +838,14 @@ function ClassicCustomsView({ data }: ViewProps) {
                     )}
                   </div>
                   {sr.warranty.terms && (
-                    <div className="mt-3 p-3 border rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Warranty Terms')}</p><p className="text-sm">{sr.warranty.terms}</p></div>
+                    <div className="mt-3 p-3 border rounded-lg"><p className="text-xs text-muted-foreground mb-1">{t('Warranty Terms')}</p><SafeHtml html={sr.warranty.terms} className="text-sm" /></div>
                   )}
                 </div>
               )}
               {isFieldVisible('supportRepair') && sr.repairInfo && (
                 <div>
                   <h4 className="font-medium mb-2 flex items-center gap-2"><Wrench className="h-4 w-4" />{t('Repair Information')}</h4>
-                  {sr.repairInfo.repairGuide && <p className="text-sm text-muted-foreground mb-2">{sr.repairInfo.repairGuide}</p>}
+                  {sr.repairInfo.repairGuide && <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-muted-foreground mb-2" />}
                   {sr.repairInfo.repairabilityScore != null && (
                     <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">{t('Repairability Score')}</span><span className="font-bold">{sr.repairInfo.repairabilityScore}/10</span></div>
                   )}

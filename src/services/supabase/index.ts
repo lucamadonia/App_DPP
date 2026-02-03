@@ -149,6 +149,18 @@ export {
   type Profile,
 } from './profiles';
 
+// Product Components (Sets / Bundles)
+export {
+  getProductComponents,
+  getProductComponentsPublic,
+  addProductComponent,
+  updateProductComponent,
+  removeProductComponent,
+  reorderProductComponents,
+  getProductsContaining,
+  getComponentCount,
+} from './product-components';
+
 // Product Images
 export {
   getProductImages,

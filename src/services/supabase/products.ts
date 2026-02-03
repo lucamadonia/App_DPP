@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Product, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry } from '@/types/product';
+import type { Product, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides } from '@/types/product';
 import type { ProductRegistrations, SupportResources } from '@/types/database';
 
 // Transform database row to Product type (master data only)
@@ -41,6 +41,11 @@ function transformProduct(row: any): Product {
     manufacturerVAT: row.manufacturer_vat || undefined,
     registrations: (row.registrations as ProductRegistrations) || undefined,
     supportResources: (row.support_resources as SupportResources) || undefined,
+    translations: (row.translations as Record<string, TranslatableProductFields>) || {},
+    manufacturerSupplierId: row.manufacturer_supplier_id || undefined,
+    importerSupplierId: row.importer_supplier_id || undefined,
+    productType: row.product_type || 'single',
+    aggregationOverrides: (row.aggregation_overrides as AggregationOverrides) || {},
   };
 }
 
@@ -100,6 +105,8 @@ export interface ProductListItem {
   batchCount: number;
   status?: 'draft' | 'live' | 'archived';
   createdAt?: string;
+  productType?: 'single' | 'set';
+  componentCount?: number;
 }
 
 /**
@@ -114,7 +121,7 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 
   let query = supabase
     .from('products')
-    .select('*, product_batches(id)')
+    .select('*, product_batches(id), product_components!product_components_parent_product_id_fkey(id)')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
@@ -143,6 +150,8 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
     batchCount: Array.isArray(p.product_batches) ? p.product_batches.length : 0,
     status: p.status || 'draft',
     createdAt: p.created_at,
+    productType: p.product_type || 'single',
+    componentCount: Array.isArray(p.product_components) ? p.product_components.length : 0,
   }));
 }
 
@@ -321,6 +330,11 @@ export async function createProduct(
     manufacturer_vat: product.manufacturerVAT || null,
     registrations: product.registrations || {},
     support_resources: product.supportResources || {},
+    translations: product.translations || {},
+    manufacturer_supplier_id: product.manufacturerSupplierId || null,
+    importer_supplier_id: product.importerSupplierId || null,
+    product_type: product.productType || 'single',
+    aggregation_overrides: product.aggregationOverrides || {},
   };
 
   const { data, error } = await supabase
@@ -388,6 +402,11 @@ export async function updateProduct(
   if (product.manufacturerVAT !== undefined) updateData.manufacturer_vat = product.manufacturerVAT || null;
   if (product.registrations !== undefined) updateData.registrations = product.registrations || {};
   if (product.supportResources !== undefined) updateData.support_resources = product.supportResources || {};
+  if (product.translations !== undefined) updateData.translations = product.translations || {};
+  if (product.manufacturerSupplierId !== undefined) updateData.manufacturer_supplier_id = product.manufacturerSupplierId || null;
+  if (product.importerSupplierId !== undefined) updateData.importer_supplier_id = product.importerSupplierId || null;
+  if (product.productType !== undefined) updateData.product_type = product.productType;
+  if (product.aggregationOverrides !== undefined) updateData.aggregation_overrides = product.aggregationOverrides || {};
 
   const { error } = await supabase
     .from('products')

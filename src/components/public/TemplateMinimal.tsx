@@ -3,7 +3,10 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 interface DPPTemplateProps {
   product: Product;
@@ -26,6 +29,9 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} cardStyle={styles.card} headingStyle={styles.heading} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -68,7 +74,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
           <p className="text-sm">{t('Packaging recyclable')}: {p.recyclability.packagingRecyclablePercentage}%</p>
         )}
         {isFieldVisible('packagingRecyclingInstructions') && p.recyclability?.packagingInstructions && (
-          <p className="text-sm text-muted-foreground">{p.recyclability.packagingInstructions}</p>
+          <SafeHtml html={p.recyclability.packagingInstructions} className="text-sm text-muted-foreground" />
         )}
       </div>
     );
@@ -103,9 +109,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
           <span className="text-muted-foreground">{t('Recyclable')}</span>
         </div>
         {isFieldVisible('recyclingInstructions') && p.recyclability.instructions && (
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {p.recyclability.instructions}
-          </p>
+          <SafeHtml html={p.recyclability.instructions} className="text-sm text-muted-foreground leading-relaxed" />
         )}
         {isFieldVisible('disposalMethods') && p.recyclability.disposalMethods.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -170,13 +174,13 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
           {sr.instructions && (
             <div className="space-y-2">
               <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Usage Instructions')}</h3>
-              <p className="text-sm leading-relaxed text-foreground/80">{sr.instructions}</p>
+              <SafeHtml html={sr.instructions} className="text-sm leading-relaxed text-foreground/80" />
             </div>
           )}
           {sr.assemblyGuide && (
             <div className="space-y-2">
               <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Assembly Guide')}</h3>
-              <p className="text-sm leading-relaxed text-foreground/80">{sr.assemblyGuide}</p>
+              <SafeHtml html={sr.assemblyGuide} className="text-sm leading-relaxed text-foreground/80" />
             </div>
           )}
           {isFieldVisible('supportVideos') && sr.videos && sr.videos.length > 0 && (
@@ -198,7 +202,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
                 {sr.faq.map((item, i) => (
                   <div key={i} className="space-y-1">
                     <p className="font-medium text-sm">{item.question}</p>
-                    <p className="text-sm text-muted-foreground">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-muted-foreground" />
                   </div>
                 ))}
               </div>
@@ -227,7 +231,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
                   </div>
                 )}
                 {sr.warranty.terms && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{sr.warranty.terms}</p>
+                  <SafeHtml html={sr.warranty.terms} className="text-sm text-muted-foreground leading-relaxed" />
                 )}
               </div>
             </div>
@@ -237,7 +241,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
               <h3 className="text-sm uppercase tracking-widest text-muted-foreground">{t('Repair Information')}</h3>
               <div className="space-y-3">
                 {sr.repairInfo.repairGuide && (
-                  <p className="text-sm leading-relaxed text-foreground/80">{sr.repairInfo.repairGuide}</p>
+                  <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm leading-relaxed text-foreground/80" />
                 )}
                 {sr.repairInfo.repairabilityScore != null && (
                   <div className="flex items-baseline gap-2">
@@ -309,7 +313,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
           </p>
         )}
         {isFieldVisible('description') && p.description && (
-          <p className="text-lg leading-relaxed text-foreground/80">{p.description}</p>
+          <SafeHtml html={p.description} className="text-lg leading-relaxed text-foreground/80" />
         )}
       </header>
 

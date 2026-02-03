@@ -1,4 +1,5 @@
 import { formatDate } from '@/lib/format';
+import { SafeHtml } from '@/components/ui/safe-html';
 import {
   Leaf,
   Recycle,
@@ -15,7 +16,9 @@ import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+
 import { RATING_ECO_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
+import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 
 interface DPPTemplateProps {
   product: Product;
@@ -52,6 +55,9 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
       case 'certifications': return renderCertifications();
       case 'supplyChain': return renderSupplyChain();
       case 'support': return renderSupport();
+      case 'components': return product.productType === 'set' && product.components?.length ? (
+        <DPPSetComponentsSection key="components" components={product.components} cardStyle={styles.card} headingStyle={styles.heading} t={t} />
+      ) : null;
       default: return null;
     }
   };
@@ -100,7 +106,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
             <p className="text-green-700 font-medium">{t('Recyclable')}</p>
             {isFieldVisible('recyclingInstructions') && product.recyclability.instructions && (
               <div className="bg-green-50 p-4 rounded-xl">
-                <p className="text-sm text-green-800">{product.recyclability.instructions}</p>
+                <SafeHtml html={product.recyclability.instructions} className="text-sm text-green-800" />
               </div>
             )}
             {isFieldVisible('disposalMethods') && product.recyclability.disposalMethods.length > 0 && (
@@ -191,7 +197,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
         {isFieldVisible('packagingRecyclingInstructions') && product.recyclability?.packagingInstructions && (
           <div className="mt-4 p-3 bg-muted/50 rounded-lg">
             <p className="text-sm font-medium mb-1">{t('Packaging Recycling')}</p>
-            <p className="text-sm text-muted-foreground">{product.recyclability.packagingInstructions}</p>
+            <SafeHtml html={product.recyclability.packagingInstructions} className="text-sm text-muted-foreground" />
           </div>
         )}
       </div>
@@ -271,7 +277,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-4 w-4 text-green-600" />
                     {t('Usage Instructions')}
                   </h4>
-                  <p className="text-sm text-green-800">{sr.instructions}</p>
+                  <SafeHtml html={sr.instructions} className="text-sm text-green-800" />
                 </div>
               )}
               {sr.assemblyGuide && (
@@ -280,7 +286,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
                     <BookOpen className="h-4 w-4 text-green-600" />
                     {t('Assembly Guide')}
                   </h4>
-                  <p className="text-sm text-green-800">{sr.assemblyGuide}</p>
+                  <SafeHtml html={sr.assemblyGuide} className="text-sm text-green-800" />
                 </div>
               )}
             </div>
@@ -314,7 +320,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
                 {sr.faq.map((item, i) => (
                   <div key={i} className="bg-green-50 p-4 rounded-xl border border-green-100">
                     <p className="font-medium text-sm text-green-900">{item.question}</p>
-                    <p className="text-sm text-green-700 mt-1">{item.answer}</p>
+                    <SafeHtml html={item.answer} className="text-sm text-green-700 mt-1" />
                   </div>
                 ))}
               </div>
@@ -351,7 +357,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
               {sr.warranty.terms && (
                 <div className="bg-green-50 p-4 rounded-xl mt-3">
                   <p className="text-xs text-green-600 mb-1">{t('Warranty Terms')}</p>
-                  <p className="text-sm text-green-800">{sr.warranty.terms}</p>
+                  <SafeHtml html={sr.warranty.terms} className="text-sm text-green-800" />
                 </div>
               )}
             </div>
@@ -367,7 +373,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
               {sr.repairInfo.repairGuide && (
                 <div className="bg-green-50 p-4 rounded-xl mb-3">
                   <p className="text-xs text-green-600 mb-1">{t('Repair Guide')}</p>
-                  <p className="text-sm text-green-800">{sr.repairInfo.repairGuide}</p>
+                  <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-green-800" />
                 </div>
               )}
               {sr.repairInfo.repairabilityScore != null && (
@@ -450,7 +456,7 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
                 </span>
               )}
               {isFieldVisible('description') && product.description && (
-                <p className="text-green-100 leading-relaxed">{product.description}</p>
+                <SafeHtml html={product.description} className="text-green-100 leading-relaxed" />
               )}
             </div>
           </div>
@@ -498,7 +504,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                 </span>
               )}
               {isFieldVisible('description') && product.description && (
-                <p className="text-green-100 leading-relaxed">{product.description}</p>
+                <SafeHtml html={product.description} className="text-green-100 leading-relaxed" />
               )}
             </div>
           </div>
@@ -697,7 +703,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                           <BookOpen className="h-4 w-4 text-green-600" />
                           {t('Usage Instructions')}
                         </h4>
-                        <p className="text-sm text-green-800">{sr.instructions}</p>
+                        <SafeHtml html={sr.instructions} className="text-sm text-green-800" />
                       </div>
                     )}
                     {sr.assemblyGuide && (
@@ -706,7 +712,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                           <BookOpen className="h-4 w-4 text-green-600" />
                           {t('Assembly Guide')}
                         </h4>
-                        <p className="text-sm text-green-800">{sr.assemblyGuide}</p>
+                        <SafeHtml html={sr.assemblyGuide} className="text-sm text-green-800" />
                       </div>
                     )}
                   </div>
@@ -740,7 +746,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                       {sr.faq.map((item, i) => (
                         <div key={i} className="bg-green-50 p-4 rounded-xl border border-green-100">
                           <p className="font-medium text-sm text-green-900">{item.question}</p>
-                          <p className="text-sm text-green-700 mt-1">{item.answer}</p>
+                          <SafeHtml html={item.answer} className="text-sm text-green-700 mt-1" />
                         </div>
                       ))}
                     </div>
@@ -777,7 +783,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                     {sr.warranty.terms && (
                       <div className="bg-green-50 p-4 rounded-xl mt-3">
                         <p className="text-xs text-green-600 mb-1">{t('Warranty Terms')}</p>
-                        <p className="text-sm text-green-800">{sr.warranty.terms}</p>
+                        <SafeHtml html={sr.warranty.terms} className="text-sm text-green-800" />
                       </div>
                     )}
                   </div>
@@ -793,7 +799,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                     {sr.repairInfo.repairGuide && (
                       <div className="bg-green-50 p-4 rounded-xl mb-3">
                         <p className="text-xs text-green-600 mb-1">{t('Repair Guide')}</p>
-                        <p className="text-sm text-green-800">{sr.repairInfo.repairGuide}</p>
+                        <SafeHtml html={sr.repairInfo.repairGuide} className="text-sm text-green-800" />
                       </div>
                     )}
                     {sr.repairInfo.repairabilityScore != null && (
