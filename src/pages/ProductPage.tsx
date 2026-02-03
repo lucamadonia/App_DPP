@@ -34,6 +34,7 @@ import {
   DollarSign,
   Hash,
   BarChart3,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +68,7 @@ import { ProductDocumentsTab } from '@/components/product/ProductDocumentsTab';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductComplianceTab } from '@/components/product/ProductComplianceTab';
 import { AIComplianceCheckTab } from '@/components/compliance-check/AIComplianceCheckTab';
+import { MasterLabelTab } from '@/components/product/MasterLabelTab';
 
 const SUPPLIER_ROLE_LABELS: Record<string, string> = {
   manufacturer: 'Manufacturer',
@@ -319,6 +321,10 @@ export function ProductPage() {
           <TabsTrigger value="qr" className="flex items-center gap-2 flex-shrink-0">
             <QrCode className="h-4 w-4" />
             <span className="hidden sm:inline">{t('QR & Access')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="master-label" className="flex items-center gap-2 flex-shrink-0">
+            <Tag className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('Master Label')}</span>
           </TabsTrigger>
           <TabsTrigger value="historie" className="flex items-center gap-2 flex-shrink-0">
             <History className="h-4 w-4" />
@@ -925,6 +931,11 @@ export function ProductPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Master Label Tab */}
+        <TabsContent value="master-label" className="space-y-6">
+          <MasterLabelTab product={product} batches={batches} productSuppliers={productSuppliers} />
         </TabsContent>
 
         {/* History Tab */}

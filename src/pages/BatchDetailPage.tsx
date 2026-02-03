@@ -19,6 +19,7 @@ import {
   BrainCircuit,
   DollarSign,
   Truck,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -146,6 +147,12 @@ export function BatchDetailPage() {
             <Link to={`/products/${productId}?tab=ai-check&batchId=${batchId}`}>
               <BrainCircuit className="mr-2 h-4 w-4" />
               AI Check
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to={`/products/${productId}?tab=master-label&batchId=${batchId}`}>
+              <Tag className="mr-2 h-4 w-4" />
+              {t('Master Label')}
             </Link>
           </Button>
           <Button variant="outline" asChild>
