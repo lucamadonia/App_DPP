@@ -60,6 +60,8 @@ import {
 } from '@/services/supabase';
 import type { Supplier, SupplierProduct, Country, PriceTier } from '@/types/database';
 import type { Document } from '@/services/supabase';
+
+type SupplierProductWithName = SupplierProduct & { product_name?: string };
 import {
   SupplierRiskBadge,
   SupplierStatusBadge,
@@ -75,7 +77,7 @@ export function SupplierDetailPage() {
   const locale = useLocale();
 
   const [supplier, setSupplier] = useState<Supplier | null>(null);
-  const [products, setProducts] = useState<SupplierProduct[]>([]);
+  const [products, setProducts] = useState<SupplierProductWithName[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [spend, setSpend] = useState<SupplierSpendDetail | null>(null);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -500,7 +502,6 @@ export function SupplierDetailPage() {
                         <TableRow key={sp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/products/${sp.product_id}`)}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              {/* @ts-expect-error product_name from join */}
                               <span>{sp.product_name || sp.product_id}</span>
                               {sp.is_primary && (
                                 <Badge className="bg-blue-100 text-blue-800 text-xs">{t('Primary Supplier')}</Badge>

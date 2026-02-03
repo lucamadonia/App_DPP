@@ -337,10 +337,10 @@ function transformSupplierProduct(row: any): SupplierProduct {
 /**
  * Get products for a supplier
  */
-export async function getSupplierProducts(supplierId: string): Promise<SupplierProduct[]> {
+export async function getSupplierProducts(supplierId: string): Promise<(SupplierProduct & { product_name?: string })[]> {
   const { data, error } = await supabase
     .from('supplier_products')
-    .select('*')
+    .select('*, products(name)')
     .eq('supplier_id', supplierId);
 
   if (error) {
@@ -349,7 +349,10 @@ export async function getSupplierProducts(supplierId: string): Promise<SupplierP
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data || []).map((row: any) => transformSupplierProduct(row));
+  return (data || []).map((row: any) => ({
+    ...transformSupplierProduct(row),
+    product_name: row.products?.name || undefined,
+  }));
 }
 
 /**
