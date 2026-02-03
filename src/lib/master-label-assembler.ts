@@ -3,6 +3,7 @@ import type {
   ComplianceModuleIcon,
   SustainabilitySection,
   IdentitySection,
+  LabelEntityInfo,
   MasterLabelData,
   AssembleMasterLabelParams,
 } from '@/types/master-label';
@@ -170,34 +171,52 @@ export function formatSupplierAddress(supplier: Supplier): string {
   return parts.join(', ');
 }
 
+function buildEntityInfo(supplier: Supplier | null, fallback?: { name?: string; address?: string; eori?: string; vat?: string }): LabelEntityInfo {
+  if (supplier) {
+    return {
+      name: supplier.name,
+      address: formatSupplierAddress(supplier),
+      email: supplier.email || undefined,
+      phone: supplier.phone || undefined,
+      vatId: supplier.vat_id || undefined,
+      eoriNumber: undefined, // Suppliers don't have EORI in DB yet
+      website: supplier.website || undefined,
+      contactPerson: supplier.contact_person || undefined,
+      country: supplier.country || undefined,
+    };
+  }
+  return {
+    name: fallback?.name || '',
+    address: fallback?.address || '',
+    vatId: fallback?.vat || undefined,
+    eoriNumber: fallback?.eori || undefined,
+  };
+}
+
 export function buildIdentitySection(
   product: AssembleMasterLabelParams['product'],
   batch: AssembleMasterLabelParams['batch'],
   manufacturerSupplier: Supplier | null,
   importerSupplier: Supplier | null,
 ): IdentitySection {
-  const manufacturerName = manufacturerSupplier?.name || product.manufacturer || '';
-  const manufacturerAddress = manufacturerSupplier
-    ? formatSupplierAddress(manufacturerSupplier)
-    : product.manufacturerAddress || '';
-
   const batchNumber = batch?.batchNumber || product.batchNumber || '';
+
+  const manufacturer = buildEntityInfo(manufacturerSupplier, {
+    name: product.manufacturer,
+    address: product.manufacturerAddress,
+    eori: product.manufacturerEORI,
+    vat: product.manufacturerVAT,
+  });
 
   const identity: IdentitySection = {
     productName: product.name,
     modelSku: product.gtin,
     batchNumber,
-    manufacturer: {
-      name: manufacturerName,
-      address: manufacturerAddress,
-    },
+    manufacturer,
   };
 
   if (importerSupplier) {
-    identity.importer = {
-      name: importerSupplier.name,
-      address: formatSupplierAddress(importerSupplier),
-    };
+    identity.importer = buildEntityInfo(importerSupplier);
   }
 
   return identity;
@@ -308,10 +327,34 @@ export function resolveFieldValue(fieldKey: LabelFieldKey, data: MasterLabelData
       return data.identity.manufacturer.name || '';
     case 'manufacturerAddress':
       return data.identity.manufacturer.address || '';
+    case 'manufacturerEmail':
+      return data.identity.manufacturer.email || '';
+    case 'manufacturerPhone':
+      return data.identity.manufacturer.phone || '';
+    case 'manufacturerVAT':
+      return data.identity.manufacturer.vatId || '';
+    case 'manufacturerEORI':
+      return data.identity.manufacturer.eoriNumber || '';
+    case 'manufacturerWebsite':
+      return data.identity.manufacturer.website || '';
+    case 'manufacturerContact':
+      return data.identity.manufacturer.contactPerson || '';
+    case 'manufacturerCountry':
+      return data.identity.manufacturer.country || '';
     case 'importerName':
       return data.identity.importer?.name || '';
     case 'importerAddress':
       return data.identity.importer?.address || '';
+    case 'importerEmail':
+      return data.identity.importer?.email || '';
+    case 'importerPhone':
+      return data.identity.importer?.phone || '';
+    case 'importerVAT':
+      return data.identity.importer?.vatId || '';
+    case 'importerEORI':
+      return data.identity.importer?.eoriNumber || '';
+    case 'importerCountry':
+      return data.identity.importer?.country || '';
     case 'countryOfOrigin':
       return data.countryOfOrigin || data.b2cTargetCountry || '';
     case 'category':

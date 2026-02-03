@@ -72,7 +72,7 @@ export function createElement(type: LabelElementType, sectionId: LabelSectionId,
       return { ...base, type: 'text', content: 'Text', fontSize: 7, fontWeight: 'normal', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: false } satisfies LabelTextElement;
 
     case 'field-value':
-      return { ...base, type: 'field-value', fieldKey: 'productName', showLabel: true, fontSize: 7, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline' } satisfies LabelFieldValueElement;
+      return { ...base, type: 'field-value', fieldKey: 'productName', showLabel: true, fontSize: 7, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline', lineHeight: 1.2, italic: false, uppercase: false, marginBottom: 2 } satisfies LabelFieldValueElement;
 
     case 'qr-code':
       return { ...base, type: 'qr-code', size: 52, showLabel: true, labelText: 'Digital Product Passport', showUrl: true, alignment: 'left' } satisfies LabelQRCodeElement;

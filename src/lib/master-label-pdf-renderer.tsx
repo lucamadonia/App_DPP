@@ -74,18 +74,35 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
     }
 
     case 'field-value': {
-      const value = resolveFieldValue(element.fieldKey, data);
-      if (!value) return null;
+      const rawValue = resolveFieldValue(element.fieldKey, data);
+      if (!rawValue) return null;
+      const value = element.uppercase ? rawValue.toUpperCase() : rawValue;
+
+      // Resolve font family with bold/italic mapping
+      const baseFam = element.fontFamily || 'Helvetica';
+      const isBold = element.fontWeight === 'bold';
+      const isItalic = element.italic === true;
+      let resolvedFont: string;
+      if (baseFam === 'Courier') {
+        resolvedFont = isBold && isItalic ? 'Courier-BoldOblique' : isBold ? 'Courier-Bold' : isItalic ? 'Courier-Oblique' : 'Courier';
+      } else if (baseFam === 'Times-Roman') {
+        resolvedFont = isBold && isItalic ? 'Times-BoldItalic' : isBold ? 'Times-Bold' : isItalic ? 'Times-Italic' : 'Times-Roman';
+      } else {
+        resolvedFont = isBold && isItalic ? 'Helvetica-BoldOblique' : isBold ? 'Helvetica-Bold' : isItalic ? 'Helvetica-Oblique' : 'Helvetica';
+      }
+
+      const mb = element.marginBottom ?? 2;
+      const lh = element.lineHeight ?? 1.2;
 
       if (element.layout === 'stacked') {
         return (
-          <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 2 }}>
+          <View style={{ alignItems: getAlignment(element.alignment), marginBottom: mb }}>
             {element.showLabel && (
               <Text style={{ fontSize: element.fontSize - 1, color: element.labelColor, marginBottom: 1 }}>
                 {element.labelText || element.fieldKey}
               </Text>
             )}
-            <Text style={{ fontSize: element.fontSize, fontFamily: element.fontWeight === 'bold' ? 'Helvetica-Bold' : 'Helvetica', color: element.color }}>
+            <Text style={{ fontSize: element.fontSize, fontFamily: resolvedFont, color: element.color, lineHeight: lh }}>
               {value}
             </Text>
           </View>
@@ -93,13 +110,13 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
       }
 
       return (
-        <View style={{ ...s.fieldRow, justifyContent: getAlignment(element.alignment) }}>
+        <View style={{ ...s.fieldRow, justifyContent: getAlignment(element.alignment), marginBottom: mb }}>
           {element.showLabel && (
             <Text style={{ ...s.fieldLabel, fontSize: element.fontSize - 0.5, color: element.labelColor }}>
               {element.labelText || element.fieldKey}
             </Text>
           )}
-          <Text style={{ ...s.fieldValue, fontSize: element.fontSize, fontFamily: element.fontWeight === 'bold' ? 'Helvetica-Bold' : 'Helvetica', color: element.color }}>
+          <Text style={{ ...s.fieldValue, fontSize: element.fontSize, fontFamily: resolvedFont, color: element.color, lineHeight: lh }}>
             {value}
           </Text>
         </View>

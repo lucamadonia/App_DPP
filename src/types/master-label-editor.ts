@@ -55,6 +55,11 @@ export interface LabelFieldValueElement extends LabelElementBase {
   labelColor: string;
   alignment: 'left' | 'center' | 'right';
   layout: 'inline' | 'stacked';
+  lineHeight?: number;        // default 1.2
+  italic?: boolean;           // default false
+  uppercase?: boolean;        // default false
+  marginBottom?: number;      // pt, default 2
+  fontFamily?: 'Helvetica' | 'Courier' | 'Times-Roman';
 }
 
 export interface LabelQRCodeElement extends LabelElementBase {
@@ -191,8 +196,20 @@ export type LabelFieldKey =
   | 'serialNumber'
   | 'manufacturerName'
   | 'manufacturerAddress'
+  | 'manufacturerEmail'
+  | 'manufacturerPhone'
+  | 'manufacturerVAT'
+  | 'manufacturerEORI'
+  | 'manufacturerWebsite'
+  | 'manufacturerContact'
+  | 'manufacturerCountry'
   | 'importerName'
   | 'importerAddress'
+  | 'importerEmail'
+  | 'importerPhone'
+  | 'importerVAT'
+  | 'importerEORI'
+  | 'importerCountry'
   | 'countryOfOrigin'
   | 'category'
   | 'grossWeight'
@@ -217,8 +234,20 @@ export const LABEL_FIELD_METADATA: LabelFieldMetadata[] = [
   { key: 'serialNumber', labelKey: 'ml.field.serialNumber', section: 'identity' },
   { key: 'manufacturerName', labelKey: 'ml.field.manufacturerName', section: 'identity' },
   { key: 'manufacturerAddress', labelKey: 'ml.field.manufacturerAddress', section: 'identity' },
+  { key: 'manufacturerEmail', labelKey: 'ml.field.manufacturerEmail', section: 'identity' },
+  { key: 'manufacturerPhone', labelKey: 'ml.field.manufacturerPhone', section: 'identity' },
+  { key: 'manufacturerVAT', labelKey: 'ml.field.manufacturerVAT', section: 'identity' },
+  { key: 'manufacturerEORI', labelKey: 'ml.field.manufacturerEORI', section: 'identity' },
+  { key: 'manufacturerWebsite', labelKey: 'ml.field.manufacturerWebsite', section: 'identity' },
+  { key: 'manufacturerContact', labelKey: 'ml.field.manufacturerContact', section: 'identity' },
+  { key: 'manufacturerCountry', labelKey: 'ml.field.manufacturerCountry', section: 'identity' },
   { key: 'importerName', labelKey: 'ml.field.importerName', section: 'identity' },
   { key: 'importerAddress', labelKey: 'ml.field.importerAddress', section: 'identity' },
+  { key: 'importerEmail', labelKey: 'ml.field.importerEmail', section: 'identity' },
+  { key: 'importerPhone', labelKey: 'ml.field.importerPhone', section: 'identity' },
+  { key: 'importerVAT', labelKey: 'ml.field.importerVAT', section: 'identity' },
+  { key: 'importerEORI', labelKey: 'ml.field.importerEORI', section: 'identity' },
+  { key: 'importerCountry', labelKey: 'ml.field.importerCountry', section: 'identity' },
   { key: 'countryOfOrigin', labelKey: 'ml.field.countryOfOrigin', section: 'identity' },
   { key: 'category', labelKey: 'ml.field.category', section: 'identity' },
   { key: 'grossWeight', labelKey: 'ml.field.grossWeight', section: 'identity', format: 'weight' },
@@ -273,7 +302,7 @@ export interface MasterLabelTemplate {
 
 export type LabelEditorView = 'gallery' | 'editor';
 
-export type LabelSettingsPanelTab = 'preview' | 'settings' | 'design' | 'pictograms';
+export type LabelSettingsPanelTab = 'preview' | 'settings' | 'design' | 'pictograms' | 'check';
 
 export type LabelSaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
 

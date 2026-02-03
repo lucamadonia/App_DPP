@@ -41,30 +41,35 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
 
     case 'field-value': {
       const value = data ? resolveFieldValue(element.fieldKey, data) : `{${element.fieldKey}}`;
+      const displayValue = element.uppercase ? (value || `{${element.fieldKey}}`).toUpperCase() : (value || `{${element.fieldKey}}`);
+      const fvStyle: React.CSSProperties = {
+        fontSize: `${element.fontSize * 1.2}px`,
+        fontWeight: element.fontWeight,
+        color: element.color,
+        fontStyle: element.italic ? 'italic' : 'normal',
+        lineHeight: element.lineHeight ?? 1.2,
+        fontFamily: element.fontFamily || undefined,
+      };
       if (element.layout === 'stacked') {
         return (
-          <div style={{ textAlign: element.alignment }}>
+          <div style={{ textAlign: element.alignment, marginBottom: element.marginBottom != null ? `${element.marginBottom}px` : '2px' }}>
             {element.showLabel && (
               <div style={{ fontSize: `${(element.fontSize - 1) * 1.2}px`, color: element.labelColor }}>
                 {element.labelText || t(`ml.field.${element.fieldKey}`)}
               </div>
             )}
-            <div style={{ fontSize: `${element.fontSize * 1.2}px`, fontWeight: element.fontWeight, color: element.color }}>
-              {value || `{${element.fieldKey}}`}
-            </div>
+            <div style={fvStyle}>{displayValue}</div>
           </div>
         );
       }
       return (
-        <div className="flex gap-1" style={{ justifyContent: element.alignment === 'center' ? 'center' : element.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
+        <div className="flex gap-1" style={{ justifyContent: element.alignment === 'center' ? 'center' : element.alignment === 'right' ? 'flex-end' : 'flex-start', marginBottom: element.marginBottom != null ? `${element.marginBottom}px` : '2px' }}>
           {element.showLabel && (
             <span style={{ fontSize: `${(element.fontSize - 0.5) * 1.2}px`, color: element.labelColor, minWidth: '55px' }}>
               {element.labelText || t(`ml.field.${element.fieldKey}`)}
             </span>
           )}
-          <span style={{ fontSize: `${element.fontSize * 1.2}px`, fontWeight: element.fontWeight, color: element.color }}>
-            {value || `{${element.fieldKey}}`}
-          </span>
+          <span style={fvStyle}>{displayValue}</span>
         </div>
       );
     }

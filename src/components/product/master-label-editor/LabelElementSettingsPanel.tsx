@@ -164,6 +164,71 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
               </Select>
             </div>
           </div>
+
+          {/* Value Color + Label Color */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('ml.editor.valueColor')}</Label>
+              <div className="flex gap-1.5">
+                <input type="color" value={element.color} onChange={(e) => update({ color: e.target.value })} className="h-8 w-8 rounded border cursor-pointer" />
+                <Input value={element.color} onChange={(e) => update({ color: e.target.value })} className="text-xs h-8 flex-1" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('ml.editor.labelColor')}</Label>
+              <div className="flex gap-1.5">
+                <input type="color" value={element.labelColor} onChange={(e) => update({ labelColor: e.target.value })} className="h-8 w-8 rounded border cursor-pointer" />
+                <Input value={element.labelColor} onChange={(e) => update({ labelColor: e.target.value })} className="text-xs h-8 flex-1" />
+              </div>
+            </div>
+          </div>
+
+          {/* Font Family */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('ml.editor.fontFamily')}</Label>
+            <Select value={element.fontFamily || ''} onValueChange={(v) => update({ fontFamily: v === '' ? undefined : v as 'Helvetica' | 'Courier' | 'Times-Roman' })}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder={t('ml.editor.fontFamilyDefault')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">({t('ml.editor.fontFamilyDefault')})</SelectItem>
+                <SelectItem value="Helvetica">Helvetica</SelectItem>
+                <SelectItem value="Courier">Courier</SelectItem>
+                <SelectItem value="Times-Roman">Times Roman</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Bold / Italic / Uppercase toggles */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={element.fontWeight === 'bold'} onCheckedChange={(v) => update({ fontWeight: v ? 'bold' : 'normal' })} />
+              <Label className="text-xs">{t('ml.editor.bold')}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={element.italic === true} onCheckedChange={(v) => update({ italic: v })} />
+              <Label className="text-xs">{t('ml.editor.italic')}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={element.uppercase === true} onCheckedChange={(v) => update({ uppercase: v })} />
+              <Label className="text-xs">{t('ml.editor.uppercase')}</Label>
+            </div>
+          </div>
+
+          {/* Line Height */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('ml.editor.lineHeight')}</Label>
+            <Slider value={[element.lineHeight ?? 1.2]} onValueChange={([v]) => update({ lineHeight: v })} min={0.8} max={2.5} step={0.1} />
+            <span className="text-xs text-muted-foreground">{(element.lineHeight ?? 1.2).toFixed(1)}</span>
+          </div>
+
+          {/* Margin Bottom */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('ml.editor.marginBottom')}</Label>
+            <Slider value={[element.marginBottom ?? 2]} onValueChange={([v]) => update({ marginBottom: v })} min={0} max={20} step={1} />
+            <span className="text-xs text-muted-foreground">{element.marginBottom ?? 2}pt</span>
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-xs">{t('ml.editor.alignment')}</Label>
             <AlignmentPicker value={element.alignment} onChange={(v) => update({ alignment: v })} />

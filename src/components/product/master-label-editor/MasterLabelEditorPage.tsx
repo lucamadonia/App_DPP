@@ -15,6 +15,7 @@ import type {
   LabelDesign,
   LabelElement,
   LabelElementType,
+  LabelFieldKey,
   LabelSectionId,
   LabelEditorView,
   LabelSettingsPanelTab,
@@ -37,7 +38,10 @@ import { LabelCanvas } from './LabelCanvas';
 import { LabelElementSettingsPanel } from './LabelElementSettingsPanel';
 import { LabelDesignSettingsPanel } from './LabelDesignSettingsPanel';
 import { LabelPictogramLibrary } from './LabelPictogramLibrary';
+import { LabelComplianceChecker } from './LabelComplianceChecker';
 import { LabelTemplateGallery } from './LabelTemplateGallery';
+import { detectProductGroup } from '@/lib/master-label-assembler';
+import { ShieldCheck } from 'lucide-react';
 
 interface MasterLabelEditorPageProps {
   data: MasterLabelData | null;
@@ -406,9 +410,71 @@ export function MasterLabelEditorPage({
     e.dataTransfer.dropEffect = 'copy';
   }, []);
 
+  const addFieldElement = useCallback((fieldKey: LabelFieldKey) => {
+    const firstVisible = design.sections.find(s => s.visible);
+    if (!firstVisible) return;
+
+    const sectionElements = design.elements.filter(e => e.sectionId === firstVisible.id);
+    const newSortOrder = sectionElements.length;
+
+    // Shift existing elements
+    const updatedElements = design.elements.map(e => {
+      if (e.sectionId === firstVisible.id && e.sortOrder >= newSortOrder) {
+        return { ...e, sortOrder: e.sortOrder + 1 };
+      }
+      return e;
+    });
+
+    const newElement = createElement('field-value', firstVisible.id, newSortOrder);
+    // Pre-configure with the selected field key
+    (newElement as any).fieldKey = fieldKey;
+    (newElement as any).showLabel = true;
+    (newElement as any).layout = 'inline';
+
+    updateDesign({ ...design, elements: [...updatedElements, newElement] });
+    setSelectedElementId(newElement.id);
+    setRightPanelTab('settings');
+  }, [design, updateDesign]);
+
+  const addComplianceBadge = useCallback((badgeId: string, symbol: string) => {
+    const compSection = design.sections.find(s => s.id === 'compliance' && s.visible) || design.sections.find(s => s.visible);
+    if (!compSection) return;
+
+    const sectionElements = design.elements.filter(e => e.sectionId === compSection.id);
+    const newElement = createElement('compliance-badge', compSection.id, sectionElements.length);
+    (newElement as any).badgeId = badgeId;
+    (newElement as any).symbol = symbol;
+
+    updateDesign({ ...design, elements: [...design.elements, newElement] });
+    setSelectedElementId(newElement.id);
+  }, [design, updateDesign]);
+
+  const addCompliancePictogram = useCallback((pictogramId: string) => {
+    const compSection = design.sections.find(s => s.id === 'compliance' && s.visible) || design.sections.find(s => s.visible);
+    if (!compSection) return;
+
+    const sectionElements = design.elements.filter(e => e.sectionId === compSection.id);
+    const newElement = createElement('pictogram', compSection.id, sectionElements.length);
+    (newElement as any).pictogramId = pictogramId;
+    (newElement as any).source = 'builtin';
+    (newElement as any).showLabel = false;
+
+    updateDesign({ ...design, elements: [...design.elements, newElement] });
+    setSelectedElementId(newElement.id);
+  }, [design, updateDesign]);
+
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const elementType = e.dataTransfer.getData('text/plain') as LabelElementType;
+    const rawData = e.dataTransfer.getData('text/plain');
+
+    // Handle field: prefix from the Field Browser
+    if (rawData.startsWith('field:')) {
+      const fieldKey = rawData.slice(6) as LabelFieldKey;
+      addFieldElement(fieldKey);
+      return;
+    }
+
+    const elementType = rawData as LabelElementType;
     if (elementType) {
       // Insert into the first visible section
       const firstVisible = design.sections.find(s => s.visible);
@@ -416,7 +482,7 @@ export function MasterLabelEditorPage({
         addElement(elementType, firstVisible.id);
       }
     }
-  }, [design.sections, addElement]);
+  }, [design.sections, addElement, addFieldElement]);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -477,6 +543,8 @@ export function MasterLabelEditorPage({
               const firstVisible = design.sections.find(s => s.visible);
               if (firstVisible) addElement(type, firstVisible.id);
             }}
+            onFieldDragStart={() => {}}
+            onFieldClickAdd={(fieldKey) => addFieldElement(fieldKey)}
           />
         }
         canvas={
@@ -502,11 +570,15 @@ export function MasterLabelEditorPage({
         }
         rightPane={
           <Tabs value={rightPanelTab} onValueChange={(v) => setRightPanelTab(v as LabelSettingsPanelTab)}>
-            <TabsList className="w-full grid grid-cols-4 h-9">
+            <TabsList className="w-full grid grid-cols-5 h-9">
               <TabsTrigger value="preview" className="text-xs">{t('ml.editor.tabPreview')}</TabsTrigger>
               <TabsTrigger value="settings" className="text-xs">{t('ml.editor.tabSettings')}</TabsTrigger>
               <TabsTrigger value="design" className="text-xs">{t('ml.editor.tabDesign')}</TabsTrigger>
               <TabsTrigger value="pictograms" className="text-xs">{t('ml.editor.tabPictograms')}</TabsTrigger>
+              <TabsTrigger value="check" className="text-xs gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                {t('ml.editor.tabCheck')}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="preview" className="mt-0">
@@ -556,6 +628,22 @@ export function MasterLabelEditorPage({
             <TabsContent value="pictograms" className="mt-0">
               <LabelPictogramLibrary
                 onInsert={insertPictogram}
+              />
+            </TabsContent>
+
+            <TabsContent value="check" className="mt-0">
+              <LabelComplianceChecker
+                design={design}
+                data={data}
+                productGroup={data ? data.productGroup : detectProductGroup('')}
+                variant={variant}
+                onAddField={(fieldKey) => addFieldElement(fieldKey)}
+                onAddBadge={(badgeId, symbol) => addComplianceBadge(badgeId, symbol)}
+                onAddPictogram={(pictogramId) => addCompliancePictogram(pictogramId)}
+                onSelectElement={(elementId) => {
+                  setSelectedElementId(elementId);
+                  setRightPanelTab('settings');
+                }}
               />
             </TabsContent>
           </Tabs>

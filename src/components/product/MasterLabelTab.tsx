@@ -142,6 +142,8 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         category: product.category,
         manufacturer: product.manufacturer,
         manufacturerAddress: product.manufacturerAddress,
+        manufacturerEORI: (product as any).manufacturerEORI || '',
+        manufacturerVAT: (product as any).manufacturerVAT || '',
         materials: product.materials || [],
         certifications: product.certifications || [],
         recyclability: product.recyclability,

@@ -34,6 +34,22 @@ export type ComplianceModule =
   | ComplianceModuleGeneral;
 
 // ---------------------------------------------------------------------------
+// Entity Info (manufacturer / importer with full detail)
+// ---------------------------------------------------------------------------
+
+export interface LabelEntityInfo {
+  name: string;
+  address: string;
+  email?: string;
+  phone?: string;
+  vatId?: string;
+  eoriNumber?: string;
+  website?: string;
+  contactPerson?: string;
+  country?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Label Sections
 // ---------------------------------------------------------------------------
 
@@ -41,14 +57,8 @@ export interface IdentitySection {
   productName: string;
   modelSku: string;       // GTIN
   batchNumber: string;
-  manufacturer: {
-    name: string;
-    address: string;
-  };
-  importer?: {
-    name: string;
-    address: string;
-  };
+  manufacturer: LabelEntityInfo;
+  importer?: LabelEntityInfo;
 }
 
 export interface DppQrSection {
@@ -144,6 +154,8 @@ export interface AssembleMasterLabelParams {
     countryOfOrigin?: string;
     manufacturerSupplierId?: string | null;
     importerSupplierId?: string | null;
+    manufacturerEORI?: string;
+    manufacturerVAT?: string;
   };
   batch?: {
     batchNumber?: string;
