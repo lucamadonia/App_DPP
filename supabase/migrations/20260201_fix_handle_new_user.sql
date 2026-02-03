@@ -31,6 +31,10 @@ BEGIN
   -- Path 1: Customer registration (unchanged)
   -- =============================================
   IF user_type = 'customer' THEN
+    IF NEW.raw_user_meta_data->>'tenant_id' IS NULL OR NEW.raw_user_meta_data->>'tenant_id' = '' THEN
+      RAISE EXCEPTION 'tenant_id is required for customer registration';
+    END IF;
+
     meta_tenant_id := (NEW.raw_user_meta_data->>'tenant_id')::UUID;
     meta_first_name := NEW.raw_user_meta_data->>'first_name';
     meta_last_name := NEW.raw_user_meta_data->>'last_name';

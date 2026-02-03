@@ -365,12 +365,48 @@ export interface CustomerPortalFeatureToggles {
   downloadLabels: boolean;
 }
 
+export interface CustomerPortalFooterLink {
+  label: string;
+  url: string;
+}
+
+export type CustomerPortalFontFamily = 'system' | 'Inter' | 'Roboto' | 'Poppins' | 'Playfair Display';
+export type CustomerPortalBorderRadius = 'none' | 'small' | 'medium' | 'large';
+export type CustomerPortalLoginStyle = 'centered' | 'split';
+
 export interface CustomerPortalBrandingOverrides {
   inheritFromReturnsHub: boolean;
+  // Colors
   primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  pageBackground: string;
+  cardBackground: string;
+  headerBackground: string;
+  headerTextColor: string;
+  sidebarBackground: string;
+  sidebarTextColor: string;
+  // Logo & Identity
   logoUrl: string;
-  welcomeMessage: string;
+  faviconUrl: string;
+  portalTitle: string;
+  // Typography
+  fontFamily: CustomerPortalFontFamily;
+  borderRadius: CustomerPortalBorderRadius;
+  // Login Page
+  loginStyle: CustomerPortalLoginStyle;
+  loginBackgroundUrl: string;
+  loginWelcomeTitle: string;
+  loginWelcomeSubtitle: string;
+  // Footer
   footerText: string;
+  footerLinks: CustomerPortalFooterLink[];
+  showPoweredBy: boolean;
+  copyrightText: string;
+  // Content
+  welcomeMessage: string;
+  // Custom CSS
+  customCss: string;
 }
 
 export interface CustomerPortalSecuritySettings {

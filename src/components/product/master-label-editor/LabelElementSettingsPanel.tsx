@@ -186,12 +186,12 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
           {/* Font Family */}
           <div className="space-y-1.5">
             <Label className="text-xs">{t('ml.editor.fontFamily')}</Label>
-            <Select value={element.fontFamily || ''} onValueChange={(v) => update({ fontFamily: v === '' ? undefined : v as 'Helvetica' | 'Courier' | 'Times-Roman' })}>
+            <Select value={element.fontFamily || '_default'} onValueChange={(v) => update({ fontFamily: v === '_default' ? undefined : v as 'Helvetica' | 'Courier' | 'Times-Roman' })}>
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={t('ml.editor.fontFamilyDefault')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">({t('ml.editor.fontFamilyDefault')})</SelectItem>
+                <SelectItem value="_default">({t('ml.editor.fontFamilyDefault')})</SelectItem>
                 <SelectItem value="Helvetica">Helvetica</SelectItem>
                 <SelectItem value="Courier">Courier</SelectItem>
                 <SelectItem value="Times-Roman">Times Roman</SelectItem>

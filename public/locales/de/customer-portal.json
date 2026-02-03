@@ -160,5 +160,14 @@
   "REFUND_COMPLETED": "Erstattet",
   "COMPLETED": "Abgeschlossen",
   "REJECTED": "Abgelehnt",
-  "CANCELLED": "Storniert"
+  "CANCELLED": "Storniert",
+  "Need help?": "Brauchen Sie Hilfe?",
+  "Ticket created!": "Ticket erstellt!",
+  "We will get back to you soon.": "Wir melden uns in K\u00fcrze bei Ihnen.",
+  "Category": "Kategorie",
+  "General": "Allgemein",
+  "Return Issue": "Retourenproblem",
+  "Account": "Konto",
+  "Other": "Sonstiges",
+  "Unable to register. Please try again later.": "Registrierung derzeit nicht m\u00f6glich. Bitte versuchen Sie es sp\u00e4ter erneut."
 }

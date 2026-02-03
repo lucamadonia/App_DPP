@@ -14,7 +14,7 @@ import type { RhReturn, ReturnStatus } from '@/types/returns-hub';
 export function CustomerReturnsListPage() {
   const { t } = useTranslation('customer-portal');
   const navigate = useNavigate();
-  const { tenantSlug } = useCustomerPortal();
+  const { tenantSlug, branding } = useCustomerPortal();
   const [returns, setReturns] = useState<RhReturn[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -48,7 +48,7 @@ export function CustomerReturnsListPage() {
           <h1 className="text-2xl font-bold">{t('My Returns')}</h1>
           <p className="text-muted-foreground">{t('Track and manage your returns')}</p>
         </div>
-        <Button onClick={() => navigate(`/customer/${tenantSlug}/returns/new`)} className="gap-2">
+        <Button onClick={() => navigate(`/customer/${tenantSlug}/returns/new`)} className="gap-2" style={{ backgroundColor: branding.primaryColor }}>
           <Plus className="h-4 w-4" />
           {t('New Return')}
         </Button>
@@ -109,7 +109,7 @@ export function CustomerReturnsListPage() {
             {returns.map((ret) => (
               <Card
                 key={ret.id}
-                className="cursor-pointer hover:shadow-sm transition-shadow"
+                className="cursor-pointer border-0 shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => navigate(`/customer/${tenantSlug}/returns/${ret.id}`)}
               >
                 <CardContent className="py-3 px-4">

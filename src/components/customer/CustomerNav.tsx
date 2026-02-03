@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, MessageSquare, Plus, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, MessageSquare, Plus, User, LogOut, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 
 export function CustomerNav() {
   const { t } = useTranslation('customer-portal');
-  const { tenantSlug, signOut } = useCustomerPortal();
+  const { tenantSlug, branding, portalSettings, signOut } = useCustomerPortal();
 
   const base = `/customer/${tenantSlug}`;
+  const primaryColor = branding.primaryColor;
 
   const links = [
     { to: base, icon: LayoutDashboard, label: t('Dashboard'), end: true },
@@ -19,12 +20,23 @@ export function CustomerNav() {
 
   return (
     <nav className="flex flex-col gap-1 p-3">
+      {/* New Return CTA */}
       <NavLink to={`${base}/returns/new`}>
-        <Button className="w-full mb-3 gap-2" size="sm">
+        <Button className="w-full mb-2 gap-2" size="sm" style={{ backgroundColor: primaryColor }}>
           <Plus className="h-4 w-4" />
           {t('New Return')}
         </Button>
       </NavLink>
+
+      {/* Create Ticket CTA */}
+      {portalSettings.features.createTickets && (
+        <NavLink to={`${base}/tickets`} state={{ openNewTicket: true }}>
+          <Button variant="outline" className="w-full mb-3 gap-2" size="sm">
+            <HelpCircle className="h-4 w-4" />
+            {t('Create Ticket')}
+          </Button>
+        </NavLink>
+      )}
 
       {links.map((link) => (
         <NavLink

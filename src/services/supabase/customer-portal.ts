@@ -6,9 +6,10 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason } from '@/types/returns-hub';
+import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings } from '@/types/returns-hub';
 import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput, CustomerReturnsFilter, CustomerTicketsFilter } from '@/types/customer-portal';
 import { generateReturnNumber } from '@/lib/return-number';
+import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 
 // ============================================
 // AUTH HELPERS
@@ -57,6 +58,10 @@ export async function customerSignUp(params: {
   lastName: string;
   tenantId: string;
 }): Promise<{ success: boolean; error?: string }> {
+  if (!params.tenantId) {
+    return { success: false, error: 'Registration is currently unavailable. Please try again later.' };
+  }
+
   const { error } = await supabase.auth.signUp({
     email: params.email,
     password: params.password,
@@ -722,12 +727,14 @@ export async function getCustomerReturnReasons(tenantId: string): Promise<RhRetu
 // TENANT BRANDING (public)
 // ============================================
 
-export async function getCustomerPortalBranding(tenantSlug: string): Promise<{
+export interface CustomerPortalBrandingResult {
   tenantId: string;
   name: string;
-  primaryColor: string;
-  logoUrl: string;
-} | null> {
+  branding: CustomerPortalBrandingOverrides;
+  portalSettings: CustomerPortalSettings;
+}
+
+export async function getCustomerPortalBranding(tenantSlug: string): Promise<CustomerPortalBrandingResult | null> {
   const { data } = await supabase
     .from('tenants')
     .select('id, name, settings')
@@ -738,12 +745,29 @@ export async function getCustomerPortalBranding(tenantSlug: string): Promise<{
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = data.settings as Record<string, any> | null;
-  const branding = settings?.returnsHub?.branding;
+  const rhBranding = settings?.returnsHub?.branding;
+  const portalSettings: CustomerPortalSettings = {
+    ...DEFAULT_CUSTOMER_PORTAL_SETTINGS,
+    ...settings?.returnsHub?.customerPortal,
+  };
+  const savedBranding = portalSettings.branding || {};
+
+  // Merge with defaults, using Returns Hub branding as fallback when inheriting
+  const defaultBranding = DEFAULT_CUSTOMER_PORTAL_SETTINGS.branding;
+  const branding: CustomerPortalBrandingOverrides = {
+    ...defaultBranding,
+    ...savedBranding,
+    // When inheriting, override primary color and logo from returns hub branding
+    ...(savedBranding.inheritFromReturnsHub && rhBranding ? {
+      primaryColor: rhBranding.primaryColor || defaultBranding.primaryColor,
+      logoUrl: rhBranding.logoUrl || defaultBranding.logoUrl,
+    } : {}),
+  };
 
   return {
     tenantId: data.id,
     name: data.name || '',
-    primaryColor: branding?.primaryColor || '#3B82F6',
-    logoUrl: branding?.logoUrl || '',
+    branding,
+    portalSettings,
   };
 }

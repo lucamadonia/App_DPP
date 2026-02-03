@@ -160,5 +160,14 @@
   "REFUND_COMPLETED": "Refund Complete",
   "COMPLETED": "Completed",
   "REJECTED": "Rejected",
-  "CANCELLED": "Cancelled"
+  "CANCELLED": "Cancelled",
+  "Need help?": "Need help?",
+  "Ticket created!": "Ticket created!",
+  "We will get back to you soon.": "We will get back to you soon.",
+  "Category": "Category",
+  "General": "General",
+  "Return Issue": "Return Issue",
+  "Account": "Account",
+  "Other": "Other",
+  "Unable to register. Please try again later.": "Unable to register. Please try again later."
 }

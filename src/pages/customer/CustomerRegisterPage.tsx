@@ -26,6 +26,11 @@ export function CustomerRegisterPage() {
     e.preventDefault();
     if (!email.trim() || !password.trim() || !firstName.trim()) return;
 
+    if (!tenantId) {
+      setError(t('Unable to register. Please try again later.'));
+      return;
+    }
+
     if (password.length < 6) {
       setError(t('Password must be at least 6 characters'));
       return;
@@ -146,7 +151,7 @@ export function CustomerRegisterPage() {
               <p className="text-xs text-muted-foreground">{t('Minimum 6 characters')}</p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !tenantId}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {t('Create Account')}
             </Button>

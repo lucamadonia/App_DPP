@@ -2,9 +2,10 @@ import { createContext, useEffect, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { getCustomerPortalBranding, getCustomerProfile, getCustomerReturnReasons } from '@/services/supabase/customer-portal';
-import { applyPrimaryColor } from '@/lib/dynamic-theme';
+import { applyPrimaryColor, applyFavicon } from '@/lib/dynamic-theme';
+import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 import type { CustomerPortalProfile } from '@/types/customer-portal';
-import type { RhReturnReason } from '@/types/returns-hub';
+import type { RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings } from '@/types/returns-hub';
 
 export interface TenantOverride {
   tenantId: string;
@@ -20,6 +21,8 @@ export interface CustomerPortalContextType {
   tenantName: string;
   primaryColor: string;
   logoUrl: string;
+  branding: CustomerPortalBrandingOverrides;
+  portalSettings: CustomerPortalSettings;
   isAuthenticated: boolean;
   isLoading: boolean;
   customerProfile: CustomerPortalProfile | null;
@@ -41,12 +44,15 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
 
   const [tenantId, setTenantId] = useState('');
   const [tenantName, setTenantName] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#3B82F6');
-  const [logoUrl, setLogoUrl] = useState('');
+  const [branding, setBranding] = useState<CustomerPortalBrandingOverrides>(DEFAULT_CUSTOMER_PORTAL_SETTINGS.branding);
+  const [portalSettings, setPortalSettings] = useState<CustomerPortalSettings>(DEFAULT_CUSTOMER_PORTAL_SETTINGS);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [customerProfile, setCustomerProfile] = useState<CustomerPortalProfile | null>(null);
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
+
+  const primaryColor = branding.primaryColor;
+  const logoUrl = branding.logoUrl;
 
   const refreshProfile = async () => {
     const profile = await getCustomerProfile();
@@ -67,8 +73,11 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
       if (tenantOverride) {
         setTenantId(tenantOverride.tenantId);
         setTenantName(tenantOverride.tenantName);
-        setPrimaryColor(tenantOverride.primaryColor);
-        setLogoUrl(tenantOverride.logoUrl);
+        setBranding(prev => ({
+          ...prev,
+          primaryColor: tenantOverride.primaryColor,
+          logoUrl: tenantOverride.logoUrl,
+        }));
         if (tenantOverride.primaryColor) {
           applyPrimaryColor(tenantOverride.primaryColor);
         }
@@ -82,18 +91,25 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
         return;
       }
       try {
-        const branding = await getCustomerPortalBranding(tenantSlug);
-        if (branding) {
-          setTenantId(branding.tenantId);
-          setTenantName(branding.name);
-          setPrimaryColor(branding.primaryColor);
-          setLogoUrl(branding.logoUrl);
-          if (branding.primaryColor) {
-            applyPrimaryColor(branding.primaryColor);
+        const result = await getCustomerPortalBranding(tenantSlug);
+        if (result) {
+          setTenantId(result.tenantId);
+          setTenantName(result.name);
+          setBranding(result.branding);
+          setPortalSettings(result.portalSettings);
+
+          if (result.branding.primaryColor) {
+            applyPrimaryColor(result.branding.primaryColor);
+          }
+          if (result.branding.faviconUrl) {
+            applyFavicon(result.branding.faviconUrl);
+          }
+          if (result.branding.portalTitle) {
+            document.title = result.branding.portalTitle;
           }
 
           // Load return reasons
-          const reasonsData = await getCustomerReturnReasons(branding.tenantId);
+          const reasonsData = await getCustomerReturnReasons(result.tenantId);
           setReasons(reasonsData);
         }
       } catch (err) {
@@ -134,6 +150,8 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
         tenantName,
         primaryColor,
         logoUrl,
+        branding,
+        portalSettings,
         isAuthenticated,
         isLoading,
         customerProfile,
