@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -43,6 +44,7 @@ import {
   EyeOff,
   ChevronDown,
   ChevronUp,
+  Maximize2,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Button } from '@/components/ui/button';
@@ -135,6 +137,7 @@ const SUPPLIER_ROLES: { value: SupplierProduct['role']; label: string }[] = [
 export function SuppliersPage() {
   const { t } = useTranslation('settings');
   const locale = useLocale();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1352,6 +1355,7 @@ export function SuppliersPage() {
                       key={supplier.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => openDetailView(supplier)}
+                      onDoubleClick={() => navigate(`/suppliers/${supplier.id}`)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -1436,7 +1440,15 @@ export function SuppliersPage() {
           <Sheet open={!!detailSupplier} onOpenChange={(open) => { if (!open) setDetailSupplier(null); }}>
             <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
               <SheetHeader>
-                <SheetTitle>{detailSupplier?.name || t('Details')}</SheetTitle>
+                <div className="flex items-center justify-between">
+                  <SheetTitle>{detailSupplier?.name || t('Details')}</SheetTitle>
+                  {detailSupplier && (
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/suppliers/${detailSupplier.id}`)}>
+                      <Maximize2 className="h-4 w-4 mr-1" />
+                      {t('Open')}
+                    </Button>
+                  )}
+                </div>
                 {detailSupplier && (
                   <SheetDescription>{detailSupplier.legal_form} | {detailSupplier.code || t('No code')}</SheetDescription>
                 )}
@@ -1447,9 +1459,17 @@ export function SuppliersPage() {
         ) : (
           <Card className="lg:col-span-1">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">
-                {detailSupplier ? detailSupplier.name : t('Details')}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">
+                  {detailSupplier ? detailSupplier.name : t('Details')}
+                </CardTitle>
+                {detailSupplier && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/suppliers/${detailSupplier.id}`)}>
+                    <Maximize2 className="h-4 w-4 mr-1" />
+                    {t('Open')}
+                  </Button>
+                )}
+              </div>
               {detailSupplier && (
                 <CardDescription>{detailSupplier.legal_form} | {detailSupplier.code || t('No code')}</CardDescription>
               )}

@@ -42,6 +42,7 @@ export {
   updateDocument,
   deleteDocument,
   getDocumentStats,
+  getSupplierDocuments,
   uploadProductImage,
   type Document,
 } from './documents';

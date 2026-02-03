@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
@@ -14,63 +15,80 @@ import { BrandingProvider, useBranding } from '@/contexts/BrandingContext';
 import { useCustomDomainDetection } from '@/hooks/useCustomDomainDetection';
 import { CustomDomainPortal } from '@/components/CustomDomainPortal';
 import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { ProductsPage } from '@/pages/ProductsPage';
-import { ProductPage } from '@/pages/ProductPage';
-import { ProductFormPage } from '@/pages/ProductFormPage';
-import { DPPOverviewPage } from '@/pages/DPPOverviewPage';
-import { QRGeneratorPage } from '@/pages/QRGeneratorPage';
-import { DocumentsPage } from '@/pages/DocumentsPage';
-import { CompliancePage } from '@/pages/CompliancePage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { RegulationsPage } from '@/pages/RegulationsPage';
-import { ChecklistPage } from '@/pages/ChecklistPage';
-import { RequirementsCalculatorPage } from '@/pages/RequirementsCalculatorPage';
-import { ProductCategoriesPage } from '@/pages/ProductCategoriesPage';
-import { DPPVisibilitySettingsPage } from '@/pages/DPPVisibilitySettingsPage';
-import { PublicLayout } from '@/pages/public/PublicLayout';
-import { PublicCustomerPage } from '@/pages/public/PublicCustomerPage';
-import { PublicCustomsPage } from '@/pages/public/PublicCustomsPage';
-import { LoginPage } from '@/pages/LoginPage';
-import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
-import { AdminPage } from '@/pages/AdminPage';
-import { NewsPage } from '@/pages/NewsPage';
-import { SupplyChainPage } from '@/pages/SupplyChainPage';
-import { SuppliersPage } from '@/pages/SuppliersPage';
-import { BatchFormPage } from '@/pages/BatchFormPage';
-import { BatchDetailPage } from '@/pages/BatchDetailPage';
-import { ReturnsHubDashboardPage } from '@/pages/returns/ReturnsHubDashboardPage';
-import { ReturnsListPage } from '@/pages/returns/ReturnsListPage';
-import { CreateReturnPage } from '@/pages/returns/CreateReturnPage';
-import { ReturnDetailPage } from '@/pages/returns/ReturnDetailPage';
-import { CustomersListPage } from '@/pages/returns/CustomersListPage';
-import { CustomerDetailPage } from '@/pages/returns/CustomerDetailPage';
-import { TicketsListPage } from '@/pages/returns/TicketsListPage';
-import { TicketDetailPage } from '@/pages/returns/TicketDetailPage';
-import { ReturnsReportsPage } from '@/pages/returns/ReturnsReportsPage';
-import { ReturnsSettingsPage } from '@/pages/returns/ReturnsSettingsPage';
-import { WorkflowRulesPage } from '@/pages/returns/WorkflowRulesPage';
-import { WorkflowBuilderPage } from '@/components/returns/workflow-builder/WorkflowBuilderPage';
-import { EmailTemplateEditorPage } from '@/components/returns/email-editor/EmailTemplateEditorPage';
-import { LandingPage } from '@/pages/LandingPage';
-import { ReturnsPortalLayout } from '@/pages/returns/public/ReturnsPortalLayout';
-import { PublicReturnPortalPage } from '@/pages/returns/public/PublicReturnPortalPage';
-import { PublicReturnRegisterPage } from '@/pages/returns/public/PublicReturnRegisterPage';
-import { PublicReturnTrackingPage } from '@/pages/returns/public/PublicReturnTrackingPage';
-import { CustomerPortalLayout } from '@/pages/customer/CustomerPortalLayout';
-import { CustomerProtectedRoute } from '@/pages/customer/CustomerProtectedRoute';
-import { CustomerLoginPage } from '@/pages/customer/CustomerLoginPage';
-import { CustomerRegisterPage } from '@/pages/customer/CustomerRegisterPage';
-import { CustomerAuthCallbackPage } from '@/pages/customer/CustomerAuthCallbackPage';
-import { CustomerDashboardPage } from '@/pages/customer/CustomerDashboardPage';
-import { CustomerReturnsListPage } from '@/pages/customer/CustomerReturnsListPage';
-import { CustomerReturnDetailPage } from '@/pages/customer/CustomerReturnDetailPage';
-import { CustomerNewReturnPage } from '@/pages/customer/CustomerNewReturnPage';
-import { CustomerTicketsListPage } from '@/pages/customer/CustomerTicketsListPage';
-import { CustomerTicketDetailPage } from '@/pages/customer/CustomerTicketDetailPage';
-import { CustomerProfilePage } from '@/pages/customer/CustomerProfilePage';
 import './index.css';
+
+// --- Lazy page imports (code-split per route) ---
+
+// Landing & Auth
+const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+
+// Public DPP
+const PublicLayout = lazy(() => import('@/pages/public/PublicLayout').then(m => ({ default: m.PublicLayout })));
+const PublicCustomerPage = lazy(() => import('@/pages/public/PublicCustomerPage').then(m => ({ default: m.PublicCustomerPage })));
+const PublicCustomsPage = lazy(() => import('@/pages/public/PublicCustomsPage').then(m => ({ default: m.PublicCustomsPage })));
+
+// Returns Portal (public)
+const ReturnsPortalLayout = lazy(() => import('@/pages/returns/public/ReturnsPortalLayout').then(m => ({ default: m.ReturnsPortalLayout })));
+const PublicReturnPortalPage = lazy(() => import('@/pages/returns/public/PublicReturnPortalPage').then(m => ({ default: m.PublicReturnPortalPage })));
+const PublicReturnRegisterPage = lazy(() => import('@/pages/returns/public/PublicReturnRegisterPage').then(m => ({ default: m.PublicReturnRegisterPage })));
+const PublicReturnTrackingPage = lazy(() => import('@/pages/returns/public/PublicReturnTrackingPage').then(m => ({ default: m.PublicReturnTrackingPage })));
+
+// Customer Portal
+const CustomerPortalLayout = lazy(() => import('@/pages/customer/CustomerPortalLayout').then(m => ({ default: m.CustomerPortalLayout })));
+const CustomerProtectedRoute = lazy(() => import('@/pages/customer/CustomerProtectedRoute').then(m => ({ default: m.CustomerProtectedRoute })));
+const CustomerLoginPage = lazy(() => import('@/pages/customer/CustomerLoginPage').then(m => ({ default: m.CustomerLoginPage })));
+const CustomerRegisterPage = lazy(() => import('@/pages/customer/CustomerRegisterPage').then(m => ({ default: m.CustomerRegisterPage })));
+const CustomerAuthCallbackPage = lazy(() => import('@/pages/customer/CustomerAuthCallbackPage').then(m => ({ default: m.CustomerAuthCallbackPage })));
+const CustomerDashboardPage = lazy(() => import('@/pages/customer/CustomerDashboardPage').then(m => ({ default: m.CustomerDashboardPage })));
+const CustomerReturnsListPage = lazy(() => import('@/pages/customer/CustomerReturnsListPage').then(m => ({ default: m.CustomerReturnsListPage })));
+const CustomerReturnDetailPage = lazy(() => import('@/pages/customer/CustomerReturnDetailPage').then(m => ({ default: m.CustomerReturnDetailPage })));
+const CustomerNewReturnPage = lazy(() => import('@/pages/customer/CustomerNewReturnPage').then(m => ({ default: m.CustomerNewReturnPage })));
+const CustomerTicketsListPage = lazy(() => import('@/pages/customer/CustomerTicketsListPage').then(m => ({ default: m.CustomerTicketsListPage })));
+const CustomerTicketDetailPage = lazy(() => import('@/pages/customer/CustomerTicketDetailPage').then(m => ({ default: m.CustomerTicketDetailPage })));
+const CustomerProfilePage = lazy(() => import('@/pages/customer/CustomerProfilePage').then(m => ({ default: m.CustomerProfilePage })));
+
+// Admin Core
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const ProductsPage = lazy(() => import('@/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
+const ProductPage = lazy(() => import('@/pages/ProductPage').then(m => ({ default: m.ProductPage })));
+const ProductFormPage = lazy(() => import('@/pages/ProductFormPage').then(m => ({ default: m.ProductFormPage })));
+const ProductCategoriesPage = lazy(() => import('@/pages/ProductCategoriesPage').then(m => ({ default: m.ProductCategoriesPage })));
+const BatchFormPage = lazy(() => import('@/pages/BatchFormPage').then(m => ({ default: m.BatchFormPage })));
+const BatchDetailPage = lazy(() => import('@/pages/BatchDetailPage').then(m => ({ default: m.BatchDetailPage })));
+const DPPOverviewPage = lazy(() => import('@/pages/DPPOverviewPage').then(m => ({ default: m.DPPOverviewPage })));
+const QRGeneratorPage = lazy(() => import('@/pages/QRGeneratorPage').then(m => ({ default: m.QRGeneratorPage })));
+const DPPVisibilitySettingsPage = lazy(() => import('@/pages/DPPVisibilitySettingsPage').then(m => ({ default: m.DPPVisibilitySettingsPage })));
+const DocumentsPage = lazy(() => import('@/pages/DocumentsPage').then(m => ({ default: m.DocumentsPage })));
+const SupplyChainPage = lazy(() => import('@/pages/SupplyChainPage').then(m => ({ default: m.SupplyChainPage })));
+const SuppliersPage = lazy(() => import('@/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
+const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetailPage').then(m => ({ default: m.SupplierDetailPage })));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
+const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
+
+// Compliance
+const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
+const RegulationsPage = lazy(() => import('@/pages/RegulationsPage').then(m => ({ default: m.RegulationsPage })));
+const ChecklistPage = lazy(() => import('@/pages/ChecklistPage').then(m => ({ default: m.ChecklistPage })));
+
+// Returns Hub Admin
+const ReturnsHubDashboardPage = lazy(() => import('@/pages/returns/ReturnsHubDashboardPage').then(m => ({ default: m.ReturnsHubDashboardPage })));
+const ReturnsListPage = lazy(() => import('@/pages/returns/ReturnsListPage').then(m => ({ default: m.ReturnsListPage })));
+const CreateReturnPage = lazy(() => import('@/pages/returns/CreateReturnPage').then(m => ({ default: m.CreateReturnPage })));
+const ReturnDetailPage = lazy(() => import('@/pages/returns/ReturnDetailPage').then(m => ({ default: m.ReturnDetailPage })));
+const CustomersListPage = lazy(() => import('@/pages/returns/CustomersListPage').then(m => ({ default: m.CustomersListPage })));
+const CustomerDetailPage = lazy(() => import('@/pages/returns/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage })));
+const TicketsListPage = lazy(() => import('@/pages/returns/TicketsListPage').then(m => ({ default: m.TicketsListPage })));
+const TicketDetailPage = lazy(() => import('@/pages/returns/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })));
+const ReturnsReportsPage = lazy(() => import('@/pages/returns/ReturnsReportsPage').then(m => ({ default: m.ReturnsReportsPage })));
+const ReturnsSettingsPage = lazy(() => import('@/pages/returns/ReturnsSettingsPage').then(m => ({ default: m.ReturnsSettingsPage })));
+const WorkflowRulesPage = lazy(() => import('@/pages/returns/WorkflowRulesPage').then(m => ({ default: m.WorkflowRulesPage })));
+const WorkflowBuilderPage = lazy(() => import('@/components/returns/workflow-builder/WorkflowBuilderPage').then(m => ({ default: m.WorkflowBuilderPage })));
+const EmailTemplateEditorPage = lazy(() => import('@/components/returns/email-editor/EmailTemplateEditorPage').then(m => ({ default: m.EmailTemplateEditorPage })));
 
 // Protected Route - redirects to login if not authenticated
 function ProtectedRoute() {
@@ -164,9 +182,20 @@ function CustomDomainGate() {
   return <NormalAppRoutes />;
 }
 
+function LoadingSpinner() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+      </div>
+    </div>
+  );
+}
+
 function NormalAppRoutes() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<LoadingSpinner />}>
       <Routes>
         {/* Landing Page */}
         <Route path="landing" element={<LandingPage />} />
@@ -238,6 +267,7 @@ function NormalAppRoutes() {
           {/* Supply Chain */}
           <Route path="supply-chain" element={<SupplyChainPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="suppliers/:id" element={<SupplierDetailPage />} />
 
           {/* Returns Hub */}
           <Route path="returns" element={<ReturnsHubDashboardPage />} />
@@ -283,6 +313,7 @@ function NormalAppRoutes() {
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

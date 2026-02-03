@@ -12,6 +12,14 @@ export const DOCUMENT_CATEGORIES = [
   'Environmental Declaration',
   'Technical Drawing',
   'Video',
+  'Offer',
+  'Invoice',
+  'Contract',
+  'NDA',
+  'Quality Certificate',
+  'Audit Report',
+  'Insurance Certificate',
+  'Price List',
   'Other',
 ] as const;
 

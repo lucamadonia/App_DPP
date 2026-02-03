@@ -10,6 +10,7 @@ export interface Document {
   id: string;
   tenant_id: string;
   product_id?: string;
+  supplier_id?: string;
   name: string;
   type: 'pdf' | 'image' | 'other';
   category: string;
@@ -29,6 +30,7 @@ function transformDocument(row: any): Document {
     id: row.id,
     tenant_id: row.tenant_id,
     product_id: row.product_id || undefined,
+    supplier_id: row.supplier_id || undefined,
     name: row.name,
     type: row.type,
     category: row.category,
@@ -99,6 +101,7 @@ export async function uploadDocument(
     name: string;
     category: string;
     productId?: string;
+    supplierId?: string;
     validUntil?: string;
     visibility?: 'internal' | 'customs' | 'consumer';
   }
@@ -153,6 +156,7 @@ export async function uploadDocument(
   const insertData = {
     tenant_id: tenantId,
     product_id: metadata.productId || null,
+    supplier_id: metadata.supplierId || null,
     name: metadata.name,
     type: fileType,
     category: metadata.category,
@@ -309,6 +313,32 @@ export async function getDocumentStats(): Promise<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expired: data.filter((d: any) => d.status === 'expired').length,
   };
+}
+
+/**
+ * Get documents for a specific supplier
+ */
+export async function getSupplierDocuments(supplierId: string): Promise<Document[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    console.warn('No tenant set - cannot load supplier documents');
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('supplier_id', supplierId)
+    .order('uploaded_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load supplier documents:', error);
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((row: any) => transformDocument(row));
 }
 
 /**

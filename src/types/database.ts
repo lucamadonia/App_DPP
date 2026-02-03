@@ -303,6 +303,7 @@ export interface Document {
   id: string;
   tenant_id: string;
   product_id?: string;
+  supplier_id?: string;
   name: string;
   type: 'pdf' | 'image' | 'other';
   category: string;
