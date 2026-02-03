@@ -15,10 +15,11 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Download,
   Package,
   Loader2,
   Layers,
+  Copy,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +40,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getProducts, deleteProduct, type ProductListItem } from '@/services/supabase/products';
+import { getProducts, deleteProduct, getProductsForExport, type ProductListItem } from '@/services/supabase/products';
+import { getCurrentTenant } from '@/services/supabase/tenants';
+import { generateProductCSV } from '@/lib/product-csv';
+import { DuplicateProductDialog } from '@/components/product/DuplicateProductDialog';
+import { ExportProductsDropdown } from '@/components/product/ExportProductsDropdown';
+import { ImportProductsDialog } from '@/components/product/ImportProductsDialog';
 
 const statusConfig = {
   live: {
@@ -77,6 +83,16 @@ export function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
+  // Duplicate
+  const [duplicateTarget, setDuplicateTarget] = useState<{ id: string; name: string } | null>(null);
+
+  // Export
+  const [isExporting, setIsExporting] = useState(false);
+  const [includeBatches, setIncludeBatches] = useState(false);
+
+  // Import
+  const [importOpen, setImportOpen] = useState(false);
+
   useEffect(() => {
     loadProducts();
   }, [location.key]);
@@ -104,6 +120,75 @@ export function ProductsPage() {
       alert('Error deleting: ' + result.error);
     }
   };
+
+  // ------ Export handlers ------
+
+  const getExportIds = () => filteredProducts.map((p) => p.id);
+
+  const getTenantName = async () => {
+    try {
+      const tenant = await getCurrentTenant();
+      return tenant?.name || 'DPP Manager';
+    } catch {
+      return 'DPP Manager';
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (filteredProducts.length === 0) return;
+    setIsExporting(true);
+    try {
+      const data = await getProductsForExport(getExportIds(), includeBatches);
+      const csv = generateProductCSV(data, includeBatches);
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `products-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPDFOverview = async () => {
+    if (filteredProducts.length === 0) return;
+    setIsExporting(true);
+    try {
+      const [data, tenantName] = await Promise.all([
+        getProductsForExport(getExportIds(), includeBatches),
+        getTenantName(),
+      ]);
+      const { generateProductOverviewPDF } = await import(
+        '@/components/product/ProductCatalogPDF'
+      );
+      await generateProductOverviewPDF(data, tenantName, includeBatches);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPDFCatalog = async () => {
+    if (filteredProducts.length === 0) return;
+    setIsExporting(true);
+    try {
+      const [data, tenantName] = await Promise.all([
+        getProductsForExport(getExportIds(), includeBatches),
+        getTenantName(),
+      ]);
+      const { generateProductCatalogPDF } = await import(
+        '@/components/product/ProductCatalogPDF'
+      );
+      await generateProductCatalogPDF(data, tenantName, includeBatches);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // ------ Filtering ------
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -184,9 +269,18 @@ export function ProductsPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              {t('Export')}
+            <ExportProductsDropdown
+              disabled={filteredProducts.length === 0}
+              includeBatches={includeBatches}
+              onIncludeBatchesChange={setIncludeBatches}
+              onExportCSV={handleExportCSV}
+              onExportPDFOverview={handleExportPDFOverview}
+              onExportPDFCatalog={handleExportPDFCatalog}
+              isExporting={isExporting}
+            />
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              {t('Import')}
             </Button>
           </div>
         </CardContent>
@@ -304,6 +398,14 @@ export function ProductsPage() {
                                 {t('QR-Code')}
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setDuplicateTarget({ id: product.id, name: product.name })
+                              }
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              {t('Duplicate Product')}
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive"
@@ -329,6 +431,24 @@ export function ProductsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      {duplicateTarget && (
+        <DuplicateProductDialog
+          productId={duplicateTarget.id}
+          productName={duplicateTarget.name}
+          open={!!duplicateTarget}
+          onOpenChange={(open) => {
+            if (!open) setDuplicateTarget(null);
+          }}
+        />
+      )}
+
+      <ImportProductsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImportComplete={loadProducts}
+      />
     </div>
   );
 }

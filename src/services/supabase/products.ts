@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Product, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides } from '@/types/product';
+import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides } from '@/types/product';
 import type { ProductRegistrations, SupportResources } from '@/types/database';
 
 // Transform database row to Product type (master data only)
@@ -503,5 +503,292 @@ export async function getProductStats(): Promise<{
     withDpp: batchCount || products.length,
     expiringSoon,
     byCategory,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate product
+// ---------------------------------------------------------------------------
+
+export interface DuplicateProductOptions {
+  includeSupplyChain: boolean;
+  includeBatches: boolean;
+  includeImages: boolean;
+  includeDocuments: boolean;
+  includeSuppliers: boolean;
+}
+
+export async function duplicateProduct(
+  sourceId: string,
+  options: DuplicateProductOptions,
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  // 1. Fetch source product
+  const source = await getProductById(sourceId);
+  if (!source) return { success: false, error: 'Source product not found' };
+
+  // 2. Create copy with cleared GTIN and draft status
+  const result = await createProduct({
+    ...source,
+    name: `(Copy) ${source.name}`,
+    gtin: '',
+    supplyChain: [], // handled separately below
+  });
+  if (!result.success || !result.id) return result;
+
+  const newId = result.id;
+
+  // 3. Supply chain
+  if (options.includeSupplyChain && source.supplyChain.length > 0) {
+    const entries = source.supplyChain.map((sc: SupplyChainEntry) => ({
+      tenant_id: tenantId,
+      product_id: newId,
+      step: sc.step,
+      location: sc.location,
+      country: sc.country,
+      date: sc.date,
+      description: sc.description,
+      process_type: sc.processType || null,
+      transport_mode: sc.transportMode || null,
+      status: sc.status || null,
+      emissions_kg: sc.emissionsKg != null ? sc.emissionsKg : null,
+    }));
+    await supabase.from('supply_chain_entries').insert(entries);
+  }
+
+  // 4. Batches (clear serial numbers, status draft)
+  if (options.includeBatches) {
+    const { data: batches } = await supabase
+      .from('product_batches')
+      .select('*')
+      .eq('product_id', sourceId);
+
+    if (batches && batches.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const batchInserts = batches.map((b: any) => ({
+        tenant_id: tenantId,
+        product_id: newId,
+        batch_number: b.batch_number || null,
+        serial_number: '',
+        production_date: b.production_date,
+        expiration_date: b.expiration_date || null,
+        net_weight: b.net_weight,
+        gross_weight: b.gross_weight,
+        quantity: b.quantity,
+        price_per_unit: b.price_per_unit,
+        currency: b.currency,
+        supplier_id: b.supplier_id,
+        status: 'draft',
+        notes: b.notes || null,
+        materials_override: b.materials_override,
+        certifications_override: b.certifications_override,
+        carbon_footprint_override: b.carbon_footprint_override,
+        recyclability_override: b.recyclability_override,
+        description_override: b.description_override,
+      }));
+      await supabase.from('product_batches').insert(batchInserts);
+    }
+  }
+
+  // 5. Images (reference same storage URLs)
+  if (options.includeImages) {
+    const { data: images } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', sourceId)
+      .order('sort_order', { ascending: true });
+
+    if (images && images.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const imgInserts = images.map((img: any) => ({
+        tenant_id: tenantId,
+        product_id: newId,
+        url: img.url,
+        filename: img.filename,
+        is_primary: img.is_primary,
+        sort_order: img.sort_order,
+        caption: img.caption || null,
+      }));
+      await supabase.from('product_images').insert(imgInserts);
+    }
+  }
+
+  // 6. Documents (reference same storage URLs)
+  if (options.includeDocuments) {
+    const { data: docs } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('product_id', sourceId);
+
+    if (docs && docs.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const docInserts = docs.map((d: any) => ({
+        tenant_id: tenantId,
+        product_id: newId,
+        name: d.name,
+        category: d.category,
+        file_url: d.file_url,
+        file_name: d.file_name,
+        file_size: d.file_size,
+        mime_type: d.mime_type,
+        visibility: d.visibility,
+        valid_until: d.valid_until || null,
+      }));
+      await supabase.from('documents').insert(docInserts);
+    }
+  }
+
+  // 7. Supplier assignments
+  if (options.includeSuppliers) {
+    const { data: sps } = await supabase
+      .from('supplier_products')
+      .select('*')
+      .eq('product_id', sourceId);
+
+    if (sps && sps.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const spInserts = sps.map((sp: any) => ({
+        tenant_id: tenantId,
+        product_id: newId,
+        supplier_id: sp.supplier_id,
+        role: sp.role,
+        is_primary: sp.is_primary,
+        lead_time_days: sp.lead_time_days,
+        price_tiers: sp.price_tiers || null,
+      }));
+      await supabase.from('supplier_products').insert(spInserts);
+    }
+  }
+
+  return { success: true, id: newId };
+}
+
+// ---------------------------------------------------------------------------
+// Get entity counts for duplicate dialog
+// ---------------------------------------------------------------------------
+
+export async function getDuplicateEntityCounts(productId: string): Promise<{
+  supplyChain: number;
+  batches: number;
+  images: number;
+  documents: number;
+  suppliers: number;
+}> {
+  const [sc, batches, images, docs, suppliers] = await Promise.all([
+    supabase.from('supply_chain_entries').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+    supabase.from('product_batches').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+    supabase.from('product_images').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+    supabase.from('documents').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+    supabase.from('supplier_products').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+  ]);
+
+  return {
+    supplyChain: sc.count || 0,
+    batches: batches.count || 0,
+    images: images.count || 0,
+    documents: docs.count || 0,
+    suppliers: suppliers.count || 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Get full products for export
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformBatchForExport(row: any): ProductBatch {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    productId: row.product_id,
+    batchNumber: row.batch_number || undefined,
+    serialNumber: row.serial_number || '',
+    productionDate: row.production_date || '',
+    expirationDate: row.expiration_date || undefined,
+    netWeight: row.net_weight != null ? Number(row.net_weight) : undefined,
+    grossWeight: row.gross_weight != null ? Number(row.gross_weight) : undefined,
+    quantity: row.quantity != null ? Number(row.quantity) : undefined,
+    pricePerUnit: row.price_per_unit != null ? Number(row.price_per_unit) : undefined,
+    currency: row.currency || undefined,
+    supplierId: row.supplier_id || undefined,
+    status: row.status || 'draft',
+    notes: row.notes || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getProductsForExport(
+  productIds: string[],
+  includeBatches?: boolean,
+): Promise<Array<Product & { batches?: ProductBatch[] }>> {
+  if (productIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .in('id', productIds);
+
+  if (error || !data) return [];
+
+  const products = data.map(transformProduct);
+
+  if (includeBatches) {
+    const { data: batchData } = await supabase
+      .from('product_batches')
+      .select('*')
+      .in('product_id', productIds)
+      .order('created_at', { ascending: true });
+
+    const batchesByProduct: Record<string, ProductBatch[]> = {};
+    if (batchData) {
+      for (const row of batchData) {
+        const pid = row.product_id;
+        if (!batchesByProduct[pid]) batchesByProduct[pid] = [];
+        batchesByProduct[pid].push(transformBatchForExport(row));
+      }
+    }
+
+    return products.map(p => ({
+      ...p,
+      batches: batchesByProduct[p.id] || [],
+    }));
+  }
+
+  return products;
+}
+
+// ---------------------------------------------------------------------------
+// Bulk import products
+// ---------------------------------------------------------------------------
+
+export async function importProducts(
+  products: Array<Partial<Product>>,
+): Promise<{
+  success: boolean;
+  imported: number;
+  failed: number;
+  errors: Array<{ index: number; name: string; error: string }>;
+}> {
+  const errors: Array<{ index: number; name: string; error: string }> = [];
+  let imported = 0;
+
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    const result = await createProduct({ ...p, gtin: p.gtin || '' });
+    if (result.success) {
+      imported++;
+    } else {
+      errors.push({ index: i, name: p.name || `Row ${i + 1}`, error: result.error || 'Unknown error' });
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    imported,
+    failed: errors.length,
+    errors,
   };
 }
