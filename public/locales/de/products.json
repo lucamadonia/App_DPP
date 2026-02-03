@@ -375,6 +375,11 @@
   "ml.editor.saving": "Speichern...",
   "ml.editor.saved": "Gespeichert",
   "ml.editor.save": "Speichern",
+  "ml.editor.saveAs": "Speichern als",
+  "ml.editor.saveAsCopy": "Als Kopie speichern",
+  "ml.editor.fromProduct": "Vom Produkt",
+  "ml.editor.manufacturer": "Hersteller",
+  "ml.editor.importer": "EU Importeur",
   "ml.editor.emptyState": "Elemente aus der linken Palette ziehen oder eine Vorlage wählen.",
   "ml.editor.selectElement": "Element auf der Arbeitsfläche auswählen, um Einstellungen zu bearbeiten.",
   "ml.editor.livePreview": "Live-Vorschau",
@@ -498,5 +503,7 @@
   "ml.template.name": "Vorlagenname",
   "ml.template.namePlaceholder": "Mein benutzerdefiniertes Etikett...",
   "ml.template.save": "Speichern",
-  "ml.template.untitled": "Unbenanntes Etikett"
+  "ml.template.untitled": "Unbenanntes Etikett",
+  "ml.template.description": "Beschreibung",
+  "ml.template.descriptionPlaceholder": "Optionale Beschreibung..."
 }

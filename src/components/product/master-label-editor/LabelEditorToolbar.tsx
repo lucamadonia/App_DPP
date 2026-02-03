@@ -7,6 +7,10 @@ import {
   Loader2,
   ZoomIn,
   ZoomOut,
+  Save,
+  Copy,
+  Factory,
+  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +23,7 @@ import {
 import type { LabelSaveStatus } from '@/types/master-label-editor';
 import type { LabelVariant } from '@/types/master-label';
 import type { BatchListItem } from '@/types/product';
+import type { SupplierProduct } from '@/types/database';
 
 interface LabelEditorToolbarProps {
   templateName: string;
@@ -33,11 +38,18 @@ interface LabelEditorToolbarProps {
   onRedo: () => void;
   saveStatus: LabelSaveStatus;
   onSave: () => void;
+  onSaveAs: () => void;
+  isBuiltinTemplate: boolean;
   zoom: number;
   onZoomChange: (z: number) => void;
   isGenerating: boolean;
   onGeneratePDF: () => void;
   onBack: () => void;
+  productSuppliers?: Array<SupplierProduct & { supplier_name: string; supplier_country: string }>;
+  manufacturerOverrideId: string | null;
+  onManufacturerOverride: (id: string | null) => void;
+  importerOverrideId: string | null;
+  onImporterOverride: (id: string | null) => void;
 }
 
 const ZOOM_LEVELS = [50, 75, 100, 150];
@@ -66,14 +78,24 @@ export function LabelEditorToolbar({
   onRedo,
   saveStatus,
   onSave,
+  onSaveAs,
+  isBuiltinTemplate,
   zoom,
   onZoomChange,
   isGenerating,
   onGeneratePDF,
   onBack,
+  productSuppliers = [],
+  manufacturerOverrideId,
+  onManufacturerOverride,
+  importerOverrideId,
+  onImporterOverride,
 }: LabelEditorToolbarProps) {
   const { t } = useTranslation('products');
   const liveBatches = batches.filter(b => b.status === 'live' || b.status === 'draft');
+
+  const manufacturerSuppliers = productSuppliers.filter(sp => sp.role === 'manufacturer');
+  const importerSuppliers = productSuppliers.filter(sp => sp.role === 'importeur');
 
   return (
     <div className="h-12 shrink-0 border-b bg-background/80 backdrop-blur-sm flex items-center gap-2 px-3">
@@ -82,8 +104,11 @@ export function LabelEditorToolbar({
         <ArrowLeft className="h-4 w-4" />
       </Button>
 
-      {/* Template name */}
-      <span className="text-sm font-medium truncate max-w-[160px]">{templateName}</span>
+      {/* Template name + save status dot */}
+      <div className="flex items-center gap-1.5">
+        <SaveStatusDot status={saveStatus} />
+        <span className="text-sm font-medium truncate max-w-[140px]">{templateName}</span>
+      </div>
 
       <div className="w-px h-5 bg-border mx-1" />
 
@@ -113,6 +138,52 @@ export function LabelEditorToolbar({
         </SelectContent>
       </Select>
 
+      {/* Manufacturer override */}
+      {manufacturerSuppliers.length > 0 && (
+        <Select
+          value={manufacturerOverrideId || '_default'}
+          onValueChange={(v) => onManufacturerOverride(v === '_default' ? null : v)}
+        >
+          <SelectTrigger className="h-8 w-[140px] text-xs">
+            <div className="flex items-center gap-1 truncate">
+              <Factory className="h-3 w-3 shrink-0" />
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_default">{t('ml.editor.fromProduct')}</SelectItem>
+            {manufacturerSuppliers.map((sp) => (
+              <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
+                {sp.supplier_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {/* Importer override */}
+      {importerSuppliers.length > 0 && (
+        <Select
+          value={importerOverrideId || '_default'}
+          onValueChange={(v) => onImporterOverride(v === '_default' ? null : v)}
+        >
+          <SelectTrigger className="h-8 w-[140px] text-xs">
+            <div className="flex items-center gap-1 truncate">
+              <Building2 className="h-3 w-3 shrink-0" />
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_default">{t('ml.editor.fromProduct')}</SelectItem>
+            {importerSuppliers.map((sp) => (
+              <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
+                {sp.supplier_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
       <div className="w-px h-5 bg-border mx-1" />
 
       {/* Undo/Redo */}
@@ -123,15 +194,34 @@ export function LabelEditorToolbar({
         <Redo2 className="h-4 w-4" />
       </Button>
 
-      {/* Save status */}
-      <div className="flex items-center gap-1.5 ml-1">
-        <SaveStatusDot status={saveStatus} />
-        <button onClick={onSave} className="text-xs text-muted-foreground hover:text-foreground">
-          {saveStatus === 'saving' ? t('ml.editor.saving') : saveStatus === 'saved' ? t('ml.editor.saved') : t('ml.editor.save')}
-        </button>
-      </div>
-
       <div className="flex-1" />
+
+      {/* Prominent Save button(s) */}
+      {isBuiltinTemplate ? (
+        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onSaveAs}>
+          <Copy className="h-3.5 w-3.5" />
+          {t('ml.editor.saveAsCopy')}
+        </Button>
+      ) : (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={onSave}
+            disabled={saveStatus === 'saving'}
+          >
+            <Save className="h-3.5 w-3.5" />
+            {saveStatus === 'saving' ? t('ml.editor.saving') : t('ml.editor.save')}
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={onSaveAs}>
+            <Copy className="h-3.5 w-3.5" />
+            {t('ml.editor.saveAs')}
+          </Button>
+        </div>
+      )}
+
+      <div className="w-px h-5 bg-border mx-1" />
 
       {/* Zoom */}
       <div className="flex items-center gap-1">

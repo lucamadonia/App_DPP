@@ -253,6 +253,8 @@ export function assembleMasterLabelData(params: AssembleMasterLabelParams): Mast
   const compliance = buildComplianceModules(productGroup, certNames, product.registrations);
   const sustainability = buildSustainabilitySection(materials, recyclability);
 
+  const serialNumber = batch?.serialNumber || product.serialNumber || '';
+
   const data: MasterLabelData = {
     variant,
     productGroup,
@@ -264,6 +266,11 @@ export function assembleMasterLabelData(params: AssembleMasterLabelParams): Mast
     },
     compliance,
     sustainability,
+    serialNumber,
+    netWeight: product.netWeight,
+    hsCode: product.hsCode,
+    countryOfOrigin: product.countryOfOrigin,
+    registrations: product.registrations,
   };
 
   if (variant === 'b2b') {
@@ -296,7 +303,7 @@ export function resolveFieldValue(fieldKey: LabelFieldKey, data: MasterLabelData
     case 'batchNumber':
       return data.identity.batchNumber || '';
     case 'serialNumber':
-      return data.identity.batchNumber || ''; // serial often same context
+      return data.serialNumber || '';
     case 'manufacturerName':
       return data.identity.manufacturer.name || '';
     case 'manufacturerAddress':
@@ -306,23 +313,23 @@ export function resolveFieldValue(fieldKey: LabelFieldKey, data: MasterLabelData
     case 'importerAddress':
       return data.identity.importer?.address || '';
     case 'countryOfOrigin':
-      return data.b2cTargetCountry || '';
+      return data.countryOfOrigin || data.b2cTargetCountry || '';
     case 'category':
       return data.productGroup || '';
     case 'grossWeight':
       return data.b2bGrossWeight != null ? `${(data.b2bGrossWeight / 1000).toFixed(2)} kg` : '';
     case 'netWeight':
-      return ''; // not available in MasterLabelData currently
+      return data.netWeight != null ? `${(data.netWeight / 1000).toFixed(2)} kg` : '';
     case 'hsCode':
-      return ''; // not available in MasterLabelData currently
+      return data.hsCode || '';
     case 'quantity':
       return data.b2bQuantity != null ? `${data.b2bQuantity}` : '';
     case 'eprelNumber':
-      return ''; // would need registrations passed through
+      return data.registrations?.eprelNumber || '';
     case 'weeeNumber':
-      return ''; // would need registrations passed through
+      return data.registrations?.weeeRegistration || '';
     case 'madeIn':
-      return data.b2cTargetCountry || '';
+      return data.countryOfOrigin || data.b2cTargetCountry || '';
     default:
       return '';
   }

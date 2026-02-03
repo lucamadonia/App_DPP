@@ -75,6 +75,13 @@ export interface MasterLabelData {
   compliance: ComplianceModuleIcon[];
   sustainability: SustainabilitySection;
 
+  // Additional resolved fields
+  serialNumber?: string;
+  netWeight?: number;
+  hsCode?: string;
+  countryOfOrigin?: string;
+  registrations?: Record<string, string>;
+
   // B2B extras
   b2bQuantity?: number;
   b2bGrossWeight?: number;
@@ -116,6 +123,7 @@ export interface AssembleMasterLabelParams {
     name: string;
     gtin: string;
     batchNumber?: string;
+    serialNumber?: string;
     category: string;
     manufacturer: string;
     manufacturerAddress?: string;
@@ -130,7 +138,10 @@ export interface AssembleMasterLabelParams {
       packagingDisposalMethods?: string[];
     };
     registrations?: Record<string, string>;
+    netWeight?: number;
     grossWeight?: number;
+    hsCode?: string;
+    countryOfOrigin?: string;
     manufacturerSupplierId?: string | null;
     importerSupplierId?: string | null;
   };

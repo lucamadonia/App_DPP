@@ -67,6 +67,10 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
   const [manufacturerSupplier, setManufacturerSupplier] = useState<Supplier | null>(null);
   const [importerSupplier, setImporterSupplier] = useState<Supplier | null>(null);
 
+  // Supplier override state (for advanced editor)
+  const [manufacturerOverrideId, setManufacturerOverrideId] = useState<string | null>(null);
+  const [importerOverrideId, setImporterOverrideId] = useState<string | null>(null);
+
   const productGroup = detectProductGroup(product.category);
   const liveBatches = batches.filter(b => b.status === 'live' || b.status === 'draft');
 
@@ -75,34 +79,37 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
     getCountries().then(setCountries).catch(console.error);
   }, []);
 
-  // Load manufacturer and importer suppliers
-  useEffect(() => {
-    async function loadSuppliers() {
-      if (product.manufacturerSupplierId) {
-        const s = await getSupplier(product.manufacturerSupplierId);
-        setManufacturerSupplier(s);
-      } else {
-        const mfr = productSuppliers.find(sp => sp.role === 'manufacturer');
-        if (mfr) {
-          const s = await getSupplier(mfr.supplier_id);
-          setManufacturerSupplier(s);
-        }
-      }
 
-      if (product.importerSupplierId) {
-        const s = await getSupplier(product.importerSupplierId);
-        setImporterSupplier(s);
+  // Load override suppliers when override IDs change
+  useEffect(() => {
+    if (manufacturerOverrideId) {
+      getSupplier(manufacturerOverrideId).then(setManufacturerSupplier).catch(console.error);
+    } else if (product.manufacturerSupplierId) {
+      getSupplier(product.manufacturerSupplierId).then(setManufacturerSupplier).catch(console.error);
+    } else {
+      const mfr = productSuppliers.find(sp => sp.role === 'manufacturer');
+      if (mfr) {
+        getSupplier(mfr.supplier_id).then(setManufacturerSupplier).catch(console.error);
       } else {
-        const imp = productSuppliers.find(sp => sp.role === 'importeur');
-        if (imp) {
-          const s = await getSupplier(imp.supplier_id);
-          setImporterSupplier(s);
-        }
+        setManufacturerSupplier(null);
       }
     }
+  }, [manufacturerOverrideId, product.manufacturerSupplierId, productSuppliers]);
 
-    loadSuppliers();
-  }, [product.manufacturerSupplierId, product.importerSupplierId, productSuppliers]);
+  useEffect(() => {
+    if (importerOverrideId) {
+      getSupplier(importerOverrideId).then(setImporterSupplier).catch(console.error);
+    } else if (product.importerSupplierId) {
+      getSupplier(product.importerSupplierId).then(setImporterSupplier).catch(console.error);
+    } else {
+      const imp = productSuppliers.find(sp => sp.role === 'importeur');
+      if (imp) {
+        getSupplier(imp.supplier_id).then(setImporterSupplier).catch(console.error);
+      } else {
+        setImporterSupplier(null);
+      }
+    }
+  }, [importerOverrideId, product.importerSupplierId, productSuppliers]);
 
   // Assemble label data when config changes
   const assembleLabel = useCallback(async () => {
@@ -131,6 +138,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         name: product.name,
         gtin: product.gtin,
         batchNumber: product.batchNumber,
+        serialNumber: product.serialNumber,
         category: product.category,
         manufacturer: product.manufacturer,
         manufacturerAddress: product.manufacturerAddress,
@@ -138,7 +146,10 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         certifications: product.certifications || [],
         recyclability: product.recyclability,
         registrations: product.registrations as Record<string, string> | undefined,
+        netWeight: product.netWeight,
         grossWeight: product.grossWeight,
+        hsCode: product.hsCode,
+        countryOfOrigin: product.countryOfOrigin,
         manufacturerSupplierId: product.manufacturerSupplierId,
         importerSupplierId: product.importerSupplierId,
       },
@@ -209,6 +220,11 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
               selectedBatchId={selectedBatchId}
               onBatchChange={setSelectedBatchId}
               onBack={() => setMode('simple')}
+              productSuppliers={productSuppliers}
+              manufacturerOverrideId={manufacturerOverrideId}
+              onManufacturerOverride={setManufacturerOverrideId}
+              importerOverrideId={importerOverrideId}
+              onImporterOverride={setImporterOverrideId}
             />
           </div>
         </div>

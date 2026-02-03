@@ -23,6 +23,8 @@ import type {
 } from '@/types/master-label-editor';
 import type { MasterLabelData, LabelVariant } from '@/types/master-label';
 import type { BatchListItem } from '@/types/product';
+import type { SupplierProduct } from '@/types/database';
+import { Textarea } from '@/components/ui/textarea';
 import { createBlankDesign, createElement, generateElementId, generateTemplateId } from '@/lib/master-label-defaults';
 import { useLabelEditorHistory } from './hooks/useLabelEditorHistory';
 import { useLabelDragReorder } from './hooks/useLabelDragReorder';
@@ -45,6 +47,11 @@ interface MasterLabelEditorPageProps {
   selectedBatchId: string;
   onBatchChange: (id: string) => void;
   onBack: () => void;
+  productSuppliers?: Array<SupplierProduct & { supplier_name: string; supplier_country: string }>;
+  manufacturerOverrideId: string | null;
+  onManufacturerOverride: (id: string | null) => void;
+  importerOverrideId: string | null;
+  onImporterOverride: (id: string | null) => void;
 }
 
 export function MasterLabelEditorPage({
@@ -55,6 +62,11 @@ export function MasterLabelEditorPage({
   selectedBatchId,
   onBatchChange,
   onBack: _onBack,
+  productSuppliers = [],
+  manufacturerOverrideId,
+  onManufacturerOverride,
+  importerOverrideId,
+  onImporterOverride,
 }: MasterLabelEditorPageProps) {
   const { t } = useTranslation('products');
 
@@ -75,6 +87,8 @@ export function MasterLabelEditorPage({
   // Save dialog
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
+  const [saveTemplateDescription, setSaveTemplateDescription] = useState('');
+  const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
 
   // Hooks
   const history = useLabelEditorHistory(design);
@@ -235,15 +249,16 @@ export function MasterLabelEditorPage({
   const handleSaveTemplate = useCallback(async () => {
     if (!saveTemplateName.trim()) return;
 
+    const isOverwrite = saveMode === 'save' && activeTemplate && !activeTemplate.isDefault;
     const template: MasterLabelTemplate = {
-      id: activeTemplate && !activeTemplate.isDefault ? activeTemplate.id : generateTemplateId(),
+      id: isOverwrite ? activeTemplate.id : generateTemplateId(),
       name: saveTemplateName,
-      description: '',
+      description: saveTemplateDescription,
       category: 'custom',
       variant: 'universal',
       design: JSON.parse(JSON.stringify(design)),
       isDefault: false,
-      createdAt: new Date().toISOString(),
+      createdAt: isOverwrite ? activeTemplate.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -263,7 +278,49 @@ export function MasterLabelEditorPage({
       autosave.markSaved();
     }
     setShowSaveDialog(false);
-  }, [saveTemplateName, activeTemplate, design, autosave]);
+  }, [saveTemplateName, saveTemplateDescription, saveMode, activeTemplate, design, autosave]);
+
+  // Direct save for custom templates (no dialog)
+  const handleDirectSave = useCallback(async () => {
+    if (!activeTemplate || activeTemplate.isDefault) {
+      // For built-in or no template: open save-as dialog
+      setSaveMode('saveAs');
+      setSaveTemplateName(activeTemplate?.name ? `${activeTemplate.name} (Copy)` : '');
+      setSaveTemplateDescription(activeTemplate?.description || '');
+      setShowSaveDialog(true);
+      return;
+    }
+    // Overwrite existing custom template
+    const template: MasterLabelTemplate = {
+      ...activeTemplate,
+      design: JSON.parse(JSON.stringify(design)),
+      updatedAt: new Date().toISOString(),
+    };
+    const result = await saveMasterLabelTemplate(template);
+    if (result.success) {
+      setActiveTemplate(template);
+      setCustomTemplates(prev => {
+        const idx = prev.findIndex(t => t.id === template.id);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = template;
+          return updated;
+        }
+        return [...prev, template];
+      });
+      setHasChanges(false);
+      autosave.markSaved();
+    }
+  }, [activeTemplate, design, autosave]);
+
+  const handleSaveAs = useCallback(() => {
+    setSaveMode('saveAs');
+    const baseName = activeTemplate?.name || '';
+    const isBuiltin = activeTemplate?.isDefault;
+    setSaveTemplateName(isBuiltin ? `${baseName} (Copy)` : baseName);
+    setSaveTemplateDescription(activeTemplate?.description || '');
+    setShowSaveDialog(true);
+  }, [activeTemplate]);
 
   // ---------------------------------------------------------------------------
   // Undo/Redo
@@ -320,8 +377,7 @@ export function MasterLabelEditorPage({
         handleRedo();
       } else if (isCtrl && e.key === 's') {
         e.preventDefault();
-        setShowSaveDialog(true);
-        setSaveTemplateName(activeTemplate?.name || '');
+        handleDirectSave();
       } else if (isCtrl && e.key === 'd' && selectedElementId) {
         e.preventDefault();
         duplicateElement(selectedElementId);
@@ -339,7 +395,7 @@ export function MasterLabelEditorPage({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [view, handleUndo, handleRedo, selectedElementId, duplicateElement, deleteElement, activeTemplate]);
+  }, [view, handleUndo, handleRedo, handleDirectSave, selectedElementId, duplicateElement, deleteElement, activeTemplate]);
 
   // ---------------------------------------------------------------------------
   // Drag handlers
@@ -399,15 +455,19 @@ export function MasterLabelEditorPage({
             onUndo={handleUndo}
             onRedo={handleRedo}
             saveStatus={autosave.status}
-            onSave={() => {
-              setShowSaveDialog(true);
-              setSaveTemplateName(activeTemplate?.name || '');
-            }}
+            onSave={handleDirectSave}
+            onSaveAs={handleSaveAs}
+            isBuiltinTemplate={!!activeTemplate?.isDefault}
             zoom={zoom}
             onZoomChange={setZoom}
             isGenerating={isGenerating}
             onGeneratePDF={handleGeneratePDF}
             onBack={() => setView('gallery')}
+            productSuppliers={productSuppliers}
+            manufacturerOverrideId={manufacturerOverrideId}
+            onManufacturerOverride={onManufacturerOverride}
+            importerOverrideId={importerOverrideId}
+            onImporterOverride={onImporterOverride}
           />
         }
         palette={
@@ -506,7 +566,9 @@ export function MasterLabelEditorPage({
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('ml.template.saveTitle')}</DialogTitle>
+            <DialogTitle>
+              {saveMode === 'saveAs' ? t('ml.editor.saveAs') : t('ml.template.saveTitle')}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
             <div className="space-y-1.5">
@@ -518,6 +580,15 @@ export function MasterLabelEditorPage({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveTemplate();
                 }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('ml.template.description')}</Label>
+              <Textarea
+                value={saveTemplateDescription}
+                onChange={(e) => setSaveTemplateDescription(e.target.value)}
+                placeholder={t('ml.template.descriptionPlaceholder')}
+                rows={2}
               />
             </div>
           </div>

@@ -375,6 +375,11 @@
   "ml.editor.saving": "Saving...",
   "ml.editor.saved": "Saved",
   "ml.editor.save": "Save",
+  "ml.editor.saveAs": "Save As",
+  "ml.editor.saveAsCopy": "Save as Copy",
+  "ml.editor.fromProduct": "From Product",
+  "ml.editor.manufacturer": "Manufacturer",
+  "ml.editor.importer": "EU Importer",
   "ml.editor.emptyState": "Drag elements from the left palette or choose a template to start.",
   "ml.editor.selectElement": "Select an element on the canvas to edit its settings.",
   "ml.editor.livePreview": "Live Preview",
@@ -498,5 +503,7 @@
   "ml.template.name": "Template Name",
   "ml.template.namePlaceholder": "My custom label...",
   "ml.template.save": "Save",
-  "ml.template.untitled": "Untitled Label"
+  "ml.template.untitled": "Untitled Label",
+  "ml.template.description": "Description",
+  "ml.template.descriptionPlaceholder": "Optional description..."
 }
