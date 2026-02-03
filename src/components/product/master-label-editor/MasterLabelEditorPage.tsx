@@ -41,6 +41,7 @@ import { LabelPictogramLibrary } from './LabelPictogramLibrary';
 import { LabelComplianceChecker } from './LabelComplianceChecker';
 import { LabelTemplateGallery } from './LabelTemplateGallery';
 import { detectProductGroup } from '@/lib/master-label-assembler';
+import { useBranding } from '@/hooks/use-branding';
 import { ShieldCheck } from 'lucide-react';
 
 interface MasterLabelEditorPageProps {
@@ -95,9 +96,11 @@ export function MasterLabelEditorPage({
   const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
 
   // Hooks
+  const { branding } = useBranding();
   const history = useLabelEditorHistory(design);
   const drag = useLabelDragReorder();
   const changeCountRef = useRef(0);
+  const dragSectionRef = useRef<LabelSectionId | null>(null);
 
   // Autosave
   const autosave = useLabelAutosave(
@@ -463,6 +466,73 @@ export function MasterLabelEditorPage({
     setSelectedElementId(newElement.id);
   }, [design, updateDesign]);
 
+  const handleElementDrop = useCallback((targetIndex: number): boolean => {
+    const result = drag.handleDrop(targetIndex);
+    if (!result) return false;
+
+    if (result.type === 'reorder' && dragSectionRef.current) {
+      const sectionId = dragSectionRef.current;
+      const sectionElements = design.elements
+        .filter(e => e.sectionId === sectionId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const moved = sectionElements.splice(result.from, 1)[0];
+      if (!moved) { dragSectionRef.current = null; return false; }
+      sectionElements.splice(result.to, 0, moved);
+
+      const updated = design.elements.map(e => {
+        if (e.sectionId !== sectionId) return e;
+        const newOrder = sectionElements.findIndex(se => se.id === e.id);
+        return { ...e, sortOrder: newOrder };
+      });
+
+      updateDesign({ ...design, elements: updated });
+      dragSectionRef.current = null;
+      return true;
+    }
+
+    if (result.type === 'insert' && dragSectionRef.current) {
+      addElement(result.elementType, dragSectionRef.current, targetIndex);
+      dragSectionRef.current = null;
+      return true;
+    }
+
+    // insert without a tracked section — use first visible section
+    if (result.type === 'insert') {
+      const firstVisible = design.sections.find(s => s.visible);
+      if (firstVisible) {
+        addElement(result.elementType, firstVisible.id, targetIndex);
+      }
+      dragSectionRef.current = null;
+      return true;
+    }
+
+    dragSectionRef.current = null;
+    return false;
+  }, [drag, design, updateDesign, addElement]);
+
+  const handleSectionDrop = useCallback((targetIndex: number): boolean => {
+    const result = drag.handleDrop(targetIndex);
+    if (!result) return false;
+
+    if (result.type === 'section-reorder') {
+      const sorted = [...design.sections].sort((a, b) => a.sortOrder - b.sortOrder);
+      const moved = sorted.splice(result.from, 1)[0];
+      if (!moved) return false;
+      sorted.splice(result.to, 0, moved);
+
+      const sections = design.sections.map(s => {
+        const newOrder = sorted.findIndex(ss => ss.id === s.id);
+        return { ...s, sortOrder: newOrder };
+      });
+
+      updateDesign({ ...design, sections });
+      return true;
+    }
+
+    return false;
+  }, [drag, design, updateDesign]);
+
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const rawData = e.dataTransfer.getData('text/plain');
@@ -559,10 +629,18 @@ export function MasterLabelEditorPage({
             onMoveElement={moveElement}
             onDuplicateElement={duplicateElement}
             onDeleteElement={deleteElement}
-            onDragElementStart={drag.handleDragStart}
+            onDragElementStart={(index, sectionId) => {
+              dragSectionRef.current = sectionId;
+              drag.handleDragStart(index);
+            }}
             onInsertElement={addElement}
             onToggleSectionCollapsed={toggleSectionCollapsed}
             onSectionDragStart={drag.handleSectionDragStart}
+            onDragElementOver={drag.handleDragOver}
+            onDropElement={handleElementDrop}
+            onDragElementEnd={drag.handleDragEnd}
+            onSectionDragOver={drag.handleDragOver}
+            onDropSection={handleSectionDrop}
             dragTargetSectionIndex={drag.dragState.isDragging ? drag.dragState.targetIndex : null}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
@@ -602,6 +680,11 @@ export function MasterLabelEditorPage({
                       onInsertElement={() => {}}
                       onToggleSectionCollapsed={() => {}}
                       onSectionDragStart={() => {}}
+                      onDragElementOver={() => {}}
+                      onDropElement={() => false}
+                      onDragElementEnd={() => {}}
+                      onSectionDragOver={() => {}}
+                      onDropSection={() => false}
                       dragTargetSectionIndex={null}
                       onDragOver={() => {}}
                       onDrop={() => {}}
@@ -622,6 +705,8 @@ export function MasterLabelEditorPage({
               <LabelDesignSettingsPanel
                 design={design}
                 onDesignChange={updateDesign}
+                brandingLogo={branding.logo}
+                brandingPrimaryColor={branding.primaryColor}
               />
             </TabsContent>
 

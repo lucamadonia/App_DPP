@@ -442,6 +442,7 @@
   "ml.editor.borderColor": "Border Color",
   "ml.editor.paddingTop": "Top Padding",
   "ml.editor.paddingBottom": "Bottom Padding",
+  "ml.editor.applyCorporateDesign": "Apply Corporate Design",
 
   "ml.element.text": "Text",
   "ml.element.fieldValue": "Field",

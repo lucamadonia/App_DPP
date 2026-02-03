@@ -15,10 +15,15 @@ interface LabelCanvasProps {
   onMoveElement: (elementId: string, direction: 'up' | 'down') => void;
   onDuplicateElement: (elementId: string) => void;
   onDeleteElement: (elementId: string) => void;
-  onDragElementStart: (index: number) => void;
+  onDragElementStart: (index: number, sectionId: LabelSectionId) => void;
   onInsertElement: (type: LabelElementType, sectionId: LabelSectionId, afterIndex: number) => void;
   onToggleSectionCollapsed: (sectionId: LabelSectionId) => void;
   onSectionDragStart: (index: number) => void;
+  onDragElementOver: (index: number) => void;
+  onDropElement: (index: number) => boolean;
+  onDragElementEnd: () => void;
+  onSectionDragOver: (index: number) => void;
+  onDropSection: (index: number) => boolean;
   dragTargetSectionIndex: number | null;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -39,6 +44,11 @@ export function LabelCanvas({
   onInsertElement,
   onToggleSectionCollapsed,
   onSectionDragStart,
+  onDragElementOver,
+  onDropElement,
+  onDragElementEnd,
+  onSectionDragOver,
+  onDropSection,
   dragTargetSectionIndex,
   onDragOver,
   onDrop,
@@ -90,10 +100,15 @@ export function LabelCanvas({
               onMoveElement={onMoveElement}
               onDuplicateElement={onDuplicateElement}
               onDeleteElement={onDeleteElement}
-              onDragElementStart={onDragElementStart}
+              onDragElementStart={(index) => onDragElementStart(index, section.id)}
               onInsertElement={(type, afterIndex) => onInsertElement(type, section.id, afterIndex)}
               onToggleCollapsed={() => onToggleSectionCollapsed(section.id)}
               onSectionDragStart={() => onSectionDragStart(sectionIndex)}
+              onDragElementOver={onDragElementOver}
+              onDropElement={onDropElement}
+              onDragElementEnd={onDragElementEnd}
+              onSectionDragOver={() => onSectionDragOver(sectionIndex)}
+              onSectionDrop={() => onDropSection(sectionIndex)}
               isDragTarget={dragTargetSectionIndex === sectionIndex}
             />
           );

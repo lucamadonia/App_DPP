@@ -17,6 +17,9 @@ interface LabelCanvasElementProps {
   onDuplicate: () => void;
   onDelete: () => void;
   onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => boolean;
+  onDragEnd: () => void;
 }
 
 function ElementPreview({ element, data }: { element: LabelElement; data: MasterLabelData | null }) {
@@ -251,6 +254,9 @@ export function LabelCanvasElement({
   onDuplicate,
   onDelete,
   onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: LabelCanvasElementProps) {
   return (
     <div
@@ -273,6 +279,17 @@ export function LabelCanvasElement({
         e.dataTransfer.effectAllowed = 'move';
         onDragStart();
       }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOver();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const handled = onDrop();
+        if (handled) e.stopPropagation();
+      }}
+      onDragEnd={onDragEnd}
     >
       <ElementPreview element={element} data={data} />
 

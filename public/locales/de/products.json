@@ -442,6 +442,7 @@
   "ml.editor.borderColor": "Rahmenfarbe",
   "ml.editor.paddingTop": "Abstand oben",
   "ml.editor.paddingBottom": "Abstand unten",
+  "ml.editor.applyCorporateDesign": "Corporate Design anwenden",
 
   "ml.element.text": "Text",
   "ml.element.fieldValue": "Feld",

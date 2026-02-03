@@ -20,6 +20,11 @@ interface LabelCanvasSectionProps {
   onInsertElement: (type: LabelElementType, afterIndex: number) => void;
   onToggleCollapsed: () => void;
   onSectionDragStart: () => void;
+  onDragElementOver: (index: number) => void;
+  onDropElement: (index: number) => boolean;
+  onDragElementEnd: () => void;
+  onSectionDragOver?: () => void;
+  onSectionDrop?: () => boolean;
   isDragTarget: boolean;
 }
 
@@ -38,6 +43,11 @@ export function LabelCanvasSection({
   onInsertElement,
   onToggleCollapsed,
   onSectionDragStart,
+  onDragElementOver,
+  onDropElement,
+  onDragElementEnd,
+  onSectionDragOver,
+  onSectionDrop,
   isDragTarget,
 }: LabelCanvasSectionProps) {
   const { t } = useTranslation('products');
@@ -67,6 +77,16 @@ export function LabelCanvasSection({
           e.dataTransfer.effectAllowed = 'move';
           onSectionDragStart();
         }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          onSectionDragOver?.();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const handled = onSectionDrop?.();
+          if (handled) e.stopPropagation();
+        }}
+        onDragEnd={onDragElementEnd}
       >
         <GripHorizontal className="h-2.5 w-2.5 text-muted-foreground/40 opacity-0 group-hover/header:opacity-100 cursor-grab" />
         <button onClick={onToggleCollapsed} className="flex items-center gap-0.5">
@@ -98,6 +118,9 @@ export function LabelCanvasSection({
                 onDuplicate={() => onDuplicateElement(element.id)}
                 onDelete={() => onDeleteElement(element.id)}
                 onDragStart={() => onDragElementStart(index)}
+                onDragOver={() => onDragElementOver(index)}
+                onDrop={() => onDropElement(index)}
+                onDragEnd={onDragElementEnd}
               />
 
               {/* Insert handle between elements */}

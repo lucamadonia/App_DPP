@@ -3,6 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
+import { Paintbrush } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -11,14 +13,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { LabelDesign, LabelSection } from '@/types/master-label-editor';
+import { generateElementId } from '@/lib/master-label-defaults';
 
 interface LabelDesignSettingsPanelProps {
   design: LabelDesign;
   onDesignChange: (design: LabelDesign) => void;
+  brandingLogo?: string | null;
+  brandingPrimaryColor?: string;
 }
 
-export function LabelDesignSettingsPanel({ design, onDesignChange }: LabelDesignSettingsPanelProps) {
+export function LabelDesignSettingsPanel({ design, onDesignChange, brandingLogo, brandingPrimaryColor }: LabelDesignSettingsPanelProps) {
   const { t } = useTranslation('products');
+
+  const DEFAULT_BORDER_COLOR = '#d1d5db';
 
   const update = (partial: Partial<LabelDesign>) => {
     onDesignChange({ ...design, ...partial });
@@ -31,8 +38,68 @@ export function LabelDesignSettingsPanel({ design, onDesignChange }: LabelDesign
     onDesignChange({ ...design, sections });
   };
 
+  const hasBranding = !!(brandingLogo || (brandingPrimaryColor && brandingPrimaryColor !== '#3B82F6'));
+
+  const applyCorporateDesign = () => {
+    let updatedDesign = { ...design };
+
+    // Apply primary color to sections with default border color
+    if (brandingPrimaryColor) {
+      updatedDesign.sections = updatedDesign.sections.map(s =>
+        s.borderColor === DEFAULT_BORDER_COLOR
+          ? { ...s, borderColor: brandingPrimaryColor }
+          : s
+      );
+    }
+
+    // Insert logo into identity section if no image element with a src exists
+    if (brandingLogo) {
+      const hasImageWithSrc = updatedDesign.elements.some(
+        el => el.type === 'image' && (el as any).src
+      );
+      if (!hasImageWithSrc) {
+        const identitySection = updatedDesign.sections.find(s => s.id === 'identity');
+        if (identitySection) {
+          // Shift existing elements to make room at position 0
+          const shifted = updatedDesign.elements.map(e =>
+            e.sectionId === 'identity' ? { ...e, sortOrder: e.sortOrder + 1 } : e
+          );
+          shifted.push({
+            id: generateElementId(),
+            type: 'image',
+            sectionId: 'identity',
+            sortOrder: 0,
+            src: brandingLogo,
+            alt: 'Logo',
+            width: 60,
+            alignment: 'center',
+            borderRadius: 0,
+          } as any);
+          updatedDesign.elements = shifted;
+        }
+      }
+    }
+
+    onDesignChange(updatedDesign);
+  };
+
   return (
     <div className="p-4 space-y-6 animate-panel-slide-in">
+      {/* Corporate Design */}
+      {hasBranding && (
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+            onClick={applyCorporateDesign}
+          >
+            <Paintbrush className="h-3.5 w-3.5" />
+            {t('ml.editor.applyCorporateDesign')}
+          </Button>
+        </div>
+      )}
+
       {/* Page Settings */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium">{t('ml.editor.pageSettings')}</h3>
