@@ -50,6 +50,8 @@ interface ResolvedQRCodeSettings {
   foregroundColor: string;
   backgroundColor: string;
   dppTemplate: DPPTemplateName;
+  dppTemplateCustomer: DPPTemplateName;
+  dppTemplateCustoms: DPPTemplateName;
 }
 
 interface BrandingContextType {
@@ -88,6 +90,8 @@ const DEFAULT_QR_CODE_SETTINGS: ResolvedQRCodeSettings = {
   foregroundColor: '#000000',
   backgroundColor: '#FFFFFF',
   dppTemplate: 'modern',
+  dppTemplateCustomer: 'modern',
+  dppTemplateCustoms: 'modern',
 };
 
 const BrandingContext = createContext<BrandingContextType | undefined>(undefined);
@@ -121,6 +125,8 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
     foregroundColor: rawQRCodeSettings?.foregroundColor || DEFAULT_QR_CODE_SETTINGS.foregroundColor,
     backgroundColor: rawQRCodeSettings?.backgroundColor || DEFAULT_QR_CODE_SETTINGS.backgroundColor,
     dppTemplate: rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplate,
+    dppTemplateCustomer: rawQRCodeSettings?.dppTemplateCustomer || rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplateCustomer,
+    dppTemplateCustoms: rawQRCodeSettings?.dppTemplateCustoms || rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplateCustoms,
   };
 
   // Load branding from database

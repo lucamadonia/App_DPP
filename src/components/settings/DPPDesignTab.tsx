@@ -70,6 +70,7 @@ const SECTION_LABELS: Record<DPPSectionId, { icon: React.ReactNode; labelKey: st
   certifications: { icon: <Award className="h-4 w-4" />, labelKey: 'Certifications' },
   supplyChain: { icon: <Truck className="h-4 w-4" />, labelKey: 'Supply Chain' },
   support: { icon: <HelpCircle className="h-4 w-4" />, labelKey: 'Support' },
+  components: { icon: <Package className="h-4 w-4" />, labelKey: 'Components' },
 };
 
 const TEMPLATE_OPTIONS: { value: DPPTemplateName; labelKey: string; descKey: string }[] = [
@@ -282,16 +283,8 @@ export function DPPDesignTab() {
   const [saveError, setSaveError] = useState(false);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const heroInputRef = useRef<HTMLInputElement>(null);
-  const [templateCustomer, setTemplateCustomer] = useState<DPPTemplateName>(
-    (qrCodeSettings as { dppTemplateCustomer?: DPPTemplateName }).dppTemplateCustomer ||
-    (qrCodeSettings as { dppTemplate?: DPPTemplateName }).dppTemplate ||
-    'modern'
-  );
-  const [templateCustoms, setTemplateCustoms] = useState<DPPTemplateName>(
-    (qrCodeSettings as { dppTemplateCustoms?: DPPTemplateName }).dppTemplateCustoms ||
-    (qrCodeSettings as { dppTemplate?: DPPTemplateName }).dppTemplate ||
-    'modern'
-  );
+  const [templateCustomer, setTemplateCustomer] = useState<DPPTemplateName>(qrCodeSettings.dppTemplateCustomer);
+  const [templateCustoms, setTemplateCustoms] = useState<DPPTemplateName>(qrCodeSettings.dppTemplateCustoms);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
 
