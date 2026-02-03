@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Info,
   Package,
+  Paintbrush,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,6 +32,10 @@ import { detectProductGroup, assembleMasterLabelData, generateQRDataUrl, buildDp
 import { validateMasterLabel } from '@/lib/master-label-validation';
 import { MasterLabelPreview } from './MasterLabelPreview';
 
+const MasterLabelEditorPage = lazy(() =>
+  import('./master-label-editor/MasterLabelEditorPage').then(m => ({ default: m.MasterLabelEditorPage }))
+);
+
 interface MasterLabelTabProps {
   product: Product;
   batches: BatchListItem[];
@@ -41,6 +46,9 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
   const { t } = useTranslation('products');
   const { qrCodeSettings } = useBranding();
   const [searchParams] = useSearchParams();
+
+  // Mode: simple vs advanced editor
+  const [mode, setMode] = useState<'simple' | 'advanced'>('simple');
 
   // Config state
   const preselectedBatchId = searchParams.get('batchId') || '';
@@ -70,12 +78,10 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
   // Load manufacturer and importer suppliers
   useEffect(() => {
     async function loadSuppliers() {
-      // From product's direct references
       if (product.manufacturerSupplierId) {
         const s = await getSupplier(product.manufacturerSupplierId);
         setManufacturerSupplier(s);
       } else {
-        // Fallback: find from productSuppliers with manufacturer role
         const mfr = productSuppliers.find(sp => sp.role === 'manufacturer');
         if (mfr) {
           const s = await getSupplier(mfr.supplier_id);
@@ -176,139 +182,189 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
   const warnings = validation.filter(v => v.severity === 'warning');
   const infos = validation.filter(v => v.severity === 'info');
 
+  // Advanced Editor mode
+  if (mode === 'advanced') {
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[500px]">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMode('simple')}
+            >
+              {t('ml.editor.backToSimple')}
+            </Button>
+          </div>
+          <div className="border rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+            <MasterLabelEditorPage
+              data={labelData}
+              batches={batches}
+              variant={variant}
+              onVariantChange={setVariant}
+              selectedBatchId={selectedBatchId}
+              onBatchChange={setSelectedBatchId}
+              onBack={() => setMode('simple')}
+            />
+          </div>
+        </div>
+      </Suspense>
+    );
+  }
+
+  // Simple Mode (original)
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
-      {/* Left: Configuration */}
-      <div className="space-y-6">
-        {/* Product Group Badge */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              {t('ml.title')}
-            </CardTitle>
-            <CardDescription>{t('ml.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">{t('ml.detectedGroup')}</span>
-              <Badge variant="secondary">{t(`ml.group.${productGroup}`)}</Badge>
-            </div>
+    <div className="space-y-4">
+      {/* Mode toggle */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setMode('advanced')}
+          className="gap-1.5"
+        >
+          <Paintbrush className="h-4 w-4" />
+          {t('ml.editor.advancedEditor')}
+        </Button>
+      </div>
 
-            {/* Variant Toggle */}
-            <div className="space-y-2">
-              <Label>{t('ml.variant')}</Label>
-              <Select value={variant} onValueChange={(v) => setVariant(v as LabelVariant)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="b2b">{t('ml.variantB2B')}</SelectItem>
-                  <SelectItem value="b2c">{t('ml.variantB2C')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
+        {/* Left: Configuration */}
+        <div className="space-y-6">
+          {/* Product Group Badge */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                {t('ml.title')}
+              </CardTitle>
+              <CardDescription>{t('ml.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{t('ml.detectedGroup')}</span>
+                <Badge variant="secondary">{t(`ml.group.${productGroup}`)}</Badge>
+              </div>
 
-            {/* Batch Selector */}
-            <div className="space-y-2">
-              <Label>{t('ml.selectBatch')}</Label>
-              <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('ml.selectBatchPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {liveBatches.map((batch) => (
-                    <SelectItem key={batch.id} value={batch.id}>
-                      {batch.serialNumber}
-                      {batch.batchNumber ? ` (${batch.batchNumber})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Target Country (B2C only) */}
-            {variant === 'b2c' && (
+              {/* Variant Toggle */}
               <div className="space-y-2">
-                <Label>{t('ml.targetCountry')}</Label>
-                <Select value={targetCountry} onValueChange={setTargetCountry}>
+                <Label>{t('ml.variant')}</Label>
+                <Select value={variant} onValueChange={(v) => setVariant(v as LabelVariant)}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t('ml.selectCountry')} />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
-                        {country.name}
+                    <SelectItem value="b2b">{t('ml.variantB2B')}</SelectItem>
+                    <SelectItem value="b2c">{t('ml.variantB2C')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch Selector */}
+              <div className="space-y-2">
+                <Label>{t('ml.selectBatch')}</Label>
+                <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('ml.selectBatchPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {liveBatches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.serialNumber}
+                        {batch.batchNumber ? ` (${batch.batchNumber})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Validation Results */}
-        {validation.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{t('ml.validation')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {errors.map((v, i) => (
-                <div key={`e-${i}`} className="flex items-start gap-2 text-sm">
-                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                  <span className="text-destructive">{t(v.i18nKey)}</span>
+              {/* Target Country (B2C only) */}
+              {variant === 'b2c' && (
+                <div className="space-y-2">
+                  <Label>{t('ml.targetCountry')}</Label>
+                  <Select value={targetCountry} onValueChange={setTargetCountry}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('ml.selectCountry')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
-              {warnings.map((v, i) => (
-                <div key={`w-${i}`} className="flex items-start gap-2 text-sm">
-                  <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-                  <span className="text-warning">{t(v.i18nKey)}</span>
-                </div>
-              ))}
-              {infos.map((v, i) => (
-                <div key={`i-${i}`} className="flex items-start gap-2 text-sm">
-                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span className="text-muted-foreground">{t(v.i18nKey)}</span>
-                </div>
-              ))}
+              )}
             </CardContent>
           </Card>
-        )}
 
-        {/* Generate Button */}
-        <Button
-          onClick={handleGeneratePDF}
-          disabled={isGenerating || isAssembling || !labelData}
-          className="w-full"
-          size="lg"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t('ml.generating')}
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              {t('ml.generatePDF')}
-            </>
+          {/* Validation Results */}
+          {validation.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">{t('ml.validation')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {errors.map((v, i) => (
+                  <div key={`e-${i}`} className="flex items-start gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                    <span className="text-destructive">{t(v.i18nKey)}</span>
+                  </div>
+                ))}
+                {warnings.map((v, i) => (
+                  <div key={`w-${i}`} className="flex items-start gap-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                    <span className="text-warning">{t(v.i18nKey)}</span>
+                  </div>
+                ))}
+                {infos.map((v, i) => (
+                  <div key={`i-${i}`} className="flex items-start gap-2 text-sm">
+                    <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="text-muted-foreground">{t(v.i18nKey)}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
-        </Button>
-      </div>
 
-      {/* Right: Preview */}
-      <div className="flex flex-col items-center gap-3">
-        <p className="text-sm font-medium text-muted-foreground">{t('ml.preview')}</p>
-        {isAssembling ? (
-          <div className="w-[280px] h-[396px] bg-muted/50 rounded-lg border flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <MasterLabelPreview data={labelData} />
-        )}
-        <p className="text-xs text-muted-foreground">{t('ml.previewNote')}</p>
+          {/* Generate Button */}
+          <Button
+            onClick={handleGeneratePDF}
+            disabled={isGenerating || isAssembling || !labelData}
+            className="w-full"
+            size="lg"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t('ml.generating')}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                {t('ml.generatePDF')}
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Right: Preview */}
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm font-medium text-muted-foreground">{t('ml.preview')}</p>
+          {isAssembling ? (
+            <div className="w-[280px] h-[396px] bg-muted/50 rounded-lg border flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <MasterLabelPreview data={labelData} />
+          )}
+          <p className="text-xs text-muted-foreground">{t('ml.previewNote')}</p>
+        </div>
       </div>
     </div>
   );

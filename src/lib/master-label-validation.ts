@@ -1,4 +1,5 @@
 import type { MasterLabelData, LabelValidationResult } from '@/types/master-label';
+import type { LabelDesign } from '@/types/master-label-editor';
 import { CE_APPLICABLE_GROUPS } from './master-label-constants';
 
 export function validateMasterLabel(data: MasterLabelData): LabelValidationResult[] {
@@ -91,6 +92,73 @@ export function validateMasterLabel(data: MasterLabelData): LabelValidationResul
       message: 'QR code could not be generated. Check DPP URL configuration.',
       severity: 'error',
       i18nKey: 'ml.validation.qrCodeMissing',
+    });
+  }
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// Editor Design Validation
+// ---------------------------------------------------------------------------
+
+export interface DesignValidationResult {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+  i18nKey: string;
+}
+
+export function validateLabelDesign(design: LabelDesign): DesignValidationResult[] {
+  const results: DesignValidationResult[] = [];
+
+  // Check: QR code element required
+  const hasQR = design.elements.some(e => e.type === 'qr-code');
+  if (!hasQR) {
+    results.push({
+      field: 'qrCode',
+      message: 'QR code element is required for the DPP link.',
+      severity: 'error',
+      i18nKey: 'ml.validation.qrElementRequired',
+    });
+  }
+
+  // Check: Product name field recommended
+  const hasProductName = design.elements.some(
+    e => e.type === 'field-value' && e.fieldKey === 'productName'
+  );
+  if (!hasProductName) {
+    results.push({
+      field: 'productName',
+      message: 'Product name field is recommended on the label.',
+      severity: 'warning',
+      i18nKey: 'ml.validation.productNameRecommended',
+    });
+  }
+
+  // Check: Font size minimum 3.4pt per EU regulation
+  for (const element of design.elements) {
+    if ('fontSize' in element && typeof element.fontSize === 'number' && element.fontSize < 3.4) {
+      results.push({
+        field: `element.${element.id}`,
+        message: 'Font size below 3.4pt (1.2mm). EU regulation requires minimum 1.2mm text height.',
+        severity: 'error',
+        i18nKey: 'ml.validation.fontSizeTooSmall',
+      });
+      break; // One warning is enough
+    }
+  }
+
+  // Check: Manufacturer/importer fields present (warning)
+  const hasManufacturer = design.elements.some(
+    e => e.type === 'field-value' && (e.fieldKey === 'manufacturerName' || e.fieldKey === 'manufacturerAddress')
+  );
+  if (!hasManufacturer) {
+    results.push({
+      field: 'manufacturer',
+      message: 'Manufacturer information is recommended on the label.',
+      severity: 'warning',
+      i18nKey: 'ml.validation.manufacturerRecommended',
     });
   }
 

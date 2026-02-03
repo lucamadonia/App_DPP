@@ -6,6 +6,7 @@ import type {
   MasterLabelData,
   AssembleMasterLabelParams,
 } from '@/types/master-label';
+import type { LabelFieldKey } from '@/types/master-label-editor';
 import type { Supplier } from '@/types/database';
 import {
   CATEGORY_TO_PRODUCT_GROUP,
@@ -276,4 +277,53 @@ export function assembleMasterLabelData(params: AssembleMasterLabelParams): Mast
   }
 
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Field Value Resolution (for visual editor)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves an auto-populated field key to its string value from assembled label data.
+ * Used by both the canvas preview and the PDF renderer.
+ */
+export function resolveFieldValue(fieldKey: LabelFieldKey, data: MasterLabelData): string {
+  switch (fieldKey) {
+    case 'productName':
+      return data.identity.productName || '';
+    case 'gtin':
+      return data.identity.modelSku || '';
+    case 'batchNumber':
+      return data.identity.batchNumber || '';
+    case 'serialNumber':
+      return data.identity.batchNumber || ''; // serial often same context
+    case 'manufacturerName':
+      return data.identity.manufacturer.name || '';
+    case 'manufacturerAddress':
+      return data.identity.manufacturer.address || '';
+    case 'importerName':
+      return data.identity.importer?.name || '';
+    case 'importerAddress':
+      return data.identity.importer?.address || '';
+    case 'countryOfOrigin':
+      return data.b2cTargetCountry || '';
+    case 'category':
+      return data.productGroup || '';
+    case 'grossWeight':
+      return data.b2bGrossWeight != null ? `${(data.b2bGrossWeight / 1000).toFixed(2)} kg` : '';
+    case 'netWeight':
+      return ''; // not available in MasterLabelData currently
+    case 'hsCode':
+      return ''; // not available in MasterLabelData currently
+    case 'quantity':
+      return data.b2bQuantity != null ? `${data.b2bQuantity}` : '';
+    case 'eprelNumber':
+      return ''; // would need registrations passed through
+    case 'weeeNumber':
+      return ''; // would need registrations passed through
+    case 'madeIn':
+      return data.b2cTargetCountry || '';
+    default:
+      return '';
+  }
 }

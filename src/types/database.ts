@@ -6,6 +6,7 @@
  */
 
 import type { ReturnsHubSettings } from './returns-hub';
+import type { MasterLabelTemplate } from './master-label-editor';
 
 // ============================================
 // TENANT (Mandant)
@@ -148,6 +149,7 @@ export interface TenantSettings {
   dppDesign?: DPPDesignSettings;
   returnsHub?: ReturnsHubSettings;
   productLanguages?: string[];
+  masterLabelTemplates?: MasterLabelTemplate[];
 }
 
 // ============================================
@@ -304,6 +306,7 @@ export interface Document {
   tenant_id: string;
   product_id?: string;
   supplier_id?: string;
+  folder_id?: string;
   name: string;
   type: 'pdf' | 'image' | 'other';
   category: string;
@@ -314,6 +317,19 @@ export interface Document {
   uploadedBy?: string;
   status: 'valid' | 'expiring' | 'expired';
   visibility: 'internal' | 'customs' | 'consumer';
+}
+
+// ============================================
+// DOCUMENT FOLDERS (Tenant-Daten)
+// ============================================
+
+export interface DocumentFolder {
+  id: string;
+  tenantId: string;
+  name: string;
+  parentId?: string;
+  sortOrder: number;
+  createdAt: string;
 }
 
 // ============================================
