@@ -8,7 +8,7 @@ interface EditorLayoutProps {
 
 export function EditorLayout({ sidebar, canvas, rightPane }: EditorLayoutProps) {
   return (
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-lg border bg-muted/30">
+    <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-muted/30">
       {/* Left sidebar */}
       <div className="w-[72px] shrink-0 border-r bg-background overflow-y-auto">
         {sidebar}
@@ -22,7 +22,7 @@ export function EditorLayout({ sidebar, canvas, rightPane }: EditorLayoutProps) 
           backgroundSize: '20px 20px',
         }}
       >
-        <div className="py-6 px-4 flex justify-center min-h-full">
+        <div className="py-6 pl-14 pr-4 flex justify-center min-h-full">
           {canvas}
         </div>
       </div>

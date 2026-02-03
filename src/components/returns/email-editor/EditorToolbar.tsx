@@ -40,7 +40,7 @@ export function EditorToolbar({
   const { t } = useTranslation('returns');
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-b border-white/20 shadow-sm sticky top-0 z-20">
+    <div className="flex items-center gap-3 px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-b border-white/20 shadow-sm shrink-0 z-10">
       {/* Back button */}
       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onBack}>
         <ArrowLeft className="h-4 w-4" />

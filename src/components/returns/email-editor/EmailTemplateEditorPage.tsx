@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Settings2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -9,6 +9,7 @@ import {
 import {
   getRhEmailTemplates, upsertRhEmailTemplate, seedDefaultEmailTemplates,
 } from '@/services/supabase';
+import { useBranding } from '@/hooks/use-branding';
 import type { RhEmailTemplate } from '@/types/returns-hub';
 import type { EmailDesignConfig, EmailBlock, EmailBlockType, SettingsPanelTab } from './emailEditorTypes';
 import { getDefaultTemplate, getDefaultDesignConfig } from './emailTemplateDefaults';
@@ -59,10 +60,14 @@ function createDefaultBlock(type: EmailBlockType): EmailBlock {
 export function EmailTemplateEditorPage() {
   const { t } = useTranslation('returns');
   const navigate = useNavigate();
+  const { branding } = useBranding();
 
   const [templates, setTemplates] = useState<RhEmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Design panel focus (for canvas header/footer click)
+  const [designFocusSection, setDesignFocusSection] = useState<'header' | 'footer' | null>(null);
 
   // Editor state
   const [editingTemplate, setEditingTemplate] = useState<RhEmailTemplate | null>(null);
@@ -322,19 +327,50 @@ export function EmailTemplateEditorPage() {
     setEditPreviewText(tmpl.previewText || '');
 
     const storedConfig = tmpl.designConfig as unknown as EmailDesignConfig;
-    const config = storedConfig?.blocks?.length > 0
+    let config = storedConfig?.blocks?.length > 0
       ? storedConfig
       : (getDefaultTemplate(tmpl.eventType)?.designConfig || getDefaultDesignConfig());
+
+    // Auto-apply corporate design for empty/default values
+    let brandingApplied = false;
+    if (branding.logo && config.header.showLogo && !config.header.logoUrl) {
+      config = { ...config, header: { ...config.header, logoUrl: branding.logo } };
+      brandingApplied = true;
+    }
+    if (branding.primaryColor) {
+      // Apply to header background if still default
+      if (config.header.backgroundColor === '#1e293b') {
+        config = { ...config, header: { ...config.header, backgroundColor: branding.primaryColor } };
+        brandingApplied = true;
+      }
+      // Apply to default-colored button blocks
+      const updatedBlocks = config.blocks.map((block) => {
+        if (block.type === 'button' && block.backgroundColor === '#3b82f6') {
+          brandingApplied = true;
+          return { ...block, backgroundColor: branding.primaryColor };
+        }
+        if (block.type === 'hero' && block.ctaBackgroundColor === '#3b82f6') {
+          brandingApplied = true;
+          return { ...block, ctaBackgroundColor: branding.primaryColor };
+        }
+        return block;
+      });
+      if (brandingApplied) {
+        config = { ...config, blocks: updatedBlocks };
+      }
+    }
+
     setEditDesignConfig(config);
     history.reset(config, tmpl.subjectTemplate);
 
     setEditLocale('en');
-    setHasChanges(false);
+    setHasChanges(brandingApplied);
     setSelectedBlockIndex(null);
     setRightPanelTab('preview');
     setViewportMode('desktop');
-    changeCounterRef.current = 0;
-    setChangeCounter(0);
+    setDesignFocusSection(null);
+    changeCounterRef.current = brandingApplied ? 1 : 0;
+    setChangeCounter(changeCounterRef.current);
   };
 
   const handleToggleEnabled = async (tmpl: RhEmailTemplate, enabled: boolean) => {
@@ -398,7 +434,7 @@ export function EmailTemplateEditorPage() {
   const selectedBlock = selectedBlockIndex !== null ? blocks[selectedBlockIndex] : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -m-6">
+    <div className="flex flex-col h-[calc(100vh-4rem)] -m-6 overflow-hidden">
       {/* Glassmorphism toolbar */}
       <EditorToolbar
         templateName={editingTemplate.name || editingTemplate.eventType}
@@ -440,8 +476,49 @@ export function EmailTemplateEditorPage() {
               />
             </div>
 
+            {/* Canvas Header Section */}
+            {editDesignConfig.header.enabled && (
+              <div
+                className="bg-background rounded-t-lg border border-b-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all group/header"
+                onClick={() => {
+                  setRightPanelTab('design-settings');
+                  setDesignFocusSection('header');
+                }}
+              >
+                <div className="flex items-center justify-between px-3 py-1 border-b bg-muted/30 rounded-t-lg">
+                  <span className="text-[10px] font-medium text-muted-foreground">{t('Header')}</span>
+                  <Settings2 className="h-3 w-3 text-muted-foreground opacity-0 group-hover/header:opacity-100 transition-opacity" />
+                </div>
+                <div
+                  className="px-4 py-3 flex items-center"
+                  style={{
+                    backgroundColor: editDesignConfig.header.backgroundColor,
+                    justifyContent: editDesignConfig.header.alignment === 'center' ? 'center' : editDesignConfig.header.alignment === 'right' ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  {editDesignConfig.header.showLogo && editDesignConfig.header.logoUrl ? (
+                    <img
+                      src={editDesignConfig.header.logoUrl}
+                      alt="Logo"
+                      className="object-contain"
+                      style={{ height: Math.min(editDesignConfig.header.logoHeight, 50) }}
+                    />
+                  ) : editDesignConfig.header.showLogo ? (
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: editDesignConfig.header.textColor }}>
+                      <ImageIcon className="h-4 w-4 opacity-50" />
+                      <span className="opacity-60">{t('No logo set')}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs" style={{ color: editDesignConfig.header.textColor }}>
+                      {t('Header')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Blocks canvas */}
-            <div className="bg-background rounded-lg border shadow-sm overflow-hidden">
+            <div className={`bg-background border shadow-sm overflow-hidden ${editDesignConfig.header.enabled ? 'border-t-0' : 'rounded-t-lg'} ${editDesignConfig.footer.enabled ? 'border-b-0' : 'rounded-b-lg'}`}>
               {blocks.length === 0 ? (
                 <div
                   className="py-16 text-center text-muted-foreground border-2 border-dashed rounded-lg m-4"
@@ -525,6 +602,30 @@ export function EmailTemplateEditorPage() {
                 </div>
               )}
             </div>
+
+            {/* Canvas Footer Section */}
+            {editDesignConfig.footer.enabled && (
+              <div
+                className="bg-background rounded-b-lg border border-t-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all group/footer"
+                onClick={() => {
+                  setRightPanelTab('design-settings');
+                  setDesignFocusSection('footer');
+                }}
+              >
+                <div
+                  className="px-4 py-3 rounded-b-lg"
+                  style={{ backgroundColor: editDesignConfig.footer.backgroundColor }}
+                >
+                  <p className="text-xs text-center" style={{ color: editDesignConfig.footer.textColor }}>
+                    {editDesignConfig.footer.text || t('Footer Text')}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between px-3 py-1 border-t bg-muted/30 rounded-b-lg">
+                  <span className="text-[10px] font-medium text-muted-foreground">{t('Footer')}</span>
+                  <Settings2 className="h-3 w-3 text-muted-foreground opacity-0 group-hover/footer:opacity-100 transition-opacity" />
+                </div>
+              </div>
+            )}
           </div>
         }
         rightPane={
@@ -587,6 +688,10 @@ export function EmailTemplateEditorPage() {
                 <DesignSettingsPanel
                   designConfig={editDesignConfig}
                   onChange={handleDesignConfigChange}
+                  focusSection={designFocusSection}
+                  onFocusSectionHandled={() => setDesignFocusSection(null)}
+                  brandingLogo={branding.logo}
+                  brandingPrimaryColor={branding.primaryColor}
                 />
               </div>
             )}

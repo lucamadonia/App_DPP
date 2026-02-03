@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Paintbrush } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Accordion,
@@ -15,11 +18,67 @@ import type { EmailDesignConfig } from './emailEditorTypes';
 interface DesignSettingsPanelProps {
   designConfig: EmailDesignConfig;
   onChange: (config: EmailDesignConfig) => void;
+  /** When set, the accordion scrolls to and opens this section */
+  focusSection?: 'header' | 'footer' | null;
+  onFocusSectionHandled?: () => void;
+  /** Tenant branding for corporate design button */
+  brandingLogo?: string | null;
+  brandingPrimaryColor?: string;
 }
 
-export function DesignSettingsPanel({ designConfig, onChange }: DesignSettingsPanelProps) {
+export function DesignSettingsPanel({ designConfig, onChange, focusSection, onFocusSectionHandled, brandingLogo, brandingPrimaryColor }: DesignSettingsPanelProps) {
   const { t } = useTranslation('returns');
   const { layout, header, footer } = designConfig;
+
+  const [openSections, setOpenSections] = useState<string[]>(['layout', 'header', 'footer', 'typography']);
+
+  // When focusSection changes, open that section
+  useEffect(() => {
+    if (focusSection) {
+      setOpenSections((prev) => prev.includes(focusSection) ? prev : [...prev, focusSection]);
+      // Scroll the section into view after a tick
+      setTimeout(() => {
+        const el = document.getElementById(`design-section-${focusSection}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      onFocusSectionHandled?.();
+    }
+  }, [focusSection, onFocusSectionHandled]);
+
+  const hasBranding = !!(brandingLogo || brandingPrimaryColor);
+
+  const handleApplyCorporateDesign = () => {
+    let updated = { ...designConfig };
+    if (brandingLogo) {
+      updated = {
+        ...updated,
+        header: {
+          ...updated.header,
+          enabled: true,
+          showLogo: true,
+          logoUrl: updated.header.logoUrl || brandingLogo,
+        },
+      };
+    }
+    if (brandingPrimaryColor) {
+      // Apply primary color to header background if it's the default
+      if (!updated.header.backgroundColor || updated.header.backgroundColor === '#1e293b') {
+        updated = { ...updated, header: { ...updated.header, backgroundColor: brandingPrimaryColor } };
+      }
+      // Update all button blocks that use default blue
+      const updatedBlocks = updated.blocks.map((block) => {
+        if (block.type === 'button' && block.backgroundColor === '#3b82f6') {
+          return { ...block, backgroundColor: brandingPrimaryColor };
+        }
+        if (block.type === 'hero' && block.ctaBackgroundColor === '#3b82f6') {
+          return { ...block, ctaBackgroundColor: brandingPrimaryColor };
+        }
+        return block;
+      });
+      updated = { ...updated, blocks: updatedBlocks };
+    }
+    onChange(updated);
+  };
 
   const updateLayout = (partial: Partial<typeof layout>) => {
     onChange({ ...designConfig, layout: { ...layout, ...partial } });
@@ -34,7 +93,19 @@ export function DesignSettingsPanel({ designConfig, onChange }: DesignSettingsPa
   };
 
   return (
-    <Accordion type="multiple" defaultValue={['layout', 'header', 'footer', 'typography']} className="space-y-2">
+    <div className="space-y-3">
+      {hasBranding && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 text-xs"
+          onClick={handleApplyCorporateDesign}
+        >
+          <Paintbrush className="h-3.5 w-3.5" />
+          {t('Apply Corporate Design')}
+        </Button>
+      )}
+    <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="space-y-2">
       {/* Layout */}
       <AccordionItem value="layout" className="border rounded-lg px-4">
         <AccordionTrigger className="text-sm font-medium py-3">{t('Layout')}</AccordionTrigger>
@@ -71,7 +142,7 @@ export function DesignSettingsPanel({ designConfig, onChange }: DesignSettingsPa
       </AccordionItem>
 
       {/* Header */}
-      <AccordionItem value="header" className="border rounded-lg px-4">
+      <AccordionItem value="header" className="border rounded-lg px-4" id="design-section-header">
         <AccordionTrigger className="text-sm font-medium py-3">{t('Header')}</AccordionTrigger>
         <AccordionContent className="space-y-3 pb-4">
           <div className="flex items-center justify-between">
@@ -125,7 +196,7 @@ export function DesignSettingsPanel({ designConfig, onChange }: DesignSettingsPa
       </AccordionItem>
 
       {/* Footer */}
-      <AccordionItem value="footer" className="border rounded-lg px-4">
+      <AccordionItem value="footer" className="border rounded-lg px-4" id="design-section-footer">
         <AccordionTrigger className="text-sm font-medium py-3">{t('Footer')}</AccordionTrigger>
         <AccordionContent className="space-y-3 pb-4">
           <div className="flex items-center justify-between">
@@ -179,5 +250,6 @@ export function DesignSettingsPanel({ designConfig, onChange }: DesignSettingsPa
         </AccordionContent>
       </AccordionItem>
     </Accordion>
+    </div>
   );
 }
