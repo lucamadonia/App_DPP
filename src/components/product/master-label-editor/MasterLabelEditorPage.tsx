@@ -54,7 +54,7 @@ export function MasterLabelEditorPage({
   onVariantChange,
   selectedBatchId,
   onBatchChange,
-  onBack,
+  onBack: _onBack,
 }: MasterLabelEditorPageProps) {
   const { t } = useTranslation('products');
 

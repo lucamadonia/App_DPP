@@ -15,6 +15,7 @@ import type {
   LabelQRCodeElement,
   LabelComplianceBadgeElement,
   LabelPictogramElement,
+  LabelImageElement,
   LabelDividerElement,
   LabelSpacerElement,
   LabelMaterialCodeElement,
