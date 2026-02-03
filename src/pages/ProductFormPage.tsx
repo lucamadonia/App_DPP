@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages } from '@/services/supabase';
+import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages, createSupplier, getCountries, createCategory, addSubcategoryToCategory } from '@/services/supabase';
 import { getCurrentTenant } from '@/services/supabase/tenants';
-import type { Category, Supplier, ProductRegistrations, SupportResources, Tenant } from '@/types/database';
+import { getCurrentTenantId } from '@/lib/supabase';
+import type { Category, Country, Supplier, ProductRegistrations, SupportResources, Tenant } from '@/types/database';
+import { getCategoryDisplayName, getSubcategoryDisplayName } from '@/lib/category-utils';
 import type { TranslatableProductFields } from '@/types/product';
 import { REGISTRATION_FIELDS } from '@/lib/registration-fields';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
@@ -53,7 +55,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command';
 
 const SUPPLIER_ROLES = [
   { value: 'manufacturer', label: 'Manufacturer' },
@@ -77,7 +79,8 @@ const BASE_STEPS = [
 const COMPONENTS_STEP = { id: 'components', title: 'Components', icon: Layers };
 
 export function ProductFormPage() {
-  const { t } = useTranslation('products');
+  const { t, i18n } = useTranslation('products');
+  const locale = i18n.language === 'de' ? 'de' : 'en';
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
@@ -90,6 +93,21 @@ export function ProductFormPage() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+  const [manufacturerOpen, setManufacturerOpen] = useState(false);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateName, setQuickCreateName] = useState('');
+  const [quickCreateCountry, setQuickCreateCountry] = useState('');
+  const [isQuickCreating, setIsQuickCreating] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [quickCreateCategoryOpen, setQuickCreateCategoryOpen] = useState(false);
+  const [quickCreateCategoryNameEn, setQuickCreateCategoryNameEn] = useState('');
+  const [quickCreateCategoryNameDe, setQuickCreateCategoryNameDe] = useState('');
+  const [isQuickCreatingCategory, setIsQuickCreatingCategory] = useState(false);
+  const [quickCreateSubOpen, setQuickCreateSubOpen] = useState(false);
+  const [quickCreateSubNameEn, setQuickCreateSubNameEn] = useState('');
+  const [quickCreateSubNameDe, setQuickCreateSubNameDe] = useState('');
+  const [isQuickCreatingSub, setIsQuickCreatingSub] = useState(false);
 
   // Multi-language state
   const [activeLanguage, setActiveLanguage] = useState<string>('default');
@@ -145,6 +163,7 @@ export function ProductFormPage() {
       getCategories().then(setCategories),
       getSuppliers().then(setSuppliers),
       getCurrentTenant().then(setTenant),
+      getCountries().then(setCountries),
     ]).catch(console.error).finally(() => setCategoriesLoading(false));
   }, []);
 
@@ -345,6 +364,92 @@ export function ProductFormPage() {
     setSelectedSuppliers(prev => prev.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
     ));
+  };
+
+  // Quick-create supplier handler
+  const handleQuickCreateSupplier = async () => {
+    if (!quickCreateName.trim()) return;
+    setIsQuickCreating(true);
+    try {
+      const result = await createSupplier({
+        name: quickCreateName.trim(),
+        country: quickCreateCountry || undefined,
+        status: 'active',
+        risk_level: 'medium',
+        verified: false,
+      } as Omit<Supplier, 'id' | 'tenant_id' | 'createdAt'>);
+      if (result.success && result.id) {
+        const refreshed = await getSuppliers();
+        setSuppliers(refreshed);
+        setManufacturerSupplierId(result.id);
+        updateField('manufacturer', quickCreateName.trim());
+      }
+    } catch (err) {
+      console.error('Quick create supplier failed:', err);
+    } finally {
+      setIsQuickCreating(false);
+      setQuickCreateOpen(false);
+      setQuickCreateName('');
+      setQuickCreateCountry('');
+    }
+  };
+
+  // Quick-create category handler
+  const handleQuickCreateCategory = async () => {
+    if (!quickCreateCategoryNameEn.trim()) return;
+    setIsQuickCreatingCategory(true);
+    try {
+      const tenantId = await getCurrentTenantId();
+      if (!tenantId) return;
+      const result = await createCategory({
+        name: quickCreateCategoryNameEn.trim(),
+        tenant_id: tenantId,
+        translations: {
+          en: quickCreateCategoryNameEn.trim(),
+          de: quickCreateCategoryNameDe.trim() || quickCreateCategoryNameEn.trim(),
+        },
+        subcategories: [],
+      });
+      if (result.success && result.id) {
+        const refreshed = await getCategories();
+        setCategories(refreshed);
+        setSelectedMainCategory(quickCreateCategoryNameEn.trim());
+        updateField('category', quickCreateCategoryNameEn.trim());
+      }
+    } catch (err) {
+      console.error('Quick create category failed:', err);
+    } finally {
+      setIsQuickCreatingCategory(false);
+      setQuickCreateCategoryOpen(false);
+      setQuickCreateCategoryNameEn('');
+      setQuickCreateCategoryNameDe('');
+    }
+  };
+
+  // Quick-create subcategory handler
+  const handleQuickCreateSubcategory = async () => {
+    if (!quickCreateSubNameEn.trim() || !selectedMainCategory) return;
+    setIsQuickCreatingSub(true);
+    try {
+      const parentCat = categories.find(c => c.name === selectedMainCategory);
+      if (!parentCat) return;
+      const result = await addSubcategoryToCategory(parentCat.id, quickCreateSubNameEn.trim(), {
+        en: quickCreateSubNameEn.trim(),
+        de: quickCreateSubNameDe.trim() || quickCreateSubNameEn.trim(),
+      });
+      if (result.success) {
+        const refreshed = await getCategories();
+        setCategories(refreshed);
+        handleSubcategoryChange(quickCreateSubNameEn.trim());
+      }
+    } catch (err) {
+      console.error('Quick create subcategory failed:', err);
+    } finally {
+      setIsQuickCreatingSub(false);
+      setQuickCreateSubOpen(false);
+      setQuickCreateSubNameEn('');
+      setQuickCreateSubNameDe('');
+    }
   };
 
   // Document upload handler — opens dialog instead of uploading directly
@@ -644,11 +749,123 @@ export function ProductFormPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('Manufacturer')} *</label>
-                <Input
-                  placeholder={t('e.g. GreenStep GmbH')}
-                  value={formData.manufacturer}
-                  onChange={(e) => updateField('manufacturer', e.target.value)}
-                />
+                <Popover open={manufacturerOpen} onOpenChange={setManufacturerOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      aria-expanded={manufacturerOpen}
+                      className={cn(
+                        "border-input data-[placeholder]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] h-9",
+                        !formData.manufacturer && "text-muted-foreground"
+                      )}
+                    >
+                      {formData.manufacturer || t('e.g. GreenStep GmbH')}
+                      <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder={t('Search supplier...')} />
+                      <CommandList>
+                        <CommandEmpty>{t('No supplier found.')}</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value={`_tenant_${branding.appName || tenant?.name || 'Own Company'}`}
+                            onSelect={() => {
+                              setManufacturerSupplierId('_tenant');
+                              updateField('manufacturer', branding.appName || tenant?.name || '');
+                              setManufacturerOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", manufacturerSupplierId === '_tenant' ? "opacity-100" : "opacity-0")} />
+                            <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                            {branding.appName || tenant?.name || t('Own Company')}
+                          </CommandItem>
+                          {suppliers.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.name}
+                              onSelect={() => {
+                                setManufacturerSupplierId(s.id);
+                                updateField('manufacturer', s.name);
+                                setManufacturerOpen(false);
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", manufacturerSupplierId === s.id ? "opacity-100" : "opacity-0")} />
+                              <span className="truncate">{s.name}</span>
+                              {s.country && <span className="ml-auto text-xs text-muted-foreground">{s.country}</span>}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            value="_create_new_supplier"
+                            onSelect={() => {
+                              setManufacturerOpen(false);
+                              const input = document.querySelector<HTMLInputElement>('[cmdk-input]');
+                              setQuickCreateName(input?.value || '');
+                              setQuickCreateOpen(true);
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            {t('Create new supplier...')}
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Quick Create Supplier Dialog */}
+                <Dialog open={quickCreateOpen} onOpenChange={setQuickCreateOpen}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t('Quick Create Supplier')}</DialogTitle>
+                      <DialogDescription>{t('Enter name and country to quickly create a new supplier.')}</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label>{t('Name')} *</Label>
+                        <Input
+                          value={quickCreateName}
+                          onChange={(e) => setQuickCreateName(e.target.value)}
+                          placeholder={t('e.g. GreenStep GmbH')}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('Country of Origin')}</Label>
+                        <Select value={quickCreateCountry} onValueChange={setQuickCreateCountry}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('Select country...')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {countries.map((c) => (
+                              <SelectItem key={c.id} value={c.name || c.id}>
+                                {c.flag} {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setQuickCreateOpen(false)} type="button">
+                        {t('Cancel', { ns: 'common' })}
+                      </Button>
+                      <Button
+                        onClick={handleQuickCreateSupplier}
+                        disabled={!quickCreateName.trim() || isQuickCreating}
+                        type="button"
+                      >
+                        {isQuickCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('Create Supplier')}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('GTIN/EAN')} *</label>
@@ -661,20 +878,106 @@ export function ProductFormPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('Category')} *</label>
-                <Select value={selectedMainCategory} onValueChange={handleCategoryChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={categoriesLoading ? t('Loading...') : t('Select category...')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.filter(c => !c.parent_id).map((cat) => (
-                      <SelectItem key={cat.id} value={cat.name}>
-                        {cat.icon ? `${cat.icon} ` : ''}{cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      aria-expanded={categoryOpen}
+                      className={cn(
+                        "border-input data-[placeholder]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] h-9",
+                        !selectedMainCategory && "text-muted-foreground"
+                      )}
+                    >
+                      {selectedMainCategory
+                        ? (() => {
+                            const cat = categories.find(c => c.name === selectedMainCategory);
+                            return cat ? `${cat.icon ? cat.icon + ' ' : ''}${getCategoryDisplayName(cat, locale)}` : selectedMainCategory;
+                          })()
+                        : (categoriesLoading ? t('Loading...') : t('Select category...'))}
+                      <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder={t('Search category...')} />
+                      <CommandList>
+                        <CommandEmpty>{t('No category found.')}</CommandEmpty>
+                        <CommandGroup>
+                          {categories.filter(c => !c.parent_id).map((cat) => (
+                            <CommandItem
+                              key={cat.id}
+                              value={`${cat.name} ${getCategoryDisplayName(cat, locale)}`}
+                              onSelect={() => {
+                                handleCategoryChange(cat.name);
+                                setCategoryOpen(false);
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", selectedMainCategory === cat.name ? "opacity-100" : "opacity-0")} />
+                              {cat.icon ? `${cat.icon} ` : ''}{getCategoryDisplayName(cat, locale)}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            value="_create_new_category"
+                            onSelect={() => {
+                              setCategoryOpen(false);
+                              setQuickCreateCategoryOpen(true);
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            {t('Create new category...')}
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Quick Create Category Dialog */}
+                <Dialog open={quickCreateCategoryOpen} onOpenChange={setQuickCreateCategoryOpen}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t('Quick Create Category')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label>{t('Category Name (English)')} *</Label>
+                        <Input
+                          value={quickCreateCategoryNameEn}
+                          onChange={(e) => setQuickCreateCategoryNameEn(e.target.value)}
+                          placeholder="e.g. Electronics"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('Category Name (German)')} *</Label>
+                        <Input
+                          value={quickCreateCategoryNameDe}
+                          onChange={(e) => setQuickCreateCategoryNameDe(e.target.value)}
+                          placeholder="z.B. Elektronik"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setQuickCreateCategoryOpen(false)} type="button">
+                        {t('Cancel', { ns: 'common' })}
+                      </Button>
+                      <Button
+                        onClick={handleQuickCreateCategory}
+                        disabled={!quickCreateCategoryNameEn.trim() || isQuickCreatingCategory}
+                        type="button"
+                      >
+                        {isQuickCreatingCategory && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('Create Category')}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
-              {selectedMainCategory && selectedSubcategories.length > 0 && (
+              {selectedMainCategory && (selectedSubcategories.length > 0 || categories.find(c => c.name === selectedMainCategory)) && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('Subcategory')}</label>
                   <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
@@ -689,7 +992,11 @@ export function ProductFormPage() {
                         )}
                       >
                         {formData.category.includes(' / ')
-                          ? formData.category.split(' / ')[1]
+                          ? (() => {
+                              const subName = formData.category.split(' / ')[1];
+                              const parentCat = categories.find(c => c.name === selectedMainCategory);
+                              return parentCat ? getSubcategoryDisplayName(parentCat, subName, locale) : subName;
+                            })()
                           : t('Search subcategory...')}
                         <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                       </button>
@@ -700,31 +1007,89 @@ export function ProductFormPage() {
                         <CommandList>
                           <CommandEmpty>{t('No subcategory found.')}</CommandEmpty>
                           <CommandGroup>
-                            {selectedSubcategories.map((sub) => (
-                              <CommandItem
-                                key={sub}
-                                value={sub}
-                                onSelect={() => {
-                                  handleSubcategoryChange(sub);
-                                  setSubcategoryOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.category === `${selectedMainCategory} / ${sub}`
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {sub}
-                              </CommandItem>
-                            ))}
+                            {selectedSubcategories.map((sub) => {
+                              const parentCat = categories.find(c => c.name === selectedMainCategory);
+                              const displayName = parentCat ? getSubcategoryDisplayName(parentCat, sub, locale) : sub;
+                              return (
+                                <CommandItem
+                                  key={sub}
+                                  value={`${sub} ${displayName}`}
+                                  onSelect={() => {
+                                    handleSubcategoryChange(sub);
+                                    setSubcategoryOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.category === `${selectedMainCategory} / ${sub}`
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {displayName}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                          <CommandSeparator />
+                          <CommandGroup>
+                            <CommandItem
+                              value="_add_new_subcategory"
+                              onSelect={() => {
+                                setSubcategoryOpen(false);
+                                setQuickCreateSubOpen(true);
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              {t('Add new subcategory...')}
+                            </CommandItem>
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
+
+                  {/* Quick Add Subcategory Dialog */}
+                  <Dialog open={quickCreateSubOpen} onOpenChange={setQuickCreateSubOpen}>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>{t('Quick Add Subcategory')}</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label>{t('Subcategory Name (English)')} *</Label>
+                          <Input
+                            value={quickCreateSubNameEn}
+                            onChange={(e) => setQuickCreateSubNameEn(e.target.value)}
+                            placeholder="e.g. Smartphones"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t('Subcategory Name (German)')} *</Label>
+                          <Input
+                            value={quickCreateSubNameDe}
+                            onChange={(e) => setQuickCreateSubNameDe(e.target.value)}
+                            placeholder="z.B. Smartphones"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setQuickCreateSubOpen(false)} type="button">
+                          {t('Cancel', { ns: 'common' })}
+                        </Button>
+                        <Button
+                          onClick={handleQuickCreateSubcategory}
+                          disabled={!quickCreateSubNameEn.trim() || isQuickCreatingSub}
+                          type="button"
+                        >
+                          {isQuickCreatingSub && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {t('Add Subcategory')}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               )}
               <div className="space-y-2 md:col-span-2">

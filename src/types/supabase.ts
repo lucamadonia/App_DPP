@@ -30,6 +30,9 @@ export interface Database {
           regulations: string[] | null;
           sort_order: number | null;
           subcategories: string[] | null;
+          tenant_id: string | null;
+          translations: Record<string, string> | null;
+          subcategory_translations: Record<string, Record<string, string>> | null;
           created_at: string;
         };
         Insert: {
@@ -41,6 +44,9 @@ export interface Database {
           regulations?: string[] | null;
           sort_order?: number | null;
           subcategories?: string[] | null;
+          tenant_id?: string | null;
+          translations?: Record<string, string> | null;
+          subcategory_translations?: Record<string, Record<string, string>> | null;
           created_at?: string;
         };
         Update: {
@@ -52,6 +58,9 @@ export interface Database {
           regulations?: string[] | null;
           sort_order?: number | null;
           subcategories?: string[] | null;
+          tenant_id?: string | null;
+          translations?: Record<string, string> | null;
+          subcategory_translations?: Record<string, Record<string, string>> | null;
           created_at?: string;
         };
       };

@@ -117,6 +117,7 @@ export {
   createCategory,
   updateCategory,
   deleteCategory,
+  addSubcategoryToCategory,
   createPictogram,
   updatePictogram,
   deletePictogram,

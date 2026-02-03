@@ -165,6 +165,9 @@ export interface Category {
   regulations?: string[]; // Array von Regulierungs-IDs oder -Namen
   sort_order?: number;
   subcategories?: string[]; // Für hierarchische Darstellung
+  tenant_id?: string; // null = global seed, set = tenant-specific
+  translations?: Record<string, string>; // { en: "Electronics", de: "Elektronik" }
+  subcategory_translations?: Record<string, Record<string, string>>; // { "Phones": { en: "Phones", de: "Telefone" } }
 }
 
 // ============================================

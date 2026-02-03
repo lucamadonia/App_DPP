@@ -62,6 +62,9 @@ function transformCategory(row: CategoryRow): Category {
     regulations: row.regulations || undefined,
     sort_order: row.sort_order || undefined,
     subcategories: row.subcategories || undefined,
+    tenant_id: row.tenant_id || undefined,
+    translations: (row.translations as Record<string, string>) || undefined,
+    subcategory_translations: (row.subcategory_translations as Record<string, Record<string, string>>) || undefined,
   };
 }
 
@@ -460,8 +463,8 @@ export async function deleteCountry(id: string): Promise<WriteResult> {
 
 // --- CATEGORIES ---
 
-export async function createCategory(data: Omit<Category, 'id'>): Promise<WriteResult> {
-  const { error } = await supabase.from('categories').insert({
+export async function createCategory(data: Omit<Category, 'id'>): Promise<WriteResult & { id?: string }> {
+  const { data: rows, error } = await supabase.from('categories').insert({
     name: data.name,
     description: data.description,
     icon: data.icon,
@@ -469,7 +472,46 @@ export async function createCategory(data: Omit<Category, 'id'>): Promise<WriteR
     sort_order: data.sort_order,
     parent_id: data.parent_id,
     subcategories: data.subcategories,
-  });
+    tenant_id: data.tenant_id,
+    translations: data.translations || {},
+    subcategory_translations: data.subcategory_translations || {},
+  }).select('id').single();
+  if (error) return { success: false, error: error.message };
+  invalidateCache('categories');
+  return { success: true, id: rows?.id };
+}
+
+export async function addSubcategoryToCategory(
+  categoryId: string,
+  name: string,
+  translations?: Record<string, string>,
+): Promise<WriteResult> {
+  // Fetch current category
+  const { data: row, error: fetchError } = await supabase
+    .from('categories')
+    .select('subcategories, subcategory_translations')
+    .eq('id', categoryId)
+    .single();
+  if (fetchError || !row) return { success: false, error: fetchError?.message || 'Category not found' };
+
+  const existing = (row.subcategories as string[]) || [];
+  if (existing.includes(name)) {
+    return { success: false, error: 'Subcategory already exists' };
+  }
+
+  const existingTranslations = (row.subcategory_translations as Record<string, Record<string, string>>) || {};
+  const updatedTranslations = { ...existingTranslations };
+  if (translations) {
+    updatedTranslations[name] = translations;
+  }
+
+  const { error } = await supabase
+    .from('categories')
+    .update({
+      subcategories: [...existing, name],
+      subcategory_translations: updatedTranslations,
+    })
+    .eq('id', categoryId);
   if (error) return { success: false, error: error.message };
   invalidateCache('categories');
   return { success: true };
