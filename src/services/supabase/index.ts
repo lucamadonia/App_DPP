@@ -58,6 +58,11 @@ export {
   getProductSuppliersWithDetails,
   assignProductToSupplier,
   removeProductFromSupplier,
+  updateSupplierProduct,
+  getSupplierSpendAnalysis,
+  getSupplierSpendForSupplier,
+  type SupplierSpendSummary,
+  type SupplierSpendDetail,
 } from './suppliers';
 
 // Supply Chain

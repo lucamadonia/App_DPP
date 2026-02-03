@@ -460,6 +460,14 @@ export interface SupplierContact {
   notes?: string;
 }
 
+// Staffelpreis-Stufe (Volume Pricing Tier)
+export interface PriceTier {
+  minQty: number;
+  maxQty: number | null;  // null = unbegrenzt
+  pricePerUnit: number;
+  currency: string;
+}
+
 // Verknüpfung Lieferant <-> Produkt
 export interface SupplierProduct {
   id: string;
@@ -472,6 +480,7 @@ export interface SupplierProduct {
   price_per_unit?: number;
   currency?: string;
   min_order_quantity?: number;
+  price_tiers?: PriceTier[];
   notes?: string;
   createdAt: string;
 }

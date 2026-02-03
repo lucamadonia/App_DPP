@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Supplier, SupplierProduct, SupplierContact } from '@/types/database';
+import type { Supplier, SupplierProduct, SupplierContact, PriceTier } from '@/types/database';
 
 // Transform database row to Supplier type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -328,6 +328,7 @@ function transformSupplierProduct(row: any): SupplierProduct {
     price_per_unit: row.price_per_unit || undefined,
     currency: row.currency || undefined,
     min_order_quantity: row.min_order_quantity || undefined,
+    price_tiers: (row.price_tiers as PriceTier[]) || undefined,
     notes: row.notes || undefined,
     createdAt: row.created_at,
   };
@@ -390,6 +391,7 @@ export async function assignProductToSupplier(
     price_per_unit: data.price_per_unit || null,
     currency: data.currency || null,
     min_order_quantity: data.min_order_quantity || null,
+    price_tiers: data.price_tiers || null,
     notes: data.notes || null,
   };
 
@@ -444,4 +446,179 @@ export async function removeProductFromSupplier(id: string): Promise<{ success: 
   }
 
   return { success: true };
+}
+
+/**
+ * Update a supplier_products row (e.g. price_tiers)
+ */
+export async function updateSupplierProduct(
+  id: string,
+  data: { price_tiers?: PriceTier[] | null }
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('supplier_products')
+    .update({ price_tiers: data.price_tiers ?? null })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Failed to update supplier product:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// ============================================
+// SPEND ANALYSIS
+// ============================================
+
+export interface SupplierSpendSummary {
+  supplierId: string;
+  supplierName: string;
+  totalSpend: number;
+  totalBatches: number;
+  totalQuantity: number;
+  avgPricePerUnit: number;
+  currency: string;
+  productCount: number;
+}
+
+export interface SupplierSpendDetail {
+  totalSpend: number;
+  totalBatches: number;
+  totalQuantity: number;
+  currency: string;
+  byProduct: {
+    productId: string;
+    productName: string;
+    spend: number;
+    quantity: number;
+    batches: number;
+  }[];
+}
+
+/**
+ * Get spend analysis across all suppliers (aggregated from product_batches)
+ */
+export async function getSupplierSpendAnalysis(): Promise<SupplierSpendSummary[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data, error } = await supabase
+    .from('product_batches')
+    .select('quantity, price_per_unit, currency, supplier_id, suppliers(name), product_id')
+    .eq('tenant_id', tenantId)
+    .not('supplier_id', 'is', null);
+
+  if (error || !data) {
+    console.error('Failed to load spend analysis:', error);
+    return [];
+  }
+
+  const grouped = new Map<string, {
+    name: string;
+    batches: number;
+    qty: number;
+    cost: number;
+    currency: string;
+    products: Set<string>;
+  }>();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of data as any[]) {
+    const sid = row.supplier_id as string;
+    const sname = row.suppliers?.name || 'Unknown';
+    const qty = Number(row.quantity) || 0;
+    const ppu = Number(row.price_per_unit) || 0;
+    const cur = (row.currency as string) || 'EUR';
+    const pid = row.product_id as string;
+    const existing = grouped.get(sid);
+    if (existing) {
+      existing.batches += 1;
+      existing.qty += qty;
+      existing.cost += ppu * qty;
+      existing.products.add(pid);
+    } else {
+      grouped.set(sid, { name: sname, batches: 1, qty, cost: ppu * qty, currency: cur, products: new Set([pid]) });
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .map(([supplierId, v]) => ({
+      supplierId,
+      supplierName: v.name,
+      totalSpend: v.cost,
+      totalBatches: v.batches,
+      totalQuantity: v.qty,
+      avgPricePerUnit: v.qty > 0 ? v.cost / v.qty : 0,
+      currency: v.currency,
+      productCount: v.products.size,
+    }))
+    .sort((a, b) => b.totalSpend - a.totalSpend);
+}
+
+/**
+ * Get spend detail for a single supplier (per-product breakdown)
+ */
+export async function getSupplierSpendForSupplier(supplierId: string): Promise<SupplierSpendDetail | null> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return null;
+
+  const { data, error } = await supabase
+    .from('product_batches')
+    .select('quantity, price_per_unit, currency, product_id, products(name)')
+    .eq('tenant_id', tenantId)
+    .eq('supplier_id', supplierId);
+
+  if (error || !data) {
+    console.error('Failed to load supplier spend detail:', error);
+    return null;
+  }
+
+  let totalSpend = 0;
+  let totalBatches = 0;
+  let totalQuantity = 0;
+  let currency = 'EUR';
+
+  const byProductMap = new Map<string, { name: string; spend: number; quantity: number; batches: number }>();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of data as any[]) {
+    const qty = Number(row.quantity) || 0;
+    const ppu = Number(row.price_per_unit) || 0;
+    const cost = ppu * qty;
+    const cur = (row.currency as string) || 'EUR';
+    const pid = row.product_id as string;
+    const pname = row.products?.name || 'Unknown';
+
+    totalSpend += cost;
+    totalBatches += 1;
+    totalQuantity += qty;
+    currency = cur;
+
+    const existing = byProductMap.get(pid);
+    if (existing) {
+      existing.spend += cost;
+      existing.quantity += qty;
+      existing.batches += 1;
+    } else {
+      byProductMap.set(pid, { name: pname, spend: cost, quantity: qty, batches: 1 });
+    }
+  }
+
+  return {
+    totalSpend,
+    totalBatches,
+    totalQuantity,
+    currency,
+    byProduct: Array.from(byProductMap.entries())
+      .map(([productId, v]) => ({
+        productId,
+        productName: v.name,
+        spend: v.spend,
+        quantity: v.quantity,
+        batches: v.batches,
+      }))
+      .sort((a, b) => b.spend - a.spend),
+  };
 }

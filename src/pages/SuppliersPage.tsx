@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
   Building2,
@@ -35,7 +35,16 @@ import {
   AlertCircle,
   CreditCard,
   Info,
+  TrendingUp,
+  DollarSign,
+  BarChart3,
+  Layers,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -79,10 +88,15 @@ import {
   getProducts,
   assignProductToSupplier,
   removeProductFromSupplier,
+  updateSupplierProduct,
+  getSupplierSpendAnalysis,
+  getSupplierSpendForSupplier,
   getCountries,
   type ProductListItem,
+  type SupplierSpendSummary,
+  type SupplierSpendDetail,
 } from '@/services/supabase';
-import type { Country } from '@/types/database';
+import type { Country, PriceTier } from '@/types/database';
 import type { Supplier, SupplierProduct, SupplierContact } from '@/types/database';
 
 // Available certifications
@@ -156,6 +170,18 @@ export function SuppliersPage() {
   const [detailProducts, setDetailProducts] = useState<SupplierProduct[]>([]);
   const [activeDetailTab, setActiveDetailTab] = useState('overview');
 
+  // Spend analysis
+  const [spendAnalysis, setSpendAnalysis] = useState<SupplierSpendSummary[]>([]);
+  const [detailSpend, setDetailSpend] = useState<SupplierSpendDetail | null>(null);
+
+  // Finance tab: IBAN toggle
+  const [showIban, setShowIban] = useState(false);
+
+  // Price tiers editor state
+  const [expandedPriceTiers, setExpandedPriceTiers] = useState<string | null>(null);
+  const [editingTiers, setEditingTiers] = useState<PriceTier[]>([]);
+  const [savingTiers, setSavingTiers] = useState(false);
+
   // Load data on mount
   useEffect(() => {
     loadData();
@@ -165,19 +191,51 @@ export function SuppliersPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [suppliersData, productsData, countriesData] = await Promise.all([
+      const [suppliersData, productsData, countriesData, spendData] = await Promise.all([
         getSuppliers(),
         getProducts(),
         getCountries(),
+        getSupplierSpendAnalysis(),
       ]);
       setSuppliers(suppliersData);
       setProducts(productsData);
       setCountries(countriesData);
+      setSpendAnalysis(spendData);
     } catch (error) {
       console.error('Error loading data:', error);
     }
     setIsLoading(false);
   };
+
+  // Load detail spend when finance tab is active
+  useEffect(() => {
+    if (activeDetailTab === 'finance' && detailSupplier) {
+      getSupplierSpendForSupplier(detailSupplier.id).then(data => {
+        setDetailSpend(data);
+      });
+    }
+  }, [activeDetailTab, detailSupplier]);
+
+  // Compute financial KPIs from spend analysis
+  const spendKpis = useMemo(() => {
+    if (spendAnalysis.length === 0) return null;
+    const totalSpend = spendAnalysis.reduce((sum, s) => sum + s.totalSpend, 0);
+    const totalBatches = spendAnalysis.reduce((sum, s) => sum + s.totalBatches, 0);
+    const topSupplier = spendAnalysis[0]; // Already sorted desc by totalSpend
+    const avgOrderValue = totalBatches > 0 ? totalSpend / totalBatches : 0;
+    const currency = topSupplier?.currency || 'EUR';
+    return { totalSpend, topSupplier, avgOrderValue, currency, supplierCount: spendAnalysis.length };
+  }, [spendAnalysis]);
+
+  // Chart data: Top 5 suppliers by spend
+  const chartData = useMemo(() => {
+    return spendAnalysis.slice(0, 5).map(s => ({
+      name: s.supplierName.length > 15 ? s.supplierName.substring(0, 15) + '...' : s.supplierName,
+      spend: s.totalSpend,
+    }));
+  }, [spendAnalysis]);
+
+  const CHART_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -877,35 +935,97 @@ export function SuppliersPage() {
           </div>
         </TabsContent>
 
-        {/* Finance Tab (NEW) */}
+        {/* Finance Tab */}
         <TabsContent value="finance" className="space-y-4 mt-4">
-          {/* Contract Status */}
-          {(detailSupplier.contract_start || detailSupplier.contract_end) && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm">{t('Contract Period')}</h4>
-                {(() => {
-                  const status = getContractStatus(detailSupplier);
-                  if (!status) return null;
-                  return <Badge className={`${status.bg} ${status.color}`}>{status.label}</Badge>;
-                })()}
-              </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div className="flex justify-between">
-                  <span>{t('Start')}:</span>
-                  <span>{detailSupplier.contract_start ? formatDate(detailSupplier.contract_start, locale) : '-'}</span>
+          {/* Spend Summary */}
+          {detailSpend && detailSpend.totalSpend > 0 && (
+            <>
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" /> {t('Supplier Spend')}
+                </h4>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg border bg-card">
+                    <p className="text-xs text-muted-foreground">{t('Total Spend')}</p>
+                    <p className="text-sm font-bold">{formatCurrency(detailSpend.totalSpend, detailSpend.currency, locale)}</p>
+                  </div>
+                  <div className="p-2 rounded-lg border bg-card">
+                    <p className="text-xs text-muted-foreground">{t('Batches')}</p>
+                    <p className="text-sm font-bold">{detailSpend.totalBatches}</p>
+                  </div>
+                  <div className="p-2 rounded-lg border bg-card">
+                    <p className="text-xs text-muted-foreground">{t('Quantity')}</p>
+                    <p className="text-sm font-bold">{detailSpend.totalQuantity.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>{t('End')}:</span>
-                  <span>{detailSupplier.contract_end ? formatDate(detailSupplier.contract_end, locale) : '-'}</span>
-                </div>
+                {detailSpend.byProduct.length > 0 && (
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-medium text-muted-foreground">{t('Spend by Product')}</h5>
+                    <div className="space-y-1">
+                      {detailSpend.byProduct.map(bp => (
+                        <div key={bp.productId} className="flex items-center justify-between text-xs p-1.5 rounded border">
+                          <span className="truncate flex-1 mr-2">{bp.productName}</span>
+                          <span className="font-medium whitespace-nowrap">{formatCurrency(bp.spend, detailSpend.currency, locale)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <Progress value={getContractProgress(detailSupplier)} className="h-2" />
-              <p className="text-xs text-muted-foreground text-right">{getContractProgress(detailSupplier)}%</p>
-            </div>
+              <Separator />
+            </>
           )}
 
-          <Separator />
+          {/* Contract Status */}
+          {(detailSupplier.contract_start || detailSupplier.contract_end) && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">{t('Contract Period')}</h4>
+                  {(() => {
+                    const status = getContractStatus(detailSupplier);
+                    if (!status) return null;
+                    return <Badge className={`${status.bg} ${status.color}`}>{status.label}</Badge>;
+                  })()}
+                </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>{t('Start')}:</span>
+                    <span>{detailSupplier.contract_start ? formatDate(detailSupplier.contract_start, locale) : '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('End')}:</span>
+                    <span>{detailSupplier.contract_end ? formatDate(detailSupplier.contract_end, locale) : '-'}</span>
+                  </div>
+                </div>
+                {/* Days remaining / expired text */}
+                {detailSupplier.contract_end && (() => {
+                  const now = new Date();
+                  const end = new Date(detailSupplier.contract_end);
+                  const days = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  const colorClass = days < 0 ? 'text-red-600' : days < 7 ? 'text-orange-600' : days < 30 ? 'text-yellow-600' : days < 60 ? 'text-yellow-500' : 'text-green-600';
+                  return (
+                    <p className={`text-xs font-medium ${colorClass}`}>
+                      {days < 0
+                        ? t('Contract expired {{days}} days ago', { days: Math.abs(days) })
+                        : t('{{days}} days remaining', { days })}
+                    </p>
+                  );
+                })()}
+                {/* Contract duration in months */}
+                {detailSupplier.contract_start && detailSupplier.contract_end && (() => {
+                  const start = new Date(detailSupplier.contract_start);
+                  const end = new Date(detailSupplier.contract_end);
+                  const months = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+                  return (
+                    <p className="text-xs text-muted-foreground">{months} {locale === 'de' ? 'Monate Laufzeit' : 'months duration'}</p>
+                  );
+                })()}
+                <Progress value={getContractProgress(detailSupplier)} className="h-2" />
+              </div>
+              <Separator />
+            </>
+          )}
 
           {/* Payment & Orders */}
           <div className="space-y-2">
@@ -917,7 +1037,7 @@ export function SuppliersPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Min. Order')}:</span>
-                <span>{detailSupplier.min_order_value ? `${detailSupplier.min_order_value.toLocaleString()} ${detailSupplier.currency || 'EUR'}` : '-'}</span>
+                <span>{detailSupplier.min_order_value ? formatCurrency(detailSupplier.min_order_value, detailSupplier.currency || 'EUR', locale) : '-'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Currency')}:</span>
@@ -928,7 +1048,7 @@ export function SuppliersPage() {
 
           <Separator />
 
-          {/* Bank Details */}
+          {/* Bank Details with IBAN toggle */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm">{t('Bank Details')}</h4>
             <div className="space-y-1 text-sm">
@@ -936,9 +1056,16 @@ export function SuppliersPage() {
                 <span className="text-muted-foreground">{t('Bank')}:</span>
                 <span>{detailSupplier.bank_name || '-'}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">{t('IBAN')}:</span>
-                <span className="font-mono text-xs">{maskIban(detailSupplier.iban)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-xs">{showIban ? (detailSupplier.iban || '-') : maskIban(detailSupplier.iban)}</span>
+                  {detailSupplier.iban && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowIban(!showIban)}>
+                      {showIban ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('BIC')}:</span>
@@ -946,6 +1073,43 @@ export function SuppliersPage() {
               </div>
             </div>
           </div>
+
+          {/* Volume Pricing (from assigned products) */}
+          {detailProducts.some(sp => sp.price_tiers && sp.price_tiers.length > 0) && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm flex items-center gap-1">
+                  <Layers className="h-4 w-4" /> {t('Volume Pricing')}
+                </h4>
+                {detailProducts.filter(sp => sp.price_tiers && sp.price_tiers.length > 0).map(sp => {
+                  const tiers = sp.price_tiers!;
+                  const maxPrice = Math.max(...tiers.map(t => t.pricePerUnit));
+                  return (
+                    <div key={sp.id} className="space-y-1">
+                      <p className="text-xs font-medium">{getProductName(sp.product_id)}</p>
+                      <div className="space-y-0.5">
+                        {tiers.map((tier, i) => {
+                          const savingsPercent = maxPrice > 0 ? Math.round((1 - tier.pricePerUnit / maxPrice) * 100) : 0;
+                          return (
+                            <div key={i} className="flex items-center justify-between text-xs p-1 rounded border">
+                              <span>{tier.minQty}{tier.maxQty ? `–${tier.maxQty}` : '+'}</span>
+                              <span className="font-medium">{formatCurrency(tier.pricePerUnit, tier.currency, locale)}</span>
+                              {savingsPercent > 0 && (
+                                <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 bg-green-100 text-green-700">
+                                  -{savingsPercent}%
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     );
@@ -1029,6 +1193,77 @@ export function SuppliersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Financial KPI Cards + Chart */}
+      {spendKpis && spendKpis.totalSpend > 0 && (
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-medium">{t('Total Spend')}</span>
+                </div>
+                <p className="text-2xl font-bold mt-1 text-emerald-600">
+                  {formatCurrency(spendKpis.totalSpend, spendKpis.currency, locale)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('{{count}} suppliers', { count: spendKpis.supplierCount })}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">{t('Top Supplier')}</span>
+                </div>
+                <p className="text-lg font-bold mt-1 text-blue-600 truncate">
+                  {spendKpis.topSupplier.supplierName}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {formatCurrency(spendKpis.topSupplier.totalSpend, spendKpis.currency, locale)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-medium">{t('Avg. Order Value')}</span>
+                </div>
+                <p className="text-2xl font-bold mt-1 text-amber-600">
+                  {formatCurrency(spendKpis.avgOrderValue, spendKpis.currency, locale)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {chartData.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{t('Top Suppliers by Spend')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={192}>
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 16, top: 0, bottom: 0 }}>
+                    <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v, spendKpis.currency, locale)} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value), spendKpis.currency, locale)} />
+                    <Bar dataKey="spend" radius={[0, 4, 4, 0]}>
+                      {chartData.map((_entry, index) => (
+                        <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Supplier list */}
@@ -1758,28 +1993,178 @@ export function SuppliersPage() {
               {supplierProducts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t('No products assigned yet')}</p>
               ) : (
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {supplierProducts.map(sp => (
-                    <div key={sp.id} className="flex items-center justify-between p-2 rounded border bg-card">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
-                          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <span>{SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}</span>
-                            {sp.price_per_unit != null && (
-                              <span>{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>
-                            )}
-                            {sp.min_order_quantity != null && (
-                              <span>Min: {sp.min_order_quantity}</span>
-                            )}
-                            {sp.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
+                    <div key={sp.id} className="rounded border bg-card">
+                      <div className="flex items-center justify-between p-2">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm font-medium">{getProductName(sp.product_id)}</div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <span>{SUPPLIER_ROLES.find(r => r.value === sp.role)?.label}</span>
+                              {sp.price_per_unit != null && (
+                                <span>{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>
+                              )}
+                              {sp.min_order_quantity != null && (
+                                <span>Min: {sp.min_order_quantity}</span>
+                              )}
+                              {sp.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-7 px-2"
+                            onClick={() => {
+                              if (expandedPriceTiers === sp.id) {
+                                setExpandedPriceTiers(null);
+                              } else {
+                                setExpandedPriceTiers(sp.id);
+                                setEditingTiers(sp.price_tiers ? [...sp.price_tiers] : []);
+                              }
+                            }}
+                          >
+                            <Layers className="h-3 w-3 mr-1" />
+                            {t('Tiers')} ({sp.price_tiers?.length || 0})
+                            {expandedPriceTiers === sp.id ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveProduct(sp.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(sp.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+
+                      {/* Inline Price Tiers Editor */}
+                      {expandedPriceTiers === sp.id && (
+                        <div className="border-t p-2 space-y-2 bg-muted/30">
+                          <h5 className="text-xs font-medium">{t('Volume Pricing Tiers')}</h5>
+                          {editingTiers.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">{t('No volume pricing configured')}</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {editingTiers.map((tier, i) => (
+                                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 items-end">
+                                  <div>
+                                    {i === 0 && <Label className="text-[10px]">{t('From Qty')}</Label>}
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      className="h-7 text-xs"
+                                      value={tier.minQty}
+                                      onChange={e => {
+                                        const updated = [...editingTiers];
+                                        updated[i] = { ...updated[i], minQty: parseInt(e.target.value) || 1 };
+                                        setEditingTiers(updated);
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    {i === 0 && <Label className="text-[10px]">{t('To Qty')}</Label>}
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      className="h-7 text-xs"
+                                      placeholder={t('unlimited')}
+                                      value={tier.maxQty ?? ''}
+                                      onChange={e => {
+                                        const updated = [...editingTiers];
+                                        updated[i] = { ...updated[i], maxQty: e.target.value ? parseInt(e.target.value) : null };
+                                        setEditingTiers(updated);
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    {i === 0 && <Label className="text-[10px]">{t('Price/Unit')}</Label>}
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min={0.01}
+                                      className="h-7 text-xs"
+                                      value={tier.pricePerUnit}
+                                      onChange={e => {
+                                        const updated = [...editingTiers];
+                                        updated[i] = { ...updated[i], pricePerUnit: parseFloat(e.target.value) || 0 };
+                                        setEditingTiers(updated);
+                                      }}
+                                    />
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => {
+                                      setEditingTiers(editingTiers.filter((_, idx) => idx !== i));
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-7"
+                              onClick={() => {
+                                const lastTier = editingTiers[editingTiers.length - 1];
+                                const newMinQty = lastTier ? (lastTier.maxQty ? lastTier.maxQty + 1 : lastTier.minQty + 100) : 1;
+                                setEditingTiers([
+                                  // Set maxQty on previous last tier if it was null
+                                  ...editingTiers.map((t, i) =>
+                                    i === editingTiers.length - 1 && t.maxQty === null
+                                      ? { ...t, maxQty: newMinQty - 1 }
+                                      : t
+                                  ),
+                                  { minQty: newMinQty, maxQty: null, pricePerUnit: lastTier?.pricePerUnit || 1, currency: sp.currency || 'EUR' },
+                                ]);
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />{t('Add Tier')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs h-7"
+                              disabled={savingTiers}
+                              onClick={async () => {
+                                // Validation
+                                const valid = editingTiers.every((tier, i) => {
+                                  if (tier.pricePerUnit <= 0) return false;
+                                  if (tier.minQty < 1) return false;
+                                  if (i > 0 && editingTiers[i - 1].maxQty !== null && tier.minQty !== editingTiers[i - 1].maxQty! + 1) return false;
+                                  return true;
+                                });
+                                if (!valid && editingTiers.length > 0) {
+                                  alert(t('Price tiers have gaps or invalid values'));
+                                  return;
+                                }
+                                setSavingTiers(true);
+                                const result = await updateSupplierProduct(sp.id, {
+                                  price_tiers: editingTiers.length > 0 ? editingTiers : null,
+                                });
+                                setSavingTiers(false);
+                                if (result.success) {
+                                  // Refresh supplier products
+                                  if (selectedSupplier) {
+                                    const updated = await getSupplierProducts(selectedSupplier.id);
+                                    setSupplierProducts(updated);
+                                  }
+                                  setExpandedPriceTiers(null);
+                                } else {
+                                  alert(t('Failed to save tiers'));
+                                }
+                              }}
+                            >
+                              {savingTiers ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+                              {t('Save Tiers')}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
