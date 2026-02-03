@@ -37,15 +37,27 @@ export {
 export {
   getDocuments,
   getDocument,
+  getDocumentDownloadUrl,
   uploadDocument,
   createDocument,
   updateDocument,
   deleteDocument,
   getDocumentStats,
   getSupplierDocuments,
+  getDocumentContextCounts,
   uploadProductImage,
   type Document,
 } from './documents';
+
+// Document Folders
+export {
+  getDocumentFolders,
+  createDocumentFolder,
+  renameDocumentFolder,
+  deleteDocumentFolder,
+  moveDocumentToFolder,
+  removeDocumentFromFolder,
+} from './document-folders';
 
 // Suppliers
 export {

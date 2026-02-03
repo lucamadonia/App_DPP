@@ -11,10 +11,12 @@ export interface Document {
   tenant_id: string;
   product_id?: string;
   supplier_id?: string;
+  folder_id?: string;
   name: string;
   type: 'pdf' | 'image' | 'other';
   category: string;
   url?: string;
+  storagePath?: string;
   size?: string;
   validUntil?: string;
   uploadedAt: string;
@@ -31,10 +33,12 @@ function transformDocument(row: any): Document {
     tenant_id: row.tenant_id,
     product_id: row.product_id || undefined,
     supplier_id: row.supplier_id || undefined,
+    folder_id: row.folder_id || undefined,
     name: row.name,
     type: row.type,
     category: row.category,
     url: row.url || undefined,
+    storagePath: row.storage_path || undefined,
     size: row.size || undefined,
     validUntil: row.valid_until || undefined,
     uploadedAt: row.uploaded_at,
@@ -76,6 +80,20 @@ export async function getDocuments(productId?: string): Promise<Document[]> {
 }
 
 /**
+ * Get a signed download URL for a document in storage
+ */
+export async function getDocumentDownloadUrl(storagePath: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .createSignedUrl(storagePath, 3600);
+  if (error || !data?.signedUrl) {
+    console.error('Failed to get document URL:', error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+/**
  * Get a single document by ID
  */
 export async function getDocument(id: string): Promise<Document | null> {
@@ -102,6 +120,7 @@ export async function uploadDocument(
     category: string;
     productId?: string;
     supplierId?: string;
+    folderId?: string;
     validUntil?: string;
     visibility?: 'internal' | 'customs' | 'consumer';
   }
@@ -157,6 +176,7 @@ export async function uploadDocument(
     tenant_id: tenantId,
     product_id: metadata.productId || null,
     supplier_id: metadata.supplierId || null,
+    folder_id: metadata.folderId || null,
     name: metadata.name,
     type: fileType,
     category: metadata.category,
@@ -237,6 +257,9 @@ export async function updateDocument(
   if (doc.validUntil !== undefined) updateData.valid_until = doc.validUntil || null;
   if (doc.status !== undefined) updateData.status = doc.status;
   if (doc.visibility !== undefined) updateData.visibility = doc.visibility;
+  if (doc.product_id !== undefined) updateData.product_id = doc.product_id || null;
+  if (doc.supplier_id !== undefined) updateData.supplier_id = doc.supplier_id || null;
+  if (doc.folder_id !== undefined) updateData.folder_id = doc.folder_id || null;
 
   const { error } = await supabase
     .from('documents')
@@ -339,6 +362,110 @@ export async function getSupplierDocuments(supplierId: string): Promise<Document
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data || []).map((row: any) => transformDocument(row));
+}
+
+/**
+ * Get document context counts for sidebar navigation
+ */
+export async function getDocumentContextCounts(): Promise<{
+  products: Array<{ id: string; name: string; count: number }>;
+  suppliers: Array<{ id: string; name: string; count: number }>;
+  folders: Array<{ id: string; name: string; parentId?: string; count: number }>;
+  unassigned: number;
+}> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    return { products: [], suppliers: [], folders: [], unassigned: 0 };
+  }
+
+  // Run all queries in parallel
+  const [productDocs, supplierDocs, folderDocs, unassignedDocs] = await Promise.all([
+    // Documents grouped by product
+    supabase
+      .from('documents')
+      .select('product_id, products(name)')
+      .eq('tenant_id', tenantId)
+      .not('product_id', 'is', null),
+
+    // Documents grouped by supplier
+    supabase
+      .from('documents')
+      .select('supplier_id, suppliers(name)')
+      .eq('tenant_id', tenantId)
+      .not('supplier_id', 'is', null),
+
+    // Documents grouped by folder
+    supabase
+      .from('documents')
+      .select('folder_id, document_folders(name, parent_id)')
+      .eq('tenant_id', tenantId)
+      .not('folder_id', 'is', null),
+
+    // Unassigned documents count
+    supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('product_id', null)
+      .is('supplier_id', null)
+      .is('folder_id', null),
+  ]);
+
+  // Aggregate product counts
+  const productMap = new Map<string, { name: string; count: number }>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of (productDocs.data || []) as any[]) {
+    const id = row.product_id;
+    const existing = productMap.get(id);
+    if (existing) {
+      existing.count++;
+    } else {
+      const name = row.products?.name || 'Unknown';
+      productMap.set(id, { name, count: 1 });
+    }
+  }
+
+  // Aggregate supplier counts
+  const supplierMap = new Map<string, { name: string; count: number }>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of (supplierDocs.data || []) as any[]) {
+    const id = row.supplier_id;
+    const existing = supplierMap.get(id);
+    if (existing) {
+      existing.count++;
+    } else {
+      const name = row.suppliers?.name || 'Unknown';
+      supplierMap.set(id, { name, count: 1 });
+    }
+  }
+
+  // Aggregate folder counts
+  const folderMap = new Map<string, { name: string; parentId?: string; count: number }>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of (folderDocs.data || []) as any[]) {
+    const id = row.folder_id;
+    const existing = folderMap.get(id);
+    if (existing) {
+      existing.count++;
+    } else {
+      const name = row.document_folders?.name || 'Unknown';
+      const parentId = row.document_folders?.parent_id || undefined;
+      folderMap.set(id, { name, parentId, count: 1 });
+    }
+  }
+
+  return {
+    products: Array.from(productMap.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    suppliers: Array.from(supplierMap.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    folders: Array.from(folderMap.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    unassigned: unassignedDocs.count ?? 0,
+  };
 }
 
 /**
