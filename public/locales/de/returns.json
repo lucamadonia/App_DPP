@@ -1031,5 +1031,10 @@
   "Domain saved but hosting registration failed": "Domain gespeichert, aber Hosting-Registrierung fehlgeschlagen",
   "Domain removed": "Domain entfernt",
   "Open Portal": "Portal \u00f6ffnen",
-  "Upgrade": "Upgrade"
+  "Upgrade": "Upgrade",
+  "Ticket number": "Ticketnummer",
+  "Failed to create support ticket. Please try again.": "Support-Ticket konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+  "An unexpected error occurred. Please try again.": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+  "Portal not found": "Portal nicht gefunden",
+  "Ticket creation is currently unavailable": "Ticket-Erstellung ist derzeit nicht verfügbar"
 }

@@ -392,4 +392,7 @@ export {
   getCustomerDashboardStats,
   getCustomerReturnReasons,
   getCustomerPortalBranding,
+  isPublicTicketCreationEnabled,
+  createPublicProductTicket,
+  createPublicReturnTicket,
 } from './customer-portal';

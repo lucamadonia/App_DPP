@@ -11,6 +11,7 @@ import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
 import { publicTrackReturn, publicGetReturnItems } from '@/services/supabase';
+import { supabase } from '@/lib/supabase';
 import type { RhReturn, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
 
 interface ReturnItem {
@@ -32,6 +33,7 @@ export function PublicReturnTrackingPage() {
   const [timeline, setTimeline] = useState<TimelineType[]>([]);
   const [items, setItems] = useState<ReturnItem[]>([]);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [tenantSlug, setTenantSlug] = useState<string>('');
 
   // Auto-search if returnNumber is in URL
   useEffect(() => {
@@ -60,6 +62,18 @@ export function PublicReturnTrackingPage() {
 
     setReturnData(result.returnData);
     setTimeline(result.timeline as TimelineType[]);
+
+    // Fetch tenant slug from tenant ID
+    if (result.returnData.tenantId) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', result.returnData.tenantId)
+        .single();
+      if (tenant?.slug) {
+        setTenantSlug(tenant.slug);
+      }
+    }
 
     // Load items
     const returnItems = await publicGetReturnItems(number);
@@ -275,6 +289,7 @@ export function PublicReturnTrackingPage() {
         open={supportOpen}
         onOpenChange={setSupportOpen}
         returnNumber={returnData.returnNumber}
+        tenantSlug={tenantSlug}
       />
     </div>
   );

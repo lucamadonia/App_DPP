@@ -8,7 +8,7 @@
 import { supabase } from '@/lib/supabase';
 import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings } from '@/types/returns-hub';
 import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput, CustomerReturnsFilter, CustomerTicketsFilter } from '@/types/customer-portal';
-import { generateReturnNumber } from '@/lib/return-number';
+import { generateReturnNumber, generateTicketNumber } from '@/lib/return-number';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 
 // ============================================
@@ -134,12 +134,20 @@ export async function getCustomerProfile(): Promise<CustomerPortalProfile | null
     if (profileError.code === 'PGRST116') {
       console.debug('getCustomerProfile: Profile not found for user', user.id);
     } else {
-      console.error('getCustomerProfile: Error fetching profile', profileError);
+      console.error('getCustomerProfile: Error fetching profile', {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint,
+      });
     }
     return null;
   }
 
-  if (!profile) return null;
+  if (!profile) {
+    console.debug('getCustomerProfile: Profile is null after query');
+    return null;
+  }
 
   const { data: customer, error: customerError } = await supabase
     .from('rh_customers')
@@ -148,11 +156,22 @@ export async function getCustomerProfile(): Promise<CustomerPortalProfile | null
     .single();
 
   if (customerError) {
-    console.error('getCustomerProfile: Error fetching customer', customerError);
+    console.error('getCustomerProfile: Error fetching customer', {
+      code: customerError.code,
+      message: customerError.message,
+      profileId: profile.id,
+      customerId: profile.customer_id,
+    });
     return null;
   }
 
-  if (!customer) return null;
+  if (!customer) {
+    console.error('getCustomerProfile: Customer is null after query', {
+      profileId: profile.id,
+      customerId: profile.customer_id,
+    });
+    return null;
+  }
 
   return transformCustomerProfile(profile, customer);
 }
@@ -941,6 +960,160 @@ export async function createPublicProductTicket(params: {
   if (messageError) {
     console.error('Error creating ticket message:', messageError);
     // Ticket was created, but message failed - still return success
+  }
+
+  return { success: true, ticketNumber: ticket.ticket_number };
+}
+
+/**
+ * Create a support ticket from the public return tracking page
+ * Allows unauthenticated users to create tickets linked to their returns
+ */
+export async function createPublicReturnTicket(params: {
+  tenantSlug: string;
+  email: string;
+  subject: string;
+  message: string;
+  returnNumber?: string;
+}): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
+  const { tenantSlug, email, subject, message, returnNumber } = params;
+
+  // 1. Resolve tenant ID from slug
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('slug', tenantSlug)
+    .single();
+
+  if (tenantError || !tenant) {
+    console.error('Error resolving tenant:', tenantError);
+    return { success: false, error: 'Portal not found' };
+  }
+
+  const tenantId = tenant.id;
+
+  // 2. Check if feature is enabled
+  const isEnabled = await isPublicTicketCreationEnabled(tenantId);
+  if (!isEnabled) {
+    return { success: false, error: 'Ticket creation is currently unavailable' };
+  }
+
+  // 3. Find or create customer
+  const normalizedEmail = email.trim().toLowerCase();
+  let customerId: string;
+
+  const { data: existingCustomer } = await supabase
+    .from('rh_customers')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('email', normalizedEmail)
+    .single();
+
+  if (existingCustomer) {
+    customerId = existingCustomer.id;
+  } else {
+    // Create new customer record
+    const { data: newCustomer, error: customerError } = await supabase
+      .from('rh_customers')
+      .insert({
+        tenant_id: tenantId,
+        email: normalizedEmail,
+        display_name: normalizedEmail.split('@')[0],
+        created_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (customerError || !newCustomer) {
+      console.error('Error creating customer:', customerError);
+      return { success: false, error: 'Failed to create customer record' };
+    }
+
+    customerId = newCustomer.id;
+  }
+
+  // 4. Optionally lookup return by return number (if provided)
+  let returnId: string | undefined = undefined;
+
+  if (returnNumber) {
+    const { data: returnRecord, error: returnError } = await supabase
+      .from('rh_returns')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('return_number', returnNumber)
+      .single();
+
+    if (returnError) {
+      console.warn('Return not found for return_number:', returnNumber, returnError);
+      // Continue without linking - customer might have typo or return doesn't exist
+    } else if (returnRecord) {
+      returnId = returnRecord.id;
+    }
+  }
+
+  // 5. Generate ticket number
+  const ticketNumber = generateTicketNumber();
+
+  // 6. Create ticket
+  const ticketData = {
+    tenant_id: tenantId,
+    ticket_number: ticketNumber,
+    customer_id: customerId,
+    return_id: returnId,
+    subject,
+    category: 'return_inquiry',
+    priority: 'normal',
+    status: 'open',
+    source: 'public_return_portal',
+    created_at: new Date().toISOString(),
+  };
+
+  const { data: ticket, error: ticketError } = await supabase
+    .from('rh_tickets')
+    .insert(ticketData)
+    .select('id, ticket_number')
+    .single();
+
+  if (ticketError || !ticket) {
+    console.error('Error creating ticket:', ticketError);
+    return { success: false, error: 'Failed to create ticket' };
+  }
+
+  // 7. Create initial message
+  const messageData = {
+    ticket_id: ticket.id,
+    sender_type: 'customer',
+    sender_id: customerId,
+    content: message,
+    is_internal: false,
+    created_at: new Date().toISOString(),
+  };
+
+  const { error: messageError } = await supabase
+    .from('rh_ticket_messages')
+    .insert(messageData);
+
+  if (messageError) {
+    console.error('Error creating ticket message:', messageError);
+    // Ticket was created, but message failed - still return success
+  }
+
+  // 8. Trigger email notification (public context)
+  try {
+    const { triggerPublicEmailNotification } = await import('./rh-notification-trigger');
+    await triggerPublicEmailNotification(
+      tenantId,
+      'ticket_created',
+      {
+        recipientEmail: normalizedEmail,
+        customerName: normalizedEmail.split('@')[0],
+        ticketNumber: ticket.ticket_number,
+        subject,
+      }
+    );
+  } catch (error) {
+    console.error('Error triggering ticket email notification:', error);
+    // Non-critical - ticket was still created
   }
 
   return { success: true, ticketNumber: ticket.ticket_number };

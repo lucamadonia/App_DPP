@@ -12,32 +12,68 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { createPublicReturnTicket } from '@/services/supabase';
+import { useReturnsPortal } from '@/hooks/useReturnsPortal';
 
 interface ContactSupportFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   returnNumber: string;
+  tenantSlug?: string; // Optional - will use context if not provided
 }
 
-export function ContactSupportForm({ open, onOpenChange, returnNumber }: ContactSupportFormProps) {
+export function ContactSupportForm({ open, onOpenChange, returnNumber, tenantSlug: propTenantSlug }: ContactSupportFormProps) {
   const { t } = useTranslation('returns');
+  const context = useReturnsPortal();
+  const tenantSlug = propTenantSlug || context?.tenantSlug;
+
   const [subject, setSubject] = useState(`Return ${returnNumber}`);
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async () => {
+    if (!email.trim() || !subject.trim() || !message.trim()) return;
+    if (!tenantSlug) {
+      setError(t('Portal not found'));
+      return;
+    }
+
     setSending(true);
-    // Simulate sending - in production this would call a service
-    await new Promise(r => setTimeout(r, 1000));
-    setSending(false);
-    setSent(true);
-    setTimeout(() => {
-      onOpenChange(false);
-      setSent(false);
-      setMessage('');
-    }, 2000);
+    setError('');
+
+    try {
+      const result = await createPublicReturnTicket({
+        tenantSlug,
+        email: email.trim(),
+        subject: subject.trim(),
+        message: message.trim(),
+        returnNumber,
+      });
+
+      if (result.success && result.ticketNumber) {
+        setTicketNumber(result.ticketNumber);
+        setSent(true);
+        setTimeout(() => {
+          onOpenChange(false);
+          setSent(false);
+          setMessage('');
+          setSubject(`Return ${returnNumber}`);
+          setEmail('');
+          setTicketNumber('');
+        }, 3000);
+      } else {
+        setError(result.error || t('An unexpected error occurred. Please try again.'));
+      }
+    } catch (err) {
+      console.error('Error creating support ticket:', err);
+      setError(t('Failed to create support ticket. Please try again.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -55,10 +91,21 @@ export function ContactSupportForm({ open, onOpenChange, returnNumber }: Contact
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="font-medium">{t('Support request sent')}</p>
+            <p className="font-medium">{t('Ticket created!')}</p>
+            {ticketNumber && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('Ticket number')}: <span className="font-mono font-semibold">{ticketNumber}</span>
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground mt-1">{t('We will get back to you soon.')}</p>
           </div>
         ) : (
           <div className="space-y-4">
+            {error && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>{t('Email Address')}</Label>
               <Input
@@ -86,7 +133,7 @@ export function ContactSupportForm({ open, onOpenChange, returnNumber }: Contact
             </div>
             <Button
               onClick={handleSubmit}
-              disabled={sending || !message.trim() || !email.trim()}
+              disabled={sending || !message.trim() || !email.trim() || !subject.trim()}
               className="w-full"
             >
               {sending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

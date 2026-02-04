@@ -1031,5 +1031,10 @@
   "Domain saved but hosting registration failed": "Domain saved but hosting registration failed",
   "Domain removed": "Domain removed",
   "Open Portal": "Open Portal",
-  "Upgrade": "Upgrade"
+  "Upgrade": "Upgrade",
+  "Ticket number": "Ticket number",
+  "Failed to create support ticket. Please try again.": "Failed to create support ticket. Please try again.",
+  "An unexpected error occurred. Please try again.": "An unexpected error occurred. Please try again.",
+  "Portal not found": "Portal not found",
+  "Ticket creation is currently unavailable": "Ticket creation is currently unavailable"
 }

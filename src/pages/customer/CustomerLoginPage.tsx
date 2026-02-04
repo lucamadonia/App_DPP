@@ -47,20 +47,8 @@ export function CustomerLoginPage() {
     // Small delay for RLS propagation
     await new Promise(resolve => setTimeout(resolve, 100));
 
+    // Refresh profile via context (handles all profile loading logic)
     await refreshProfile();
-    const profile = await getCustomerProfile();
-
-    if (!profile) {
-      await supabase.auth.signOut();
-      setError(t('No customer account found. Please register first.'));
-      setLoading(false);
-      return;
-    }
-
-    // Log tenant mismatch as warning but allow login (profile may be multi-tenant)
-    if (profile.tenantId !== tenantId) {
-      console.warn(`Customer logged into different tenant. Expected: ${tenantId}, Got: ${profile.tenantId}`);
-    }
 
     setLoading(false);
     navigate(`/customer/${tenantSlug}`);
