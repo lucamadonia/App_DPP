@@ -10,9 +10,10 @@ import type { ProductRegistrations, SupportResources } from '@/types/database';
 
 // Transform database row to Product type (master data only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformProduct(row: any): Product {
+function transformProduct(row: any): Product & { tenantId: string } {
   return {
     id: row.id,
+    tenantId: row.tenant_id,
     name: row.name,
     manufacturer: row.manufacturer,
     gtin: row.gtin,
@@ -54,7 +55,7 @@ function transformProduct(row: any): Product {
  * Batch overrides take precedence when not null/undefined.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mergeProductWithBatch(product: Product, batch: any): Product {
+function mergeProductWithBatch(product: Product & { tenantId: string }, batch: any): Product & { tenantId: string } {
   return {
     ...product,
     serialNumber: batch.serial_number || product.serialNumber,
@@ -76,7 +77,7 @@ function mergeProductWithBatch(product: Product, batch: any): Product {
  * Enrich product.imageUrl from product_images table if the legacy field is empty.
  * Picks the primary image first, otherwise the first image by sort_order.
  */
-async function enrichImageUrl(product: Product, productId: string): Promise<void> {
+async function enrichImageUrl(product: Product & { tenantId?: string }, productId: string): Promise<void> {
   if (product.imageUrl) return;
 
   const { data: images } = await supabase
@@ -163,7 +164,7 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 export async function getProductByGtinSerial(
   gtin: string,
   serial: string
-): Promise<Product | null> {
+): Promise<(Product & { tenantId: string }) | null> {
   // Step 1: Find the product by GTIN
   const { data: productRows, error: productError } = await supabase
     .from('products')

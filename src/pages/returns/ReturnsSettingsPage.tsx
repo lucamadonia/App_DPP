@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Save, Plus, Trash2, Mail, Pencil, Copy, Check, ExternalLink, MessageSquareText, ArrowRight, Settings2 } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, Mail, Pencil, MessageSquareText, ArrowRight, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/returns/EmptyState';
-import { CustomerPortalSettingsTab } from '@/components/returns/CustomerPortalSettingsTab';
+import { PortalDesignTab } from '@/components/returns/PortalDesignTab';
+import { PortalSetupTab } from '@/components/returns/PortalSetupTab';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import {
   getReturnsHubSettings, updateReturnsHubSettings,
@@ -33,7 +34,6 @@ export function ReturnsSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [tenantSlug, setTenantSlug] = useState('');
-  const [copied, setCopied] = useState(false);
 
   // Canned responses
   const [cannedResponses, setCannedResponses] = useState<RhCannedResponse[]>([]);
@@ -196,12 +196,6 @@ export function ReturnsSettingsPage() {
 
   if (!settings) return null;
 
-  // License usage gauge
-  const usagePercent = settings.maxReturnsPerMonth > 0
-    ? Math.min((settings.usage.returnsThisMonth / settings.maxReturnsPerMonth) * 100, 100)
-    : 0;
-  const usageColor = usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-yellow-500' : 'bg-green-500';
-
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div>
@@ -213,11 +207,10 @@ export function ReturnsSettingsPage() {
         <TabsList>
           <TabsTrigger value="general">{t('General')}</TabsTrigger>
           <TabsTrigger value="reasons">{t('Return Reasons')}</TabsTrigger>
-          <TabsTrigger value="license">{t('License')}</TabsTrigger>
-          <TabsTrigger value="branding">{t('Branding')}</TabsTrigger>
-          <TabsTrigger value="tickets">{t('Tickets')}</TabsTrigger>
+          <TabsTrigger value="tickets">{t('Tickets & SLA')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('Notifications')}</TabsTrigger>
-          <TabsTrigger value="portal">{t('Customer Portal')}</TabsTrigger>
+          <TabsTrigger value="appearance">{t('Portal Design')}</TabsTrigger>
+          <TabsTrigger value="portal">{t('Portal Setup')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-4 space-y-4">
@@ -326,135 +319,13 @@ export function ReturnsSettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="license" className="mt-4 space-y-4">
-          <Card className="animate-fade-in-up">
-            <CardHeader>
-              <CardTitle className="text-base">{t('License')}</CardTitle>
-              <CardDescription>{t('Your current plan and usage')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Badge className="text-lg px-3 py-1 capitalize">{settings.plan}</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted space-y-2">
-                  <p className="text-sm text-muted-foreground">{t('Returns this month')}</p>
-                  <p className="text-2xl font-bold">{settings.usage.returnsThisMonth} <span className="text-sm font-normal text-muted-foreground">{t('of {{max}} included', { max: settings.maxReturnsPerMonth })}</span></p>
-                  {/* Usage gauge */}
-                  <div className="h-2 bg-muted-foreground/10 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${usageColor} rounded-full transition-all duration-700`}
-                      style={{ width: `${usagePercent}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-muted">
-                  <p className="text-sm text-muted-foreground">{t('Admin users')}</p>
-                  <p className="text-2xl font-bold">{settings.maxAdminUsers}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">{t('Features')}</h4>
-                {Object.entries(settings.features).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between py-1 text-sm">
-                    <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <span>{typeof value === 'boolean' ? (value ? '\u2713' : '\u2014') : value}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="branding" className="mt-4 space-y-4">
-          <Card className="animate-fade-in-up">
-            <CardHeader>
-              <CardTitle className="text-base">{t('Branding')}</CardTitle>
-              <CardDescription>{t('Customize the customer portal appearance')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t('Primary Color')}</Label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={settings.branding.primaryColor}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        branding: { ...settings.branding, primaryColor: e.target.value },
-                      })}
-                      className="h-9 w-12 rounded border cursor-pointer"
-                    />
-                    <Input
-                      value={settings.branding.primaryColor}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        branding: { ...settings.branding, primaryColor: e.target.value },
-                      })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Logo URL')}</Label>
-                  <Input
-                    value={settings.branding.logoUrl}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      branding: { ...settings.branding, logoUrl: e.target.value },
-                    })}
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
-
-              {tenantSlug && (
-                <div className="space-y-3 pt-2 border-t">
-                  <div className="space-y-2">
-                    <Label>{t('Portal URL')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('Share this link with your customers')}</p>
-                    <div className="flex gap-2">
-                      <Input
-                        readOnly
-                        value={`${window.location.origin}/returns/portal/${tenantSlug}`}
-                        className="font-mono text-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/returns/portal/${tenantSlug}`);
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
-                        }}
-                      >
-                        {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <a href={`/returns/portal/${tenantSlug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                      <ExternalLink className="h-3.5 w-3.5" /> {t('Returns Portal')}
-                    </a>
-                    <a href={`/returns/portal/${tenantSlug}/register`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                      <ExternalLink className="h-3.5 w-3.5" /> {t('Register Return')}
-                    </a>
-                    <a href={`/returns/portal/${tenantSlug}/track`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                      <ExternalLink className="h-3.5 w-3.5" /> {t('Track Return')}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveSettings} disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                  {t('Save')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="appearance" className="mt-4 space-y-4">
+          <PortalDesignTab
+            settings={settings!}
+            setSettings={setSettings}
+            saving={saving}
+            onSave={handleSaveSettings}
+          />
         </TabsContent>
 
         <TabsContent value="tickets" className="mt-4 space-y-4">
@@ -650,7 +521,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="portal" className="mt-4 space-y-4">
-          <CustomerPortalSettingsTab
+          <PortalSetupTab
             settings={settings!}
             setSettings={setSettings}
             tenantSlug={tenantSlug}

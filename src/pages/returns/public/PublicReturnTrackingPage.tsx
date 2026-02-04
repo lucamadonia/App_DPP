@@ -13,8 +13,7 @@ import { ContactSupportForm } from '@/components/returns/public/ContactSupportFo
 import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding } from '@/services/supabase';
 import { supabase } from '@/lib/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
-import type { RhReturn, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
-import type { CustomerPortalBrandingOverrides } from '@/types/customer-portal';
+import type { RhReturn, RhReturnTimeline as TimelineType, CustomerPortalBrandingOverrides } from '@/types/returns-hub';
 
 interface ReturnItem {
   id: string;

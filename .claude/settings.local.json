@@ -28,7 +28,18 @@
       "Bash(test:*)",
       "Bash(git stash:*)",
       "Bash(git pull:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(npx vite --host)",
+      "Bash(gh api:*)",
+      "Bash(git log:*)",
+      "WebSearch",
+      "Bash(Corporate Design\" button that applies branding primary color to section\nborders and inserts logo into the identity section.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(start http://localhost:5184/)",
+      "Bash(start http://localhost:5173/)",
+      "Bash(gh release list:*)",
+      "Bash(git tag:*)",
+      "Bash(find:*)",
+      "Bash(del \"C:\\\\Users\\\\luca\\\\projects\\\\app_dpp\\\\src\\\\components\\\\returns\\\\CustomerPortalSettingsTab.tsx\")"
     ]
   }
 }

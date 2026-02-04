@@ -36,7 +36,7 @@ export function TemplateEcoFriendly({ product, visibilityV2, view, dppDesign, te
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <EcoFriendlyCustomsView data={data} />;
+    return <EcoFriendlyCustomsView data={data} tenantId={tenantId} />;
   }
 
   return <EcoFriendlyConsumerView data={data} tenantId={tenantId} />;
@@ -44,12 +44,12 @@ export function TemplateEcoFriendly({ product, visibilityV2, view, dppDesign, te
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
-  tenantId?: string | null;
+  tenantId: string | null;
 }
 
 function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(data.product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
   const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
@@ -487,12 +487,16 @@ function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
         {consumerSections.map(s => renderSection(s))}
       </div>
 
-      <PublicProductTicketDialog
-        open={ticketDialogOpen}
-        onOpenChange={setTicketDialogOpen}
-        product={product}
-        tenantId={tenantId ?? undefined}
-      />
+      {tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
+        />
+      )}
     </div>
   );
 }

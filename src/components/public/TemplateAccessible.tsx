@@ -16,8 +16,8 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 import { RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { SafeHtml } from '@/components/ui/safe-html';
-import { PublicProductTicketDialog } from '@/components/returns/public/PublicProductTicketDialog';
-import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreation';
+import { PublicProductTicketDialog } from '@/components/public/PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 import { Button } from '@/components/ui/button';
 
 interface DPPTemplateProps {
@@ -480,8 +480,10 @@ function AccessibleConsumerView({ data, product, tenantId }: ConsumerViewProps) 
         <PublicProductTicketDialog
           open={ticketDialogOpen}
           onOpenChange={setTicketDialogOpen}
-          product={product}
           tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
         />
       )}
     </div>

@@ -34,7 +34,7 @@ export function TemplatePremium({ product, visibilityV2, view, dppDesign, tenant
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <PremiumCustomsView data={data} />;
+    return <PremiumCustomsView data={data} tenantId={tenantId} />;
   }
 
   return <PremiumConsumerView data={data} tenantId={tenantId} />;
@@ -42,12 +42,12 @@ export function TemplatePremium({ product, visibilityV2, view, dppDesign, tenant
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
-  tenantId?: string | null;
+  tenantId: string | null;
 }
 
 function PremiumConsumerView({ data, tenantId }: ViewProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(data.product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
   const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
@@ -457,12 +457,16 @@ function PremiumConsumerView({ data, tenantId }: ViewProps) {
         {consumerSections.map(s => renderSection(s))}
       </div>
 
-      <PublicProductTicketDialog
-        open={ticketDialogOpen}
-        onOpenChange={setTicketDialogOpen}
-        product={product}
-        tenantId={tenantId ?? undefined}
-      />
+      {tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
+        />
+      )}
     </div>
   );
 }

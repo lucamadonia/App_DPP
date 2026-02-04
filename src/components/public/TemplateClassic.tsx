@@ -45,7 +45,7 @@ export function TemplateClassic({ product, visibilityV2, view, dppDesign, tenant
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <ClassicCustomsView data={data} />;
+    return <ClassicCustomsView data={data} tenantId={tenantId} />;
   }
 
   return <ClassicConsumerView data={data} tenantId={tenantId} />;
@@ -53,14 +53,14 @@ export function TemplateClassic({ product, visibilityV2, view, dppDesign, tenant
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
-  tenantId?: string | null;
+  tenantId: string | null;
 }
 
 function ClassicConsumerView({ data, tenantId }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -505,12 +505,16 @@ function ClassicConsumerView({ data, tenantId }: ViewProps) {
 
       {consumerSections.map(s => renderSection(s))}
 
-      <PublicProductTicketDialog
-        open={ticketDialogOpen}
-        onOpenChange={setTicketDialogOpen}
-        product={product}
-        tenantId={tenantId ?? undefined}
-      />
+      {tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
+        />
+      )}
     </div>
   );
 }

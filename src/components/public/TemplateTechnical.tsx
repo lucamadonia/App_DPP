@@ -34,7 +34,7 @@ export function TemplateTechnical({ product, visibilityV2, view, dppDesign, tena
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <TechnicalCustomsView data={data} />;
+    return <TechnicalCustomsView data={data} tenantId={tenantId} />;
   }
 
   return <TechnicalConsumerView data={data} tenantId={tenantId} />;
@@ -42,12 +42,12 @@ export function TemplateTechnical({ product, visibilityV2, view, dppDesign, tena
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
-  tenantId?: string | null;
+  tenantId: string | null;
 }
 
 function TechnicalConsumerView({ data, tenantId }: ViewProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(data.product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
   const { product, isFieldVisible, t, locale, consumerSections } = data;
 
   const renderSection = (section: RenderableSection) => {
@@ -499,12 +499,16 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
         {consumerSections.map(s => renderSection(s))}
       </div>
 
-      <PublicProductTicketDialog
-        open={ticketDialogOpen}
-        onOpenChange={setTicketDialogOpen}
-        product={product}
-        tenantId={tenantId ?? undefined}
-      />
+      {tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
+        />
+      )}
     </div>
   );
 }

@@ -7,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
-import { customerSendMagicLink, getCustomerProfile } from '@/services/supabase/customer-portal';
+import { customerSendMagicLink } from '@/services/supabase/customer-portal';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 
 export function CustomerLoginPage() {
   const { t } = useTranslation('customer-portal');
   const navigate = useNavigate();
-  const { tenantSlug, tenantId, tenantName, branding, refreshProfile } = useCustomerPortal();
+  const { tenantSlug, tenantName, branding, refreshProfile } = useCustomerPortal();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

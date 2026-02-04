@@ -1036,5 +1036,17 @@
   "Failed to create support ticket. Please try again.": "Support-Ticket konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
   "An unexpected error occurred. Please try again.": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
   "Portal not found": "Portal nicht gefunden",
-  "Ticket creation is currently unavailable": "Ticket-Erstellung ist derzeit nicht verfügbar"
+  "Ticket creation is currently unavailable": "Ticket-Erstellung ist derzeit nicht verfügbar",
+
+  "Portal Design": "Portal-Design",
+  "Portal Setup": "Portal-Einrichtung",
+  "Portal Links": "Portal-Links",
+  "All portal URLs at a glance": "Alle Portal-URLs auf einen Blick",
+  "Tickets & SLA": "Tickets & SLA",
+  "Returns Portal Branding": "Retouren-Portal Branding",
+  "Primary color and logo for the public returns portal": "Primärfarbe und Logo für das öffentliche Retouren-Portal",
+  "Customer Portal Setup": "Kundenportal-Einrichtung",
+  "License & Usage": "Lizenz & Nutzung",
+  "Welcome back": "Willkommen zurück",
+  "Sign in to your account": "Bei Ihrem Konto anmelden"
 }

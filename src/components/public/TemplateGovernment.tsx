@@ -18,8 +18,8 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
-import { PublicProductTicketDialog } from '@/components/returns/public/PublicProductTicketDialog';
-import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreation';
+import { PublicProductTicketDialog } from '@/components/public/PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 import { Button } from '@/components/ui/button';
 
 interface DPPTemplateProps {
@@ -548,8 +548,10 @@ function GovernmentConsumerView({ data, product, tenantId }: ConsumerViewProps) 
         <PublicProductTicketDialog
           open={ticketDialogOpen}
           onOpenChange={setTicketDialogOpen}
-          product={product}
           tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
         />
       )}
     </div>

@@ -1036,5 +1036,17 @@
   "Failed to create support ticket. Please try again.": "Failed to create support ticket. Please try again.",
   "An unexpected error occurred. Please try again.": "An unexpected error occurred. Please try again.",
   "Portal not found": "Portal not found",
-  "Ticket creation is currently unavailable": "Ticket creation is currently unavailable"
+  "Ticket creation is currently unavailable": "Ticket creation is currently unavailable",
+
+  "Portal Design": "Portal Design",
+  "Portal Setup": "Portal Setup",
+  "Portal Links": "Portal Links",
+  "All portal URLs at a glance": "All portal URLs at a glance",
+  "Tickets & SLA": "Tickets & SLA",
+  "Returns Portal Branding": "Returns Portal Branding",
+  "Primary color and logo for the public returns portal": "Primary color and logo for the public returns portal",
+  "Customer Portal Setup": "Customer Portal Setup",
+  "License & Usage": "License & Usage",
+  "Welcome back": "Welcome back",
+  "Sign in to your account": "Sign in to your account"
 }

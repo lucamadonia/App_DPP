@@ -16,7 +16,6 @@ import {
   BookOpen,
   Video,
   MessageSquare,
-  Wrench,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,7 +42,7 @@ export function TemplateCompact({ product, visibilityV2, view, dppDesign, tenant
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
-    return <CompactCustomsView data={data} />;
+    return <CompactCustomsView data={data} tenantId={tenantId} />;
   }
 
   return <CompactConsumerView data={data} tenantId={tenantId} />;
@@ -51,7 +50,7 @@ export function TemplateCompact({ product, visibilityV2, view, dppDesign, tenant
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
-  tenantId?: string | null;
+  tenantId: string | null;
 }
 
 // Tab config per DPPSectionId for consumer view
@@ -72,7 +71,7 @@ function CompactConsumerView({ data, tenantId }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
 
   // Build visible tabs from consumerSections (already ordered, filtered by visibility + data)
   const visibleTabs = consumerSections.map((section) => {
@@ -388,12 +387,16 @@ function CompactConsumerView({ data, tenantId }: ViewProps) {
         )}
       </div>
 
-      <PublicProductTicketDialog
-        open={ticketDialogOpen}
-        onOpenChange={setTicketDialogOpen}
-        product={product}
-        tenantId={tenantId ?? undefined}
-      />
+      {tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber}
+        />
+      )}
     </div>
   );
 }

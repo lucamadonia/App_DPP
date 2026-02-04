@@ -46,22 +46,23 @@ export function TemplateModern({ product, tenantId, visibilityV2, view, dppDesig
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign, primaryColor);
 
   if (view === 'customs') {
-    return <ModernCustomsView data={data} primaryColor={primaryColor} />;
+    return <ModernCustomsView data={data} primaryColor={primaryColor} tenantId={tenantId} />;
   }
 
-  return <ModernConsumerView data={data} primaryColor={primaryColor} />;
+  return <ModernConsumerView data={data} primaryColor={primaryColor} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
   primaryColor: string;
+  tenantId: string | null;
 }
 
-function ModernConsumerView({ data, primaryColor }: ViewProps) {
+function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle, hero: heroResult } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -535,11 +536,11 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
         {consumerSections.map(s => renderSection(s))}
       </div>
 
-      {ticketCreationEnabled && product.tenantId && (
+      {ticketCreationEnabled && tenantId && (
         <PublicProductTicketDialog
           open={ticketDialogOpen}
           onOpenChange={setTicketDialogOpen}
-          tenantId={product.tenantId}
+          tenantId={tenantId}
           productName={product.name}
           gtin={product.gtin}
           serialNumber={product.serialNumber || ''}

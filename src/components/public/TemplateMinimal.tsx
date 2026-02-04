@@ -26,7 +26,7 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign, tenant
   const { product: p, isFieldVisible, t, locale, consumerSections, view: v, styles } = data;
   const { heading: headingStyle } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -426,12 +426,16 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign, tenant
 
       {consumerSections.map(s => renderSection(s))}
 
-      <PublicProductTicketDialog
-        open={ticketDialogOpen}
-        onOpenChange={setTicketDialogOpen}
-        product={p}
-        tenantId={tenantId ?? undefined}
-      />
+      {tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={tenantId}
+          productName={p.name}
+          gtin={p.gtin}
+          serialNumber={p.serialNumber}
+        />
+      )}
     </div>
   );
 }
