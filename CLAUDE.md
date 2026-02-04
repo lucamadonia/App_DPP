@@ -14,6 +14,12 @@ npm run build        # tsc -b && vite build
 npm run lint         # ESLint (flat config)
 npx tsc --noEmit     # Type-check only (no emit)
 
+# Database migrations (require SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_REF in .env)
+node scripts/db-migrate.mjs              # Apply all pending migrations
+node scripts/db-migrate.mjs --status     # Show migration status
+node scripts/db-migrate.mjs --force      # Re-apply all migrations
+node scripts/db-migrate.mjs --file X.sql # Apply specific SQL file from supabase/
+
 # Seed scripts (require SUPABASE_SERVICE_ROLE_KEY in .env)
 node scripts/seed-countries.mjs
 node scripts/seed-checklist-templates.mjs
