@@ -45,10 +45,18 @@ export function CustomerLoginPage() {
     }
 
     // Small delay for RLS propagation
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-    // Refresh profile via context (handles all profile loading logic)
-    await refreshProfile();
+    // Refresh profile via context — returns true if customer profile exists
+    const hasProfile = await refreshProfile();
+
+    if (!hasProfile) {
+      // Auth succeeded but no customer profile — likely an admin user or registration issue
+      await supabase.auth.signOut();
+      setError(t('No customer account found for this email. Please register first.'));
+      setLoading(false);
+      return;
+    }
 
     setLoading(false);
     navigate(`/customer/${tenantSlug}`);

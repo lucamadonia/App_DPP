@@ -10,8 +10,16 @@ export function CustomerAuthCallbackPage() {
   useEffect(() => {
     async function handleCallback() {
       // Supabase auth automatically handles the token exchange via detectSessionInUrl
-      await refreshProfile();
-      navigate(`/customer/${tenantSlug}`, { replace: true });
+      // Small delay for RLS propagation after magic link token exchange
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const hasProfile = await refreshProfile();
+      if (hasProfile) {
+        navigate(`/customer/${tenantSlug}`, { replace: true });
+      } else {
+        // No customer profile found — redirect to login with error
+        navigate(`/customer/${tenantSlug}/login`, { replace: true });
+      }
     }
     handleCallback();
   }, [navigate, tenantSlug, refreshProfile]);

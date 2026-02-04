@@ -16,6 +16,7 @@
   "Use Magic Link instead": "Use Magic Link instead",
   "Use password instead": "Use password instead",
   "Invalid email or password": "Invalid email or password",
+  "No customer account found for this email. Please register first.": "No customer account found for this email. Please register first.",
   "Check your email": "Check your email",
   "We sent a login link to {{email}}": "We sent a login link to {{email}}",
   "Try again": "Try again",

@@ -27,7 +27,7 @@ export interface CustomerPortalContextType {
   isLoading: boolean;
   customerProfile: CustomerPortalProfile | null;
   reasons: RhReturnReason[];
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<boolean>;
   signOut: () => Promise<void>;
 }
 
@@ -54,15 +54,17 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
   const primaryColor = branding.primaryColor;
   const logoUrl = branding.logoUrl;
 
-  const refreshProfile = async () => {
+  const refreshProfile = async (): Promise<boolean> => {
     try {
       const profile = await getCustomerProfile();
       setCustomerProfile(profile);
       setIsAuthenticated(!!profile);
+      return !!profile;
     } catch (error) {
       console.error('Error refreshing customer profile:', error);
       setCustomerProfile(null);
       setIsAuthenticated(false);
+      return false;
     }
   };
 
@@ -127,21 +129,27 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
 
   // Check auth state
   useEffect(() => {
+    let initialCheckDone = false;
+
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await refreshProfile();
       }
+      initialCheckDone = true;
       setIsLoading(false);
     }
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        await refreshProfile();
-      } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Skip the initial SIGNED_IN event — already handled by checkAuth above
+      if (!initialCheckDone) return;
+
+      if (event === 'SIGNED_OUT' || !session) {
         setCustomerProfile(null);
         setIsAuthenticated(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        await refreshProfile();
       }
     });
 

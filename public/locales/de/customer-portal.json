@@ -16,6 +16,7 @@
   "Use Magic Link instead": "Stattdessen Magic Link verwenden",
   "Use password instead": "Stattdessen Passwort verwenden",
   "Invalid email or password": "Ung\u00fcltige E-Mail oder Passwort",
+  "No customer account found for this email. Please register first.": "Kein Kundenkonto f\u00fcr diese E-Mail gefunden. Bitte registrieren Sie sich zuerst.",
   "Check your email": "Pr\u00fcfen Sie Ihre E-Mail",
   "We sent a login link to {{email}}": "Wir haben einen Login-Link an {{email}} gesendet",
   "Try again": "Erneut versuchen",
