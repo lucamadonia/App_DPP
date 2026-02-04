@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import { SafeHtml } from '@/components/ui/safe-html';
 import {
@@ -17,30 +18,41 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { PublicProductTicketDialog } from '@/components/returns/public/PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreation';
+import { Button } from '@/components/ui/button';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateGovernment({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateGovernment({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <GovernmentCustomsView data={data} />;
   }
 
-  return <GovernmentConsumerView data={data} />;
+  return <GovernmentConsumerView data={data} product={product} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
 }
 
-function GovernmentConsumerView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale, consumerSections } = data;
+interface ConsumerViewProps extends ViewProps {
+  product: Product;
+  tenantId: string | null;
+}
+
+function GovernmentConsumerView({ data, product, tenantId }: ConsumerViewProps) {
+  const { isFieldVisible, t, locale, consumerSections } = data;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const ticketCreationEnabled = usePublicTicketCreationEnabled(tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -441,6 +453,21 @@ function GovernmentConsumerView({ data }: ViewProps) {
               </div>
             </div>
           )}
+
+          {/* Contact Support Button */}
+          {ticketCreationEnabled && (
+            <div className="border-t-2 border-gray-300 pt-4">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                variant="outline"
+                size="lg"
+                className="w-full border-2 border-gray-400 hover:bg-gray-100 font-semibold"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support', { ns: 'customer-portal' })}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -515,6 +542,16 @@ function GovernmentConsumerView({ data }: ViewProps) {
       <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-300">
         {t('Digital Product Passport')} &mdash; {product.gtin}
       </div>
+
+      {/* Ticket Dialog */}
+      {ticketCreationEnabled && tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          product={product}
+          tenantId={tenantId}
+        />
+      )}
     </div>
   );
 }

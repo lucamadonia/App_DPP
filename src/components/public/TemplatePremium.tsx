@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
+import { Button } from '@/components/ui/button';
 import {
   ShieldCheck,
   MapPin,
@@ -17,29 +19,35 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 import { RATING_TEXT_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplatePremium({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplatePremium({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <PremiumCustomsView data={data} />;
   }
 
-  return <PremiumConsumerView data={data} />;
+  return <PremiumConsumerView data={data} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
+  tenantId?: string | null;
 }
 
-function PremiumConsumerView({ data }: ViewProps) {
+function PremiumConsumerView({ data, tenantId }: ViewProps) {
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(data.product.tenantId);
   const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
@@ -394,6 +402,18 @@ function PremiumConsumerView({ data }: ViewProps) {
               </div>
             </div>
           )}
+
+          {ticketCreationEnabled && (
+            <div className="pt-6 border-t border-amber-400/20">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                className="w-full bg-amber-400 hover:bg-amber-500 text-gray-950"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support')}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -436,6 +456,13 @@ function PremiumConsumerView({ data }: ViewProps) {
       <div className="max-w-4xl mx-auto px-4 pb-12 space-y-8">
         {consumerSections.map(s => renderSection(s))}
       </div>
+
+      <PublicProductTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        product={product}
+        tenantId={tenantId ?? undefined}
+      />
     </div>
   );
 }

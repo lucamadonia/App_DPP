@@ -169,5 +169,6 @@
   "Return Issue": "Return Issue",
   "Account": "Account",
   "Other": "Other",
-  "Unable to register. Please try again later.": "Unable to register. Please try again later."
+  "Unable to register. Please try again later.": "Unable to register. Please try again later.",
+  "No customer account found. Please register first.": "No customer account found. Please register first."
 }

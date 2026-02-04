@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import {
   Package,
@@ -29,31 +30,37 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 import { RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateClassic({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateClassic({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <ClassicCustomsView data={data} />;
   }
 
-  return <ClassicConsumerView data={data} />;
+  return <ClassicConsumerView data={data} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
+  tenantId?: string | null;
 }
 
-function ClassicConsumerView({ data }: ViewProps) {
+function ClassicConsumerView({ data, tenantId }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -166,6 +173,19 @@ function ClassicConsumerView({ data }: ViewProps) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {ticketCreationEnabled && (
+            <div className="pt-4 border-t">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support')}
+              </Button>
             </div>
           )}
         </CardContent>
@@ -484,6 +504,13 @@ function ClassicConsumerView({ data }: ViewProps) {
       </Card>
 
       {consumerSections.map(s => renderSection(s))}
+
+      <PublicProductTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        product={product}
+        tenantId={tenantId ?? undefined}
+      />
     </div>
   );
 }

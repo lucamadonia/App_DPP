@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import {
   Package,
@@ -28,15 +29,18 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 import { RATING_GRADIENT_COLORS, RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { usePublicBranding } from '@/pages/public/PublicLayout';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
+  tenantId: string | null;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
 }
 
-export function TemplateModern({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateModern({ product, tenantId, visibilityV2, view, dppDesign }: DPPTemplateProps) {
   const { branding } = usePublicBranding();
   const primaryColor = branding?.primaryColor || '#3B82F6';
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign, primaryColor);
@@ -56,6 +60,8 @@ interface ViewProps {
 function ModernConsumerView({ data, primaryColor }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle, hero: heroResult } = styles;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -181,6 +187,18 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          {ticketCreationEnabled && (
+            <div className="pt-4 border-t">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support')}
+              </Button>
             </div>
           )}
         </div>
@@ -516,6 +534,17 @@ function ModernConsumerView({ data, primaryColor }: ViewProps) {
       <div className="container mx-auto px-4 space-y-8">
         {consumerSections.map(s => renderSection(s))}
       </div>
+
+      {ticketCreationEnabled && product.tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          tenantId={product.tenantId}
+          productName={product.name}
+          gtin={product.gtin}
+          serialNumber={product.serialNumber || ''}
+        />
+      )}
     </div>
   );
 }

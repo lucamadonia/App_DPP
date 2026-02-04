@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { Button } from '@/components/ui/button';
 import {
   HelpCircle,
   BookOpen,
@@ -17,29 +19,35 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateTechnical({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateTechnical({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <TechnicalCustomsView data={data} />;
   }
 
-  return <TechnicalConsumerView data={data} />;
+  return <TechnicalConsumerView data={data} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
+  tenantId?: string | null;
 }
 
-function TechnicalConsumerView({ data }: ViewProps) {
+function TechnicalConsumerView({ data, tenantId }: ViewProps) {
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(data.product.tenantId);
   const { product, isFieldVisible, t, locale, consumerSections } = data;
 
   const renderSection = (section: RenderableSection) => {
@@ -430,6 +438,19 @@ function TechnicalConsumerView({ data }: ViewProps) {
               </div>
             </div>
           )}
+
+          {ticketCreationEnabled && (
+            <div className="pt-4 border-t border-gray-200">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support')}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -477,6 +498,13 @@ function TechnicalConsumerView({ data }: ViewProps) {
 
         {consumerSections.map(s => renderSection(s))}
       </div>
+
+      <PublicProductTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        product={product}
+        tenantId={tenantId ?? undefined}
+      />
     </div>
   );
 }

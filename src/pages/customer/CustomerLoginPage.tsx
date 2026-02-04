@@ -7,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
-import { customerSendMagicLink } from '@/services/supabase/customer-portal';
+import { customerSendMagicLink, getCustomerProfile } from '@/services/supabase/customer-portal';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 
 export function CustomerLoginPage() {
   const { t } = useTranslation('customer-portal');
   const navigate = useNavigate();
-  const { tenantSlug, tenantName, branding, refreshProfile } = useCustomerPortal();
+  const { tenantSlug, tenantId, tenantName, branding, refreshProfile } = useCustomerPortal();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +44,24 @@ export function CustomerLoginPage() {
       return;
     }
 
+    // Small delay for RLS propagation
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     await refreshProfile();
+    const profile = await getCustomerProfile();
+
+    if (!profile) {
+      await supabase.auth.signOut();
+      setError(t('No customer account found. Please register first.'));
+      setLoading(false);
+      return;
+    }
+
+    // Log tenant mismatch as warning but allow login (profile may be multi-tenant)
+    if (profile.tenantId !== tenantId) {
+      console.warn(`Customer logged into different tenant. Expected: ${tenantId}, Got: ${profile.tenantId}`);
+    }
+
     setLoading(false);
     navigate(`/customer/${tenantSlug}`);
   };

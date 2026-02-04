@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
@@ -7,30 +8,42 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 import { RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { PublicProductTicketDialog } from '@/components/returns/public/PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreation';
+import { Button } from '@/components/ui/button';
+import { MessageSquare } from 'lucide-react';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateScientific({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateScientific({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <ScientificCustomsView data={data} />;
   }
 
-  return <ScientificConsumerView data={data} />;
+  return <ScientificConsumerView data={data} product={product} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
 }
 
-function ScientificConsumerView({ data }: ViewProps) {
-  const { product, isFieldVisible, consumerSections, t, locale } = data;
+interface ConsumerViewProps extends ViewProps {
+  product: Product;
+  tenantId: string | null;
+}
+
+function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) {
+  const { isFieldVisible, consumerSections, t, locale } = data;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const ticketCreationEnabled = usePublicTicketCreationEnabled(tenantId);
 
   // Description is rendered outside the consumerSections loop and gets section number 1 if visible
   const hasDescription = isFieldVisible('description') && product.description;
@@ -423,6 +436,21 @@ function ScientificConsumerView({ data }: ViewProps) {
               </table>
             </div>
           )}
+
+          {/* Contact Support Button */}
+          {ticketCreationEnabled && (
+            <div className="overflow-x-auto mt-6">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                variant="outline"
+                size="lg"
+                className="w-full border-2"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support', { ns: 'customer-portal' })}
+              </Button>
+            </div>
+          )}
         </div>
       </section>
     );
@@ -504,6 +532,16 @@ function ScientificConsumerView({ data }: ViewProps) {
           )}
         </div>
       </footer>
+
+      {/* Ticket Dialog */}
+      {ticketCreationEnabled && tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          product={product}
+          tenantId={tenantId}
+        />
+      )}
     </div>
   );
 }

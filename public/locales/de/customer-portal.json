@@ -169,5 +169,6 @@
   "Return Issue": "Retourenproblem",
   "Account": "Konto",
   "Other": "Sonstiges",
-  "Unable to register. Please try again later.": "Registrierung derzeit nicht m\u00f6glich. Bitte versuchen Sie es sp\u00e4ter erneut."
+  "Unable to register. Please try again later.": "Registrierung derzeit nicht m\u00f6glich. Bitte versuchen Sie es sp\u00e4ter erneut.",
+  "No customer account found. Please register first.": "Kein Kundenkonto gefunden. Bitte registrieren Sie sich zuerst."
 }

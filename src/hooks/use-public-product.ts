@@ -50,6 +50,7 @@ export type DPPTemplate = DPPTemplateName;
 
 export function usePublicProduct(gtin?: string, serial?: string) {
   const [product, setProduct] = useState<Product | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const [visibilityV2, setVisibilityV2] = useState<VisibilityConfigV2 | null>(null);
   const [dppTemplate, setDppTemplate] = useState<DPPTemplate>('modern');
   const [dppTemplateCustomer, setDppTemplateCustomer] = useState<DPPTemplate>('modern');
@@ -76,6 +77,7 @@ export function usePublicProduct(gtin?: string, serial?: string) {
         }
 
         setProduct(apiProduct);
+        setTenantId(apiProduct?.tenantId || null);
 
         const [visibility, qrSettings, designSettings] = await Promise.all([
           getPublicVisibilitySettings(gtin, serial),
@@ -103,5 +105,5 @@ export function usePublicProduct(gtin?: string, serial?: string) {
     loadData();
   }, [gtin, serial]);
 
-  return { product, visibilityV2, dppTemplate, dppTemplateCustomer, dppTemplateCustoms, dppDesign, loading };
+  return { product, tenantId, visibilityV2, dppTemplate, dppTemplateCustomer, dppTemplateCustoms, dppDesign, loading };
 }

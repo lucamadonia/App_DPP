@@ -1,24 +1,32 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import type { VisibilityConfigV2 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
+import { MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateMinimal({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
   const { product: p, isFieldVisible, t, locale, consumerSections, view: v, styles } = data;
   const { heading: headingStyle } = styles;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -283,6 +291,19 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
               </div>
             </div>
           )}
+
+          {ticketCreationEnabled && (
+            <div className="pt-6 border-t">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support')}
+              </Button>
+            </div>
+          )}
         </div>
       </section>
     );
@@ -404,6 +425,13 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign }: DPPT
       )}
 
       {consumerSections.map(s => renderSection(s))}
+
+      <PublicProductTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        product={p}
+        tenantId={tenantId ?? undefined}
+      />
     </div>
   );
 }

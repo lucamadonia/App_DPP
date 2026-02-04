@@ -119,21 +119,38 @@ function transformCustomerProfile(profile: any, customer: any): CustomerPortalPr
 
 export async function getCustomerProfile(): Promise<CustomerPortalProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    console.debug('getCustomerProfile: No authenticated user');
+    return null;
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('rh_customer_profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
+  if (profileError) {
+    if (profileError.code === 'PGRST116') {
+      console.debug('getCustomerProfile: Profile not found for user', user.id);
+    } else {
+      console.error('getCustomerProfile: Error fetching profile', profileError);
+    }
+    return null;
+  }
+
   if (!profile) return null;
 
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from('rh_customers')
     .select('*')
     .eq('id', profile.customer_id)
     .single();
+
+  if (customerError) {
+    console.error('getCustomerProfile: Error fetching customer', customerError);
+    return null;
+  }
 
   if (!customer) return null;
 
@@ -770,4 +787,161 @@ export async function getCustomerPortalBranding(tenantSlug: string): Promise<Cus
     branding,
     portalSettings,
   };
+}
+
+/**
+ * Check if public ticket creation is enabled for a tenant
+ */
+export async function isPublicTicketCreationEnabled(tenantId: string): Promise<boolean> {
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .single();
+
+  if (!tenant?.settings) return false;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings = tenant.settings as any;
+  const customerPortalSettings = settings.returnsHub?.customerPortal;
+  return customerPortalSettings?.features?.createTickets ?? false;
+}
+
+/**
+ * Create a support ticket from a public product page (unauthenticated)
+ */
+export async function createPublicProductTicket(params: {
+  tenantId: string;
+  email: string;
+  name?: string;
+  subject: string;
+  message: string;
+  productContext: {
+    productName: string;
+    gtin: string;
+    serialNumber: string;
+  };
+}): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
+  const { tenantId, email, name, subject, message, productContext } = params;
+
+  // Verify feature is enabled
+  const isEnabled = await isPublicTicketCreationEnabled(tenantId);
+  if (!isEnabled) {
+    return { success: false, error: 'Ticket creation is not enabled' };
+  }
+
+  // 1. Find or create customer
+  let customerId: string;
+
+  const { data: existingCustomer } = await supabase
+    .from('rh_customers')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+
+  if (existingCustomer) {
+    customerId = existingCustomer.id;
+  } else {
+    // Create new customer
+    const customerData = {
+      tenant_id: tenantId,
+      email: email.toLowerCase(),
+      first_name: name || email.split('@')[0],
+      last_name: null,
+      phone: null,
+      company: null,
+      addresses: [],
+      payment_methods: [],
+      communication_preferences: { email: true, sms: false, marketing: false },
+      lifecycle_stage: 'lead',
+      tags: ['public-ticket'],
+      notes: 'Customer created via public product page ticket',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: newCustomer, error: customerError } = await supabase
+      .from('rh_customers')
+      .insert(customerData)
+      .select('id')
+      .single();
+
+    if (customerError || !newCustomer) {
+      console.error('Error creating customer:', customerError);
+      return { success: false, error: 'Failed to create customer record' };
+    }
+
+    customerId = newCustomer.id;
+  }
+
+  // 2. Generate ticket number
+  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+
+  // Simple Luhn checksum for ticket number validation
+  const digits = (timestamp + random).split('').map(Number);
+  let sum = 0;
+  for (let i = digits.length - 1; i >= 0; i -= 2) {
+    sum += digits[i];
+    if (i > 0) {
+      const doubled = digits[i - 1] * 2;
+      sum += doubled > 9 ? doubled - 9 : doubled;
+    }
+  }
+  const checksum = (10 - (sum % 10)) % 10;
+  const ticketNumber = `TKT-${timestamp}-${random}${checksum}`;
+
+  // 3. Create ticket with product metadata
+  const ticketData = {
+    tenant_id: tenantId,
+    ticket_number: ticketNumber,
+    customer_id: customerId,
+    subject,
+    category: 'product_inquiry',
+    priority: 'normal',
+    status: 'open',
+    source: 'public_dpp',
+    tags: ['public-product-page'],
+    metadata: {
+      productName: productContext.productName,
+      gtin: productContext.gtin,
+      serialNumber: productContext.serialNumber,
+      source: 'public_product_page',
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: ticket, error: ticketError } = await supabase
+    .from('rh_tickets')
+    .insert(ticketData)
+    .select('id, ticket_number')
+    .single();
+
+  if (ticketError || !ticket) {
+    console.error('Error creating ticket:', ticketError);
+    return { success: false, error: 'Failed to create ticket' };
+  }
+
+  // 4. Create initial message
+  const messageData = {
+    ticket_id: ticket.id,
+    sender_type: 'customer',
+    sender_id: customerId,
+    content: message,
+    is_internal: false,
+    created_at: new Date().toISOString(),
+  };
+
+  const { error: messageError } = await supabase
+    .from('rh_ticket_messages')
+    .insert(messageData);
+
+  if (messageError) {
+    console.error('Error creating ticket message:', messageError);
+    // Ticket was created, but message failed - still return success
+  }
+
+  return { success: true, ticketNumber: ticket.ticket_number };
 }

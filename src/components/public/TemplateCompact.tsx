@@ -15,6 +15,8 @@ import {
   HelpCircle,
   BookOpen,
   Video,
+  MessageSquare,
+  Wrench,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,26 +28,30 @@ import { useDPPTemplateData } from '@/hooks/use-dpp-template-data';
 import { RATING_BG_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateCompact({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateCompact({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <CompactCustomsView data={data} />;
   }
 
-  return <CompactConsumerView data={data} />;
+  return <CompactConsumerView data={data} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
+  tenantId?: string | null;
 }
 
 // Tab config per DPPSectionId for consumer view
@@ -62,9 +68,11 @@ const SECTION_TAB_CONFIG: Record<DPPSectionId, { label: string; icon: React.Reac
 
 type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2' | 'support';
 
-function CompactConsumerView({ data }: ViewProps) {
+function CompactConsumerView({ data, tenantId }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(product.tenantId);
 
   // Build visible tabs from consumerSections (already ordered, filtered by visibility + data)
   const visibleTabs = consumerSections.map((section) => {
@@ -357,6 +365,20 @@ function CompactConsumerView({ data }: ViewProps) {
                   ))}
                 </div>
               )}
+
+              {ticketCreationEnabled && (
+                <div className="pt-2 border-t">
+                  <Button
+                    onClick={() => setTicketDialogOpen(true)}
+                    className="w-full"
+                    size="sm"
+                    variant="outline"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                    {t('Contact Support')}
+                  </Button>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -365,6 +387,13 @@ function CompactConsumerView({ data }: ViewProps) {
           <DPPSetComponentsSection components={product.components} cardStyle={cardStyle} headingStyle={headingStyle} t={t} />
         )}
       </div>
+
+      <PublicProductTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        product={product}
+        tenantId={tenantId ?? undefined}
+      />
     </div>
   );
 }

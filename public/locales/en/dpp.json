@@ -266,5 +266,22 @@
   "Included Products": "Included Products",
   "Set Components": "Set Components",
   "View Digital Product Passport": "View Digital Product Passport",
-  "{{count}} products in this set": "{{count}} products in this set"
+  "{{count}} products in this set": "{{count}} products in this set",
+  "Contact Support": "Contact Support",
+  "Ticket Created Successfully": "Ticket Created Successfully",
+  "Your ticket number is": "Your ticket number is",
+  "We will respond to your inquiry shortly via email.": "We will respond to your inquiry shortly via email.",
+  "Close": "Close",
+  "Serial": "Serial",
+  "Email Address": "Email Address",
+  "Your Name": "Your Name",
+  "John Doe": "John Doe",
+  "Subject": "Subject",
+  "Brief description of your issue": "Brief description of your issue",
+  "Message": "Message",
+  "Describe your issue or question in detail...": "Describe your issue or question in detail...",
+  "Cancel": "Cancel",
+  "Submit Ticket": "Submit Ticket",
+  "Failed to create ticket. Please try again.": "Failed to create ticket. Please try again.",
+  "Get help with this product": "Get help with this product"
 }

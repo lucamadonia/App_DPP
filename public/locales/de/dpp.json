@@ -266,5 +266,22 @@
   "Included Products": "Enthaltene Produkte",
   "Set Components": "Set-Komponenten",
   "View Digital Product Passport": "Digitalen Produktpass ansehen",
-  "{{count}} products in this set": "{{count}} Produkte in diesem Set"
+  "{{count}} products in this set": "{{count}} Produkte in diesem Set",
+  "Contact Support": "Support kontaktieren",
+  "Ticket Created Successfully": "Ticket erfolgreich erstellt",
+  "Your ticket number is": "Ihre Ticketnummer lautet",
+  "We will respond to your inquiry shortly via email.": "Wir werden Ihre Anfrage in Kürze per E-Mail beantworten.",
+  "Close": "Schließen",
+  "Serial": "Seriennummer",
+  "Email Address": "E-Mail-Adresse",
+  "Your Name": "Ihr Name",
+  "John Doe": "Max Mustermann",
+  "Subject": "Betreff",
+  "Brief description of your issue": "Kurze Beschreibung Ihres Anliegens",
+  "Message": "Nachricht",
+  "Describe your issue or question in detail...": "Beschreiben Sie Ihr Anliegen oder Ihre Frage im Detail...",
+  "Cancel": "Abbrechen",
+  "Submit Ticket": "Ticket absenden",
+  "Failed to create ticket. Please try again.": "Ticket konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+  "Get help with this product": "Hilfe zu diesem Produkt erhalten"
 }

@@ -18,7 +18,7 @@ import { TemplateAccessible } from '@/components/public/TemplateAccessible';
 export function PublicCustomerPage() {
   const { t } = useTranslation('dpp');
   const { gtin, serial } = useParams();
-  const { product, visibilityV2, dppTemplateCustomer, dppDesign, loading } = usePublicProduct(gtin, serial);
+  const { product, tenantId, visibilityV2, dppTemplateCustomer, dppDesign, loading } = usePublicProduct(gtin, serial);
 
   if (loading) {
     return (
@@ -58,7 +58,7 @@ export function PublicCustomerPage() {
     );
   }
 
-  const templateProps = { product, visibilityV2, view: 'consumer' as const, dppDesign };
+  const templateProps = { product, tenantId, visibilityV2, view: 'consumer' as const, dppDesign };
 
   switch (dppTemplateCustomer) {
     case 'classic':

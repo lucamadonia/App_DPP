@@ -55,9 +55,15 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
   const logoUrl = branding.logoUrl;
 
   const refreshProfile = async () => {
-    const profile = await getCustomerProfile();
-    setCustomerProfile(profile);
-    setIsAuthenticated(!!profile);
+    try {
+      const profile = await getCustomerProfile();
+      setCustomerProfile(profile);
+      setIsAuthenticated(!!profile);
+    } catch (error) {
+      console.error('Error refreshing customer profile:', error);
+      setCustomerProfile(null);
+      setIsAuthenticated(false);
+    }
   };
 
   const signOut = async () => {

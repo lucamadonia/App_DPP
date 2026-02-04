@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import { SafeHtml } from '@/components/ui/safe-html';
 import {
@@ -22,30 +23,41 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { RATING_BG_COLORS, RATING_STARS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { PublicProductTicketDialog } from '@/components/returns/public/PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreation';
+import { Button } from '@/components/ui/button';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateRetail({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateRetail({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <RetailCustomsView data={data} />;
   }
 
-  return <RetailConsumerView data={data} />;
+  return <RetailConsumerView data={data} product={product} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
 }
 
-function RetailConsumerView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
+interface ConsumerViewProps extends ViewProps {
+  product: Product;
+  tenantId: string | null;
+}
+
+function RetailConsumerView({ data, product, tenantId }: ConsumerViewProps) {
+  const { isFieldVisible, t, locale, consumerSections, styles } = data;
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const ticketCreationEnabled = usePublicTicketCreationEnabled(tenantId);
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
 
@@ -434,6 +446,21 @@ function RetailConsumerView({ data }: ViewProps) {
               </div>
             </div>
           )}
+
+          {/* Contact Support Button */}
+          {ticketCreationEnabled && (
+            <div className="border-t pt-4 mt-4">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                variant="outline"
+                size="lg"
+                className="w-full"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support', { ns: 'customer-portal' })}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -514,6 +541,16 @@ function RetailConsumerView({ data }: ViewProps) {
       )}
 
       {consumerSections.map(s => renderSection(s))}
+
+      {/* Ticket Dialog */}
+      {ticketCreationEnabled && tenantId && (
+        <PublicProductTicketDialog
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          product={product}
+          tenantId={tenantId}
+        />
+      )}
     </div>
   );
 }

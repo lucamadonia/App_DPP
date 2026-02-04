@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { Button } from '@/components/ui/button';
 import {
   Leaf,
   Recycle,
@@ -19,29 +21,35 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { RATING_ECO_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { PublicProductTicketDialog } from './PublicProductTicketDialog';
+import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
 interface DPPTemplateProps {
   product: Product;
   visibilityV2: VisibilityConfigV2 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
+  tenantId: string | null;
 }
 
-export function TemplateEcoFriendly({ product, visibilityV2, view, dppDesign }: DPPTemplateProps) {
+export function TemplateEcoFriendly({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
 
   if (view === 'customs') {
     return <EcoFriendlyCustomsView data={data} />;
   }
 
-  return <EcoFriendlyConsumerView data={data} />;
+  return <EcoFriendlyConsumerView data={data} tenantId={tenantId} />;
 }
 
 interface ViewProps {
   data: ReturnType<typeof useDPPTemplateData>;
+  tenantId?: string | null;
 }
 
-function EcoFriendlyConsumerView({ data }: ViewProps) {
+function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(data.product.tenantId);
   const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
@@ -420,6 +428,18 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
               </div>
             </div>
           )}
+
+          {ticketCreationEnabled && (
+            <div className="pt-6 border-t border-green-200">
+              <Button
+                onClick={() => setTicketDialogOpen(true)}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {t('Contact Support')}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -466,6 +486,13 @@ function EcoFriendlyConsumerView({ data }: ViewProps) {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {consumerSections.map(s => renderSection(s))}
       </div>
+
+      <PublicProductTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        product={product}
+        tenantId={tenantId ?? undefined}
+      />
     </div>
   );
 }
