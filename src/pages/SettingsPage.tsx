@@ -691,7 +691,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     <Label htmlFor="appName">{t('App Name')}</Label>
                     <Input
                       id="appName"
-                      placeholder="DPP Manager"
+                      placeholder="Trackbliss"
                       value={brandingForm.appName || ''}
                       onChange={(e) =>
                         setBrandingForm((prev) => ({ ...prev, appName: e.target.value }))

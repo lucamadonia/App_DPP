@@ -319,7 +319,7 @@ export async function getPublicTenantBranding(tenantId: string): Promise<Brandin
   const branding: BrandingSettings = {
     ...settings?.branding,
     // Use tenant.name as fallback for appName
-    appName: settings?.branding?.appName || data.name || 'DPP Manager',
+    appName: settings?.branding?.appName || data.name || 'Trackbliss',
     // Use tenant.logo as fallback
     logo: settings?.branding?.logo || data.logo,
   };

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**DPP Manager** — React SPA zur Verwaltung digitaler Produktpässe (EU-ESPR-Verordnung) mit integriertem Returns Hub (Retouren-Management, Ticket-System, Kunden-Portal), AI Compliance Check, Custom-Domain White-Labeling und DPP Design System. Multi-Tenant SaaS mit Supabase-Backend. Deutsche und englische Benutzeroberfläche.
+**Trackbliss** — React SPA zur Verwaltung digitaler Produktpässe (EU-ESPR-Verordnung) mit integriertem Returns Hub (Retouren-Management, Ticket-System, Kunden-Portal), AI Compliance Check, Custom-Domain White-Labeling und DPP Design System. Multi-Tenant SaaS mit Supabase-Backend. Deutsche und englische Benutzeroberfläche.
 
 ## Commands
 

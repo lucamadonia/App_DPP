@@ -28,7 +28,7 @@ export async function* streamCompletion(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
       'HTTP-Referer': window.location.origin,
-      'X-Title': 'DPP Manager',
+      'X-Title': 'Trackbliss',
     },
     body: JSON.stringify({
       model: MODEL,
