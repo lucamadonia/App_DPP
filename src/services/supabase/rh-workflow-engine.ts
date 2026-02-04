@@ -23,7 +23,7 @@ import type {
 import type { RhReturn, RhTicket, RhCustomer, ReturnStatus } from '@/types/returns-hub';
 import { supabase } from '@/lib/supabase';
 import { getReturnsHubSettings } from './rh-settings';
-import { deserializeWorkflowGraph } from './rh-workflows';
+import { deserializeWorkflowGraph, buildGraphFromLegacy } from './rh-workflows';
 import { updateReturn, updateReturnStatus, approveReturn, rejectReturn, getReturn } from './returns';
 import { addTimelineEntry } from './return-timeline';
 import { createRhTicket, updateRhTicket, getRhTicket, addRhTicketMessage } from './rh-tickets';
@@ -84,7 +84,17 @@ export async function executeWorkflowsForEvent(
       .eq('active', true)
       .order('sort_order');
 
-    if (error || !rules?.length) return;
+    if (error) {
+      console.error(`[workflow-engine] Failed to load rules for "${eventType}":`, error.message);
+      return;
+    }
+    if (!rules?.length) {
+      console.log(`[workflow-engine] No active rules found for trigger "${eventType}" (tenant: ${context.tenantId})`);
+      return;
+    }
+
+    console.log(`[workflow-engine] Found ${rules.length} active rule(s) for trigger "${eventType}"`);
+
 
     // Hydrate context entities if not already present
     const ctx = await hydrateContext(context);
@@ -96,12 +106,32 @@ export async function executeWorkflowsForEvent(
         continue;
       }
 
-      const graph = deserializeWorkflowGraph(rule.conditions || {});
-      if (!graph) continue;
+      let graph = deserializeWorkflowGraph(rule.conditions || {});
+      if (!graph) {
+        // Attempt on-the-fly migration of legacy rule
+        if (rule.actions?.length) {
+          console.warn(`[workflow-engine] Rule "${rule.name}" (${rule.id}) is legacy format — migrating on-the-fly`);
+          graph = buildGraphFromLegacy(rule.trigger_type, rule.actions);
+          // Persist migration so this only happens once
+          supabase
+            .from('rh_workflow_rules')
+            .update({ conditions: graph as unknown as Record<string, unknown>, updated_at: new Date().toISOString() })
+            .eq('id', rule.id)
+            .then(({ error: migErr }) => {
+              if (migErr) console.error(`[workflow-engine] Failed to persist migration for rule "${rule.name}":`, migErr.message);
+              else console.log(`[workflow-engine] Persisted migration for rule "${rule.name}"`);
+            });
+        } else {
+          console.warn(`[workflow-engine] Rule "${rule.name}" (${rule.id}) has no valid graph and no actions — skipping`);
+          continue;
+        }
+      }
 
       executingRuleIds.add(rule.id);
       try {
+        console.log(`[workflow-engine] Executing rule "${rule.name}" (${rule.id}) — ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
         await walkGraph(graph, ctx);
+        console.log(`[workflow-engine] Rule "${rule.name}" completed successfully`);
       } catch (err) {
         console.error(`[workflow-engine] Error executing rule "${rule.name}":`, err);
       } finally {
@@ -155,7 +185,10 @@ async function hydrateContext(ctx: WorkflowEventContext): Promise<WorkflowEventC
 async function walkGraph(graph: WorkflowGraph, ctx: WorkflowEventContext): Promise<void> {
   // Find the trigger node
   const triggerNode = graph.nodes.find((n) => n.type === 'trigger');
-  if (!triggerNode) return;
+  if (!triggerNode) {
+    console.warn('[workflow-engine] No trigger node found in graph — aborting walk');
+    return;
+  }
 
   // Check trigger-level filters
   const triggerData = triggerNode.data as TriggerNodeData;
@@ -163,7 +196,8 @@ async function walkGraph(graph: WorkflowGraph, ctx: WorkflowEventContext): Promi
     for (const filter of triggerData.filters) {
       const fieldValue = resolveFieldValue(filter.field, ctx);
       if (!applyOperator(filter.operator, fieldValue, filter.value)) {
-        return; // Trigger filter not met, skip this rule
+        console.log(`[workflow-engine] Trigger filter not met: ${filter.field} ${filter.operator} ${String(filter.value)} (actual: ${String(fieldValue)})`);
+        return;
       }
     }
   }

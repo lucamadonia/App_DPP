@@ -2,8 +2,76 @@
  * Supabase Returns Hub Workflow Rules Service
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { RhWorkflowRule } from '@/types/returns-hub';
-import type { WorkflowGraph } from '@/types/workflow-builder';
+import type { RhWorkflowRule, RhWorkflowAction } from '@/types/returns-hub';
+import type { WorkflowGraph, WorkflowNode, WorkflowEdge, TriggerEventType, WorkflowActionType } from '@/types/workflow-builder';
+
+// ============================================
+// LEGACY → V2 MIGRATION MAPS
+// ============================================
+
+const LEGACY_TRIGGER_MAP: Record<string, TriggerEventType> = {
+  status_changed: 'return_status_changed',
+  return_overdue: 'return_created', // fallback — return_overdue not implemented in engine
+};
+
+const LEGACY_ACTION_MAP: Record<string, WorkflowActionType> = {
+  assign_to: 'assign',
+  send_notification: 'email_send_template',
+  add_tag: 'customer_add_tag',
+};
+
+/**
+ * Build a WorkflowGraph from a legacy rule's trigger type and actions array.
+ * Maps old trigger/action names to the current engine-compatible names.
+ */
+export function buildGraphFromLegacy(
+  triggerType: string,
+  actions: RhWorkflowAction[]
+): WorkflowGraph {
+  const mappedTrigger = (LEGACY_TRIGGER_MAP[triggerType] || triggerType) as TriggerEventType;
+
+  const nodes: WorkflowNode[] = [];
+  const edges: WorkflowEdge[] = [];
+
+  const triggerId = 'trigger-1';
+  nodes.push({
+    id: triggerId,
+    type: 'trigger',
+    position: { x: 250, y: 50 },
+    data: { eventType: mappedTrigger },
+    label: 'Trigger',
+  });
+
+  let prevId = triggerId;
+  actions.forEach((action, i) => {
+    const mappedType = (LEGACY_ACTION_MAP[action.type] || action.type) as WorkflowActionType;
+    const actionId = `action-${i + 1}`;
+    nodes.push({
+      id: actionId,
+      type: 'action',
+      position: { x: 250, y: 150 + i * 100 },
+      data: { actionType: mappedType, params: action.params || {} },
+      label: mappedType,
+    });
+    edges.push({
+      id: `edge-${prevId}-${actionId}`,
+      source: prevId,
+      target: actionId,
+    });
+    prevId = actionId;
+  });
+
+  return {
+    _graphVersion: 2,
+    nodes,
+    edges,
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+// ============================================
+// SERIALIZATION
+// ============================================
 
 /**
  * Serialize a WorkflowGraph into the conditions/actions JSONB columns.
@@ -70,7 +138,53 @@ export async function getRhWorkflowRules(): Promise<RhWorkflowRule[]> {
     return [];
   }
 
-  return (data || []).map((row: any) => transformWorkflowRule(row));
+  const rules = (data || []).map((row: any) => transformWorkflowRule(row));
+
+  // Auto-migrate legacy rules that don't have _graphVersion: 2
+  await migrateLegacyRules(rules);
+
+  return rules;
+}
+
+/**
+ * Finds legacy rules (no _graphVersion: 2) and migrates them to graph format.
+ * Updates the DB in place and mutates the rule objects so callers see the new data.
+ */
+async function migrateLegacyRules(rules: RhWorkflowRule[]): Promise<void> {
+  const legacyRules = rules.filter(
+    (r) => !(r.conditions as { _graphVersion?: number })?._graphVersion
+  );
+
+  if (!legacyRules.length) return;
+
+  console.log(`[workflow-migration] Migrating ${legacyRules.length} legacy rule(s) to graph format`);
+
+  for (const rule of legacyRules) {
+    try {
+      const graph = buildGraphFromLegacy(rule.triggerType, rule.actions);
+      const mappedTriggerType = (LEGACY_TRIGGER_MAP[rule.triggerType] || rule.triggerType) as string;
+
+      const { error } = await supabase
+        .from('rh_workflow_rules')
+        .update({
+          conditions: graph as unknown as Record<string, unknown>,
+          trigger_type: mappedTriggerType,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rule.id);
+
+      if (error) {
+        console.error(`[workflow-migration] Failed to migrate rule "${rule.name}":`, error.message);
+      } else {
+        // Update in-memory object so the caller sees the migrated data
+        rule.conditions = graph as unknown as Record<string, unknown>;
+        rule.triggerType = mappedTriggerType;
+        console.log(`[workflow-migration] Migrated rule "${rule.name}" (${rule.id})`);
+      }
+    } catch (err) {
+      console.error(`[workflow-migration] Error migrating rule "${rule.name}":`, err);
+    }
+  }
 }
 
 export async function createRhWorkflowRule(

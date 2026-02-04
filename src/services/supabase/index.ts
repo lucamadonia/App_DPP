@@ -315,6 +315,7 @@ export {
   deleteRhWorkflowRule,
   serializeWorkflowGraph,
   deserializeWorkflowGraph,
+  buildGraphFromLegacy,
 } from './rh-workflows';
 
 // Returns Hub - Workflow Engine
