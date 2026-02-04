@@ -10,6 +10,7 @@ const KNOWN_HOSTS = [
   'app-dpp.vercel.app',
   'dpp-app.fambliss.eu',
   'trackbliss.eu',
+  'www.trackbliss.eu',
 ];
 
 const SESSION_CACHE_PREFIX = 'domain-resolution:';
