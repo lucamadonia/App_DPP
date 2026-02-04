@@ -195,7 +195,7 @@ function CustomerPortalContent() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
           <div className="flex flex-col sm:flex-row items-center gap-2">
             {branding.showPoweredBy !== false && (
-              <span>Powered by DPP Manager</span>
+              <span>Powered by Trackbliss</span>
             )}
             {branding.copyrightText && (
               <span>{branding.copyrightText}</span>

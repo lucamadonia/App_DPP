@@ -165,7 +165,7 @@ export function applyDocumentTitle(title: string): void {
  * Reset document title to default
  */
 export function resetDocumentTitle(): void {
-  document.title = 'DPP Manager';
+  document.title = 'Trackbliss';
 }
 
 /**
@@ -200,8 +200,8 @@ export function resetBranding(): void {
  * Default branding values
  */
 export const DEFAULT_BRANDING = {
-  appName: 'DPP Manager',
+  appName: 'Trackbliss',
   primaryColor: '#3B82F6',
   favicon: '/vite.svg',
-  poweredByText: 'Powered by DPP Manager',
+  poweredByText: 'Powered by Trackbliss',
 } as const;

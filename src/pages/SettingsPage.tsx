@@ -405,7 +405,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           </TabsTrigger>
           <TabsTrigger value="branding" className="flex items-center gap-2 flex-shrink-0">
             <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('Branding')}</span>
+            <span className="hidden sm:inline">{t('App Branding')}</span>
           </TabsTrigger>
           <TabsTrigger value="dpp-design" className="flex items-center gap-2 flex-shrink-0">
             <Paintbrush className="h-4 w-4" />
@@ -705,7 +705,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     <Label htmlFor="poweredBy">{t('Footer Text')}</Label>
                     <Input
                       id="poweredBy"
-                      placeholder="Powered by DPP Manager"
+                      placeholder="Powered by Trackbliss"
                       value={brandingForm.poweredByText || ''}
                       onChange={(e) =>
                         setBrandingForm((prev) => ({ ...prev, poweredByText: e.target.value }))
@@ -816,7 +816,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                             <Globe className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           )}
                           <span className="text-xs truncate">
-                            {brandingForm.appName || 'DPP Manager'}
+                            {brandingForm.appName || 'Trackbliss'}
                           </span>
                           <X className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
                         </div>
@@ -849,7 +849,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                           {(brandingForm.appName || 'D').charAt(0)}
                         </div>
                       )}
-                      <span className="text-sm font-medium">{brandingForm.appName || 'DPP Manager'}</span>
+                      <span className="text-sm font-medium">{brandingForm.appName || 'Trackbliss'}</span>
                     </div>
                   </div>
                 </div>
@@ -967,7 +967,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         </div>
                       )}
                       <span className="font-semibold text-sm truncate">
-                        {brandingForm.appName || 'DPP Manager'}
+                        {brandingForm.appName || 'Trackbliss'}
                       </span>
                     </div>
                     {/* Nav Items */}
@@ -1007,7 +1007,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         {(brandingForm.appName || 'D').charAt(0)}
                       </div>
                     )}
-                    <span className="font-medium text-sm">{brandingForm.appName || 'DPP Manager'}</span>
+                    <span className="font-medium text-sm">{brandingForm.appName || 'Trackbliss'}</span>
                   </div>
                   {/* Content */}
                   <div className="p-4 space-y-3">
@@ -1046,7 +1046,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   {/* Footer */}
                   <div className="border-t px-4 py-2">
                     <p className="text-xs text-muted-foreground">
-                      {brandingForm.poweredByText || 'Powered by DPP Manager'}
+                      {brandingForm.poweredByText || 'Powered by Trackbliss'}
                     </p>
                   </div>
                 </div>

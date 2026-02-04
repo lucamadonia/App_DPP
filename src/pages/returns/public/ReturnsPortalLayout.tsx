@@ -168,7 +168,7 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
         {/* Footer */}
         <footer className="border-t py-6 bg-white">
           <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span>Powered by DPP Manager</span>
+            <span>Powered by Trackbliss</span>
             <div className="flex items-center gap-4">
               <span className="hover:text-foreground transition-colors cursor-default">
                 {t('Privacy Policy')}

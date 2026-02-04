@@ -128,9 +128,9 @@ export function ProductsPage() {
   const getTenantName = async () => {
     try {
       const tenant = await getCurrentTenant();
-      return tenant?.name || 'DPP Manager';
+      return tenant?.name || 'Trackbliss';
     } catch {
-      return 'DPP Manager';
+      return 'Trackbliss';
     }
   };
 
@@ -294,7 +294,7 @@ export function ProductsPage() {
               <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">{t('No products available')}</h3>
               <p className="mt-2 text-muted-foreground">
-                {t('Create your first product to get started with DPP Manager.')}
+                {t('Create your first product to get started with Trackbliss.')}
               </p>
               <Button className="mt-6" asChild>
                 <Link to="/products/new">
