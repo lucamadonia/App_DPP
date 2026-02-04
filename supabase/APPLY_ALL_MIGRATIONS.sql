@@ -151,28 +151,32 @@ CREATE TRIGGER on_auth_user_created
 -- ============================================
 
 -- Allow anon users to SELECT from rh_customers (email lookup)
-CREATE POLICY IF NOT EXISTS "Allow anon to lookup customer by email"
+DROP POLICY IF EXISTS "Allow anon to lookup customer by email" ON rh_customers;
+CREATE POLICY "Allow anon to lookup customer by email"
 ON rh_customers
 FOR SELECT
 TO anon
 USING (true);
 
 -- Allow anon users to INSERT into rh_customers
-CREATE POLICY IF NOT EXISTS "Allow anon to create customer records"
+DROP POLICY IF EXISTS "Allow anon to create customer records" ON rh_customers;
+CREATE POLICY "Allow anon to create customer records"
 ON rh_customers
 FOR INSERT
 TO anon
 WITH CHECK (true);
 
 -- Allow anon users to INSERT into rh_tickets
-CREATE POLICY IF NOT EXISTS "Allow anon to create tickets"
+DROP POLICY IF EXISTS "Allow anon to create tickets" ON rh_tickets;
+CREATE POLICY "Allow anon to create tickets"
 ON rh_tickets
 FOR INSERT
 TO anon
 WITH CHECK (true);
 
 -- Allow anon users to INSERT into rh_ticket_messages
-CREATE POLICY IF NOT EXISTS "Allow anon to create ticket messages"
+DROP POLICY IF EXISTS "Allow anon to create ticket messages" ON rh_ticket_messages;
+CREATE POLICY "Allow anon to create ticket messages"
 ON rh_ticket_messages
 FOR INSERT
 TO anon
@@ -184,7 +188,8 @@ WITH CHECK (true);
 -- ============================================
 
 -- Allow public (anon) users to read visibility settings for product pages
-CREATE POLICY IF NOT EXISTS "Allow public read of visibility settings"
+DROP POLICY IF EXISTS "Allow public read of visibility settings" ON visibility_settings;
+CREATE POLICY "Allow public read of visibility settings"
 ON visibility_settings
 FOR SELECT
 TO anon
