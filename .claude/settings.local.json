@@ -39,7 +39,8 @@
       "Bash(gh release list:*)",
       "Bash(git tag:*)",
       "Bash(find:*)",
-      "Bash(del \"C:\\\\Users\\\\luca\\\\projects\\\\app_dpp\\\\src\\\\components\\\\returns\\\\CustomerPortalSettingsTab.tsx\")"
+      "Bash(del \"C:\\\\Users\\\\luca\\\\projects\\\\app_dpp\\\\src\\\\components\\\\returns\\\\CustomerPortalSettingsTab.tsx\")",
+      "Bash(python -m json.tool:*)"
     ]
   }
 }
