@@ -912,7 +912,10 @@ export async function createPublicProductTicket(params: {
   const ticketNumber = `TKT-${timestamp}-${random}${checksum}`;
 
   // 3. Create ticket with product metadata
+  // Generate UUID client-side to avoid needing a SELECT policy for anon
+  const ticketId = crypto.randomUUID();
   const ticketData = {
+    id: ticketId,
     tenant_id: tenantId,
     ticket_number: ticketNumber,
     customer_id: customerId,
@@ -932,23 +935,25 @@ export async function createPublicProductTicket(params: {
     updated_at: new Date().toISOString(),
   };
 
-  const { data: ticket, error: ticketError } = await supabase
+  const { error: ticketError } = await supabase
     .from('rh_tickets')
-    .insert(ticketData)
-    .select('id, ticket_number')
-    .single();
+    .insert(ticketData);
 
-  if (ticketError || !ticket) {
+  if (ticketError) {
     console.error('Error creating ticket:', ticketError);
     return { success: false, error: 'Failed to create ticket' };
   }
 
   // 4. Create initial message
   const messageData = {
-    ticket_id: ticket.id,
+    ticket_id: ticketId,
+    tenant_id: tenantId,
     sender_type: 'customer',
     sender_id: customerId,
+    sender_name: name || email.split('@')[0],
+    sender_email: email.toLowerCase(),
     content: message,
+    attachments: [],
     is_internal: false,
     created_at: new Date().toISOString(),
   };
@@ -962,7 +967,7 @@ export async function createPublicProductTicket(params: {
     // Ticket was created, but message failed - still return success
   }
 
-  return { success: true, ticketNumber: ticket.ticket_number };
+  return { success: true, ticketNumber };
 }
 
 /**
@@ -1055,7 +1060,10 @@ export async function createPublicReturnTicket(params: {
   const ticketNumber = generateTicketNumber();
 
   // 6. Create ticket
+  // Generate UUID client-side to avoid needing a SELECT policy for anon
+  const ticketId = crypto.randomUUID();
   const ticketData = {
+    id: ticketId,
     tenant_id: tenantId,
     ticket_number: ticketNumber,
     customer_id: customerId,
@@ -1068,23 +1076,25 @@ export async function createPublicReturnTicket(params: {
     created_at: new Date().toISOString(),
   };
 
-  const { data: ticket, error: ticketError } = await supabase
+  const { error: ticketError } = await supabase
     .from('rh_tickets')
-    .insert(ticketData)
-    .select('id, ticket_number')
-    .single();
+    .insert(ticketData);
 
-  if (ticketError || !ticket) {
+  if (ticketError) {
     console.error('Error creating ticket:', ticketError);
     return { success: false, error: 'Failed to create ticket' };
   }
 
   // 7. Create initial message
   const messageData = {
-    ticket_id: ticket.id,
+    ticket_id: ticketId,
+    tenant_id: tenantId,
     sender_type: 'customer',
     sender_id: customerId,
+    sender_name: normalizedEmail.split('@')[0],
+    sender_email: normalizedEmail,
     content: message,
+    attachments: [],
     is_internal: false,
     created_at: new Date().toISOString(),
   };
@@ -1107,7 +1117,7 @@ export async function createPublicReturnTicket(params: {
       {
         recipientEmail: normalizedEmail,
         customerName: normalizedEmail.split('@')[0],
-        ticketNumber: ticket.ticket_number,
+        ticketNumber,
         subject,
       }
     );
@@ -1116,5 +1126,5 @@ export async function createPublicReturnTicket(params: {
     // Non-critical - ticket was still created
   }
 
-  return { success: true, ticketNumber: ticket.ticket_number };
+  return { success: true, ticketNumber };
 }
