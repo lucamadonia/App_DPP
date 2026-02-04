@@ -217,8 +217,10 @@ function NormalAppRoutes() {
         <Route element={<ReturnsPortalLayout />}>
           <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
           <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
-          <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
         </Route>
+
+        {/* Standalone tracking page (loads branding dynamically) */}
+        <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
 
         {/* Customer Portal (tenant-branded, own auth) */}
         <Route path="customer/:tenantSlug" element={<CustomerPortalLayout />}>

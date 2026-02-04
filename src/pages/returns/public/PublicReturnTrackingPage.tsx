@@ -10,9 +10,11 @@ import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
-import { publicTrackReturn, publicGetReturnItems } from '@/services/supabase';
+import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding } from '@/services/supabase';
 import { supabase } from '@/lib/supabase';
+import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import type { RhReturn, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
+import type { CustomerPortalBrandingOverrides } from '@/types/customer-portal';
 
 interface ReturnItem {
   id: string;
@@ -34,6 +36,8 @@ export function PublicReturnTrackingPage() {
   const [items, setItems] = useState<ReturnItem[]>([]);
   const [supportOpen, setSupportOpen] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string>('');
+  const [tenantName, setTenantName] = useState<string>('');
+  const [branding, setBranding] = useState<CustomerPortalBrandingOverrides | null>(null);
 
   // Auto-search if returnNumber is in URL
   useEffect(() => {
@@ -63,7 +67,7 @@ export function PublicReturnTrackingPage() {
     setReturnData(result.returnData);
     setTimeline(result.timeline as TimelineType[]);
 
-    // Fetch tenant slug from tenant ID
+    // Fetch tenant slug and branding from tenant ID
     if (result.returnData.tenantId) {
       const { data: tenant } = await supabase
         .from('tenants')
@@ -72,6 +76,21 @@ export function PublicReturnTrackingPage() {
         .single();
       if (tenant?.slug) {
         setTenantSlug(tenant.slug);
+
+        // Load branding
+        const brandingData = await getCustomerPortalBranding(tenant.slug);
+        if (brandingData) {
+          setTenantName(brandingData.name);
+          setBranding(brandingData.branding);
+          // Apply primary color to the page
+          if (brandingData.branding.primaryColor) {
+            applyPrimaryColor(brandingData.branding.primaryColor);
+          }
+          // Update document title
+          if (brandingData.name) {
+            document.title = `${brandingData.name} - ${t('Track Return')}`;
+          }
+        }
       }
     }
 
@@ -89,10 +108,44 @@ export function PublicReturnTrackingPage() {
     repair: 'Repair',
   };
 
+  // Simple branded header
+  const renderHeader = () => (
+    <header className="bg-white border-b sticky top-0 z-50">
+      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {branding?.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={tenantName}
+              className="h-9 w-9 rounded-lg object-contain"
+            />
+          ) : (
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+              style={{ backgroundColor: branding?.primaryColor || '#3B82F6' }}
+            >
+              <Package className="h-5 w-5" />
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-foreground">
+              {tenantName || t('Returns Portal')}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {t('Track Return')}
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+
   // Search form view
   if (!returnData && !loading) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-12 animate-fade-in-up">
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        {renderHeader()}
+        <div className="max-w-lg mx-auto px-4 py-12 animate-fade-in-up">
         <Card>
           <CardHeader className="text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mx-auto mb-3">
@@ -146,6 +199,7 @@ export function PublicReturnTrackingPage() {
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -163,7 +217,10 @@ export function PublicReturnTrackingPage() {
   if (!returnData) return null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-4 animate-fade-in-up">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {renderHeader()}
+      <main className="flex-1">
+        <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-4 animate-fade-in-up">
       {/* Status Pipeline */}
       <Card>
         <CardHeader className="pb-2">
@@ -291,6 +348,8 @@ export function PublicReturnTrackingPage() {
         returnNumber={returnData.returnNumber}
         tenantSlug={tenantSlug}
       />
+        </div>
+      </main>
     </div>
   );
 }
