@@ -245,7 +245,15 @@ export type LabelFieldKey =
   | 'quantity'
   | 'eprelNumber'
   | 'weeeNumber'
-  | 'madeIn';
+  | 'madeIn'
+  // ESPR fields
+  | 'uniqueProductId'
+  | 'productionDate'
+  | 'recycledContentPercentage'
+  | 'durabilityYears'
+  | 'repairabilityScore'
+  | 'dppRegistryId'
+  | 'safetyInformation';
 
 export interface LabelFieldMetadata {
   key: LabelFieldKey;
@@ -284,6 +292,19 @@ export const LABEL_FIELD_METADATA: LabelFieldMetadata[] = [
   { key: 'eprelNumber', labelKey: 'ml.field.eprelNumber', section: 'compliance' },
   { key: 'weeeNumber', labelKey: 'ml.field.weeeNumber', section: 'compliance' },
   { key: 'madeIn', labelKey: 'ml.field.madeIn', section: 'footer' },
+
+  // ESPR fields - Identity
+  { key: 'uniqueProductId', labelKey: 'ml.field.uniqueProductId', section: 'identity' },
+  { key: 'productionDate', labelKey: 'ml.field.productionDate', section: 'identity' },
+
+  // ESPR fields - Sustainability
+  { key: 'recycledContentPercentage', labelKey: 'ml.field.recycledContentPercentage', section: 'sustainability', format: 'number' },
+  { key: 'durabilityYears', labelKey: 'ml.field.durabilityYears', section: 'sustainability', format: 'number' },
+  { key: 'repairabilityScore', labelKey: 'ml.field.repairabilityScore', section: 'sustainability', format: 'number' },
+
+  // ESPR fields - Compliance
+  { key: 'dppRegistryId', labelKey: 'ml.field.dppRegistryId', section: 'compliance' },
+  { key: 'safetyInformation', labelKey: 'ml.field.safetyInformation', section: 'compliance' },
 ];
 
 // ---------------------------------------------------------------------------

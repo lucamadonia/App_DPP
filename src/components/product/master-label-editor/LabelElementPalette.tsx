@@ -62,7 +62,7 @@ const FIELD_GROUPS: FieldGroup[] = [
   {
     id: 'identity',
     labelKey: 'ml.fieldGroup.identity',
-    fields: ['productName', 'gtin', 'batchNumber', 'serialNumber', 'category', 'countryOfOrigin', 'madeIn'],
+    fields: ['productName', 'gtin', 'batchNumber', 'serialNumber', 'uniqueProductId', 'productionDate', 'category', 'countryOfOrigin', 'madeIn'],
   },
   {
     id: 'manufacturer',
@@ -80,9 +80,14 @@ const FIELD_GROUPS: FieldGroup[] = [
     fields: ['netWeight', 'grossWeight', 'quantity', 'hsCode'],
   },
   {
+    id: 'sustainability',
+    labelKey: 'ml.fieldGroup.sustainability',
+    fields: ['recycledContentPercentage', 'durabilityYears', 'repairabilityScore'],
+  },
+  {
     id: 'compliance',
     labelKey: 'ml.fieldGroup.compliance',
-    fields: ['eprelNumber', 'weeeNumber'],
+    fields: ['eprelNumber', 'weeeNumber', 'dppRegistryId', 'safetyInformation'],
   },
 ];
 

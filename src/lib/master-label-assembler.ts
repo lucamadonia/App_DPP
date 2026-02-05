@@ -290,6 +290,14 @@ export function assembleMasterLabelData(params: AssembleMasterLabelParams): Mast
     hsCode: product.hsCode,
     countryOfOrigin: product.countryOfOrigin,
     registrations: product.registrations,
+    // ESPR fields
+    uniqueProductId: product.uniqueProductId,
+    productionDate: product.productionDate,
+    recycledContentPercentage: product.recycledContentPercentage,
+    durabilityYears: product.durabilityYears,
+    repairabilityScore: product.repairabilityScore,
+    dppRegistryId: product.dppRegistryId,
+    safetyInformation: product.safetyInformation,
   };
 
   if (variant === 'b2b') {
@@ -373,6 +381,23 @@ export function resolveFieldValue(fieldKey: LabelFieldKey, data: MasterLabelData
       return data.registrations?.weeeRegistration || '';
     case 'madeIn':
       return data.countryOfOrigin || data.b2cTargetCountry || '';
+
+    // ESPR fields
+    case 'uniqueProductId':
+      return data.uniqueProductId || '';
+    case 'productionDate':
+      return data.productionDate || '';
+    case 'recycledContentPercentage':
+      return data.recycledContentPercentage != null ? `${data.recycledContentPercentage}%` : '';
+    case 'durabilityYears':
+      return data.durabilityYears != null ? `${data.durabilityYears} years` : '';
+    case 'repairabilityScore':
+      return data.repairabilityScore != null ? `${data.repairabilityScore}/100` : '';
+    case 'dppRegistryId':
+      return data.dppRegistryId || '';
+    case 'safetyInformation':
+      return data.safetyInformation || '';
+
     default:
       return '';
   }

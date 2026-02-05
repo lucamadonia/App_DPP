@@ -154,6 +154,14 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         countryOfOrigin: product.countryOfOrigin,
         manufacturerSupplierId: product.manufacturerSupplierId,
         importerSupplierId: product.importerSupplierId,
+        // ESPR fields
+        uniqueProductId: (product as any).uniqueProductId,
+        productionDate: (product as any).productionDate,
+        recycledContentPercentage: (product as any).recycledContentPercentage,
+        durabilityYears: (product as any).durabilityYears,
+        repairabilityScore: (product as any).repairabilityScore,
+        dppRegistryId: (product as any).dppRegistryId,
+        safetyInformation: (product as any).safetyInformation,
       },
       batch: selectedBatch ? {
         batchNumber,

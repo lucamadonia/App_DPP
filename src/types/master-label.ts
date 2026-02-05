@@ -99,6 +99,15 @@ export interface MasterLabelData {
   // B2C extras
   b2cTargetCountry?: string;
   b2cDisposalHint?: string;
+
+  // ESPR fields
+  uniqueProductId?: string;
+  productionDate?: string;
+  recycledContentPercentage?: number;
+  durabilityYears?: number;
+  repairabilityScore?: number;
+  dppRegistryId?: string;
+  safetyInformation?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +165,14 @@ export interface AssembleMasterLabelParams {
     importerSupplierId?: string | null;
     manufacturerEORI?: string;
     manufacturerVAT?: string;
+    // ESPR fields
+    uniqueProductId?: string;
+    productionDate?: string;
+    recycledContentPercentage?: number;
+    durabilityYears?: number;
+    repairabilityScore?: number;
+    dppRegistryId?: string;
+    safetyInformation?: string;
   };
   batch?: {
     batchNumber?: string;

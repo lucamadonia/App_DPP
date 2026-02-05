@@ -491,6 +491,13 @@
   "ml.field.eprelNumber": "EPREL Number",
   "ml.field.weeeNumber": "WEEE Number",
   "ml.field.madeIn": "Made In",
+  "ml.field.uniqueProductId": "Unique Product ID",
+  "ml.field.productionDate": "Production Date",
+  "ml.field.recycledContentPercentage": "Recycled Content",
+  "ml.field.durabilityYears": "Durability",
+  "ml.field.repairabilityScore": "Repairability Score",
+  "ml.field.dppRegistryId": "DPP Registry ID",
+  "ml.field.safetyInformation": "Safety Information",
 
   "ml.section.identity": "Identity & Traceability",
   "ml.section.dpp": "Digital Product Passport",
@@ -550,6 +557,7 @@
   "ml.fieldGroup.manufacturer": "Manufacturer",
   "ml.fieldGroup.importer": "Importer",
   "ml.fieldGroup.measurements": "Measurements",
+  "ml.fieldGroup.sustainability": "Sustainability",
   "ml.fieldGroup.compliance": "Compliance",
 
   "ml.editor.tabCheck": "Check",
