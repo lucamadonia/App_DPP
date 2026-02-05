@@ -24,7 +24,7 @@ interface DPPTemplateProps {
 
 export function TemplateMinimal({ product, visibilityV2, view, dppDesign, tenantId }: DPPTemplateProps) {
   const data = useDPPTemplateData(product, visibilityV2, view, dppDesign);
-  const { product: p, isFieldVisible, t, locale, consumerSections, view: v, styles } = data;
+  const { product: p, isFieldVisible, t, locale, consumerSections, view: v, styles, design } = data;
   const { heading: headingStyle } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
@@ -430,9 +430,9 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign, tenant
       <DPPESPRSections
         product={p}
         isFieldVisible={isFieldVisible}
-        cardStyle={{}}
-        headingStyle={headingStyle}
-        primaryColor=""
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
 

@@ -42,7 +42,7 @@ interface ConsumerViewProps extends ViewProps {
 }
 
 function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) {
-  const { isFieldVisible, consumerSections, t, locale } = data;
+  const { isFieldVisible, consumerSections, t, locale, styles, design } = data;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const ticketCreationEnabled = usePublicTicketCreationEnabled(tenantId);
 
@@ -523,9 +523,9 @@ function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) 
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
 
@@ -559,7 +559,7 @@ function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) 
 }
 
 function ScientificCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale } = data;
+  const { product, isFieldVisible, t, locale, styles, design } = data;
 
   let sectionNumber = 0;
   const nextSection = () => {
@@ -1056,9 +1056,9 @@ function ScientificCustomsView({ data }: ViewProps) {
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
 

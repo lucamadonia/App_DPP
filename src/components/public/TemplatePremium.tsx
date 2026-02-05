@@ -49,7 +49,7 @@ interface ViewProps {
 function PremiumConsumerView({ data, tenantId }: ViewProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
-  const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
+  const { product, isFieldVisible, t, locale, consumerSections, styles, design } = data;
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
 
@@ -460,9 +460,9 @@ function PremiumConsumerView({ data, tenantId }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>
@@ -482,7 +482,7 @@ function PremiumConsumerView({ data, tenantId }: ViewProps) {
 }
 
 function PremiumCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale } = data;
+  const { product, isFieldVisible, t, locale, styles, design } = data;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -913,9 +913,9 @@ function PremiumCustomsView({ data }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>

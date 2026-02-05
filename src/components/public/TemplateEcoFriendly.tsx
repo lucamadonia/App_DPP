@@ -51,7 +51,7 @@ interface ViewProps {
 function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
-  const { product, isFieldVisible, t, locale, consumerSections, styles } = data;
+  const { product, isFieldVisible, t, locale, consumerSections, styles, design } = data;
   const cardStyle = styles.card;
   const headingStyle = styles.heading;
 
@@ -490,9 +490,9 @@ function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>
@@ -512,7 +512,7 @@ function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
 }
 
 function EcoFriendlyCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale } = data;
+  const { product, isFieldVisible, t, locale, styles, design } = data;
 
   return (
     <div className="min-h-screen bg-green-50">
@@ -895,9 +895,9 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>

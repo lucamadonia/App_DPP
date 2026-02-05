@@ -49,7 +49,7 @@ interface ViewProps {
 function TechnicalConsumerView({ data, tenantId }: ViewProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
-  const { product, isFieldVisible, t, locale, consumerSections } = data;
+  const { product, isFieldVisible, t, locale, consumerSections, styles, design } = data;
 
   const renderSection = (section: RenderableSection) => {
     switch (section.id) {
@@ -502,9 +502,9 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>
@@ -524,7 +524,7 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
 }
 
 function TechnicalCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale } = data;
+  const { product, isFieldVisible, t, locale, styles, design } = data;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
@@ -1001,9 +1001,9 @@ function TechnicalCustomsView({ data }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>

@@ -69,7 +69,7 @@ const SECTION_TAB_CONFIG: Record<DPPSectionId, { label: string; icon: React.Reac
 type CustomsTab = 'customs' | 'materials' | 'certs' | 'supply' | 'co2' | 'support';
 
 function CompactConsumerView({ data, tenantId }: ViewProps) {
-  const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
+  const { product, isFieldVisible, t, locale, styles, consumerSections, design } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
@@ -391,9 +391,9 @@ function CompactConsumerView({ data, tenantId }: ViewProps) {
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
 
@@ -412,7 +412,7 @@ function CompactConsumerView({ data, tenantId }: ViewProps) {
 }
 
 function CompactCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale, styles, supportHasContent } = data;
+  const { product, isFieldVisible, t, locale, styles, supportHasContent, design } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
   const [activeTab, setActiveTab] = useState<CustomsTab>('customs');
 
@@ -721,9 +721,9 @@ function CompactCustomsView({ data }: ViewProps) {
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
     </div>

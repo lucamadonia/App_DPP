@@ -9,9 +9,8 @@ import type {
   SupplierRegistrationData,
   PublicSupplierInvitationResult,
   SupplierPortalSettings,
-  DEFAULT_SUPPLIER_PORTAL_SETTINGS,
 } from '@/types/supplier-portal';
-import type { Supplier } from '@/types/database';
+import { DEFAULT_SUPPLIER_PORTAL_SETTINGS } from '@/types/supplier-portal';
 
 // Transform database row to SupplierInvitation
 function transformInvitation(row: any): SupplierInvitation {

@@ -24,7 +24,7 @@ import {
   createSupplierInvitation,
   cancelSupplierInvitation,
 } from '@/services/supabase/supplier-portal';
-import type { SupplierInvitation, SupplierInvitationStatus } from '@/types/supplier-portal';
+import type { SupplierInvitationStatus } from '@/types/supplier-portal';
 
 // Status badge configuration
 const STATUS_CONFIG: Record<SupplierInvitationStatus, { variant: 'default' | 'secondary' | 'destructive' | 'outline', color: string }> = {

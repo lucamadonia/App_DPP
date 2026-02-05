@@ -5,7 +5,7 @@
  * Includes: Economic Operators, SVHC, Durability, Conformity, Safety, Registry.
  */
 
-import { CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 import {
   Building2,
   AlertTriangle,
@@ -102,21 +102,21 @@ export function DPPESPRSections({
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t('Name')}</p>
-                  <p className="font-medium text-sm">{product.authorizedRepresentative.name}</p>
+                  <p className="font-medium text-sm">{product.authorizedRepresentative?.name}</p>
                 </div>
-                {product.authorizedRepresentative.email && (
+                {product.authorizedRepresentative?.email && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">{t('Email')}</p>
                     <p className="text-sm">{product.authorizedRepresentative.email}</p>
                   </div>
                 )}
-                {product.authorizedRepresentative.phone && (
+                {product.authorizedRepresentative?.phone && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">{t('Phone')}</p>
                     <p className="text-sm">{product.authorizedRepresentative.phone}</p>
                   </div>
                 )}
-                {product.authorizedRepresentative.address && (
+                {product.authorizedRepresentative?.address && (
                   <div className="sm:col-span-2">
                     <p className="text-xs text-muted-foreground mb-1">{t('Address')}</p>
                     <p className="text-sm">{product.authorizedRepresentative.address}</p>
@@ -133,19 +133,19 @@ export function DPPESPRSections({
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t('Name')}</p>
-                  <p className="font-medium text-sm">{product.dppResponsible.name}</p>
+                  <p className="font-medium text-sm">{product.dppResponsible?.name}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t('Role')}</p>
-                  <p className="text-sm">{product.dppResponsible.role}</p>
+                  <p className="text-sm">{product.dppResponsible?.role}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t('Email')}</p>
-                  <p className="text-sm">{product.dppResponsible.email}</p>
+                  <p className="text-sm">{product.dppResponsible?.email}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t('Last Update')}</p>
-                  <p className="text-sm">{new Date(product.dppResponsible.lastUpdate).toLocaleDateString()}</p>
+                  <p className="text-sm">{product.dppResponsible?.lastUpdate ? new Date(product.dppResponsible.lastUpdate).toLocaleDateString() : '-'}</p>
                 </div>
               </div>
             </div>

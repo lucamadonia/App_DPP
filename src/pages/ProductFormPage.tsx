@@ -47,7 +47,6 @@ import {
   Factory,
   AlertTriangle,
   ExternalLink,
-  Calendar,
   Zap,
   Recycle,
 } from 'lucide-react';
@@ -2385,7 +2384,7 @@ export function ProductFormPage() {
                     value={formData.disassemblyInstructions}
                     onChange={(value) => updateField('disassemblyInstructions', value)}
                     placeholder={t('Describe how to disassemble the product for recycling...')}
-                    minHeight={120}
+                    minHeight="120px"
                   />
                   <p className="text-xs text-muted-foreground">{t('Or provide a URL to external instructions')}</p>
                 </div>
@@ -2396,7 +2395,7 @@ export function ProductFormPage() {
                     value={formData.endOfLifeInstructions}
                     onChange={(value) => updateField('endOfLifeInstructions', value)}
                     placeholder={t('Describe proper disposal methods at end of product life...')}
-                    minHeight={120}
+                    minHeight="120px"
                   />
                 </div>
               </div>
@@ -2528,7 +2527,7 @@ export function ProductFormPage() {
                     value={formData.safetyInformation}
                     onChange={(value) => updateField('safetyInformation', value)}
                     placeholder={t('Safety warnings, precautions, handling instructions...')}
-                    minHeight={100}
+                    minHeight="100px"
                   />
                 </div>
               </div>

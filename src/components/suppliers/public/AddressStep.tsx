@@ -2,7 +2,7 @@
  * Supplier Registration - Step 2: Address
  */
 
-import { UseFormReturn } from 'react-hook-form';
+import type { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';

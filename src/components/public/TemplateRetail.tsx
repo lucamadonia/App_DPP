@@ -56,7 +56,7 @@ interface ConsumerViewProps extends ViewProps {
 }
 
 function RetailConsumerView({ data, product, tenantId }: ConsumerViewProps) {
-  const { isFieldVisible, t, locale, consumerSections, styles } = data;
+  const { isFieldVisible, t, locale, consumerSections, styles, design } = data;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const ticketCreationEnabled = usePublicTicketCreationEnabled(tenantId);
   const cardStyle = styles.card;
@@ -546,9 +546,9 @@ function RetailConsumerView({ data, product, tenantId }: ConsumerViewProps) {
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
 
@@ -568,7 +568,7 @@ function RetailConsumerView({ data, product, tenantId }: ConsumerViewProps) {
 }
 
 function RetailCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale } = data;
+  const { product, isFieldVisible, t, locale, styles, design } = data;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -1052,9 +1052,9 @@ function RetailCustomsView({ data }: ViewProps) {
         <DPPESPRSections
           product={product}
           isFieldVisible={isFieldVisible}
-          cardStyle={cardStyle}
-          headingStyle={headingStyle}
-          primaryColor={primaryColor}
+          cardStyle={styles.card}
+          headingStyle={styles.heading}
+          primaryColor={design.colors.secondaryColor}
           t={t}
         />
       </div>

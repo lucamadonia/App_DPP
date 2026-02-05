@@ -145,7 +145,7 @@ export function SupplierRegisterPage() {
       case 2:
         return <LegalBankingStep form={form} />;
       case 3:
-        return <BusinessDetailsStep form={form} />;
+        return <BusinessDetailsStep form={form} onEditStep={setCurrentStep} />;
       default:
         return null;
     }

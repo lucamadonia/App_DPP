@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Tables, InsertTables, UpdateTables } from '@/types/supabase';
+import type { Tables } from '@/types/supabase';
 import type { SupplyChainEntry } from '@/types/database';
 
 type SupplyChainRow = Tables<'supply_chain_entries'>;
@@ -35,7 +35,7 @@ function transformSupplyChainEntry(row: SupplyChainRow): SupplyChainEntry {
     notes: row.notes || undefined,
     cost: row.cost != null ? Number(row.cost) : undefined,
     currency: row.currency || undefined,
-    facility_identifier: row.facility_identifier || undefined,
+    facility_identifier: (row as any).facility_identifier || undefined,
   };
 }
 
@@ -89,7 +89,7 @@ export async function createSupplyChainEntry(
     return { success: false, error: 'No tenant set' };
   }
 
-  const insertData: InsertTables<'supply_chain_entries'> = {
+  const insertData: any = {
     tenant_id: tenantId,
     product_id: entry.product_id,
     step: entry.step,
@@ -111,6 +111,7 @@ export async function createSupplyChainEntry(
     notes: entry.notes || null,
     cost: entry.cost ?? null,
     currency: entry.currency || 'EUR',
+    facility_identifier: entry.facility_identifier || null,
   };
 
   const { data, error } = await supabase
@@ -134,7 +135,7 @@ export async function updateSupplyChainEntry(
   id: string,
   entry: Partial<SupplyChainEntry>
 ): Promise<{ success: boolean; error?: string }> {
-  const updateData: UpdateTables<'supply_chain_entries'> = {};
+  const updateData: any = {};
 
   if (entry.step !== undefined) updateData.step = entry.step;
   if (entry.location !== undefined) updateData.location = entry.location;
@@ -155,6 +156,7 @@ export async function updateSupplyChainEntry(
   if (entry.notes !== undefined) updateData.notes = entry.notes || null;
   if (entry.cost !== undefined) updateData.cost = entry.cost ?? null;
   if (entry.currency !== undefined) updateData.currency = entry.currency || 'EUR';
+  if (entry.facility_identifier !== undefined) updateData.facility_identifier = entry.facility_identifier || null;
 
   const { error } = await supabase
     .from('supply_chain_entries')

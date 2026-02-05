@@ -58,7 +58,7 @@ interface ViewProps {
 }
 
 function ClassicConsumerView({ data, tenantId }: ViewProps) {
-  const { product, isFieldVisible, t, locale, styles, consumerSections } = data;
+  const { product, isFieldVisible, t, locale, styles, design, consumerSections } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const { enabled: ticketCreationEnabled } = usePublicTicketCreationEnabled(tenantId);
@@ -509,9 +509,9 @@ function ClassicConsumerView({ data, tenantId }: ViewProps) {
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
 
@@ -530,7 +530,7 @@ function ClassicConsumerView({ data, tenantId }: ViewProps) {
 }
 
 function ClassicCustomsView({ data }: ViewProps) {
-  const { product, isFieldVisible, t, locale, styles } = data;
+  const { product, isFieldVisible, t, locale, styles, design } = data;
   const { card: cardStyle, heading: headingStyle } = styles;
 
   return (
@@ -916,9 +916,9 @@ function ClassicCustomsView({ data }: ViewProps) {
       <DPPESPRSections
         product={product}
         isFieldVisible={isFieldVisible}
-        cardStyle={cardStyle}
-        headingStyle={headingStyle}
-        primaryColor={primaryColor}
+        cardStyle={styles.card}
+        headingStyle={styles.heading}
+        primaryColor={design.colors.secondaryColor}
         t={t}
       />
     </div>

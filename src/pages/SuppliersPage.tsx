@@ -97,7 +97,6 @@ import {
   getSupplierSpendAnalysis,
   getSupplierSpendForSupplier,
   getCountries,
-  getPendingSuppliers,
   approveSupplier,
   rejectSupplier,
   createSupplierInvitation,
@@ -520,14 +519,10 @@ export function SuppliersPage() {
         contactName: invitationContactName || undefined,
         companyName: invitationCompanyName || undefined,
       });
-      if (result.success && result.data) {
-        setGeneratedInvitationLink(result.data.invitationLink);
-        // Copy to clipboard
-        await navigator.clipboard.writeText(result.data.invitationLink);
-        alert(t('Link copied to clipboard!'));
-      } else {
-        alert(t('Failed to generate invitation'));
-      }
+      setGeneratedInvitationLink(result.invitationUrl);
+      // Copy to clipboard
+      await navigator.clipboard.writeText(result.invitationUrl);
+      alert(t('Link copied to clipboard!'));
     } catch (error) {
       console.error('Error generating invitation:', error);
       alert(t('Error generating invitation'));
@@ -549,15 +544,11 @@ export function SuppliersPage() {
     if (!selectedSupplierForApproval) return;
     setIsProcessingApproval(true);
     try {
-      const result = await approveSupplier(selectedSupplierForApproval.id);
-      if (result.success) {
-        alert(t('Supplier approved successfully'));
-        await loadData();
-        setApproveDialogOpen(false);
-        setSelectedSupplierForApproval(null);
-      } else {
-        alert(t('Failed to approve supplier'));
-      }
+      await approveSupplier(selectedSupplierForApproval.id);
+      alert(t('Supplier approved successfully'));
+      await loadData();
+      setApproveDialogOpen(false);
+      setSelectedSupplierForApproval(null);
     } catch (error) {
       console.error('Error approving supplier:', error);
       alert(t('Error approving supplier'));
@@ -570,16 +561,12 @@ export function SuppliersPage() {
     if (!selectedSupplierForApproval) return;
     setIsProcessingApproval(true);
     try {
-      const result = await rejectSupplier(selectedSupplierForApproval.id, rejectionReason || undefined);
-      if (result.success) {
-        alert(t('Supplier rejected successfully'));
-        await loadData();
-        setRejectDialogOpen(false);
-        setSelectedSupplierForApproval(null);
-        setRejectionReason('');
-      } else {
-        alert(t('Failed to reject supplier'));
-      }
+      await rejectSupplier(selectedSupplierForApproval.id, rejectionReason || undefined);
+      alert(t('Supplier rejected successfully'));
+      await loadData();
+      setRejectDialogOpen(false);
+      setSelectedSupplierForApproval(null);
+      setRejectionReason('');
     } catch (error) {
       console.error('Error rejecting supplier:', error);
       alert(t('Error rejecting supplier'));
