@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import type { VisibilityConfigV3, IndependentFieldVisibility } from '@/types/visibility';
 import { defaultVisibilityConfigV3, fieldDefinitions } from '@/types/visibility';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,9 @@ import { LeftSidebar } from '@/components/dpp/visibility/LeftSidebar';
 import { MainCanvas } from '@/components/dpp/visibility/MainCanvas';
 import { RightPanel } from '@/components/dpp/visibility/RightPanel';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FieldChange {
   field: string;
@@ -50,6 +53,9 @@ export function DPPVisibilitySettingsPageV3() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['Basic Data'])
   );
+  const isMobile = useIsMobile();
+  const [leftSheetOpen, setLeftSheetOpen] = useState(false);
+  const [rightSheetOpen, setRightSheetOpen] = useState(false);
 
   // Load config on mount
   useEffect(() => {
@@ -305,11 +311,41 @@ export function DPPVisibilitySettingsPageV3() {
         onBack={() => navigate('/dpp')}
         onPresetApply={handlePresetApply}
         isSaving={isSaving}
+        isMobile={isMobile}
+        onOpenLeftSheet={() => setLeftSheetOpen(true)}
+        onOpenRightSheet={() => setRightSheetOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <LeftSidebar onPresetApply={handlePresetApply} onBulkAction={handleBulkAction} />
+        {/* Desktop: Fixed Left Sidebar */}
+        {!isMobile && (
+          <LeftSidebar onPresetApply={handlePresetApply} onBulkAction={handleBulkAction} />
+        )}
 
+        {/* Mobile: Left Sheet */}
+        {isMobile && (
+          <Sheet open={leftSheetOpen} onOpenChange={setLeftSheetOpen}>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>{t('Quick Actions')}</SheetTitle>
+              </SheetHeader>
+              <div className="p-4">
+                <LeftSidebar
+                  onPresetApply={(preset) => {
+                    handlePresetApply(preset);
+                    setLeftSheetOpen(false);
+                  }}
+                  onBulkAction={(level, value) => {
+                    handleBulkAction(level, value);
+                    setLeftSheetOpen(false);
+                  }}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+
+        {/* Main Canvas (always visible) */}
         <ScrollArea className="flex-1">
           <MainCanvas
             config={config}
@@ -321,8 +357,39 @@ export function DPPVisibilitySettingsPageV3() {
           />
         </ScrollArea>
 
-        <RightPanel stats={stats} changes={changes} onRevertChange={handleRevertChange} />
+        {/* Desktop: Fixed Right Panel */}
+        {!isMobile && (
+          <RightPanel stats={stats} changes={changes} onRevertChange={handleRevertChange} />
+        )}
+
+        {/* Mobile: Right Sheet */}
+        {isMobile && (
+          <Sheet open={rightSheetOpen} onOpenChange={setRightSheetOpen}>
+            <SheetContent side="right" className="w-[320px] p-0">
+              <RightPanel stats={stats} changes={changes} onRevertChange={handleRevertChange} />
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
+
+      {/* Mobile: Sticky Bottom Save Bar */}
+      {isMobile && hasChanges && (
+        <div className="sticky bottom-0 z-50 border-t bg-background/95 backdrop-blur-sm p-3">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full bg-gradient-to-r from-primary to-purple-600"
+            size="lg"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {t('Save')} ({changes.length} {t('changes')})
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

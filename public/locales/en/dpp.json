@@ -368,5 +368,12 @@
   "Recycling": "Recycling",
   "Customs Data": "Customs Data",
   "Set / Bundle": "Set / Bundle",
-  "Support": "Support"
+  "Support": "Support",
+  "Quick Actions": "Quick Actions",
+  "Search fields": "Search fields",
+  "Consumer ON": "Consumer ON",
+  "Consumer OFF": "Consumer OFF",
+  "Customs ON": "Customs ON",
+  "Customs OFF": "Customs OFF",
+  "Configure field visibility independently": "Configure field visibility independently"
 }

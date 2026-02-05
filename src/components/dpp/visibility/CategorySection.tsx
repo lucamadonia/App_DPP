@@ -62,45 +62,95 @@ export function CategorySection({
 
       <AccordionContent className="px-4 pb-4">
         {/* Bulk Toggle Bar */}
-        <div className="flex items-center gap-2 mb-3 pb-3 border-b">
-          <span className="text-xs text-muted-foreground mr-2">{t('Bulk toggle')}:</span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onBulkToggle(category, 'consumer', true)}
-          >
-            <Users className="h-3 w-3 mr-1" />
-            ON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onBulkToggle(category, 'consumer', false)}
-          >
-            <Users className="h-3 w-3 mr-1" />
-            OFF
-          </Button>
-          <div className="w-px h-4 bg-border mx-1" />
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onBulkToggle(category, 'customs', true)}
-          >
-            <ShieldCheck className="h-3 w-3 mr-1" />
-            ON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onBulkToggle(category, 'customs', false)}
-          >
-            <ShieldCheck className="h-3 w-3 mr-1" />
-            OFF
-          </Button>
+        <div className="mb-3 pb-3 border-b">
+          <span className="text-xs text-muted-foreground mb-2 block md:inline md:mr-2">
+            {t('Bulk toggle')}:
+          </span>
+
+          {/* Mobile: 2x2 Grid with large Touch Targets */}
+          <div className="flex flex-col gap-2 md:hidden">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 text-xs justify-start"
+                onClick={() => onBulkToggle(category, 'consumer', true)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                {t('Consumer ON')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 text-xs justify-start"
+                onClick={() => onBulkToggle(category, 'consumer', false)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                {t('Consumer OFF')}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 text-xs justify-start"
+                onClick={() => onBulkToggle(category, 'customs', true)}
+              >
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                {t('Customs ON')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 text-xs justify-start"
+                onClick={() => onBulkToggle(category, 'customs', false)}
+              >
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                {t('Customs OFF')}
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop: Inline Buttons */}
+          <div className="hidden md:flex md:items-center md:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onBulkToggle(category, 'consumer', true)}
+            >
+              <Users className="h-3 w-3 mr-1" />
+              ON
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onBulkToggle(category, 'consumer', false)}
+            >
+              <Users className="h-3 w-3 mr-1" />
+              OFF
+            </Button>
+            <div className="w-px h-4 bg-border mx-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onBulkToggle(category, 'customs', true)}
+            >
+              <ShieldCheck className="h-3 w-3 mr-1" />
+              ON
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onBulkToggle(category, 'customs', false)}
+            >
+              <ShieldCheck className="h-3 w-3 mr-1" />
+              OFF
+            </Button>
+          </div>
         </div>
 
         {/* Field Rows */}

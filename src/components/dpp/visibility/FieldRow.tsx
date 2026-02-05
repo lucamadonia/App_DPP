@@ -29,8 +29,15 @@ export function FieldRow({
   return (
     <div
       className={cn(
-        'grid grid-cols-[1fr_180px_180px] gap-4 items-center p-3 rounded-lg border',
-        'hover:border-primary/50 hover:shadow-sm transition-all',
+        'p-3 rounded-lg border transition-all',
+        'hover:border-primary/50 hover:shadow-sm',
+
+        // Mobile: Vertical Stack
+        'flex flex-col gap-3',
+
+        // Desktop: Horizontal Grid
+        'md:grid md:grid-cols-[1fr_200px_200px] md:gap-4 md:items-center',
+
         isSearchMatch && 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-700'
       )}
     >
@@ -41,19 +48,22 @@ export function FieldRow({
         )}
       </div>
 
-      <VisibilitySwitch
-        level="consumer"
-        checked={consumerVisible}
-        onChange={(v) => onToggle(field.key, 'consumer', v)}
-        label={t('Consumer')}
-      />
+      {/* Toggles Container */}
+      <div className="flex gap-4 md:contents">
+        <VisibilitySwitch
+          level="consumer"
+          checked={consumerVisible}
+          onChange={(v) => onToggle(field.key, 'consumer', v)}
+          label={t('Consumer')}
+        />
 
-      <VisibilitySwitch
-        level="customs"
-        checked={customsVisible}
-        onChange={(v) => onToggle(field.key, 'customs', v)}
-        label={t('Customs')}
-      />
+        <VisibilitySwitch
+          level="customs"
+          checked={customsVisible}
+          onChange={(v) => onToggle(field.key, 'customs', v)}
+          label={t('Customs')}
+        />
+      </div>
     </div>
   );
 }

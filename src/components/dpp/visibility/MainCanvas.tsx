@@ -61,7 +61,7 @@ export function MainCanvas({
   }, [categorizedFields, searchQuery]);
 
   return (
-    <div className="px-6 py-4">
+    <div className="px-3 py-3 md:px-6 md:py-4">
       <Accordion
         type="multiple"
         value={Array.from(expandedCategories)}

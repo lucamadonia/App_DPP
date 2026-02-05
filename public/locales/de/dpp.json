@@ -368,5 +368,12 @@
   "Recycling": "Recycling",
   "Customs Data": "Zolldaten",
   "Set / Bundle": "Set / Bündel",
-  "Support": "Support"
+  "Support": "Support",
+  "Quick Actions": "Schnellaktionen",
+  "Search fields": "Felder durchsuchen",
+  "Consumer ON": "Verbraucher AN",
+  "Consumer OFF": "Verbraucher AUS",
+  "Customs ON": "Zoll AN",
+  "Customs OFF": "Zoll AUS",
+  "Configure field visibility independently": "Konfiguriere Feld-Sichtbarkeit unabhängig"
 }
