@@ -5,15 +5,26 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { VisibilityConfigV2, FieldVisibilityConfig } from '@/types/visibility';
-import { defaultVisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2, VisibilityConfigV3, FieldVisibilityConfig } from '@/types/visibility';
+import { defaultVisibilityConfigV2, defaultVisibilityConfigV3, migrateVisibilityV2toV3 } from '@/types/visibility';
 
-// Transform database row to VisibilityConfigV2 type
+// Transform database row to VisibilityConfigV2 or V3 type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformVisibilitySettings(row: any): VisibilityConfigV2 {
+function transformVisibilitySettings(row: any): VisibilityConfigV2 | VisibilityConfigV3 {
+  const version = row.version || 2;
+
+  if (version === 3) {
+    return {
+      id: row.id,
+      version: 3,
+      fields: { ...defaultVisibilityConfigV3.fields, ...row.fields },
+    };
+  }
+
+  // V2 format
   return {
     id: row.id,
-    version: row.version || 2,
+    version: 2,
     fields: { ...defaultVisibilityConfigV2.fields, ...(row.fields as FieldVisibilityConfig) },
   };
 }
@@ -22,12 +33,13 @@ function transformVisibilitySettings(row: any): VisibilityConfigV2 {
  * Get visibility settings for the current tenant
  * If productId is provided, returns product-specific settings
  * Otherwise returns tenant-wide default settings
+ * Auto-migrates V2 to V3 when loading
  */
-export async function getVisibilitySettings(productId?: string): Promise<VisibilityConfigV2> {
+export async function getVisibilitySettings(productId?: string): Promise<VisibilityConfigV3> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) {
     console.warn('No tenant set - returning default visibility settings');
-    return defaultVisibilityConfigV2;
+    return defaultVisibilityConfigV3;
   }
 
   // First try to get product-specific settings if productId is provided
@@ -40,7 +52,12 @@ export async function getVisibilitySettings(productId?: string): Promise<Visibil
       .single();
 
     if (!productError && productSettings) {
-      return transformVisibilitySettings(productSettings);
+      const config = transformVisibilitySettings(productSettings);
+      // Auto-migrate V2 to V3
+      if (config.version === 2) {
+        return migrateVisibilityV2toV3(config as VisibilityConfigV2);
+      }
+      return config as VisibilityConfigV3;
     }
   }
 
@@ -54,19 +71,24 @@ export async function getVisibilitySettings(productId?: string): Promise<Visibil
 
   if (tenantError || !tenantSettings) {
     // Return default settings if no settings found in database
-    return defaultVisibilityConfigV2;
+    return defaultVisibilityConfigV3;
   }
 
-  return transformVisibilitySettings(tenantSettings);
+  const config = transformVisibilitySettings(tenantSettings);
+  // Auto-migrate V2 to V3
+  if (config.version === 2) {
+    return migrateVisibilityV2toV3(config as VisibilityConfigV2);
+  }
+  return config as VisibilityConfigV3;
 }
 
 /**
- * Save visibility settings
+ * Save visibility settings (V3 format)
  * If productId is provided, saves product-specific settings
  * Otherwise saves tenant-wide default settings
  */
 export async function saveVisibilitySettings(
-  config: VisibilityConfigV2,
+  config: VisibilityConfigV3,
   productId?: string
 ): Promise<{ success: boolean; error?: string }> {
   const tenantId = await getCurrentTenantId();
@@ -77,7 +99,7 @@ export async function saveVisibilitySettings(
   const settingsData = {
     tenant_id: tenantId,
     product_id: productId || null,
-    version: config.version || 2,
+    version: 3,
     fields: config.fields,
     updated_at: new Date().toISOString(),
   };
@@ -163,11 +185,12 @@ export async function copyVisibilitySettingsToProduct(
  * This bypasses tenant check since it's for public access.
  * Two-step lookup: find product by GTIN, then batch by serial_number.
  * Falls back to legacy direct product lookup for backwards compatibility.
+ * Auto-migrates V2 to V3 when loading.
  */
 export async function getPublicVisibilitySettings(
   gtin: string,
   serial: string
-): Promise<VisibilityConfigV2> {
+): Promise<VisibilityConfigV3> {
   let productId: string | null = null;
   let tenantId: string | null = null;
 
@@ -211,7 +234,7 @@ export async function getPublicVisibilitySettings(
   }
 
   if (!productId || !tenantId) {
-    return defaultVisibilityConfigV2;
+    return defaultVisibilityConfigV3;
   }
 
   const product = { id: productId, tenant_id: tenantId };
@@ -225,7 +248,12 @@ export async function getPublicVisibilitySettings(
     .single();
 
   if (productSettings) {
-    return transformVisibilitySettings(productSettings);
+    const config = transformVisibilitySettings(productSettings);
+    // Auto-migrate V2 to V3
+    if (config.version === 2) {
+      return migrateVisibilityV2toV3(config as VisibilityConfigV2);
+    }
+    return config as VisibilityConfigV3;
   }
 
   // Fall back to tenant settings
@@ -237,8 +265,13 @@ export async function getPublicVisibilitySettings(
     .single();
 
   if (tenantSettings) {
-    return transformVisibilitySettings(tenantSettings);
+    const config = transformVisibilitySettings(tenantSettings);
+    // Auto-migrate V2 to V3
+    if (config.version === 2) {
+      return migrateVisibilityV2toV3(config as VisibilityConfigV2);
+    }
+    return config as VisibilityConfigV3;
   }
 
-  return defaultVisibilityConfigV2;
+  return defaultVisibilityConfigV3;
 }

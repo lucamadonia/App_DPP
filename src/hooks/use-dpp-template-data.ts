@@ -9,7 +9,7 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/hooks/use-locale';
-import { isFieldVisibleForView, type VisibilityConfigV2 } from '@/types/visibility';
+import { isFieldVisibleForView, isFieldVisibleForViewV3, type VisibilityConfigV2, type VisibilityConfigV3 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
 import { getTranslatedProduct } from '@/hooks/use-public-product';
@@ -128,7 +128,7 @@ const SECTION_CHECKS: Record<
 
 export function useDPPTemplateData(
   product: Product,
-  visibilityV2: VisibilityConfigV2 | null,
+  visibilityV2: VisibilityConfigV2 | VisibilityConfigV3 | null,
   view: 'consumer' | 'customs',
   dppDesign?: DPPDesignSettings | null,
   primaryColor?: string,
@@ -142,10 +142,16 @@ export function useDPPTemplateData(
   // 1. Resolve design (merge with defaults)
   const design = resolveDesign(dppDesign);
 
-  // 2. Build isFieldVisible closure
+  // 2. Build isFieldVisible closure (supports both V2 and V3)
   const isFieldVisible = (field: string): boolean => {
     if (!visibilityV2) return true;
-    return isFieldVisibleForView(visibilityV2, field, view);
+
+    // Auto-detect version and use appropriate function
+    if (visibilityV2.version === 3) {
+      return isFieldVisibleForViewV3(visibilityV2 as VisibilityConfigV3, field, view);
+    } else {
+      return isFieldVisibleForView(visibilityV2 as VisibilityConfigV2, field, view);
+    }
   };
 
   // 3. Pre-compute support content flag

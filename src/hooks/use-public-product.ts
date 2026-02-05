@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type Product } from '@/types/product';
-import { type VisibilityConfigV2, defaultVisibilityConfigV2 } from '@/types/visibility';
+import { type VisibilityConfigV2, type VisibilityConfigV3, defaultVisibilityConfigV3 } from '@/types/visibility';
 import { getProductByGtinSerial, getPublicVisibilitySettings, getProductComponentsPublic } from '@/services/supabase';
 import { getPublicTenantQRSettings, getPublicTenantDPPDesign } from '@/services/supabase/tenants';
 import type { DPPDesignSettings, DPPTemplateName, SupportResources } from '@/types/database';
@@ -51,7 +51,7 @@ export type DPPTemplate = DPPTemplateName;
 export function usePublicProduct(gtin?: string, serial?: string) {
   const [product, setProduct] = useState<Product | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [visibilityV2, setVisibilityV2] = useState<VisibilityConfigV2 | null>(null);
+  const [visibilityV2, setVisibilityV2] = useState<VisibilityConfigV2 | VisibilityConfigV3 | null>(null);
   const [dppTemplate, setDppTemplate] = useState<DPPTemplate>('modern');
   const [dppTemplateCustomer, setDppTemplateCustomer] = useState<DPPTemplate>('modern');
   const [dppTemplateCustoms, setDppTemplateCustoms] = useState<DPPTemplate>('modern');
@@ -96,7 +96,7 @@ export function usePublicProduct(gtin?: string, serial?: string) {
       } catch (error) {
         console.error('Error loading product data:', error);
         setProduct(null);
-        setVisibilityV2(defaultVisibilityConfigV2);
+        setVisibilityV2(defaultVisibilityConfigV3);
       }
 
       setLoading(false);

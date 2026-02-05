@@ -254,27 +254,16 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'batchNumber', label: 'Batch Number', category: 'Identifiers' },
 
   // Materialien
-  { key: 'materials', label: 'Material Composition', category: 'Materials' },
-  { key: 'materialOrigins', label: 'Material Origin', category: 'Materials' },
-
-  // Verpackung
-  { key: 'packagingMaterials', label: 'Packaging Materials', category: 'Packaging' },
-  { key: 'packagingRecyclability', label: 'Packaging Recyclability (%)', category: 'Packaging' },
-  { key: 'packagingRecyclingInstructions', label: 'Packaging Recycling Instructions', category: 'Packaging' },
-  { key: 'packagingDisposalMethods', label: 'Packaging Disposal Methods', category: 'Packaging' },
+  { key: 'materials', label: 'Material Composition', category: 'Materials', description: 'Product materials (excluding packaging)' },
 
   // Nachhaltigkeit
-  { key: 'carbonFootprint', label: 'Carbon Footprint (kg)', category: 'Sustainability' },
-  { key: 'carbonRating', label: 'CO2 Rating (A-E)', category: 'Sustainability' },
+  { key: 'carbonFootprint', label: 'Carbon Footprint', category: 'Sustainability', description: 'CO2 footprint with rating (A-E)' },
 
   // Recycling
-  { key: 'recyclability', label: 'Recyclability (%)', category: 'Recycling' },
-  { key: 'recyclingInstructions', label: 'Recycling Instructions', category: 'Recycling' },
-  { key: 'disposalMethods', label: 'Disposal Methods', category: 'Recycling' },
+  { key: 'recyclability', label: 'Recyclability', category: 'Recycling', description: 'Recyclability percentage, instructions, and disposal methods' },
 
   // Zertifizierungen
-  { key: 'certifications', label: 'Certifications', category: 'Certifications' },
-  { key: 'certificateDownloads', label: 'Certificate Downloads', category: 'Certifications' },
+  { key: 'certifications', label: 'Certifications', category: 'Certifications', description: 'Product certifications with certificate URLs' },
 
   // Lieferkette
   { key: 'supplyChainSimple', label: 'Supply Chain (simplified)', category: 'Supply Chain' },
@@ -310,13 +299,12 @@ export const fieldCategories = [
   'Basic Data',
   'Identifiers',
   'Materials',
-  'Packaging',
   'Sustainability',
   'Recycling',
   'Certifications',
   'Supply Chain',
-  'Set / Bundle',
   'Customs Data',
+  'Set / Bundle',
   'Support',
 ];
 
@@ -396,7 +384,7 @@ export function isFieldVisibleForView(
 ): boolean {
   // Fall back to default visibility if field not in config
   const level = config.fields[field] || defaultVisibilityConfigV2.fields[field];
-  if (!level) return true; // Unknown fields default to visible
+  if (!level) return false; // Unknown fields default to HIDDEN (security fix)
 
   switch (view) {
     case 'consumer':
@@ -405,6 +393,133 @@ export function isFieldVisibleForView(
       return level === 'consumer' || level === 'customs';
     case 'internal':
       return true; // Intern sieht alles
+    default:
+      return false;
+  }
+}
+
+// ============================================
+// V3 VISIBILITY SYSTEM - INDEPENDENT TOGGLES
+// ============================================
+
+/**
+ * V3: Independent visibility flags for each field.
+ * Consumer and Customs are now separate booleans (no hierarchy).
+ */
+export interface IndependentFieldVisibility {
+  consumer: boolean;
+  customs: boolean;
+}
+
+/**
+ * V3 Visibility Configuration.
+ * Each field has independent consumer/customs visibility flags.
+ */
+export interface VisibilityConfigV3 {
+  id?: string;
+  version: 3;
+  fields: {
+    [fieldKey: string]: IndependentFieldVisibility;
+  };
+}
+
+/**
+ * Default V3 configuration with corrected field names
+ * (removed non-existent fields like packagingMaterials, carbonRating, certificateDownloads)
+ */
+export const defaultVisibilityConfigV3: VisibilityConfigV3 = {
+  version: 3,
+  fields: {
+    // Basic Data - Public
+    name: { consumer: true, customs: true },
+    image: { consumer: true, customs: true },
+    description: { consumer: true, customs: true },
+    manufacturer: { consumer: true, customs: true },
+    category: { consumer: true, customs: true },
+
+    // Identifiers - Customs only
+    gtin: { consumer: false, customs: true },
+    serialNumber: { consumer: false, customs: true },
+    batchNumber: { consumer: false, customs: true },
+
+    // Materials - Public
+    materials: { consumer: true, customs: true },
+
+    // Sustainability - Public
+    carbonFootprint: { consumer: true, customs: true },
+
+    // Recycling - Public
+    recyclability: { consumer: true, customs: true },
+
+    // Certifications - Public
+    certifications: { consumer: true, customs: true },
+
+    // Supply Chain - Mixed
+    supplyChainSimple: { consumer: true, customs: true },
+    supplyChainFull: { consumer: false, customs: true },
+    supplyChainProcessType: { consumer: true, customs: true },
+    supplyChainTransport: { consumer: false, customs: true },
+    supplyChainEmissions: { consumer: true, customs: true },
+    supplyChainCost: { consumer: false, customs: false }, // Internal only
+
+    // Customs Data - Customs only
+    hsCode: { consumer: false, customs: true },
+    countryOfOrigin: { consumer: false, customs: true },
+    netWeight: { consumer: false, customs: true },
+    grossWeight: { consumer: false, customs: true },
+    manufacturerAddress: { consumer: false, customs: true },
+    manufacturerEORI: { consumer: false, customs: true },
+    manufacturerVAT: { consumer: false, customs: true },
+
+    // Set Components - Public
+    setComponents: { consumer: true, customs: true },
+
+    // Support - Public
+    supportResources: { consumer: true, customs: true },
+    supportWarranty: { consumer: true, customs: true },
+    supportFaq: { consumer: true, customs: true },
+    supportVideos: { consumer: true, customs: true },
+    supportRepair: { consumer: true, customs: true },
+    supportSpareParts: { consumer: true, customs: true },
+  },
+};
+
+/**
+ * Migrate V2 config to V3.
+ * Converts hierarchical levels to independent boolean flags.
+ */
+export function migrateVisibilityV2toV3(v2: VisibilityConfigV2): VisibilityConfigV3 {
+  const v3: VisibilityConfigV3 = { version: 3, fields: {} };
+
+  for (const [field, level] of Object.entries(v2.fields)) {
+    v3.fields[field] = {
+      consumer: level === 'consumer',
+      customs: level === 'consumer' || level === 'customs',
+    };
+  }
+
+  return v3;
+}
+
+/**
+ * Check if a field is visible for a specific view (V3).
+ */
+export function isFieldVisibleForViewV3(
+  config: VisibilityConfigV3,
+  field: string,
+  view: 'consumer' | 'customs' | 'internal'
+): boolean {
+  const visibility = config.fields[field] || defaultVisibilityConfigV3.fields[field];
+
+  if (!visibility) return false; // Unknown fields default to HIDDEN
+
+  switch (view) {
+    case 'consumer':
+      return visibility.consumer;
+    case 'customs':
+      return visibility.customs;
+    case 'internal':
+      return true; // Admin sees everything
     default:
       return false;
   }
