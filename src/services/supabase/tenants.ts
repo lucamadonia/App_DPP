@@ -354,34 +354,72 @@ export async function getPublicBrandingByProduct(
 /**
  * Get QR code settings for a product's tenant (for public pages)
  * Returns the dppTemplate and other QR settings
+ * Uses two-step lookup: find product by GTIN, then batch by serial_number
  */
 export async function getPublicTenantQRSettings(
   gtin: string,
   serial: string
 ): Promise<QRCodeDomainSettings | null> {
-  const { data: product, error: productError } = await supabase
-    .from('products')
-    .select('tenant_id')
-    .eq('gtin', gtin)
-    .eq('serial_number', serial)
-    .single();
+  try {
+    // Step 1: Find products by GTIN
+    const { data: productRows } = await supabase
+      .from('products')
+      .select('id, tenant_id')
+      .eq('gtin', gtin);
 
-  if (productError || !product) {
+    if (!productRows || productRows.length === 0) {
+      return null;
+    }
+
+    let tenantId: string | null = null;
+
+    // Step 2: Try to find a batch with the given serial number
+    for (const row of productRows) {
+      const { data: batchRow } = await supabase
+        .from('product_batches')
+        .select('id')
+        .eq('product_id', row.id)
+        .eq('serial_number', serial)
+        .single();
+
+      if (batchRow) {
+        tenantId = row.tenant_id;
+        break;
+      }
+    }
+
+    // Fallback: legacy lookup (serial_number on products table)
+    if (!tenantId) {
+      const legacyProduct = productRows.find(
+        (p) => (p as unknown as { serial_number?: string }).serial_number === serial
+      );
+      if (legacyProduct) {
+        tenantId = legacyProduct.tenant_id;
+      }
+    }
+
+    if (!tenantId) {
+      return null;
+    }
+
+    // Step 3: Fetch tenant settings
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching tenant QR settings:', error);
+      return null;
+    }
+
+    const settings = data.settings as TenantSettings | null;
+    return settings?.qrCode || null;
+  } catch (error) {
+    console.error('Error in getPublicTenantQRSettings:', error);
     return null;
   }
-
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('id', product.tenant_id)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  const settings = data.settings as TenantSettings | null;
-  return settings?.qrCode || null;
 }
 
 // ============================================
@@ -456,34 +494,72 @@ export async function updateDPPDesignSettings(
 
 /**
  * Get DPP design settings for a product's tenant (for public pages)
+ * Uses two-step lookup: find product by GTIN, then batch by serial_number
  */
 export async function getPublicTenantDPPDesign(
   gtin: string,
   serial: string
 ): Promise<DPPDesignSettings | null> {
-  const { data: product, error: productError } = await supabase
-    .from('products')
-    .select('tenant_id')
-    .eq('gtin', gtin)
-    .eq('serial_number', serial)
-    .single();
+  try {
+    // Step 1: Find products by GTIN
+    const { data: productRows } = await supabase
+      .from('products')
+      .select('id, tenant_id')
+      .eq('gtin', gtin);
 
-  if (productError || !product) {
+    if (!productRows || productRows.length === 0) {
+      return null;
+    }
+
+    let tenantId: string | null = null;
+
+    // Step 2: Try to find a batch with the given serial number
+    for (const row of productRows) {
+      const { data: batchRow } = await supabase
+        .from('product_batches')
+        .select('id')
+        .eq('product_id', row.id)
+        .eq('serial_number', serial)
+        .single();
+
+      if (batchRow) {
+        tenantId = row.tenant_id;
+        break;
+      }
+    }
+
+    // Fallback: legacy lookup (serial_number on products table)
+    if (!tenantId) {
+      const legacyProduct = productRows.find(
+        (p) => (p as unknown as { serial_number?: string }).serial_number === serial
+      );
+      if (legacyProduct) {
+        tenantId = legacyProduct.tenant_id;
+      }
+    }
+
+    if (!tenantId) {
+      return null;
+    }
+
+    // Step 3: Fetch tenant DPP design settings
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching tenant DPP design:', error);
+      return null;
+    }
+
+    const settings = data.settings as TenantSettings | null;
+    return settings?.dppDesign || null;
+  } catch (error) {
+    console.error('Error in getPublicTenantDPPDesign:', error);
     return null;
   }
-
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('id', product.tenant_id)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  const settings = data.settings as TenantSettings | null;
-  return settings?.dppDesign || null;
 }
 
 /**
