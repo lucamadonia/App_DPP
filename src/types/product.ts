@@ -80,6 +80,47 @@ export interface Product {
   packagingHeightCm?: number;
   packagingWidthCm?: number;
   packagingDepthCm?: number;
+
+  // ============================================
+  // ESPR COMPLIANCE FIELDS
+  // ============================================
+
+  // Identification & Economic Operators
+  uniqueProductId?: string; // UID per ISO/IEC 15459
+  importerName?: string;
+  importerEORI?: string;
+  authorizedRepresentative?: AuthorizedRepresentative;
+  dppResponsible?: DppResponsible;
+
+  // Materials & Substances
+  substancesOfConcern?: SubstanceOfConcern[];
+  recycledContentPercentage?: number; // 0-100
+
+  // Sustainability
+  energyConsumptionKWh?: number;
+  durabilityYears?: number;
+  repairabilityScore?: number; // 0-100
+
+  // Recycling & End-of-Life
+  disassemblyInstructions?: string;
+  endOfLifeInstructions?: string;
+
+  // Conformity & Certifications
+  euDeclarationOfConformity?: string; // URL
+  testReports?: string[]; // Array of URLs
+  ceMarking?: boolean;
+  userManualUrl?: string;
+  safetyInformation?: string;
+
+  // Customs Data
+  customsValue?: number; // EUR
+  preferenceProof?: string; // EUR.1, REX, etc.
+
+  // Product Sets
+  componentDppUrls?: string[];
+
+  // DPP Registry
+  dppRegistryId?: string;
 }
 
 export interface TranslatableProductFields {
@@ -188,6 +229,7 @@ export interface SupplyChainEntry {
   transportMode?: string;
   status?: string;
   emissionsKg?: number;
+  facilityIdentifier?: string; // GLN (Global Location Number)
 }
 
 // ============================================
@@ -224,4 +266,32 @@ export interface AggregationOverrides {
   recyclability?: boolean;
   netWeight?: boolean;
   grossWeight?: boolean;
+}
+
+// ============================================
+// ESPR COMPLIANCE TYPES
+// ============================================
+
+export interface SubstanceOfConcern {
+  name: string;
+  casNumber: string; // CAS Number
+  ecNumber?: string; // EC Number
+  concentration?: number; // Concentration in %
+  scipId?: string; // SCIP Database ID
+  svhcListed: boolean; // Is it a SVHC (Substance of Very High Concern)?
+}
+
+export interface AuthorizedRepresentative {
+  name: string;
+  address: string;
+  email: string;
+  phone?: string;
+  eori?: string;
+}
+
+export interface DppResponsible {
+  name: string;
+  role: string;
+  email: string;
+  lastUpdate: string;
 }

@@ -18,6 +18,7 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { RATING_TEXT_COLORS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { SafeHtml } from '@/components/ui/safe-html';
 import { PublicProductTicketDialog } from './PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
@@ -455,6 +456,15 @@ function PremiumConsumerView({ data, tenantId }: ViewProps) {
 
       <div className="max-w-4xl mx-auto px-4 pb-12 space-y-8">
         {consumerSections.map(s => renderSection(s))}
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
 
       {tenantId && (
@@ -899,6 +909,15 @@ function PremiumCustomsView({ data }: ViewProps) {
             </div>
           </div>
         </div>
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
     </div>
   );

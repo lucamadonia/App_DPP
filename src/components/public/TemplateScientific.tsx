@@ -7,6 +7,7 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { SafeHtml } from '@/components/ui/safe-html';
 import { PublicProductTicketDialog } from '@/components/public/PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
@@ -518,6 +519,15 @@ function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) 
         const sectionNumber = (hasDescription ? 1 : 0) + index + 1;
         return renderSection(s, sectionNumber);
       })}
+
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
 
       {/* References / Footer */}
       <footer className="border-t-2 border-gray-300 pt-6">
@@ -1042,6 +1052,15 @@ function ScientificCustomsView({ data }: ViewProps) {
           </section>
         );
       })()}
+
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
 
       {/* References / Footer */}
       <footer className="border-t-2 border-gray-300 pt-6">

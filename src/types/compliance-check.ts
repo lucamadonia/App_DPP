@@ -1,7 +1,25 @@
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type FindingSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 export type FindingStatus = 'compliant' | 'partial' | 'non_compliant' | 'unknown';
-export type FindingCategory = 'ESPR' | 'Battery' | 'PPWR' | 'GPSR' | 'CE' | 'REACH' | 'RoHS' | 'EMC' | 'RED' | 'LVD' | 'Docs' | 'DPP' | 'National' | 'Other';
+export type FindingCategory =
+  | 'ESPR'
+  | 'EconomicOperators'
+  | 'SVHC'
+  | 'Durability'
+  | 'Registry'
+  | 'Battery'
+  | 'PPWR'
+  | 'GPSR'
+  | 'CE'
+  | 'REACH'
+  | 'RoHS'
+  | 'EMC'
+  | 'RED'
+  | 'LVD'
+  | 'Docs'
+  | 'DPP'
+  | 'National'
+  | 'Other';
 export type ActionPriority = 'P1' | 'P2' | 'P3';
 export type RecommendationType = 'quick_win' | 'improvement' | 'strategic';
 

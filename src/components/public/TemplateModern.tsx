@@ -28,6 +28,7 @@ import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
 import { RATING_GRADIENT_COLORS, RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { usePublicBranding } from '@/pages/public/PublicLayout';
 import { PublicProductTicketDialog } from './PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
@@ -534,6 +535,15 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
 
       <div className="container mx-auto px-4 space-y-8">
         {consumerSections.map(s => renderSection(s))}
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
 
       {ticketCreationEnabled && tenantId && (
@@ -950,6 +960,15 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
             </div>
           );
         })()}
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
     </div>
   );

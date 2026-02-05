@@ -23,6 +23,7 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { RATING_BG_COLORS, RATING_STARS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { PublicProductTicketDialog } from '@/components/public/PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 import { Button } from '@/components/ui/button';
@@ -542,6 +543,15 @@ function RetailConsumerView({ data, product, tenantId }: ConsumerViewProps) {
 
       {consumerSections.map(s => renderSection(s))}
 
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
+
       {/* Ticket Dialog */}
       {ticketCreationEnabled && tenantId && (
         <PublicProductTicketDialog
@@ -1038,6 +1048,15 @@ function RetailCustomsView({ data }: ViewProps) {
             )}
           </div>
         </div>
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
     </div>
   );

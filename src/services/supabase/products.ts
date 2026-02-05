@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides, PackagingType } from '@/types/product';
+import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides, PackagingType, SubstanceOfConcern, AuthorizedRepresentative, DppResponsible } from '@/types/product';
 import type { ProductRegistrations, SupportResources } from '@/types/database';
 
 // Transform database row to Product type (master data only)
@@ -57,6 +57,28 @@ function transformProduct(row: any): Product & { tenantId: string } {
     packagingHeightCm: row.packaging_height_cm != null ? Number(row.packaging_height_cm) : undefined,
     packagingWidthCm: row.packaging_width_cm != null ? Number(row.packaging_width_cm) : undefined,
     packagingDepthCm: row.packaging_depth_cm != null ? Number(row.packaging_depth_cm) : undefined,
+    // ESPR Compliance Fields
+    uniqueProductId: row.unique_product_id || undefined,
+    importerName: row.importer_name || undefined,
+    importerEORI: row.importer_eori || undefined,
+    authorizedRepresentative: (row.authorized_representative as AuthorizedRepresentative) || undefined,
+    dppResponsible: (row.dpp_responsible as DppResponsible) || undefined,
+    substancesOfConcern: (row.substances_of_concern as SubstanceOfConcern[]) || undefined,
+    recycledContentPercentage: row.recycled_content_percentage != null ? Number(row.recycled_content_percentage) : undefined,
+    energyConsumptionKWh: row.energy_consumption_kwh != null ? Number(row.energy_consumption_kwh) : undefined,
+    durabilityYears: row.durability_years != null ? Number(row.durability_years) : undefined,
+    repairabilityScore: row.repairability_score != null ? Number(row.repairability_score) : undefined,
+    disassemblyInstructions: row.disassembly_instructions || undefined,
+    endOfLifeInstructions: row.end_of_life_instructions || undefined,
+    euDeclarationOfConformity: row.eu_declaration_of_conformity || undefined,
+    testReports: (row.test_reports as string[]) || undefined,
+    ceMarking: row.ce_marking || false,
+    userManualUrl: row.user_manual_url || undefined,
+    safetyInformation: row.safety_information || undefined,
+    customsValue: row.customs_value != null ? Number(row.customs_value) : undefined,
+    preferenceProof: row.preference_proof || undefined,
+    componentDppUrls: (row.component_dpp_urls as string[]) || undefined,
+    dppRegistryId: row.dpp_registry_id || undefined,
   };
 }
 
@@ -365,6 +387,28 @@ export async function createProduct(
     packaging_height_cm: product.packagingHeightCm ?? null,
     packaging_width_cm: product.packagingWidthCm ?? null,
     packaging_depth_cm: product.packagingDepthCm ?? null,
+    // ESPR Compliance Fields
+    unique_product_id: product.uniqueProductId || null,
+    importer_name: product.importerName || null,
+    importer_eori: product.importerEORI || null,
+    authorized_representative: product.authorizedRepresentative || null,
+    dpp_responsible: product.dppResponsible || null,
+    substances_of_concern: product.substancesOfConcern || null,
+    recycled_content_percentage: product.recycledContentPercentage ?? null,
+    energy_consumption_kwh: product.energyConsumptionKWh ?? null,
+    durability_years: product.durabilityYears ?? null,
+    repairability_score: product.repairabilityScore ?? null,
+    disassembly_instructions: product.disassemblyInstructions || null,
+    end_of_life_instructions: product.endOfLifeInstructions || null,
+    eu_declaration_of_conformity: product.euDeclarationOfConformity || null,
+    test_reports: product.testReports || null,
+    ce_marking: product.ceMarking || false,
+    user_manual_url: product.userManualUrl || null,
+    safety_information: product.safetyInformation || null,
+    customs_value: product.customsValue ?? null,
+    preference_proof: product.preferenceProof || null,
+    component_dpp_urls: product.componentDppUrls || null,
+    dpp_registry_id: product.dppRegistryId || null,
   };
 
   const { data, error } = await supabase
@@ -447,6 +491,28 @@ export async function updateProduct(
   if (product.packagingHeightCm !== undefined) updateData.packaging_height_cm = product.packagingHeightCm ?? null;
   if (product.packagingWidthCm !== undefined) updateData.packaging_width_cm = product.packagingWidthCm ?? null;
   if (product.packagingDepthCm !== undefined) updateData.packaging_depth_cm = product.packagingDepthCm ?? null;
+  // ESPR Compliance Fields
+  if (product.uniqueProductId !== undefined) updateData.unique_product_id = product.uniqueProductId || null;
+  if (product.importerName !== undefined) updateData.importer_name = product.importerName || null;
+  if (product.importerEORI !== undefined) updateData.importer_eori = product.importerEORI || null;
+  if (product.authorizedRepresentative !== undefined) updateData.authorized_representative = product.authorizedRepresentative || null;
+  if (product.dppResponsible !== undefined) updateData.dpp_responsible = product.dppResponsible || null;
+  if (product.substancesOfConcern !== undefined) updateData.substances_of_concern = product.substancesOfConcern || null;
+  if (product.recycledContentPercentage !== undefined) updateData.recycled_content_percentage = product.recycledContentPercentage ?? null;
+  if (product.energyConsumptionKWh !== undefined) updateData.energy_consumption_kwh = product.energyConsumptionKWh ?? null;
+  if (product.durabilityYears !== undefined) updateData.durability_years = product.durabilityYears ?? null;
+  if (product.repairabilityScore !== undefined) updateData.repairability_score = product.repairabilityScore ?? null;
+  if (product.disassemblyInstructions !== undefined) updateData.disassembly_instructions = product.disassemblyInstructions || null;
+  if (product.endOfLifeInstructions !== undefined) updateData.end_of_life_instructions = product.endOfLifeInstructions || null;
+  if (product.euDeclarationOfConformity !== undefined) updateData.eu_declaration_of_conformity = product.euDeclarationOfConformity || null;
+  if (product.testReports !== undefined) updateData.test_reports = product.testReports || null;
+  if (product.ceMarking !== undefined) updateData.ce_marking = product.ceMarking || false;
+  if (product.userManualUrl !== undefined) updateData.user_manual_url = product.userManualUrl || null;
+  if (product.safetyInformation !== undefined) updateData.safety_information = product.safetyInformation || null;
+  if (product.customsValue !== undefined) updateData.customs_value = product.customsValue ?? null;
+  if (product.preferenceProof !== undefined) updateData.preference_proof = product.preferenceProof || null;
+  if (product.componentDppUrls !== undefined) updateData.component_dpp_urls = product.componentDppUrls || null;
+  if (product.dppRegistryId !== undefined) updateData.dpp_registry_id = product.dppRegistryId || null;
 
   const { error } = await supabase
     .from('products')

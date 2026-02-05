@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { SafeHtml } from '@/components/ui/safe-html';
 import { PublicProductTicketDialog } from './PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
@@ -425,6 +426,15 @@ export function TemplateMinimal({ product, visibilityV2, view, dppDesign, tenant
       )}
 
       {consumerSections.map(s => renderSection(s))}
+
+      <DPPESPRSections
+        product={p}
+        isFieldVisible={isFieldVisible}
+        cardStyle={{}}
+        headingStyle={headingStyle}
+        primaryColor=""
+        t={t}
+      />
 
       {tenantId && (
         <PublicProductTicketDialog

@@ -29,6 +29,7 @@ import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
 import { RATING_BG_COLORS, RATING_DESCRIPTIONS, getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { SafeHtml } from '@/components/ui/safe-html';
 import { PublicProductTicketDialog } from './PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
@@ -505,6 +506,15 @@ function ClassicConsumerView({ data, tenantId }: ViewProps) {
 
       {consumerSections.map(s => renderSection(s))}
 
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
+
       {tenantId && (
         <PublicProductTicketDialog
           open={ticketDialogOpen}
@@ -902,6 +912,15 @@ function ClassicCustomsView({ data }: ViewProps) {
           </Card>
         );
       })()}
+
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
     </div>
   );
 }

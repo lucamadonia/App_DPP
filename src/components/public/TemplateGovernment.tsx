@@ -18,6 +18,7 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { PublicProductTicketDialog } from '@/components/public/PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 import { Button } from '@/components/ui/button';
@@ -538,6 +539,15 @@ function GovernmentConsumerView({ data, product, tenantId }: ConsumerViewProps) 
 
       {consumerSections.map(s => renderSection(s))}
 
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
+
       {/* Document footer stamp */}
       <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-300">
         {t('Digital Product Passport')} &mdash; {product.gtin}
@@ -1041,6 +1051,15 @@ function GovernmentCustomsView({ data }: ViewProps) {
           </div>
         );
       })()}
+
+      <DPPESPRSections
+        product={product}
+        isFieldVisible={isFieldVisible}
+        cardStyle={cardStyle}
+        headingStyle={headingStyle}
+        primaryColor={primaryColor}
+        t={t}
+      />
 
       {/* Document footer stamp */}
       <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-300">

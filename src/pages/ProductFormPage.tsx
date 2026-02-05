@@ -6,7 +6,7 @@ import { getCurrentTenant } from '@/services/supabase/tenants';
 import { getCurrentTenantId } from '@/lib/supabase';
 import type { Category, Country, Supplier, ProductRegistrations, SupportResources, Tenant } from '@/types/database';
 import { getCategoryDisplayName, getSubcategoryDisplayName } from '@/lib/category-utils';
-import type { TranslatableProductFields, PackagingType } from '@/types/product';
+import type { TranslatableProductFields, PackagingType, SubstanceOfConcern, AuthorizedRepresentative, DppResponsible } from '@/types/product';
 import { REGISTRATION_FIELDS } from '@/lib/registration-fields';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import { CERTIFICATION_CATEGORIES } from '@/lib/certification-options';
@@ -44,6 +44,12 @@ import {
   Layers,
   ToggleLeft,
   ToggleRight,
+  Factory,
+  AlertTriangle,
+  ExternalLink,
+  Calendar,
+  Zap,
+  Recycle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +78,7 @@ const BASE_STEPS = [
   { id: 'images', title: 'Images', icon: ImageIcon },
   { id: 'sustainability', title: 'Sustainability', icon: Leaf },
   { id: 'compliance', title: 'Compliance', icon: ShieldCheck },
+  { id: 'espr-compliance', title: 'ESPR Compliance', icon: Factory },
   { id: 'documents', title: 'Documents', icon: FileText },
   { id: 'support', title: 'Support', icon: Headphones },
   { id: 'suppliers', title: 'Suppliers', icon: Truck },
@@ -240,6 +247,30 @@ export function ProductFormPage() {
         packagingHeightCm: product.packagingHeightCm ?? '',
         packagingWidthCm: product.packagingWidthCm ?? '',
         packagingDepthCm: product.packagingDepthCm ?? '',
+        // ESPR Compliance Fields
+        uniqueProductId: product.uniqueProductId || '',
+        productionDate: product.productionDate || '',
+        expirationDate: product.expirationDate || '',
+        importerName: product.importerName || '',
+        importerEORI: product.importerEORI || '',
+        authorizedRepresentative: product.authorizedRepresentative || null,
+        dppResponsible: product.dppResponsible || null,
+        substancesOfConcern: product.substancesOfConcern || [],
+        recycledContentPercentage: product.recycledContentPercentage ?? '',
+        energyConsumptionKWh: product.energyConsumptionKWh ?? '',
+        durabilityYears: product.durabilityYears ?? '',
+        repairabilityScore: product.repairabilityScore ?? '',
+        disassemblyInstructions: product.disassemblyInstructions || '',
+        endOfLifeInstructions: product.endOfLifeInstructions || '',
+        euDeclarationOfConformity: product.euDeclarationOfConformity || '',
+        testReports: product.testReports || [],
+        ceMarking: product.ceMarking || false,
+        userManualUrl: product.userManualUrl || '',
+        safetyInformation: product.safetyInformation || '',
+        customsValue: product.customsValue ?? '',
+        preferenceProof: product.preferenceProof || '',
+        componentDppUrls: product.componentDppUrls || [],
+        dppRegistryId: product.dppRegistryId || '',
       });
 
       setTranslations(product.translations || {});
@@ -307,6 +338,30 @@ export function ProductFormPage() {
     packagingHeightCm: '' as number | '',
     packagingWidthCm: '' as number | '',
     packagingDepthCm: '' as number | '',
+    // ESPR Compliance Fields
+    uniqueProductId: '' as string,
+    productionDate: '' as string,
+    expirationDate: '' as string,
+    importerName: '' as string,
+    importerEORI: '' as string,
+    authorizedRepresentative: null as AuthorizedRepresentative | null,
+    dppResponsible: null as DppResponsible | null,
+    substancesOfConcern: [] as SubstanceOfConcern[],
+    recycledContentPercentage: '' as number | '',
+    energyConsumptionKWh: '' as number | '',
+    durabilityYears: '' as number | '',
+    repairabilityScore: '' as number | '',
+    disassemblyInstructions: '' as string,
+    endOfLifeInstructions: '' as string,
+    euDeclarationOfConformity: '' as string,
+    testReports: [] as string[],
+    ceMarking: false as boolean,
+    userManualUrl: '' as string,
+    safetyInformation: '' as string,
+    customsValue: '' as number | '',
+    preferenceProof: '' as string,
+    componentDppUrls: [] as string[],
+    dppRegistryId: '' as string,
   });
 
   const updateField = (field: string, value: string | number | boolean) => {
@@ -581,6 +636,30 @@ export function ProductFormPage() {
         packagingHeightCm: formData.packagingHeightCm || undefined,
         packagingWidthCm: formData.packagingWidthCm || undefined,
         packagingDepthCm: formData.packagingDepthCm || undefined,
+        // ESPR Compliance Fields
+        uniqueProductId: formData.uniqueProductId || undefined,
+        productionDate: formData.productionDate || undefined,
+        expirationDate: formData.expirationDate || undefined,
+        importerName: formData.importerName || undefined,
+        importerEORI: formData.importerEORI || undefined,
+        authorizedRepresentative: formData.authorizedRepresentative || undefined,
+        dppResponsible: formData.dppResponsible || undefined,
+        substancesOfConcern: formData.substancesOfConcern.filter(s => s.name && s.casNumber),
+        recycledContentPercentage: formData.recycledContentPercentage || undefined,
+        energyConsumptionKWh: formData.energyConsumptionKWh || undefined,
+        durabilityYears: formData.durabilityYears || undefined,
+        repairabilityScore: formData.repairabilityScore || undefined,
+        disassemblyInstructions: formData.disassemblyInstructions || undefined,
+        endOfLifeInstructions: formData.endOfLifeInstructions || undefined,
+        euDeclarationOfConformity: formData.euDeclarationOfConformity || undefined,
+        testReports: formData.testReports.filter(url => url.trim()),
+        ceMarking: formData.ceMarking || false,
+        userManualUrl: formData.userManualUrl || undefined,
+        safetyInformation: formData.safetyInformation || undefined,
+        customsValue: formData.customsValue || undefined,
+        preferenceProof: formData.preferenceProof || undefined,
+        componentDppUrls: formData.componentDppUrls.filter(url => url.trim()),
+        dppRegistryId: formData.dppRegistryId || undefined,
       };
 
       if (isEditMode && id) {
@@ -761,6 +840,7 @@ export function ProductFormPage() {
             {currentStepId === 'images' && t('Manage product images')}
             {currentStepId === 'sustainability' && t('Define materials and sustainability data')}
             {currentStepId === 'compliance' && t('Add certifications and compliance data')}
+            {currentStepId === 'espr-compliance' && t('EU ESPR mandatory fields: economic operators, substances, durability, conformity')}
             {currentStepId === 'documents' && t('Upload relevant documents')}
             {currentStepId === 'support' && t('Add support resources, FAQ, warranty, and repair information')}
             {currentStepId === 'suppliers' && t('Assign suppliers and economic operators')}
@@ -1797,6 +1877,756 @@ export function ProductFormPage() {
                           </button>
                         </Badge>
                       ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step: ESPR Compliance */}
+          {currentStepId === 'espr-compliance' && (
+            <div className="space-y-8">
+              {/* Section 1: Identification & Economic Operators */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">{t('Identification & Economic Operators')}</h3>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="uniqueProductId">{t('Unique Product ID (UID)')}</Label>
+                    <Input
+                      id="uniqueProductId"
+                      placeholder="e.g. UID-2026-ABC123"
+                      value={formData.uniqueProductId}
+                      onChange={(e) => updateField('uniqueProductId', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">{t('Per ISO/IEC 15459 standard')}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="productionDate">{t('Production Date')}</Label>
+                    <Input
+                      id="productionDate"
+                      type="date"
+                      value={formData.productionDate}
+                      onChange={(e) => updateField('productionDate', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="expirationDate">{t('Expiration Date')}</Label>
+                    <Input
+                      id="expirationDate"
+                      type="date"
+                      value={formData.expirationDate}
+                      onChange={(e) => updateField('expirationDate', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dppRegistryId">{t('DPP Registry ID')}</Label>
+                    <Input
+                      id="dppRegistryId"
+                      placeholder={t('EU DPP Registry Entry ID')}
+                      value={formData.dppRegistryId}
+                      onChange={(e) => updateField('dppRegistryId', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="importerName">{t('Importer Name')}</Label>
+                    <Input
+                      id="importerName"
+                      placeholder={t('e.g. Import GmbH')}
+                      value={formData.importerName}
+                      onChange={(e) => updateField('importerName', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="importerEORI">{t('Importer EORI Number')}</Label>
+                    <Input
+                      id="importerEORI"
+                      placeholder="e.g. DE123456789012345"
+                      value={formData.importerEORI}
+                      onChange={(e) => updateField('importerEORI', e.target.value)}
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Authorized Representative */}
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base">{t('Authorized Representative')}</Label>
+                    {!formData.authorizedRepresentative && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          authorizedRepresentative: { name: '', address: '', email: '', phone: '', eori: '' }
+                        }))}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t('Add')}
+                      </Button>
+                    )}
+                  </div>
+
+                  {formData.authorizedRepresentative && (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Name')}</Label>
+                        <Input
+                          placeholder={t('Full Name')}
+                          value={formData.authorizedRepresentative.name}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            authorizedRepresentative: { ...prev.authorizedRepresentative!, name: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Email')}</Label>
+                        <Input
+                          type="email"
+                          placeholder="email@example.com"
+                          value={formData.authorizedRepresentative.email}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            authorizedRepresentative: { ...prev.authorizedRepresentative!, email: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Phone')}</Label>
+                        <Input
+                          type="tel"
+                          placeholder="+49..."
+                          value={formData.authorizedRepresentative.phone || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            authorizedRepresentative: { ...prev.authorizedRepresentative!, phone: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('EORI')}</Label>
+                        <Input
+                          placeholder="Optional"
+                          value={formData.authorizedRepresentative.eori || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            authorizedRepresentative: { ...prev.authorizedRepresentative!, eori: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">{t('Address')}</Label>
+                        <Input
+                          placeholder={t('Full Address')}
+                          value={formData.authorizedRepresentative.address}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            authorizedRepresentative: { ...prev.authorizedRepresentative!, address: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFormData(prev => ({ ...prev, authorizedRepresentative: null }))}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t('Remove')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* DPP Responsible */}
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base">{t('DPP Responsible Person')}</Label>
+                    {!formData.dppResponsible && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          dppResponsible: { name: '', role: '', email: '', lastUpdate: new Date().toISOString().split('T')[0] }
+                        }))}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t('Add')}
+                      </Button>
+                    )}
+                  </div>
+
+                  {formData.dppResponsible && (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Name')}</Label>
+                        <Input
+                          placeholder={t('Full Name')}
+                          value={formData.dppResponsible.name}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            dppResponsible: { ...prev.dppResponsible!, name: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Role/Position')}</Label>
+                        <Input
+                          placeholder={t('e.g. Sustainability Manager')}
+                          value={formData.dppResponsible.role}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            dppResponsible: { ...prev.dppResponsible!, role: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Email')}</Label>
+                        <Input
+                          type="email"
+                          placeholder="email@example.com"
+                          value={formData.dppResponsible.email}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            dppResponsible: { ...prev.dppResponsible!, email: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Last Update')}</Label>
+                        <Input
+                          type="date"
+                          value={formData.dppResponsible.lastUpdate}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            dppResponsible: { ...prev.dppResponsible!, lastUpdate: e.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFormData(prev => ({ ...prev, dppResponsible: null }))}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t('Remove')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 2: Materials & Substances of Concern */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  <h3 className="text-lg font-semibold">{t('Substances of Concern (SVHC/SCIP)')}</h3>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('Recycled Content Percentage')}</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={formData.recycledContentPercentage}
+                      onChange={(e) => updateField('recycledContentPercentage', e.target.value ? Number(e.target.value) : '')}
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base">{t('SVHC Substances List')}</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        substancesOfConcern: [...prev.substancesOfConcern, {
+                          name: '',
+                          casNumber: '',
+                          ecNumber: '',
+                          concentration: 0,
+                          scipId: '',
+                          svhcListed: false
+                        }]
+                      }))}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t('Add Substance')}
+                    </Button>
+                  </div>
+
+                  {formData.substancesOfConcern.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      {t('No substances of concern declared yet')}
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.substancesOfConcern.map((substance, index) => (
+                        <div key={index} className="border rounded-lg p-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">{t('Substance')} #{index + 1}</Label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                substancesOfConcern: prev.substancesOfConcern.filter((_, i) => i !== index)
+                              }))}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="grid gap-2 md:grid-cols-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t('Substance Name')} *</Label>
+                              <Input
+                                placeholder={t('e.g. Lead')}
+                                value={substance.name}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  substancesOfConcern: prev.substancesOfConcern.map((s, i) =>
+                                    i === index ? { ...s, name: e.target.value } : s
+                                  )
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t('CAS Number')} *</Label>
+                              <Input
+                                placeholder="e.g. 7439-92-1"
+                                value={substance.casNumber}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  substancesOfConcern: prev.substancesOfConcern.map((s, i) =>
+                                    i === index ? { ...s, casNumber: e.target.value } : s
+                                  )
+                                }))}
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t('EC Number')}</Label>
+                              <Input
+                                placeholder="e.g. 231-100-4"
+                                value={substance.ecNumber || ''}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  substancesOfConcern: prev.substancesOfConcern.map((s, i) =>
+                                    i === index ? { ...s, ecNumber: e.target.value } : s
+                                  )
+                                }))}
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t('Concentration (%)')}</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={substance.concentration || ''}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  substancesOfConcern: prev.substancesOfConcern.map((s, i) =>
+                                    i === index ? { ...s, concentration: e.target.value ? Number(e.target.value) : 0 } : s
+                                  )
+                                }))}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t('SCIP ID')}</Label>
+                              <Input
+                                placeholder={t('Optional')}
+                                value={substance.scipId || ''}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  substancesOfConcern: prev.substancesOfConcern.map((s, i) =>
+                                    i === index ? { ...s, scipId: e.target.value } : s
+                                  )
+                                }))}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 pt-6">
+                              <input
+                                type="checkbox"
+                                id={`svhc-${index}`}
+                                checked={substance.svhcListed}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  substancesOfConcern: prev.substancesOfConcern.map((s, i) =>
+                                    i === index ? { ...s, svhcListed: e.target.checked } : s
+                                  )
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              <Label htmlFor={`svhc-${index}`} className="text-xs cursor-pointer">
+                                {t('Listed as SVHC')}
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 3: Sustainability & Durability */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                  <h3 className="text-lg font-semibold">{t('Sustainability & Durability')}</h3>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="energyConsumptionKWh">{t('Energy Consumption (kWh/year)')}</Label>
+                    <Input
+                      id="energyConsumptionKWh"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.energyConsumptionKWh}
+                      onChange={(e) => updateField('energyConsumptionKWh', e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="durabilityYears">{t('Durability (years)')}</Label>
+                    <Input
+                      id="durabilityYears"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      placeholder="e.g. 5"
+                      value={formData.durabilityYears}
+                      onChange={(e) => updateField('durabilityYears', e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="repairabilityScore">{t('Repairability Score (0-100)')}</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        id="repairabilityScore"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={formData.repairabilityScore || 0}
+                        onChange={(e) => updateField('repairabilityScore', Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={formData.repairabilityScore}
+                        onChange={(e) => updateField('repairabilityScore', e.target.value ? Number(e.target.value) : '')}
+                        className="w-20"
+                      />
+                    </div>
+                    <Progress value={Number(formData.repairabilityScore) || 0} className="h-2" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 4: Recycling & End-of-Life */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Recycle className="h-5 w-5 text-green-500" />
+                  <h3 className="text-lg font-semibold">{t('Recycling & End-of-Life')}</h3>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="disassemblyInstructions">{t('Disassembly Instructions')}</Label>
+                  <RichTextEditor
+                    value={formData.disassemblyInstructions}
+                    onChange={(value) => updateField('disassemblyInstructions', value)}
+                    placeholder={t('Describe how to disassemble the product for recycling...')}
+                    minHeight={120}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('Or provide a URL to external instructions')}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endOfLifeInstructions">{t('End-of-Life Disposal Instructions')}</Label>
+                  <RichTextEditor
+                    value={formData.endOfLifeInstructions}
+                    onChange={(value) => updateField('endOfLifeInstructions', value)}
+                    placeholder={t('Describe proper disposal methods at end of product life...')}
+                    minHeight={120}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 5: Conformity & Certifications */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-blue-500" />
+                  <h3 className="text-lg font-semibold">{t('Conformity & Certifications')}</h3>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="ceMarking"
+                    checked={formData.ceMarking}
+                    onChange={(e) => updateField('ceMarking', e.target.checked)}
+                    className="h-5 w-5 rounded border-gray-300"
+                  />
+                  <Label htmlFor="ceMarking" className="text-base font-medium cursor-pointer">
+                    {t('CE Marking Present')}
+                  </Label>
+                  {formData.ceMarking && (
+                    <Badge variant="secondary" className="ml-auto">✓ CE</Badge>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="euDeclarationOfConformity">{t('EU Declaration of Conformity (URL)')}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="euDeclarationOfConformity"
+                      type="url"
+                      placeholder="https://example.com/doc.pdf"
+                      value={formData.euDeclarationOfConformity}
+                      onChange={(e) => updateField('euDeclarationOfConformity', e.target.value)}
+                    />
+                    {formData.euDeclarationOfConformity && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => window.open(formData.euDeclarationOfConformity, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="userManualUrl">{t('User Manual (URL)')}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="userManualUrl"
+                      type="url"
+                      placeholder="https://example.com/manual.pdf"
+                      value={formData.userManualUrl}
+                      onChange={(e) => updateField('userManualUrl', e.target.value)}
+                    />
+                    {formData.userManualUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => window.open(formData.userManualUrl, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('Test Reports (URLs)')}</Label>
+                  {formData.testReports.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="https://example.com/test-report.pdf"
+                        value={url}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          testReports: prev.testReports.map((u, i) => i === index ? e.target.value : u)
+                        }))}
+                      />
+                      {url && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => window.open(url, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          testReports: prev.testReports.filter((_, i) => i !== index)
+                        }))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      testReports: [...prev.testReports, '']
+                    }))}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('Add Test Report')}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="safetyInformation">{t('Safety Information')}</Label>
+                  <RichTextEditor
+                    value={formData.safetyInformation}
+                    onChange={(value) => updateField('safetyInformation', value)}
+                    placeholder={t('Safety warnings, precautions, handling instructions...')}
+                    minHeight={100}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 6: Customs & Preference */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-purple-500" />
+                  <h3 className="text-lg font-semibold">{t('Customs & Trade Preferences')}</h3>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="customsValue">{t('Customs Value (EUR)')}</Label>
+                    <Input
+                      id="customsValue"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.customsValue}
+                      onChange={(e) => updateField('customsValue', e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="preferenceProof">{t('Preference Proof')}</Label>
+                    <Input
+                      id="preferenceProof"
+                      placeholder={t('e.g. EUR.1, REX, etc.')}
+                      value={formData.preferenceProof}
+                      onChange={(e) => updateField('preferenceProof', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">{t('Preferential origin proof document')}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 7: Product Sets (Component DPP URLs) */}
+              {productType === 'set' && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-indigo-500" />
+                      <h3 className="text-lg font-semibold">{t('Component DPP URLs')}</h3>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t('DPP URLs of Components')}</Label>
+                      {formData.componentDppUrls.map((url, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            type="url"
+                            placeholder="https://dpp-app.fambliss.eu/p/..."
+                            value={url}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              componentDppUrls: prev.componentDppUrls.map((u, i) => i === index ? e.target.value : u)
+                            }))}
+                          />
+                          {url && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => window.open(url, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              componentDppUrls: prev.componentDppUrls.filter((_, i) => i !== index)
+                            }))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          componentDppUrls: [...prev.componentDppUrls, '']
+                        }))}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t('Add Component DPP URL')}
+                      </Button>
                     </div>
                   </div>
                 </>

@@ -252,18 +252,40 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'gtin', label: 'GTIN', category: 'Identifiers', description: 'Global Trade Item Number' },
   { key: 'serialNumber', label: 'Serial Number', category: 'Identifiers' },
   { key: 'batchNumber', label: 'Batch Number', category: 'Identifiers' },
+  { key: 'uniqueProductId', label: 'Unique Product ID (UID)', category: 'Identifiers', description: 'UID per ISO/IEC 15459' },
+  { key: 'productionDate', label: 'Production Date', category: 'Identifiers' },
+  { key: 'expirationDate', label: 'Expiration Date', category: 'Identifiers' },
+  { key: 'productDimensions', label: 'Product Dimensions', category: 'Basic Data', description: 'Height, Width, Depth in cm' },
+  { key: 'packagingDetails', label: 'Packaging Details', category: 'Basic Data', description: 'Type, Description, Dimensions' },
+
+  // Economic Operators
+  { key: 'importerName', label: 'Importer Name', category: 'Economic Operators' },
+  { key: 'importerEORI', label: 'Importer EORI', category: 'Economic Operators' },
+  { key: 'authorizedRepresentative', label: 'Authorized Representative', category: 'Economic Operators' },
+  { key: 'dppResponsible', label: 'DPP Responsible', category: 'Economic Operators' },
 
   // Materialien
   { key: 'materials', label: 'Material Composition', category: 'Materials', description: 'Product materials (excluding packaging)' },
+  { key: 'substancesOfConcern', label: 'Substances of Concern (SVHC)', category: 'Materials', description: 'SVHC/SCIP substances list' },
+  { key: 'recycledContentPercentage', label: 'Recycled Content %', category: 'Materials' },
 
   // Nachhaltigkeit
   { key: 'carbonFootprint', label: 'Carbon Footprint', category: 'Sustainability', description: 'CO2 footprint with rating (A-E)' },
+  { key: 'energyConsumptionKWh', label: 'Energy Consumption (kWh/year)', category: 'Sustainability' },
+  { key: 'durabilityYears', label: 'Durability (years)', category: 'Sustainability' },
+  { key: 'repairabilityScore', label: 'Repairability Score', category: 'Sustainability', description: 'Score 0-100' },
 
   // Recycling
   { key: 'recyclability', label: 'Recyclability', category: 'Recycling', description: 'Recyclability percentage, instructions, and disposal methods' },
+  { key: 'disassemblyInstructions', label: 'Disassembly Instructions', category: 'Recycling' },
+  { key: 'endOfLifeInstructions', label: 'End-of-Life Instructions', category: 'Recycling' },
 
   // Zertifizierungen
   { key: 'certifications', label: 'Certifications', category: 'Certifications', description: 'Product certifications with certificate URLs' },
+  { key: 'euDeclarationOfConformity', label: 'EU Declaration of Conformity', category: 'Certifications' },
+  { key: 'testReports', label: 'Test Reports', category: 'Certifications' },
+  { key: 'ceMarking', label: 'CE Marking', category: 'Certifications' },
+  { key: 'registrations', label: 'Product Registrations', category: 'Certifications', description: 'WEEE, EPREL, LUCID, etc.' },
 
   // Lieferkette
   { key: 'supplyChainSimple', label: 'Supply Chain (simplified)', category: 'Supply Chain' },
@@ -281,9 +303,12 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'manufacturerAddress', label: 'Manufacturer Address', category: 'Customs Data' },
   { key: 'manufacturerEORI', label: 'EORI Number', category: 'Customs Data', description: 'Economic Operators Registration and Identification' },
   { key: 'manufacturerVAT', label: 'VAT ID', category: 'Customs Data', description: 'Value Added Tax Identification Number' },
+  { key: 'customsValue', label: 'Customs Value (EUR)', category: 'Customs Data' },
+  { key: 'preferenceProof', label: 'Preference Proof', category: 'Customs Data', description: 'EUR.1, REX, etc.' },
 
   // Set Components
   { key: 'setComponents', label: 'Set Components', category: 'Set / Bundle', description: 'Components of a product set' },
+  { key: 'componentDppUrls', label: 'Component DPP URLs', category: 'Set / Bundle', description: 'URLs to component DPPs' },
 
   // Support
   { key: 'supportResources', label: 'Support Information', category: 'Support' },
@@ -292,12 +317,18 @@ export const fieldDefinitions: FieldDefinition[] = [
   { key: 'supportVideos', label: 'Videos', category: 'Support' },
   { key: 'supportRepair', label: 'Repair Information', category: 'Support' },
   { key: 'supportSpareParts', label: 'Spare Parts', category: 'Support' },
+  { key: 'userManualUrl', label: 'User Manual', category: 'Support' },
+  { key: 'safetyInformation', label: 'Safety Information', category: 'Support' },
+
+  // Technical / DPP Registry
+  { key: 'dppRegistryId', label: 'DPP Registry ID', category: 'Technical', description: 'EU DPP Registry Entry' },
 ];
 
 // Kategorien für die Gruppierung in den Einstellungen
 export const fieldCategories = [
   'Basic Data',
   'Identifiers',
+  'Economic Operators',
   'Materials',
   'Sustainability',
   'Recycling',
@@ -306,6 +337,7 @@ export const fieldCategories = [
   'Customs Data',
   'Set / Bundle',
   'Support',
+  'Technical',
 ];
 
 // Hilfsfunktion zum Laden der V2-Konfiguration
@@ -441,18 +473,40 @@ export const defaultVisibilityConfigV3: VisibilityConfigV3 = {
     gtin: { consumer: false, customs: true },
     serialNumber: { consumer: false, customs: true },
     batchNumber: { consumer: false, customs: true },
+    uniqueProductId: { consumer: false, customs: true },
+    productionDate: { consumer: false, customs: true },
+    expirationDate: { consumer: false, customs: true },
+    productDimensions: { consumer: true, customs: true },
+    packagingDetails: { consumer: true, customs: true },
+
+    // Economic Operators - Customs only (except dppResponsible)
+    importerName: { consumer: false, customs: true },
+    importerEORI: { consumer: false, customs: true },
+    authorizedRepresentative: { consumer: false, customs: true },
+    dppResponsible: { consumer: true, customs: true },
 
     // Materials - Public
     materials: { consumer: true, customs: true },
+    substancesOfConcern: { consumer: true, customs: true },
+    recycledContentPercentage: { consumer: true, customs: true },
 
     // Sustainability - Public
     carbonFootprint: { consumer: true, customs: true },
+    energyConsumptionKWh: { consumer: true, customs: true },
+    durabilityYears: { consumer: true, customs: true },
+    repairabilityScore: { consumer: true, customs: true },
 
     // Recycling - Public
     recyclability: { consumer: true, customs: true },
+    disassemblyInstructions: { consumer: true, customs: true },
+    endOfLifeInstructions: { consumer: true, customs: true },
 
     // Certifications - Public
     certifications: { consumer: true, customs: true },
+    euDeclarationOfConformity: { consumer: false, customs: true },
+    testReports: { consumer: false, customs: true },
+    ceMarking: { consumer: true, customs: true },
+    registrations: { consumer: false, customs: true },
 
     // Supply Chain - Mixed
     supplyChainSimple: { consumer: true, customs: true },
@@ -470,9 +524,12 @@ export const defaultVisibilityConfigV3: VisibilityConfigV3 = {
     manufacturerAddress: { consumer: false, customs: true },
     manufacturerEORI: { consumer: false, customs: true },
     manufacturerVAT: { consumer: false, customs: true },
+    customsValue: { consumer: false, customs: true },
+    preferenceProof: { consumer: false, customs: true },
 
     // Set Components - Public
     setComponents: { consumer: true, customs: true },
+    componentDppUrls: { consumer: true, customs: true },
 
     // Support - Public
     supportResources: { consumer: true, customs: true },
@@ -481,6 +538,11 @@ export const defaultVisibilityConfigV3: VisibilityConfigV3 = {
     supportVideos: { consumer: true, customs: true },
     supportRepair: { consumer: true, customs: true },
     supportSpareParts: { consumer: true, customs: true },
+    userManualUrl: { consumer: true, customs: true },
+    safetyInformation: { consumer: true, customs: true },
+
+    // Technical / DPP Registry
+    dppRegistryId: { consumer: false, customs: true },
   },
 };
 

@@ -19,6 +19,7 @@ import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-temp
 
 import { getProductMaterials, getPackagingMaterials } from '@/lib/dpp-template-helpers';
 import { DPPSetComponentsSection } from '@/components/public/DPPSetComponentsSection';
+import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { PublicProductTicketDialog } from './PublicProductTicketDialog';
 import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationEnabled';
 
@@ -497,6 +498,15 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
         )}
 
         {consumerSections.map(s => renderSection(s))}
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
 
       {tenantId && (
@@ -987,6 +997,15 @@ function TechnicalCustomsView({ data }: ViewProps) {
             </div>
           );
         })()}
+
+        <DPPESPRSections
+          product={product}
+          isFieldVisible={isFieldVisible}
+          cardStyle={cardStyle}
+          headingStyle={headingStyle}
+          primaryColor={primaryColor}
+          t={t}
+        />
       </div>
     </div>
   );

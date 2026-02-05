@@ -35,6 +35,7 @@ function transformSupplyChainEntry(row: SupplyChainRow): SupplyChainEntry {
     notes: row.notes || undefined,
     cost: row.cost != null ? Number(row.cost) : undefined,
     currency: row.currency || undefined,
+    facility_identifier: row.facility_identifier || undefined,
   };
 }
 
