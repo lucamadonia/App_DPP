@@ -101,7 +101,7 @@ interface BrandingProviderProps {
 }
 
 export function BrandingProvider({ children }: BrandingProviderProps) {
-  const { isAuthenticated, tenantId } = useAuth();
+  const { isAuthenticated, tenantId, isInitializing } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [rawBranding, setRawBranding] = useState<BrandingSettings | null>(null);
   const [rawQRCodeSettings, setRawQRCodeSettings] = useState<QRCodeDomainSettings | null>(null);
@@ -155,12 +155,23 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
       setRawDPPDesign(null);
     }
     setIsLoading(false);
-  }, [isAuthenticated, tenantId]);
+  }, [isAuthenticated, tenantId, isInitializing]);
 
   // Load branding when auth state changes
   useEffect(() => {
-    loadBranding();
-  }, [loadBranding]);
+    // Wait until auth is fully initialized
+    if (isInitializing) return;
+
+    if (isAuthenticated && tenantId) {
+      loadBranding();
+    } else {
+      // Reset to defaults when not authenticated
+      setRawBranding(null);
+      setRawQRCodeSettings(null);
+      setRawDPPDesign(null);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, tenantId, isInitializing, loadBranding]);
 
   // Apply branding changes to DOM
   useEffect(() => {

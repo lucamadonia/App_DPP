@@ -33,10 +33,23 @@ export const supabase = createClient<any>(
   }
 );
 
+// Cache for tenant ID to reduce database queries
+let cachedTenantId: string | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Helper to get the current user's tenant_id from their profile
-export async function getCurrentTenantId(): Promise<string | null> {
+export async function getCurrentTenantId(forceRefresh = false): Promise<string | null> {
+  // Return cached value if valid
+  if (!forceRefresh && cachedTenantId && Date.now() - cacheTimestamp < CACHE_TTL) {
+    return cachedTenantId;
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    cachedTenantId = null;
+    return null;
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -44,5 +57,14 @@ export async function getCurrentTenantId(): Promise<string | null> {
     .eq('id', user.id)
     .single();
 
-  return (profile as { tenant_id: string } | null)?.tenant_id || null;
+  cachedTenantId = (profile as { tenant_id: string } | null)?.tenant_id || null;
+  cacheTimestamp = Date.now();
+
+  return cachedTenantId;
+}
+
+// Export cache invalidation for logout
+export function clearTenantIdCache() {
+  cachedTenantId = null;
+  cacheTimestamp = 0;
 }

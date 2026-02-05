@@ -25,14 +25,22 @@ import { useLocale } from '@/hooks/use-locale';
 export function DashboardPage() {
   const { t } = useTranslation('dashboard');
   const locale = useLocale();
-  const { user } = useAuth();
+  const { user, isAuthenticated, tenantId, isInitializing } = useAuth();
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [docStats, setDocStats] = useState({ total: 0, valid: 0, expiring: 0, expired: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Wait until auth is fully loaded
+    if (isInitializing) return;
+
+    // Only load data when authenticated AND tenantId is available
+    if (isAuthenticated && tenantId) {
+      loadData();
+    } else {
+      setIsLoading(false); // Stop loading if not authenticated
+    }
+  }, [isAuthenticated, tenantId, isInitializing]);
 
   const loadData = async () => {
     setIsLoading(true);
