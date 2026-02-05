@@ -95,6 +95,32 @@ export async function getSuppliers(): Promise<Supplier[]> {
 }
 
 /**
+ * Get suppliers with status 'pending_approval'
+ * Used for supplier portal approval workflow
+ */
+export async function getPendingSuppliers(): Promise<Supplier[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'pending_approval')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load pending suppliers:', error);
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((row: any) => transformSupplier(row));
+}
+
+/**
  * Get a single supplier by ID
  */
 export async function getSupplier(id: string): Promise<Supplier | null> {

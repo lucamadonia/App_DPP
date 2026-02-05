@@ -45,6 +45,8 @@ import {
   ChevronDown,
   ChevronUp,
   Maximize2,
+  XCircle,
+  Copy,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Button } from '@/components/ui/button';
@@ -81,6 +83,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import {
   getSuppliers,
   createSupplier,
@@ -94,6 +97,10 @@ import {
   getSupplierSpendAnalysis,
   getSupplierSpendForSupplier,
   getCountries,
+  getPendingSuppliers,
+  approveSupplier,
+  rejectSupplier,
+  createSupplierInvitation,
   type ProductListItem,
   type SupplierSpendSummary,
   type SupplierSpendDetail,
@@ -184,6 +191,21 @@ export function SuppliersPage() {
   const [expandedPriceTiers, setExpandedPriceTiers] = useState<string | null>(null);
   const [editingTiers, setEditingTiers] = useState<PriceTier[]>([]);
   const [savingTiers, setSavingTiers] = useState(false);
+
+  // Supplier portal invitation state
+  const [invitationDialogOpen, setInvitationDialogOpen] = useState(false);
+  const [invitationEmail, setInvitationEmail] = useState('');
+  const [invitationContactName, setInvitationContactName] = useState('');
+  const [invitationCompanyName, setInvitationCompanyName] = useState('');
+  const [generatedInvitationLink, setGeneratedInvitationLink] = useState('');
+  const [isGeneratingInvitation, setIsGeneratingInvitation] = useState(false);
+
+  // Approve/reject supplier state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedSupplierForApproval, setSelectedSupplierForApproval] = useState<Supplier | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -483,6 +505,98 @@ export function SuppliersPage() {
       alert('Error deleting');
     }
     setIsLoading(false);
+  };
+
+  // Generate supplier invitation
+  const handleGenerateInvitation = async () => {
+    if (!invitationEmail) {
+      alert(t('Email is required'));
+      return;
+    }
+    setIsGeneratingInvitation(true);
+    try {
+      const result = await createSupplierInvitation({
+        email: invitationEmail,
+        contactName: invitationContactName || undefined,
+        companyName: invitationCompanyName || undefined,
+      });
+      if (result.success && result.data) {
+        setGeneratedInvitationLink(result.data.invitationLink);
+        // Copy to clipboard
+        await navigator.clipboard.writeText(result.data.invitationLink);
+        alert(t('Link copied to clipboard!'));
+      } else {
+        alert(t('Failed to generate invitation'));
+      }
+    } catch (error) {
+      console.error('Error generating invitation:', error);
+      alert(t('Error generating invitation'));
+    }
+    setIsGeneratingInvitation(false);
+  };
+
+  // Close invitation dialog
+  const closeInvitationDialog = () => {
+    setInvitationDialogOpen(false);
+    setInvitationEmail('');
+    setInvitationContactName('');
+    setInvitationCompanyName('');
+    setGeneratedInvitationLink('');
+  };
+
+  // Approve supplier
+  const handleApproveSupplier = async () => {
+    if (!selectedSupplierForApproval) return;
+    setIsProcessingApproval(true);
+    try {
+      const result = await approveSupplier(selectedSupplierForApproval.id);
+      if (result.success) {
+        alert(t('Supplier approved successfully'));
+        await loadData();
+        setApproveDialogOpen(false);
+        setSelectedSupplierForApproval(null);
+      } else {
+        alert(t('Failed to approve supplier'));
+      }
+    } catch (error) {
+      console.error('Error approving supplier:', error);
+      alert(t('Error approving supplier'));
+    }
+    setIsProcessingApproval(false);
+  };
+
+  // Reject supplier
+  const handleRejectSupplier = async () => {
+    if (!selectedSupplierForApproval) return;
+    setIsProcessingApproval(true);
+    try {
+      const result = await rejectSupplier(selectedSupplierForApproval.id, rejectionReason || undefined);
+      if (result.success) {
+        alert(t('Supplier rejected successfully'));
+        await loadData();
+        setRejectDialogOpen(false);
+        setSelectedSupplierForApproval(null);
+        setRejectionReason('');
+      } else {
+        alert(t('Failed to reject supplier'));
+      }
+    } catch (error) {
+      console.error('Error rejecting supplier:', error);
+      alert(t('Error rejecting supplier'));
+    }
+    setIsProcessingApproval(false);
+  };
+
+  // Open approve dialog
+  const openApproveDialog = (supplier: Supplier) => {
+    setSelectedSupplierForApproval(supplier);
+    setApproveDialogOpen(true);
+  };
+
+  // Open reject dialog
+  const openRejectDialog = (supplier: Supplier) => {
+    setSelectedSupplierForApproval(supplier);
+    setRejectDialogOpen(true);
   };
 
   // Assign product
@@ -1128,10 +1242,16 @@ export function SuppliersPage() {
             {t('Manage suppliers, rate them, and assign products')}
           </p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('New Supplier')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setInvitationDialogOpen(true)}>
+            <Mail className="mr-2 h-4 w-4" />
+            {t('Invite Supplier')}
+          </Button>
+          <Button onClick={openCreateDialog}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('New Supplier')}
+          </Button>
+        </div>
       </div>
 
       {/* Statistics cards */}
@@ -1416,15 +1536,40 @@ export function SuppliersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" onClick={() => openProductDialog(supplier)} title="Products">
-                            <Link2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(supplier)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteSupplier(supplier.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {supplier.status === 'pending_approval' ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openApproveDialog(supplier)}
+                                title={t('Approve')}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openRejectDialog(supplier)}
+                                title={t('Reject')}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => openProductDialog(supplier)} title="Products">
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(supplier)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteSupplier(supplier.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -2194,6 +2339,200 @@ export function SuppliersPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setProductDialogOpen(false)}>{t('Close', { ns: 'common' })}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Invite Supplier */}
+      <Dialog open={invitationDialogOpen} onOpenChange={setInvitationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Invite Supplier')}</DialogTitle>
+            <DialogDescription>
+              {t('Generate an invitation link for a supplier to register via the supplier portal')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!generatedInvitationLink ? (
+            <div className="space-y-4">
+              <div>
+                <Label>{t('Email')} *</Label>
+                <Input
+                  type="email"
+                  value={invitationEmail}
+                  onChange={(e) => setInvitationEmail(e.target.value)}
+                  placeholder="supplier@example.com"
+                />
+              </div>
+              <div>
+                <Label>{t('Contact Name')}</Label>
+                <Input
+                  value={invitationContactName}
+                  onChange={(e) => setInvitationContactName(e.target.value)}
+                  placeholder="John Doe"
+                />
+              </div>
+              <div>
+                <Label>{t('Company Name')}</Label>
+                <Input
+                  value={invitationCompanyName}
+                  onChange={(e) => setInvitationCompanyName(e.target.value)}
+                  placeholder="Supplier GmbH"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label>{t('Invitation Link')}</Label>
+                <div className="flex gap-2">
+                  <Input value={generatedInvitationLink} readOnly className="font-mono text-xs" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(generatedInvitationLink);
+                      alert(t('Link copied to clipboard!'));
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {!generatedInvitationLink ? (
+              <>
+                <Button variant="outline" onClick={closeInvitationDialog}>
+                  {t('Cancel', { ns: 'common' })}
+                </Button>
+                <Button onClick={handleGenerateInvitation} disabled={isGeneratingInvitation}>
+                  {isGeneratingInvitation ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-2" />
+                  )}
+                  {t('Generate Link & Copy')}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={closeInvitationDialog}>{t('Close', { ns: 'common' })}</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Approve Supplier */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Approve Supplier')}</DialogTitle>
+            <DialogDescription>
+              {t('Are you sure you want to approve this supplier?')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSupplierForApproval && (
+            <div className="space-y-2 py-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-medium">{selectedSupplierForApproval.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedSupplierForApproval.email}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setApproveDialogOpen(false);
+                setSelectedSupplierForApproval(null);
+              }}
+              disabled={isProcessingApproval}
+            >
+              {t('Cancel', { ns: 'common' })}
+            </Button>
+            <Button
+              onClick={handleApproveSupplier}
+              disabled={isProcessingApproval}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessingApproval ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              {t('Approve')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Reject Supplier */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Reject Supplier')}</DialogTitle>
+            <DialogDescription>
+              {t('Are you sure you want to reject this supplier? You can optionally provide a reason.')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSupplierForApproval && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-medium">{selectedSupplierForApproval.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedSupplierForApproval.email}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label>{t('Rejection Reason')} ({t('Optional')})</Label>
+                <Textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder={t('Enter reason for rejection...')}
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setSelectedSupplierForApproval(null);
+                setRejectionReason('');
+              }}
+              disabled={isProcessingApproval}
+            >
+              {t('Cancel', { ns: 'common' })}
+            </Button>
+            <Button
+              onClick={handleRejectSupplier}
+              disabled={isProcessingApproval}
+              variant="destructive"
+            >
+              {isProcessingApproval ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              {t('Reject')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

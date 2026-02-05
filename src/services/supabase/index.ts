@@ -62,6 +62,7 @@ export {
 // Suppliers
 export {
   getSuppliers,
+  getPendingSuppliers,
   getSupplier,
   createSupplier,
   updateSupplier,
@@ -77,6 +78,17 @@ export {
   type SupplierSpendSummary,
   type SupplierSpendDetail,
 } from './suppliers';
+
+// Supplier Portal
+export {
+  getSupplierInvitations,
+  createSupplierInvitation,
+  cancelSupplierInvitation,
+  getSupplierInvitationByCode,
+  publicSubmitSupplierRegistration,
+  approveSupplier,
+  rejectSupplier,
+} from './supplier-portal';
 
 // Supply Chain
 export {

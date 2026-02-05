@@ -36,6 +36,12 @@ const PublicReturnPortalPage = lazy(() => import('@/pages/returns/public/PublicR
 const PublicReturnRegisterPage = lazy(() => import('@/pages/returns/public/PublicReturnRegisterPage').then(m => ({ default: m.PublicReturnRegisterPage })));
 const PublicReturnTrackingPage = lazy(() => import('@/pages/returns/public/PublicReturnTrackingPage').then(m => ({ default: m.PublicReturnTrackingPage })));
 
+// Supplier Portal (public)
+const SupplierPortalLayout = lazy(() => import('@/pages/suppliers/public/SupplierPortalLayout').then(m => ({ default: m.SupplierPortalLayout })));
+const SupplierRegisterPage = lazy(() => import('@/pages/suppliers/public/SupplierRegisterPage').then(m => ({ default: m.SupplierRegisterPage })));
+const SupplierRegisterSuccessPage = lazy(() => import('@/pages/suppliers/public/SupplierRegisterSuccessPage').then(m => ({ default: m.SupplierRegisterSuccessPage })));
+const SupplierInvitationExpiredPage = lazy(() => import('@/pages/suppliers/public/SupplierInvitationExpiredPage').then(m => ({ default: m.SupplierInvitationExpiredPage })));
+
 // Customer Portal
 const CustomerPortalLayout = lazy(() => import('@/pages/customer/CustomerPortalLayout').then(m => ({ default: m.CustomerPortalLayout })));
 const CustomerProtectedRoute = lazy(() => import('@/pages/customer/CustomerProtectedRoute').then(m => ({ default: m.CustomerProtectedRoute })));
@@ -65,6 +71,7 @@ const DocumentsPage = lazy(() => import('@/pages/DocumentsPage').then(m => ({ de
 const SupplyChainPage = lazy(() => import('@/pages/SupplyChainPage').then(m => ({ default: m.SupplyChainPage })));
 const SuppliersPage = lazy(() => import('@/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetailPage').then(m => ({ default: m.SupplierDetailPage })));
+const SupplierInvitationsPage = lazy(() => import('@/pages/SupplierInvitationsPage').then(m => ({ default: m.SupplierInvitationsPage })));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
@@ -222,6 +229,13 @@ function NormalAppRoutes() {
         {/* Standalone tracking page (loads branding dynamically) */}
         <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
 
+        {/* Public Supplier Portal (no auth, invitation-based) */}
+        <Route path="suppliers/register/:invitationCode" element={<SupplierPortalLayout />}>
+          <Route index element={<SupplierRegisterPage />} />
+          <Route path="success" element={<SupplierRegisterSuccessPage />} />
+          <Route path="expired" element={<SupplierInvitationExpiredPage />} />
+        </Route>
+
         {/* Customer Portal (tenant-branded, own auth) */}
         <Route path="customer/:tenantSlug" element={<CustomerPortalLayout />}>
           {/* Public customer pages (no customer auth needed) */}
@@ -269,6 +283,7 @@ function NormalAppRoutes() {
           {/* Supply Chain */}
           <Route path="supply-chain" element={<SupplyChainPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="suppliers/invitations" element={<SupplierInvitationsPage />} />
           <Route path="suppliers/:id" element={<SupplierDetailPage />} />
 
           {/* Returns Hub */}

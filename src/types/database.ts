@@ -7,6 +7,7 @@
 
 import type { ReturnsHubSettings } from './returns-hub';
 import type { MasterLabelTemplate } from './master-label-editor';
+import type { SupplierPortalSettings } from './supplier-portal';
 
 // ============================================
 // TENANT (Mandant)
@@ -148,6 +149,7 @@ export interface TenantSettings {
   qrCode?: QRCodeDomainSettings;
   dppDesign?: DPPDesignSettings;
   returnsHub?: ReturnsHubSettings;
+  supplierPortal?: SupplierPortalSettings;
   productLanguages?: string[];
   masterLabelTemplates?: MasterLabelTemplate[];
 }
@@ -362,6 +364,7 @@ export interface SupplyChainEntry {
   notes?: string;
   cost?: number;
   currency?: string;
+  facility_identifier?: string; // GLN (Global Location Number)
 }
 
 // ============================================
