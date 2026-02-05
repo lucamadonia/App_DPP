@@ -6,7 +6,7 @@ import { getCurrentTenant } from '@/services/supabase/tenants';
 import { getCurrentTenantId } from '@/lib/supabase';
 import type { Category, Country, Supplier, ProductRegistrations, SupportResources, Tenant } from '@/types/database';
 import { getCategoryDisplayName, getSubcategoryDisplayName } from '@/lib/category-utils';
-import type { TranslatableProductFields } from '@/types/product';
+import type { TranslatableProductFields, PackagingType } from '@/types/product';
 import { REGISTRATION_FIELDS } from '@/lib/registration-fields';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import { CERTIFICATION_CATEGORIES } from '@/lib/certification-options';
@@ -229,6 +229,16 @@ export function ProductFormPage() {
         })),
         registrations: product.registrations || {},
         supportResources: product.supportResources || {},
+        // Dimensions
+        productHeightCm: product.productHeightCm ?? '',
+        productWidthCm: product.productWidthCm ?? '',
+        productDepthCm: product.productDepthCm ?? '',
+        // Packaging details
+        packagingType: product.packagingType || '',
+        packagingDescription: product.packagingDescription || '',
+        packagingHeightCm: product.packagingHeightCm ?? '',
+        packagingWidthCm: product.packagingWidthCm ?? '',
+        packagingDepthCm: product.packagingDepthCm ?? '',
       });
 
       setTranslations(product.translations || {});
@@ -286,6 +296,16 @@ export function ProductFormPage() {
     certifications: [] as Array<{ name: string; issuedBy: string; validUntil: string }>,
     registrations: {} as ProductRegistrations,
     supportResources: {} as SupportResources,
+    // Dimensions
+    productHeightCm: '' as number | '',
+    productWidthCm: '' as number | '',
+    productDepthCm: '' as number | '',
+    // Packaging details
+    packagingType: '' as PackagingType | '',
+    packagingDescription: '' as string,
+    packagingHeightCm: '' as number | '',
+    packagingWidthCm: '' as number | '',
+    packagingDepthCm: '' as number | '',
   });
 
   const updateField = (field: string, value: string | number | boolean) => {
@@ -550,6 +570,16 @@ export function ProductFormPage() {
         importerSupplierId: (importerSupplierId && importerSupplierId !== '_tenant' && importerSupplierId !== '_none') ? importerSupplierId : null,
         productType,
         aggregationOverrides: productType === 'set' ? aggregationOverrides : {},
+        // Dimensions
+        productHeightCm: formData.productHeightCm || undefined,
+        productWidthCm: formData.productWidthCm || undefined,
+        productDepthCm: formData.productDepthCm || undefined,
+        // Packaging details
+        packagingType: formData.packagingType || undefined,
+        packagingDescription: formData.packagingDescription || undefined,
+        packagingHeightCm: formData.packagingHeightCm || undefined,
+        packagingWidthCm: formData.packagingWidthCm || undefined,
+        packagingDepthCm: formData.packagingDepthCm || undefined,
       };
 
       if (isEditMode && id) {
@@ -1506,6 +1536,138 @@ export function ProductFormPage() {
                       minHeight="5rem"
                     />
                   )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 5: Packaging Details */}
+              <div>
+                <h3 className="font-medium mb-4 flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  {t('Packaging Details')}
+                </h3>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('Packaging Type')}</label>
+                    <Select
+                      value={formData.packagingType || ''}
+                      onValueChange={(v) => updateField('packagingType', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('Select packaging type...')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="box">{t('packaging.box')}</SelectItem>
+                        <SelectItem value="blister">{t('packaging.blister')}</SelectItem>
+                        <SelectItem value="bottle">{t('packaging.bottle')}</SelectItem>
+                        <SelectItem value="pouch">{t('packaging.pouch')}</SelectItem>
+                        <SelectItem value="can">{t('packaging.can')}</SelectItem>
+                        <SelectItem value="tube">{t('packaging.tube')}</SelectItem>
+                        <SelectItem value="bag">{t('packaging.bag')}</SelectItem>
+                        <SelectItem value="clamshell">{t('packaging.clamshell')}</SelectItem>
+                        <SelectItem value="wrap">{t('packaging.wrap')}</SelectItem>
+                        <SelectItem value="pallet">{t('packaging.pallet')}</SelectItem>
+                        <SelectItem value="other">{t('packaging.other')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-medium">{t('Packaging Description')}</label>
+                    <textarea
+                      className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder={t('Describe the packaging...')}
+                      value={formData.packagingDescription || ''}
+                      onChange={(e) => updateField('packagingDescription', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Section 6: Dimensions */}
+              <div>
+                <h3 className="font-medium mb-4">{t('Dimensions')}</h3>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Product Dimensions */}
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="text-sm font-medium mb-4">{t('Product Dimensions')}</h4>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 10')}
+                          value={formData.productHeightCm || ''}
+                          onChange={(e) => updateField('productHeightCm', e.target.value ? parseFloat(e.target.value) : '')}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{t('Width (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 20')}
+                          value={formData.productWidthCm || ''}
+                          onChange={(e) => updateField('productWidthCm', e.target.value ? parseFloat(e.target.value) : '')}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{t('Depth (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 5')}
+                          value={formData.productDepthCm || ''}
+                          onChange={(e) => updateField('productDepthCm', e.target.value ? parseFloat(e.target.value) : '')}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Packaging Dimensions */}
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="text-sm font-medium mb-4">{t('Packaging Dimensions')}</h4>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 10')}
+                          value={formData.packagingHeightCm || ''}
+                          onChange={(e) => updateField('packagingHeightCm', e.target.value ? parseFloat(e.target.value) : '')}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{t('Width (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 20')}
+                          value={formData.packagingWidthCm || ''}
+                          onChange={(e) => updateField('packagingWidthCm', e.target.value ? parseFloat(e.target.value) : '')}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{t('Depth (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 5')}
+                          value={formData.packagingDepthCm || ''}
+                          onChange={(e) => updateField('packagingDepthCm', e.target.value ? parseFloat(e.target.value) : '')}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

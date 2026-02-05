@@ -11,6 +11,7 @@ import {
   Copy,
   Factory,
   Building2,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +45,7 @@ interface LabelEditorToolbarProps {
   onZoomChange: (z: number) => void;
   isGenerating: boolean;
   onGeneratePDF: () => void;
+  onOpenMultiLabelDialog: () => void;
   onBack: () => void;
   productSuppliers?: Array<SupplierProduct & { supplier_name: string; supplier_country: string }>;
   manufacturerOverrideId: string | null;
@@ -254,15 +256,32 @@ export function LabelEditorToolbar({
 
       <div className="w-px h-5 bg-border mx-1" />
 
-      {/* Generate PDF */}
-      <Button onClick={onGeneratePDF} disabled={isGenerating} size="sm" className="h-8">
-        {isGenerating ? (
-          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Download className="mr-1.5 h-3.5 w-3.5" />
-        )}
-        {t('ml.generatePDF')}
-      </Button>
+      {/* Generate PDF - Split Button */}
+      <div className="flex items-center gap-0.5">
+        <Button
+          onClick={onGeneratePDF}
+          disabled={isGenerating}
+          size="sm"
+          className="h-8 rounded-r-none"
+        >
+          {isGenerating ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+          )}
+          {t('ml.generatePDF')}
+        </Button>
+        <Button
+          onClick={onOpenMultiLabelDialog}
+          disabled={isGenerating}
+          size="sm"
+          variant="outline"
+          className="h-8 px-2 rounded-l-none border-l-0"
+          title={t('ml.export.title')}
+        >
+          <Package className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }

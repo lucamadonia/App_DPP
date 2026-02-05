@@ -21,6 +21,7 @@ import type {
   LabelSettingsPanelTab,
   MasterLabelTemplate,
   BuiltinPictogram,
+  MultiLabelExportConfig,
 } from '@/types/master-label-editor';
 import type { MasterLabelData, LabelVariant } from '@/types/master-label';
 import type { BatchListItem } from '@/types/product';
@@ -40,6 +41,7 @@ import { LabelDesignSettingsPanel } from './LabelDesignSettingsPanel';
 import { LabelPictogramLibrary } from './LabelPictogramLibrary';
 import { LabelComplianceChecker } from './LabelComplianceChecker';
 import { LabelTemplateGallery } from './LabelTemplateGallery';
+import { MultiLabelExportDialog } from './MultiLabelExportDialog';
 import { detectProductGroup } from '@/lib/master-label-assembler';
 import { useBranding } from '@/hooks/use-branding';
 import { ShieldCheck } from 'lucide-react';
@@ -88,6 +90,7 @@ export function MasterLabelEditorPage({
   const [rightPanelTab, setRightPanelTab] = useState<LabelSettingsPanelTab>('settings');
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showMultiLabelDialog, setShowMultiLabelDialog] = useState(false);
 
   // Save dialog
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -366,6 +369,27 @@ export function MasterLabelEditorPage({
     }
   }, [design, data]);
 
+  const handleMultiLabelExport = useCallback(async (config: MultiLabelExportConfig) => {
+    if (!data) return;
+    setIsGenerating(true);
+    try {
+      const { generateMasterLabelEditorPDF } = await import('@/lib/master-label-pdf-renderer');
+      await generateMasterLabelEditorPDF(
+        design,
+        data,
+        undefined,
+        config,
+        i18n.language as 'en' | 'de'
+      );
+    } catch (err) {
+      console.error('Multi-label export failed:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [design, data, i18n.language]);
+
+  const hasCounterElement = design.elements.some(el => el.type === 'package-counter');
+
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts
   // ---------------------------------------------------------------------------
@@ -598,6 +622,7 @@ export function MasterLabelEditorPage({
             onZoomChange={setZoom}
             isGenerating={isGenerating}
             onGeneratePDF={handleGeneratePDF}
+            onOpenMultiLabelDialog={() => setShowMultiLabelDialog(true)}
             onBack={() => setView('gallery')}
             productSuppliers={productSuppliers}
             manufacturerOverrideId={manufacturerOverrideId}
@@ -775,6 +800,14 @@ export function MasterLabelEditorPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Multi-Label Export Dialog */}
+      <MultiLabelExportDialog
+        open={showMultiLabelDialog}
+        onOpenChange={setShowMultiLabelDialog}
+        onExport={handleMultiLabelExport}
+        hasCounterElement={hasCounterElement}
+      />
     </>
   );
 }

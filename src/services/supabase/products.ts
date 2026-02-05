@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides } from '@/types/product';
+import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides, PackagingType } from '@/types/product';
 import type { ProductRegistrations, SupportResources } from '@/types/database';
 
 // Transform database row to Product type (master data only)
@@ -47,6 +47,16 @@ function transformProduct(row: any): Product & { tenantId: string } {
     importerSupplierId: row.importer_supplier_id || undefined,
     productType: row.product_type || 'single',
     aggregationOverrides: (row.aggregation_overrides as AggregationOverrides) || {},
+    // Dimensions
+    productHeightCm: row.product_height_cm != null ? Number(row.product_height_cm) : undefined,
+    productWidthCm: row.product_width_cm != null ? Number(row.product_width_cm) : undefined,
+    productDepthCm: row.product_depth_cm != null ? Number(row.product_depth_cm) : undefined,
+    // Packaging
+    packagingType: (row.packaging_type as PackagingType) || undefined,
+    packagingDescription: row.packaging_description || undefined,
+    packagingHeightCm: row.packaging_height_cm != null ? Number(row.packaging_height_cm) : undefined,
+    packagingWidthCm: row.packaging_width_cm != null ? Number(row.packaging_width_cm) : undefined,
+    packagingDepthCm: row.packaging_depth_cm != null ? Number(row.packaging_depth_cm) : undefined,
   };
 }
 
@@ -70,6 +80,15 @@ function mergeProductWithBatch(product: Product & { tenantId: string }, batch: a
     certifications: batch.certifications_override || product.certifications,
     carbonFootprint: batch.carbon_footprint_override || product.carbonFootprint,
     recyclability: batch.recyclability_override || product.recyclability,
+    // Dimensions & Packaging overrides
+    productHeightCm: batch.product_height_cm != null ? Number(batch.product_height_cm) : product.productHeightCm,
+    productWidthCm: batch.product_width_cm != null ? Number(batch.product_width_cm) : product.productWidthCm,
+    productDepthCm: batch.product_depth_cm != null ? Number(batch.product_depth_cm) : product.productDepthCm,
+    packagingType: batch.packaging_type || product.packagingType,
+    packagingDescription: batch.packaging_description || product.packagingDescription,
+    packagingHeightCm: batch.packaging_height_cm != null ? Number(batch.packaging_height_cm) : product.packagingHeightCm,
+    packagingWidthCm: batch.packaging_width_cm != null ? Number(batch.packaging_width_cm) : product.packagingWidthCm,
+    packagingDepthCm: batch.packaging_depth_cm != null ? Number(batch.packaging_depth_cm) : product.packagingDepthCm,
   };
 }
 
@@ -336,6 +355,16 @@ export async function createProduct(
     importer_supplier_id: product.importerSupplierId || null,
     product_type: product.productType || 'single',
     aggregation_overrides: product.aggregationOverrides || {},
+    // Dimensions
+    product_height_cm: product.productHeightCm ?? null,
+    product_width_cm: product.productWidthCm ?? null,
+    product_depth_cm: product.productDepthCm ?? null,
+    // Packaging
+    packaging_type: product.packagingType || null,
+    packaging_description: product.packagingDescription || null,
+    packaging_height_cm: product.packagingHeightCm ?? null,
+    packaging_width_cm: product.packagingWidthCm ?? null,
+    packaging_depth_cm: product.packagingDepthCm ?? null,
   };
 
   const { data, error } = await supabase
@@ -408,6 +437,16 @@ export async function updateProduct(
   if (product.importerSupplierId !== undefined) updateData.importer_supplier_id = product.importerSupplierId || null;
   if (product.productType !== undefined) updateData.product_type = product.productType;
   if (product.aggregationOverrides !== undefined) updateData.aggregation_overrides = product.aggregationOverrides || {};
+  // Dimensions
+  if (product.productHeightCm !== undefined) updateData.product_height_cm = product.productHeightCm ?? null;
+  if (product.productWidthCm !== undefined) updateData.product_width_cm = product.productWidthCm ?? null;
+  if (product.productDepthCm !== undefined) updateData.product_depth_cm = product.productDepthCm ?? null;
+  // Packaging
+  if (product.packagingType !== undefined) updateData.packaging_type = product.packagingType || null;
+  if (product.packagingDescription !== undefined) updateData.packaging_description = product.packagingDescription || null;
+  if (product.packagingHeightCm !== undefined) updateData.packaging_height_cm = product.packagingHeightCm ?? null;
+  if (product.packagingWidthCm !== undefined) updateData.packaging_width_cm = product.packagingWidthCm ?? null;
+  if (product.packagingDepthCm !== undefined) updateData.packaging_depth_cm = product.packagingDepthCm ?? null;
 
   const { error } = await supabase
     .from('products')

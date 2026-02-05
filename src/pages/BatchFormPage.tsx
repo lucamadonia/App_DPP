@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getProductById, getProductSuppliersWithDetails } from '@/services/supabase';
 import { getBatchById, createBatch, updateBatch } from '@/services/supabase/batches';
 import { formatCurrency } from '@/lib/format';
-import type { Product, Material } from '@/types/product';
+import type { Product, Material, PackagingType } from '@/types/product';
 import type { SupplierProduct } from '@/types/database';
 
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'] as const;
@@ -43,6 +43,7 @@ export function BatchFormPage() {
   const [overrideMaterials, setOverrideMaterials] = useState(false);
   const [overrideDescription, setOverrideDescription] = useState(false);
   const [overrideCertifications, setOverrideCertifications] = useState(false);
+  const [overrideDimensions, setOverrideDimensions] = useState(false);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -61,6 +62,15 @@ export function BatchFormPage() {
     descriptionOverride: '',
     materialsOverride: [{ name: '', percentage: 0, recyclable: false, origin: '' }] as Material[],
     certificationsOverride: [] as string[],
+    // Dimensions & Packaging override fields
+    productHeightCm: '' as number | '',
+    productWidthCm: '' as number | '',
+    productDepthCm: '' as number | '',
+    packagingType: '' as PackagingType | '',
+    packagingDescription: '' as string,
+    packagingHeightCm: '' as number | '',
+    packagingWidthCm: '' as number | '',
+    packagingDepthCm: '' as number | '',
   });
 
   const updateField = (field: string, value: string | number) => {
@@ -104,10 +114,24 @@ export function BatchFormPage() {
             descriptionOverride: batch.descriptionOverride || '',
             materialsOverride: batch.materialsOverride || [{ name: '', percentage: 0, recyclable: false, origin: '' }],
             certificationsOverride: batch.certificationsOverride?.map(c => c.name) || [],
+            // Dimensions & Packaging override fields
+            productHeightCm: batch.productHeightCm ?? '',
+            productWidthCm: batch.productWidthCm ?? '',
+            productDepthCm: batch.productDepthCm ?? '',
+            packagingType: batch.packagingType || '',
+            packagingDescription: batch.packagingDescription || '',
+            packagingHeightCm: batch.packagingHeightCm ?? '',
+            packagingWidthCm: batch.packagingWidthCm ?? '',
+            packagingDepthCm: batch.packagingDepthCm ?? '',
           });
           if (batch.descriptionOverride) setOverrideDescription(true);
           if (batch.materialsOverride) setOverrideMaterials(true);
           if (batch.certificationsOverride) setOverrideCertifications(true);
+          if (batch.productHeightCm != null || batch.productWidthCm != null || batch.productDepthCm != null ||
+              batch.packagingType || batch.packagingDescription ||
+              batch.packagingHeightCm != null || batch.packagingWidthCm != null || batch.packagingDepthCm != null) {
+            setOverrideDimensions(true);
+          }
         }
       } else if (duplicateFromId) {
         const batch = await getBatchById(duplicateFromId);
@@ -128,10 +152,24 @@ export function BatchFormPage() {
             descriptionOverride: batch.descriptionOverride || '',
             materialsOverride: batch.materialsOverride || [{ name: '', percentage: 0, recyclable: false, origin: '' }],
             certificationsOverride: batch.certificationsOverride?.map(c => c.name) || [],
+            // Dimensions & Packaging override fields
+            productHeightCm: batch.productHeightCm ?? '',
+            productWidthCm: batch.productWidthCm ?? '',
+            productDepthCm: batch.productDepthCm ?? '',
+            packagingType: batch.packagingType || '',
+            packagingDescription: batch.packagingDescription || '',
+            packagingHeightCm: batch.packagingHeightCm ?? '',
+            packagingWidthCm: batch.packagingWidthCm ?? '',
+            packagingDepthCm: batch.packagingDepthCm ?? '',
           });
           if (batch.descriptionOverride) setOverrideDescription(true);
           if (batch.materialsOverride) setOverrideMaterials(true);
           if (batch.certificationsOverride) setOverrideCertifications(true);
+          if (batch.productHeightCm != null || batch.productWidthCm != null || batch.productDepthCm != null ||
+              batch.packagingType || batch.packagingDescription ||
+              batch.packagingHeightCm != null || batch.packagingWidthCm != null || batch.packagingDepthCm != null) {
+            setOverrideDimensions(true);
+          }
         }
       }
 
@@ -204,6 +242,15 @@ export function BatchFormPage() {
         certificationsOverride: overrideCertifications
           ? formData.certificationsOverride.map(name => ({ name, issuedBy: '', validUntil: '' }))
           : undefined,
+        // Dimensions & Packaging overrides
+        productHeightCm: overrideDimensions && formData.productHeightCm ? Number(formData.productHeightCm) : undefined,
+        productWidthCm: overrideDimensions && formData.productWidthCm ? Number(formData.productWidthCm) : undefined,
+        productDepthCm: overrideDimensions && formData.productDepthCm ? Number(formData.productDepthCm) : undefined,
+        packagingType: overrideDimensions ? formData.packagingType || undefined : undefined,
+        packagingDescription: overrideDimensions ? formData.packagingDescription || undefined : undefined,
+        packagingHeightCm: overrideDimensions && formData.packagingHeightCm ? Number(formData.packagingHeightCm) : undefined,
+        packagingWidthCm: overrideDimensions && formData.packagingWidthCm ? Number(formData.packagingWidthCm) : undefined,
+        packagingDepthCm: overrideDimensions && formData.packagingDepthCm ? Number(formData.packagingDepthCm) : undefined,
       };
 
       if (isEditMode && batchId) {
@@ -635,6 +682,160 @@ export function BatchFormPage() {
                     </label>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dimensions & Packaging Override */}
+          <div className="border rounded-lg">
+            <button
+              type="button"
+              className="flex items-center justify-between w-full p-4 text-left"
+              onClick={() => setOverrideDimensions(!overrideDimensions)}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={overrideDimensions}
+                  onChange={(e) => setOverrideDimensions(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="font-medium">{t('Override Dimensions & Packaging')}</span>
+                {overrideDimensions && <Badge variant="outline" className="border-primary text-primary">Active</Badge>}
+              </div>
+              {overrideDimensions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {overrideDimensions && (
+              <div className="px-4 pb-4 space-y-6">
+                {/* Packaging Details */}
+                <div>
+                  <h4 className="text-sm font-medium mb-3">{t('Packaging Details')}</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">{t('Packaging Type')}</label>
+                      <Select
+                        value={formData.packagingType || ''}
+                        onValueChange={(v) => updateField('packagingType', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('Select packaging type...')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="box">{t('packaging.box')}</SelectItem>
+                          <SelectItem value="blister">{t('packaging.blister')}</SelectItem>
+                          <SelectItem value="bottle">{t('packaging.bottle')}</SelectItem>
+                          <SelectItem value="pouch">{t('packaging.pouch')}</SelectItem>
+                          <SelectItem value="can">{t('packaging.can')}</SelectItem>
+                          <SelectItem value="tube">{t('packaging.tube')}</SelectItem>
+                          <SelectItem value="bag">{t('packaging.bag')}</SelectItem>
+                          <SelectItem value="clamshell">{t('packaging.clamshell')}</SelectItem>
+                          <SelectItem value="wrap">{t('packaging.wrap')}</SelectItem>
+                          <SelectItem value="pallet">{t('packaging.pallet')}</SelectItem>
+                          <SelectItem value="other">{t('packaging.other')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs text-muted-foreground">{t('Packaging Description')}</label>
+                      <textarea
+                        className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        placeholder={t('Describe the packaging...')}
+                        value={formData.packagingDescription}
+                        onChange={(e) => updateField('packagingDescription', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* Dimensions */}
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {/* Product Dimensions */}
+                  <div className="p-3 border rounded-lg">
+                    <h4 className="text-xs font-medium mb-3">{t('Product Dimensions')}</h4>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 10')}
+                          value={formData.productHeightCm}
+                          onChange={(e) => updateField('productHeightCm', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{t('Width (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 20')}
+                          value={formData.productWidthCm}
+                          onChange={(e) => updateField('productWidthCm', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{t('Depth (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 5')}
+                          value={formData.productDepthCm}
+                          onChange={(e) => updateField('productDepthCm', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Packaging Dimensions */}
+                  <div className="p-3 border rounded-lg">
+                    <h4 className="text-xs font-medium mb-3">{t('Packaging Dimensions')}</h4>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 10')}
+                          value={formData.packagingHeightCm}
+                          onChange={(e) => updateField('packagingHeightCm', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{t('Width (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 20')}
+                          value={formData.packagingWidthCm}
+                          onChange={(e) => updateField('packagingWidthCm', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{t('Depth (cm)')}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder={t('e.g. 5')}
+                          value={formData.packagingDepthCm}
+                          onChange={(e) => updateField('packagingDepthCm', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {product && (product.productHeightCm || product.productWidthCm || product.productDepthCm || product.packagingType) && (
+                  <p className="text-xs text-muted-foreground">
+                    Product defaults: {product.productHeightCm && `H: ${product.productHeightCm}cm`}
+                    {product.productWidthCm && ` W: ${product.productWidthCm}cm`}
+                    {product.productDepthCm && ` D: ${product.productDepthCm}cm`}
+                    {product.packagingType && ` | Packaging: ${t(`packaging.${product.packagingType}`)}`}
+                  </p>
+                )}
               </div>
             )}
           </div>

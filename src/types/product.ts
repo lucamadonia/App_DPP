@@ -1,5 +1,7 @@
 import type { ProductRegistrations, SupportResources, ProductImage } from './database';
 
+export type PackagingType = 'box' | 'blister' | 'bottle' | 'pouch' | 'can' | 'tube' | 'bag' | 'clamshell' | 'wrap' | 'pallet' | 'other';
+
 export interface Product {
   id: string;
   name: string;
@@ -45,6 +47,18 @@ export interface Product {
   productType?: 'single' | 'set';
   components?: ProductComponent[];
   aggregationOverrides?: AggregationOverrides;
+
+  // Product Dimensions (cm)
+  productHeightCm?: number;
+  productWidthCm?: number;
+  productDepthCm?: number;
+
+  // Packaging Details
+  packagingType?: PackagingType;
+  packagingDescription?: string;
+  packagingHeightCm?: number;
+  packagingWidthCm?: number;
+  packagingDepthCm?: number;
 }
 
 export interface TranslatableProductFields {
@@ -78,6 +92,15 @@ export interface ProductBatch {
   carbonFootprintOverride?: CarbonFootprint;
   recyclabilityOverride?: RecyclabilityInfo;
   descriptionOverride?: string;
+  // Dimensions & Packaging overrides (null/undefined = inherit from product)
+  productHeightCm?: number;
+  productWidthCm?: number;
+  productDepthCm?: number;
+  packagingType?: PackagingType;
+  packagingDescription?: string;
+  packagingHeightCm?: number;
+  packagingWidthCm?: number;
+  packagingDepthCm?: number;
   createdAt: string;
   updatedAt: string;
 }

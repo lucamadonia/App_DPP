@@ -11,7 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import type { LabelElement, LabelFieldKey } from '@/types/master-label-editor';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { LabelElement, LabelFieldKey, PackageCounterFormat } from '@/types/master-label-editor';
 import { LABEL_FIELD_METADATA } from '@/types/master-label-editor';
 
 interface LabelElementSettingsPanelProps {
@@ -494,6 +496,209 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
           <div className="space-y-1.5">
             <Label className="text-xs">{t('ml.editor.alignment')}</Label>
             <AlignmentPicker value={element.alignment} onChange={(v) => update({ alignment: v })} />
+          </div>
+        </>
+      )}
+
+      {/* Package Counter element */}
+      {element.type === 'package-counter' && (
+        <>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('ml.element.packageCounter.format')}</Label>
+            <Select
+              value={element.format}
+              onValueChange={(v) => update({ format: v as PackageCounterFormat })}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="x-of-y">1 {t('ml.export.format.of')} 5</SelectItem>
+                <SelectItem value="x-slash-y">1/5</SelectItem>
+                <SelectItem value="package-x-of-y">
+                  {t('ml.export.format.package')} 1 {t('ml.export.format.of')} 5
+                </SelectItem>
+                <SelectItem value="box-x-of-y">
+                  {t('ml.export.format.box')} 1 {t('ml.export.format.of')} 5
+                </SelectItem>
+                <SelectItem value="parcel-x-of-y">
+                  {t('ml.export.format.parcel')} 1 {t('ml.export.format.of')} 5
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('ml.fontSize')}</Label>
+              <Input
+                type="number"
+                min={6}
+                max={24}
+                value={element.fontSize}
+                onChange={(e) => update({ fontSize: Number(e.target.value) })}
+                className="text-sm h-8"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('ml.fontWeight')}</Label>
+              <Select
+                value={element.fontWeight}
+                onValueChange={(v) => update({ fontWeight: v as 'normal' | 'bold' })}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">{t('ml.fontWeight.normal')}</SelectItem>
+                  <SelectItem value="bold">{t('ml.fontWeight.bold')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('ml.alignment')}</Label>
+            <RadioGroup
+              value={element.alignment}
+              onValueChange={(v) => update({ alignment: v as 'left' | 'center' | 'right' })}
+            >
+              <div className="flex gap-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="left" id="counter-left" />
+                  <Label htmlFor="counter-left" className="text-xs font-normal">{t('ml.alignment.left')}</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="center" id="counter-center" />
+                  <Label htmlFor="counter-center" className="text-xs font-normal">{t('ml.alignment.center')}</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="right" id="counter-right" />
+                  <Label htmlFor="counter-right" className="text-xs font-normal">{t('ml.alignment.right')}</Label>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('ml.color')}</Label>
+            <div className="flex gap-1.5">
+              <input
+                type="color"
+                value={element.color}
+                onChange={(e) => update({ color: e.target.value })}
+                className="h-8 w-8 rounded border cursor-pointer"
+              />
+              <Input
+                value={element.color}
+                onChange={(e) => update({ color: e.target.value })}
+                className="text-xs h-8 flex-1"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="showBorder"
+              checked={element.showBorder}
+              onCheckedChange={(checked) => update({ showBorder: !!checked })}
+            />
+            <Label htmlFor="showBorder" className="text-xs font-normal">{t('ml.element.packageCounter.showBorder')}</Label>
+          </div>
+
+          {element.showBorder && (
+            <div className="grid grid-cols-2 gap-3 pl-6">
+              <div className="space-y-1.5">
+                <Label className="text-xs">{t('ml.borderColor')}</Label>
+                <div className="flex gap-1.5">
+                  <input
+                    type="color"
+                    value={element.borderColor}
+                    onChange={(e) => update({ borderColor: e.target.value })}
+                    className="h-8 w-8 rounded border cursor-pointer"
+                  />
+                  <Input
+                    value={element.borderColor}
+                    onChange={(e) => update({ borderColor: e.target.value })}
+                    className="text-xs h-8 flex-1"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">{t('ml.borderWidth')}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  value={element.borderWidth}
+                  onChange={(e) => update({ borderWidth: Number(e.target.value) })}
+                  className="text-sm h-8"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="showBackground"
+              checked={element.showBackground}
+              onCheckedChange={(checked) => update({ showBackground: !!checked })}
+            />
+            <Label htmlFor="showBackground" className="text-xs font-normal">{t('ml.element.packageCounter.showBackground')}</Label>
+          </div>
+
+          {element.showBackground && (
+            <div className="space-y-1.5 pl-6">
+              <Label className="text-xs">{t('ml.backgroundColor')}</Label>
+              <div className="flex gap-1.5">
+                <input
+                  type="color"
+                  value={element.backgroundColor}
+                  onChange={(e) => update({ backgroundColor: e.target.value })}
+                  className="h-8 w-8 rounded border cursor-pointer"
+                />
+                <Input
+                  value={element.backgroundColor}
+                  onChange={(e) => update({ backgroundColor: e.target.value })}
+                  className="text-xs h-8 flex-1"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('ml.borderRadius')}</Label>
+              <Input
+                type="number"
+                min={0}
+                max={12}
+                value={element.borderRadius}
+                onChange={(e) => update({ borderRadius: Number(e.target.value) })}
+                className="text-sm h-8"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('ml.padding')}</Label>
+              <Input
+                type="number"
+                min={0}
+                max={20}
+                value={element.padding}
+                onChange={(e) => update({ padding: Number(e.target.value) })}
+                className="text-sm h-8"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="uppercase"
+              checked={element.uppercase}
+              onCheckedChange={(checked) => update({ uppercase: !!checked })}
+            />
+            <Label htmlFor="uppercase" className="text-xs font-normal">{t('ml.uppercase')}</Label>
           </div>
         </>
       )}

@@ -16,7 +16,7 @@ import {
   StyleSheet,
   pdf,
 } from '@react-pdf/renderer';
-import type { LabelDesign, LabelElement, LabelSection } from '@/types/master-label-editor';
+import type { LabelDesign, LabelElement, LabelSection, PackageCounterFormat, MultiLabelExportConfig } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
 import { resolveFieldValue } from './master-label-assembler';
 import { getBuiltinPictogram } from './master-label-builtin-pictograms';
@@ -36,6 +36,38 @@ const s = StyleSheet.create({
   materialRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
   materialCode: { borderWidth: 0.5, borderRadius: 1, paddingHorizontal: 3, paddingVertical: 1 },
 });
+
+// ---------------------------------------------------------------------------
+// Package Counter Helper
+// ---------------------------------------------------------------------------
+
+function formatPackageCounter(
+  current: number,
+  total: number,
+  format: PackageCounterFormat,
+  locale: 'en' | 'de'
+): string {
+  switch (format) {
+    case 'x-of-y':
+      return locale === 'de' ? `${current} von ${total}` : `${current} of ${total}`;
+    case 'x-slash-y':
+      return `${current}/${total}`;
+    case 'package-x-of-y':
+      return locale === 'de'
+        ? `Paket ${current} von ${total}`
+        : `Package ${current} of ${total}`;
+    case 'box-x-of-y':
+      return locale === 'de'
+        ? `Karton ${current} von ${total}`
+        : `Box ${current} of ${total}`;
+    case 'parcel-x-of-y':
+      return locale === 'de'
+        ? `Paket ${current} von ${total}`
+        : `Parcel ${current} of ${total}`;
+    default:
+      return `${current}/${total}`;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Element Renderer
@@ -266,6 +298,55 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
       );
     }
 
+    case 'package-counter': {
+      // Extract counter values from enriched data
+      const current = (data as any)._counterCurrent;
+      const total = (data as any)._counterTotal;
+      const counterFormat = (data as any)._counterFormat || element.format;
+      const locale = (data as any)._locale || 'en';
+
+      if (!current || !total) return null;  // Skip if no counter context
+
+      const counterText = formatPackageCounter(current, total, counterFormat, locale);
+
+      const baseFam = element.fontFamily || 'Helvetica';
+      const isBold = element.fontWeight === 'bold';
+      const resolvedFont = baseFam === 'Courier'
+        ? (isBold ? 'Courier-Bold' : 'Courier')
+        : baseFam === 'Times-Roman'
+        ? (isBold ? 'Times-Bold' : 'Times-Roman')
+        : (isBold ? 'Helvetica-Bold' : 'Helvetica');
+
+      return (
+        <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 4 }}>
+          <View
+            style={{
+              borderWidth: element.showBorder ? element.borderWidth : 0,
+              borderColor: element.borderColor,
+              borderRadius: element.borderRadius,
+              backgroundColor: element.showBackground ? element.backgroundColor : 'transparent',
+              paddingHorizontal: element.padding,
+              paddingVertical: element.padding * 0.75,
+              minWidth: 60,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: element.fontSize,
+                fontFamily: resolvedFont,
+                color: element.color,
+                textAlign: getTextAlign(element.alignment),
+                textTransform: element.uppercase ? ('uppercase' as any) : ('none' as any),
+                letterSpacing: 0.5,
+              }}
+            >
+              {counterText}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     default:
       return null;
   }
@@ -344,17 +425,121 @@ export async function generateMasterLabelEditorPDF(
   design: LabelDesign,
   data: MasterLabelData,
   filename?: string,
+  multiLabelConfig?: MultiLabelExportConfig,
+  locale: 'en' | 'de' = 'en',
 ): Promise<void> {
-  const blob = await pdf(
-    <MasterLabelEditorDocument design={design} data={data} />
-  ).toBlob();
+  // Single label mode (backward compatible)
+  if (!multiLabelConfig || multiLabelConfig.labelCount <= 1) {
+    const blob = await pdf(
+      <MasterLabelEditorDocument design={design} data={data} />
+    ).toBlob();
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename || `master-label-${data.identity.modelSku}-${data.identity.batchNumber || 'product'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || `master-label-${data.identity.modelSku || 'product'}-${data.identity.batchNumber || 'batch'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  // Multi-label mode
+  const { labelCount, format, startNumber, filenamePattern } = multiLabelConfig;
+
+  if (filenamePattern === 'batch') {
+    // Generate separate PDF per label
+    for (let i = 0; i < labelCount; i++) {
+      const currentPage = startNumber + i;
+
+      // Enrich data with counter context
+      const enrichedData = {
+        ...data,
+        _counterCurrent: currentPage,
+        _counterTotal: labelCount,
+        _counterFormat: format,
+        _locale: locale,
+      };
+
+      const blob = await pdf(
+        <MasterLabelEditorDocument design={design} data={enrichedData as any} />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const paddedNum = String(currentPage).padStart(3, '0');
+      a.href = url;
+      a.download = `master-label-${data.identity.modelSku || 'product'}-${data.identity.batchNumber || 'batch'}-${paddedNum}-of-${labelCount}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Small delay between downloads
+      if (i < labelCount - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+  } else {
+    // Generate single multi-page PDF
+    const pages = [];
+    for (let i = 0; i < labelCount; i++) {
+      const currentPage = startNumber + i;
+
+      const enrichedData = {
+        ...data,
+        _counterCurrent: currentPage,
+        _counterTotal: labelCount,
+        _counterFormat: format,
+        _locale: locale,
+      };
+
+      pages.push(enrichedData);
+    }
+
+    // Create multi-page document
+    const multiPageDoc = (
+      <Document>
+        {pages.map((pageData, i) => {
+          const sortedSections = [...design.sections].sort((a, b) => a.sortOrder - b.sortOrder);
+
+          return (
+            <Page
+              key={i}
+              size={[design.pageWidth, design.pageHeight]}
+              style={{
+                width: design.pageWidth,
+                height: design.pageHeight,
+                padding: design.padding,
+                fontFamily: design.fontFamily,
+                fontSize: design.baseFontSize,
+                color: design.baseTextColor,
+                backgroundColor: design.backgroundColor,
+              }}
+            >
+              {sortedSections.map(section => (
+                <LabelSectionRenderer
+                  key={section.id}
+                  section={section}
+                  elements={design.elements}
+                  data={pageData as any}
+                />
+              ))}
+            </Page>
+          );
+        })}
+      </Document>
+    );
+
+    const blob = await pdf(multiPageDoc).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `master-label-${data.identity.modelSku || 'product'}-${data.identity.batchNumber || 'batch'}-1-to-${labelCount}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }

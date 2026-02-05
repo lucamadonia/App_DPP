@@ -21,6 +21,7 @@ import type {
   LabelMaterialCodeElement,
   LabelBarcodeElement,
   LabelIconTextElement,
+  LabelPackageCounterElement,
   MasterLabelTemplate,
 } from '@/types/master-label-editor';
 
@@ -100,6 +101,25 @@ export function createElement(type: LabelElementType, sectionId: LabelSectionId,
 
     case 'icon-text':
       return { ...base, type: 'icon-text', icon: 'Info', text: 'Label text', fontSize: 6, color: '#374151', iconSize: 8, alignment: 'left' } satisfies LabelIconTextElement;
+
+    case 'package-counter':
+      return {
+        ...base,
+        type: 'package-counter',
+        format: 'package-x-of-y',
+        fontSize: 11,
+        fontWeight: 'bold',
+        color: '#1a1a1a',
+        backgroundColor: '#f3f4f6',
+        borderColor: '#9ca3af',
+        borderWidth: 1,
+        borderRadius: 4,
+        padding: 6,
+        alignment: 'center',
+        showBorder: true,
+        showBackground: true,
+        uppercase: false,
+      } satisfies LabelPackageCounterElement;
   }
 }
 

@@ -12,6 +12,7 @@ import type {
   Certification,
   CarbonFootprint,
   RecyclabilityInfo,
+  PackagingType,
 } from '@/types/product';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +39,15 @@ function transformBatch(row: any): ProductBatch {
     carbonFootprintOverride: row.carbon_footprint_override as CarbonFootprint | undefined,
     recyclabilityOverride: row.recyclability_override as RecyclabilityInfo | undefined,
     descriptionOverride: row.description_override || undefined,
+    // Dimensions & Packaging overrides
+    productHeightCm: row.product_height_cm != null ? Number(row.product_height_cm) : undefined,
+    productWidthCm: row.product_width_cm != null ? Number(row.product_width_cm) : undefined,
+    productDepthCm: row.product_depth_cm != null ? Number(row.product_depth_cm) : undefined,
+    packagingType: (row.packaging_type as PackagingType) || undefined,
+    packagingDescription: row.packaging_description || undefined,
+    packagingHeightCm: row.packaging_height_cm != null ? Number(row.packaging_height_cm) : undefined,
+    packagingWidthCm: row.packaging_width_cm != null ? Number(row.packaging_width_cm) : undefined,
+    packagingDepthCm: row.packaging_depth_cm != null ? Number(row.packaging_depth_cm) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -50,7 +60,15 @@ function transformBatchListItem(row: any): BatchListItem {
     row.certifications_override ||
     row.carbon_footprint_override ||
     row.recyclability_override ||
-    row.description_override
+    row.description_override ||
+    row.product_height_cm != null ||
+    row.product_width_cm != null ||
+    row.product_depth_cm != null ||
+    row.packaging_type ||
+    row.packaging_description ||
+    row.packaging_height_cm != null ||
+    row.packaging_width_cm != null ||
+    row.packaging_depth_cm != null
   );
 
   return {
@@ -157,6 +175,15 @@ export async function createBatch(
     carbon_footprint_override: batch.carbonFootprintOverride || null,
     recyclability_override: batch.recyclabilityOverride || null,
     description_override: batch.descriptionOverride || null,
+    // Dimensions & Packaging overrides
+    product_height_cm: batch.productHeightCm ?? null,
+    product_width_cm: batch.productWidthCm ?? null,
+    product_depth_cm: batch.productDepthCm ?? null,
+    packaging_type: batch.packagingType || null,
+    packaging_description: batch.packagingDescription || null,
+    packaging_height_cm: batch.packagingHeightCm ?? null,
+    packaging_width_cm: batch.packagingWidthCm ?? null,
+    packaging_depth_cm: batch.packagingDepthCm ?? null,
   };
 
   const { data, error } = await supabase
@@ -200,6 +227,15 @@ export async function updateBatch(
   if (batch.carbonFootprintOverride !== undefined) updateData.carbon_footprint_override = batch.carbonFootprintOverride || null;
   if (batch.recyclabilityOverride !== undefined) updateData.recyclability_override = batch.recyclabilityOverride || null;
   if (batch.descriptionOverride !== undefined) updateData.description_override = batch.descriptionOverride || null;
+  // Dimensions & Packaging overrides
+  if (batch.productHeightCm !== undefined) updateData.product_height_cm = batch.productHeightCm ?? null;
+  if (batch.productWidthCm !== undefined) updateData.product_width_cm = batch.productWidthCm ?? null;
+  if (batch.productDepthCm !== undefined) updateData.product_depth_cm = batch.productDepthCm ?? null;
+  if (batch.packagingType !== undefined) updateData.packaging_type = batch.packagingType || null;
+  if (batch.packagingDescription !== undefined) updateData.packaging_description = batch.packagingDescription || null;
+  if (batch.packagingHeightCm !== undefined) updateData.packaging_height_cm = batch.packagingHeightCm ?? null;
+  if (batch.packagingWidthCm !== undefined) updateData.packaging_width_cm = batch.packagingWidthCm ?? null;
+  if (batch.packagingDepthCm !== undefined) updateData.packaging_depth_cm = batch.packagingDepthCm ?? null;
 
   const { error } = await supabase
     .from('product_batches')
@@ -263,6 +299,15 @@ export async function duplicateBatch(
     carbonFootprintOverride: existing.carbonFootprintOverride,
     recyclabilityOverride: existing.recyclabilityOverride,
     descriptionOverride: existing.descriptionOverride,
+    // Dimensions & Packaging overrides
+    productHeightCm: existing.productHeightCm,
+    productWidthCm: existing.productWidthCm,
+    productDepthCm: existing.productDepthCm,
+    packagingType: existing.packagingType,
+    packagingDescription: existing.packagingDescription,
+    packagingHeightCm: existing.packagingHeightCm,
+    packagingWidthCm: existing.packagingWidthCm,
+    packagingDepthCm: existing.packagingDepthCm,
   });
 }
 

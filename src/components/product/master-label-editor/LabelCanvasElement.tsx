@@ -237,6 +237,72 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
         </div>
       );
 
+    case 'package-counter': {
+      const previewText = element.format === 'x-slash-y'
+        ? 'X/Y'
+        : element.format === 'package-x-of-y'
+        ? t('ml.element.packageCounter.previewPackage')
+        : element.format === 'box-x-of-y'
+        ? t('ml.element.packageCounter.previewBox')
+        : element.format === 'parcel-x-of-y'
+        ? t('ml.element.packageCounter.previewParcel')
+        : t('ml.element.packageCounter.previewXofY');
+
+      return (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent:
+              element.alignment === 'center' ? 'center'
+              : element.alignment === 'right' ? 'flex-end'
+              : 'flex-start',
+            marginBottom: '4px',
+          }}
+        >
+          <div
+            style={{
+              border: element.showBorder ? `${element.borderWidth}px solid ${element.borderColor}` : 'none',
+              borderRadius: `${element.borderRadius}px`,
+              backgroundColor: element.showBackground ? element.backgroundColor : 'transparent',
+              padding: `${element.padding * 0.75}px ${element.padding}px`,
+              minWidth: '60px',
+              position: 'relative',
+            }}
+          >
+            <div
+              style={{
+                fontSize: `${element.fontSize * 1.2}px`,
+                fontWeight: element.fontWeight,
+                fontFamily: element.fontFamily || 'inherit',
+                color: element.color,
+                textAlign: element.alignment,
+                textTransform: element.uppercase ? 'uppercase' : 'none',
+                letterSpacing: '0.5px',
+                opacity: 0.7,
+              }}
+            >
+              {previewText}
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                fontSize: '8px',
+                fontWeight: 'bold',
+                borderRadius: '4px',
+                padding: '2px 4px',
+              }}
+            >
+              {t('ml.element.packageCounter.dynamic')}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     default:
       return null;
   }

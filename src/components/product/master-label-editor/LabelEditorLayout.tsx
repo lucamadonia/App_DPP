@@ -14,7 +14,7 @@ export function LabelEditorLayout({ toolbar, palette, canvas, rightPane }: Label
       {toolbar}
 
       {/* 3-column layout */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Left: Element Palette */}
         <div className="w-[150px] shrink-0 border-r bg-muted/30 overflow-y-auto">
           {palette}

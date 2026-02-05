@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Layers,
   FileText,
+  Package,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { LabelElementType, LabelFieldKey } from '@/types/master-label-editor';
@@ -44,6 +45,7 @@ const PALETTE_ITEMS: Array<{ type: LabelElementType; icon: typeof Type; labelKey
   { type: 'material-code', icon: Recycle, labelKey: 'ml.element.materialCode' },
   { type: 'barcode', icon: Barcode, labelKey: 'ml.element.barcode' },
   { type: 'icon-text', icon: Info, labelKey: 'ml.element.iconText' },
+  { type: 'package-counter', icon: Package, labelKey: 'ml.palette.packageCounter' },
 ];
 
 // ---------------------------------------------------------------------------

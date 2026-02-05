@@ -20,7 +20,8 @@ export type LabelElementType =
   | 'spacer'
   | 'material-code'
   | 'barcode'
-  | 'icon-text';
+  | 'icon-text'
+  | 'package-counter';
 
 // ---------------------------------------------------------------------------
 // Element Interfaces (discriminated union on `type`)
@@ -147,6 +148,31 @@ export interface LabelIconTextElement extends LabelElementBase {
   alignment: 'left' | 'center' | 'right';
 }
 
+export type PackageCounterFormat =
+  | 'x-of-y'           // "1 von 6" / "1 of 6"
+  | 'x-slash-y'        // "1/6"
+  | 'package-x-of-y'   // "Paket 1 von 6" / "Package 1 of 6"
+  | 'box-x-of-y'       // "Karton 1 von 6" / "Box 1 of 6"
+  | 'parcel-x-of-y';   // "Paket 1 von 6" / "Parcel 1 of 6"
+
+export interface LabelPackageCounterElement extends LabelElementBase {
+  type: 'package-counter';
+  format: PackageCounterFormat;
+  fontSize: number;                    // default: 11
+  fontWeight: 'normal' | 'bold';       // default: 'bold'
+  color: string;                       // default: '#1a1a1a'
+  backgroundColor: string;             // default: '#f3f4f6'
+  borderColor: string;                 // default: '#9ca3af'
+  borderWidth: number;                 // default: 1
+  borderRadius: number;                // default: 4
+  padding: number;                     // default: 6
+  alignment: 'left' | 'center' | 'right';
+  showBorder: boolean;                 // default: true
+  showBackground: boolean;             // default: true
+  uppercase: boolean;                  // default: false
+  fontFamily?: 'Helvetica' | 'Courier' | 'Times-Roman';
+}
+
 export type LabelElement =
   | LabelTextElement
   | LabelFieldValueElement
@@ -158,7 +184,8 @@ export type LabelElement =
   | LabelSpacerElement
   | LabelMaterialCodeElement
   | LabelBarcodeElement
-  | LabelIconTextElement;
+  | LabelIconTextElement
+  | LabelPackageCounterElement;
 
 // ---------------------------------------------------------------------------
 // Sections
@@ -333,4 +360,15 @@ export interface BuiltinPictogram {
   viewBox: string;
   mandatory: boolean;
   description: string;
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Label Export Configuration
+// ---------------------------------------------------------------------------
+
+export interface MultiLabelExportConfig {
+  labelCount: number;                  // 1-999
+  format: PackageCounterFormat;
+  startNumber: number;                 // default: 1
+  filenamePattern: 'single' | 'batch'; // single multi-page PDF or separate PDFs
 }
