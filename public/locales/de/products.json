@@ -703,5 +703,27 @@
   "ml.element.packageCounter.previewBox": "Karton X von Y",
   "ml.element.packageCounter.previewParcel": "Paket X von Y",
   "ml.element.packageCounter.previewXofY": "X von Y",
-  "ml.element.packageCounter.dynamic": "Dynamisch"
+  "ml.element.packageCounter.dynamic": "Dynamisch",
+
+  "Packaging Layers": "Verpackungsebenen",
+  "Add Packaging Layer": "Verpackungsebene hinzufügen",
+  "Remove Packaging Layer": "Verpackungsebene entfernen",
+  "Packaging Layer": "Verpackungsebene",
+  "Layer Type": "Ebenentyp",
+  "layer.primary": "Primärverpackung",
+  "layer.secondary": "Sekundärverpackung",
+  "layer.tertiary": "Tertiärverpackung",
+  "layer.transport": "Transportverpackung",
+  "layer.primary.desc": "Direkte Produktverpackung (z.B. Flasche, Blister)",
+  "layer.secondary.desc": "Äußere Verpackung (z.B. Karton, Schachtel)",
+  "layer.tertiary.desc": "Bündelverpackung (z.B. Umkarton, Schrumpffolie)",
+  "layer.transport.desc": "Logistikverpackung (z.B. Palette, Container)",
+  "Packaging Weight (g)": "Verpackungsgewicht (g)",
+  "Main Material": "Hauptmaterial",
+  "Recycling Code": "Recyclingcode",
+  "e.g. PAP 21": "z.B. PAP 21",
+  "e.g. Cardboard": "z.B. Karton",
+  "No packaging layers yet": "Noch keine Verpackungsebenen",
+  "Add packaging layers to define all packaging components": "Verpackungsebenen hinzufügen, um alle Verpackungsbestandteile zu definieren",
+  "Select layer type...": "Ebenentyp wählen..."
 }

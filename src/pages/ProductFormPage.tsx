@@ -14,6 +14,7 @@ import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
 import { LanguageSwitcher } from '@/components/product/LanguageSwitcher';
 import { ProductComponentsStep, type ComponentEntry } from '@/components/product/ProductComponentsStep';
+import { PackagingLayersEditor } from '@/components/product/PackagingLayersEditor';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useBranding } from '@/contexts/BrandingContext';
 import type { ProductImage } from '@/types/database';
@@ -1670,6 +1671,14 @@ export function ProductFormPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Section 7: Multiple Packaging Layers (only for existing products) */}
+              {productId && (
+                <>
+                  <Separator />
+                  <PackagingLayersEditor productId={productId} />
+                </>
+              )}
             </div>
           )}
 

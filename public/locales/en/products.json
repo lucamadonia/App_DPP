@@ -703,5 +703,27 @@
   "ml.element.packageCounter.previewBox": "Box X of Y",
   "ml.element.packageCounter.previewParcel": "Parcel X of Y",
   "ml.element.packageCounter.previewXofY": "X of Y",
-  "ml.element.packageCounter.dynamic": "Dynamic"
+  "ml.element.packageCounter.dynamic": "Dynamic",
+
+  "Packaging Layers": "Packaging Layers",
+  "Add Packaging Layer": "Add Packaging Layer",
+  "Remove Packaging Layer": "Remove Packaging Layer",
+  "Packaging Layer": "Packaging Layer",
+  "Layer Type": "Layer Type",
+  "layer.primary": "Primary Packaging",
+  "layer.secondary": "Secondary Packaging",
+  "layer.tertiary": "Tertiary Packaging",
+  "layer.transport": "Transport Packaging",
+  "layer.primary.desc": "Direct product packaging (e.g., bottle, blister)",
+  "layer.secondary.desc": "Outer packaging (e.g., carton, box)",
+  "layer.tertiary.desc": "Bundled packaging (e.g., case, shrink wrap)",
+  "layer.transport.desc": "Logistics packaging (e.g., pallet, container)",
+  "Packaging Weight (g)": "Packaging Weight (g)",
+  "Main Material": "Main Material",
+  "Recycling Code": "Recycling Code",
+  "e.g. PAP 21": "e.g. PAP 21",
+  "e.g. Cardboard": "e.g. Cardboard",
+  "No packaging layers yet": "No packaging layers yet",
+  "Add packaging layers to define all packaging components": "Add packaging layers to define all packaging components",
+  "Select layer type...": "Select layer type..."
 }

@@ -190,6 +190,17 @@ export {
   updateImageCaption,
 } from './product-images';
 
+// Product Packaging (multiple layers)
+export {
+  getProductPackaging,
+  getPackagingById,
+  createPackaging,
+  updatePackaging,
+  deletePackaging,
+  reorderPackaging,
+  duplicateProductPackaging,
+} from './product-packaging';
+
 // Invitations
 export {
   getInvitations,

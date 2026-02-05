@@ -2,6 +2,27 @@ import type { ProductRegistrations, SupportResources, ProductImage } from './dat
 
 export type PackagingType = 'box' | 'blister' | 'bottle' | 'pouch' | 'can' | 'tube' | 'bag' | 'clamshell' | 'wrap' | 'pallet' | 'other';
 
+export type PackagingLayerType = 'primary' | 'secondary' | 'tertiary' | 'transport';
+
+export interface ProductPackaging {
+  id: string;
+  tenantId: string;
+  productId: string;
+  layerType: PackagingLayerType;
+  sortOrder: number;
+  packagingType?: PackagingType;
+  packagingDescription?: string;
+  heightCm?: number;
+  widthCm?: number;
+  depthCm?: number;
+  weightG?: number;
+  material?: string;
+  recyclable?: boolean;
+  recyclingCode?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;
