@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import type { VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2, VisibilityConfigV3 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
@@ -35,7 +35,7 @@ import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationE
 
 interface DPPTemplateProps {
   product: Product;
-  visibilityV2: VisibilityConfigV2 | null;
+  visibilityV2: VisibilityConfigV2 | VisibilityConfigV3 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
   tenantId: string | null;

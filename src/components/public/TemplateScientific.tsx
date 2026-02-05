@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatDate } from '@/lib/format';
-import type { VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2, VisibilityConfigV3 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings } from '@/types/database';
 import { useDPPTemplateData, type RenderableSection } from '@/hooks/use-dpp-template-data';
@@ -15,7 +15,7 @@ import { MessageSquare } from 'lucide-react';
 
 interface DPPTemplateProps {
   product: Product;
-  visibilityV2: VisibilityConfigV2 | null;
+  visibilityV2: VisibilityConfigV2 | VisibilityConfigV3 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
   tenantId: string | null;

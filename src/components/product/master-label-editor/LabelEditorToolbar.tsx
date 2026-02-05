@@ -86,6 +86,7 @@ export function LabelEditorToolbar({
   onZoomChange,
   isGenerating,
   onGeneratePDF,
+  onOpenMultiLabelDialog,
   onBack,
   productSuppliers = [],
   manufacturerOverrideId,

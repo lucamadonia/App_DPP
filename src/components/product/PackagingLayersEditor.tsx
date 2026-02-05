@@ -4,7 +4,7 @@ import { Plus, Trash2, GripVertical, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   getProductPackaging,
@@ -120,7 +120,7 @@ export function PackagingLayersEditor({ productId, readOnly = false }: Packaging
         </Card>
       ) : (
         <div className="space-y-3">
-          {layers.map((layer, index) => (
+          {layers.map((layer) => (
             <Card key={layer.id} className="relative">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">

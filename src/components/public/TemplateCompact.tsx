@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { VisibilityConfigV2 } from '@/types/visibility';
+import type { VisibilityConfigV2, VisibilityConfigV3 } from '@/types/visibility';
 import type { Product } from '@/types/product';
 import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
 import { useDPPTemplateData } from '@/hooks/use-dpp-template-data';
@@ -32,7 +32,7 @@ import { usePublicTicketCreationEnabled } from '@/hooks/usePublicTicketCreationE
 
 interface DPPTemplateProps {
   product: Product;
-  visibilityV2: VisibilityConfigV2 | null;
+  visibilityV2: VisibilityConfigV2 | VisibilityConfigV3 | null;
   view: 'consumer' | 'customs';
   dppDesign?: DPPDesignSettings | null;
   tenantId: string | null;

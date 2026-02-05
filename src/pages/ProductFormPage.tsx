@@ -1673,10 +1673,10 @@ export function ProductFormPage() {
               </div>
 
               {/* Section 7: Multiple Packaging Layers (only for existing products) */}
-              {productId && (
+              {id && (
                 <>
                   <Separator />
-                  <PackagingLayersEditor productId={productId} />
+                  <PackagingLayersEditor productId={id} />
                 </>
               )}
             </div>

@@ -75,7 +75,7 @@ export function MasterLabelEditorPage({
   importerOverrideId,
   onImporterOverride,
 }: MasterLabelEditorPageProps) {
-  const { t } = useTranslation('products');
+  const { t, i18n } = useTranslation('products');
 
   // View state
   const [view, setView] = useState<LabelEditorView>('gallery');
