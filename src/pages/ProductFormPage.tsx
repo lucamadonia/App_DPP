@@ -17,6 +17,7 @@ import { ProductComponentsStep, type ComponentEntry } from '@/components/product
 import { PackagingLayersEditor } from '@/components/product/PackagingLayersEditor';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useBranding } from '@/contexts/BrandingContext';
+import { UpgradePrompt } from '@/components/billing';
 import type { ProductImage } from '@/types/database';
 import type { AggregationOverrides } from '@/types/product';
 import { getProductComponents, addProductComponent, removeProductComponent, updateProductComponent } from '@/services/supabase';
@@ -96,6 +97,7 @@ export function ProductFormPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [quotaReached, setQuotaReached] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
@@ -733,7 +735,11 @@ export function ProductFormPage() {
         } else if (result.success) {
           navigate('/products');
         } else {
-          setSubmitError(result.error || 'Product could not be saved.');
+          const err = result.error || 'Product could not be saved.';
+          if (err.includes('limit reached')) {
+            setQuotaReached(true);
+          }
+          setSubmitError(err);
         }
       }
     } catch {
@@ -2995,9 +3001,16 @@ export function ProductFormPage() {
       </div>
 
       {submitError && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {submitError}
-        </div>
+        quotaReached ? (
+          <UpgradePrompt
+            variant="quota"
+            message={submitError}
+          />
+        ) : (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            {submitError}
+          </div>
+        )
       )}
 
       {/* Document Upload Dialog */}

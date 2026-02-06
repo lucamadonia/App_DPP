@@ -98,5 +98,6 @@
   "Failed to open billing portal. Please try again.": "Failed to open billing portal. Please try again.",
   "Credits purchased successfully": "Credits purchased successfully!",
   "Plan upgraded successfully": "Plan upgraded successfully!",
-  "Module activated successfully": "Module activated successfully!"
+  "Module activated successfully": "Module activated successfully!",
+  "Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products.": "Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products."
 }

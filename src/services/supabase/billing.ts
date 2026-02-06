@@ -186,8 +186,7 @@ export async function checkQuota(
       const { count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tid)
-        .eq('is_active', true);
+        .eq('tenant_id', tid);
       current = count || 0;
       limit = limits.maxAdminUsers;
       break;
@@ -222,7 +221,7 @@ export async function checkQuota(
         .from('rh_workflow_rules')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', tid)
-        .eq('is_active', true);
+        .eq('active', true);
       current = count || 0;
       limit = limits.maxWorkflowRules || 0;
       break;
@@ -479,7 +478,7 @@ export async function getUsageSummary(): Promise<Record<string, { current: numbe
   const [products, documents, adminUsers] = await Promise.all([
     supabase.from('products').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
     supabase.from('documents').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('is_active', true),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
   ]);
 
   return {
@@ -510,6 +509,12 @@ export async function createCheckoutSession(params: {
 
   if (error) {
     console.error('Checkout session error:', error);
+    console.error('Checkout session error context:', { message: error.message, context: error.context, status: error.status });
+    return null;
+  }
+
+  if (!data?.url) {
+    console.error('Checkout session returned no URL:', data);
     return null;
   }
 

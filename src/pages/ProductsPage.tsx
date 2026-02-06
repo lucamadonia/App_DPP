@@ -46,6 +46,8 @@ import { generateProductCSV } from '@/lib/product-csv';
 import { DuplicateProductDialog } from '@/components/product/DuplicateProductDialog';
 import { ExportProductsDropdown } from '@/components/product/ExportProductsDropdown';
 import { ImportProductsDialog } from '@/components/product/ImportProductsDialog';
+import { useBilling } from '@/hooks/use-billing';
+import { UpgradePrompt } from '@/components/billing';
 
 const statusConfig = {
   live: {
@@ -76,8 +78,10 @@ const statusConfig = {
 
 export function ProductsPage() {
   const { t } = useTranslation('products');
+  const { t: tBilling } = useTranslation('billing');
   const locale = useLocale();
   const location = useLocation();
+  const { entitlements } = useBilling();
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -220,13 +224,27 @@ export function ProductsPage() {
             {t('Manage your products and their Digital Product Passports')}
           </p>
         </div>
-        <Button asChild>
-          <Link to="/products/new">
+        {entitlements && products.length >= entitlements.limits.maxProducts && entitlements.limits.maxProducts !== Infinity ? (
+          <Button disabled>
             <Plus className="mr-2 h-4 w-4" />
             {t('New Product')}
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild>
+            <Link to="/products/new">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('New Product')}
+            </Link>
+          </Button>
+        )}
       </div>
+
+      {entitlements && products.length >= entitlements.limits.maxProducts && entitlements.limits.maxProducts !== Infinity && (
+        <UpgradePrompt
+          variant="quota"
+          message={tBilling('Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products.', { current: products.length, limit: entitlements.limits.maxProducts })}
+        />
+      )}
 
       {/* Filters */}
       <Card>

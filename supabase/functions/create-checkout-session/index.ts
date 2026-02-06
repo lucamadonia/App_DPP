@@ -22,7 +22,11 @@ const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' });
+if (!STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY is not configured');
+}
+
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -119,32 +123,29 @@ Deno.serve(async (req) => {
       tax_id_collection: { enabled: true },
       allow_promotion_codes: true,
       billing_address_collection: 'required',
-      metadata: {
-        tenant_id: tenantId,
-        user_id: user.id,
-        ...metadata,
-      },
+      metadata: Object.fromEntries(
+        Object.entries({ tenant_id: tenantId, user_id: user.id, ...(metadata || {}) })
+          .map(([k, v]) => [k, String(v ?? '')])
+      ),
     };
 
     // For subscriptions, also store metadata on the subscription
     if (mode === 'subscription') {
       sessionParams.subscription_data = {
-        metadata: {
-          tenant_id: tenantId,
-          user_id: user.id,
-          ...metadata,
-        },
+        metadata: Object.fromEntries(
+          Object.entries({ tenant_id: tenantId, user_id: user.id, ...(metadata || {}) })
+            .map(([k, v]) => [k, String(v ?? '')])
+        ),
       };
     }
 
     // For one-time payments (credit packs), include payment intent metadata
     if (mode === 'payment') {
       sessionParams.payment_intent_data = {
-        metadata: {
-          tenant_id: tenantId,
-          user_id: user.id,
-          ...metadata,
-        },
+        metadata: Object.fromEntries(
+          Object.entries({ tenant_id: tenantId, user_id: user.id, ...(metadata || {}) })
+            .map(([k, v]) => [k, String(v ?? '')])
+        ),
       };
     }
 
@@ -153,7 +154,8 @@ Deno.serve(async (req) => {
     return jsonResponse({ sessionId: session.id, url: session.url });
   } catch (error) {
     console.error('create-checkout-session error:', error);
-    return jsonResponse({ error: error.message || 'Internal server error' }, 500);
+    const msg = error instanceof Error ? error.message : String(error);
+    return jsonResponse({ error: msg }, 500);
   }
 });
 

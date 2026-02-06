@@ -20,7 +20,11 @@ const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' });
+if (!STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY is not configured');
+}
+
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -79,7 +83,8 @@ Deno.serve(async (req) => {
     return jsonResponse({ url: session.url });
   } catch (error) {
     console.error('create-portal-session error:', error);
-    return jsonResponse({ error: error.message || 'Internal server error' }, 500);
+    const msg = error instanceof Error ? error.message : String(error);
+    return jsonResponse({ error: msg }, 500);
   }
 });
 

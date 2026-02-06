@@ -98,5 +98,6 @@
   "Failed to open billing portal. Please try again.": "Abrechnungsportal konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
   "Credits purchased successfully": "Credits erfolgreich gekauft!",
   "Plan upgraded successfully": "Plan erfolgreich geupgradet!",
-  "Module activated successfully": "Modul erfolgreich aktiviert!"
+  "Module activated successfully": "Modul erfolgreich aktiviert!",
+  "Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products.": "Produktlimit erreicht ({{current}}/{{limit}}). Upgraden Sie Ihren Plan, um mehr Produkte hinzuzufügen."
 }
