@@ -11,7 +11,7 @@ import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
 import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding } from '@/services/supabase';
-import { supabase } from '@/lib/supabase';
+import { supabaseAnon } from '@/lib/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import type { RhReturn, RhReturnTimeline as TimelineType, CustomerPortalBrandingOverrides } from '@/types/returns-hub';
 
@@ -52,52 +52,68 @@ export function PublicReturnTrackingPage() {
     setLoading(true);
     setError('');
 
-    const result = await publicTrackReturn(number, email || undefined);
+    try {
+      const result = await publicTrackReturn(number, email || undefined);
 
-    if (!result.returnData) {
+      if (!result.returnData) {
+        setReturnData(null);
+        setTimeline([]);
+        setItems([]);
+        setError(t('Return not found. Please check your return number and try again.'));
+        return;
+      }
+
+      setReturnData(result.returnData);
+      setTimeline(result.timeline as TimelineType[]);
+
+      // Fetch tenant slug and branding from tenant ID
+      try {
+        if (result.returnData.tenantId) {
+          const { data: tenant, error: tenantError } = await supabaseAnon
+            .from('tenants')
+            .select('slug')
+            .eq('id', result.returnData.tenantId)
+            .single();
+          if (tenantError) {
+            console.warn('[Tracking] Tenant query error:', tenantError.message);
+          }
+          if (tenant?.slug) {
+            setTenantSlug(tenant.slug);
+
+            // Load branding
+            const brandingData = await getCustomerPortalBranding(tenant.slug);
+            if (brandingData) {
+              setTenantName(brandingData.name);
+              setBranding(brandingData.branding);
+              if (brandingData.branding.primaryColor) {
+                applyPrimaryColor(brandingData.branding.primaryColor);
+              }
+              if (brandingData.name) {
+                document.title = `${brandingData.name} - ${t('Track Return')}`;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load branding:', e);
+      }
+
+      // Load items
+      try {
+        const returnItems = await publicGetReturnItems(number);
+        setItems(returnItems);
+      } catch (e) {
+        console.warn('Failed to load return items:', e);
+      }
+    } catch (err) {
+      console.error('Return tracking error:', err);
       setReturnData(null);
       setTimeline([]);
       setItems([]);
       setError(t('Return not found. Please check your return number and try again.'));
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setReturnData(result.returnData);
-    setTimeline(result.timeline as TimelineType[]);
-
-    // Fetch tenant slug and branding from tenant ID
-    if (result.returnData.tenantId) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('slug')
-        .eq('id', result.returnData.tenantId)
-        .single();
-      if (tenant?.slug) {
-        setTenantSlug(tenant.slug);
-
-        // Load branding
-        const brandingData = await getCustomerPortalBranding(tenant.slug);
-        if (brandingData) {
-          setTenantName(brandingData.name);
-          setBranding(brandingData.branding);
-          // Apply primary color to the page
-          if (brandingData.branding.primaryColor) {
-            applyPrimaryColor(brandingData.branding.primaryColor);
-          }
-          // Update document title
-          if (brandingData.name) {
-            document.title = `${brandingData.name} - ${t('Track Return')}`;
-          }
-        }
-      }
-    }
-
-    // Load items
-    const returnItems = await publicGetReturnItems(number);
-    setItems(returnItems);
-
-    setLoading(false);
   };
 
   const solutionLabels: Record<string, string> = {

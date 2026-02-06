@@ -572,3 +572,55 @@ code, .font-mono {
   50% { transform: translateY(-6px) rotate(1deg); }
 }
 .animate-landing-badge-float { animation: landing-badge-float 3s ease-in-out infinite; }
+
+/* Landing Page v4 — Premium Overhaul */
+@keyframes landing-typewriter {
+  from { max-width: 0; }
+  to { max-width: 100%; }
+}
+@keyframes landing-float-rotate {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-6px) rotate(1deg); }
+  75% { transform: translateY(4px) rotate(-1deg); }
+}
+@keyframes landing-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes landing-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+@keyframes landing-cursor-move {
+  0% { transform: translate(20px, 40px); }
+  15% { transform: translate(80px, 30px); }
+  30% { transform: translate(140px, 60px); }
+  50% { transform: translate(100px, 120px); }
+  70% { transform: translate(60px, 80px); }
+  85% { transform: translate(160px, 50px); }
+  100% { transform: translate(20px, 40px); }
+}
+@keyframes landing-drag-float {
+  0%, 100% { transform: translate(0, 0) rotate(-1deg); opacity: 0.85; }
+  50% { transform: translate(6px, -10px) rotate(1.5deg); opacity: 0.95; }
+}
+@keyframes landing-score-fill {
+  0% { stroke-dashoffset: 188; }
+  100% { stroke-dashoffset: var(--target-offset, 24); }
+}
+@keyframes landing-template-switch {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-landing-typewriter { animation: landing-typewriter 1s steps(40) both; overflow: hidden; white-space: nowrap; }
+.animate-landing-float-rotate { animation: landing-float-rotate 5s ease-in-out infinite; }
+.animate-landing-gradient-shift { animation: landing-gradient-shift 4s ease infinite; background-size: 200% 200%; }
+.animate-landing-pulse-ring { animation: landing-pulse-ring 2s ease-out infinite; }
+.animate-landing-cursor-move { animation: landing-cursor-move 8s ease-in-out infinite; }
+.animate-landing-drag-float { animation: landing-drag-float 3s ease-in-out infinite; }
+.animate-landing-score-fill { animation: landing-score-fill 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-landing-template-switch { animation: landing-template-switch 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }

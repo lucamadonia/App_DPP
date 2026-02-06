@@ -1,147 +1,274 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
-import { Check, QrCode } from 'lucide-react';
+import QRCode from 'qrcode';
+import { Download, Copy, Check, ScanLine, Palette, Maximize2, ShieldCheck } from 'lucide-react';
 
-const qrFeatures = ['feature1', 'feature2', 'feature3', 'feature4', 'feature5', 'feature6'];
-const tabs = ['customer', 'customs', 'gs1'] as const;
-
-const domainUrls = [
-  'trackbliss.com/p/4260123/SN001',
-  'id.gs1.org/01/4260123/21/SN001',
-  'dpp.your-brand.com/passport/SN001',
+const colorPresets = [
+  { hex: '#0f172a', label: 'Slate' },
+  { hex: '#3b82f6', label: 'Blue' },
+  { hex: '#8b5cf6', label: 'Violet' },
+  { hex: '#10b981', label: 'Emerald' },
+  { hex: '#ef4444', label: 'Red' },
+  { hex: '#f59e0b', label: 'Amber' },
 ];
+
+const ecLevels = ['L', 'M', 'Q', 'H'] as const;
+type ECLevel = typeof ecLevels[number];
+
+const tabs = ['custom', 'gs1', 'vcard'] as const;
+type TabType = typeof tabs[number];
 
 export function LandingQRSection() {
   const { t } = useTranslation('landing');
   const { ref, isVisible } = useScrollReveal();
-  const [activeTab, setActiveTab] = useState<typeof tabs[number]>('customer');
+
+  const [activeTab, setActiveTab] = useState<TabType>('custom');
+  const [url, setUrl] = useState('https://trackbliss.com/p/4260123456789/SN001');
+  const [qrColor, setQrColor] = useState('#0f172a');
+  const [size, setSize] = useState(256);
+  const [ecLevel, setEcLevel] = useState<ECLevel>('M');
+  const [copied, setCopied] = useState(false);
+
+  // GS1 fields
+  const [gtin, setGtin] = useState('4260123456789');
+  const [serial, setSerial] = useState('SN001');
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const effectiveUrl = activeTab === 'gs1'
+    ? `https://id.gs1.org/01/${gtin}/21/${serial}`
+    : activeTab === 'vcard'
+      ? 'BEGIN:VCARD\nVERSION:3.0\nFN:EcoWear GmbH\nORG:EcoWear GmbH\nTEL:+49 30 12345678\nEMAIL:info@ecowear.de\nURL:https://ecowear.de\nADR:;;Musterstr. 12;Berlin;;10115;DE\nEND:VCARD'
+      : url;
+
+  // Render QR code
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !effectiveUrl) return;
+
+    QRCode.toCanvas(canvas, effectiveUrl, {
+      width: size,
+      margin: 2,
+      color: { dark: qrColor, light: '#ffffff' },
+      errorCorrectionLevel: ecLevel,
+    }).catch(() => {
+      // silently ignore render errors for invalid input
+    });
+  }, [effectiveUrl, qrColor, size, ecLevel]);
+
+  const handleDownload = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `qr-code-${Date.now()}.png`;
+    a.click();
+  }, []);
+
+  const handleCopy = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (blob) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // Fallback: copy URL instead
+      await navigator.clipboard.writeText(effectiveUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [effectiveUrl]);
 
   return (
     <section id="qr-section" className="py-24 bg-slate-900 text-white overflow-hidden">
       <div ref={ref} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left: QR Mockup */}
-          <div className={isVisible ? 'animate-landing-reveal-left' : 'opacity-0 -translate-x-10'}>
-            <div className="rounded-2xl bg-slate-800 border border-slate-700 p-6 max-w-sm mx-auto lg:mx-0">
-              {/* QR Code */}
-              <div className="flex justify-center mb-5">
-                <div className="relative">
-                  <svg width="180" height="180" viewBox="0 0 180 180" className="rounded-xl">
-                    <rect width="180" height="180" fill="#1e293b" rx="12" />
-                    {/* QR pattern (stylized) */}
-                    {[0,1,2,3,4,5,6,7,8].map(row =>
-                      [0,1,2,3,4,5,6,7,8].map(col => {
-                        const isCorner = (row < 3 && col < 3) || (row < 3 && col > 5) || (row > 5 && col < 3);
-                        const isData = [
-                          [0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2],
-                          [0,6],[0,7],[0,8],[1,6],[1,8],[2,6],[2,7],[2,8],
-                          [6,0],[6,1],[6,2],[7,0],[7,2],[8,0],[8,1],[8,2],
-                          [3,3],[3,5],[4,4],[5,3],[5,5],
-                          [3,7],[4,6],[5,7],[6,5],[7,4],[8,5],[7,7],[6,7],
-                        ].some(([r,c]) => r === row && c === col);
-                        if (!isData) return null;
-                        return (
-                          <rect
-                            key={`${row}-${col}`}
-                            x={16 + col * 18}
-                            y={16 + row * 18}
-                            width={14}
-                            height={14}
-                            rx={isCorner ? 2 : 3}
-                            fill={isCorner ? '#3b82f6' : '#8b5cf6'}
-                            opacity={isCorner ? 1 : 0.8}
-                          />
-                        );
-                      })
-                    )}
-                    {/* Center logo */}
-                    <rect x="68" y="68" width="44" height="44" rx="10" fill="#0f172a" />
-                    <rect x="72" y="72" width="36" height="36" rx="8" fill="#3b82f6" />
-                    <text x="90" y="95" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">DPP</text>
-                  </svg>
+        {/* Header */}
+        <div className={`text-center max-w-3xl mx-auto mb-12 ${isVisible ? 'animate-landing-reveal' : 'opacity-0 translate-y-8'}`}>
+          <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 text-sm font-medium text-blue-400 mb-6">
+            <ScanLine className="h-4 w-4" />
+            {t('qrSection.tryIt')}
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold">{t('qrSection.title')}</h2>
+          <p className="mt-4 text-lg text-slate-400">{t('qrSection.subtitle')}</p>
+        </div>
+
+        {/* Generator Card */}
+        <div className={`rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden max-w-4xl mx-auto ${
+          isVisible ? 'animate-landing-reveal [animation-delay:0.3s]' : 'opacity-0 translate-y-8'
+        }`}>
+          {/* Tab Bar */}
+          <div className="flex border-b border-slate-700 bg-slate-800/50">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                  activeTab === tab
+                    ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {t(`qrSection.tab.${tab}`)}
+              </button>
+            ))}
+          </div>
+
+          {/* Content Grid */}
+          <div className="grid md:grid-cols-2 gap-6 p-6">
+            {/* Left: Controls */}
+            <div className="space-y-5">
+              {activeTab === 'custom' && (
+                <div>
+                  <label className="text-xs font-medium text-slate-400 mb-1.5 block">{t('qrSection.urlInput')}</label>
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="https://..."
+                  />
+                </div>
+              )}
+
+              {activeTab === 'gs1' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 mb-1.5 block">{t('qrSection.gtinInput')}</label>
+                    <input
+                      type="text"
+                      value={gtin}
+                      onChange={(e) => setGtin(e.target.value)}
+                      className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="4260123456789"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 mb-1.5 block">{t('qrSection.serialInput')}</label>
+                    <input
+                      type="text"
+                      value={serial}
+                      onChange={(e) => setSerial(e.target.value)}
+                      className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="SN001"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'vcard' && (
+                <div className="rounded-lg bg-slate-900 border border-slate-600 p-3">
+                  <p className="text-[10px] font-medium text-slate-500 uppercase mb-2">vCard Demo</p>
+                  <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
+{`FN: EcoWear GmbH
+ORG: EcoWear GmbH
+TEL: +49 30 12345678
+EMAIL: info@ecowear.de
+URL: ecowear.de`}
+                  </pre>
+                </div>
+              )}
+
+              {/* Color Presets */}
+              <div>
+                <label className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
+                  <Palette className="h-3.5 w-3.5" />
+                  {t('qrSection.color')}
+                </label>
+                <div className="flex gap-2">
+                  {colorPresets.map((c) => (
+                    <button
+                      key={c.hex}
+                      onClick={() => setQrColor(c.hex)}
+                      className={`h-8 w-8 rounded-full border-2 transition-all ${
+                        qrColor === c.hex ? 'border-blue-400 scale-110' : 'border-slate-600 hover:border-slate-400'
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.label}
+                    />
+                  ))}
                 </div>
               </div>
 
-              {/* URL Tabs */}
-              <div className="flex gap-1 mb-3 bg-slate-900 rounded-lg p-1">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
-                      activeTab === tab
-                        ? 'bg-blue-500 text-white'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {t(`qrSection.tab.${tab}`)}
-                  </button>
-                ))}
+              {/* Size Slider */}
+              <div>
+                <label className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
+                  <Maximize2 className="h-3.5 w-3.5" />
+                  {t('qrSection.size')}: {size}px
+                </label>
+                <input
+                  type="range"
+                  min={128}
+                  max={512}
+                  step={32}
+                  value={size}
+                  onChange={(e) => setSize(Number(e.target.value))}
+                  className="w-full accent-blue-500"
+                />
               </div>
 
-              {/* Settings Mockup */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Size</span>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-20 rounded-full bg-slate-700">
-                      <div className="h-1.5 w-14 rounded-full bg-blue-500" />
-                    </div>
-                    <span className="text-xs text-slate-300">256px</span>
-                  </div>
+              {/* Error Correction */}
+              <div>
+                <label className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {t('qrSection.errorCorrection')}
+                </label>
+                <div className="flex gap-1.5">
+                  {ecLevels.map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setEcLevel(level)}
+                      className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${
+                        ecLevel === level
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                      }`}
+                    >
+                      {t(`qrSection.ecLevel.${level}`)}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Colors</span>
-                  <div className="flex gap-1.5">
-                    {['bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-rose-500', 'bg-slate-100'].map((c, i) => (
-                      <div key={i} className={`h-4 w-4 rounded-full ${c} ${i === 0 ? 'ring-2 ring-blue-300' : ''}`} />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Error Correction</span>
-                  <span className="text-xs text-slate-300 bg-slate-700 rounded px-2 py-0.5">Level H (30%)</span>
-                </div>
+              </div>
+            </div>
+
+            {/* Right: Preview + Actions */}
+            <div className="flex flex-col items-center">
+              <div className="rounded-xl bg-white p-4 shadow-lg">
+                <canvas ref={canvasRef} className="block" />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors animate-landing-pulse-ring"
+                >
+                  <Download className="h-4 w-4" />
+                  {t('qrSection.download')}
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 rounded-xl border border-slate-600 px-5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                  {copied ? t('qrSection.copied') : t('qrSection.copy')}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Right: Features */}
-          <div className={isVisible ? 'animate-landing-reveal-right' : 'opacity-0 translate-x-10'}>
-            <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 text-sm font-medium text-blue-400 mb-6">
-              <QrCode className="h-4 w-4" />
-              GS1 Digital Link
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold">
-              {t('qrSection.title')}
-            </h2>
-            <p className="mt-4 text-lg text-slate-400">
-              {t('qrSection.subtitle')}
-            </p>
-
-            <ul className="mt-8 space-y-4">
-              {qrFeatures.map((key) => (
-                <li key={key} className="flex items-start gap-3">
-                  <div className="rounded-full bg-blue-500/20 p-1 mt-0.5 shrink-0">
-                    <Check className="h-3.5 w-3.5 text-blue-400" />
-                  </div>
-                  <span className="text-slate-300">{t(`qrSection.${key}`)}</span>
-                </li>
-              ))}
-            </ul>
-
-            {/* Domain Showcase */}
-            <div className="mt-8 rounded-xl bg-slate-800 border border-slate-700 p-4">
-              <p className="text-xs font-medium text-slate-400 mb-3">{t('qrSection.domains')}</p>
-              <div className="space-y-2 font-mono text-xs">
-                {domainUrls.map((url, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="text-slate-500">{'>'}</span>
-                    <span className="text-blue-400">{url}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Footer: GS1 Structure Reference */}
+          <div className="border-t border-slate-700 px-6 py-3 bg-slate-800/50">
+            <p className="text-[10px] font-medium text-slate-500 mb-1">{t('qrSection.gs1Structure')}</p>
+            <div className="flex gap-4 font-mono text-[11px]">
+              <span><span className="text-blue-400">01</span>=<span className="text-slate-400">GTIN</span></span>
+              <span><span className="text-violet-400">21</span>=<span className="text-slate-400">Serial</span></span>
+              <span><span className="text-emerald-400">10</span>=<span className="text-slate-400">Batch</span></span>
             </div>
           </div>
         </div>

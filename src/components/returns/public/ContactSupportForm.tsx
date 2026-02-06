@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { createPublicReturnTicket } from '@/services/supabase';
-import { useReturnsPortal } from '@/hooks/useReturnsPortal';
+import { ReturnsPortalContext } from '@/pages/returns/public/ReturnsPortalLayout';
 
 interface ContactSupportFormProps {
   open: boolean;
@@ -24,7 +24,7 @@ interface ContactSupportFormProps {
 
 export function ContactSupportForm({ open, onOpenChange, returnNumber, tenantSlug: propTenantSlug }: ContactSupportFormProps) {
   const { t } = useTranslation('returns');
-  const context = useReturnsPortal();
+  const context = useContext(ReturnsPortalContext);
   const tenantSlug = propTenantSlug || context?.tenantSlug;
 
   const [subject, setSubject] = useState(`Return ${returnNumber}`);

@@ -3,7 +3,7 @@
  * Returns CRUD with RLS
  */
 
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
 import type { RhReturn, ReturnStatus, ReturnsFilter, PaginatedResult, ReturnsHubStats, RhNotificationEventType } from '@/types/returns-hub';
 import { generateReturnNumber } from '@/lib/return-number';
 import { triggerEmailNotification, triggerPublicEmailNotification } from './rh-notification-trigger';
@@ -411,11 +411,15 @@ export async function publicTrackReturn(
   returnNumber: string,
   email?: string
 ): Promise<{ returnData: RhReturn | null; timeline: Array<{ id: string; returnId: string; tenantId: string; status: string; comment?: string; actorType: string; metadata: Record<string, unknown>; createdAt: string }> }> {
-  const { data: ret } = await supabase
+  const { data: ret, error: retError } = await supabaseAnon
     .from('rh_returns')
     .select('*')
     .eq('return_number', returnNumber.trim())
     .single();
+
+  if (retError) {
+    console.error('[publicTrackReturn] Query error:', retError.message, retError.code, retError.details);
+  }
 
   if (!ret) return { returnData: null, timeline: [] };
 
@@ -432,7 +436,7 @@ export async function publicTrackReturn(
   transformed.metadata = {};
 
   // Load timeline
-  const { data: tlData } = await supabase
+  const { data: tlData } = await supabaseAnon
     .from('rh_return_timeline')
     .select('*')
     .eq('return_id', ret.id)
@@ -453,7 +457,7 @@ export async function publicTrackReturn(
 }
 
 export async function publicGetTenantName(tenantSlug: string): Promise<string> {
-  const { data } = await supabase
+  const { data } = await supabaseAnon
     .from('tenants')
     .select('name')
     .eq('slug', tenantSlug)
@@ -466,7 +470,7 @@ export async function publicGetTenantBranding(tenantSlug: string): Promise<{
   primaryColor: string;
   logoUrl: string;
 } | null> {
-  const { data } = await supabase
+  const { data } = await supabaseAnon
     .from('tenants')
     .select('name, settings')
     .eq('slug', tenantSlug)
@@ -489,7 +493,7 @@ export async function publicUploadReturnPhoto(
   returnId: string,
   file: File
 ): Promise<{ success: boolean; path?: string; error?: string }> {
-  const { data: tenant } = await supabase
+  const { data: tenant } = await supabaseAnon
     .from('tenants')
     .select('id')
     .eq('slug', tenantSlug)
@@ -500,7 +504,7 @@ export async function publicUploadReturnPhoto(
   const ext = file.name.split('.').pop() || 'jpg';
   const filePath = `${tenant.id}/${returnId}/${Date.now()}.${ext}`;
 
-  const { error } = await supabase.storage
+  const { error } = await supabaseAnon.storage
     .from('return-photos')
     .upload(filePath, file, { contentType: file.type, upsert: false });
 
@@ -519,7 +523,7 @@ export async function publicGetReturnItems(returnNumber: string): Promise<Array<
   condition?: string;
   photos: string[];
 }>> {
-  const { data: ret } = await supabase
+  const { data: ret } = await supabaseAnon
     .from('rh_returns')
     .select('id')
     .eq('return_number', returnNumber.trim())
@@ -527,7 +531,7 @@ export async function publicGetReturnItems(returnNumber: string): Promise<Array<
 
   if (!ret) return [];
 
-  const { data: items } = await supabase
+  const { data: items } = await supabaseAnon
     .from('rh_return_items')
     .select('id, name, quantity, condition, photos')
     .eq('return_id', ret.id);

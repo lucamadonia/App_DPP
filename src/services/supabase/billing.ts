@@ -494,6 +494,7 @@ export async function getUsageSummary(): Promise<Record<string, { current: numbe
 
 /**
  * Create a Stripe Checkout session via Edge Function.
+ * Returns { url } on success or { error } with detail message on failure.
  */
 export async function createCheckoutSession(params: {
   priceId: string;
@@ -502,41 +503,86 @@ export async function createCheckoutSession(params: {
   cancelUrl: string;
   metadata?: Record<string, string>;
   locale?: string;
-}): Promise<{ url: string } | null> {
+}): Promise<{ url: string; error?: never } | { url?: never; error: string }> {
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: params,
   });
 
   if (error) {
     console.error('Checkout session error:', error);
-    console.error('Checkout session error context:', { message: error.message, context: error.context, status: error.status });
-    return null;
+    // Extract real error from edge function response body
+    const detail = extractEdgeFunctionError(error);
+    return { error: detail };
   }
 
   if (!data?.url) {
     console.error('Checkout session returned no URL:', data);
-    return null;
+    return { error: data?.error || 'No checkout URL returned' };
   }
 
-  return data;
+  return { url: data.url };
 }
 
 /**
  * Create a Stripe Customer Portal session via Edge Function.
+ * Returns { url } on success or { error } with detail message on failure.
  */
 export async function createPortalSession(
   returnUrl: string,
-): Promise<{ url: string } | null> {
+): Promise<{ url: string; error?: never } | { url?: never; error: string }> {
   const { data, error } = await supabase.functions.invoke('create-portal-session', {
     body: { returnUrl },
   });
 
   if (error) {
     console.error('Portal session error:', error);
-    return null;
+    const detail = extractEdgeFunctionError(error);
+    return { error: detail };
   }
 
-  return data;
+  if (!data?.url) {
+    return { error: data?.error || 'No portal URL returned' };
+  }
+
+  return { url: data.url };
+}
+
+// ============================================
+// EDGE FUNCTION ERROR EXTRACTION
+// ============================================
+
+/**
+ * Extract the real error message from a Supabase Edge Function error.
+ * When an edge function returns non-2xx, supabase-js wraps the response
+ * in error.context (which contains the JSON body with the real error).
+ */
+function extractEdgeFunctionError(error: { message?: string; context?: unknown }): string {
+  try {
+    // error.context may be the parsed JSON body or a string
+    const ctx = error.context;
+    if (ctx && typeof ctx === 'object') {
+      // Direct object — e.g. { error: "Stripe Tax not enabled..." }
+      const obj = ctx as Record<string, unknown>;
+      if (typeof obj.error === 'string') return obj.error;
+      // Sometimes nested in body
+      if (obj.body && typeof obj.body === 'object') {
+        const body = obj.body as Record<string, unknown>;
+        if (typeof body.error === 'string') return body.error;
+      }
+    }
+    if (typeof ctx === 'string') {
+      try {
+        const parsed = JSON.parse(ctx);
+        if (typeof parsed.error === 'string') return parsed.error;
+      } catch {
+        // ctx is a plain string error
+        if (ctx.length > 0 && ctx.length < 500) return ctx;
+      }
+    }
+  } catch {
+    // fallthrough
+  }
+  return error.message || 'Unknown error';
 }
 
 // ============================================

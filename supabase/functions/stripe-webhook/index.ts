@@ -28,7 +28,14 @@ const STRIPE_WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' });
+if (!STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY is not configured');
+}
+if (!STRIPE_WEBHOOK_SECRET) {
+  console.error('STRIPE_WEBHOOK_SECRET is not configured');
+}
+
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 Deno.serve(async (req) => {
   // Only POST

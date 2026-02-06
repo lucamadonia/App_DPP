@@ -102,10 +102,10 @@ export function BillingPage() {
         locale: i18n.language,
       });
 
-      if (result?.url) {
+      if ('url' in result && result.url) {
         window.location.href = result.url;
       } else {
-        toast({ title: t('Error'), description: t('Failed to start checkout. Please try again.'), variant: 'destructive' });
+        toast({ title: t('Error'), description: result.error || t('Failed to start checkout. Please try again.'), variant: 'destructive' });
       }
     } finally {
       setActionLoading(false);
@@ -126,10 +126,10 @@ export function BillingPage() {
         locale: i18n.language,
       });
 
-      if (result?.url) {
+      if ('url' in result && result.url) {
         window.location.href = result.url;
       } else {
-        toast({ title: t('Error'), description: t('Failed to start checkout. Please try again.'), variant: 'destructive' });
+        toast({ title: t('Error'), description: result.error || t('Failed to start checkout. Please try again.'), variant: 'destructive' });
       }
     } finally {
       setActionLoading(false);
@@ -142,10 +142,10 @@ export function BillingPage() {
       const result = await createPortalSession(
         `${window.location.origin}/settings/billing`,
       );
-      if (result?.url) {
+      if ('url' in result && result.url) {
         window.location.href = result.url;
       } else {
-        toast({ title: t('Error'), description: t('Failed to open billing portal. Please try again.'), variant: 'destructive' });
+        toast({ title: t('Error'), description: result.error || t('Failed to open billing portal. Please try again.'), variant: 'destructive' });
       }
     } finally {
       setActionLoading(false);

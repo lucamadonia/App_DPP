@@ -5,7 +5,7 @@
  * Uses authenticated Supabase client (customer RLS policies apply).
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAnon } from '@/lib/supabase';
 import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings } from '@/types/returns-hub';
 import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput, CustomerReturnsFilter, CustomerTicketsFilter } from '@/types/customer-portal';
 import { generateReturnNumber, generateTicketNumber } from '@/lib/return-number';
@@ -62,12 +62,12 @@ export async function customerSignUp(params: {
     return { success: false, error: 'Registration is currently unavailable. Please try again later.' };
   }
 
-  // Billing: check customer portal module
-  const { hasModule: checkModule } = await import('./billing');
-  const hasCP = await checkModule('customer_portal', params.tenantId);
-  if (!hasCP) {
-    return { success: false, error: 'Customer Portal module not active for this tenant.' };
-  }
+  // TODO: Re-enable billing check when Stripe is fully configured
+  // const { hasModule: checkModule } = await import('./billing');
+  // const hasCP = await checkModule('customer_portal', params.tenantId);
+  // if (!hasCP) {
+  //   return { success: false, error: 'Customer Portal module not active for this tenant.' };
+  // }
 
   const { error } = await supabase.auth.signUp({
     email: params.email,
@@ -740,7 +740,7 @@ export async function getCustomerDashboardStats(): Promise<CustomerDashboardStat
 // ============================================
 
 export async function getCustomerReturnReasons(tenantId: string): Promise<RhReturnReason[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAnon
     .from('rh_return_reasons')
     .select('*')
     .eq('tenant_id', tenantId)
@@ -778,7 +778,7 @@ export interface CustomerPortalBrandingResult {
 }
 
 export async function getCustomerPortalBranding(tenantSlug: string): Promise<CustomerPortalBrandingResult | null> {
-  const { data } = await supabase
+  const { data } = await supabaseAnon
     .from('tenants')
     .select('id, name, settings')
     .eq('slug', tenantSlug)

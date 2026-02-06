@@ -2,20 +2,21 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 import {
-  Type, MousePointerClick, Image, Minus, MoveVertical,
-  LayoutGrid, Sparkles, Link2, Columns2, Check, Monitor, Smartphone,
+  Type, Pointer, Image, Minus, ArrowUpDown,
+  Table2, Sparkles, Link2, Columns2, Check, Monitor, Smartphone,
+  GripVertical, Copy, Trash2, Plus,
 } from 'lucide-react';
 
 const blockIcons = [
-  { icon: Type, label: 'Text' },
-  { icon: MousePointerClick, label: 'Button' },
-  { icon: Image, label: 'Image' },
-  { icon: Minus, label: 'Divider' },
-  { icon: MoveVertical, label: 'Spacer' },
-  { icon: LayoutGrid, label: 'Info Box' },
-  { icon: Sparkles, label: 'Hero' },
-  { icon: Link2, label: 'Social' },
-  { icon: Columns2, label: 'Columns' },
+  { icon: Type, label: 'Text', gradient: 'from-blue-500/10 to-blue-500/5' },
+  { icon: Pointer, label: 'Button', gradient: 'from-violet-500/10 to-violet-500/5' },
+  { icon: Image, label: 'Image', gradient: 'from-emerald-500/10 to-emerald-500/5' },
+  { icon: Minus, label: 'Divider', gradient: 'from-slate-500/10 to-slate-500/5' },
+  { icon: ArrowUpDown, label: 'Spacer', gradient: 'from-amber-500/10 to-amber-500/5' },
+  { icon: Table2, label: 'Info Box', gradient: 'from-cyan-500/10 to-cyan-500/5' },
+  { icon: Sparkles, label: 'Hero', gradient: 'from-rose-500/10 to-rose-500/5' },
+  { icon: Link2, label: 'Social', gradient: 'from-indigo-500/10 to-indigo-500/5' },
+  { icon: Columns2, label: 'Columns', gradient: 'from-teal-500/10 to-teal-500/5' },
 ];
 
 const templateStrip = [
@@ -94,7 +95,7 @@ export function LandingEmailEditor() {
           </div>
 
           {/* 3-Column Layout */}
-          <div className="grid grid-cols-[72px_1fr_200px] min-h-[340px] divide-x divide-slate-100">
+          <div className="grid grid-cols-[72px_1fr_200px] min-h-[380px] divide-x divide-slate-100 relative">
             {/* Left: Block Icons */}
             <div className="bg-slate-50 p-2 space-y-1.5">
               <p className="text-[10px] font-medium text-slate-400 text-center mb-2">
@@ -103,7 +104,7 @@ export function LandingEmailEditor() {
               {blockIcons.map((block) => (
                 <div
                   key={block.label}
-                  className="flex flex-col items-center gap-0.5 rounded-lg p-1.5 hover:bg-white cursor-default"
+                  className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 bg-gradient-to-b ${block.gradient} hover:bg-white cursor-default transition-all`}
                 >
                   <block.icon className="h-4 w-4 text-slate-500" />
                   <span className="text-[8px] text-slate-400">{block.label}</span>
@@ -112,40 +113,102 @@ export function LandingEmailEditor() {
             </div>
 
             {/* Center: Canvas */}
-            <div className="p-4 bg-[radial-gradient(circle,#e2e8f0_1px,transparent_1px)] bg-[size:16px_16px]">
+            <div className="p-4 bg-[radial-gradient(circle,#e2e8f0_1px,transparent_1px)] bg-[size:16px_16px] relative overflow-hidden">
               <p className="text-[10px] font-medium text-slate-400 mb-3">{t('emailEditor.canvas')}</p>
               <div className="space-y-2 max-w-[280px] mx-auto">
                 {/* Hero Block */}
-                <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-4 text-center">
+                <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-4 text-center relative group">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <div className="h-5 w-5 rounded bg-blue-200" />
-                    <div className="h-3 w-16 rounded bg-blue-200" />
+                    <span className="text-[9px] font-semibold text-blue-600">Trackbliss</span>
                   </div>
-                  <div className="h-4 w-32 rounded bg-blue-100 mx-auto mb-1.5" />
-                  <div className="h-3 w-24 rounded bg-blue-50 mx-auto" />
+                  <p className="text-[11px] font-semibold text-blue-800 mb-1">{t('emailEditor.trackReturn')}</p>
+                  <p className="text-[9px] text-blue-500">Order #TB-2024-0847</p>
                 </div>
-                {/* Text Block */}
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <div className="h-3 w-full rounded bg-slate-100 mb-1.5" />
-                  <div className="h-3 w-3/4 rounded bg-slate-100 mb-1.5" />
-                  <div className="h-3 w-1/2 rounded bg-slate-100" />
+
+                {/* Insert Handle */}
+                <div className="flex justify-center">
+                  <div className="h-5 w-5 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center animate-insert-handle-pulse cursor-default">
+                    <Plus className="h-2.5 w-2.5 text-blue-500" />
+                  </div>
                 </div>
-                {/* Columns Block */}
-                <div className="rounded-lg border border-slate-200 p-2">
+
+                {/* Info Box Block — Selected with floating toolbar */}
+                <div className="rounded-lg border-2 border-blue-400 bg-white p-2 relative shadow-sm">
+                  {/* Floating Toolbar */}
+                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-slate-800 rounded-lg px-1.5 py-1 shadow-lg">
+                    <GripVertical className="h-3 w-3 text-slate-400" />
+                    <Copy className="h-3 w-3 text-slate-400" />
+                    <Trash2 className="h-3 w-3 text-red-400" />
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2">
-                      <div className="h-2 w-10 rounded bg-emerald-200 mb-1" />
-                      <div className="h-3 w-14 rounded bg-emerald-300" />
+                      <span className="text-[8px] text-emerald-500 block">Return #</span>
+                      <span className="text-[10px] font-semibold text-emerald-700">RET-2024-0312</span>
                     </div>
                     <div className="rounded-md border border-amber-200 bg-amber-50 p-2">
-                      <div className="h-2 w-10 rounded bg-amber-200 mb-1" />
-                      <div className="h-3 w-14 rounded bg-amber-300" />
+                      <span className="text-[8px] text-amber-500 block">Status</span>
+                      <span className="text-[10px] font-semibold text-amber-700">Approved</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Divider */}
+                <div className="rounded-lg border border-slate-200 p-2">
+                  <div className="h-px bg-slate-300 my-1" />
+                </div>
+
                 {/* Button Block */}
                 <div className="rounded-lg border border-slate-200 p-3 text-center">
-                  <div className="inline-block h-7 w-28 rounded-md bg-blue-500" />
+                  <div className="inline-flex items-center gap-1.5 h-7 px-4 rounded-md bg-blue-500 text-[9px] font-semibold text-white">
+                    {t('emailEditor.trackReturn')}
+                  </div>
+                </div>
+
+                {/* Social Links Block */}
+                <div className="rounded-lg border border-slate-200 p-2 flex justify-center gap-2">
+                  {['#3b82f6', '#8b5cf6', '#ec4899', '#10b981'].map((color) => (
+                    <div key={color} className="h-5 w-5 rounded-full" style={{ backgroundColor: color, opacity: 0.7 }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Animated Cursor Overlay */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="animate-landing-cursor-move absolute">
+                  <svg width="16" height="20" viewBox="0 0 16 20" fill="none">
+                    <path d="M1 1L1 14L4.5 10.5L8 18L10.5 17L7 9.5L12 9.5L1 1Z" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Drag Ghost */}
+              <div className="absolute bottom-16 right-4 animate-landing-drag-float pointer-events-none">
+                <div className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 shadow-lg opacity-70 rotate-2">
+                  <div className="flex items-center gap-1.5">
+                    <Table2 className="h-3 w-3 text-blue-400" />
+                    <span className="text-[8px] font-medium text-blue-600">{t('emailEditor.dragBlock')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Color Picker Mockup */}
+              <div className="absolute top-12 right-2 pointer-events-none">
+                <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-lg w-24">
+                  <p className="text-[7px] font-medium text-slate-400 mb-1">{t('emailEditor.colorPicker')}</p>
+                  <div className="h-10 rounded-md mb-1.5" style={{
+                    background: 'linear-gradient(to right, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6)',
+                  }} />
+                  <div className="flex gap-0.5">
+                    {['#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b'].map((c) => (
+                      <div key={c} className="h-3 w-3 rounded-sm" style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1">
+                    <div className="h-3 flex-1 rounded-sm border border-slate-200 flex items-center px-0.5">
+                      <span className="text-[6px] text-slate-500 font-mono">#3b82f6</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -173,16 +236,30 @@ export function LandingEmailEditor() {
                 previewMode === 'mobile' ? 'max-w-[100px]' : 'max-w-full'
               }`}>
                 <div className="rounded bg-gradient-to-r from-blue-500 to-violet-500 p-2">
-                  <div className="h-2 w-8 rounded bg-white/50 mb-1" />
+                  <div className="flex items-center gap-1 mb-1">
+                    <div className="h-2 w-2 rounded bg-white/50" />
+                    <div className="h-1.5 w-8 rounded bg-white/50" />
+                  </div>
                   <div className="h-2 w-14 rounded bg-white/30" />
+                  <div className="h-1.5 w-10 rounded bg-white/20 mt-0.5" />
                 </div>
-                <div className="h-2 w-full rounded bg-slate-100" />
-                <div className="h-2 w-3/4 rounded bg-slate-100" />
                 <div className="grid grid-cols-2 gap-1">
-                  <div className="h-4 rounded bg-emerald-50 border border-emerald-100" />
-                  <div className="h-4 rounded bg-amber-50 border border-amber-100" />
+                  <div className="h-5 rounded bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                    <span className="text-[5px] text-emerald-600 font-medium">RET-0312</span>
+                  </div>
+                  <div className="h-5 rounded bg-amber-50 border border-amber-100 flex items-center justify-center">
+                    <span className="text-[5px] text-amber-600 font-medium">Approved</span>
+                  </div>
                 </div>
-                <div className="mx-auto h-4 w-14 rounded bg-blue-500 mt-1" />
+                <div className="h-px bg-slate-200" />
+                <div className="mx-auto h-4 w-14 rounded bg-blue-500 mt-1 flex items-center justify-center">
+                  <span className="text-[5px] text-white font-medium">Track</span>
+                </div>
+                <div className="flex justify-center gap-1 pt-1">
+                  {['#3b82f6', '#8b5cf6', '#ec4899', '#10b981'].map((c) => (
+                    <div key={c} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c, opacity: 0.6 }} />
+                  ))}
+                </div>
               </div>
             </div>
           </div>

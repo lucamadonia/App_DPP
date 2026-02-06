@@ -33,6 +33,25 @@ export const supabase = createClient<any>(
   }
 );
 
+/**
+ * Anon-only Supabase client for public pages (tracking, portal, registration).
+ * Does NOT persist or auto-refresh sessions, so it always runs as anon role
+ * and is not affected by a broken admin session in the same browser.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const supabaseAnon = createClient<any>(
+  supabaseUrl || '',
+  supabaseAnonKey || '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+      storageKey: 'sb-anon-public',
+    },
+  }
+);
+
 // Cache for tenant ID to reduce database queries
 let cachedTenantId: string | null = null;
 let cacheTimestamp: number = 0;

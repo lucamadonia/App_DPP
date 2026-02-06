@@ -112,6 +112,9 @@ Deno.serve(async (req) => {
     const stripeLocale = locale === 'de' ? 'de' : 'en';
 
     // Create Checkout Session
+    // Note: automatic_tax and tax_id_collection removed — they require
+    // Stripe Tax to be enabled in the Stripe Dashboard (Settings > Tax).
+    // Re-add once Stripe Tax is configured.
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       mode: mode as 'subscription' | 'payment',
@@ -119,8 +122,6 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       locale: stripeLocale,
-      automatic_tax: { enabled: true },
-      tax_id_collection: { enabled: true },
       allow_promotion_codes: true,
       billing_address_collection: 'required',
       metadata: Object.fromEntries(

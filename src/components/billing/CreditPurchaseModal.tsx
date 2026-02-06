@@ -51,12 +51,12 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
         locale: i18n.language,
       });
 
-      if (result?.url) {
+      if ('url' in result && result.url) {
         window.location.href = result.url;
       } else {
         toast({
           title: t('Error'),
-          description: t('Failed to start checkout. Please try again.'),
+          description: result.error || t('Failed to start checkout. Please try again.'),
           variant: 'destructive',
         });
       }
@@ -64,7 +64,7 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
       console.error('Failed to create checkout:', error);
       toast({
         title: t('Error'),
-        description: t('Failed to start checkout. Please try again.'),
+        description: error instanceof Error ? error.message : t('Failed to start checkout. Please try again.'),
         variant: 'destructive',
       });
     } finally {

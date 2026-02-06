@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Menu, X, Globe } from 'lucide-react';
+import { Menu, X, Globe, ChevronDown, Check } from 'lucide-react';
 
 const navIds = [
   { key: 'nav.features', id: 'features' },
@@ -13,12 +13,20 @@ const navIds = [
   { key: 'nav.pricing', id: 'pricing' },
 ];
 
+const languages = [
+  { code: 'en', label: 'EN', name: 'English' },
+  { code: 'de', label: 'DE', name: 'Deutsch' },
+  { code: 'el', label: 'EL', name: 'Ελληνικά' },
+];
+
 export function LandingNavbar() {
   const { t, i18n } = useTranslation('landing');
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -50,10 +58,23 @@ export function LandingNavbar() {
     return () => observers.forEach((o) => o.disconnect());
   }, []);
 
-  const toggleLang = () => {
-    const next = i18n.language === 'de' ? 'en' : 'de';
-    i18n.changeLanguage(next);
+  // Click outside to close language dropdown
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const changeLang = (code: string) => {
+    i18n.changeLanguage(code);
+    setLangOpen(false);
   };
+
+  const currentLang = languages.find((l) => l.code === i18n.language) || languages[0];
 
   const scrollTo = useCallback((id: string) => {
     setMobileOpen(false);
@@ -101,13 +122,36 @@ export function LandingNavbar() {
 
             {/* Desktop Actions */}
             <div className="hidden lg:flex items-center gap-3">
-              <button
-                onClick={toggleLang}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <Globe className="h-4 w-4" />
-                {i18n.language === 'de' ? 'DE' : 'EN'}
-              </button>
+              {/* Language Dropdown */}
+              <div ref={langRef} className="relative">
+                <button
+                  onClick={() => setLangOpen(!langOpen)}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <Globe className="h-4 w-4" />
+                  {currentLang.label}
+                  <ChevronDown className={`h-3 w-3 transition-transform ${langOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {langOpen && (
+                  <div className="absolute right-0 mt-1 w-44 rounded-xl border border-slate-200 bg-white shadow-lg py-1 animate-landing-reveal-scale">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => changeLang(lang.code)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="font-medium">{lang.label}</span>
+                          <span className="text-slate-400">{lang.name}</span>
+                        </span>
+                        {i18n.language === lang.code && (
+                          <Check className="h-3.5 w-3.5 text-blue-600" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => navigate('/login')}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
@@ -153,13 +197,29 @@ export function LandingNavbar() {
                 </button>
               ))}
               <div className="border-t border-slate-200 pt-3 mt-3 space-y-2">
-                <button
-                  onClick={toggleLang}
-                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-xl"
-                >
-                  <Globe className="h-4 w-4" />
-                  {i18n.language === 'de' ? 'Deutsch → English' : 'English → Deutsch'}
-                </button>
+                {/* Mobile Language Selector */}
+                <div className="px-4 py-2">
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+                    <Globe className="h-3 w-3 inline mr-1" />
+                    {t('footer.language', { ns: 'landing' })}
+                  </p>
+                  <div className="flex gap-2">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => changeLang(lang.code)}
+                        className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium text-center transition-all ${
+                          i18n.language === lang.code
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        <span className="block font-semibold">{lang.label}</span>
+                        <span className="block text-[10px] opacity-80">{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button
                   onClick={() => { setMobileOpen(false); navigate('/login'); }}
                   className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white text-center landing-glow"
