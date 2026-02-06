@@ -87,6 +87,7 @@ const AdminBillingPage = lazy(() => import('@/pages/admin/AdminBillingPage').the
 const AdminCreditsPage = lazy(() => import('@/pages/admin/AdminCreditsPage').then(m => ({ default: m.AdminCreditsPage })));
 const AdminCouponsPage = lazy(() => import('@/pages/admin/AdminCouponsPage').then(m => ({ default: m.AdminCouponsPage })));
 const AdminMasterDataPage = lazy(() => import('@/pages/admin/AdminMasterDataPage').then(m => ({ default: m.AdminMasterDataPage })));
+const TrainingGuidePage = lazy(() => import('@/pages/TrainingGuidePage').then(m => ({ default: m.TrainingGuidePage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
 
@@ -340,7 +341,7 @@ function NormalAppRoutes() {
           <Route path="settings/billing" element={<BillingPage />} />
 
           {/* Help */}
-          <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
+          <Route path="help" element={<TrainingGuidePage />} />
 
           {/* Admin Portal (Super Admin only) */}
           <Route path="admin" element={<AdminGuard />}>

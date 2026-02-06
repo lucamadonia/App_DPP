@@ -624,3 +624,68 @@ code, .font-mono {
 .animate-landing-drag-float { animation: landing-drag-float 3s ease-in-out infinite; }
 .animate-landing-score-fill { animation: landing-score-fill 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .animate-landing-template-switch { animation: landing-template-switch 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Training Guide Animations */
+@keyframes guide-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes guide-number-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+@keyframes guide-check-bounce {
+  0% { transform: scale(0.8); }
+  40% { transform: scale(1.2); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+@keyframes guide-progress-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes guide-pill-active {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+}
+@keyframes guide-mockup-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes guide-step-connector-draw {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes guide-tip-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.08); }
+  50% { box-shadow: 0 0 16px rgba(59, 130, 246, 0.15); }
+}
+@keyframes guide-fab-appear {
+  from { opacity: 0; transform: translateY(16px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes guide-confetti-mini {
+  0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--cx, 20px), var(--cy, -30px)) scale(0) rotate(360deg); }
+}
+
+.animate-guide-gradient-shift { animation: guide-gradient-shift 6s ease infinite; background-size: 200% 200%; }
+.animate-guide-number-pulse { animation: guide-number-pulse 2s ease-in-out infinite; }
+.animate-guide-check-bounce { animation: guide-check-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-guide-progress-fill { animation: guide-progress-fill 1s ease-out both; transform-origin: left; }
+.animate-guide-pill-active { animation: guide-pill-active 1.5s ease-in-out infinite; }
+.animate-guide-mockup-float { animation: guide-mockup-float 4s ease-in-out infinite; }
+.animate-guide-step-connector-draw { animation: guide-step-connector-draw 0.5s ease-out both; transform-origin: top; }
+.animate-guide-tip-glow { animation: guide-tip-glow 3s ease-in-out infinite; }
+.animate-guide-fab-appear { animation: guide-fab-appear 0.3s ease-out both; }
+.animate-guide-confetti-mini { animation: guide-confetti-mini 0.8s ease-out forwards; }
+
+.guide-glass {
+  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+.guide-chapter-glow {
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}

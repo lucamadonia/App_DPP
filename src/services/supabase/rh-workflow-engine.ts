@@ -22,7 +22,7 @@ import type {
 } from '@/types/workflow-builder';
 import type { RhReturn, RhTicket, RhCustomer, ReturnStatus } from '@/types/returns-hub';
 import { supabase } from '@/lib/supabase';
-import { getReturnsHubSettings } from './rh-settings';
+import { getReturnsHubSettings, getReturnsHubSettingsByTenantId } from './rh-settings';
 import { deserializeWorkflowGraph, buildGraphFromLegacy } from './rh-workflows';
 import { updateReturn, updateReturnStatus, approveReturn, rejectReturn, getReturn } from './returns';
 import { addTimelineEntry } from './return-timeline';
@@ -68,9 +68,17 @@ export async function executeWorkflowsForEvent(
   context: WorkflowEventContext
 ): Promise<void> {
   try {
-    // Feature gate
-    const settings = await getReturnsHubSettings();
-    if (!settings.features?.workflowRules) {
+    // Feature gate — try authenticated settings first, fall back to tenantId lookup (public portal)
+    let settings;
+    try {
+      settings = await getReturnsHubSettings();
+    } catch {
+      settings = null;
+    }
+    if (!settings?.features?.workflowRules && context.tenantId) {
+      settings = await getReturnsHubSettingsByTenantId(context.tenantId);
+    }
+    if (!settings?.features?.workflowRules) {
       console.warn('[workflow-engine] Workflow rules feature is disabled in tenant settings — skipping execution.');
       return;
     }
@@ -425,7 +433,7 @@ async function executeAction(
 
       case 'assign': {
         if (!ctx.returnId) break;
-        await updateReturn(ctx.returnId, { assignedTo: params.assignee as string });
+        await updateReturn(ctx.returnId, { assignedTo: (params.assignTo || params.assignee) as string });
         break;
       }
 
@@ -492,7 +500,7 @@ async function executeAction(
 
       case 'ticket_assign': {
         if (!ctx.ticketId) break;
-        await updateRhTicket(ctx.ticketId, { assignedTo: params.assignee as string });
+        await updateRhTicket(ctx.ticketId, { assignedTo: (params.assignTo || params.assignee) as string });
         break;
       }
 
@@ -547,7 +555,17 @@ async function executeAction(
 
       // ---- Notification actions ----
       case 'email_send_template': {
-        const templateEventType = params.templateEventType as string;
+        // Builder saves templateId (UUID), engine needs templateEventType (string).
+        // Support both: resolve UUID → event_type via DB if needed.
+        let templateEventType = params.templateEventType as string | undefined;
+        if (!templateEventType && params.templateId) {
+          const { data: tpl } = await supabase
+            .from('rh_email_templates')
+            .select('event_type')
+            .eq('id', params.templateId as string)
+            .single();
+          templateEventType = tpl?.event_type;
+        }
         const customer = ctx.customer || (ctx.customerId ? await getRhCustomer(ctx.customerId) : null);
         const recipientEmail = (params.recipientEmail as string) || customer?.email;
         if (templateEventType && recipientEmail) {
@@ -576,7 +594,7 @@ async function executeAction(
             ticketId: ctx.ticketId,
             customerId: ctx.customerId,
             subject: (params.subject as string) || 'Workflow Notification',
-            content: (params.content as string) || '',
+            content: (params.content || params.body) as string || '',
             metadata: { source: 'workflow', recipientEmail },
           });
         }
@@ -612,19 +630,35 @@ async function executeAction(
         const url = params.url as string;
         if (!url) break;
         const method = (params.method as string)?.toUpperCase() || 'POST';
+        // Parse headers: Builder may save as "Key: Value\nKey2: Value2" string
+        let parsedHeaders: Record<string, string> = {};
+        if (typeof params.headers === 'string') {
+          for (const line of (params.headers as string).split('\n')) {
+            const idx = line.indexOf(':');
+            if (idx > 0) {
+              parsedHeaders[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+            }
+          }
+        } else if (params.headers && typeof params.headers === 'object') {
+          parsedHeaders = params.headers as Record<string, string>;
+        }
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-          ...(params.headers as Record<string, string> || {}),
+          ...parsedHeaders,
         };
-        const body = params.body
-          ? JSON.stringify(params.body)
-          : JSON.stringify({
-              event: ctx.eventType,
-              returnId: ctx.returnId,
-              ticketId: ctx.ticketId,
-              customerId: ctx.customerId,
-              timestamp: new Date().toISOString(),
-            });
+        // Avoid double-encoding: if body is already a string, use it directly
+        let body: string;
+        if (params.body) {
+          body = typeof params.body === 'string' ? params.body : JSON.stringify(params.body);
+        } else {
+          body = JSON.stringify({
+            event: ctx.eventType,
+            returnId: ctx.returnId,
+            ticketId: ctx.ticketId,
+            customerId: ctx.customerId,
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         await fetch(url, { method, headers, body: method !== 'GET' ? body : undefined })
           .catch((err) => console.error('[workflow-engine] Webhook call failed:', err));

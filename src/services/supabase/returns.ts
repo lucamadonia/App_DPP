@@ -428,6 +428,15 @@ export async function publicCreateReturn(
     returnId: ret.id,
   }).catch((err) => console.error('Public notification trigger failed:', err));
 
+  // Fire workflow event for public return creation (fire-and-forget)
+  import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
+    executeWorkflowsForEvent('return_created', {
+      tenantId: tenant.id,
+      eventType: 'return_created',
+      returnId: ret.id,
+    });
+  }).catch(console.error);
+
   return { success: true, returnNumber: rn };
 }
 

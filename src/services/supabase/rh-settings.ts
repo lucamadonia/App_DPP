@@ -99,7 +99,47 @@ export async function getReturnsHubSettings(): Promise<ReturnsHubSettings> {
     return { ...DEFAULT_SETTINGS };
   }
 
-  return { ...DEFAULT_SETTINGS, ...data.settings.returnsHub };
+  const stored = data.settings.returnsHub;
+  return deepMergeSettings(stored);
+}
+
+/**
+ * Load Returns Hub settings for a specific tenant (no auth needed).
+ * Used by workflow engine in public portal context.
+ */
+export async function getReturnsHubSettingsByTenantId(tenantId: string): Promise<ReturnsHubSettings> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .single();
+
+  if (error || !data?.settings?.returnsHub) {
+    return { ...DEFAULT_SETTINGS };
+  }
+
+  return deepMergeSettings(data.settings.returnsHub);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function deepMergeSettings(stored: any): ReturnsHubSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    features: { ...DEFAULT_SETTINGS.features, ...(stored.features || {}) },
+    branding: { ...DEFAULT_SETTINGS.branding, ...(stored.branding || {}) },
+    notifications: { ...DEFAULT_SETTINGS.notifications, ...(stored.notifications || {}) },
+    usage: { ...DEFAULT_SETTINGS.usage, ...(stored.usage || {}) },
+    customerPortal: stored.customerPortal
+      ? {
+          ...DEFAULT_CUSTOMER_PORTAL_SETTINGS,
+          ...stored.customerPortal,
+          features: { ...DEFAULT_CUSTOMER_PORTAL_SETTINGS.features, ...(stored.customerPortal.features || {}) },
+          branding: { ...DEFAULT_CUSTOMER_PORTAL_SETTINGS.branding, ...(stored.customerPortal.branding || {}) },
+          security: { ...DEFAULT_CUSTOMER_PORTAL_SETTINGS.security, ...(stored.customerPortal.security || {}) },
+        }
+      : DEFAULT_CUSTOMER_PORTAL_SETTINGS,
+  };
 }
 
 export async function updateReturnsHubSettings(
