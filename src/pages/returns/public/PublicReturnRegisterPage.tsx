@@ -132,7 +132,12 @@ export function PublicReturnRegisterPage() {
       reasonText: state.reasonText || undefined,
       desiredSolution: state.solution,
       shippingMethod: state.shippingMethod,
-      items: state.items.filter(i => i.name.trim()).map(i => ({ name: i.name, quantity: i.quantity })),
+      items: state.items.filter(i => i.name.trim()).map(i => ({
+        name: i.name,
+        quantity: i.quantity,
+        condition: i.condition,
+        productId: i.productId,
+      })),
     });
 
     if (result.success && result.returnNumber) {

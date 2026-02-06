@@ -77,7 +77,16 @@ const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetailPage').then(
 const SupplierInvitationsPage = lazy(() => import('@/pages/SupplierInvitationsPage').then(m => ({ default: m.SupplierInvitationsPage })));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const BillingPage = lazy(() => import('@/pages/BillingPage').then(m => ({ default: m.BillingPage })));
-const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
+// Admin Portal
+const AdminGuard = lazy(() => import('@/components/admin/AdminGuard').then(m => ({ default: m.AdminGuard })));
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
+const AdminTenantsPage = lazy(() => import('@/pages/admin/AdminTenantsPage').then(m => ({ default: m.AdminTenantsPage })));
+const AdminTenantDetailPage = lazy(() => import('@/pages/admin/AdminTenantDetailPage').then(m => ({ default: m.AdminTenantDetailPage })));
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })));
+const AdminBillingPage = lazy(() => import('@/pages/admin/AdminBillingPage').then(m => ({ default: m.AdminBillingPage })));
+const AdminCreditsPage = lazy(() => import('@/pages/admin/AdminCreditsPage').then(m => ({ default: m.AdminCreditsPage })));
+const AdminCouponsPage = lazy(() => import('@/pages/admin/AdminCouponsPage').then(m => ({ default: m.AdminCouponsPage })));
+const AdminMasterDataPage = lazy(() => import('@/pages/admin/AdminMasterDataPage').then(m => ({ default: m.AdminMasterDataPage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
 
@@ -333,8 +342,17 @@ function NormalAppRoutes() {
           {/* Help */}
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
 
-          {/* Admin */}
-          <Route path="admin" element={<AdminPage />} />
+          {/* Admin Portal (Super Admin only) */}
+          <Route path="admin" element={<AdminGuard />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="tenants" element={<AdminTenantsPage />} />
+            <Route path="tenants/:tenantId" element={<AdminTenantDetailPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="billing" element={<AdminBillingPage />} />
+            <Route path="credits" element={<AdminCreditsPage />} />
+            <Route path="coupons" element={<AdminCouponsPage />} />
+            <Route path="master-data" element={<AdminMasterDataPage />} />
+          </Route>
         </Route>
       </Routes>
       </Suspense>

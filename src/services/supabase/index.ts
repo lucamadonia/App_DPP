@@ -263,6 +263,7 @@ export {
   publicGetTenantBranding,
   publicUploadReturnPhoto,
   publicGetReturnItems,
+  publicGetTenantProducts,
 } from './returns';
 
 // Returns Hub - Return Items

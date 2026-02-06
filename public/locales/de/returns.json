@@ -1048,5 +1048,9 @@
   "Customer Portal Setup": "Kundenportal-Einrichtung",
   "License & Usage": "Lizenz & Nutzung",
   "Welcome back": "Willkommen zurück",
-  "Sign in to your account": "Bei Ihrem Konto anmelden"
+  "Sign in to your account": "Bei Ihrem Konto anmelden",
+
+  "Search product...": "Produkt suchen...",
+  "No products found": "Keine Produkte gefunden",
+  "Or type custom name": "Oder eigenen Namen eingeben"
 }

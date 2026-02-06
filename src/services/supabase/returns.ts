@@ -316,6 +316,28 @@ export async function rejectReturn(
 // PUBLIC ACCESS (no auth needed)
 // ============================================
 
+export async function publicGetTenantProducts(tenantSlug: string): Promise<Array<{ id: string; name: string; gtin?: string; imageUrl?: string }>> {
+  const { data: tenant } = await supabaseAnon
+    .from('tenants')
+    .select('id')
+    .eq('slug', tenantSlug)
+    .single();
+  if (!tenant) return [];
+
+  const { data } = await supabaseAnon
+    .from('products')
+    .select('id, name, gtin, image_url')
+    .eq('tenant_id', tenant.id)
+    .order('name');
+
+  return (data || []).map((p: any) => ({
+    id: p.id,
+    name: p.name || '',
+    gtin: p.gtin || undefined,
+    imageUrl: p.image_url || undefined,
+  }));
+}
+
 export async function publicCreateReturn(
   tenantSlug: string,
   data: {
@@ -325,7 +347,7 @@ export async function publicCreateReturn(
     reasonText?: string;
     desiredSolution: string;
     shippingMethod: string;
-    items: Array<{ name: string; quantity: number }>;
+    items: Array<{ name: string; quantity: number; condition?: string; productId?: string }>;
   }
 ): Promise<{ success: boolean; returnNumber?: string; error?: string }> {
   // Get tenant by slug
@@ -367,8 +389,10 @@ export async function publicCreateReturn(
     await supabase.from('rh_return_items').insert({
       return_id: ret.id,
       tenant_id: tenant.id,
+      product_id: item.productId || null,
       name: item.name,
       quantity: item.quantity,
+      condition: item.condition || null,
     });
   }
 

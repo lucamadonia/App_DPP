@@ -3,9 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { Package, Loader2, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { publicGetTenantBranding, getPublicReturnReasons } from '@/services/supabase';
+import { publicGetTenantBranding, getPublicReturnReasons, publicGetTenantProducts } from '@/services/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import type { RhReturnReason } from '@/types/returns-hub';
+
+export interface TenantProduct {
+  id: string;
+  name: string;
+  gtin?: string;
+  imageUrl?: string;
+}
 
 export interface ReturnsPortalContextType {
   tenantSlug: string;
@@ -13,6 +20,7 @@ export interface ReturnsPortalContextType {
   primaryColor: string;
   logoUrl: string;
   reasons: RhReturnReason[];
+  products: TenantProduct[];
   isLoading: boolean;
 }
 
@@ -39,6 +47,7 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
   const [primaryColor, setPrimaryColor] = useState('#3B82F6');
   const [logoUrl, setLogoUrl] = useState('');
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
+  const [products, setProducts] = useState<TenantProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Extract tenantSlug from any nested route param or override
@@ -69,8 +78,12 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
         if (tenantOverride.primaryColor) {
           applyPrimaryColor(tenantOverride.primaryColor);
         }
-        const reasonsData = await getPublicReturnReasons(tenantOverride.tenantSlug);
+        const [reasonsData, productsData] = await Promise.all([
+          getPublicReturnReasons(tenantOverride.tenantSlug),
+          publicGetTenantProducts(tenantOverride.tenantSlug),
+        ]);
         setReasons(reasonsData);
+        setProducts(productsData);
         setIsLoading(false);
         return;
       }
@@ -80,9 +93,10 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
         return;
       }
       try {
-        const [branding, reasonsData] = await Promise.all([
+        const [branding, reasonsData, productsData] = await Promise.all([
           publicGetTenantBranding(tenantSlug),
           getPublicReturnReasons(tenantSlug),
+          publicGetTenantProducts(tenantSlug),
         ]);
         if (branding) {
           setTenantName(branding.name);
@@ -93,6 +107,7 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
           }
         }
         setReasons(reasonsData);
+        setProducts(productsData);
       } catch (err) {
         console.error('Failed to load portal branding:', err);
       }
@@ -114,7 +129,7 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
 
   return (
     <ReturnsPortalContext.Provider
-      value={{ tenantSlug, tenantName, primaryColor, logoUrl, reasons, isLoading }}
+      value={{ tenantSlug, tenantName, primaryColor, logoUrl, reasons, products, isLoading }}
     >
       <div className="min-h-screen flex flex-col bg-gray-50">
         {/* Header */}

@@ -1048,5 +1048,9 @@
   "Customer Portal Setup": "Customer Portal Setup",
   "License & Usage": "License & Usage",
   "Welcome back": "Welcome back",
-  "Sign in to your account": "Sign in to your account"
+  "Sign in to your account": "Sign in to your account",
+
+  "Search product...": "Search product...",
+  "No products found": "No products found",
+  "Or type custom name": "Or type custom name"
 }

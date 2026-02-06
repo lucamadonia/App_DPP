@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   tenantId: string | null;
+  isSuperAdmin: boolean;
   isInitializing: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -22,6 +23,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -30,12 +32,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('tenant_id')
+          .select('tenant_id, is_super_admin')
           .eq('id', userId)
           .single();
 
         if (profile?.tenant_id) {
           setTenantId(profile.tenant_id);
+          setIsSuperAdmin(profile.is_super_admin === true);
           return; // Success!
         }
 
@@ -103,6 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     clearTenantIdCache(); // Clear tenant ID cache
     setUser(null);
     setTenantId(null);
+    setIsSuperAdmin(false);
   };
 
   const value: AuthContextType = {
@@ -110,6 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     isAuthenticated: !!user,
     tenantId,
+    isSuperAdmin,
     isInitializing,
     signOut,
     refreshSession,

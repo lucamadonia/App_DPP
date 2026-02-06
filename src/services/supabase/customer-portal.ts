@@ -1079,7 +1079,7 @@ export async function createPublicReturnTicket(params: {
     category: 'return_inquiry',
     priority: 'normal',
     status: 'open',
-    source: 'public_return_portal',
+    metadata: { source: 'public_return_portal' },
     created_at: new Date().toISOString(),
   };
 

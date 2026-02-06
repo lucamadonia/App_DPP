@@ -25,6 +25,8 @@ import {
   RotateCcw,
   CreditCard,
   Sparkles,
+  Ticket,
+  Database,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -58,7 +60,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isSuperAdmin } = useAuth();
   const { branding } = useBranding();
   const billing = useBillingOptional();
   const { t } = useTranslation('common');
@@ -169,17 +171,25 @@ export function AppSidebar() {
         { title: t('Billing'), url: '/settings/billing', icon: CreditCard },
       ],
     },
-    {
-      title: t('Admin Dashboard'),
-      url: '/admin',
+    ...(isSuperAdmin ? [{
+      title: t('Admin'),
       icon: Shield,
-    },
+      items: [
+        { title: t('Dashboard'), url: '/admin', icon: LayoutDashboard },
+        { title: t('Tenants'), url: '/admin/tenants', icon: Building2 },
+        { title: t('Users'), url: '/admin/users', icon: Users },
+        { title: t('Billing'), url: '/admin/billing', icon: CreditCard },
+        { title: t('Credits'), url: '/admin/credits', icon: Sparkles },
+        { title: t('Coupons'), url: '/admin/coupons', icon: Ticket },
+        { title: t('Master Data'), url: '/admin/master-data', icon: Database },
+      ],
+    }] : []),
     {
       title: t('Help & Support'),
       url: '/help',
       icon: HelpCircle,
     },
-  ], [t]);
+  ], [t, isSuperAdmin]);
 
   const handleSignOut = async () => {
     await signOut();

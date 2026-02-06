@@ -4,7 +4,7 @@
  * Checks settings + template, renders variables, creates rh_notifications record.
  * The actual email sending is handled by the Supabase Edge Function via DB webhook.
  */
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
 import type { RhNotificationEventType } from '@/types/returns-hub';
 import type { EmailDesignConfig } from '@/components/returns/email-editor/emailEditorTypes';
 import { renderEmailHtml } from '@/components/returns/email-editor/emailHtmlRenderer';
@@ -24,6 +24,24 @@ export interface NotificationContext {
   returnId?: string;
   ticketId?: string;
   customerId?: string;
+}
+
+/**
+ * Directly invoke the send-email Edge Function after creating a notification record.
+ * This bypasses the need for a Database Webhook (which isn't configured).
+ * Accepts an optional client parameter for public (anon) context.
+ */
+async function sendNotificationEmail(
+  notificationRecord: Record<string, unknown>,
+  client: typeof supabase = supabase
+) {
+  try {
+    await client.functions.invoke('send-email', {
+      body: { record: notificationRecord },
+    });
+  } catch (err) {
+    console.warn('Direct send-email invocation failed:', err);
+  }
 }
 
 function renderTemplate(template: string, ctx: NotificationContext): string {
@@ -78,29 +96,31 @@ export async function triggerEmailNotification(
       renderedBody = renderTemplate(template.bodyTemplate, ctx);
     }
 
-    // Create notification record (Edge Function picks it up via DB webhook)
+    // Create notification record and invoke send-email Edge Function directly
     const tenantId = await getCurrentTenantId();
     if (!tenantId) return { success: false, error: 'No tenant set' };
 
+    const notificationPayload = {
+      tenant_id: tenantId,
+      return_id: ctx.returnId || null,
+      ticket_id: ctx.ticketId || null,
+      customer_id: ctx.customerId || null,
+      channel: 'email',
+      template: eventType,
+      recipient_email: ctx.recipientEmail,
+      subject: renderedSubject,
+      content: renderedBody,
+      status: 'pending',
+      metadata: {
+        senderName: settings.notifications.senderName || '',
+        isHtml: true,
+        locale: emailLocale,
+      },
+    };
+
     const { data, error } = await supabase
       .from('rh_notifications')
-      .insert({
-        tenant_id: tenantId,
-        return_id: ctx.returnId || null,
-        ticket_id: ctx.ticketId || null,
-        customer_id: ctx.customerId || null,
-        channel: 'email',
-        template: eventType,
-        recipient_email: ctx.recipientEmail,
-        subject: renderedSubject,
-        content: renderedBody,
-        status: 'pending',
-        metadata: {
-          senderName: settings.notifications.senderName || '',
-          isHtml: true,
-          locale: emailLocale,
-        },
-      })
+      .insert(notificationPayload)
       .select('id')
       .single();
 
@@ -108,6 +128,9 @@ export async function triggerEmailNotification(
       console.error('Failed to create email notification:', error);
       return { success: false, error: error.message };
     }
+
+    // Directly invoke Edge Function (no DB webhook configured)
+    sendNotificationEmail({ ...notificationPayload, id: data.id });
 
     return { success: true, notificationId: data.id };
   } catch (err) {
@@ -126,8 +149,8 @@ export async function triggerPublicEmailNotification(
   ctx: NotificationContext
 ): Promise<{ success: boolean; skipped?: boolean; error?: string }> {
   try {
-    // Check global settings from tenant
-    const { data: tenant } = await supabase
+    // Check global settings from tenant (use anon client for public context)
+    const { data: tenant } = await supabaseAnon
       .from('tenants')
       .select('settings')
       .eq('id', tenantId)
@@ -162,31 +185,38 @@ export async function triggerPublicEmailNotification(
       renderedBody = renderTemplate(template.bodyTemplate, ctx);
     }
 
-    // Create notification record
-    const { error } = await supabase
+    // Create notification record (use anon client for public context)
+    const notificationPayload = {
+      tenant_id: tenantId,
+      return_id: ctx.returnId || null,
+      ticket_id: ctx.ticketId || null,
+      customer_id: ctx.customerId || null,
+      channel: 'email',
+      template: eventType,
+      recipient_email: ctx.recipientEmail,
+      subject: renderedSubject,
+      content: renderedBody,
+      status: 'pending',
+      metadata: {
+        senderName: rhSettings.notifications.senderName || '',
+        isHtml: true,
+        locale: emailLocale,
+      },
+    };
+
+    const { data, error } = await supabaseAnon
       .from('rh_notifications')
-      .insert({
-        tenant_id: tenantId,
-        return_id: ctx.returnId || null,
-        ticket_id: ctx.ticketId || null,
-        customer_id: ctx.customerId || null,
-        channel: 'email',
-        template: eventType,
-        recipient_email: ctx.recipientEmail,
-        subject: renderedSubject,
-        content: renderedBody,
-        status: 'pending',
-        metadata: {
-          senderName: rhSettings.notifications.senderName || '',
-          isHtml: true,
-          locale: emailLocale,
-        },
-      });
+      .insert(notificationPayload)
+      .select('id')
+      .single();
 
     if (error) {
       console.error('Failed to create public email notification:', error);
       return { success: false, error: error.message };
     }
+
+    // Directly invoke Edge Function with anon client (no DB webhook configured)
+    sendNotificationEmail({ ...notificationPayload, id: data?.id }, supabaseAnon);
 
     return { success: true };
   } catch (err) {

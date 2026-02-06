@@ -1,12 +1,18 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Minus, X, Package } from 'lucide-react';
+import { Plus, Minus, X, Package, Check, ChevronsUpDown, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+import { useReturnsPortal } from '@/hooks/useReturnsPortal';
 import type { ItemCondition } from '@/types/returns-hub';
 
 export interface WizardItem {
   name: string;
+  productId?: string;
   quantity: number;
   condition: ItemCondition;
 }
@@ -14,6 +20,127 @@ export interface WizardItem {
 interface SelectItemsStepProps {
   items: WizardItem[];
   onItemsChange: (items: WizardItem[]) => void;
+}
+
+function ProductCombobox({
+  value,
+  productId,
+  onChange,
+  autoFocus,
+}: {
+  value: string;
+  productId?: string;
+  onChange: (name: string, productId?: string) => void;
+  autoFocus?: boolean;
+}) {
+  const { t } = useTranslation('returns');
+  const { products } = useReturnsPortal();
+  const [open, setOpen] = useState(false);
+  const [customMode, setCustomMode] = useState(!productId && value.length > 0);
+
+  if (customMode) {
+    return (
+      <div className="flex gap-2">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value, undefined)}
+          placeholder={t('Item name')}
+          autoFocus={autoFocus}
+          className="flex-1"
+        />
+        {products.length > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() => { setCustomMode(false); setOpen(true); }}
+            title={t('Search product...')}
+          >
+            <Package className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value, undefined)}
+        placeholder={t('Item name')}
+        autoFocus={autoFocus}
+      />
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+          autoFocus={autoFocus}
+        >
+          <span className="truncate">
+            {value || t('Search product...')}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={t('Search product...')} />
+          <CommandList>
+            <CommandEmpty>{t('No products found')}</CommandEmpty>
+            <CommandGroup>
+              {products.map((product) => (
+                <CommandItem
+                  key={product.id}
+                  value={product.name}
+                  onSelect={() => {
+                    onChange(product.name, product.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      productId === product.id ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  <div className="flex-1 truncate">
+                    <span>{product.name}</span>
+                    {product.gtin && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {product.gtin}
+                      </span>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup>
+              <CommandItem
+                onSelect={() => {
+                  setCustomMode(true);
+                  onChange('', undefined);
+                  setOpen(false);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                {t('Or type custom name')}
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function SelectItemsStep({ items, onItemsChange }: SelectItemsStepProps) {
@@ -30,6 +157,12 @@ export function SelectItemsStep({ items, onItemsChange }: SelectItemsStepProps) 
   const updateItem = (index: number, field: keyof WizardItem, value: string | number) => {
     const updated = [...items];
     updated[index] = { ...updated[index], [field]: value };
+    onItemsChange(updated);
+  };
+
+  const updateItemProduct = (index: number, name: string, productId?: string) => {
+    const updated = [...items];
+    updated[index] = { ...updated[index], name, productId };
     onItemsChange(updated);
   };
 
@@ -55,10 +188,10 @@ export function SelectItemsStep({ items, onItemsChange }: SelectItemsStepProps) 
           >
             <div className="flex items-start gap-3">
               <div className="flex-1 space-y-3">
-                <Input
+                <ProductCombobox
                   value={item.name}
-                  onChange={(e) => updateItem(i, 'name', e.target.value)}
-                  placeholder={t('Item name')}
+                  productId={item.productId}
+                  onChange={(name, productId) => updateItemProduct(i, name, productId)}
                   autoFocus={i === items.length - 1}
                 />
                 <div className="flex items-center gap-3">
