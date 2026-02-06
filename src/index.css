@@ -444,3 +444,131 @@ code, .font-mono {
 .landing-glow-violet {
   box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
 }
+
+/* Landing Page v3 — Next-Level Effects */
+
+/* Rotating conic-gradient border animation */
+@keyframes landing-gradient-border-spin {
+  0% { --landing-border-angle: 0deg; }
+  100% { --landing-border-angle: 360deg; }
+}
+@property --landing-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.landing-gradient-border {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+}
+.landing-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--landing-border-angle), #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981, #3b82f6);
+  animation: landing-gradient-border-spin 3s linear infinite;
+  z-index: -1;
+}
+
+/* Animated gradient text shimmer */
+@keyframes landing-text-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.landing-text-shimmer {
+  background: linear-gradient(90deg, #0f172a 0%, #0f172a 35%, #3b82f6 50%, #8b5cf6 55%, #0f172a 65%, #0f172a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: landing-text-shimmer 4s linear infinite;
+}
+
+/* Spring-like scale entrance with overshoot */
+@keyframes landing-scale-bounce {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.08); }
+  80% { transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-landing-scale-bounce { animation: landing-scale-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Blur-to-clear entrance */
+@keyframes landing-blur-in {
+  0% { opacity: 0; filter: blur(12px); transform: translateY(8px); }
+  100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+.animate-landing-blur-in { animation: landing-blur-in 0.6s ease-out both; }
+
+/* Slide up with spring overshoot */
+@keyframes landing-slide-up-spring {
+  0% { opacity: 0; transform: translateY(40px); }
+  60% { opacity: 1; transform: translateY(-6px); }
+  80% { transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-landing-slide-up-spring { animation: landing-slide-up-spring 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Pulsing gradient outline glow */
+@keyframes landing-glow-border {
+  0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.2), 0 0 25px rgba(139, 92, 246, 0.1); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.35), 0 0 45px rgba(139, 92, 246, 0.2); }
+}
+.animate-landing-glow-border { animation: landing-glow-border 2.5s ease-in-out infinite; }
+
+/* 3D card perspective hover */
+.landing-3d-card {
+  perspective: 800px;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+.landing-3d-card:hover {
+  transform: perspective(800px) rotateX(2deg) rotateY(-2deg) translateY(-6px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12), 0 0 30px rgba(59, 130, 246, 0.08);
+}
+
+/* Gradient fill for icons */
+.landing-gradient-icon {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Floating particle animation */
+@keyframes landing-particle-float {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  25% { transform: translate(10px, -20px) scale(1.2); opacity: 0.9; }
+  50% { transform: translate(-5px, -35px) scale(0.8); opacity: 0.7; }
+  75% { transform: translate(15px, -15px) scale(1.1); opacity: 0.5; }
+}
+.landing-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: landing-particle-float 6s ease-in-out infinite;
+}
+
+/* Glow divider between sections */
+.landing-glow-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.3) 20%, rgba(139, 92, 246, 0.4) 50%, rgba(59, 130, 246, 0.3) 80%, transparent 100%);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.08);
+  margin: 0 auto;
+}
+
+/* CTA glow pulse */
+@keyframes landing-cta-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), 0 4px 16px rgba(59, 130, 246, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.35), 0 4px 24px rgba(59, 130, 246, 0.25); }
+}
+.animate-landing-cta-glow { animation: landing-cta-glow 2s ease-in-out infinite; }
+
+/* Floating badge animation */
+@keyframes landing-badge-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+}
+.animate-landing-badge-float { animation: landing-badge-float 3s ease-in-out infinite; }

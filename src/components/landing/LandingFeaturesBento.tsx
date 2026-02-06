@@ -6,20 +6,20 @@ import {
 } from 'lucide-react';
 
 const features = [
-  { key: 'productManagement', icon: Package, color: 'bg-blue-100 text-blue-600', borderColor: 'group-hover:border-t-blue-500', span: 2 },
-  { key: 'compliance', icon: ShieldCheck, color: 'bg-emerald-100 text-emerald-600', borderColor: 'group-hover:border-t-emerald-500', span: 2 },
-  { key: 'supplyChain', icon: Truck, color: 'bg-orange-100 text-orange-600', borderColor: 'group-hover:border-t-orange-500', span: 1 },
-  { key: 'ai', icon: BrainCircuit, color: 'bg-violet-100 text-violet-600', borderColor: 'group-hover:border-t-violet-500', span: 1 },
-  { key: 'returnsHub', icon: RotateCcw, color: 'bg-rose-100 text-rose-600', borderColor: 'group-hover:border-t-rose-500', span: 1 },
-  { key: 'dppTemplates', icon: QrCode, color: 'bg-cyan-100 text-cyan-600', borderColor: 'group-hover:border-t-cyan-500', span: 1 },
-  { key: 'documents', icon: FileText, color: 'bg-amber-100 text-amber-600', borderColor: 'group-hover:border-t-amber-500', span: 1 },
-  { key: 'certificates', icon: Award, color: 'bg-teal-100 text-teal-600', borderColor: 'group-hover:border-t-teal-500', span: 1 },
-  { key: 'suppliers', icon: Building2, color: 'bg-indigo-100 text-indigo-600', borderColor: 'group-hover:border-t-indigo-500', span: 1 },
-  { key: 'multiTenant', icon: Users, color: 'bg-pink-100 text-pink-600', borderColor: 'group-hover:border-t-pink-500', span: 1 },
-  { key: 'qrGenerator', icon: QrCode, color: 'bg-sky-100 text-sky-600', borderColor: 'group-hover:border-t-sky-500', span: 1 },
-  { key: 'customerPortal', icon: UserCircle, color: 'bg-emerald-100 text-emerald-600', borderColor: 'group-hover:border-t-emerald-500', span: 1 },
-  { key: 'checklists', icon: ListChecks, color: 'bg-lime-100 text-lime-600', borderColor: 'group-hover:border-t-lime-500', span: 1 },
-  { key: 'emailTemplates', icon: Mail, color: 'bg-sky-100 text-sky-600', borderColor: 'group-hover:border-t-sky-500', span: 1 },
+  { key: 'productManagement', icon: Package, gradient: 'from-blue-500 to-indigo-600', span: 2 },
+  { key: 'compliance', icon: ShieldCheck, gradient: 'from-emerald-500 to-teal-600', span: 2 },
+  { key: 'supplyChain', icon: Truck, gradient: 'from-orange-500 to-amber-600', span: 1 },
+  { key: 'ai', icon: BrainCircuit, gradient: 'from-violet-500 to-purple-600', span: 1 },
+  { key: 'returnsHub', icon: RotateCcw, gradient: 'from-rose-500 to-pink-600', span: 1 },
+  { key: 'dppTemplates', icon: QrCode, gradient: 'from-cyan-500 to-blue-600', span: 1 },
+  { key: 'documents', icon: FileText, gradient: 'from-amber-500 to-yellow-600', span: 1 },
+  { key: 'certificates', icon: Award, gradient: 'from-teal-500 to-emerald-600', span: 1 },
+  { key: 'suppliers', icon: Building2, gradient: 'from-indigo-500 to-blue-600', span: 1 },
+  { key: 'multiTenant', icon: Users, gradient: 'from-pink-500 to-rose-600', span: 1 },
+  { key: 'qrGenerator', icon: QrCode, gradient: 'from-sky-500 to-blue-600', span: 1 },
+  { key: 'customerPortal', icon: UserCircle, gradient: 'from-emerald-500 to-green-600', span: 1 },
+  { key: 'checklists', icon: ListChecks, gradient: 'from-lime-500 to-green-600', span: 1 },
+  { key: 'emailTemplates', icon: Mail, gradient: 'from-sky-500 to-cyan-600', span: 1 },
 ];
 
 export function LandingFeaturesBento() {
@@ -42,14 +42,17 @@ export function LandingFeaturesBento() {
           {features.map((f, i) => (
             <div
               key={f.key}
-              className={`group relative rounded-2xl border border-slate-200 border-t-2 border-t-transparent bg-white p-6
-                hover:bg-white/80 hover:backdrop-blur-sm hover:shadow-lg hover:border-slate-300
-                landing-card-hover ${f.borderColor}
+              className={`group relative rounded-2xl border border-slate-200/80 bg-white p-6
+                landing-3d-card
+                hover:border-slate-300/80
                 ${f.span === 2 ? 'sm:col-span-2' : ''}
                 ${isVisible ? 'animate-landing-reveal' : 'opacity-0 translate-y-8'}`}
-              style={{ animationDelay: isVisible ? `${i * 60}ms` : undefined }}
+              style={{ animationDelay: isVisible ? `${i * 50}ms` : undefined }}
             >
-              <div className={`inline-flex rounded-xl p-2.5 ${f.color} transition-all group-hover:shadow-md group-hover:shadow-current/10`}>
+              {/* Hover gradient border glow */}
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-sm bg-gradient-to-br from-blue-100/50 to-violet-100/50" />
+
+              <div className={`inline-flex rounded-xl p-2.5 bg-gradient-to-br ${f.gradient} text-white shadow-sm transition-all group-hover:shadow-md group-hover:scale-105`}>
                 <f.icon className="h-5 w-5" />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-slate-900">
@@ -97,7 +100,7 @@ export function LandingFeaturesBento() {
                         <div className={`h-2 w-2 rounded-full ${item.ok ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                         <span className="text-slate-600">{item.label}</span>
                         <span className={`text-[10px] ${item.ok ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {item.ok ? '✓' : '⚠'}
+                          {item.ok ? '\u2713' : '\u26a0'}
                         </span>
                       </div>
                     ))}

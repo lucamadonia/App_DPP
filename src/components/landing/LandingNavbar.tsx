@@ -10,7 +10,7 @@ const navIds = [
   { key: 'nav.ai', id: 'ai' },
   { key: 'nav.returns', id: 'returns' },
   { key: 'nav.emailEditor', id: 'email-editor' },
-  { key: 'nav.pricing', id: 'stats' },
+  { key: 'nav.pricing', id: 'pricing' },
 ];
 
 export function LandingNavbar() {
