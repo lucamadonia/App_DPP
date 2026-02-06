@@ -63,6 +63,13 @@ export async function createSupplierInvitation(params: {
 
   if (!user) throw new Error('Not authenticated');
 
+  // Billing: check supplier portal module
+  const { hasModule: checkModule } = await import('./billing');
+  const hasSupplierPortal = await checkModule('supplier_portal', tenantId || undefined);
+  if (!hasSupplierPortal) {
+    throw new Error('Supplier Portal module not active. Please activate it in Billing settings.');
+  }
+
   // Get tenant settings for expiry days
   const { data: tenantData } = await supabase
     .from('tenants')

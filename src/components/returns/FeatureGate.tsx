@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Lock, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +12,7 @@ interface FeatureGateProps {
 
 export function FeatureGate({ feature, available, children }: FeatureGateProps) {
   const { t } = useTranslation('returns');
+  const navigate = useNavigate();
 
   if (available) {
     return <>{children}</>;
@@ -26,8 +28,9 @@ export function FeatureGate({ feature, available, children }: FeatureGateProps) 
         <p className="text-sm text-muted-foreground mb-4">
           {t('This feature is not included in your current plan.')}
         </p>
-        <Button variant="outline">
+        <Button variant="outline" onClick={() => navigate('/settings/billing')}>
           {t('Upgrade')}
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardContent>
     </Card>

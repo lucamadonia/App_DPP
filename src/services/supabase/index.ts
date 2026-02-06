@@ -396,6 +396,24 @@ export {
   deleteComplianceCheck,
 } from './ai-compliance-checks';
 
+// Billing
+export {
+  getTenantEntitlements,
+  checkQuota,
+  consumeCredits,
+  refundCredits,
+  hasModule,
+  hasAnyReturnsHubModule,
+  canUseFeature,
+  getCreditBalance,
+  getCreditTransactions,
+  getInvoices,
+  getUsageSummary,
+  createCheckoutSession,
+  createPortalSession,
+  invalidateEntitlementCache,
+} from './billing';
+
 // Customer Portal
 export {
   getCustomerContext,

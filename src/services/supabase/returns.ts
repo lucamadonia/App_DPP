@@ -128,6 +128,17 @@ export async function createReturn(
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { success: false, error: 'No tenant set' };
 
+  // Billing: check returns hub module + quota
+  const { hasAnyReturnsHubModule, checkQuota } = await import('./billing');
+  const hasRH = await hasAnyReturnsHubModule(tenantId);
+  if (!hasRH) {
+    return { success: false, error: 'Returns Hub module not active. Please activate it in Billing settings.' };
+  }
+  const quota = await checkQuota('return', { tenantId });
+  if (!quota.allowed) {
+    return { success: false, error: `Monthly return limit reached (${quota.current}/${quota.limit}). Please upgrade your Returns Hub plan.` };
+  }
+
   const returnNumber = returnData.returnNumber || generateReturnNumber();
 
   const insertData = {

@@ -24,6 +24,7 @@ export interface Tenant {
   vat?: string; // USt-IdNr
   settings?: TenantSettings;
   plan: 'free' | 'pro' | 'enterprise';
+  stripeCustomerId?: string;
   createdAt: string;
 }
 

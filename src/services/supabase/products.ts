@@ -342,6 +342,13 @@ export async function createProduct(
     return { success: false, error: 'No tenant set' };
   }
 
+  // Billing quota check
+  const { checkQuota } = await import('./billing');
+  const quota = await checkQuota('product', { tenantId });
+  if (!quota.allowed) {
+    return { success: false, error: `Product limit reached (${quota.current}/${quota.limit}). Please upgrade your plan.` };
+  }
+
   const insertData = {
     tenant_id: tenantId,
     status: 'draft',

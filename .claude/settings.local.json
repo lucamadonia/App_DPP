@@ -42,7 +42,13 @@
       "Bash(del \"C:\\\\Users\\\\luca\\\\projects\\\\app_dpp\\\\src\\\\components\\\\returns\\\\CustomerPortalSettingsTab.tsx\")",
       "Bash(python -m json.tool:*)",
       "Bash(npm ls:*)",
-      "WebFetch(domain:trackbliss.eu)"
+      "WebFetch(domain:trackbliss.eu)",
+      "Bash(for file in Template*.tsx)",
+      "Bash(do sed -i 's/import type { VisibilityConfigV2 } from/import type { VisibilityConfigV2, VisibilityConfigV3 } from/g' \"$file\")",
+      "Bash(done)",
+      "Bash(for template in Classic Compact EcoFriendly Government Minimal Modern Premium Retail Scientific Technical)",
+      "Bash(do)",
+      "Bash(echo:*)"
     ]
   }
 }

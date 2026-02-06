@@ -1,11 +1,16 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Globe } from 'lucide-react';
 
 export function LandingFooter() {
   const { t, i18n } = useTranslation('landing');
 
-  const toggleLang = () => {
-    const next = i18n.language === 'de' ? 'en' : 'de';
+  const LANGS = ['en', 'de', 'el'] as const;
+  const LANG_LABELS: Record<string, string> = { en: 'English', de: 'Deutsch', el: '\u0395\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ac' };
+
+  const cycleLang = () => {
+    const idx = LANGS.indexOf(i18n.language as typeof LANGS[number]);
+    const next = LANGS[(idx + 1) % LANGS.length];
     i18n.changeLanguage(next);
   };
 
@@ -39,9 +44,9 @@ export function LandingFooter() {
     {
       title: t('footer.legal'),
       links: [
-        { label: t('footer.legal.privacy'), href: '#' },
+        { label: t('footer.legal.privacy'), href: '/privacy' },
         { label: t('footer.legal.terms'), href: '#' },
-        { label: t('footer.legal.imprint'), href: '#' },
+        { label: t('footer.legal.imprint'), href: '/imprint' },
       ],
     },
   ];
@@ -56,21 +61,30 @@ export function LandingFooter() {
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm hover:text-white transition-colors"
-                      onClick={(e) => {
-                        if (link.href.startsWith('#')) {
-                          e.preventDefault();
-                          const id = link.href.slice(1);
-                          if (id) {
-                            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+                    {link.href.startsWith('/') ? (
+                      <Link
+                        to={link.href}
+                        className="text-sm hover:text-white transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-sm hover:text-white transition-colors"
+                        onClick={(e) => {
+                          if (link.href.startsWith('#')) {
+                            e.preventDefault();
+                            const id = link.href.slice(1);
+                            if (id) {
+                              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+                            }
                           }
-                        }
-                      }}
-                    >
-                      {link.label}
-                    </a>
+                        }}
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -88,11 +102,11 @@ export function LandingFooter() {
             </p>
           </div>
           <button
-            onClick={toggleLang}
+            onClick={cycleLang}
             className="flex items-center gap-1.5 text-sm hover:text-white transition-colors"
           >
             <Globe className="h-4 w-4" />
-            {t('footer.language')}: {i18n.language === 'de' ? 'Deutsch' : 'English'}
+            {t('footer.language')}: {LANG_LABELS[i18n.language] ?? 'English'}
           </button>
         </div>
       </div>

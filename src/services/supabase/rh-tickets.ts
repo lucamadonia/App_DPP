@@ -137,6 +137,13 @@ export async function createRhTicket(
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { success: false, error: 'No tenant set' };
 
+  // Billing: check returns hub professional+ (tickets require professional tier)
+  const { hasModule } = await import('./billing');
+  const hasPro = await hasModule('returns_hub_professional', tenantId) || await hasModule('returns_hub_business', tenantId);
+  if (!hasPro) {
+    return { success: false, error: 'Tickets require Returns Hub Professional or higher. Please upgrade.' };
+  }
+
   const ticketNumber = generateTicketNumber();
 
   const { data, error } = await supabase

@@ -152,6 +152,13 @@ export async function inviteUser(
     return { success: false, error: 'No tenant set' };
   }
 
+  // Billing quota check
+  const { checkQuota } = await import('./billing');
+  const quota = await checkQuota('admin_user', { tenantId });
+  if (!quota.allowed) {
+    return { success: false, error: `Admin user limit reached (${quota.current}/${quota.limit}). Please upgrade your plan.` };
+  }
+
   // Use Supabase Auth to invite the user
   const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
     data: {

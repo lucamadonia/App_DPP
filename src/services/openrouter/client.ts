@@ -13,11 +13,21 @@ export function isAIAvailable(): boolean {
 
 export async function* streamCompletion(
   messages: OpenRouterMessage[],
-  options: { maxTokens?: number; temperature?: number } = {}
+  options: { maxTokens?: number; temperature?: number; creditCost?: number } = {}
 ): AsyncGenerator<string, void, unknown> {
   const apiKey = getApiKey();
   if (!apiKey) {
     throw new Error('OpenRouter API key not configured');
+  }
+
+  // Billing: consume AI credits before making the call
+  const creditCost = options.creditCost ?? 1;
+  if (creditCost > 0) {
+    const { consumeCredits } = await import('@/services/supabase/billing');
+    const result = await consumeCredits(creditCost, 'AI stream completion');
+    if (!result.success) {
+      throw new Error(`Not enough AI credits (${result.remaining} remaining, need ${creditCost}). Purchase more credits or upgrade your plan.`);
+    }
   }
 
   const { maxTokens = 2000, temperature = 0.3 } = options;

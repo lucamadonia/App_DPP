@@ -155,6 +155,13 @@ export async function createBatch(
     return { success: false, error: 'No tenant set' };
   }
 
+  // Billing quota check
+  const { checkQuota } = await import('./billing');
+  const quota = await checkQuota('batch', { tenantId, productId: batch.productId });
+  if (!quota.allowed) {
+    return { success: false, error: `Batch limit reached (${quota.current}/${quota.limit}). Please upgrade your plan.` };
+  }
+
   const insertData = {
     tenant_id: tenantId,
     product_id: batch.productId,

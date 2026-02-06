@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { BrandingProvider, useBranding } from '@/contexts/BrandingContext';
+import { BillingProvider } from '@/contexts/BillingContext';
 import { useCustomDomainDetection } from '@/hooks/useCustomDomainDetection';
 import { CustomDomainPortal } from '@/components/CustomDomainPortal';
 import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
@@ -21,6 +22,8 @@ import './index.css';
 
 // Landing & Auth
 const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const ImprintPage = lazy(() => import('@/pages/ImprintPage').then(m => ({ default: m.ImprintPage })));
+const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
@@ -73,6 +76,7 @@ const SuppliersPage = lazy(() => import('@/pages/SuppliersPage').then(m => ({ de
 const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetailPage').then(m => ({ default: m.SupplierDetailPage })));
 const SupplierInvitationsPage = lazy(() => import('@/pages/SupplierInvitationsPage').then(m => ({ default: m.SupplierInvitationsPage })));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const BillingPage = lazy(() => import('@/pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
@@ -206,6 +210,8 @@ function NormalAppRoutes() {
       <Routes>
         {/* Landing Page */}
         <Route path="landing" element={<LandingPage />} />
+        <Route path="imprint" element={<ImprintPage />} />
+        <Route path="privacy" element={<PrivacyPolicyPage />} />
 
         {/* Login & Auth */}
         <Route path="login" element={<LoginPage />} />
@@ -322,6 +328,7 @@ function NormalAppRoutes() {
           <Route path="settings/branding" element={<SettingsPage tab="branding" />} />
           <Route path="settings/users" element={<SettingsPage tab="users" />} />
           <Route path="settings/api-keys" element={<SettingsPage tab="api" />} />
+          <Route path="settings/billing" element={<BillingPage />} />
 
           {/* Help */}
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
@@ -338,9 +345,11 @@ function NormalAppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrandingProvider>
-        <CustomDomainGate />
-      </BrandingProvider>
+      <BillingProvider>
+        <BrandingProvider>
+          <CustomDomainGate />
+        </BrandingProvider>
+      </BillingProvider>
     </AuthProvider>
   );
 }

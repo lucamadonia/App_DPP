@@ -23,10 +23,14 @@ import {
   LogOut,
   Newspaper,
   RotateCcw,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
+import { useBillingOptional } from '@/contexts/BillingContext';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 import {
@@ -56,6 +60,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { branding } = useBranding();
+  const billing = useBillingOptional();
   const { t } = useTranslation('common');
 
   const mainNavItems = useMemo(() => [
@@ -161,6 +166,7 @@ export function AppSidebar() {
         { title: t('Branding'), url: '/settings/branding', icon: FolderKanban },
         { title: t('Users & Roles'), url: '/settings/users', icon: Users },
         { title: t('API Keys'), url: '/settings/api-keys', icon: Key },
+        { title: t('Billing'), url: '/settings/billing', icon: CreditCard },
       ],
     },
     {
@@ -323,6 +329,22 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
+        {/* Credit Badge */}
+        {billing?.entitlements && (
+          <Link
+            to="/settings/billing"
+            className="mb-2 flex items-center justify-between rounded-md bg-sidebar-accent/50 px-3 py-1.5 text-xs transition-colors hover:bg-sidebar-accent"
+          >
+            <span className="flex items-center gap-1.5 text-sidebar-foreground/70">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="font-medium tabular-nums">{billing.entitlements.credits.totalAvailable}</span>
+              <span>Credits</span>
+            </span>
+            <Badge className="h-5 text-[10px] px-1.5 capitalize bg-sidebar-accent text-sidebar-foreground/70">
+              {billing.entitlements.plan}
+            </Badge>
+          </Link>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">

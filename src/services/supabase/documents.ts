@@ -130,6 +130,13 @@ export async function uploadDocument(
     return { success: false, error: 'No tenant set' };
   }
 
+  // Billing quota check
+  const { checkQuota } = await import('./billing');
+  const quota = await checkQuota('document', { tenantId });
+  if (!quota.allowed) {
+    return { success: false, error: `Document limit reached (${quota.current}/${quota.limit}). Please upgrade your plan.` };
+  }
+
   // Determine file type
   let fileType: 'pdf' | 'image' | 'other' = 'other';
   if (file.type === 'application/pdf') {

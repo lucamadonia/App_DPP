@@ -62,6 +62,13 @@ export async function customerSignUp(params: {
     return { success: false, error: 'Registration is currently unavailable. Please try again later.' };
   }
 
+  // Billing: check customer portal module
+  const { hasModule: checkModule } = await import('./billing');
+  const hasCP = await checkModule('customer_portal', params.tenantId);
+  if (!hasCP) {
+    return { success: false, error: 'Customer Portal module not active for this tenant.' };
+  }
+
   const { error } = await supabase.auth.signUp({
     email: params.email,
     password: params.password,

@@ -9,9 +9,9 @@ i18n
   .use(initReactI18next)
   .init({
     fallbackLng: 'en',
-    supportedLngs: ['en', 'de'],
+    supportedLngs: ['en', 'de', 'el'],
     defaultNS: 'common',
-    ns: ['common', 'auth', 'dashboard', 'products', 'dpp', 'documents', 'compliance', 'settings', 'returns', 'customer-portal', 'landing'],
+    ns: ['common', 'auth', 'dashboard', 'products', 'dpp', 'documents', 'compliance', 'settings', 'returns', 'customer-portal', 'landing', 'billing', 'legal'],
 
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

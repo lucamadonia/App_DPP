@@ -193,6 +193,17 @@ export async function createRhWorkflowRule(
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { success: false, error: 'No tenant set' };
 
+  // Billing: check returns hub professional+ and workflow quota
+  const { hasModule, checkQuota } = await import('./billing');
+  const hasPro = await hasModule('returns_hub_professional', tenantId) || await hasModule('returns_hub_business', tenantId);
+  if (!hasPro) {
+    return { success: false, error: 'Workflows require Returns Hub Professional or higher.' };
+  }
+  const quota = await checkQuota('workflow_rule', { tenantId });
+  if (!quota.allowed) {
+    return { success: false, error: `Workflow rule limit reached (${quota.current}/${quota.limit}). Please upgrade.` };
+  }
+
   const { data, error } = await supabase
     .from('rh_workflow_rules')
     .insert({

@@ -89,6 +89,13 @@ export async function createSupplyChainEntry(
     return { success: false, error: 'No tenant set' };
   }
 
+  // Billing quota check
+  const { checkQuota } = await import('./billing');
+  const quota = await checkQuota('supply_chain_entry', { tenantId, productId: entry.product_id });
+  if (!quota.allowed) {
+    return { success: false, error: `Supply chain entry limit reached (${quota.current}/${quota.limit}). Please upgrade your plan.` };
+  }
+
   const insertData: any = {
     tenant_id: tenantId,
     product_id: entry.product_id,
