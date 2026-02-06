@@ -91,7 +91,7 @@ All database/storage operations go through service functions, never direct Supab
 | `tenants.ts` | Tenant settings, branding, QR settings, DPP design, hero image upload |
 | `master-data.ts` | Categories, countries, regulations, pictograms, recycling codes (with in-memory caching) |
 | `suppliers.ts` | Supplier CRUD + product assignment |
-| `supply-chain.ts` | Supply chain entries (CRUD, reorder, stats) |
+| `supply-chain.ts` | Supply chain entries (CRUD, reorder, stats, facility_identifier/GLN support) |
 | `checklists.ts` | Compliance checklist progress tracking |
 | `compliance.ts` | Compliance overview, scores, warnings |
 | `visibility.ts` | DPP field visibility V2 (consumer/customs/internal, 36 fields) |
@@ -103,6 +103,7 @@ All database/storage operations go through service functions, never direct Supab
 | `domain-resolution.ts` | Tenant lookup by custom domain (public, no auth) |
 | `domain-verification.ts` | DNS CNAME verification via Google DNS-over-HTTPS |
 | `vercel-domain.ts` | Vercel domain API wrapper (add/remove via Edge Function) |
+| `supplier-portal.ts` | Supplier invitation CRUD, public registration, approval/rejection |
 
 **Returns Hub services (`rh-*.ts`):**
 
@@ -262,6 +263,156 @@ Key types: `RiskLevel` (low/medium/high/critical), `FindingSeverity`, `FindingSt
 ### Database
 
 Table `ai_compliance_checks` stores: score, risk level, executive summary, findings (JSONB), risk matrix (JSONB), action plan (JSONB), recommendations (JSONB), raw API responses, input data snapshot, model used. RLS enforced by `tenant_id`.
+
+## ESPR 2024/1781 Compliance System
+
+### Overview
+
+Full implementation of EU ESPR 2024/1781 (Ecodesign for Sustainable Products Regulation) mandatory fields across the entire DPP system. 21 new product fields covering economic operators, SVHC declarations, durability metrics, conformity assessments, safety information, and product registry integration.
+
+### ESPR Product Fields (21 fields)
+
+Stored in `products` table, organized into 6 categories:
+
+**Economic Operators (7 fields)**:
+- `manufacturer_identifier` — GLN or other unique identifier
+- `authorized_representative` — JSON: {name, identifier, address, contact}
+- `importer` — JSON: {name, identifier, address, contact}
+- `distributor` — JSON: {name, identifier, address, contact}
+- `dpp_responsible` — JSON: {name, email, phone}
+- `economic_operators_documentation` — Supporting documents
+- `manufacturer_duns` — D-U-N-S Number
+
+**SVHC & Substances (3 fields)**:
+- `svhc_present` — Boolean: contains Substances of Very High Concern
+- `svhc_list` — Array of SVHC substances with concentration levels
+- `substances_declaration` — Full declaration JSON
+
+**Durability & Repairability (3 fields)**:
+- `expected_lifetime_years` — Number: product lifetime
+- `repairability_index` — Number 0-100: repairability score
+- `spare_parts_availability_years` — Number: availability duration
+
+**Conformity Assessment (3 fields)**:
+- `conformity_declaration_url` — URL to EU Declaration of Conformity
+- `conformity_assessment_body` — Notified body information
+- `ce_marking_year` — Year CE marking affixed
+
+**Safety & Instructions (3 fields)**:
+- `safety_instructions_url` — Link to safety documentation
+- `disposal_instructions` — Safe disposal instructions
+- `hazard_warnings` — Array of hazard warnings
+
+**Product Registry (2 fields)**:
+- `eprel_registration_number` — European Product Registry for Energy Labelling ID
+- `scip_notification_number` — SCIP database notification number
+
+### DPP ESPR Sections Component
+
+**File**: `src/components/public/DPPESPRSections.tsx` (NEW)
+
+Shared component rendering ESPR 2024/1781 mandatory sections across all 11 DPP template variants. Provides consistent ESPR compliance display regardless of chosen design template.
+
+**Props**:
+```typescript
+{
+  product: Product;
+  isFieldVisible: (field: string) => boolean;
+  cardStyle: CSSProperties;
+  headingStyle: CSSProperties;
+  primaryColor: string;
+  t: (key: string) => string;
+}
+```
+
+**Renders 6 ESPR Sections**:
+1. **Economic Operators** — Manufacturer, authorized rep, importer, distributor with identifiers
+2. **SVHC Declaration** — Substances of Very High Concern presence + list
+3. **Durability & Repairability** — Lifetime, repairability index, spare parts availability
+4. **Conformity Assessment** — Declaration of Conformity, CE marking, notified body
+5. **Safety Information** — Safety instructions, disposal, hazard warnings
+6. **Product Registry** — EPREL and SCIP registration numbers
+
+**Integration**: All 11 template files import and render `<DPPESPRSections>` after their custom sections:
+- TemplateAccessible.tsx, TemplateClassic.tsx, TemplateCompact.tsx
+- TemplateEcoFriendly.tsx, TemplateGovernment.tsx, TemplateMinimal.tsx
+- TemplateModern.tsx, TemplatePremium.tsx, TemplateRetail.tsx
+- TemplateScientific.tsx, TemplateTechnical.tsx
+
+### ProductFormPage ESPR Tab
+
+**File**: `src/pages/ProductFormPage.tsx`
+
+New "ESPR Compliance" tab added to product form with 6 collapsible sections matching the DPP display structure. Comprehensive input fields for all 21 ESPR fields with help text and validation.
+
+**Form Sections**:
+1. Economic Operators — Multiple operator inputs with identifiers
+2. SVHC & Substances — Boolean + dynamic substance list builder
+3. Durability & Repairability — Numeric inputs with sliders
+4. Conformity Assessment — URL inputs + date pickers
+5. Safety & Instructions — URL + text area + multi-select hazards
+6. Product Registry — Registration number inputs
+
+### AI Compliance Check ESPR Enhancement
+
+**File**: `src/services/openrouter/compliance-check-prompts.ts`
+
+Enhanced scoring system includes ESPR 2024/1781 specific checks:
+- Economic operator completeness (all 4 operators documented)
+- SVHC declaration accuracy (REACH compliance)
+- Durability metrics reasonability (product-category appropriate)
+- Conformity documentation validity (CE marking + DoC)
+- Safety information completeness (instructions + warnings)
+- Product registry compliance (EPREL/SCIP when required)
+
+**Scoring Impact**: ESPR compliance can contribute up to 15 points to overall 0-100 score. Missing mandatory ESPR fields for regulated products reduces score significantly.
+
+### Database Migration
+
+**File**: `supabase/migrations/20260205_espr_compliance_fields.sql` (NEW)
+
+Adds 21 ESPR compliance columns to `products` table with appropriate data types:
+- TEXT columns for identifiers, URLs
+- JSONB columns for structured operator data, SVHC lists, substances
+- NUMERIC columns for lifetime, repairability index
+- BOOLEAN for SVHC presence flag
+
+**Indexes**: Added GIN indexes on JSONB columns for query performance.
+
+### Type Definitions
+
+**File**: `src/types/product.ts`
+
+New interfaces:
+```typescript
+interface EconomicOperator {
+  name: string;
+  identifier?: string; // GLN, DUNS, VAT, etc.
+  address?: string;
+  contact?: string;
+}
+
+interface SVHCSubstance {
+  name: string;
+  casNumber?: string;
+  concentration?: string; // e.g., "< 0.1%"
+  location?: string; // Where in product
+}
+```
+
+Extended `Product` interface with all 21 ESPR fields.
+
+### Visibility System Integration
+
+ESPR fields NOT currently added to Visibility System V2 (still 36 fields, 9 categories). ESPR sections always render when data is present, not controlled by visibility toggles. Future enhancement: Add ESPR category to visibility system.
+
+### Translation Keys
+
+**Namespaces affected**:
+- `products` — ESPR tab labels, field names
+- `dpp` — ESPR section headings on public pages
+
+**Languages**: Full EN/DE translation coverage for all ESPR fields and sections.
 
 ## Custom Domain / White-Label Portal
 
@@ -445,6 +596,7 @@ DPPTemplateName: 'modern' | 'classic' | 'compact' | 'minimal' | 'technical' | 'e
 | `src/hooks/use-dpp-template-data.ts` | `useDPPTemplateData()` — centralizes visibility, sections, design, styles for all templates |
 | `src/types/database.ts` | All DPP type definitions (settings, colors, typography, hero, cards, sections, footer) |
 | `src/components/public/Template*.tsx` | 11 template components |
+| `src/components/public/DPPESPRSections.tsx` | Shared ESPR 2024/1781 compliance sections for all 11 templates |
 
 ## Workflow Execution Engine
 
@@ -636,6 +788,12 @@ Migration `20260201_visibility_public_policy.sql` adds public SELECT RLS policy 
 | `/p/:gtin/:serial/customs` | PublicCustomsPage | Customs view (local) |
 | `/01/:gtin/21/:serial/customs` | PublicCustomsPage | Customs view (GS1) |
 
+### Supplier Portal (Public, invitation-based)
+
+| Path | Page | Description |
+|------|------|-------------|
+| `/suppliers/register/:invitationCode` | SupplierRegisterPage | Supplier self-registration wizard (4 steps) |
+
 ### Admin Area (Protected)
 
 | Path | Page | Description |
@@ -717,6 +875,222 @@ Migration `20260201_visibility_public_policy.sql` adds public SELECT RLS policy 
 | `/customer/:tenantSlug/tickets` | CustomerTicketsListPage | Tickets list |
 | `/customer/:tenantSlug/tickets/:id` | CustomerTicketDetailPage | Ticket detail |
 | `/customer/:tenantSlug/profile` | CustomerProfilePage | Profile settings |
+
+## Supplier Self-Registration Portal
+
+### Overview
+
+Complete invitation-based supplier onboarding system allowing suppliers to self-register through a secure, multi-step wizard. Admin sends email invitation → supplier fills detailed form → admin reviews and approves/rejects.
+
+### Architecture
+
+**Flow**:
+```
+Admin creates invitation → generates unique invitation code
+  ↓
+Email sent to supplier with registration link
+  ↓
+Supplier visits /suppliers/register/{invitationCode}
+  ↓
+Validation: check code, expiry, status
+  ↓
+4-step wizard: Company Basics → Address → Legal/Banking → Business Details
+  ↓
+Submission creates supplier with status 'pending_approval'
+  ↓
+Admin reviews → Approve (status='active') or Reject (status='blocked')
+```
+
+### Database Tables
+
+**New table**: `supplier_invitations`
+- `id` — UUID primary key
+- `tenant_id` — Tenant reference
+- `email` — Supplier email
+- `contact_name` — Optional pre-fill
+- `company_name` — Optional pre-fill
+- `invitation_code` — UUID, unique, URL-safe
+- `status` — 'pending' | 'completed' | 'expired' | 'cancelled'
+- `invited_by` — User ID who created invitation
+- `created_at`, `expires_at`, `completed_at`
+- `supplier_id` — References `suppliers.id` after completion
+
+**RLS Policies**: Authenticated users see their tenant's invitations. Public anon SELECT for invitation code validation (single row lookup).
+
+### Service Layer
+
+**File**: `src/services/supabase/supplier-portal.ts` (NEW)
+
+| Function | Purpose |
+|----------|---------|
+| `getSupplierInvitations()` | Fetch all invitations for current tenant |
+| `createSupplierInvitation(params)` | Create invitation, generate code, set expiry (returns invitationUrl) |
+| `cancelSupplierInvitation(id)` | Cancel pending invitation |
+| `getSupplierInvitationByCode(code)` | PUBLIC: Validate code, return invitation + tenant + branding (no auth) |
+| `publicSubmitSupplierRegistration(code, data)` | PUBLIC: Create supplier with status='pending_approval', mark invitation completed |
+| `approveSupplier(id)` | Set status='active', verified=true |
+| `rejectSupplier(id, reason?)` | Set status='blocked', add reason to internal notes |
+
+**Return Type** for `createSupplierInvitation`:
+```typescript
+{
+  invitation: SupplierInvitation;
+  invitationUrl: string; // e.g., "https://app.com/suppliers/register/abc-123"
+}
+```
+
+### Wizard Components
+
+**File structure** (`src/components/suppliers/public/`):
+- `SupplierRegisterPage.tsx` — Main wizard orchestrator (stepper, validation, submission)
+- `CompanyBasicsStep.tsx` — Company name, type, contact person
+- `AddressStep.tsx` — Billing address + optional shipping address
+- `LegalBankingStep.tsx` — Tax number, VAT, IBAN, BIC, legal form
+- `BusinessDetailsStep.tsx` — Industry, product categories, certifications, notes
+
+**Wizard Features**:
+- 4 steps with progress indicator
+- Multi-step form validation with react-hook-form
+- "Use billing address" checkbox for shipping
+- Required field enforcement (15 required fields)
+- Terms & conditions acceptance
+- Auto-save to localStorage (recovery on refresh)
+- Success confirmation page with next steps
+
+### Supplier Status Workflow
+
+```
+pending_approval → [Admin Review] → active | blocked
+```
+
+**Statuses**:
+- `pending_approval` — Awaiting admin review (default after registration)
+- `active` — Approved, can be assigned to products
+- `blocked` — Rejected, cannot be assigned
+
+**Display**: `SuppliersPage` shows pending suppliers in separate section with Approve/Reject buttons.
+
+### Admin UI Integration
+
+**File**: `src/pages/SuppliersPage.tsx`
+
+**New features**:
+1. "Invite Supplier" button → modal with email input
+2. Invitation list table (status, email, created date, actions)
+3. Copy invitation link button (clipboard API)
+4. Pending suppliers section with Approve/Reject actions
+5. Rejection reason prompt (dialog with text input)
+
+### Types
+
+**File**: `src/types/supplier-portal.ts` (NEW)
+
+```typescript
+interface SupplierInvitation {
+  id: string;
+  tenantId: string;
+  email: string;
+  contactName?: string;
+  companyName?: string;
+  invitationCode: string;
+  status: 'pending' | 'completed' | 'expired' | 'cancelled';
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
+  completedAt?: string;
+  supplierId?: string;
+}
+
+interface SupplierRegistrationData {
+  // 30+ fields covering company, address, legal, banking, business details
+  companyName: string;
+  contactName: string;
+  email: string;
+  // ... (see file for full structure)
+  termsAccepted: boolean;
+}
+
+interface PublicSupplierInvitationResult {
+  invitation: SupplierInvitation;
+  tenant: { id: string; name: string; slug: string };
+  portalSettings: SupplierPortalSettings;
+  branding: { logoUrl?: string; primaryColor?: string };
+}
+
+interface SupplierPortalSettings {
+  enabled: boolean;
+  invitationExpiryDays: number; // Default: 14
+  requireApproval: boolean; // Always true currently
+  welcomeMessage?: string;
+  autoCreateSupplierUser?: boolean; // Future: create auth account
+}
+```
+
+### Tenant Settings
+
+**Location**: `tenants.settings.supplierPortal` (JSONB)
+
+```typescript
+{
+  enabled: boolean;
+  invitationExpiryDays: number;
+  requireApproval: boolean;
+  welcomeMessage?: string;
+}
+```
+
+**Default**: Loaded from `DEFAULT_SUPPLIER_PORTAL_SETTINGS` constant when not set.
+
+### Email Notifications (Future Enhancement)
+
+Currently: Manual copy/paste invitation link.
+
+**Planned**: Automatic email via Resend API when invitation created:
+- Template: "You're invited to register as a supplier for {tenant.name}"
+- Variables: `{{contactName}}`, `{{companyName}}`, `{{invitationUrl}}`, `{{expiryDate}}`
+- Locale-aware (EN/DE)
+
+### Routes
+
+**Public route** (no auth):
+```
+/suppliers/register/:invitationCode → SupplierRegisterPage
+```
+
+**Admin routes** (authenticated):
+```
+/suppliers → SuppliersPage (includes invitation management)
+```
+
+### Migration
+
+**File**: `supabase/migrations/20260204_supplier_invitations.sql` (exists, not shown in git status)
+
+Creates `supplier_invitations` table with RLS policies:
+1. Authenticated SELECT/INSERT/UPDATE/DELETE for own tenant
+2. Public anon SELECT for code validation (single row by invitation_code)
+
+Adds `status` column to `suppliers` table (if not exists) with values: 'pending_approval' | 'active' | 'inactive' | 'blocked'.
+
+### Translation Namespace
+
+**New namespace**: `supplier-portal`
+
+**Keys**: 40+ keys covering wizard steps, field labels, validation messages, success messages.
+
+**Location**: `public/locales/{en,de}/supplier-portal.json`
+
+**Example keys**:
+```json
+{
+  "Supplier Registration": "Supplier Registration",
+  "Company Basics": "Company Basics",
+  "Legal & Banking Information": "Legal & Banking Information",
+  "Terms must be accepted": "You must accept the terms and conditions",
+  "Registration Successful": "Registration Successful",
+  "Your registration has been submitted": "Your registration has been submitted and is pending approval."
+}
+```
 
 ## Returns Hub Module
 
@@ -914,7 +1288,9 @@ supabase/
 │   └── manage-vercel-domain/index.ts # Custom domain management via Vercel API
 └── migrations/
     ├── 20260201_ai_compliance_checks.sql      # AI compliance checks table + RLS
-    └── 20260201_visibility_public_policy.sql   # Public SELECT policy for visibility_settings
+    ├── 20260201_visibility_public_policy.sql   # Public SELECT policy for visibility_settings
+    ├── 20260204_supplier_invitations.sql      # Supplier portal invitation system
+    └── 20260205_espr_compliance_fields.sql    # ESPR 2024/1781 compliance fields + facility_identifier
 ```
 
 ### Table Groups
@@ -939,6 +1315,7 @@ supabase/
 | `product_images` | Product gallery images (order, primary flag, captions) |
 | `invitations` | User invitations (email, role, status) |
 | `activity_log` | Audit trail (action, entity, details, actor) |
+| `supplier_invitations` | Supplier self-registration invitations (code, email, status, expiry) |
 
 **Returns Hub data (RLS enforced, `rh_` prefix)**:
 
@@ -1019,6 +1396,7 @@ Products store complex data as JSON columns: `materials` (array), `certification
 | `compliance-check.ts` | `ComplianceCheckResult`, `ComplianceFinding`, `ActionPlanItem`, `Recommendation`, `RiskMatrixEntry`, `RiskLevel`, `FindingCategory`, `SavedComplianceCheck` | AI compliance analysis result types |
 | `visibility.ts` | `VisibilityLevel`, `VisibilityConfigV2`, `FieldVisibilityConfig`, `fieldDefinitions[]`, `fieldCategories[]`, `defaultVisibilityConfigV2` | 3-tier visibility system (36 fields, 9 categories) |
 | `customer-portal.ts` | `CustomerPortalProfile`, `CustomerDashboardStats`, `CustomerReturnInput`, `CustomerReturnsFilter` | Customer portal types |
+| `supplier-portal.ts` | `SupplierInvitation`, `SupplierRegistrationData`, `PublicSupplierInvitationResult`, `SupplierPortalSettings` | Supplier portal types |
 
 ## Component Organization
 
@@ -1075,6 +1453,20 @@ shadcn/ui components (New York style). Never modify directly — use `npx shadcn
 - `src/components/CustomDomainPortal.tsx` — Slug-free portal router
 - `src/components/settings/CustomDomainWizard.tsx` — 4-step domain setup wizard
 
+### Supplier Portal Components
+
+**Admin components** (`src/components/suppliers/`):
+- `SupplierInvitationDialog.tsx` — Create invitation modal
+- `SupplierInvitationTable.tsx` — Invitation list with status badges
+- `PendingSupplierCard.tsx` — Pending supplier review card with approve/reject
+
+**Public wizard components** (`src/components/suppliers/public/`):
+- `SupplierRegisterPage.tsx` — Main wizard orchestrator
+- `CompanyBasicsStep.tsx` — Step 1: Company name, type, contact
+- `AddressStep.tsx` — Step 2: Billing + optional shipping address
+- `LegalBankingStep.tsx` — Step 3: Tax, VAT, IBAN, BIC, legal form
+- `BusinessDetailsStep.tsx` — Step 4: Industry, categories, certifications
+
 ## i18n / Internationalization
 
 The app supports **German (de)** and **English (en)** via `i18next` + `react-i18next`. **All UI-visible text must be translated in both languages.**
@@ -1100,6 +1492,7 @@ The app supports **German (de)** and **English (en)** via `i18next` + `react-i18
 | `returns` | Returns Hub (returns, tickets, email editor, workflows, reports, settings) |
 | `customer-portal` | Customer portal UI (customer-facing returns, tickets, profile) |
 | `landing` | Marketing landing page |
+| `supplier-portal` | Supplier self-registration wizard (company, address, legal, banking, business details) |
 
 ### Rules (MANDATORY)
 
