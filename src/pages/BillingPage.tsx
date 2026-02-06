@@ -10,7 +10,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { CreditCard, Loader2, ExternalLink } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +39,9 @@ import { getPlanPriceId, getModulePriceId } from '@/config/stripe-prices';
 
 export function BillingPage() {
   const { t, i18n } = useTranslation('billing');
-  const { entitlements, isLoading: billingLoading } = useBilling();
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { entitlements, isLoading: billingLoading, refreshEntitlements } = useBilling();
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly');
   const [creditModalOpen, setCreditModalOpen] = useState(false);
   const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
@@ -59,6 +63,23 @@ export function BillingPage() {
     };
     load();
   }, []);
+
+  // Show success toast after Stripe redirect
+  useEffect(() => {
+    if (searchParams.get('credits') === 'success') {
+      toast({ title: t('Credits purchased successfully') });
+      refreshEntitlements();
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get('upgrade') === 'success') {
+      toast({ title: t('Plan upgraded successfully') });
+      refreshEntitlements();
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get('status') === 'success') {
+      toast({ title: t('Module activated successfully') });
+      refreshEntitlements();
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, toast, t, refreshEntitlements]);
 
   const handlePlanSelect = useCallback(async (plan: BillingPlan) => {
     if (plan === 'free') {
@@ -83,11 +104,13 @@ export function BillingPage() {
 
       if (result?.url) {
         window.location.href = result.url;
+      } else {
+        toast({ title: t('Error'), description: t('Failed to start checkout. Please try again.'), variant: 'destructive' });
       }
     } finally {
       setActionLoading(false);
     }
-  }, [interval, i18n.language]);
+  }, [interval, i18n.language, toast, t]);
 
   const handleModuleActivate = useCallback(async (moduleId: ModuleId) => {
     setActionLoading(true);
@@ -105,11 +128,13 @@ export function BillingPage() {
 
       if (result?.url) {
         window.location.href = result.url;
+      } else {
+        toast({ title: t('Error'), description: t('Failed to start checkout. Please try again.'), variant: 'destructive' });
       }
     } finally {
       setActionLoading(false);
     }
-  }, [i18n.language]);
+  }, [i18n.language, toast, t]);
 
   const handleManageBilling = useCallback(async () => {
     setActionLoading(true);
@@ -119,11 +144,13 @@ export function BillingPage() {
       );
       if (result?.url) {
         window.location.href = result.url;
+      } else {
+        toast({ title: t('Error'), description: t('Failed to open billing portal. Please try again.'), variant: 'destructive' });
       }
     } finally {
       setActionLoading(false);
     }
-  }, []);
+  }, [toast, t]);
 
   const handleModuleManage = useCallback((_moduleId: ModuleId) => {
     handleManageBilling();

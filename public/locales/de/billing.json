@@ -92,5 +92,11 @@
   "{{current}}/{{limit}} {{resource}} used. Upgrade to get more.": "{{current}}/{{limit}} {{resource}} verwendet. Upgraden Sie für mehr.",
   "No credits remaining. Buy credits or upgrade your plan.": "Keine Credits mehr. Kaufen Sie Credits oder upgraden Sie Ihren Plan.",
   "This module is not included in your current plan.": "Dieses Modul ist nicht in Ihrem aktuellen Plan enthalten.",
-  "This feature requires a higher plan.": "Diese Funktion erfordert einen höheren Plan."
+  "This feature requires a higher plan.": "Diese Funktion erfordert einen höheren Plan.",
+  "Error": "Fehler",
+  "Failed to start checkout. Please try again.": "Checkout konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+  "Failed to open billing portal. Please try again.": "Abrechnungsportal konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+  "Credits purchased successfully": "Credits erfolgreich gekauft!",
+  "Plan upgraded successfully": "Plan erfolgreich geupgradet!",
+  "Module activated successfully": "Modul erfolgreich aktiviert!"
 }

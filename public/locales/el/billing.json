@@ -92,5 +92,11 @@
   "{{current}}/{{limit}} {{resource}} used. Upgrade to get more.": "{{current}}/{{limit}} {{resource}} χρησιμοποιημένα. Αναβαθμίστε για περισσότερα.",
   "No credits remaining. Buy credits or upgrade your plan.": "Δεν απομένουν πιστώσεις. Αγοράστε πιστώσεις ή αναβαθμίστε το πακέτο σας.",
   "This module is not included in your current plan.": "Αυτό το module δεν περιλαμβάνεται στο τρέχον πακέτο σας.",
-  "This feature requires a higher plan.": "Αυτή η δυνατότητα απαιτεί ανώτερο πακέτο."
+  "This feature requires a higher plan.": "Αυτή η δυνατότητα απαιτεί ανώτερο πακέτο.",
+  "Error": "Σφάλμα",
+  "Failed to start checkout. Please try again.": "Η εκκίνηση πληρωμής απέτυχε. Παρακαλώ δοκιμάστε ξανά.",
+  "Failed to open billing portal. Please try again.": "Η πύλη χρεώσεων δεν άνοιξε. Παρακαλώ δοκιμάστε ξανά.",
+  "Credits purchased successfully": "Τα credits αγοράστηκαν επιτυχώς!",
+  "Plan upgraded successfully": "Το πακέτο αναβαθμίστηκε επιτυχώς!",
+  "Module activated successfully": "Το module ενεργοποιήθηκε επιτυχώς!"
 }

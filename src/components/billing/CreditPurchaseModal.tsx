@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, Check, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ interface CreditPurchaseModalProps {
 
 export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalProps) {
   const { t, i18n } = useTranslation('billing');
+  const { toast } = useToast();
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,9 +53,20 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
 
       if (result?.url) {
         window.location.href = result.url;
+      } else {
+        toast({
+          title: t('Error'),
+          description: t('Failed to start checkout. Please try again.'),
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Failed to create checkout:', error);
+      toast({
+        title: t('Error'),
+        description: t('Failed to start checkout. Please try again.'),
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

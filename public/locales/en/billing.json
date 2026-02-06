@@ -92,5 +92,11 @@
   "{{current}}/{{limit}} {{resource}} used. Upgrade to get more.": "{{current}}/{{limit}} {{resource}} used. Upgrade to get more.",
   "No credits remaining. Buy credits or upgrade your plan.": "No credits remaining. Buy credits or upgrade your plan.",
   "This module is not included in your current plan.": "This module is not included in your current plan.",
-  "This feature requires a higher plan.": "This feature requires a higher plan."
+  "This feature requires a higher plan.": "This feature requires a higher plan.",
+  "Error": "Error",
+  "Failed to start checkout. Please try again.": "Failed to start checkout. Please try again.",
+  "Failed to open billing portal. Please try again.": "Failed to open billing portal. Please try again.",
+  "Credits purchased successfully": "Credits purchased successfully!",
+  "Plan upgraded successfully": "Plan upgraded successfully!",
+  "Module activated successfully": "Module activated successfully!"
 }
