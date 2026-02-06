@@ -51,8 +51,9 @@ node scripts/migrate-batches.mjs
 ```
 BrowserRouter
   └─ AuthProvider              ← session + tenantId resolution
-      └─ BrandingProvider      ← runtime theming (CSS vars, favicon, title)
-          └─ CustomDomainGate  ← detects custom domains, switches routing mode
+      └─ BillingProvider       ← entitlements, quotas, credits (loads on auth)
+          └─ BrandingProvider  ← runtime theming (CSS vars, favicon, title)
+              └─ CustomDomainGate  ← detects custom domains, switches routing mode
               ├─ CustomDomainPortal    ← slug-free portal for white-label domains
               ├─ DomainNotFoundPage    ← custom domain not resolved
               └─ NormalAppRoutes       ← standard app routing
@@ -104,6 +105,7 @@ All database/storage operations go through service functions, never direct Supab
 | `domain-verification.ts` | DNS CNAME verification via Google DNS-over-HTTPS |
 | `vercel-domain.ts` | Vercel domain API wrapper (add/remove via Edge Function) |
 | `supplier-portal.ts` | Supplier invitation CRUD, public registration, approval/rejection |
+| `billing.ts` | Billing entitlements, quota checks, credit consumption, Stripe checkout/portal |
 
 **Returns Hub services (`rh-*.ts`):**
 
@@ -832,6 +834,7 @@ Migration `20260201_visibility_public_policy.sql` adds public SELECT RLS policy 
 | `/settings/branding` | SettingsPage | Branding settings |
 | `/settings/users` | SettingsPage | User management |
 | `/settings/api-keys` | SettingsPage | API key management |
+| `/settings/billing` | BillingPage | Billing plans, modules, credits, invoices |
 | `/help` | PlaceholderPage | Help & support (placeholder) |
 | `/admin` | AdminPage | Admin panel |
 
@@ -1274,6 +1277,191 @@ Configurable via `CustomerPortalSettingsTab.tsx` in Returns Settings:
 
 `CustomerPortalProvider` provides tenant resolution, customer session, and branding. Supports both slug-based (`/customer/:tenantSlug/...`) and custom domain (`/portal/...`) routing via `tenantOverride` prop.
 
+## Billing & Credits System
+
+### Overview
+
+Freemium + module-based SaaS billing with AI credit system via Stripe. 3-tier plans (Free/Pro/Enterprise), 6 add-on modules, purchasable AI credit packs. Fully modular architecture with quota enforcement across 12+ service files.
+
+### Plans
+
+| | **Free** | **Pro** (€49/mo) | **Enterprise** (€149/mo) |
+|---|---|---|---|
+| Products | 5 | 50 | Unlimited |
+| Batches/Product | 3 | 20 | Unlimited |
+| Admin Users | 1 | 5 | 25 |
+| Documents | 10 | 200 | Unlimited |
+| Storage | 100 MB | 2 GB | 20 GB |
+| AI Credits/Month | 3 | 25 | 100 |
+| DPP Templates | 3 | All 11 | All 11 + Custom CSS |
+| Annual Discount | — | -20% (€39/mo) | -20% (€119/mo) |
+
+### Add-on Modules (Pro+ required)
+
+| Module | Price/mo | Requirement |
+|---|---|---|
+| Returns Hub Starter | €29 | Pro+ |
+| Returns Hub Professional | €69 | Pro+ |
+| Returns Hub Business | €149 | Enterprise |
+| Supplier Portal | €19 | Pro+ |
+| Customer Portal | €29 | Any Returns Hub |
+| Custom Domain / White-Label | €19 | Pro+ |
+
+### AI Credit System
+
+**Monthly credits**: Reset on billing cycle, no rollover. **Purchased credits**: Never expire, consumed AFTER monthly.
+
+| Operation | Credits |
+|---|---|
+| AI Compliance Check (3 phases) | 3 |
+| AI Overall Assessment | 1 |
+| AI Action Plan | 1 |
+| AI Additional Requirements | 1 |
+| AI Chat Message | 1 |
+
+**Credit Packs** (one-time purchase): Small 50/€9, Medium 200/€29, Large 500/€59.
+
+### Architecture
+
+```
+BillingProvider (React Context)
+  ↓ loads on auth
+getTenantEntitlements() → parallel fetch:
+  billing_subscriptions + billing_module_subscriptions + billing_credits
+  ↓ cached 2min TTL
+TenantEntitlements { plan, modules, limits, credits, features }
+  ↓ consumed by
+useBilling() / useBillingOptional()
+  ↓ used in
+Service layer: checkQuota(), consumeCredits(), hasModule()
+UI: UpgradePrompt, CreditBalance, PlanCard, ModuleCard
+```
+
+### Database Tables (6 new, `billing_` prefix)
+
+| Table | Purpose |
+|-------|---------|
+| `billing_subscriptions` | Stripe subscription tracking (plan, status, period, cancel_at_period_end) |
+| `billing_module_subscriptions` | Active add-on modules per tenant (module_id, stripe item, status) |
+| `billing_credits` | Credit balance (monthly_allowance, monthly_used, purchased_balance) |
+| `billing_credit_transactions` | Credit audit log (type, amount, balance_after, source, description) |
+| `billing_usage_logs` | Granular usage tracking (resource_type, action, quantity) |
+| `billing_invoices` | Stripe invoice mirror (amount, status, PDF URL, period) |
+
+Additional: `tenants.stripe_customer_id` column.
+
+RLS: SELECT for authenticated users (tenant-scoped), writes only via service role (webhooks).
+
+**Migration**: `supabase/migrations/20260207_billing_tables.sql`
+
+### Service Layer (`src/services/supabase/billing.ts`)
+
+| Function | Purpose |
+|----------|---------|
+| `getTenantEntitlements(tenantId?)` | Parallel fetch + compute entitlements, 2min cache |
+| `checkQuota(resource, tenantId?)` | Count-based quota check (product, batch, document, etc.) |
+| `consumeCredits(amount, source, metadata?)` | Deduct monthly first → then purchased, log transaction |
+| `refundCredits(amount, source, metadata?)` | Refund monthly first, log transaction |
+| `hasModule(moduleId, tenantId?)` | Check if module is active |
+| `hasAnyReturnsHubModule(tenantId?)` | Check for any Returns Hub tier |
+| `canUseFeature(feature, tenantId?)` | Boolean feature flag check |
+| `getCreditTransactions(limit?)` | Fetch credit transaction history |
+| `getInvoices()` | Fetch Stripe invoice history |
+| `getUsageSummary()` | Current resource counts per type |
+| `createCheckoutSession(priceId, mode)` | Stripe Checkout via Edge Function |
+| `createPortalSession()` | Stripe Customer Portal via Edge Function |
+
+### Quota Enforcement Pattern
+
+All 12+ service files use **dynamic `import('./billing')`** to avoid circular dependencies:
+
+```typescript
+// Example: src/services/supabase/products.ts → createProduct()
+const { checkQuota } = await import('./billing');
+const quota = await checkQuota('product');
+if (!quota.allowed) throw new Error(`Product limit reached (${quota.current}/${quota.limit})`);
+```
+
+**Enforced in**: `products.ts`, `batches.ts`, `documents.ts`, `supply-chain.ts`, `profiles.ts`, `returns.ts`, `rh-tickets.ts`, `rh-workflows.ts`, `supplier-portal.ts`, `customer-portal.ts`, `vercel-domain.ts`, `openrouter/client.ts`
+
+### Context & Hooks
+
+| File | Purpose |
+|------|---------|
+| `src/contexts/BillingContext.tsx` | BillingProvider + useBilling() + useBillingOptional() |
+| `src/hooks/use-billing.ts` | Re-export of useBilling and useBillingOptional |
+
+`useBilling()` throws if outside provider. `useBillingOptional()` returns null (safe for public routes).
+
+**Exposed**: `entitlements`, `isLoading`, `error`, `refreshEntitlements`, `checkQuota`, `consumeCredits`, `refundCredits`, `hasModule`, `hasAnyReturnsHubModule`, `canUseFeature`, `isTemplateAvailable`
+
+### Types (`src/types/billing.ts`)
+
+Key types and constants:
+
+| Export | Purpose |
+|--------|---------|
+| `BillingPlan` | `'free' \| 'pro' \| 'enterprise'` |
+| `ModuleId` | 6 module string literals |
+| `PLAN_CONFIGS` | Limits and features per plan |
+| `MODULE_CONFIGS` | Pricing, requirements, features per module |
+| `CREDIT_PACKS` | 3 purchasable packs (credits, price, per-credit cost) |
+| `AI_CREDIT_COSTS` | Credit cost per AI operation |
+| `TenantEntitlements` | Computed entitlements (plan, modules, limits, credits, features) |
+| `BillingSubscription`, `BillingModuleSubscription`, `BillingCredits`, `CreditTransaction`, `BillingInvoice` | DB entity types |
+
+### UI Components (`src/components/billing/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `UsageBar` | Progress bar with warning colors at 80%/100% |
+| `PlanCard` | Plan comparison card with features, upgrade/downgrade buttons |
+| `ModuleCard` | Module card with pricing, status, dependency warnings |
+| `CreditBalance` | CreditBadge (compact header) + CreditBalanceCard (full) |
+| `CreditPurchaseModal` | Dialog with 3 credit packs, Stripe checkout |
+| `UpgradePrompt` | Contextual prompt (4 variants: quota/module/credits/feature) |
+| `InvoiceTable` | Stripe invoice table with status badges, download/view links |
+
+### Billing Page (`src/pages/BillingPage.tsx`)
+
+Route: `/settings/billing`. 4 sections: Plans (monthly/yearly toggle), Add-on Modules (card grid), AI Credits (balance + purchase), Invoice History (table).
+
+### Stripe Integration
+
+**Checkout flow**: User clicks upgrade → Edge Function creates Stripe Checkout Session → redirect to Stripe → payment → redirect back → webhook updates DB.
+
+**Customer Portal**: For managing existing subscriptions (cancel, payment method, invoices).
+
+### Edge Functions (3 new)
+
+| Function | Purpose | Auth |
+|----------|---------|------|
+| `create-checkout-session` | Creates Stripe Checkout Session | JWT required |
+| `create-portal-session` | Creates Stripe Billing Portal Session | JWT required |
+| `stripe-webhook` | Processes Stripe events (5 event types) | Stripe signature |
+
+**Webhook events handled**: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`
+
+### Graceful Degradation
+
+| Situation | Behavior |
+|-----------|----------|
+| Quota reached | Button disabled, banner with current/limit + upgrade link |
+| AI Credits empty | Button visible with "0 Credits" + purchase link |
+| Module not active | Sidebar item greyed with lock icon → click → billing page |
+| Subscription past_due | Grace period (Stripe dunning), then Free limits |
+| Downgrade | All data preserved, only new creation blocked |
+
+### Sidebar Integration
+
+- Credit badge next to user avatar (Sparkles icon + count)
+- Plan indicator badge (Free/Pro/Enterprise)
+- "Billing" nav item under Settings (CreditCard icon)
+
+### Translation Namespace
+
+`billing` — 70+ keys in `public/locales/{en,de}/billing.json` covering plans, modules, credits, invoices, upgrade prompts.
+
 ## Database Schema
 
 ### SQL Files
@@ -1284,13 +1472,17 @@ supabase/
 ├── seed.sql      # Master data (categories, 38 countries, regulations, recycling codes)
 ├── storage.sql   # Storage buckets + RLS policies
 ├── functions/
-│   ├── send-email/index.ts           # Email delivery via Resend API
-│   └── manage-vercel-domain/index.ts # Custom domain management via Vercel API
+│   ├── send-email/index.ts                    # Email delivery via Resend API
+│   ├── manage-vercel-domain/index.ts          # Custom domain management via Vercel API
+│   ├── create-checkout-session/index.ts       # Stripe Checkout Session creation
+│   ├── create-portal-session/index.ts         # Stripe Billing Portal Session
+│   └── stripe-webhook/index.ts               # Stripe webhook event processing
 └── migrations/
     ├── 20260201_ai_compliance_checks.sql      # AI compliance checks table + RLS
     ├── 20260201_visibility_public_policy.sql   # Public SELECT policy for visibility_settings
     ├── 20260204_supplier_invitations.sql      # Supplier portal invitation system
-    └── 20260205_espr_compliance_fields.sql    # ESPR 2024/1781 compliance fields + facility_identifier
+    ├── 20260205_espr_compliance_fields.sql    # ESPR 2024/1781 compliance fields + facility_identifier
+    └── 20260207_billing_tables.sql            # 6 billing tables + RLS + tenant initialization
 ```
 
 ### Table Groups
@@ -1301,7 +1493,7 @@ supabase/
 
 | Table | Purpose |
 |-------|---------|
-| `tenants` | Organizations with settings JSONB (branding, returns hub, QR, DPP design) |
+| `tenants` | Organizations with settings JSONB (branding, returns hub, QR, DPP design) + `stripe_customer_id` |
 | `profiles` | User profiles (linked to auth.users, stores tenant_id, role) |
 | `products` | Product master records (materials, certs, carbon footprint as JSON columns) |
 | `product_batches` | Product batch variants with serial numbers |
@@ -1316,6 +1508,17 @@ supabase/
 | `invitations` | User invitations (email, role, status) |
 | `activity_log` | Audit trail (action, entity, details, actor) |
 | `supplier_invitations` | Supplier self-registration invitations (code, email, status, expiry) |
+
+**Billing data (RLS enforced, `billing_` prefix)**:
+
+| Table | Purpose |
+|-------|---------|
+| `billing_subscriptions` | Stripe subscription tracking (plan, status, period) |
+| `billing_module_subscriptions` | Active add-on modules per tenant |
+| `billing_credits` | Credit balance (monthly + purchased) |
+| `billing_credit_transactions` | Credit audit log |
+| `billing_usage_logs` | Granular resource usage tracking |
+| `billing_invoices` | Stripe invoice mirror |
 
 **Returns Hub data (RLS enforced, `rh_` prefix)**:
 
@@ -1333,7 +1536,7 @@ supabase/
 | `rh_return_reasons` | Configurable reason categories (subcategories, follow-up questions) |
 | `rh_workflow_rules` | Automation rules (trigger, conditions as graph JSON, actions) |
 
-**Tenant settings storage**: `tenants.settings` JSONB stores Returns Hub settings (features, branding, notifications, customer portal config, canned responses, portal domain), QR settings, and DPP design settings.
+**Tenant settings storage**: `tenants.settings` JSONB stores Returns Hub settings (features, branding, notifications, customer portal config, canned responses, portal domain), QR settings, DPP design settings, and supplier portal settings. Billing data is stored separately in `billing_*` tables (not in settings JSONB).
 
 ### Key Data Model
 
@@ -1345,6 +1548,9 @@ Products store complex data as JSON columns: `materials` (array), `certification
 |----------|---------|---------|-----------------|
 | `send-email` | Sends emails via Resend API | INSERT on `rh_notifications` (channel=email, status=pending) | `RESEND_API_KEY` |
 | `manage-vercel-domain` | Add/remove custom domains from Vercel project | HTTP call from client | `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` |
+| `create-checkout-session` | Creates Stripe Checkout Session (subscription or payment) | HTTP call from client (JWT) | `STRIPE_SECRET_KEY` |
+| `create-portal-session` | Creates Stripe Billing Portal Session | HTTP call from client (JWT) | `STRIPE_SECRET_KEY` |
+| `stripe-webhook` | Processes Stripe events (checkout, subscription, invoice) | Stripe webhook | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
 
 ## Hooks Reference (`src/hooks/`)
 
@@ -1352,6 +1558,7 @@ Products store complex data as JSON columns: `materials` (array), `certification
 |------|---------|---------|
 | `use-mobile.ts` | Viewport width detection (< 768px) | `boolean` |
 | `use-branding.ts` | Access branding context | Re-export of `useBranding` |
+| `use-billing.ts` | Access billing context | Re-export of `useBilling`, `useBillingOptional` |
 | `use-locale.ts` | Current i18n language | `'en' \| 'de'` |
 | `use-ai-stream.ts` | Generic OpenRouter streaming | `{ text, isStreaming, error, startStream, reset }` |
 | `use-compliance-check.ts` | 3-phase compliance analysis orchestrator | `{ result, phases, isRunning, error, phaseTexts, startCheck, abort, reset }` |
@@ -1397,6 +1604,7 @@ Products store complex data as JSON columns: `materials` (array), `certification
 | `visibility.ts` | `VisibilityLevel`, `VisibilityConfigV2`, `FieldVisibilityConfig`, `fieldDefinitions[]`, `fieldCategories[]`, `defaultVisibilityConfigV2` | 3-tier visibility system (36 fields, 9 categories) |
 | `customer-portal.ts` | `CustomerPortalProfile`, `CustomerDashboardStats`, `CustomerReturnInput`, `CustomerReturnsFilter` | Customer portal types |
 | `supplier-portal.ts` | `SupplierInvitation`, `SupplierRegistrationData`, `PublicSupplierInvitationResult`, `SupplierPortalSettings` | Supplier portal types |
+| `billing.ts` | `BillingPlan`, `ModuleId`, `TenantEntitlements`, `PLAN_CONFIGS`, `MODULE_CONFIGS`, `CREDIT_PACKS`, `AI_CREDIT_COSTS`, `BillingSubscription`, `BillingCredits`, `CreditTransaction`, `BillingInvoice` | Billing system types + plan/module/credit constants |
 
 ## Component Organization
 
@@ -1415,6 +1623,10 @@ shadcn/ui components (New York style). Never modify directly — use `npx shadcn
 ### DPP Template Components (`src/components/public/`)
 
 11 public DPP page templates: `TemplateModern`, `TemplateClassic`, `TemplateCompact`, `TemplateMinimal`, `TemplateTechnical`, `TemplateEcoFriendly`, `TemplatePremium`, `TemplateGovernment`, `TemplateRetail`, `TemplateScientific`, `TemplateAccessible`.
+
+### Billing Components (`src/components/billing/`)
+
+7 components for billing UI: `UsageBar`, `PlanCard`, `ModuleCard`, `CreditBalance` (badge + card), `CreditPurchaseModal`, `UpgradePrompt`, `InvoiceTable`. Barrel export via `index.ts`.
 
 ### Landing Page Components (`src/components/landing/`)
 
@@ -1493,6 +1705,8 @@ The app supports **German (de)** and **English (en)** via `i18next` + `react-i18
 | `customer-portal` | Customer portal UI (customer-facing returns, tickets, profile) |
 | `landing` | Marketing landing page |
 | `supplier-portal` | Supplier self-registration wizard (company, address, legal, banking, business details) |
+| `billing` | Billing plans, modules, credits, invoices, upgrade prompts |
+| `legal` | Privacy policy, imprint, legal pages |
 
 ### Rules (MANDATORY)
 
@@ -1538,6 +1752,8 @@ const { t } = useTranslation('products');
 - **Custom domains**: Routes under `/` and `/portal/...` when `CustomDomainGate` detects white-label domain
 - **DPP templates**: All 11 use `useDPPTemplateData()` hook for visibility/design/styles
 - **AI features**: OpenRouter streaming via `useAIStream()` or `useComplianceCheck()` hooks
+- **Billing enforcement**: Use dynamic `import('./billing')` in service files to avoid circular deps; check quota/module before resource creation
+- **Billing context**: `useBilling()` in protected routes, `useBillingOptional()` in components that may render outside BillingProvider
 - **Seed scripts**: Follow pattern in `scripts/seed-checklist-templates.mjs` — load `.env`, use REST API with service role key, upsert with `Prefer: resolution=ignore-duplicates`
 
 ## Environment Variables
@@ -1558,4 +1774,6 @@ RESEND_API_KEY=re_...                 # Resend email API (for send-email functio
 VERCEL_TOKEN=...                      # Vercel API token (for manage-vercel-domain function)
 VERCEL_PROJECT_ID=prj_...            # Vercel project ID
 VERCEL_TEAM_ID=team_...              # Vercel team ID (optional, for team accounts)
+STRIPE_SECRET_KEY=sk_...             # Stripe API secret key (for checkout, portal, webhook)
+STRIPE_WEBHOOK_SECRET=whsec_...      # Stripe webhook signing secret
 ```
