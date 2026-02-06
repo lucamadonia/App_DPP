@@ -33,9 +33,10 @@ import {
 } from '@/services/supabase/billing';
 import type { BillingPlan, ModuleId, BillingInvoice } from '@/types/billing';
 import { MODULE_CONFIGS } from '@/types/billing';
+import { getPlanPriceId, getModulePriceId } from '@/config/stripe-prices';
 
 export function BillingPage() {
-  const { t } = useTranslation('billing');
+  const { t, i18n } = useTranslation('billing');
   const { entitlements, isLoading: billingLoading } = useBilling();
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly');
   const [creditModalOpen, setCreditModalOpen] = useState(false);
@@ -68,10 +69,8 @@ export function BillingPage() {
 
     setActionLoading(true);
     try {
-      // TODO: Replace with actual Stripe Price IDs from env/config
-      const priceId = plan === 'pro'
-        ? (interval === 'yearly' ? 'price_pro_yearly' : 'price_pro_monthly')
-        : (interval === 'yearly' ? 'price_enterprise_yearly' : 'price_enterprise_monthly');
+      const priceId = getPlanPriceId(plan, interval);
+      if (!priceId) return;
 
       const result = await createCheckoutSession({
         priceId,
@@ -79,6 +78,7 @@ export function BillingPage() {
         successUrl: `${window.location.origin}/settings/billing?upgrade=success`,
         cancelUrl: `${window.location.origin}/settings/billing`,
         metadata: { plan },
+        locale: i18n.language,
       });
 
       if (result?.url) {
@@ -87,19 +87,20 @@ export function BillingPage() {
     } finally {
       setActionLoading(false);
     }
-  }, [interval]);
+  }, [interval, i18n.language]);
 
   const handleModuleActivate = useCallback(async (moduleId: ModuleId) => {
     setActionLoading(true);
     try {
-      // TODO: Replace with actual Stripe Price IDs
-      const priceId = `price_module_${moduleId}`;
+      const priceId = getModulePriceId(moduleId);
+
       const result = await createCheckoutSession({
         priceId,
         mode: 'subscription',
         successUrl: `${window.location.origin}/settings/billing?module=${moduleId}&status=success`,
         cancelUrl: `${window.location.origin}/settings/billing`,
         metadata: { module: moduleId },
+        locale: i18n.language,
       });
 
       if (result?.url) {
@@ -108,7 +109,7 @@ export function BillingPage() {
     } finally {
       setActionLoading(false);
     }
-  }, []);
+  }, [i18n.language]);
 
   const handleManageBilling = useCallback(async () => {
     setActionLoading(true);

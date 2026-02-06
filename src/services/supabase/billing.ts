@@ -502,6 +502,7 @@ export async function createCheckoutSession(params: {
   successUrl: string;
   cancelUrl: string;
   metadata?: Record<string, string>;
+  locale?: string;
 }): Promise<{ url: string } | null> {
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: params,

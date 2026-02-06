@@ -137,9 +137,9 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: 'small', name: 'Small', credits: 50, priceEur: 9, pricePerCredit: 0.18 },
-  { id: 'medium', name: 'Medium', credits: 200, priceEur: 29, pricePerCredit: 0.145 },
-  { id: 'large', name: 'Large', credits: 500, priceEur: 59, pricePerCredit: 0.118 },
+  { id: 'small', name: 'Small', credits: 50, priceEur: 9, pricePerCredit: 0.18, stripePriceId: 'price_1SxoqsG3F2f0Er103x3yZWaJ' },
+  { id: 'medium', name: 'Medium', credits: 200, priceEur: 29, pricePerCredit: 0.145, stripePriceId: 'price_1SxoqsG3F2f0Er10kUvs9aqA' },
+  { id: 'large', name: 'Large', credits: 500, priceEur: 59, pricePerCredit: 0.118, stripePriceId: 'price_1SxoqtG3F2f0Er10yVbLgAK5' },
 ];
 
 // ============================================

@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CREDIT_PACKS, type CreditPack } from '@/types/billing';
 import { createCheckoutSession } from '@/services/supabase/billing';
+import { getCreditPackPriceId } from '@/config/stripe-prices';
 
 interface CreditPurchaseModalProps {
   open: boolean;
@@ -24,17 +25,20 @@ interface CreditPurchaseModalProps {
 }
 
 export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalProps) {
-  const { t } = useTranslation('billing');
+  const { t, i18n } = useTranslation('billing');
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePurchase = async () => {
-    if (!selectedPack?.stripePriceId) return;
+    if (!selectedPack) return;
+
+    const priceId = getCreditPackPriceId(selectedPack.id);
+    if (!priceId) return;
 
     setIsLoading(true);
     try {
       const result = await createCheckoutSession({
-        priceId: selectedPack.stripePriceId,
+        priceId,
         mode: 'payment',
         successUrl: `${window.location.origin}/settings/billing?credits=success`,
         cancelUrl: `${window.location.origin}/settings/billing`,
@@ -42,6 +46,7 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
           credit_pack: selectedPack.id,
           credits: String(selectedPack.credits),
         },
+        locale: i18n.language,
       });
 
       if (result?.url) {

@@ -4,6 +4,8 @@
  * Creates a Stripe Checkout session for plan upgrades,
  * module activations, or credit pack purchases.
  *
+ * Supports locale parameter for DE/EN checkout UI.
+ *
  * Deployment:
  *   supabase functions deploy create-checkout-session
  *
@@ -96,11 +98,14 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { priceId, mode, successUrl, cancelUrl, metadata } = await req.json();
+    const { priceId, mode, successUrl, cancelUrl, metadata, locale } = await req.json();
 
     if (!priceId || !mode || !successUrl || !cancelUrl) {
       return jsonResponse({ error: 'Missing required fields: priceId, mode, successUrl, cancelUrl' }, 400);
     }
+
+    // Map locale to Stripe locale ('de' or 'en')
+    const stripeLocale = locale === 'de' ? 'de' : 'en';
 
     // Create Checkout Session
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -109,6 +114,7 @@ Deno.serve(async (req) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      locale: stripeLocale,
       automatic_tax: { enabled: true },
       tax_id_collection: { enabled: true },
       allow_promotion_codes: true,
@@ -119,6 +125,28 @@ Deno.serve(async (req) => {
         ...metadata,
       },
     };
+
+    // For subscriptions, also store metadata on the subscription
+    if (mode === 'subscription') {
+      sessionParams.subscription_data = {
+        metadata: {
+          tenant_id: tenantId,
+          user_id: user.id,
+          ...metadata,
+        },
+      };
+    }
+
+    // For one-time payments (credit packs), include payment intent metadata
+    if (mode === 'payment') {
+      sessionParams.payment_intent_data = {
+        metadata: {
+          tenant_id: tenantId,
+          user_id: user.id,
+          ...metadata,
+        },
+      };
+    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
