@@ -1,7 +1,7 @@
 /**
  * Supabase Edge Function: send-email
  *
- * Sends emails via SMTP. Can be triggered by:
+ * Sends emails via Resend HTTP API. Can be triggered by:
  * 1. Database Webhook on INSERT into rh_notifications (payload.record)
  * 2. Direct invocation from client via supabase.functions.invoke (payload.record)
  *
@@ -9,19 +9,15 @@
  *   supabase functions deploy send-email --no-verify-jwt
  *
  * Required Supabase Secrets:
- *   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+ *   - RESEND_API_KEY
  *   - SUPABASE_URL (automatic)
  *   - SUPABASE_SERVICE_ROLE_KEY (automatic)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
-const SMTP_HOST = Deno.env.get('SMTP_HOST') || '';
-const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587', 10);
-const SMTP_USER = Deno.env.get('SMTP_USER') || '';
-const SMTP_PASS = Deno.env.get('SMTP_PASS') || '';
-const SMTP_FROM = Deno.env.get('SMTP_FROM') || SMTP_USER;
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
+const DEFAULT_FROM = 'Trackbliss <noreply@trackbliss.eu>';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
@@ -75,55 +71,50 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'No recipient email' }), { status: 200 });
     }
 
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    if (!RESEND_API_KEY) {
       await supabase
         .from('rh_notifications')
-        .update({ status: 'failed', metadata: { ...record.metadata, error: 'SMTP not configured' } })
+        .update({ status: 'failed', metadata: { ...record.metadata, error: 'RESEND_API_KEY not configured' } })
         .eq('id', record.id);
-      return new Response(JSON.stringify({ error: 'SMTP not configured' }), { status: 200 });
+      return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), { status: 200 });
     }
 
     const senderName = record.metadata?.senderName || '';
     const isHtml = record.metadata?.isHtml === true;
-    const fromAddress = senderName ? `${senderName} <${SMTP_FROM}>` : SMTP_FROM;
+    const fromAddress = senderName ? `${senderName} <noreply@trackbliss.eu>` : DEFAULT_FROM;
 
     // If content is already HTML (from email editor), use directly; otherwise wrap plain text
     const htmlBody = isHtml ? record.content : wrapPlainTextAsHtml(record.content || '', senderName);
 
-    // Send email via SMTP (tls: false for STARTTLS on port 587; denomailer auto-negotiates STARTTLS)
-    const client = new SMTPClient({
-      connection: {
-        hostname: SMTP_HOST,
-        port: SMTP_PORT,
-        tls: false,
-        auth: {
-          username: SMTP_USER,
-          password: SMTP_PASS,
-        },
+    // Send email via Resend HTTP API
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-    });
-
-    try {
-      await client.send({
+      body: JSON.stringify({
         from: fromAddress,
-        to: recipientEmail,
+        to: [recipientEmail],
         subject: record.subject || 'Notification',
         html: htmlBody,
-      });
+      }),
+    });
 
-      await client.close();
+    const resendData = await resendRes.json();
 
+    if (resendRes.ok) {
       // Mark as sent
       await supabase
         .from('rh_notifications')
         .update({ status: 'sent', sent_at: new Date().toISOString() })
         .eq('id', record.id);
 
-      return new Response(JSON.stringify({ success: true }), { status: 200 });
-    } catch (smtpErr) {
-      try { await client.close(); } catch { /* ignore close error */ }
+      return new Response(JSON.stringify({ success: true, resendId: resendData.id }), { status: 200 });
+    } else {
+      const errorMsg = resendData.message || resendData.error || JSON.stringify(resendData);
+      console.error('Resend API error:', errorMsg);
 
-      const errorMsg = String(smtpErr);
       await supabase
         .from('rh_notifications')
         .update({ status: 'failed', metadata: { ...record.metadata, error: errorMsg } })
