@@ -1,7 +1,7 @@
 /**
  * Supabase Returns Hub Email Templates Service
  */
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
 import type { RhEmailTemplate, RhNotificationEventType } from '@/types/returns-hub';
 import { DEFAULT_TEMPLATES as TEMPLATE_DEFAULTS } from '@/components/returns/email-editor/emailTemplateDefaults';
 
@@ -75,7 +75,7 @@ export async function getRhEmailTemplateByTenantId(
   tenantId: string,
   eventType: RhNotificationEventType
 ): Promise<RhEmailTemplate | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAnon
     .from('rh_email_templates')
     .select('*')
     .eq('tenant_id', tenantId)
