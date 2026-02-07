@@ -45,6 +45,10 @@ const SupplierRegisterPage = lazy(() => import('@/pages/suppliers/public/Supplie
 const SupplierRegisterSuccessPage = lazy(() => import('@/pages/suppliers/public/SupplierRegisterSuccessPage').then(m => ({ default: m.SupplierRegisterSuccessPage })));
 const SupplierInvitationExpiredPage = lazy(() => import('@/pages/suppliers/public/SupplierInvitationExpiredPage').then(m => ({ default: m.SupplierInvitationExpiredPage })));
 
+// Supplier Data Portal (public)
+const SupplierDataPortalPage = lazy(() => import('@/pages/suppliers/public/SupplierDataPortalPage').then(m => ({ default: m.SupplierDataPortalPage })));
+const SupplierDataSubmittedPage = lazy(() => import('@/pages/suppliers/public/SupplierDataSubmittedPage').then(m => ({ default: m.SupplierDataSubmittedPage })));
+
 // Customer Portal
 const CustomerPortalLayout = lazy(() => import('@/pages/customer/CustomerPortalLayout').then(m => ({ default: m.CustomerPortalLayout })));
 const CustomerProtectedRoute = lazy(() => import('@/pages/customer/CustomerProtectedRoute').then(m => ({ default: m.CustomerProtectedRoute })));
@@ -251,6 +255,10 @@ function NormalAppRoutes() {
           <Route path="success" element={<SupplierRegisterSuccessPage />} />
           <Route path="expired" element={<SupplierInvitationExpiredPage />} />
         </Route>
+
+        {/* Public Supplier Data Portal (no auth, password-protected) */}
+        <Route path="suppliers/data/:accessCode" element={<SupplierDataPortalPage />} />
+        <Route path="suppliers/data/:accessCode/submitted" element={<SupplierDataSubmittedPage />} />
 
         {/* Customer Portal (tenant-branded, own auth) */}
         <Route path="customer/:tenantSlug" element={<CustomerPortalLayout />}>

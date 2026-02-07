@@ -415,6 +415,21 @@ export {
   invalidateEntitlementCache,
 } from './billing';
 
+// Supplier Data Portal
+export {
+  getSupplierDataRequests,
+  createSupplierDataRequest,
+  cancelSupplierDataRequest,
+  deleteSupplierDataRequest,
+  getSupplierDataRequestByCode,
+  publicGetProductForDataRequest,
+  publicSubmitProductData,
+  publicSubmitBatchData,
+  publicCreateBatch,
+  publicMarkDataRequestSubmitted,
+  publicMarkDataRequestInProgress,
+} from './supplier-data-portal';
+
 // Customer Portal
 export {
   getCustomerContext,

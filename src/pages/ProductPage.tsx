@@ -69,6 +69,10 @@ import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductComplianceTab } from '@/components/product/ProductComplianceTab';
 import { AIComplianceCheckTab } from '@/components/compliance-check/AIComplianceCheckTab';
 import { MasterLabelTab } from '@/components/product/MasterLabelTab';
+import { CreateDataRequestDialog } from '@/components/suppliers/CreateDataRequestDialog';
+import { SupplierDataRequestsTable } from '@/components/suppliers/SupplierDataRequestsTable';
+import { getSupplierDataRequests } from '@/services/supabase/supplier-data-portal';
+import type { SupplierDataRequest } from '@/types/supplier-data-portal';
 
 const SUPPLIER_ROLE_LABELS: Record<string, string> = {
   manufacturer: 'Manufacturer',
@@ -101,6 +105,8 @@ export function ProductPage() {
   const [components, setComponents] = useState<ProductComponent[]>([]);
   const [usedInSets, setUsedInSets] = useState<Array<{ id: string; name: string }>>([]);
   const [supplierCosts, setSupplierCosts] = useState<SupplierBatchCost[]>([]);
+  const [dataRequests, setDataRequests] = useState<SupplierDataRequest[]>([]);
+  const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
@@ -144,6 +150,9 @@ export function ProductPage() {
       setBatches(batchData);
       setSupplierCosts(costData);
       setBatchesLoading(false);
+
+      // Load supplier data requests
+      getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
     }
 
     loadProduct();
@@ -854,6 +863,46 @@ export function ProductPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Supplier Data Requests */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ExternalLink className="h-5 w-5 text-primary" />
+                    {t('Supplier Data Requests', { ns: 'supplier-data-portal' })}
+                  </CardTitle>
+                  <CardDescription>{t('Suppliers can fill in product and batch data via a secure link', { ns: 'supplier-data-portal' })}</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setShowCreateDataRequest(true)}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  {t('Create Data Request', { ns: 'supplier-data-portal' })}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SupplierDataRequestsTable
+                requests={dataRequests}
+                onRefresh={() => {
+                  if (id) getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          {product && (
+            <CreateDataRequestDialog
+              open={showCreateDataRequest}
+              onOpenChange={setShowCreateDataRequest}
+              productId={product.id}
+              productName={product.name}
+              suppliers={productSuppliers.map(sp => ({ id: sp.supplier_id, name: sp.supplier_name }))}
+              onCreated={() => {
+                if (id) getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
+              }}
+            />
+          )}
         </TabsContent>
 
         {/* QR & Access Tab */}
