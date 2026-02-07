@@ -13,7 +13,7 @@ export function isAIAvailable(): boolean {
 
 export async function* streamCompletion(
   messages: OpenRouterMessage[],
-  options: { maxTokens?: number; temperature?: number; creditCost?: number } = {}
+  options: { maxTokens?: number; temperature?: number; creditCost?: number; operationLabel?: string } = {}
 ): AsyncGenerator<string, void, unknown> {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -23,10 +23,16 @@ export async function* streamCompletion(
   // Billing: consume AI credits before making the call
   const creditCost = options.creditCost ?? 1;
   if (creditCost > 0) {
-    const { consumeCredits } = await import('@/services/supabase/billing');
-    const result = await consumeCredits(creditCost, 'AI stream completion');
-    if (!result.success) {
-      throw new Error(`Not enough AI credits (${result.remaining} remaining, need ${creditCost}). Purchase more credits or upgrade your plan.`);
+    try {
+      const { consumeCredits } = await import('@/services/supabase/billing');
+      const result = await consumeCredits(creditCost, options.operationLabel || 'AI analysis');
+      if (!result.success) {
+        throw new Error(`Not enough AI credits (${result.remaining} remaining, need ${creditCost}). Purchase more credits or upgrade your plan.`);
+      }
+    } catch (err) {
+      // Re-throw credit errors, but don't block AI if billing service fails
+      if (err instanceof Error && err.message.includes('AI credits')) throw err;
+      console.error('Credit deduction failed:', err);
     }
   }
 

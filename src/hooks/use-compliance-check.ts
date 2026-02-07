@@ -73,12 +73,14 @@ export function useComplianceCheck(): UseComplianceCheckReturn {
     abortRef.current = true;
   }, []);
 
+  const PHASE_LABELS = ['AI Compliance: Score & Risk', 'AI Compliance: Findings', 'AI Compliance: Action Plan'];
+
   const streamPhase = useCallback(async (
     messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
     phaseIndex: 0 | 1 | 2,
   ): Promise<string> => {
     let fullText = '';
-    for await (const chunk of streamCompletion(messages, { maxTokens: 4000, temperature: 0.2 })) {
+    for await (const chunk of streamCompletion(messages, { maxTokens: 4000, temperature: 0.2, operationLabel: PHASE_LABELS[phaseIndex] })) {
       if (abortRef.current) throw new Error('Aborted');
       fullText += chunk;
       setPhaseTexts(prev => {
