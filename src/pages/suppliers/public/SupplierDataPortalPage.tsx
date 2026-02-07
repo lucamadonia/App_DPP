@@ -3,7 +3,7 @@
  * Password-protected page where suppliers fill in product/batch data
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +18,21 @@ import {
   AlertCircle,
   Info,
   Trash2,
+  FlaskConical,
+  Award,
+  Leaf,
+  Ship,
+  Ruler,
+  BoxSelect,
+  ShieldCheck,
+  Hash,
+  Truck,
+  FileEdit,
+  ClipboardCheck,
+  ChevronDown,
+  ChevronRight,
+  CheckCircle2,
+  Circle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   Accordion,
   AccordionContent,
@@ -56,7 +71,38 @@ import {
   publicMarkDataRequestInProgress,
 } from '@/services/supabase/supplier-data-portal';
 import { PRODUCT_FIELD_GROUPS, BATCH_FIELD_GROUPS } from '@/lib/supplier-data-fields';
-import type { PublicSupplierDataRequestResult, FieldDefinition } from '@/types/supplier-data-portal';
+import type { PublicSupplierDataRequestResult, FieldDefinition, FieldGroup } from '@/types/supplier-data-portal';
+import type { LucideIcon } from 'lucide-react';
+
+// ─── Category Icon Map ────────────────────────────────────────────────────
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  basic: Package,
+  materials: FlaskConical,
+  certifications: Award,
+  carbon: Leaf,
+  customs: Ship,
+  dimensions: Ruler,
+  packaging: BoxSelect,
+  espr: ShieldCheck,
+  core: Hash,
+  logistics: Truck,
+  overrides: FileEdit,
+  batchDimensions: Ruler,
+};
+
+// ─── Helper: check if a field value is "filled" ──────────────────────────
+function isFilled(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return true;
+  if (typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    return Object.values(obj).some(v => isFilled(v));
+  }
+  return false;
+}
 
 // ─── Password Hashing ─────────────────────────────────────────────────────
 async function hashPassword(password: string): Promise<string> {
@@ -128,7 +174,7 @@ function MaterialsEditor({ value, onChange, t }: { value: unknown; onChange: (v:
           <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div>
               <Label className="text-xs">{t('Name')}</Label>
-              <Input size={1} value={(item.name as string) || ''} onChange={e => updateItem(i, 'name', e.target.value)} />
+              <Input size={1} value={(item.name as string) || ''} onChange={e => updateItem(i, 'name', e.target.value)} placeholder={t('e.g. Cotton')} />
             </div>
             <div>
               <Label className="text-xs">{t('Percentage')}</Label>
@@ -140,7 +186,7 @@ function MaterialsEditor({ value, onChange, t }: { value: unknown; onChange: (v:
             </div>
             <div>
               <Label className="text-xs">{t('Origin')}</Label>
-              <Input size={1} value={(item.origin as string) || ''} onChange={e => updateItem(i, 'origin', e.target.value)} />
+              <Input size={1} value={(item.origin as string) || ''} onChange={e => updateItem(i, 'origin', e.target.value)} placeholder={t('e.g. Germany')} />
             </div>
           </div>
           <Button type="button" variant="ghost" size="icon" className="mt-5" onClick={() => removeItem(i)}>
@@ -172,7 +218,7 @@ function CertificationsEditor({ value, onChange, t }: { value: unknown; onChange
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <Label className="text-xs">{t('Name')}</Label>
-              <Input size={1} value={(item.name as string) || ''} onChange={e => updateItem(i, 'name', e.target.value)} />
+              <Input size={1} value={(item.name as string) || ''} onChange={e => updateItem(i, 'name', e.target.value)} placeholder={t('e.g. ISO 9001')} />
             </div>
             <div>
               <Label className="text-xs">{t('Issued By')}</Label>
@@ -266,7 +312,6 @@ function FieldRenderer({ field, value, onChange, t }: FieldRendererProps) {
     return <RecyclabilityEditor value={value} onChange={handleChange} t={t} />;
   }
   if (field.key === 'substancesOfConcern') {
-    // Simplified: just show as JSON-like text editor
     return (
       <Textarea
         value={typeof value === 'string' ? value : JSON.stringify(value || [], null, 2)}
@@ -377,6 +422,69 @@ function FieldRenderer({ field, value, onChange, t }: FieldRendererProps) {
   }
 }
 
+// ─── Category Card Component ──────────────────────────────────────────────
+
+interface CategoryCardProps {
+  group: FieldGroup;
+  filledCount: number;
+  totalCount: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  primaryColor: string;
+}
+
+function CategoryCard({ group, filledCount, totalCount, isOpen, onToggle, children, primaryColor }: CategoryCardProps) {
+  const Icon = CATEGORY_ICONS[group.category] || Package;
+  const allFilled = filledCount === totalCount && totalCount > 0;
+  const { t } = useTranslation('supplier-data-portal');
+
+  return (
+    <Card className="overflow-hidden transition-all">
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
+        style={{ backgroundColor: allFilled ? '#22c55e' : primaryColor }}
+      />
+      <button
+        type="button"
+        className="w-full text-left px-5 py-4 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+        onClick={onToggle}
+      >
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${primaryColor}15` }}
+        >
+          <Icon className="h-4.5 w-4.5" style={{ color: primaryColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="font-medium text-sm">{t(group.labelKey)}</span>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {allFilled ? (
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+          ) : (
+            <Badge variant="secondary" className="text-xs font-medium tabular-nums">
+              {filledCount}/{totalCount}
+            </Badge>
+          )}
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+      {isOpen && (
+        <CardContent className="px-5 pb-5 pt-0 border-t">
+          <div className="pt-4">
+            {children}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 // ─── Main Page Component ───────────────────────────────────────────────────
 
 export function SupplierDataPortalPage() {
@@ -408,6 +516,18 @@ export function SupplierDataPortalPage() {
   const [savingBatchId, setSavingBatchId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+
+  // Category open/closed state
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  };
 
   const toggleLanguage = () => {
     const newLang = currentLang === 'de' ? 'en' : 'de';
@@ -600,6 +720,42 @@ export function SupplierDataPortalPage() {
     [],
   );
 
+  // Compute visible groups (memoized)
+  const visibleProductGroups = useMemo(() => {
+    if (!requestInfo) return [];
+    return getVisibleFields(PRODUCT_FIELD_GROUPS, requestInfo.dataRequest.allowedProductFields);
+  }, [requestInfo, getVisibleFields]);
+
+  const visibleBatchGroups = useMemo(() => {
+    if (!requestInfo) return [];
+    return getVisibleFields(BATCH_FIELD_GROUPS, requestInfo.dataRequest.allowedBatchFields);
+  }, [requestInfo, getVisibleFields]);
+
+  // Open all categories by default on first load when product data arrives
+  useEffect(() => {
+    if (isAuthenticated && visibleProductGroups.length > 0 && openCategories.size === 0) {
+      setOpenCategories(new Set(visibleProductGroups.map(g => g.category)));
+    }
+  }, [isAuthenticated, visibleProductGroups, openCategories.size]);
+
+  // ─── Progress Calculation ─────────────────────────────────────────────
+  const progress = useMemo(() => {
+    const allFields = visibleProductGroups.flatMap(g => g.fields);
+    const totalCount = allFields.length;
+    const filledCount = allFields.filter(f => isFilled(productData[f.key])).length;
+    const percentage = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
+
+    const perCategory: Record<string, { filled: number; total: number }> = {};
+    for (const group of visibleProductGroups) {
+      const filled = group.fields.filter(f => isFilled(productData[f.key])).length;
+      perCategory[group.category] = { filled, total: group.fields.length };
+    }
+
+    return { totalCount, filledCount, percentage, perCategory };
+  }, [visibleProductGroups, productData]);
+
+  const editedBatchCount = Object.keys(batchEdits).filter(id => Object.keys(batchEdits[id]).length > 0).length;
+
   // ─── Loading State ─────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -672,8 +828,7 @@ export function SupplierDataPortalPage() {
   if (!requestInfo) return null;
 
   const { dataRequest, tenant, product, branding } = requestInfo;
-  const visibleProductGroups = getVisibleFields(PRODUCT_FIELD_GROUPS, dataRequest.allowedProductFields);
-  const visibleBatchGroups = getVisibleFields(BATCH_FIELD_GROUPS, dataRequest.allowedBatchFields);
+  const primaryColor = branding.primaryColor || '#3B82F6';
 
   // ─── Password Gate ─────────────────────────────────────────────────────
   if (!isAuthenticated) {
@@ -686,13 +841,13 @@ export function SupplierDataPortalPage() {
               {branding.logoUrl ? (
                 <img src={branding.logoUrl} alt={tenant.name} className="h-9 w-9 rounded-lg object-contain" />
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ backgroundColor: branding.primaryColor || '#3B82F6' }}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ backgroundColor: primaryColor }}>
                   <Package className="h-5 w-5" />
                 </div>
               )}
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">{tenant.name}</span>
-                <span className="text-xs text-muted-foreground">{t('Data Request')}</span>
+                <span className="text-xs text-muted-foreground">{t('EU Digital Product Passport')}</span>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={toggleLanguage} className="gap-1.5">
@@ -702,46 +857,108 @@ export function SupplierDataPortalPage() {
           </div>
         </header>
 
-        {/* Password form */}
         <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Lock className="h-8 w-8 text-primary" />
+          <div className="w-full max-w-lg space-y-6">
+            {/* Hero card with gradient */}
+            <div
+              className="rounded-xl p-6 sm:p-8 text-white relative overflow-hidden"
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd, ${primaryColor}99)`,
+              }}
+            >
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+              <div className="relative space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 opacity-90" />
+                  <span className="text-xs font-medium tracking-wide uppercase opacity-90">{t('ESPR 2024/1781')}</span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-bold leading-tight">
+                  {t('Data requested for your Digital Product Passport')}
+                </h1>
+                <p className="text-sm opacity-90 leading-relaxed">
+                  {t('You have been asked to provide product information for the EU Digital Product Passport. Please enter your password to begin.')}
+                </p>
               </div>
-              <CardTitle>{t('Supplier Data Request')}</CardTitle>
-              <CardDescription>
-                {product.name} · {t('from')} {tenant.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {dataRequest.message && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>{dataRequest.message}</AlertDescription>
-                </Alert>
-              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label>{t('Password')}</Label>
-                <Input
-                  type="password"
-                  value={passwordInput}
-                  onChange={e => { setPasswordInput(e.target.value); setPasswordError(false); }}
-                  onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
-                  placeholder={t('Enter Password')}
-                  autoFocus
-                />
-                {passwordError && (
-                  <p className="text-sm text-destructive">{t('Incorrect password')}</p>
+            {/* Product & Category Preview */}
+            <Card>
+              <CardContent className="pt-6 space-y-5">
+                {/* Product name */}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{product.name}</p>
+                    <p className="text-sm text-muted-foreground">{t('from')} {tenant.name}</p>
+                  </div>
+                </div>
+
+                {/* Requested categories preview */}
+                {visibleProductGroups.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {t('Requested data categories')}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {visibleProductGroups.map(group => {
+                        const Icon = CATEGORY_ICONS[group.category] || Package;
+                        return (
+                          <div
+                            key={group.category}
+                            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium"
+                          >
+                            <Icon className="h-3.5 w-3.5" style={{ color: primaryColor }} />
+                            {t(group.labelKey)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
-              </div>
 
-              <Button className="w-full" onClick={handlePasswordSubmit} disabled={!passwordInput}>
-                {t('Access')}
-              </Button>
-            </CardContent>
-          </Card>
+                {/* Admin message */}
+                {dataRequest.message && (
+                  <div className="rounded-lg border-l-4 bg-muted/50 p-4" style={{ borderLeftColor: primaryColor }}>
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">{t('Message from the requester')}</p>
+                        <p className="text-sm">{dataRequest.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Password input */}
+                <div className="space-y-2 pt-2 border-t">
+                  <Label className="text-sm font-medium">{t('Password')}</Label>
+                  <Input
+                    type="password"
+                    value={passwordInput}
+                    onChange={e => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                    onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
+                    placeholder={t('Enter Password')}
+                    autoFocus
+                  />
+                  {passwordError && (
+                    <p className="text-sm text-destructive">{t('Incorrect password')}</p>
+                  )}
+                </div>
+
+                <Button className="w-full" onClick={handlePasswordSubmit} disabled={!passwordInput} size="lg">
+                  <Lock className="mr-2 h-4 w-4" />
+                  {t('Access')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* DPP info footnote */}
+            <p className="text-center text-xs text-muted-foreground px-4">
+              {t('This data helps ensure your product meets EU sustainability and transparency requirements.')}
+            </p>
+          </div>
         </main>
 
         <footer className="border-t py-6 bg-white">
@@ -763,7 +980,7 @@ export function SupplierDataPortalPage() {
             {branding.logoUrl ? (
               <img src={branding.logoUrl} alt={tenant.name} className="h-9 w-9 rounded-lg object-contain" />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ backgroundColor: branding.primaryColor || '#3B82F6' }}>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ backgroundColor: primaryColor }}>
                 <Package className="h-5 w-5" />
               </div>
             )}
@@ -781,8 +998,49 @@ export function SupplierDataPortalPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
-        {/* Message */}
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 space-y-6">
+        {/* DPP Info Banner */}
+        <div
+          className="rounded-xl p-5 sm:p-6 text-white relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
+          }}
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/15">
+              <ClipboardCheck className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-2">
+              <h2 className="font-semibold text-base sm:text-lg leading-tight">
+                {t('Complete Product Data for the Digital Product Passport')}
+              </h2>
+              <p className="text-sm opacity-90 leading-relaxed">
+                {t('Please fill in all requested fields. This data is needed to create a compliant EU Digital Product Passport (ESPR 2024/1781).')}
+              </p>
+              {/* Overall Progress */}
+              {progress.totalCount > 0 && (
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium">{t('Overall Progress')}</span>
+                    <span className="opacity-90">
+                      {progress.filledCount === progress.totalCount
+                        ? t('All fields completed')
+                        : t('{{filled}} of {{total}} fields completed', { filled: progress.filledCount, total: progress.totalCount })}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-white transition-all duration-500"
+                      style={{ width: `${progress.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Admin message */}
         {dataRequest.message && (
           <Alert>
             <Info className="h-4 w-4" />
@@ -790,50 +1048,61 @@ export function SupplierDataPortalPage() {
           </Alert>
         )}
 
-        {/* Product Data Section */}
+        {/* Product Data — Category Cards */}
         {visibleProductGroups.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                {t('Product Data')}
-              </CardTitle>
-              <CardDescription>{product.name}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {visibleProductGroups.map((group) => (
-                <div key={group.category}>
-                  <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">
-                    {t(group.labelKey)}
-                  </h3>
-                  <div className="space-y-4">
-                    {group.fields.map((field) => (
-                      <div key={field.key} className="space-y-1.5">
-                        {field.type !== 'boolean' && (
-                          <Label className="text-sm">{t(field.labelKey)}</Label>
-                        )}
-                        <FieldRenderer
-                          field={field}
-                          value={productData[field.key]}
-                          onChange={handleProductFieldChange}
-                          t={t}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <Separator className="mt-4" />
-                </div>
-              ))}
+          <div className="space-y-3">
+            {visibleProductGroups.map((group) => {
+              const catProgress = progress.perCategory[group.category] || { filled: 0, total: 0 };
+              const isDimensionGroup = group.category === 'dimensions' || group.category === 'batchDimensions';
 
-              <div className="flex justify-end">
-                <Button onClick={handleSaveProduct} disabled={isSavingProduct}>
-                  {isSavingProduct && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Save className="mr-2 h-4 w-4" />
-                  {t('Save Product Data')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              return (
+                <CategoryCard
+                  key={group.category}
+                  group={group}
+                  filledCount={catProgress.filled}
+                  totalCount={catProgress.total}
+                  isOpen={openCategories.has(group.category)}
+                  onToggle={() => toggleCategory(group.category)}
+                  primaryColor={primaryColor}
+                >
+                  <div className={isDimensionGroup ? 'grid grid-cols-1 sm:grid-cols-3 gap-4' : 'space-y-4'}>
+                    {group.fields.map((field) => {
+                      const fieldFilled = isFilled(productData[field.key]);
+                      return (
+                        <div key={field.key} className="space-y-1.5">
+                          {field.type !== 'boolean' && (
+                            <div className="flex items-center gap-1.5">
+                              {fieldFilled ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                              ) : (
+                                <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                              )}
+                              <Label className="text-sm">{t(field.labelKey)}</Label>
+                            </div>
+                          )}
+                          <FieldRenderer
+                            field={field}
+                            value={productData[field.key]}
+                            onChange={handleProductFieldChange}
+                            t={t}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CategoryCard>
+              );
+            })}
+
+            {/* Save product button */}
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveProduct} disabled={isSavingProduct}>
+                {isSavingProduct && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Save className="mr-2 h-4 w-4" />
+                {t('Save Product Data')}
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Batches Section */}
@@ -841,12 +1110,20 @@ export function SupplierDataPortalPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-primary" />
-                    {t('Batches')}
-                  </CardTitle>
-                  <CardDescription>{t('Existing Batches')}: {batches.length}</CardDescription>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${primaryColor}15` }}
+                  >
+                    <Layers className="h-4.5 w-4.5" style={{ color: primaryColor }} />
+                  </div>
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {t('Batches')}
+                      <Badge variant="secondary" className="text-xs ml-1">{batches.length}</Badge>
+                    </CardTitle>
+                    <CardDescription>{t('Existing Batches')}: {batches.length}</CardDescription>
+                  </div>
                 </div>
                 {dataRequest.allowBatchCreate && (
                   <Button
@@ -925,7 +1202,7 @@ export function SupplierDataPortalPage() {
 
               {/* New batches */}
               {newBatches.map((newBatch, index) => (
-                <Card key={`new-${index}`} className="mt-4 border-dashed">
+                <Card key={`new-${index}`} className="mt-4 border-dashed border-2">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{t('New Batch')} #{index + 1}</CardTitle>
@@ -979,18 +1256,41 @@ export function SupplierDataPortalPage() {
           </Card>
         )}
 
-        {/* Submit All Button */}
-        <div className="flex justify-center pb-8">
-          <Button
-            size="lg"
-            onClick={() => setShowSubmitConfirm(true)}
-            disabled={isSubmitting}
-            className="gap-2"
-          >
-            <Send className="h-5 w-5" />
-            {t('Submit All Data')}
-          </Button>
-        </div>
+        {/* Submit Section */}
+        <Card className="border-2">
+          <CardContent className="pt-6 space-y-4">
+            <div className="text-center space-y-2">
+              <h3 className="font-semibold text-lg">{t('Summary')}</h3>
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <span>{t('You have completed {{filled}} of {{total}} product fields', { filled: progress.filledCount, total: progress.totalCount })}</span>
+                {editedBatchCount > 0 && (
+                  <span>{t('{{count}} batches edited', { count: editedBatchCount })}</span>
+                )}
+                {newBatches.length > 0 && (
+                  <span>{t('{{count}} new batches created', { count: newBatches.length })}</span>
+                )}
+              </div>
+              {progress.totalCount > 0 && (
+                <Progress value={progress.percentage} className="h-2 max-w-md mx-auto" />
+              )}
+            </div>
+
+            <div className="flex justify-center pt-2">
+              <Button
+                size="lg"
+                onClick={() => setShowSubmitConfirm(true)}
+                disabled={isSubmitting}
+                className="gap-2 px-8"
+                style={{
+                  background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
+                }}
+              >
+                <Send className="h-5 w-5" />
+                {t('Submit All Data')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </main>
 
       <footer className="border-t py-6 bg-white">
