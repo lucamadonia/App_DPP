@@ -44,6 +44,33 @@ async function sendNotificationEmail(
   }
 }
 
+/**
+ * Deduplication: check if the same email (eventType + recipient + entity) was
+ * already created in the last 60 seconds.  Prevents double-sends when both
+ * a hard-coded trigger and a workflow action fire for the same event.
+ */
+async function isDuplicate(
+  client: typeof supabase,
+  eventType: string,
+  recipientEmail: string,
+  returnId?: string | null,
+  ticketId?: string | null,
+): Promise<boolean> {
+  const since = new Date(Date.now() - 60_000).toISOString();
+  let query = client
+    .from('rh_notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('template', eventType)
+    .eq('recipient_email', recipientEmail)
+    .gte('created_at', since);
+
+  if (returnId) query = query.eq('return_id', returnId);
+  if (ticketId) query = query.eq('ticket_id', ticketId);
+
+  const { count } = await query;
+  return (count ?? 0) > 0;
+}
+
 function renderTemplate(template: string, ctx: NotificationContext): string {
   return template
     .replace(/\{\{customerName\}\}/g, ctx.customerName || '')
@@ -65,19 +92,15 @@ export async function triggerEmailNotification(
   ctx: NotificationContext
 ): Promise<{ success: boolean; notificationId?: string; skipped?: boolean; error?: string }> {
   try {
-    // Check global settings
-    const settings = await getReturnsHubSettings();
-    if (!settings.notifications?.emailEnabled) {
-      return { success: true, skipped: true };
-    }
-
-    // Check template
+    // Check template — per-template enabled flag is the only gate
     const template = await getRhEmailTemplate(eventType);
     if (!template || !template.enabled) {
+      console.warn(`[notification-trigger] Template "${eventType}" ${!template ? 'not found' : 'is disabled'} — skipping`);
       return { success: true, skipped: true };
     }
 
     // Resolve email locale from settings
+    const settings = await getReturnsHubSettings();
     const emailLocale = settings.notifications?.emailLocale || 'en';
 
     // Render subject (locale-aware) and body
@@ -99,6 +122,13 @@ export async function triggerEmailNotification(
     // Create notification record and invoke send-email Edge Function directly
     const tenantId = await getCurrentTenantId();
     if (!tenantId) return { success: false, error: 'No tenant set' };
+
+    // Dedup: skip if same email was already sent in the last 60s (prevents double-send
+    // when both a hard-coded trigger and a workflow action fire for the same event)
+    if (await isDuplicate(supabase, eventType, ctx.recipientEmail, ctx.returnId, ctx.ticketId)) {
+      console.log(`[notification-trigger] Dedup: "${eventType}" to "${ctx.recipientEmail}" already sent recently — skipping`);
+      return { success: true, skipped: true };
+    }
 
     const notificationPayload = {
       tenant_id: tenantId,
@@ -149,7 +179,14 @@ export async function triggerPublicEmailNotification(
   ctx: NotificationContext
 ): Promise<{ success: boolean; skipped?: boolean; error?: string }> {
   try {
-    // Check global settings from tenant (use anon client for public context)
+    // Check template — per-template enabled flag is the only gate
+    const template = await getRhEmailTemplateByTenantId(tenantId, eventType);
+    if (!template || !template.enabled) {
+      console.warn(`[notification-trigger] Public: Template "${eventType}" ${!template ? 'not found' : 'is disabled'} — skipping`);
+      return { success: true, skipped: true };
+    }
+
+    // Resolve email locale from settings
     const { data: tenant } = await supabaseAnon
       .from('tenants')
       .select('settings')
@@ -157,17 +194,6 @@ export async function triggerPublicEmailNotification(
       .single();
 
     const rhSettings = (tenant?.settings as any)?.returnsHub;
-    if (!rhSettings?.notifications?.emailEnabled) {
-      return { success: true, skipped: true };
-    }
-
-    // Check template
-    const template = await getRhEmailTemplateByTenantId(tenantId, eventType);
-    if (!template || !template.enabled) {
-      return { success: true, skipped: true };
-    }
-
-    // Resolve email locale from settings
     const emailLocale = rhSettings?.notifications?.emailLocale || 'en';
 
     // Render subject (locale-aware) and body
@@ -183,6 +209,12 @@ export async function triggerPublicEmailNotification(
       renderedBody = renderTemplate(template.htmlTemplate, ctx);
     } else {
       renderedBody = renderTemplate(template.bodyTemplate, ctx);
+    }
+
+    // Dedup: skip if same email was already sent in the last 60s
+    if (await isDuplicate(supabaseAnon, eventType, ctx.recipientEmail, ctx.returnId, ctx.ticketId)) {
+      console.log(`[notification-trigger] Public dedup: "${eventType}" to "${ctx.recipientEmail}" already sent recently — skipping`);
+      return { success: true, skipped: true };
     }
 
     // Create notification record (use anon client for public context)

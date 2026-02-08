@@ -557,47 +557,60 @@ async function executeAction(
       case 'email_send_template': {
         // Builder saves templateId (UUID), engine needs templateEventType (string).
         // Support both: resolve UUID → event_type via DB if needed.
+        console.log(`[workflow-engine] email_send_template — params:`, { templateId: params.templateId, templateEventType: params.templateEventType, recipientEmail: params.recipientEmail });
         let templateEventType = params.templateEventType as string | undefined;
         if (!templateEventType && params.templateId) {
-          const { data: tpl } = await supabase
+          const { data: tpl, error: tplErr } = await supabase
             .from('rh_email_templates')
             .select('event_type')
             .eq('id', params.templateId as string)
             .single();
+          if (tplErr) console.warn(`[workflow-engine] email_send_template — template lookup failed for ID "${params.templateId}":`, tplErr.message);
           templateEventType = tpl?.event_type;
+        }
+        if (!templateEventType) {
+          console.warn(`[workflow-engine] email_send_template — no templateEventType resolved (templateId: ${params.templateId}) — skipping`);
+          break;
         }
         const customer = ctx.customer || (ctx.customerId ? await getRhCustomer(ctx.customerId) : null);
         const recipientEmail = (params.recipientEmail as string) || customer?.email;
-        if (templateEventType && recipientEmail) {
-          await triggerEmailNotification(templateEventType as Parameters<typeof triggerEmailNotification>[0], {
-            recipientEmail,
-            customerName: customer ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : '',
-            returnNumber: ctx.return?.returnNumber,
-            status: ctx.return?.status,
-            ticketNumber: ctx.ticket?.ticketNumber,
-            subject: ctx.ticket?.subject,
-            returnId: ctx.returnId,
-            ticketId: ctx.ticketId,
-            customerId: ctx.customerId,
-          });
+        if (!recipientEmail) {
+          console.warn(`[workflow-engine] email_send_template — no recipientEmail (customerId: ${ctx.customerId}, customer email: ${customer?.email}) — skipping`);
+          break;
         }
+        console.log(`[workflow-engine] email_send_template — sending "${templateEventType}" to "${recipientEmail}"`);
+        const emailResult = await triggerEmailNotification(templateEventType as Parameters<typeof triggerEmailNotification>[0], {
+          recipientEmail,
+          customerName: customer ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : '',
+          returnNumber: ctx.return?.returnNumber,
+          status: ctx.return?.status,
+          ticketNumber: ctx.ticket?.ticketNumber,
+          subject: ctx.ticket?.subject,
+          returnId: ctx.returnId,
+          ticketId: ctx.ticketId,
+          customerId: ctx.customerId,
+        });
+        console.log(`[workflow-engine] email_send_template — result:`, emailResult);
         break;
       }
 
       case 'email_send_custom': {
         const customer = ctx.customer || (ctx.customerId ? await getRhCustomer(ctx.customerId) : null);
         const recipientEmail = (params.recipientEmail as string) || customer?.email;
-        if (recipientEmail) {
-          await createRhNotification({
-            channel: 'email',
-            returnId: ctx.returnId,
-            ticketId: ctx.ticketId,
-            customerId: ctx.customerId,
-            subject: (params.subject as string) || 'Workflow Notification',
-            content: (params.content || params.body) as string || '',
-            metadata: { source: 'workflow', recipientEmail },
-          });
+        if (!recipientEmail) {
+          console.warn(`[workflow-engine] email_send_custom — no recipientEmail (customerId: ${ctx.customerId}) — skipping`);
+          break;
         }
+        console.log(`[workflow-engine] email_send_custom — sending to "${recipientEmail}"`);
+        await createRhNotification({
+          channel: 'email',
+          returnId: ctx.returnId,
+          ticketId: ctx.ticketId,
+          customerId: ctx.customerId,
+          subject: (params.subject as string) || 'Workflow Notification',
+          content: (params.content || params.body) as string || '',
+          metadata: { source: 'workflow', recipientEmail },
+        });
         break;
       }
 
