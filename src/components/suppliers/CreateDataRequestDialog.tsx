@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff, Loader2, Copy, Check } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Copy, Check, Search, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -24,8 +25,8 @@ import { createSupplierDataRequest } from '@/services/supabase/supplier-data-por
 interface CreateDataRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productId: string;
-  productName: string;
+  initialProducts?: Array<{ id: string; name: string }>;
+  allProducts?: Array<{ id: string; name: string }>;
   suppliers?: Array<{ id: string; name: string }>;
   onCreated?: () => void;
 }
@@ -41,14 +42,16 @@ async function hashPassword(password: string): Promise<string> {
 export function CreateDataRequestDialog({
   open,
   onOpenChange,
-  productId,
-  productName,
+  initialProducts = [],
+  allProducts = [],
   suppliers = [],
   onCreated,
 }: CreateDataRequestDialogProps) {
   const { t } = useTranslation('supplier-data-portal');
   const { toast } = useToast();
 
+  const [selectedProducts, setSelectedProducts] = useState<Array<{ id: string; name: string }>>(initialProducts);
+  const [productSearch, setProductSearch] = useState('');
   const [supplierId, setSupplierId] = useState<string>('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +65,24 @@ export function CreateDataRequestDialog({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  const canSubmit = password.length >= 4 && (allowedProductFields.length > 0 || allowedBatchFields.length > 0);
+  const canSubmit = password.length >= 4 && selectedProducts.length > 0 && (allowedProductFields.length > 0 || allowedBatchFields.length > 0);
+
+  // Filter products for the search
+  const filteredProducts = useMemo(() => {
+    if (!productSearch.trim()) return allProducts;
+    const q = productSearch.toLowerCase();
+    return allProducts.filter(p => p.name.toLowerCase().includes(q));
+  }, [allProducts, productSearch]);
+
+  const toggleProduct = (product: { id: string; name: string }) => {
+    setSelectedProducts(prev => {
+      const exists = prev.some(p => p.id === product.id);
+      if (exists) return prev.filter(p => p.id !== product.id);
+      return [...prev, product];
+    });
+  };
+
+  const isProductSelected = (id: string) => selectedProducts.some(p => p.id === id);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -73,7 +93,7 @@ export function CreateDataRequestDialog({
       const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
 
       const result = await createSupplierDataRequest({
-        productId,
+        productIds: selectedProducts.map(p => p.id),
         supplierId: supplierId || null,
         passwordHash,
         allowedProductFields,
@@ -116,6 +136,8 @@ export function CreateDataRequestDialog({
     onOpenChange(false);
     // Reset form after animation
     setTimeout(() => {
+      setSelectedProducts(initialProducts);
+      setProductSearch('');
       setSupplierId('');
       setPassword('');
       setMessage('');
@@ -156,10 +178,67 @@ export function CreateDataRequestDialog({
           </div>
         ) : (
           <div className="space-y-6 py-2">
-            {/* Product (read-only) */}
+            {/* Product Selection */}
             <div className="space-y-2">
-              <Label>{t('Product')}</Label>
-              <Input value={productName} readOnly className="bg-muted" />
+              <Label>{t('Products')}</Label>
+
+              {/* Selected products badges */}
+              {selectedProducts.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedProducts.map(p => (
+                    <Badge key={p.id} variant="secondary" className="gap-1 pr-1">
+                      {p.name}
+                      <button
+                        type="button"
+                        onClick={() => toggleProduct(p)}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Product search + list */}
+              {allProducts.length > 1 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={productSearch}
+                      onChange={e => setProductSearch(e.target.value)}
+                      placeholder={t('Search products...')}
+                      className="border-0 border-b rounded-none pl-8 focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto">
+                    {filteredProducts.length === 0 ? (
+                      <p className="p-3 text-sm text-muted-foreground text-center">{t('No products found')}</p>
+                    ) : (
+                      filteredProducts.map(p => (
+                        <label
+                          key={p.id}
+                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 cursor-pointer text-sm"
+                        >
+                          <Checkbox
+                            checked={isProductSelected(p.id)}
+                            onCheckedChange={() => toggleProduct(p)}
+                          />
+                          <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">{p.name}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selectedProducts.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('{{count}} products selected', { count: selectedProducts.length })}
+                </p>
+              )}
             </div>
 
             {/* Supplier (optional) */}

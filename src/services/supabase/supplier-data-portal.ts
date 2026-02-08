@@ -13,11 +13,15 @@ import type {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformDataRequest(row: any): SupplierDataRequest {
+  // product_ids is JSONB array of UUID strings
+  const productIds: string[] = Array.isArray(row.product_ids) ? row.product_ids : [];
+
   return {
     id: row.id,
     tenantId: row.tenant_id,
     supplierId: row.supplier_id,
-    productId: row.product_id,
+    productId: row.product_id || productIds[0] || null,
+    productIds,
     accessCode: row.access_code,
     passwordHash: row.password_hash,
     allowedProductFields: row.allowed_product_fields || [],
@@ -33,6 +37,7 @@ function transformDataRequest(row: any): SupplierDataRequest {
     updatedAt: row.updated_at,
     // Joined fields
     productName: row.products?.name,
+    productNames: row._productNames,
     supplierName: row.suppliers?.name,
   };
 }
@@ -45,19 +50,51 @@ function transformDataRequest(row: any): SupplierDataRequest {
 export async function getSupplierDataRequests(productId?: string): Promise<SupplierDataRequest[]> {
   const tenantId = await getCurrentTenantId();
 
-  let query = supabase
+  const { data, error } = await supabase
     .from('supplier_data_requests')
     .select('*, products(name), suppliers(name)')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
+  if (error) throw error;
+  if (!data) return [];
+
+  // Filter by productId if provided (check product_ids JSONB array)
+  let filtered = data;
   if (productId) {
-    query = query.eq('product_id', productId);
+    filtered = data.filter((row: any) => {
+      const ids: string[] = Array.isArray(row.product_ids) ? row.product_ids : [];
+      return ids.includes(productId) || row.product_id === productId;
+    });
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data ? data.map(transformDataRequest) : [];
+  // Resolve product names for multi-product requests
+  const allProductIds = new Set<string>();
+  for (const row of filtered) {
+    const ids: string[] = Array.isArray(row.product_ids) ? row.product_ids : [];
+    ids.forEach(id => allProductIds.add(id));
+  }
+
+  let productNameMap: Record<string, string> = {};
+  if (allProductIds.size > 0) {
+    const { data: products } = await supabase
+      .from('products')
+      .select('id, name')
+      .in('id', Array.from(allProductIds));
+
+    if (products) {
+      productNameMap = Object.fromEntries(products.map(p => [p.id, p.name]));
+    }
+  }
+
+  return filtered.map((row: any) => {
+    const ids: string[] = Array.isArray(row.product_ids) ? row.product_ids : [];
+    const names = ids.map(id => productNameMap[id]).filter(Boolean);
+    return transformDataRequest({
+      ...row,
+      _productNames: names,
+    });
+  });
 }
 
 /**
@@ -80,7 +117,8 @@ export async function createSupplierDataRequest(
       id,
       tenant_id: tenantId,
       supplier_id: params.supplierId || null,
-      product_id: params.productId,
+      product_id: params.productIds[0] || null,
+      product_ids: params.productIds,
       access_code: accessCode,
       password_hash: params.passwordHash,
       allowed_product_fields: params.allowedProductFields,
@@ -103,10 +141,22 @@ export async function createSupplierDataRequest(
 
   if (fetchError) throw fetchError;
 
+  // Resolve product names
+  let productNames: string[] = [];
+  if (params.productIds.length > 0) {
+    const { data: products } = await supabase
+      .from('products')
+      .select('id, name')
+      .in('id', params.productIds);
+    if (products) {
+      productNames = params.productIds.map(pid => products.find(p => p.id === pid)?.name).filter(Boolean) as string[];
+    }
+  }
+
   const url = `${window.location.origin}/suppliers/data/${accessCode}`;
 
   return {
-    dataRequest: transformDataRequest(created),
+    dataRequest: transformDataRequest({ ...created, _productNames: productNames }),
     url,
   };
 }
@@ -146,20 +196,36 @@ export async function getSupplierDataRequestByCode(
 ): Promise<PublicSupplierDataRequestResult | null> {
   const { data, error } = await supabase
     .from('supplier_data_requests')
-    .select('*, products(id, name), tenants:tenant_id(id, name, slug, settings)')
+    .select('*, tenants:tenant_id(id, name, slug, settings)')
     .eq('access_code', accessCode)
     .single();
 
   if (error || !data) return null;
 
   const tenant = data.tenants as any;
-  const product = data.products as any;
   const branding = tenant?.settings?.branding || {};
+  const productIds: string[] = Array.isArray(data.product_ids) ? data.product_ids : [];
+
+  // Fetch all product names
+  let products: Array<{ id: string; name: string }> = [];
+  if (productIds.length > 0) {
+    const { data: productRows } = await supabase
+      .from('products')
+      .select('id, name')
+      .in('id', productIds);
+
+    if (productRows) {
+      // Maintain order from product_ids
+      products = productIds
+        .map(pid => productRows.find(p => p.id === pid))
+        .filter(Boolean) as Array<{ id: string; name: string }>;
+    }
+  }
 
   return {
-    dataRequest: transformDataRequest({ ...data, products: product, suppliers: null }),
+    dataRequest: transformDataRequest({ ...data, suppliers: null, _productNames: products.map(p => p.name) }),
     tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug },
-    product: { id: product.id, name: product.name },
+    products,
     branding: {
       logoUrl: branding.logoUrl,
       primaryColor: branding.primaryColor,
@@ -168,15 +234,16 @@ export async function getSupplierDataRequestByCode(
 }
 
 /**
- * Load product data for the data request portal (anon)
+ * Load product data for a specific product in the data request portal (anon)
  */
 export async function publicGetProductForDataRequest(
   accessCode: string,
+  productId?: string,
 ): Promise<{ product: Record<string, unknown>; batches: Record<string, unknown>[] } | null> {
   // First verify the data request
   const { data: req, error: reqError } = await supabase
     .from('supplier_data_requests')
-    .select('product_id, allowed_product_fields, allowed_batch_fields, status, expires_at')
+    .select('product_id, product_ids, allowed_product_fields, allowed_batch_fields, status, expires_at')
     .eq('access_code', accessCode)
     .single();
 
@@ -184,11 +251,20 @@ export async function publicGetProductForDataRequest(
   if (req.status === 'expired' || req.status === 'cancelled') return null;
   if (new Date(req.expires_at) < new Date()) return null;
 
+  // Determine which product to load
+  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
+  const targetProductId = productId || productIds[0] || req.product_id;
+
+  if (!targetProductId) return null;
+
+  // Verify the product is part of this request
+  if (productIds.length > 0 && !productIds.includes(targetProductId)) return null;
+
   // Load product
   const { data: product, error: productError } = await supabase
     .from('products')
     .select('*')
-    .eq('id', req.product_id)
+    .eq('id', targetProductId)
     .single();
 
   if (productError || !product) return null;
@@ -197,7 +273,7 @@ export async function publicGetProductForDataRequest(
   const { data: batches, error: batchesError } = await supabase
     .from('product_batches')
     .select('*')
-    .eq('product_id', req.product_id)
+    .eq('product_id', targetProductId)
     .order('created_at', { ascending: false });
 
   if (batchesError) return null;
@@ -213,6 +289,7 @@ export async function publicSubmitProductData(
   accessCode: string,
   passwordHash: string,
   data: Record<string, unknown>,
+  productId?: string,
 ): Promise<void> {
   // Verify request + password
   const { data: req, error: reqError } = await supabase
@@ -228,6 +305,15 @@ export async function publicSubmitProductData(
   }
   if (new Date(req.expires_at) < new Date()) throw new Error('Data request has expired');
 
+  // Determine target product
+  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
+  const targetProductId = productId || productIds[0] || req.product_id;
+
+  if (!targetProductId) throw new Error('No product specified');
+  if (productIds.length > 0 && !productIds.includes(targetProductId)) {
+    throw new Error('Product not part of this data request');
+  }
+
   // Filter to only allowed fields and convert to DB columns
   const filteredData = filterProductFieldsToColumns(data, req.allowed_product_fields || []);
 
@@ -235,7 +321,7 @@ export async function publicSubmitProductData(
     const { error } = await supabase
       .from('products')
       .update(filteredData)
-      .eq('id', req.product_id);
+      .eq('id', targetProductId);
 
     if (error) throw error;
   }
@@ -249,6 +335,7 @@ export async function publicSubmitBatchData(
   passwordHash: string,
   batchId: string,
   data: Record<string, unknown>,
+  productId?: string,
 ): Promise<void> {
   const { data: req, error: reqError } = await supabase
     .from('supplier_data_requests')
@@ -264,6 +351,12 @@ export async function publicSubmitBatchData(
   }
   if (new Date(req.expires_at) < new Date()) throw new Error('Data request has expired');
 
+  // Determine target product
+  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
+  const targetProductId = productId || productIds[0] || req.product_id;
+
+  if (!targetProductId) throw new Error('No product specified');
+
   const filteredData = filterBatchFieldsToColumns(data, req.allowed_batch_fields || []);
 
   if (Object.keys(filteredData).length > 0) {
@@ -271,7 +364,7 @@ export async function publicSubmitBatchData(
       .from('product_batches')
       .update(filteredData)
       .eq('id', batchId)
-      .eq('product_id', req.product_id);
+      .eq('product_id', targetProductId);
 
     if (error) throw error;
   }
@@ -284,6 +377,7 @@ export async function publicCreateBatch(
   accessCode: string,
   passwordHash: string,
   data: Record<string, unknown>,
+  productId?: string,
 ): Promise<string> {
   const { data: req, error: reqError } = await supabase
     .from('supplier_data_requests')
@@ -299,6 +393,12 @@ export async function publicCreateBatch(
   }
   if (new Date(req.expires_at) < new Date()) throw new Error('Data request has expired');
 
+  // Determine target product
+  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
+  const targetProductId = productId || productIds[0] || req.product_id;
+
+  if (!targetProductId) throw new Error('No product specified');
+
   const filteredData = filterBatchFieldsToColumns(data, req.allowed_batch_fields || []);
 
   const batchId = crypto.randomUUID();
@@ -308,7 +408,7 @@ export async function publicCreateBatch(
     .insert({
       id: batchId,
       tenant_id: req.tenant_id,
-      product_id: req.product_id,
+      product_id: targetProductId,
       serial_number: (data.serialNumber as string) || crypto.randomUUID().slice(0, 8),
       ...filteredData,
     });

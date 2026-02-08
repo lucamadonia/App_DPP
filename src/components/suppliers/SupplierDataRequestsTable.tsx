@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Check, XCircle, Trash2, ExternalLink } from 'lucide-react';
+import { Copy, Check, XCircle, Trash2, ExternalLink, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -28,6 +34,54 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 
 interface SupplierDataRequestsTableProps {
   requests: SupplierDataRequest[];
   onRefresh: () => void;
+}
+
+function ProductsCell({ req }: { req: SupplierDataRequest }) {
+  const names = req.productNames || (req.productName ? [req.productName] : []);
+  const count = names.length || req.productIds.length;
+
+  if (count === 0) return <span className="text-muted-foreground">—</span>;
+
+  if (count === 1) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="truncate max-w-[200px]">{names[0] || req.productIds[0]?.slice(0, 8)}</span>
+      </div>
+    );
+  }
+
+  // Multiple products — show first 2 names + tooltip with full list
+  const displayNames = names.slice(0, 2);
+  const remaining = count - 2;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1.5 cursor-default">
+            <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate max-w-[200px]">
+              {displayNames.join(', ')}
+              {remaining > 0 && (
+                <span className="text-muted-foreground"> +{remaining}</span>
+              )}
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 shrink-0">
+              {count}
+            </Badge>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="start">
+          <div className="space-y-0.5">
+            {names.map((name, i) => (
+              <div key={i} className="text-xs">{name}</div>
+            ))}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function SupplierDataRequestsTable({ requests, onRefresh }: SupplierDataRequestsTableProps) {
@@ -78,6 +132,7 @@ export function SupplierDataRequestsTable({ requests, onRefresh }: SupplierDataR
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>{t('Products')}</TableHead>
           <TableHead>{t('Supplier')}</TableHead>
           <TableHead>{t('Status')}</TableHead>
           <TableHead>{t('Created')}</TableHead>
@@ -89,6 +144,9 @@ export function SupplierDataRequestsTable({ requests, onRefresh }: SupplierDataR
         {requests.map((req) => (
           <TableRow key={req.id}>
             <TableCell className="font-medium">
+              <ProductsCell req={req} />
+            </TableCell>
+            <TableCell>
               {req.supplierName || '—'}
             </TableCell>
             <TableCell>

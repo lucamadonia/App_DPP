@@ -57,7 +57,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getProductById, getProductSuppliersWithDetails, getProductImages, getProductComponents, getProductsContaining } from '@/services/supabase';
+import { getProductById, getProducts, getProductSuppliersWithDetails, getProductImages, getProductComponents, getProductsContaining } from '@/services/supabase';
 import { getBatches, deleteBatch, getBatchCostsBySupplier } from '@/services/supabase/batches';
 import type { SupplierBatchCost } from '@/services/supabase/batches';
 import type { Product, ProductComponent } from '@/types/product';
@@ -107,6 +107,7 @@ export function ProductPage() {
   const [supplierCosts, setSupplierCosts] = useState<SupplierBatchCost[]>([]);
   const [dataRequests, setDataRequests] = useState<SupplierDataRequest[]>([]);
   const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
+  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     async function loadProduct() {
@@ -153,6 +154,9 @@ export function ProductPage() {
 
       // Load supplier data requests
       getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
+
+      // Load all products for multi-product data request dialog
+      getProducts().then(list => setAllProducts(list.map(p => ({ id: p.id, name: p.name })))).catch(console.error);
     }
 
     loadProduct();
@@ -895,8 +899,8 @@ export function ProductPage() {
             <CreateDataRequestDialog
               open={showCreateDataRequest}
               onOpenChange={setShowCreateDataRequest}
-              productId={product.id}
-              productName={product.name}
+              initialProducts={[{ id: product.id, name: product.name }]}
+              allProducts={allProducts}
               suppliers={productSuppliers.map(sp => ({ id: sp.supplier_id, name: sp.supplier_name }))}
               onCreated={() => {
                 if (id) getSupplierDataRequests(id).then(setDataRequests).catch(console.error);

@@ -6,7 +6,8 @@
  */
 
 import { supabase, supabaseAnon } from '@/lib/supabase';
-import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings } from '@/types/returns-hub';
+import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings, ReturnStatus } from '@/types/returns-hub';
+import { triggerEmailNotification } from './rh-notification-trigger';
 import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput, CustomerReturnsFilter, CustomerTicketsFilter } from '@/types/customer-portal';
 import { generateReturnNumber, generateTicketNumber } from '@/lib/return-number';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
@@ -537,6 +538,61 @@ export async function getCustomerTicket(id: string): Promise<RhTicket | null> {
 
   if (error || !data) return null;
   return transformTicket(data);
+}
+
+const CANCELLABLE_STATUSES: ReturnStatus[] = ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'];
+
+export async function customerCancelReturn(
+  returnId: string,
+  reason: string
+): Promise<{ success: boolean; error?: string }> {
+  const ctx = await getCustomerContext();
+  if (!ctx) return { success: false, error: 'Not authenticated' };
+
+  // Fetch return and verify ownership
+  const { data: ret } = await supabase
+    .from('rh_returns')
+    .select('id, status, return_number, tenant_id, metadata')
+    .eq('id', returnId)
+    .eq('tenant_id', ctx.tenantId)
+    .eq('customer_id', ctx.customerId)
+    .single();
+
+  if (!ret) return { success: false, error: 'Return not found' };
+
+  if (!CANCELLABLE_STATUSES.includes(ret.status as ReturnStatus)) {
+    return { success: false, error: 'Return cannot be cancelled in current status' };
+  }
+
+  const { error: updateError } = await supabase
+    .from('rh_returns')
+    .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+    .eq('id', ret.id);
+
+  if (updateError) return { success: false, error: updateError.message };
+
+  // Add timeline entry
+  await supabase.from('rh_return_timeline').insert({
+    id: crypto.randomUUID(),
+    return_id: ret.id,
+    tenant_id: ret.tenant_id,
+    status: 'CANCELLED',
+    comment: reason,
+    actor_type: 'customer',
+  });
+
+  // Trigger email notification
+  const email = (ret.metadata as Record<string, unknown>)?.email as string;
+  if (email) {
+    triggerEmailNotification('return_cancelled', {
+      recipientEmail: email,
+      returnNumber: ret.return_number,
+      status: 'CANCELLED',
+      reason,
+    }).catch(console.error);
+  }
+
+  return { success: true };
 }
 
 export async function createCustomerTicket(params: {

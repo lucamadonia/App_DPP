@@ -419,5 +419,15 @@
   "footer.legal.terms": "Terms of Service",
   "footer.legal.imprint": "Imprint",
   "footer.copyright": "© {{year}} Trackbliss — a brand of MYFAMBLISS GROUP LTD, Gladstonos 12-14, 8042 Paphos, Cyprus. All rights reserved.",
-  "footer.language": "Language"
+  "footer.language": "Language",
+
+  "team.badge": "Behind the Scenes",
+  "team.headline": "Built for Teams That Move Products",
+  "team.description": "From the office to the warehouse — Trackbliss connects every step of your product journey with digital traceability and compliance.",
+  "team.collaboration.title": "Team Collaboration",
+  "team.collaboration.description": "Plan, track and manage digital product passports together — from product data to compliance checks.",
+  "team.collaboration.alt": "Team collaborating with Trackbliss on laptop and mobile",
+  "team.operations.title": "Daily Operations",
+  "team.operations.description": "Scan, verify and track every product in real-time — directly from the warehouse floor.",
+  "team.operations.alt": "Warehouse team scanning products with Trackbliss"
 }

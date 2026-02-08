@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
@@ -15,7 +17,7 @@ import { EmptyState } from '@/components/returns/EmptyState';
 import { relativeTime } from '@/lib/animations';
 import {
   getReturn, getReturnItems, getReturnTimeline,
-  updateReturnStatus, updateReturn,
+  updateReturnStatus, updateReturn, cancelReturn,
 } from '@/services/supabase';
 import type { RhReturn, RhReturnItem, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
 
@@ -30,6 +32,10 @@ export function ReturnDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [refundAmount, setRefundAmount] = useState('');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -121,8 +127,30 @@ export function ReturnDetailPage() {
 
   const canApprove = ['CREATED', 'PENDING_APPROVAL'].includes(returnData.status);
   const canReject = ['CREATED', 'PENDING_APPROVAL'].includes(returnData.status);
+  const canCancel = ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'].includes(returnData.status);
   const canInspect = ['DELIVERED'].includes(returnData.status);
   const canRefund = ['INSPECTION_IN_PROGRESS', 'APPROVED'].includes(returnData.status);
+
+  const handleCancel = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    await cancelReturn(id, cancelReason || undefined);
+    const [ret, tl] = await Promise.all([getReturn(id), getReturnTimeline(id)]);
+    setReturnData(ret);
+    setTimeline(tl);
+    setActionLoading(false);
+    setCancelDialogOpen(false);
+    setCancelReason('');
+  };
+
+  const handleReject = async () => {
+    if (!id || !rejectReason.trim()) return;
+    setActionLoading(true);
+    await handleStatusChange('REJECTED', rejectReason.trim());
+    setActionLoading(false);
+    setRejectDialogOpen(false);
+    setRejectReason('');
+  };
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -148,8 +176,13 @@ export function ReturnDetailPage() {
             </Button>
           )}
           {canReject && (
-            <Button size="sm" variant="destructive" onClick={() => handleStatusChange('REJECTED', t('Return rejected'))} disabled={actionLoading}>
+            <Button size="sm" variant="destructive" onClick={() => setRejectDialogOpen(true)} disabled={actionLoading}>
               <XCircle className="h-4 w-4 mr-1" /> {t('Reject')}
+            </Button>
+          )}
+          {canCancel && (
+            <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setCancelDialogOpen(true)} disabled={actionLoading}>
+              <Ban className="h-4 w-4 mr-1" /> {t('Cancel Return')}
             </Button>
           )}
           {canInspect && (
@@ -275,6 +308,51 @@ export function ReturnDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Cancel Return')}</DialogTitle>
+            <DialogDescription>
+              {t('Are you sure you want to cancel this return? This action cannot be undone.')}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder={t('Enter reason for cancellation...')}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+            <Button variant="destructive" onClick={handleCancel} disabled={actionLoading}>
+              <Ban className="h-4 w-4 mr-1" /> {t('Cancel Return')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Reject Return')}</DialogTitle>
+            <DialogDescription>
+              {t('Please provide a reason for rejecting this return.')}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder={t('Enter reason for rejection...')}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            required
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={actionLoading || !rejectReason.trim()}>
+              <XCircle className="h-4 w-4 mr-1" /> {t('Reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

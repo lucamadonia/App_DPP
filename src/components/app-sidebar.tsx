@@ -213,26 +213,12 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
-        <Link to="/" className="flex items-center gap-3">
-          {branding.logo ? (
-            <img
-              src={branding.logo}
-              alt={branding.appName}
-              className="h-9 w-9 rounded-lg object-contain"
-            />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <FileText className="h-5 w-5" />
-            </div>
-          )}
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-sidebar-foreground">
-              {branding.appName}
-            </span>
-            <span className="text-xs text-sidebar-foreground/60">
-              {t('Digital Product Passport')}
-            </span>
-          </div>
+        <Link to="/" className="flex items-center">
+          <img
+            src={branding.logo || '/trackbliss-logo.png'}
+            alt={branding.appName}
+            className="h-12 object-contain"
+          />
         </Link>
       </SidebarHeader>
 

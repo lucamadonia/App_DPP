@@ -748,6 +748,51 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
       },
     },
   },
+  {
+    eventType: 'return_cancelled',
+    category: 'returns',
+    name: 'Return Cancelled',
+    description: 'Sent when a return is cancelled by admin or customer',
+    subjectTemplate: 'Return {{returnNumber}} - Cancelled',
+    bodyTemplate:
+      'Dear {{customerName}},\n\nYour return {{returnNumber}} has been cancelled.\n\nReason: {{reason}}\n\nIf you have any questions, please contact our support team.\n\nBest regards',
+    sortOrder: 16,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Dear {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 8 },
+        { type: 'text', id: makeId(), content: 'We would like to inform you that your return has been cancelled.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'info-box', id: makeId(), label: 'Return Number', value: '{{returnNumber}}', backgroundColor: '#fefce8', borderColor: '#d97706' },
+        { type: 'info-box', id: makeId(), label: 'Reason', value: '{{reason}}', backgroundColor: '#fefce8', borderColor: '#d97706' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'If you would like to create a new return or have any questions, please do not hesitate to contact our support team.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Best regards,\nYour Returns Team' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        de: {
+          subjectTemplate: 'Retoure {{returnNumber}} - Storniert',
+          footerText: DEFAULT_FOOTER_DE.text,
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Sehr geehrte(r) {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 8 },
+            { type: 'text', id: makeId(), content: 'Wir möchten Sie darüber informieren, dass Ihre Retoure storniert wurde.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'info-box', id: makeId(), label: 'Retourennummer', value: '{{returnNumber}}', backgroundColor: '#fefce8', borderColor: '#d97706' },
+            { type: 'info-box', id: makeId(), label: 'Grund', value: '{{reason}}', backgroundColor: '#fefce8', borderColor: '#d97706' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Wenn Sie eine neue Retoure erstellen möchten oder Fragen haben, wenden Sie sich bitte an unseren Kundenservice.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Mit freundlichen Grüßen,\nIhr Retouren-Team' },
+          ],
+        },
+      },
+    },
+  },
 ];
 
 export function getDefaultTemplate(eventType: RhNotificationEventType) {

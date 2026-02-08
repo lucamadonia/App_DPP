@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Package, Download, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Download, MessageSquare, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
-import { getCustomerReturn, createCustomerTicket } from '@/services/supabase/customer-portal';
+import { getCustomerReturn, createCustomerTicket, customerCancelReturn } from '@/services/supabase/customer-portal';
 import { supabase } from '@/lib/supabase';
 import type { RhReturn, RhReturnItem, RhReturnTimeline, ReturnStatus } from '@/types/returns-hub';
 
@@ -23,6 +25,9 @@ export function CustomerReturnDetailPage() {
   const [timeline, setTimeline] = useState<RhReturnTimeline[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingTicket, setCreatingTicket] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -75,6 +80,20 @@ export function CustomerReturnDetailPage() {
     setCreatingTicket(false);
   };
 
+  const canCancel = returnData && ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'].includes(returnData.status);
+
+  const handleCancelReturn = async () => {
+    if (!returnData || !cancelReason.trim()) return;
+    setCancelLoading(true);
+    const result = await customerCancelReturn(returnData.id, cancelReason.trim());
+    if (result.success) {
+      await loadData();
+    }
+    setCancelLoading(false);
+    setCancelDialogOpen(false);
+    setCancelReason('');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -108,14 +127,22 @@ export function CustomerReturnDetailPage() {
             {t('Created on {{date}}', { date: new Date(returnData.createdAt).toLocaleDateString() })}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleContactSupport} disabled={creatingTicket}>
-          {creatingTicket ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <MessageSquare className="h-4 w-4 mr-2" />
+        <div className="flex gap-2">
+          {canCancel && (
+            <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setCancelDialogOpen(true)}>
+              <Ban className="h-4 w-4 mr-2" />
+              {t('Cancel Return')}
+            </Button>
           )}
-          {t('Contact Support')}
-        </Button>
+          <Button variant="outline" size="sm" onClick={handleContactSupport} disabled={creatingTicket}>
+            {creatingTicket ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <MessageSquare className="h-4 w-4 mr-2" />
+            )}
+            {t('Contact Support')}
+          </Button>
+        </div>
       </div>
 
       {/* Status Pipeline */}
@@ -221,6 +248,30 @@ export function CustomerReturnDetailPage() {
           <AnimatedTimeline entries={timeline} />
         </CardContent>
       </Card>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Cancel Return')}</DialogTitle>
+            <DialogDescription>
+              {t('Are you sure you want to cancel this return? This action cannot be undone.')}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder={t('Please tell us why you want to cancel...')}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            required
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+            <Button variant="destructive" onClick={handleCancelReturn} disabled={cancelLoading || !cancelReason.trim()}>
+              {cancelLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Ban className="h-4 w-4 mr-1" />}
+              {t('Cancel Return')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

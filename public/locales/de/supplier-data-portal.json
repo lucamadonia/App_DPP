@@ -164,5 +164,13 @@
   "This data helps ensure your product meets EU sustainability and transparency requirements.": "Diese Daten helfen sicherzustellen, dass Ihr Produkt die EU-Anforderungen an Nachhaltigkeit und Transparenz erfüllt.",
   "e.g. Cotton": "z.B. Baumwolle",
   "e.g. Germany": "z.B. Deutschland",
-  "e.g. ISO 9001": "z.B. ISO 9001"
+  "e.g. ISO 9001": "z.B. ISO 9001",
+  "Products": "Produkte",
+  "{{count}} products selected": "{{count}} Produkte ausgewählt",
+  "Search products...": "Produkte suchen...",
+  "No products found": "Keine Produkte gefunden",
+  "{{count}} products": "{{count}} Produkte",
+  "Product {{current}} of {{total}}": "Produkt {{current}} von {{total}}",
+  "{{filled}} of {{total}} fields across {{count}} products": "{{filled}} von {{total}} Feldern über {{count}} Produkte",
+  "Loading products...": "Produkte werden geladen..."
 }

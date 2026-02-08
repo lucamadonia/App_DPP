@@ -256,6 +256,8 @@ export {
   updateReturnStatus,
   approveReturn,
   rejectReturn,
+  cancelReturn,
+  publicCancelReturn,
   getReturnStats,
   publicCreateReturn,
   publicTrackReturn,

@@ -4,7 +4,8 @@ export interface SupplierDataRequest {
   id: string;
   tenantId: string;
   supplierId?: string | null;
-  productId: string;
+  productId: string | null;
+  productIds: string[];
   accessCode: string;
   passwordHash: string;
   allowedProductFields: string[];
@@ -20,11 +21,12 @@ export interface SupplierDataRequest {
   updatedAt: string;
   // Joined fields (from list queries)
   productName?: string;
+  productNames?: string[];
   supplierName?: string;
 }
 
 export interface CreateSupplierDataRequestParams {
-  productId: string;
+  productIds: string[];
   supplierId?: string | null;
   passwordHash: string;
   allowedProductFields: string[];
@@ -38,7 +40,7 @@ export interface CreateSupplierDataRequestParams {
 export interface PublicSupplierDataRequestResult {
   dataRequest: SupplierDataRequest;
   tenant: { id: string; name: string; slug: string };
-  product: { id: string; name: string };
+  products: Array<{ id: string; name: string }>;
   branding: { logoUrl?: string; primaryColor?: string };
 }
 

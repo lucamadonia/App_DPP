@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Search, SearchX, Download, MessageSquare, Package } from 'lucide-react';
+import { Loader2, Search, SearchX, Download, MessageSquare, Package, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
-import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding } from '@/services/supabase';
+import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding, publicCancelReturn } from '@/services/supabase';
 import { supabaseAnon } from '@/lib/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import type { RhReturn, RhReturnTimeline as TimelineType, CustomerPortalBrandingOverrides } from '@/types/returns-hub';
@@ -34,6 +36,9 @@ export function PublicReturnTrackingPage() {
   const [timeline, setTimeline] = useState<TimelineType[]>([]);
   const [items, setItems] = useState<ReturnItem[]>([]);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
   const [branding, setBranding] = useState<CustomerPortalBrandingOverrides | null>(null);
@@ -121,6 +126,25 @@ export function PublicReturnTrackingPage() {
     exchange: 'Exchange',
     voucher: 'Voucher',
     repair: 'Repair',
+  };
+
+  const canCancel = returnData && ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'].includes(returnData.status) && email;
+
+  const handleCancelReturn = async () => {
+    if (!returnData || !email || !cancelReason.trim()) return;
+    setCancelLoading(true);
+    const result = await publicCancelReturn(returnData.returnNumber, email, cancelReason.trim());
+    if (result.success) {
+      // Refresh tracking data
+      const trackResult = await publicTrackReturn(returnData.returnNumber, email);
+      if (trackResult.returnData) {
+        setReturnData(trackResult.returnData);
+        setTimeline(trackResult.timeline as TimelineType[]);
+      }
+    }
+    setCancelLoading(false);
+    setCancelDialogOpen(false);
+    setCancelReason('');
   };
 
   // Simple branded header
@@ -343,6 +367,12 @@ export function PublicReturnTrackingPage() {
               <MessageSquare className="h-4 w-4 mr-2" />
               {t('Contact Support')}
             </Button>
+            {canCancel && (
+              <Button variant="outline" className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setCancelDialogOpen(true)}>
+                <Ban className="h-4 w-4 mr-2" />
+                {t('Cancel Return')}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -363,6 +393,31 @@ export function PublicReturnTrackingPage() {
         returnNumber={returnData.returnNumber}
         tenantSlug={tenantSlug}
       />
+
+      {/* Cancel Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Cancel Return')}</DialogTitle>
+            <DialogDescription>
+              {t('Are you sure you want to cancel this return? This action cannot be undone.')}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder={t('Please tell us why you want to cancel...')}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            required
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+            <Button variant="destructive" onClick={handleCancelReturn} disabled={cancelLoading || !cancelReason.trim()}>
+              {cancelLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Ban className="h-4 w-4 mr-1" />}
+              {t('Cancel Return')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
         </div>
       </main>
     </div>

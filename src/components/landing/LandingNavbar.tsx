@@ -93,11 +93,8 @@ export function LandingNavbar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2 group">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 text-white font-bold text-sm transition-shadow group-hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]">
-                TB
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Trackbliss</span>
+            <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group">
+              <img src="/trackbliss-logo.png" alt="Trackbliss" className="h-28 -my-6 object-contain transition-transform group-hover:scale-105" />
             </button>
 
             {/* Desktop Nav */}

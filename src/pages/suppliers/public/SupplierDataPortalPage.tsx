@@ -1,6 +1,7 @@
 /**
  * Public Supplier Data Portal
  * Password-protected page where suppliers fill in product/batch data
+ * Supports multi-product data requests with product tab navigation
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -485,6 +486,60 @@ function CategoryCard({ group, filledCount, totalCount, isOpen, onToggle, childr
   );
 }
 
+// ─── Product Tab Bar ────────────────────────────────────────────────────────
+
+interface ProductTabBarProps {
+  products: Array<{ id: string; name: string }>;
+  activeProductId: string;
+  onSelect: (id: string) => void;
+  primaryColor: string;
+  productProgress: Record<string, { filled: number; total: number }>;
+}
+
+function ProductTabBar({ products, activeProductId, onSelect, primaryColor, productProgress }: ProductTabBarProps) {
+  const { t } = useTranslation('supplier-data-portal');
+
+  if (products.length <= 1) return null;
+
+  return (
+    <div className="bg-white border rounded-xl p-1.5 overflow-x-auto">
+      <div className="flex gap-1 min-w-max">
+        {products.map((product, index) => {
+          const isActive = product.id === activeProductId;
+          const prog = productProgress[product.id];
+          const allDone = prog && prog.filled === prog.total && prog.total > 0;
+
+          return (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => onSelect(product.id)}
+              className={`
+                flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                ${isActive
+                  ? 'text-white shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                }
+              `}
+              style={isActive ? { backgroundColor: primaryColor } : undefined}
+            >
+              <span>{t('Product {{current}} of {{total}}', { current: index + 1, total: products.length })}</span>
+              {prog && (
+                <Badge
+                  variant={isActive ? 'outline' : 'secondary'}
+                  className={`text-[10px] px-1.5 py-0 h-5 ${isActive ? 'border-white/40 text-white/90' : ''}`}
+                >
+                  {allDone ? <CheckCircle2 className="h-3 w-3" /> : `${prog.filled}/${prog.total}`}
+                </Badge>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page Component ───────────────────────────────────────────────────
 
 export function SupplierDataPortalPage() {
@@ -505,11 +560,13 @@ export function SupplierDataPortalPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordHash, setPasswordHash] = useState('');
 
-  // Product/Batch data
-  const [productData, setProductData] = useState<Record<string, unknown>>({});
-  const [batches, setBatches] = useState<Record<string, unknown>[]>([]);
-  const [batchEdits, setBatchEdits] = useState<Record<string, Record<string, unknown>>>({});
-  const [newBatches, setNewBatches] = useState<Record<string, unknown>[]>([]);
+  // Multi-product state
+  const [activeProductId, setActiveProductId] = useState<string>('');
+  const [allProductData, setAllProductData] = useState<Record<string, Record<string, unknown>>>({});
+  const [allBatches, setAllBatches] = useState<Record<string, Record<string, unknown>[]>>({});
+  const [allBatchEdits, setAllBatchEdits] = useState<Record<string, Record<string, Record<string, unknown>>>>({});
+  const [allNewBatches, setAllNewBatches] = useState<Record<string, Record<string, unknown>[]>>({});
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   // UI states
   const [isSavingProduct, setIsSavingProduct] = useState(false);
@@ -535,6 +592,15 @@ export function SupplierDataPortalPage() {
     document.documentElement.lang = newLang;
     localStorage.setItem('dpp-language', newLang);
   };
+
+  // Convenience accessors for current product
+  const productData = allProductData[activeProductId] || {};
+  const batches = allBatches[activeProductId] || [];
+  const batchEdits = allBatchEdits[activeProductId] || {};
+  const newBatches = allNewBatches[activeProductId] || [];
+
+  const products = requestInfo?.products || [];
+  const isMultiProduct = products.length > 1;
 
   // Load data request info
   useEffect(() => {
@@ -569,6 +635,10 @@ export function SupplierDataPortalPage() {
         }
 
         setRequestInfo(result);
+        // Set first product as active
+        if (result.products.length > 0) {
+          setActiveProductId(result.products[0].id);
+        }
       } catch (err) {
         setError('not_found');
       }
@@ -578,9 +648,9 @@ export function SupplierDataPortalPage() {
     load();
   }, [accessCode]);
 
-  // Handle password check
+  // Handle password check — load all products data
   const handlePasswordSubmit = async () => {
-    if (!requestInfo) return;
+    if (!requestInfo || !accessCode) return;
 
     const hash = await hashPassword(passwordInput);
     if (hash === requestInfo.dataRequest.passwordHash) {
@@ -589,51 +659,64 @@ export function SupplierDataPortalPage() {
       setPasswordError(false);
 
       // Mark as in_progress
-      if (accessCode) {
-        publicMarkDataRequestInProgress(accessCode);
-      }
+      publicMarkDataRequestInProgress(accessCode);
 
-      // Load product data
-      if (accessCode) {
-        const data = await publicGetProductForDataRequest(accessCode);
+      // Load all products data
+      setIsLoadingProducts(true);
+      const productsToLoad = requestInfo.products;
+      const productDataMap: Record<string, Record<string, unknown>> = {};
+      const batchesMap: Record<string, Record<string, unknown>[]> = {};
+
+      for (const product of productsToLoad) {
+        const data = await publicGetProductForDataRequest(accessCode, product.id);
         if (data) {
-          setProductData(snakeToCamel(data.product));
-          setBatches(data.batches.map(b => snakeToCamel(b)));
+          productDataMap[product.id] = snakeToCamel(data.product);
+          batchesMap[product.id] = data.batches.map(b => snakeToCamel(b));
         }
       }
+
+      setAllProductData(productDataMap);
+      setAllBatches(batchesMap);
+      setIsLoadingProducts(false);
     } else {
       setPasswordError(true);
     }
   };
 
-  // Product field change
+  // Product field change (for current product)
   const handleProductFieldChange = (key: string, value: unknown) => {
-    setProductData(prev => ({ ...prev, [key]: value }));
-  };
-
-  // Batch field change
-  const handleBatchFieldChange = (batchId: string, key: string, value: unknown) => {
-    setBatchEdits(prev => ({
+    setAllProductData(prev => ({
       ...prev,
-      [batchId]: { ...prev[batchId], [key]: value },
+      [activeProductId]: { ...prev[activeProductId], [key]: value },
     }));
   };
 
-  // New batch field change
+  // Batch field change (for current product)
+  const handleBatchFieldChange = (batchId: string, key: string, value: unknown) => {
+    setAllBatchEdits(prev => ({
+      ...prev,
+      [activeProductId]: {
+        ...prev[activeProductId],
+        [batchId]: { ...(prev[activeProductId]?.[batchId] || {}), [key]: value },
+      },
+    }));
+  };
+
+  // New batch field change (for current product)
   const handleNewBatchFieldChange = (index: number, key: string, value: unknown) => {
-    setNewBatches(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [key]: value };
-      return updated;
+    setAllNewBatches(prev => {
+      const current = [...(prev[activeProductId] || [])];
+      current[index] = { ...current[index], [key]: value };
+      return { ...prev, [activeProductId]: current };
     });
   };
 
-  // Save product data
+  // Save product data (current product)
   const handleSaveProduct = async () => {
     if (!accessCode) return;
     setIsSavingProduct(true);
     try {
-      await publicSubmitProductData(accessCode, passwordHash, productData);
+      await publicSubmitProductData(accessCode, passwordHash, productData, activeProductId);
       toast({ title: t('Product data saved') });
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -641,13 +724,13 @@ export function SupplierDataPortalPage() {
     setIsSavingProduct(false);
   };
 
-  // Save batch data
+  // Save batch data (current product)
   const handleSaveBatch = async (batchId: string) => {
     if (!accessCode) return;
     setSavingBatchId(batchId);
     try {
       const edits = batchEdits[batchId] || {};
-      await publicSubmitBatchData(accessCode, passwordHash, batchId, edits);
+      await publicSubmitBatchData(accessCode, passwordHash, batchId, edits, activeProductId);
       toast({ title: t('Batch saved') });
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -655,44 +738,54 @@ export function SupplierDataPortalPage() {
     setSavingBatchId(null);
   };
 
-  // Create new batch
+  // Create new batch (current product)
   const handleCreateBatch = async (index: number) => {
     if (!accessCode) return;
     setSavingBatchId(`new-${index}`);
     try {
-      await publicCreateBatch(accessCode, passwordHash, newBatches[index]);
+      await publicCreateBatch(accessCode, passwordHash, newBatches[index], activeProductId);
       toast({ title: t('Batch created') });
-      // Reload data
-      const data = await publicGetProductForDataRequest(accessCode);
+      // Reload batches for this product
+      const data = await publicGetProductForDataRequest(accessCode, activeProductId);
       if (data) {
-        setBatches(data.batches.map(b => snakeToCamel(b)));
+        setAllBatches(prev => ({ ...prev, [activeProductId]: data.batches.map(b => snakeToCamel(b)) }));
       }
       // Remove the new batch form
-      setNewBatches(prev => prev.filter((_, i) => i !== index));
+      setAllNewBatches(prev => ({
+        ...prev,
+        [activeProductId]: (prev[activeProductId] || []).filter((_, i) => i !== index),
+      }));
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
     setSavingBatchId(null);
   };
 
-  // Submit all
+  // Submit all — save all products + batches, then mark as submitted
   const handleSubmitAll = async () => {
-    if (!accessCode) return;
+    if (!accessCode || !requestInfo) return;
     setIsSubmitting(true);
     try {
-      // Save product data first
-      await publicSubmitProductData(accessCode, passwordHash, productData);
-
-      // Save all batch edits
-      for (const [batchId, edits] of Object.entries(batchEdits)) {
-        if (Object.keys(edits).length > 0) {
-          await publicSubmitBatchData(accessCode, passwordHash, batchId, edits);
+      // Save all products
+      for (const product of requestInfo.products) {
+        const pData = allProductData[product.id];
+        if (pData) {
+          await publicSubmitProductData(accessCode, passwordHash, pData, product.id);
         }
-      }
 
-      // Create new batches
-      for (const newBatch of newBatches) {
-        await publicCreateBatch(accessCode, passwordHash, newBatch);
+        // Save batch edits for this product
+        const pBatchEdits = allBatchEdits[product.id] || {};
+        for (const [batchId, edits] of Object.entries(pBatchEdits)) {
+          if (Object.keys(edits).length > 0) {
+            await publicSubmitBatchData(accessCode, passwordHash, batchId, edits, product.id);
+          }
+        }
+
+        // Create new batches for this product
+        const pNewBatches = allNewBatches[product.id] || [];
+        for (const newBatch of pNewBatches) {
+          await publicCreateBatch(accessCode, passwordHash, newBatch, product.id);
+        }
       }
 
       // Mark as submitted
@@ -738,23 +831,55 @@ export function SupplierDataPortalPage() {
     }
   }, [isAuthenticated, visibleProductGroups, openCategories.size]);
 
-  // ─── Progress Calculation ─────────────────────────────────────────────
-  const progress = useMemo(() => {
+  // ─── Progress Calculation (per product) ─────────────────────────────────
+  const computeProductProgress = useCallback((pData: Record<string, unknown>) => {
     const allFields = visibleProductGroups.flatMap(g => g.fields);
     const totalCount = allFields.length;
-    const filledCount = allFields.filter(f => isFilled(productData[f.key])).length;
+    const filledCount = allFields.filter(f => isFilled(pData[f.key])).length;
     const percentage = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
 
     const perCategory: Record<string, { filled: number; total: number }> = {};
     for (const group of visibleProductGroups) {
-      const filled = group.fields.filter(f => isFilled(productData[f.key])).length;
+      const filled = group.fields.filter(f => isFilled(pData[f.key])).length;
       perCategory[group.category] = { filled, total: group.fields.length };
     }
 
     return { totalCount, filledCount, percentage, perCategory };
-  }, [visibleProductGroups, productData]);
+  }, [visibleProductGroups]);
+
+  // Current product progress
+  const progress = useMemo(() => computeProductProgress(productData), [computeProductProgress, productData]);
+
+  // Per-product progress map (for tab bar)
+  const productProgressMap = useMemo(() => {
+    const map: Record<string, { filled: number; total: number }> = {};
+    for (const product of products) {
+      const pData = allProductData[product.id] || {};
+      const allFields = visibleProductGroups.flatMap(g => g.fields);
+      const filled = allFields.filter(f => isFilled(pData[f.key])).length;
+      map[product.id] = { filled, total: allFields.length };
+    }
+    return map;
+  }, [products, allProductData, visibleProductGroups]);
+
+  // Overall progress across all products
+  const overallProgress = useMemo(() => {
+    let totalFilled = 0;
+    let totalFields = 0;
+    for (const product of products) {
+      const p = productProgressMap[product.id];
+      if (p) {
+        totalFilled += p.filled;
+        totalFields += p.total;
+      }
+    }
+    return { filled: totalFilled, total: totalFields, percentage: totalFields > 0 ? Math.round((totalFilled / totalFields) * 100) : 0 };
+  }, [products, productProgressMap]);
 
   const editedBatchCount = Object.keys(batchEdits).filter(id => Object.keys(batchEdits[id]).length > 0).length;
+
+  // Active product name
+  const activeProductName = products.find(p => p.id === activeProductId)?.name || '';
 
   // ─── Loading State ─────────────────────────────────────────────────────
   if (isLoading) {
@@ -827,7 +952,7 @@ export function SupplierDataPortalPage() {
 
   if (!requestInfo) return null;
 
-  const { dataRequest, tenant, product, branding } = requestInfo;
+  const { dataRequest, tenant, branding } = requestInfo;
   const primaryColor = branding.primaryColor || '#3B82F6';
 
   // ─── Password Gate ─────────────────────────────────────────────────────
@@ -884,14 +1009,32 @@ export function SupplierDataPortalPage() {
             {/* Product & Category Preview */}
             <Card>
               <CardContent className="pt-6 space-y-5">
-                {/* Product name */}
-                <div className="flex items-center gap-3">
+                {/* Product names */}
+                <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                     <Package className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div>
-                    <p className="font-semibold">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{t('from')} {tenant.name}</p>
+                  <div className="flex-1 min-w-0">
+                    {products.length === 1 ? (
+                      <>
+                        <p className="font-semibold">{products[0].name}</p>
+                        <p className="text-sm text-muted-foreground">{t('from')} {tenant.name}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-semibold">
+                          {t('{{count}} products', { count: products.length })}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{t('from')} {tenant.name}</p>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {products.map(p => (
+                            <Badge key={p.id} variant="secondary" className="text-xs">
+                              {p.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -970,6 +1113,18 @@ export function SupplierDataPortalPage() {
     );
   }
 
+  // ─── Loading products after auth ───────────────────────────────────────
+  if (isLoadingProducts) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="mt-3 text-sm text-muted-foreground">{t('Loading...')}</p>
+        </div>
+      </div>
+    );
+  }
+
   // ─── Main Form ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -986,7 +1141,12 @@ export function SupplierDataPortalPage() {
             )}
             <div className="flex flex-col">
               <span className="text-sm font-semibold">{tenant.name}</span>
-              <span className="text-xs text-muted-foreground">{product.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {isMultiProduct
+                  ? t('{{count}} products', { count: products.length })
+                  : activeProductName
+                }
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1018,20 +1178,25 @@ export function SupplierDataPortalPage() {
                 {t('Please fill in all requested fields. This data is needed to create a compliant EU Digital Product Passport (ESPR 2024/1781).')}
               </p>
               {/* Overall Progress */}
-              {progress.totalCount > 0 && (
+              {overallProgress.total > 0 && (
                 <div className="pt-1 space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium">{t('Overall Progress')}</span>
                     <span className="opacity-90">
-                      {progress.filledCount === progress.totalCount
-                        ? t('All fields completed')
-                        : t('{{filled}} of {{total}} fields completed', { filled: progress.filledCount, total: progress.totalCount })}
+                      {isMultiProduct
+                        ? (overallProgress.filled === overallProgress.total
+                          ? t('All fields completed')
+                          : t('{{filled}} of {{total}} fields across {{count}} products', { filled: overallProgress.filled, total: overallProgress.total, count: products.length }))
+                        : (overallProgress.filled === overallProgress.total
+                          ? t('All fields completed')
+                          : t('{{filled}} of {{total}} fields completed', { filled: overallProgress.filled, total: overallProgress.total }))
+                      }
                     </span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-white transition-all duration-500"
-                      style={{ width: `${progress.percentage}%` }}
+                      style={{ width: `${overallProgress.percentage}%` }}
                     />
                   </div>
                 </div>
@@ -1046,6 +1211,23 @@ export function SupplierDataPortalPage() {
             <Info className="h-4 w-4" />
             <AlertDescription>{dataRequest.message}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Product Tab Bar (multi-product only) */}
+        <ProductTabBar
+          products={products}
+          activeProductId={activeProductId}
+          onSelect={setActiveProductId}
+          primaryColor={primaryColor}
+          productProgress={productProgressMap}
+        />
+
+        {/* Current product name indicator (multi-product) */}
+        {isMultiProduct && (
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-sm">{activeProductName}</span>
+          </div>
         )}
 
         {/* Product Data — Category Cards */}
@@ -1129,7 +1311,10 @@ export function SupplierDataPortalPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setNewBatches(prev => [...prev, {}])}
+                    onClick={() => setAllNewBatches(prev => ({
+                      ...prev,
+                      [activeProductId]: [...(prev[activeProductId] || []), {}],
+                    }))}
                   >
                     <Plus className="mr-1 h-4 w-4" /> {t('New Batch')}
                   </Button>
@@ -1209,7 +1394,10 @@ export function SupplierDataPortalPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setNewBatches(prev => prev.filter((_, i) => i !== index))}
+                        onClick={() => setAllNewBatches(prev => ({
+                          ...prev,
+                          [activeProductId]: (prev[activeProductId] || []).filter((_, i) => i !== index),
+                        }))}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1262,7 +1450,11 @@ export function SupplierDataPortalPage() {
             <div className="text-center space-y-2">
               <h3 className="font-semibold text-lg">{t('Summary')}</h3>
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                <span>{t('You have completed {{filled}} of {{total}} product fields', { filled: progress.filledCount, total: progress.totalCount })}</span>
+                {isMultiProduct ? (
+                  <span>{t('{{filled}} of {{total}} fields across {{count}} products', { filled: overallProgress.filled, total: overallProgress.total, count: products.length })}</span>
+                ) : (
+                  <span>{t('You have completed {{filled}} of {{total}} product fields', { filled: progress.filledCount, total: progress.totalCount })}</span>
+                )}
                 {editedBatchCount > 0 && (
                   <span>{t('{{count}} batches edited', { count: editedBatchCount })}</span>
                 )}
@@ -1270,8 +1462,8 @@ export function SupplierDataPortalPage() {
                   <span>{t('{{count}} new batches created', { count: newBatches.length })}</span>
                 )}
               </div>
-              {progress.totalCount > 0 && (
-                <Progress value={progress.percentage} className="h-2 max-w-md mx-auto" />
+              {overallProgress.total > 0 && (
+                <Progress value={overallProgress.percentage} className="h-2 max-w-md mx-auto" />
               )}
             </div>
 

@@ -1,6 +1,14 @@
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, BarChart3, QrCode, RotateCcw, FileText, Users } from 'lucide-react';
+import { ShieldCheck, BarChart3, QrCode, Users } from 'lucide-react';
+
+const heroImages = [
+  { src: '/hero-website.png', alt: 'Digital Product Passports & AI Compliance' },
+  { src: '/hero-retail.png', alt: 'Consumer scanning QR code with Trackbliss' },
+  { src: '/hero-photorealistic.png', alt: 'Warehouse tracking with Trackbliss' },
+  { src: '/hero-illustration.png', alt: 'Global supply chain traceability' },
+];
 
 const particles = [
   { size: 6, color: 'bg-blue-400/40', top: '12%', left: '8%', delay: '0s' },
@@ -16,6 +24,16 @@ const particles = [
 export function LandingHero() {
   const { t } = useTranslation('landing');
   const navigate = useNavigate();
+  const [activeImg, setActiveImg] = useState(0);
+
+  const nextImage = useCallback(() => {
+    setActiveImg((prev) => (prev + 1) % heroImages.length);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(nextImage, 5000);
+    return () => clearInterval(timer);
+  }, [nextImage]);
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
@@ -91,142 +109,52 @@ export function LandingHero() {
             </div>
           </div>
 
-          {/* Right: Dashboard Mockup */}
+          {/* Right: Hero Image Carousel */}
           <div className="animate-landing-reveal [animation-delay:0.3s] hidden lg:block">
             <div className="relative">
               {/* Floating Badges */}
               <div className="absolute -top-3 -right-3 z-20 landing-glass rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg animate-landing-float">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
-                <span className="text-xs font-semibold text-slate-700">ESPR</span>
+                <span className="text-xs font-semibold text-slate-700">ESPR 2024</span>
               </div>
               <div className="absolute top-1/3 -right-4 z-20 landing-glass rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg animate-landing-float [animation-delay:2s]">
                 <QrCode className="h-4 w-4 text-violet-600" />
                 <span className="text-xs font-semibold text-slate-700">GS1</span>
               </div>
-              <div className="absolute bottom-8 -right-2 z-20 landing-glass rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg animate-landing-float [animation-delay:4s]">
+              <div className="absolute bottom-12 -right-2 z-20 landing-glass rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg animate-landing-float [animation-delay:4s]">
                 <BarChart3 className="h-4 w-4 text-emerald-600" />
                 <span className="text-xs font-semibold text-slate-700">AI</span>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50 overflow-hidden animate-landing-glow-pulse">
-                {/* Fake Browser Bar */}
-                <div className="flex items-center gap-1.5 border-b border-slate-100 px-4 py-2.5 bg-slate-50">
-                  <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                  <div className="ml-3 flex-1 rounded-md bg-slate-200/70 px-3 py-1 text-xs text-slate-400">
-                    trackbliss.com
-                  </div>
+              {/* Image Carousel */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-200/50 overflow-hidden animate-landing-glow-pulse">
+                <div className="relative aspect-[16/10]">
+                  {heroImages.map((img, i) => (
+                    <img
+                      key={img.src}
+                      src={img.src}
+                      alt={img.alt}
+                      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out ${
+                        i === activeImg ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    />
+                  ))}
                 </div>
+              </div>
 
-                <div className="flex">
-                  {/* Sidebar Silhouette */}
-                  <div className="w-12 bg-slate-900 p-2 flex flex-col items-center gap-3 pt-4">
-                    <div className="h-6 w-6 rounded-lg bg-blue-500 flex items-center justify-center">
-                      <span className="text-[8px] font-bold text-white">D</span>
-                    </div>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <div key={i} className={`h-3 w-3 rounded ${i === 0 ? 'bg-blue-400' : 'bg-slate-700'}`} />
-                    ))}
-                  </div>
-
-                  {/* Main Content */}
-                  <div className="flex-1 p-4 space-y-3">
-                    {/* Breadcrumb */}
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <div className="h-2 w-12 rounded bg-slate-100" />
-                      <div className="h-2 w-1 rounded bg-slate-200" />
-                      <div className="h-2 w-16 rounded bg-slate-100" />
-                    </div>
-
-                    {/* 4 KPI Cards */}
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { icon: BarChart3, label: t('hero.mockup.products'), value: '247', color: 'text-blue-600 bg-blue-50', sparkColor: '#3b82f6' },
-                        { icon: ShieldCheck, label: t('hero.mockup.compliant'), value: '94%', color: 'text-emerald-600 bg-emerald-50', sparkColor: '#10b981' },
-                        { icon: QrCode, label: t('hero.mockup.dpps'), value: '183', color: 'text-violet-600 bg-violet-50', sparkColor: '#8b5cf6' },
-                        { icon: RotateCcw, label: t('hero.mockup.returns'), value: '12', color: 'text-rose-600 bg-rose-50', sparkColor: '#f43f5e' },
-                      ].map((stat) => (
-                        <div key={stat.label} className="rounded-lg border border-slate-100 bg-white p-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className={`inline-flex rounded-md p-1 ${stat.color}`}>
-                              <stat.icon className="h-3 w-3" />
-                            </div>
-                            {/* Mini Sparkline */}
-                            <svg width="32" height="12" viewBox="0 0 32 12">
-                              <polyline
-                                points="0,8 5,6 10,9 15,4 20,5 25,2 32,4"
-                                fill="none"
-                                stroke={stat.sparkColor}
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                          </div>
-                          <p className="text-sm font-bold text-slate-900 leading-none">{stat.value}</p>
-                          <p className="text-[9px] text-slate-500 mt-0.5">{stat.label}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mini Chart */}
-                    <div className="rounded-lg border border-slate-100 p-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-medium text-slate-500">{t('hero.mockup.compliance')}</span>
-                        <div className="flex gap-1">
-                          <div className="h-1.5 w-6 rounded-full bg-blue-200" />
-                          <div className="h-1.5 w-6 rounded-full bg-emerald-200" />
-                        </div>
-                      </div>
-                      <svg width="100%" height="48" viewBox="0 0 280 48" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
-                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M 0 38 L 40 30 L 80 35 L 120 22 L 160 18 L 200 10 L 240 14 L 280 8 L 280 48 L 0 48 Z" fill="url(#chart-fill)" />
-                        <polyline points="0,38 40,30 80,35 120,22 160,18 200,10 240,14 280,8" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </div>
-
-                    {/* Product Table */}
-                    <div className="rounded-lg border border-slate-100 p-2">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <FileText className="h-3 w-3 text-slate-400" />
-                        <span className="text-[10px] font-medium text-slate-500">{t('hero.mockup.recentProducts')}</span>
-                      </div>
-                      {/* Header */}
-                      <div className="grid grid-cols-[24px_1fr_60px_50px_40px] gap-1.5 mb-1 px-1">
-                        <div />
-                        <div className="h-2 w-10 rounded bg-slate-100" />
-                        <div className="h-2 w-8 rounded bg-slate-100" />
-                        <div className="h-2 w-8 rounded bg-slate-100" />
-                        <div className="h-2 w-6 rounded bg-slate-100" />
-                      </div>
-                      {[
-                        { name: 'Cotton T-Shirt', gtin: '4260...789', status: 'bg-emerald-50 border-emerald-200', pct: 94 },
-                        { name: 'Denim Jacket', gtin: '4260...456', status: 'bg-emerald-50 border-emerald-200', pct: 87 },
-                        { name: 'Wool Sweater', gtin: '4260...123', status: 'bg-amber-50 border-amber-200', pct: 72 },
-                        { name: 'Linen Shirt', gtin: '4260...321', status: 'bg-emerald-50 border-emerald-200', pct: 91 },
-                      ].map((row) => (
-                        <div key={row.name} className="grid grid-cols-[24px_1fr_60px_50px_40px] gap-1.5 items-center py-1 border-t border-slate-50 px-1">
-                          <div className="h-5 w-5 rounded bg-slate-100" />
-                          <div>
-                            <div className="text-[9px] font-medium text-slate-700 truncate">{row.name}</div>
-                          </div>
-                          <div className="text-[8px] text-slate-400 font-mono">{row.gtin}</div>
-                          <div className={`h-4 rounded-full border text-[8px] flex items-center justify-center font-medium ${row.status}`}>
-                            {row.pct}%
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-100">
-                            <div className="h-1.5 rounded-full bg-blue-400" style={{ width: `${row.pct}%` }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {/* Dot Indicators */}
+              <div className="flex justify-center gap-2 mt-4">
+                {heroImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImg(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      i === activeImg
+                        ? 'w-6 bg-blue-600'
+                        : 'w-2 bg-slate-300 hover:bg-slate-400'
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           </div>

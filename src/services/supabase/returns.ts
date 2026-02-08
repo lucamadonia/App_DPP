@@ -258,6 +258,7 @@ export async function updateReturnStatus(
   const statusToEvent: Partial<Record<ReturnStatus, RhNotificationEventType>> = {
     APPROVED: 'return_approved',
     REJECTED: 'return_rejected',
+    CANCELLED: 'return_cancelled',
     SHIPPED: 'return_shipped',
     REFUND_COMPLETED: 'refund_completed',
   };
@@ -310,6 +311,70 @@ export async function rejectReturn(
   actorId?: string
 ): Promise<{ success: boolean; error?: string }> {
   return updateReturnStatus(id, 'REJECTED', reason, actorId);
+}
+
+const CANCELLABLE_STATUSES: ReturnStatus[] = ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'];
+
+export async function cancelReturn(
+  id: string,
+  reason?: string,
+  actorId?: string
+): Promise<{ success: boolean; error?: string }> {
+  return updateReturnStatus(id, 'CANCELLED', reason || 'Return cancelled', actorId);
+}
+
+export async function publicCancelReturn(
+  returnNumber: string,
+  email: string,
+  reason: string
+): Promise<{ success: boolean; error?: string }> {
+  // Find return by number
+  const { data: ret } = await supabaseAnon
+    .from('rh_returns')
+    .select('id, status, tenant_id, metadata')
+    .eq('return_number', returnNumber.trim())
+    .single();
+
+  if (!ret) return { success: false, error: 'Return not found' };
+
+  // Verify email matches
+  const meta = ret.metadata as Record<string, unknown> | null;
+  if (!meta?.email || meta.email !== email) {
+    return { success: false, error: 'Email does not match' };
+  }
+
+  // Check cancellable status
+  if (!CANCELLABLE_STATUSES.includes(ret.status as ReturnStatus)) {
+    return { success: false, error: 'Return cannot be cancelled in current status' };
+  }
+
+  // Update status
+  const { error: updateError } = await supabaseAnon
+    .from('rh_returns')
+    .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+    .eq('id', ret.id);
+
+  if (updateError) return { success: false, error: updateError.message };
+
+  // Add timeline entry
+  await supabaseAnon.from('rh_return_timeline').insert({
+    id: crypto.randomUUID(),
+    return_id: ret.id,
+    tenant_id: ret.tenant_id,
+    status: 'CANCELLED',
+    comment: reason,
+    actor_type: 'customer',
+  });
+
+  // Trigger email notification
+  triggerPublicEmailNotification(ret.tenant_id, 'return_cancelled', {
+    recipientEmail: email,
+    returnNumber,
+    status: 'CANCELLED',
+    reason,
+  }).catch(console.error);
+
+  return { success: true };
 }
 
 // ============================================

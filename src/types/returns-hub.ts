@@ -271,6 +271,7 @@ export type RhNotificationEventType =
   | 'return_confirmed'
   | 'return_approved'
   | 'return_rejected'
+  | 'return_cancelled'
   | 'return_shipped'
   | 'return_label_ready'
   | 'return_inspection_complete'

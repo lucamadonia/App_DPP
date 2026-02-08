@@ -13,6 +13,7 @@ import { LandingEmailEditor } from '@/components/landing/LandingEmailEditor';
 import { LandingQRSection } from '@/components/landing/LandingQRSection';
 import { LandingVisibility } from '@/components/landing/LandingVisibility';
 import { LandingStats } from '@/components/landing/LandingStats';
+import { LandingTeam } from '@/components/landing/LandingTeam';
 import { LandingPricing } from '@/components/landing/LandingPricing';
 import { LandingCTA } from '@/components/landing/LandingCTA';
 import { LandingFooter } from '@/components/landing/LandingFooter';
@@ -48,6 +49,7 @@ export function LandingPage() {
       <GlowDivider />
       <LandingPricing />
       <LandingStats />
+      <LandingTeam />
       <LandingCTA />
       <LandingFooter />
     </div>
