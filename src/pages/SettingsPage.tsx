@@ -118,11 +118,13 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
     address: '',
     country: '',
     eori: '',
     vat: '',
   });
+  const [slugError, setSlugError] = useState<string | null>(null);
 
   // Load tenant, users, and products
   useEffect(() => {
@@ -138,6 +140,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         setTenant(tenantData);
         setFormData({
           name: tenantData.name || '',
+          slug: tenantData.slug || '',
           address: tenantData.address || '',
           country: tenantData.country || '',
           eori: tenantData.eori || '',
@@ -178,8 +181,18 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
   const handleSave = async () => {
     setIsSaving(true);
+    // Validate slug
+    const cleanSlug = formData.slug.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (!cleanSlug) {
+      setSlugError(t('Slug cannot be empty'));
+      setIsSaving(false);
+      return;
+    }
+    setSlugError(null);
+
     const result = await updateCurrentTenant({
       name: formData.name,
+      slug: cleanSlug,
       address: formData.address,
       country: formData.country,
       eori: formData.eori,
@@ -191,7 +204,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       const updatedTenant = await getCurrentTenant();
       if (updatedTenant) {
         setTenant(updatedTenant);
+        setFormData(prev => ({ ...prev, slug: updatedTenant.slug }));
       }
+    } else if (result.error?.includes('duplicate') || result.error?.includes('unique')) {
+      setSlugError(t('This slug is already taken'));
     }
     setIsSaving(false);
   };
@@ -443,6 +459,23 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Your Company Inc."
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t('Portal Slug')}</label>
+                  <Input
+                    value={formData.slug}
+                    onChange={(e) => {
+                      const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                      setFormData({ ...formData, slug: v });
+                      setSlugError(null);
+                    }}
+                    placeholder="my_company"
+                    className="font-mono"
+                  />
+                  {slugError && <p className="text-xs text-destructive">{slugError}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    {t('Used in portal URLs')}: /returns/portal/<span className="font-medium">{formData.slug || '...'}</span>
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('EORI Number')}</label>
