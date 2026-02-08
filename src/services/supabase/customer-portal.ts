@@ -875,7 +875,7 @@ export async function getCustomerPortalBranding(tenantSlug: string): Promise<Cus
  * Check if public ticket creation is enabled for a tenant
  */
 export async function isPublicTicketCreationEnabled(tenantId: string): Promise<boolean> {
-  const { data: tenant } = await supabase
+  const { data: tenant } = await supabaseAnon
     .from('tenants')
     .select('settings')
     .eq('id', tenantId)
@@ -915,7 +915,7 @@ export async function createPublicProductTicket(params: {
   // 1. Find or create customer
   let customerId: string;
 
-  const { data: existingCustomer } = await supabase
+  const { data: existingCustomer } = await supabaseAnon
     .from('rh_customers')
     .select('id')
     .eq('tenant_id', tenantId)
@@ -925,8 +925,10 @@ export async function createPublicProductTicket(params: {
   if (existingCustomer) {
     customerId = existingCustomer.id;
   } else {
-    // Create new customer
+    // Create new customer — generate ID client-side to avoid chaining .select() after .insert()
+    customerId = crypto.randomUUID();
     const customerData = {
+      id: customerId,
       tenant_id: tenantId,
       email: email.toLowerCase(),
       first_name: name || email.split('@')[0],
@@ -943,18 +945,14 @@ export async function createPublicProductTicket(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: newCustomer, error: customerError } = await supabase
+    const { error: customerError } = await supabaseAnon
       .from('rh_customers')
-      .insert(customerData)
-      .select('id')
-      .single();
+      .insert(customerData);
 
-    if (customerError || !newCustomer) {
+    if (customerError) {
       console.error('Error creating customer:', customerError);
       return { success: false, error: 'Failed to create customer record' };
     }
-
-    customerId = newCustomer.id;
   }
 
   // 2. Generate ticket number
@@ -998,7 +996,7 @@ export async function createPublicProductTicket(params: {
     updated_at: new Date().toISOString(),
   };
 
-  const { error: ticketError } = await supabase
+  const { error: ticketError } = await supabaseAnon
     .from('rh_tickets')
     .insert(ticketData);
 
@@ -1021,7 +1019,7 @@ export async function createPublicProductTicket(params: {
     created_at: new Date().toISOString(),
   };
 
-  const { error: messageError } = await supabase
+  const { error: messageError } = await supabaseAnon
     .from('rh_ticket_messages')
     .insert(messageData);
 
@@ -1047,7 +1045,7 @@ export async function createPublicReturnTicket(params: {
   const { tenantSlug, email, subject, message, returnNumber } = params;
 
   // 1. Resolve tenant ID from slug
-  const { data: tenant, error: tenantError } = await supabase
+  const { data: tenant, error: tenantError } = await supabaseAnon
     .from('tenants')
     .select('id')
     .eq('slug', tenantSlug)
@@ -1070,7 +1068,7 @@ export async function createPublicReturnTicket(params: {
   const normalizedEmail = email.trim().toLowerCase();
   let customerId: string;
 
-  const { data: existingCustomer } = await supabase
+  const { data: existingCustomer } = await supabaseAnon
     .from('rh_customers')
     .select('id')
     .eq('tenant_id', tenantId)
@@ -1080,31 +1078,29 @@ export async function createPublicReturnTicket(params: {
   if (existingCustomer) {
     customerId = existingCustomer.id;
   } else {
-    // Create new customer record
-    const { data: newCustomer, error: customerError } = await supabase
+    // Create new customer record — generate ID client-side to avoid chaining .select() after .insert()
+    customerId = crypto.randomUUID();
+    const { error: customerError } = await supabaseAnon
       .from('rh_customers')
       .insert({
+        id: customerId,
         tenant_id: tenantId,
         email: normalizedEmail,
         display_name: normalizedEmail.split('@')[0],
         created_at: new Date().toISOString(),
-      })
-      .select('id')
-      .single();
+      });
 
-    if (customerError || !newCustomer) {
+    if (customerError) {
       console.error('Error creating customer:', customerError);
       return { success: false, error: 'Failed to create customer record' };
     }
-
-    customerId = newCustomer.id;
   }
 
   // 4. Optionally lookup return by return number (if provided)
   let returnId: string | undefined = undefined;
 
   if (returnNumber) {
-    const { data: returnRecord, error: returnError } = await supabase
+    const { data: returnRecord, error: returnError } = await supabaseAnon
       .from('rh_returns')
       .select('id')
       .eq('tenant_id', tenantId)
@@ -1139,7 +1135,7 @@ export async function createPublicReturnTicket(params: {
     created_at: new Date().toISOString(),
   };
 
-  const { error: ticketError } = await supabase
+  const { error: ticketError } = await supabaseAnon
     .from('rh_tickets')
     .insert(ticketData);
 
@@ -1162,7 +1158,7 @@ export async function createPublicReturnTicket(params: {
     created_at: new Date().toISOString(),
   };
 
-  const { error: messageError } = await supabase
+  const { error: messageError } = await supabaseAnon
     .from('rh_ticket_messages')
     .insert(messageData);
 

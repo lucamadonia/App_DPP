@@ -439,6 +439,11 @@ CREATE POLICY "Users can view their tenant"
     ON tenants FOR SELECT
     USING (id = get_user_tenant_id());
 
+CREATE POLICY "Public can read tenants for DPP"
+    ON tenants FOR SELECT
+    TO public
+    USING (true);
+
 CREATE POLICY "Admins can update their tenant"
     ON tenants FOR UPDATE
     USING (

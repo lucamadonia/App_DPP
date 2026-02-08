@@ -32,6 +32,8 @@ CREATE POLICY "product_images_tenant_update" ON product_images
     FOR UPDATE USING (tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
 CREATE POLICY "product_images_tenant_delete" ON product_images
     FOR DELETE USING (tenant_id IN (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
+CREATE POLICY "Public can view product images for DPP" ON product_images
+    FOR SELECT TO public USING (true);
 
 -- === EXPANDED DOCUMENT CATEGORIES ===
 ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_category_check;
