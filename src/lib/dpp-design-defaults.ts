@@ -5,11 +5,19 @@
  * for the DPP public page customization system.
  */
 
-import type { DPPDesignSettings } from '@/types/database';
+import type { DPPDesignSettings, DPPCustomLayoutSettings } from '@/types/database';
 
 // ============================================
 // DEFAULT DESIGN SETTINGS
 // ============================================
+
+export const DEFAULT_CUSTOM_LAYOUT: Required<DPPCustomLayoutSettings> = {
+  layoutMode: 'single-column',
+  sectionStyle: 'card',
+  headerStyle: 'icon-left',
+  showSectionDividers: false,
+  compactMode: false,
+};
 
 export const DEFAULT_DPP_DESIGN: Required<DPPDesignSettings> = {
   colors: {
@@ -64,6 +72,7 @@ export const DEFAULT_DPP_DESIGN: Required<DPPDesignSettings> = {
     },
   },
   preset: 'custom',
+  customLayout: DEFAULT_CUSTOM_LAYOUT,
 };
 
 // ============================================

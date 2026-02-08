@@ -47,7 +47,8 @@ export interface BrandingSettings {
 export type DPPTemplateName =
   | 'modern' | 'classic' | 'compact'
   | 'minimal' | 'technical' | 'eco-friendly' | 'premium'
-  | 'government' | 'retail' | 'scientific' | 'accessible';
+  | 'government' | 'retail' | 'scientific' | 'accessible'
+  | 'custom';
 
 export type DomainVerificationStatus = 'pending' | 'verified' | 'failed';
 
@@ -77,6 +78,9 @@ export type DPPHeroHeight = 'compact' | 'normal' | 'tall';
 export type DPPBorderRadius = 'none' | 'small' | 'medium' | 'large' | 'full';
 export type DPPShadowDepth = 'none' | 'subtle' | 'medium' | 'strong';
 export type DPPBorderStyle = 'none' | 'thin' | 'thick';
+export type DPPCustomLayoutMode = 'single-column' | 'two-column' | 'sidebar';
+export type DPPCustomSectionStyle = 'card' | 'flat' | 'accordion';
+export type DPPCustomHeaderStyle = 'icon-left' | 'simple' | 'centered' | 'underlined';
 export type DPPSectionId = 'materials' | 'packaging' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain' | 'support' | 'components';
 
 export interface DPPColorSettings {
@@ -120,6 +124,14 @@ export interface DPPSectionSettings {
   configs?: Partial<Record<DPPSectionId, DPPSectionConfig>>;
 }
 
+export interface DPPCustomLayoutSettings {
+  layoutMode?: DPPCustomLayoutMode;
+  sectionStyle?: DPPCustomSectionStyle;
+  headerStyle?: DPPCustomHeaderStyle;
+  showSectionDividers?: boolean;
+  compactMode?: boolean;
+}
+
 export interface DPPFooterSettings {
   legalNoticeUrl?: string;
   privacyPolicyUrl?: string;
@@ -140,6 +152,7 @@ export interface DPPDesignSettings {
   sections?: DPPSectionSettings;
   footer?: DPPFooterSettings;
   preset?: string;
+  customLayout?: DPPCustomLayoutSettings;
 }
 
 export interface TenantSettings {

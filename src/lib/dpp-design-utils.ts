@@ -15,9 +15,11 @@ import type {
   DPPCardSettings,
   DPPSectionSettings,
   DPPFooterSettings,
+  DPPCustomLayoutSettings,
 } from '@/types/database';
 import {
   DEFAULT_DPP_DESIGN,
+  DEFAULT_CUSTOM_LAYOUT,
   FONT_FAMILY_MAP,
   BORDER_RADIUS_MAP,
   SHADOW_MAP,
@@ -40,6 +42,7 @@ export interface ResolvedDPPDesign {
   sections: Required<DPPSectionSettings>;
   footer: Required<DPPFooterSettings>;
   preset: string;
+  customLayout: Required<DPPCustomLayoutSettings>;
 }
 
 // ============================================
@@ -109,6 +112,13 @@ export function resolveDesign(design?: DPPDesignSettings | null): ResolvedDPPDes
       },
     },
     preset: d.preset || DEFAULT_DPP_DESIGN.preset,
+    customLayout: {
+      layoutMode: d.customLayout?.layoutMode || DEFAULT_CUSTOM_LAYOUT.layoutMode,
+      sectionStyle: d.customLayout?.sectionStyle || DEFAULT_CUSTOM_LAYOUT.sectionStyle,
+      headerStyle: d.customLayout?.headerStyle || DEFAULT_CUSTOM_LAYOUT.headerStyle,
+      showSectionDividers: d.customLayout?.showSectionDividers ?? DEFAULT_CUSTOM_LAYOUT.showSectionDividers,
+      compactMode: d.customLayout?.compactMode ?? DEFAULT_CUSTOM_LAYOUT.compactMode,
+    },
   };
 }
 

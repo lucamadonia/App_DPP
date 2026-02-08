@@ -260,6 +260,7 @@ const FREE_TEMPLATES: DPPTemplateName[] = ['modern', 'minimal', 'compact'];
 const ALL_TEMPLATES: DPPTemplateName[] = [
   'modern', 'classic', 'compact', 'minimal', 'technical',
   'eco-friendly', 'premium', 'government', 'retail', 'scientific', 'accessible',
+  'custom',
 ];
 
 export const PLAN_CONFIGS: Record<BillingPlan, {

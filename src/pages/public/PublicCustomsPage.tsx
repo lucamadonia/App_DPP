@@ -14,6 +14,7 @@ import { TemplateGovernment } from '@/components/public/TemplateGovernment';
 import { TemplateRetail } from '@/components/public/TemplateRetail';
 import { TemplateScientific } from '@/components/public/TemplateScientific';
 import { TemplateAccessible } from '@/components/public/TemplateAccessible';
+import { TemplateCustom } from '@/components/public/TemplateCustom';
 
 export function PublicCustomsPage() {
   const { t } = useTranslation('dpp');
@@ -81,6 +82,8 @@ export function PublicCustomsPage() {
       return <TemplateScientific {...templateProps} />;
     case 'accessible':
       return <TemplateAccessible {...templateProps} />;
+    case 'custom':
+      return <TemplateCustom {...templateProps} />;
     case 'modern':
     default:
       return <TemplateModern {...templateProps} />;

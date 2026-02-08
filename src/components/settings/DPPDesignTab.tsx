@@ -6,7 +6,7 @@
  * section layout, footer configuration, and live preview.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Save,
@@ -22,6 +22,13 @@ import {
   Award,
   Truck,
   HelpCircle,
+  Settings2,
+  Columns2,
+  PanelLeft,
+  AlignLeft,
+  AlignCenter,
+  Type,
+  Minus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +57,9 @@ import type {
   DPPShadowDepth,
   DPPBorderStyle,
   DPPTemplateName,
+  DPPCustomLayoutMode,
+  DPPCustomSectionStyle,
+  DPPCustomHeaderStyle,
 } from '@/types/database';
 import {
   DPP_THEME_PRESETS,
@@ -85,6 +95,7 @@ const TEMPLATE_OPTIONS: { value: DPPTemplateName; labelKey: string; descKey: str
   { value: 'retail', labelKey: 'Retail', descKey: 'Consumer-friendly, large images, colorful badges' },
   { value: 'scientific', labelKey: 'Scientific', descKey: 'Data visualization, academic structure' },
   { value: 'accessible', labelKey: 'Accessible', descKey: 'WCAG AAA, extra-large text, high contrast' },
+  { value: 'custom', labelKey: 'Custom', descKey: 'Fully configurable layout, section styles and headers' },
 ];
 
 function TemplateMiniPreview({ template }: { template: DPPTemplateName }) {
@@ -270,6 +281,22 @@ function TemplateMiniPreview({ template }: { template: DPPTemplateName }) {
         </div>
       );
 
+    case 'custom':
+      return (
+        <div className={base} style={{ background: '#f8fafc' }}>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Settings2 className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+              <div className="px-3 space-y-1">
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{ height: 10, border: '1.5px dashed #94a3b8', borderRadius: 4, width: 60 }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
     default:
       return <div className={base} style={{ background: '#f1f5f9' }} />;
   }
@@ -348,6 +375,13 @@ export function DPPDesignTab() {
     setDesignForm(prev => ({
       ...prev,
       footer: { ...prev.footer, [key]: value },
+    }));
+  };
+
+  const updateCustomLayout = (key: string, value: unknown) => {
+    setDesignForm(prev => ({
+      ...prev,
+      customLayout: { ...prev.customLayout, [key]: value },
     }));
   };
 
@@ -503,6 +537,112 @@ export function DPPDesignTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 0b. Custom Layout Settings (visible only when custom template is selected) */}
+      {(templateCustomer === 'custom' || templateCustoms === 'custom') && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('Custom Layout')}</CardTitle>
+            <CardDescription>{t('Configure the layout of your custom DPP template')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Layout Mode */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">{t('Layout Mode')}</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  ['single-column', 'Single Column', 'Sections stacked in a single column', <AlignLeft key="sc" className="h-5 w-5" />],
+                  ['two-column', 'Two Columns', 'Sections in a two-column grid', <Columns2 key="tc" className="h-5 w-5" />],
+                  ['sidebar', 'Sidebar', 'Product info sidebar with sections main area', <PanelLeft key="sb" className="h-5 w-5" />],
+                ] as [DPPCustomLayoutMode, string, string, ReactNode][]).map(([value, label, desc, icon]) => (
+                  <button
+                    key={value}
+                    onClick={() => updateCustomLayout('layoutMode', value)}
+                    className={`p-3 rounded-lg border text-center text-sm transition-all ${
+                      resolved.customLayout.layoutMode === value
+                        ? 'border-primary bg-primary/5 font-medium'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <div className="flex justify-center mb-1.5 text-muted-foreground">{icon}</div>
+                    <p className="font-medium">{t(label)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t(desc)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Section Style */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">{t('Section Style')}</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  ['card', 'Cards', 'Sections in styled cards with shadow and border'],
+                  ['flat', 'Flat', 'Sections without cards, headings and dividers'],
+                  ['accordion', 'Accordion', 'Collapsible accordion sections'],
+                ] as [DPPCustomSectionStyle, string, string][]).map(([value, label, desc]) => (
+                  <button
+                    key={value}
+                    onClick={() => updateCustomLayout('sectionStyle', value)}
+                    className={`p-3 rounded-lg border text-center text-sm transition-all ${
+                      resolved.customLayout.sectionStyle === value
+                        ? 'border-primary bg-primary/5 font-medium'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <p className="font-medium">{t(label)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t(desc)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Header Style */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">{t('Header Style')}</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {([
+                  ['icon-left', 'Icon Left', <AlignLeft key="il" className="h-4 w-4" />],
+                  ['simple', 'Simple', <Type key="si" className="h-4 w-4" />],
+                  ['centered', 'Centered', <AlignCenter key="ce" className="h-4 w-4" />],
+                  ['underlined', 'Underlined', <Minus key="ul" className="h-4 w-4" />],
+                ] as [DPPCustomHeaderStyle, string, ReactNode][]).map(([value, label, icon]) => (
+                  <button
+                    key={value}
+                    onClick={() => updateCustomLayout('headerStyle', value)}
+                    className={`p-3 rounded-lg border text-center text-sm transition-all ${
+                      resolved.customLayout.headerStyle === value
+                        ? 'border-primary bg-primary/5 font-medium'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <div className="flex justify-center mb-1 text-muted-foreground">{icon}</div>
+                    <p className="font-medium text-xs">{t(label)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>{t('Show Section Dividers')}</Label>
+                <Switch
+                  checked={resolved.customLayout.showSectionDividers}
+                  onCheckedChange={(v) => updateCustomLayout('showSectionDividers', v)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>{t('Compact Mode')}</Label>
+                <Switch
+                  checked={resolved.customLayout.compactMode}
+                  onCheckedChange={(v) => updateCustomLayout('compactMode', v)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 1. Theme Presets */}
       <Card>
