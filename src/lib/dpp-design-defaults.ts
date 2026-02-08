@@ -12,11 +12,63 @@ import type { DPPDesignSettings, DPPCustomLayoutSettings } from '@/types/databas
 // ============================================
 
 export const DEFAULT_CUSTOM_LAYOUT: Required<DPPCustomLayoutSettings> = {
+  // Existing (5)
   layoutMode: 'single-column',
   sectionStyle: 'card',
   headerStyle: 'icon-left',
   showSectionDividers: false,
   compactMode: false,
+
+  // Spacing & Width (3)
+  sectionSpacing: 'normal',
+  contentWidth: 'medium',
+  sectionInnerPadding: 'normal',
+
+  // Content Display Modes (6)
+  materialsDisplayMode: 'table',
+  carbonDisplayMode: 'gauge',
+  certificationsDisplayMode: 'list',
+  supplyChainDisplayMode: 'numbered-list',
+  recyclingDisplayMode: 'progress-bar',
+  supportDisplayMode: 'stacked',
+
+  // Visual Accents (4)
+  iconStyle: 'filled-circle',
+  sectionAccent: 'none',
+  sectionAccentColor: '',
+  showSectionDescription: false,
+
+  // Product Header (3)
+  productHeaderLayout: 'horizontal',
+  imageDisplayStyle: 'rounded',
+  showProductBadges: true,
+
+  // Hero (3)
+  heroContentAlignment: 'left',
+  heroShowDescription: true,
+  heroShowBadges: true,
+
+  // Rating & Data Viz (2)
+  ratingVisualization: 'circle-badge',
+  showDataLabels: true,
+
+  // Animations (2)
+  entryAnimation: 'none',
+  animationStagger: false,
+
+  // Background (2)
+  backgroundPattern: 'none',
+  sectionBackgroundAlternate: false,
+
+  // Footer (1)
+  footerStyle: 'simple',
+
+  // Customs View (5)
+  customsLayoutMode: 'single-column',
+  customsSectionStyle: 'card',
+  customsHeaderStyle: 'icon-left',
+  customsCompactMode: false,
+  customsShowSectionDividers: false,
 };
 
 export const DEFAULT_DPP_DESIGN: Required<DPPDesignSettings> = {
@@ -258,4 +310,26 @@ export const BORDER_STYLE_MAP: Record<string, string> = {
   none: 'none',
   thin: '1px solid rgb(0 0 0 / 0.1)',
   thick: '2px solid rgb(0 0 0 / 0.15)',
+};
+
+// Custom Layout Mapping Constants
+export const SECTION_SPACING_MAP: Record<string, string> = {
+  tight: '0.75rem',
+  normal: '1.5rem',
+  relaxed: '2rem',
+  spacious: '3rem',
+};
+
+export const CONTENT_WIDTH_MAP: Record<string, string> = {
+  narrow: '640px',
+  medium: '768px',
+  wide: '1024px',
+  full: '100%',
+};
+
+export const SECTION_INNER_PADDING_MAP: Record<string, string> = {
+  tight: '0.75rem',
+  normal: '1.5rem',
+  relaxed: '2rem',
+  spacious: '2.5rem',
 };

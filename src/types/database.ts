@@ -83,6 +83,28 @@ export type DPPCustomSectionStyle = 'card' | 'flat' | 'accordion';
 export type DPPCustomHeaderStyle = 'icon-left' | 'simple' | 'centered' | 'underlined';
 export type DPPSectionId = 'materials' | 'packaging' | 'carbonFootprint' | 'recycling' | 'certifications' | 'supplyChain' | 'support' | 'components';
 
+// Content Display Modes per Section
+export type DPPMaterialsDisplayMode = 'table' | 'cards' | 'horizontal-bars' | 'donut-chart';
+export type DPPCarbonDisplayMode = 'gauge' | 'stat-cards' | 'comparison-bar' | 'infographic';
+export type DPPCertificationsDisplayMode = 'list' | 'grid-cards' | 'badge-row' | 'timeline';
+export type DPPSupplyChainDisplayMode = 'numbered-list' | 'vertical-timeline' | 'horizontal-timeline' | 'map-cards' | 'table';
+export type DPPRecyclingDisplayMode = 'progress-bar' | 'donut' | 'info-cards';
+export type DPPSupportDisplayMode = 'stacked' | 'tabbed' | 'accordion';
+
+// Visual Options
+export type DPPIconStyle = 'filled-circle' | 'outlined' | 'square' | 'none' | 'gradient-blob';
+export type DPPSectionAccent = 'none' | 'left-border' | 'top-border' | 'gradient-top' | 'corner-dot' | 'icon-watermark';
+export type DPPSectionSpacing = 'tight' | 'normal' | 'relaxed' | 'spacious';
+export type DPPContentWidth = 'narrow' | 'medium' | 'wide' | 'full';
+export type DPPImageDisplayStyle = 'rounded' | 'square' | 'circle' | 'hero-banner' | 'side-panel';
+export type DPPRatingVisualization = 'circle-badge' | 'letter-grade' | 'progress-bar' | 'stars' | 'speedometer';
+export type DPPEntryAnimation = 'none' | 'fade-in' | 'slide-up' | 'slide-left' | 'scale';
+export type DPPBackgroundPattern = 'none' | 'dots' | 'grid' | 'diagonal-lines' | 'subtle-noise';
+export type DPPHeroContentAlignment = 'left' | 'center' | 'right';
+export type DPPFooterStyle = 'simple' | 'centered' | 'two-column' | 'dark-band';
+export type DPPProductHeaderLayout = 'horizontal' | 'stacked' | 'overlay' | 'minimal';
+export type DPPCustomsLayoutMode = 'single-column' | 'two-column' | 'tabbed';
+
 export interface DPPColorSettings {
   secondaryColor?: string;
   accentColor?: string;
@@ -125,11 +147,63 @@ export interface DPPSectionSettings {
 }
 
 export interface DPPCustomLayoutSettings {
+  // === EXISTING (5) ===
   layoutMode?: DPPCustomLayoutMode;
   sectionStyle?: DPPCustomSectionStyle;
   headerStyle?: DPPCustomHeaderStyle;
   showSectionDividers?: boolean;
   compactMode?: boolean;
+
+  // === SPACING & WIDTH (3) ===
+  sectionSpacing?: DPPSectionSpacing;
+  contentWidth?: DPPContentWidth;
+  sectionInnerPadding?: DPPSectionSpacing;
+
+  // === CONTENT DISPLAY MODES (6) ===
+  materialsDisplayMode?: DPPMaterialsDisplayMode;
+  carbonDisplayMode?: DPPCarbonDisplayMode;
+  certificationsDisplayMode?: DPPCertificationsDisplayMode;
+  supplyChainDisplayMode?: DPPSupplyChainDisplayMode;
+  recyclingDisplayMode?: DPPRecyclingDisplayMode;
+  supportDisplayMode?: DPPSupportDisplayMode;
+
+  // === VISUAL ACCENTS (4) ===
+  iconStyle?: DPPIconStyle;
+  sectionAccent?: DPPSectionAccent;
+  sectionAccentColor?: string;
+  showSectionDescription?: boolean;
+
+  // === PRODUCT HEADER (3) ===
+  productHeaderLayout?: DPPProductHeaderLayout;
+  imageDisplayStyle?: DPPImageDisplayStyle;
+  showProductBadges?: boolean;
+
+  // === HERO (3) ===
+  heroContentAlignment?: DPPHeroContentAlignment;
+  heroShowDescription?: boolean;
+  heroShowBadges?: boolean;
+
+  // === RATING & DATA VIZ (2) ===
+  ratingVisualization?: DPPRatingVisualization;
+  showDataLabels?: boolean;
+
+  // === ANIMATIONS (2) ===
+  entryAnimation?: DPPEntryAnimation;
+  animationStagger?: boolean;
+
+  // === BACKGROUND (2) ===
+  backgroundPattern?: DPPBackgroundPattern;
+  sectionBackgroundAlternate?: boolean;
+
+  // === FOOTER (1) ===
+  footerStyle?: DPPFooterStyle;
+
+  // === CUSTOMS VIEW (5) ===
+  customsLayoutMode?: DPPCustomsLayoutMode;
+  customsSectionStyle?: DPPCustomSectionStyle;
+  customsHeaderStyle?: DPPCustomHeaderStyle;
+  customsCompactMode?: boolean;
+  customsShowSectionDividers?: boolean;
 }
 
 export interface DPPFooterSettings {

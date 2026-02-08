@@ -113,11 +113,53 @@ export function resolveDesign(design?: DPPDesignSettings | null): ResolvedDPPDes
     },
     preset: d.preset || DEFAULT_DPP_DESIGN.preset,
     customLayout: {
+      // Existing (5)
       layoutMode: d.customLayout?.layoutMode || DEFAULT_CUSTOM_LAYOUT.layoutMode,
       sectionStyle: d.customLayout?.sectionStyle || DEFAULT_CUSTOM_LAYOUT.sectionStyle,
       headerStyle: d.customLayout?.headerStyle || DEFAULT_CUSTOM_LAYOUT.headerStyle,
       showSectionDividers: d.customLayout?.showSectionDividers ?? DEFAULT_CUSTOM_LAYOUT.showSectionDividers,
       compactMode: d.customLayout?.compactMode ?? DEFAULT_CUSTOM_LAYOUT.compactMode,
+      // Spacing & Width (3)
+      sectionSpacing: d.customLayout?.sectionSpacing || DEFAULT_CUSTOM_LAYOUT.sectionSpacing,
+      contentWidth: d.customLayout?.contentWidth || DEFAULT_CUSTOM_LAYOUT.contentWidth,
+      sectionInnerPadding: d.customLayout?.sectionInnerPadding || DEFAULT_CUSTOM_LAYOUT.sectionInnerPadding,
+      // Content Display Modes (6)
+      materialsDisplayMode: d.customLayout?.materialsDisplayMode || DEFAULT_CUSTOM_LAYOUT.materialsDisplayMode,
+      carbonDisplayMode: d.customLayout?.carbonDisplayMode || DEFAULT_CUSTOM_LAYOUT.carbonDisplayMode,
+      certificationsDisplayMode: d.customLayout?.certificationsDisplayMode || DEFAULT_CUSTOM_LAYOUT.certificationsDisplayMode,
+      supplyChainDisplayMode: d.customLayout?.supplyChainDisplayMode || DEFAULT_CUSTOM_LAYOUT.supplyChainDisplayMode,
+      recyclingDisplayMode: d.customLayout?.recyclingDisplayMode || DEFAULT_CUSTOM_LAYOUT.recyclingDisplayMode,
+      supportDisplayMode: d.customLayout?.supportDisplayMode || DEFAULT_CUSTOM_LAYOUT.supportDisplayMode,
+      // Visual Accents (4)
+      iconStyle: d.customLayout?.iconStyle || DEFAULT_CUSTOM_LAYOUT.iconStyle,
+      sectionAccent: d.customLayout?.sectionAccent || DEFAULT_CUSTOM_LAYOUT.sectionAccent,
+      sectionAccentColor: d.customLayout?.sectionAccentColor || DEFAULT_CUSTOM_LAYOUT.sectionAccentColor,
+      showSectionDescription: d.customLayout?.showSectionDescription ?? DEFAULT_CUSTOM_LAYOUT.showSectionDescription,
+      // Product Header (3)
+      productHeaderLayout: d.customLayout?.productHeaderLayout || DEFAULT_CUSTOM_LAYOUT.productHeaderLayout,
+      imageDisplayStyle: d.customLayout?.imageDisplayStyle || DEFAULT_CUSTOM_LAYOUT.imageDisplayStyle,
+      showProductBadges: d.customLayout?.showProductBadges ?? DEFAULT_CUSTOM_LAYOUT.showProductBadges,
+      // Hero (3)
+      heroContentAlignment: d.customLayout?.heroContentAlignment || DEFAULT_CUSTOM_LAYOUT.heroContentAlignment,
+      heroShowDescription: d.customLayout?.heroShowDescription ?? DEFAULT_CUSTOM_LAYOUT.heroShowDescription,
+      heroShowBadges: d.customLayout?.heroShowBadges ?? DEFAULT_CUSTOM_LAYOUT.heroShowBadges,
+      // Rating & Data Viz (2)
+      ratingVisualization: d.customLayout?.ratingVisualization || DEFAULT_CUSTOM_LAYOUT.ratingVisualization,
+      showDataLabels: d.customLayout?.showDataLabels ?? DEFAULT_CUSTOM_LAYOUT.showDataLabels,
+      // Animations (2)
+      entryAnimation: d.customLayout?.entryAnimation || DEFAULT_CUSTOM_LAYOUT.entryAnimation,
+      animationStagger: d.customLayout?.animationStagger ?? DEFAULT_CUSTOM_LAYOUT.animationStagger,
+      // Background (2)
+      backgroundPattern: d.customLayout?.backgroundPattern || DEFAULT_CUSTOM_LAYOUT.backgroundPattern,
+      sectionBackgroundAlternate: d.customLayout?.sectionBackgroundAlternate ?? DEFAULT_CUSTOM_LAYOUT.sectionBackgroundAlternate,
+      // Footer (1)
+      footerStyle: d.customLayout?.footerStyle || DEFAULT_CUSTOM_LAYOUT.footerStyle,
+      // Customs View (5)
+      customsLayoutMode: d.customLayout?.customsLayoutMode || DEFAULT_CUSTOM_LAYOUT.customsLayoutMode,
+      customsSectionStyle: d.customLayout?.customsSectionStyle || DEFAULT_CUSTOM_LAYOUT.customsSectionStyle,
+      customsHeaderStyle: d.customLayout?.customsHeaderStyle || DEFAULT_CUSTOM_LAYOUT.customsHeaderStyle,
+      customsCompactMode: d.customLayout?.customsCompactMode ?? DEFAULT_CUSTOM_LAYOUT.customsCompactMode,
+      customsShowSectionDividers: d.customLayout?.customsShowSectionDividers ?? DEFAULT_CUSTOM_LAYOUT.customsShowSectionDividers,
     },
   };
 }
