@@ -303,6 +303,19 @@ export function assembleMasterLabelData(params: AssembleMasterLabelParams): Mast
   if (variant === 'b2b') {
     data.b2bQuantity = batch?.quantity;
     data.b2bGrossWeight = batch?.grossWeight ?? product.grossWeight;
+
+    // Format carton dimensions (L x B x H in mm)
+    const h = batch?.packagingHeightCm ?? product.packagingHeightCm;
+    const w = batch?.packagingWidthCm ?? product.packagingWidthCm;
+    const d = batch?.packagingDepthCm ?? product.packagingDepthCm;
+
+    if (h && w && d) {
+      // Convert cm to mm: multiply by 10
+      const heightMm = Math.round(h * 10);
+      const widthMm = Math.round(w * 10);
+      const depthMm = Math.round(d * 10);
+      data.b2bCartonDimensions = `${depthMm} x ${widthMm} x ${heightMm} mm`;
+    }
   }
 
   if (variant === 'b2c') {
@@ -375,6 +388,8 @@ export function resolveFieldValue(fieldKey: LabelFieldKey, data: MasterLabelData
       return data.hsCode || '';
     case 'quantity':
       return data.b2bQuantity != null ? `${data.b2bQuantity}` : '';
+    case 'cartonDimensions':
+      return data.b2bCartonDimensions || '';
     case 'eprelNumber':
       return data.registrations?.eprelNumber || '';
     case 'weeeNumber':

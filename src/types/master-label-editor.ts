@@ -248,6 +248,7 @@ export type LabelFieldKey =
   | 'netWeight'
   | 'hsCode'
   | 'quantity'
+  | 'cartonDimensions'
   | 'eprelNumber'
   | 'weeeNumber'
   | 'madeIn'
@@ -294,6 +295,7 @@ export const LABEL_FIELD_METADATA: LabelFieldMetadata[] = [
   { key: 'netWeight', labelKey: 'ml.field.netWeight', section: 'identity', format: 'weight' },
   { key: 'hsCode', labelKey: 'ml.field.hsCode', section: 'compliance' },
   { key: 'quantity', labelKey: 'ml.field.quantity', section: 'identity', format: 'number' },
+  { key: 'cartonDimensions', labelKey: 'ml.field.cartonDimensions', section: 'identity' },
   { key: 'eprelNumber', labelKey: 'ml.field.eprelNumber', section: 'compliance' },
   { key: 'weeeNumber', labelKey: 'ml.field.weeeNumber', section: 'compliance' },
   { key: 'madeIn', labelKey: 'ml.field.madeIn', section: 'footer' },

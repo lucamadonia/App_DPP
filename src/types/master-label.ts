@@ -95,6 +95,7 @@ export interface MasterLabelData {
   // B2B extras
   b2bQuantity?: number;
   b2bGrossWeight?: number;
+  b2bCartonDimensions?: string;
 
   // B2C extras
   b2cTargetCountry?: string;

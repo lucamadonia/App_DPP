@@ -488,6 +488,7 @@
   "ml.field.netWeight": "Nettogewicht",
   "ml.field.hsCode": "HS-Code",
   "ml.field.quantity": "Menge",
+  "ml.field.cartonDimensions": "Kartonabmessungen",
   "ml.field.eprelNumber": "EPREL-Nummer",
   "ml.field.weeeNumber": "WEEE-Nummer",
   "ml.field.madeIn": "Hergestellt in",
