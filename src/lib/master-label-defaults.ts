@@ -340,7 +340,7 @@ function createLogistics2026Template(): MasterLabelTemplate {
 
     // ZONE 2: Regulatorische Haftung & Herkunft
     { id: generateElementId(), type: 'text', sectionId: 'regulatory', sortOrder: 0, content: 'ZONE 2: REGULATORY & ORIGIN', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
-    { id: generateElementId(), type: 'compliance-badge', sectionId: 'regulatory', sortOrder: 1, badgeId: 'ce', symbol: 'CE', style: 'filled', size: 9, color: '#ffffff', backgroundColor: '#1a1a1a', showLabel: true, labelText: 'CE MARK (Min. 5mm height)', alignment: 'left' } satisfies LabelComplianceBadgeElement,
+    { id: generateElementId(), type: 'compliance-badge', sectionId: 'regulatory', sortOrder: 1, badgeId: 'ce', symbol: 'CE', style: 'filled', size: 9, color: '#ffffff', backgroundColor: '#1a1a1a', showLabel: true, alignment: 'left' } satisfies LabelComplianceBadgeElement,
     { id: generateElementId(), type: 'spacer', sectionId: 'regulatory', sortOrder: 2, height: 3 } satisfies LabelSpacerElement,
     { id: generateElementId(), type: 'text', sectionId: 'regulatory', sortOrder: 3, content: 'EU-MANUFACTURER / IMPORTER:', fontSize: 6, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
     { id: generateElementId(), type: 'field-value', sectionId: 'regulatory', sortOrder: 4, fieldKey: 'manufacturerName', showLabel: false, fontSize: 7, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'stacked', marginBottom: 1 } satisfies LabelFieldValueElement,
@@ -378,7 +378,7 @@ function createLogistics2026Template(): MasterLabelTemplate {
     id: 'builtin-logistics-2026',
     name: 'Logistics 2026 (5-Zone)',
     description: 'Professional logistics label with 5 zones: ID/Logistics, Regulatory/Origin, DPP/Barcode, PPWR/Sustainability, Handling symbols. Compliant with EU 2026 requirements.',
-    category: 'logistics',
+    category: 'general',
     variant: 'b2b',
     design,
     isDefault: true,
