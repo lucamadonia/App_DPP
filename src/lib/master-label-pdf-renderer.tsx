@@ -321,12 +321,12 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
         <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 4 }}>
           <View
             style={{
-              borderWidth: element.showBorder ? element.borderWidth : 0,
-              borderColor: element.borderColor,
-              borderRadius: element.borderRadius,
-              backgroundColor: element.showBackground ? element.backgroundColor : 'transparent',
-              paddingHorizontal: element.padding,
-              paddingVertical: element.padding * 0.75,
+              borderWidth: element.showBorder ? (element.borderWidth || 1) : 0,
+              borderColor: element.borderColor || '#000000',
+              borderRadius: element.borderRadius || 0,
+              backgroundColor: element.showBackground ? (element.backgroundColor || 'transparent') : 'transparent',
+              paddingHorizontal: element.padding || 8,
+              paddingVertical: (element.padding || 8) * 0.75,
               minWidth: 60,
             }}
           >
