@@ -197,7 +197,12 @@ export type LabelSectionId =
   | 'compliance'
   | 'sustainability'
   | 'custom'
-  | 'footer';
+  | 'footer'
+  | 'logistics'
+  | 'regulatory'
+  | 'dpp-barcode'
+  | 'packaging'
+  | 'handling';
 
 export interface LabelSection {
   id: LabelSectionId;

@@ -47,6 +47,7 @@ interface LabelEditorToolbarProps {
   onGeneratePDF: () => void;
   onOpenMultiLabelDialog: () => void;
   onBack: () => void;
+  product: { manufacturer?: string; importer?: string };
   productSuppliers?: Array<SupplierProduct & { supplier_name: string; supplier_country: string }>;
   manufacturerOverrideId: string | null;
   onManufacturerOverride: (id: string | null) => void;
@@ -88,6 +89,7 @@ export function LabelEditorToolbar({
   onGeneratePDF,
   onOpenMultiLabelDialog,
   onBack,
+  product,
   productSuppliers = [],
   manufacturerOverrideId,
   onManufacturerOverride,
@@ -99,6 +101,9 @@ export function LabelEditorToolbar({
 
   const manufacturerSuppliers = productSuppliers.filter(sp => sp.role === 'manufacturer');
   const importerSuppliers = productSuppliers.filter(sp => sp.role === 'importeur');
+
+  const hasManufacturerTextField = product.manufacturer && product.manufacturer.trim() !== '';
+  const hasImporterTextField = product.importer && product.importer.trim() !== '';
 
   return (
     <div className="h-12 shrink-0 border-b bg-background/80 backdrop-blur-sm flex items-center gap-2 px-3">
@@ -141,46 +146,72 @@ export function LabelEditorToolbar({
         </SelectContent>
       </Select>
 
-      {/* Manufacturer override */}
-      {manufacturerSuppliers.length > 0 && (
+      {/* Manufacturer override - always show if there are suppliers OR product.manufacturer exists */}
+      {(manufacturerSuppliers.length > 0 || hasManufacturerTextField) && (
         <Select
           value={manufacturerOverrideId || '_default'}
           onValueChange={(v) => onManufacturerOverride(v === '_default' ? null : v)}
         >
-          <SelectTrigger className="h-8 w-[140px] text-xs">
+          <SelectTrigger className="h-8 w-[200px] text-xs">
             <div className="flex items-center gap-1 truncate">
               <Factory className="h-3 w-3 shrink-0" />
               <SelectValue />
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_default">{t('ml.editor.fromProduct')}</SelectItem>
+            {hasManufacturerTextField && (
+              <SelectItem value="_default">
+                <div className="flex items-center gap-1.5">
+                  <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{product.manufacturer}</span>
+                </div>
+              </SelectItem>
+            )}
+            {!hasManufacturerTextField && (
+              <SelectItem value="_default">{t('ml.editor.fromProduct')}</SelectItem>
+            )}
             {manufacturerSuppliers.map((sp) => (
               <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
-                {sp.supplier_name}
+                <div className="flex items-center gap-1.5">
+                  <Factory className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{sp.supplier_name}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       )}
 
-      {/* Importer override */}
-      {importerSuppliers.length > 0 && (
+      {/* Importer override - always show if there are suppliers OR product.importer exists */}
+      {(importerSuppliers.length > 0 || hasImporterTextField) && (
         <Select
           value={importerOverrideId || '_default'}
           onValueChange={(v) => onImporterOverride(v === '_default' ? null : v)}
         >
-          <SelectTrigger className="h-8 w-[140px] text-xs">
+          <SelectTrigger className="h-8 w-[200px] text-xs">
             <div className="flex items-center gap-1 truncate">
               <Building2 className="h-3 w-3 shrink-0" />
               <SelectValue />
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_default">{t('ml.editor.fromProduct')}</SelectItem>
+            {hasImporterTextField && (
+              <SelectItem value="_default">
+                <div className="flex items-center gap-1.5">
+                  <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{product.importer}</span>
+                </div>
+              </SelectItem>
+            )}
+            {!hasImporterTextField && (
+              <SelectItem value="_default">{t('ml.editor.fromProduct')}</SelectItem>
+            )}
             {importerSuppliers.map((sp) => (
               <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
-                {sp.supplier_name}
+                <div className="flex items-center gap-1.5">
+                  <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{sp.supplier_name}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>

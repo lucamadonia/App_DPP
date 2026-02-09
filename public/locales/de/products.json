@@ -505,6 +505,11 @@
   "ml.section.sustainability": "Nachhaltigkeit & Entsorgung",
   "ml.section.custom": "Benutzerdefiniert",
   "ml.section.footer": "Fußzeile",
+  "ml.section.logistics": "ZONE 1: Identifikation & Logistik",
+  "ml.section.regulatory": "ZONE 2: Regulatorische Haftung & Herkunft",
+  "ml.section.dpp-barcode": "ZONE 3: DPP & Barcode",
+  "ml.section.packaging": "ZONE 4: PPWR & Nachhaltigkeit",
+  "ml.section.handling": "ZONE 5: Handling-Symbole",
 
   "ml.pictogram.library": "Piktogramm-Bibliothek",
   "ml.pictogram.search": "Piktogramme suchen...",

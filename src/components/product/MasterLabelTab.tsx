@@ -83,10 +83,17 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
   // Load override suppliers when override IDs change
   useEffect(() => {
     if (manufacturerOverrideId) {
+      // Priority 1: Manual override from toolbar
       getSupplier(manufacturerOverrideId).then(setManufacturerSupplier).catch(console.error);
+    } else if (product.manufacturer && product.manufacturer.trim() !== '') {
+      // Priority 2: Product's manufacturer text field (if filled)
+      // Set to null so the assembler uses the product.manufacturer fallback
+      setManufacturerSupplier(null);
     } else if (product.manufacturerSupplierId) {
+      // Priority 3: Direct supplier link
       getSupplier(product.manufacturerSupplierId).then(setManufacturerSupplier).catch(console.error);
     } else {
+      // Priority 4: Supplier relationship with manufacturer role
       const mfr = productSuppliers.find(sp => sp.role === 'manufacturer');
       if (mfr) {
         getSupplier(mfr.supplier_id).then(setManufacturerSupplier).catch(console.error);
@@ -94,7 +101,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         setManufacturerSupplier(null);
       }
     }
-  }, [manufacturerOverrideId, product.manufacturerSupplierId, productSuppliers]);
+  }, [manufacturerOverrideId, product.manufacturer, product.manufacturerSupplierId, productSuppliers]);
 
   useEffect(() => {
     if (importerOverrideId) {
@@ -224,6 +231,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
           <div className="border rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
             <MasterLabelEditorPage
               data={labelData}
+              product={product}
               batches={batches}
               variant={variant}
               onVariantChange={setVariant}

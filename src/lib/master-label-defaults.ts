@@ -315,12 +315,85 @@ function createGeneralTemplate(): MasterLabelTemplate {
 // Exports
 // ---------------------------------------------------------------------------
 
+function createLogistics2026Template(): MasterLabelTemplate {
+  const design = createBlankDesign();
+
+  // Custom sections for 5 zones
+  design.sections = [
+    { id: 'logistics', label: 'ZONE 1: Identification & Logistics', visible: true, collapsed: false, sortOrder: 0, paddingTop: 0, paddingBottom: 8, showBorder: true, borderColor: '#1a1a1a' },
+    { id: 'regulatory', label: 'ZONE 2: Regulatory & Origin', visible: true, collapsed: false, sortOrder: 1, paddingTop: 0, paddingBottom: 8, showBorder: true, borderColor: '#1a1a1a' },
+    { id: 'dpp-barcode', label: 'ZONE 3: DPP & Barcode', visible: true, collapsed: false, sortOrder: 2, paddingTop: 0, paddingBottom: 8, showBorder: true, borderColor: '#1a1a1a' },
+    { id: 'packaging', label: 'ZONE 4: PPWR & Sustainability', visible: true, collapsed: false, sortOrder: 3, paddingTop: 0, paddingBottom: 8, showBorder: true, borderColor: '#1a1a1a' },
+    { id: 'handling', label: 'ZONE 5: Handling Symbols', visible: true, collapsed: false, sortOrder: 4, paddingTop: 0, paddingBottom: 0, showBorder: false, borderColor: '#d1d5db' },
+  ];
+
+  design.elements = [
+    // ZONE 1: Identifikation & Logistik
+    { id: generateElementId(), type: 'text', sectionId: 'logistics', sortOrder: 0, content: 'ZONE 1: IDENTIFICATION & LOGISTICS', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'logistics', sortOrder: 1, fieldKey: 'productName', showLabel: false, fontSize: 10, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'stacked', lineHeight: 1.1, marginBottom: 3 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'logistics', sortOrder: 2, fieldKey: 'gtin', showLabel: true, labelText: 'SKU / ITEM NO', fontSize: 7, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline', marginBottom: 2 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'logistics', sortOrder: 3, fieldKey: 'batchNumber', showLabel: true, labelText: 'BATCH NO', fontSize: 7, fontWeight: 'bold', color: '#d97706', labelColor: '#6b7280', alignment: 'left', layout: 'inline', marginBottom: 2 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'logistics', sortOrder: 4, fieldKey: 'quantity', showLabel: true, labelText: 'QUANTITY', fontSize: 6.5, fontWeight: 'normal', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline', marginBottom: 1.5 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'logistics', sortOrder: 5, fieldKey: 'grossWeight', showLabel: true, labelText: 'GROSS WEIGHT', fontSize: 6.5, fontWeight: 'normal', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline', marginBottom: 1.5 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'logistics', sortOrder: 6, fieldKey: 'netWeight', showLabel: true, labelText: 'NET WEIGHT', fontSize: 6.5, fontWeight: 'normal', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline', marginBottom: 1.5 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'text', sectionId: 'logistics', sortOrder: 7, content: 'CARTON DIMENSIONS: [L x B x H in mm]', fontSize: 6, fontWeight: 'normal', color: '#6b7280', alignment: 'left', italic: false, uppercase: false } satisfies LabelTextElement,
+
+    // ZONE 2: Regulatorische Haftung & Herkunft
+    { id: generateElementId(), type: 'text', sectionId: 'regulatory', sortOrder: 0, content: 'ZONE 2: REGULATORY & ORIGIN', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'compliance-badge', sectionId: 'regulatory', sortOrder: 1, badgeId: 'ce', symbol: 'CE', style: 'filled', size: 9, color: '#ffffff', backgroundColor: '#1a1a1a', showLabel: true, labelText: 'CE MARK (Min. 5mm height)', alignment: 'left' } satisfies LabelComplianceBadgeElement,
+    { id: generateElementId(), type: 'spacer', sectionId: 'regulatory', sortOrder: 2, height: 3 } satisfies LabelSpacerElement,
+    { id: generateElementId(), type: 'text', sectionId: 'regulatory', sortOrder: 3, content: 'EU-MANUFACTURER / IMPORTER:', fontSize: 6, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'regulatory', sortOrder: 4, fieldKey: 'manufacturerName', showLabel: false, fontSize: 7, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'stacked', marginBottom: 1 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'regulatory', sortOrder: 5, fieldKey: 'manufacturerAddress', showLabel: false, fontSize: 6, fontWeight: 'normal', color: '#374151', labelColor: '#6b7280', alignment: 'left', layout: 'stacked', marginBottom: 1 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'regulatory', sortOrder: 6, fieldKey: 'manufacturerContact', showLabel: false, fontSize: 6, fontWeight: 'normal', color: '#374151', labelColor: '#6b7280', alignment: 'left', layout: 'stacked', marginBottom: 2 } satisfies LabelFieldValueElement,
+    { id: generateElementId(), type: 'field-value', sectionId: 'regulatory', sortOrder: 7, fieldKey: 'countryOfOrigin', showLabel: true, labelText: 'COUNTRY OF ORIGIN', fontSize: 6.5, fontWeight: 'bold', color: '#1a1a1a', labelColor: '#6b7280', alignment: 'left', layout: 'inline' } satisfies LabelFieldValueElement,
+
+    // ZONE 3: Digitaler Produktpass & Barcode
+    { id: generateElementId(), type: 'text', sectionId: 'dpp-barcode', sortOrder: 0, content: 'ZONE 3: DIGITAL PRODUCT PASSPORT', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'qr-code', sectionId: 'dpp-barcode', sortOrder: 1, size: 60, showLabel: true, labelText: 'QR-CODE (DPP) - Min. 25x25mm', showUrl: false, alignment: 'left' } satisfies LabelQRCodeElement,
+    { id: generateElementId(), type: 'text', sectionId: 'dpp-barcode', sortOrder: 2, content: 'Cloud-Akte: DoC, Safety Data, Recycling Pass', fontSize: 5, fontWeight: 'normal', color: '#6b7280', alignment: 'left', italic: true, uppercase: false } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'spacer', sectionId: 'dpp-barcode', sortOrder: 3, height: 4 } satisfies LabelSpacerElement,
+    { id: generateElementId(), type: 'text', sectionId: 'dpp-barcode', sortOrder: 4, content: 'LOGISTIC BARCODE:', fontSize: 6, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'barcode', sectionId: 'dpp-barcode', sortOrder: 5, format: 'ean13', value: '', autoPopulate: true, height: 35, showText: true, alignment: 'left' } satisfies LabelBarcodeElement,
+
+    // ZONE 4: PPWR & Nachhaltigkeit
+    { id: generateElementId(), type: 'text', sectionId: 'packaging', sortOrder: 0, content: 'ZONE 4: PPWR & SUSTAINABILITY', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'text', sectionId: 'packaging', sortOrder: 1, content: 'MATERIAL IDENTIFICATION:', fontSize: 6, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'material-code', sectionId: 'packaging', sortOrder: 2, codes: ['PAP 20'], autoPopulate: true, fontSize: 6, color: '#1a1a1a', borderColor: '#1a1a1a', alignment: 'left' } satisfies LabelMaterialCodeElement,
+    { id: generateElementId(), type: 'spacer', sectionId: 'packaging', sortOrder: 3, height: 3 } satisfies LabelSpacerElement,
+    { id: generateElementId(), type: 'text', sectionId: 'packaging', sortOrder: 4, content: 'SORTING INSTRUCTION:', fontSize: 6, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'pictogram', sectionId: 'packaging', sortOrder: 5, pictogramId: 'paper-recyclable', source: 'builtin', size: 22, color: '#1a1a1a', showLabel: true, labelText: 'Blue Bin (Altpapier)', alignment: 'left' } satisfies LabelPictogramElement,
+    { id: generateElementId(), type: 'spacer', sectionId: 'packaging', sortOrder: 6, height: 3 } satisfies LabelSpacerElement,
+    { id: generateElementId(), type: 'text', sectionId: 'packaging', sortOrder: 7, content: 'PACKAGING STATEMENT:', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'text', sectionId: 'packaging', sortOrder: 8, content: 'PFAS-free material. Minimum 80% recycled content.', fontSize: 6, fontWeight: 'normal', color: '#059669', alignment: 'left', italic: false, uppercase: false } satisfies LabelTextElement,
+
+    // ZONE 5: Handling-Symbole
+    { id: generateElementId(), type: 'text', sectionId: 'handling', sortOrder: 0, content: 'ZONE 5: HANDLING SYMBOLS (ISO 780)', fontSize: 5.5, fontWeight: 'bold', color: '#1a1a1a', alignment: 'left', italic: false, uppercase: true } satisfies LabelTextElement,
+    { id: generateElementId(), type: 'pictogram', sectionId: 'handling', sortOrder: 1, pictogramId: 'fragile', source: 'builtin', size: 18, color: '#1a1a1a', showLabel: false, alignment: 'left' } satisfies LabelPictogramElement,
+    { id: generateElementId(), type: 'pictogram', sectionId: 'handling', sortOrder: 2, pictogramId: 'keep-dry', source: 'builtin', size: 18, color: '#1a1a1a', showLabel: false, alignment: 'left' } satisfies LabelPictogramElement,
+    { id: generateElementId(), type: 'pictogram', sectionId: 'handling', sortOrder: 3, pictogramId: 'this-way-up', source: 'builtin', size: 18, color: '#1a1a1a', showLabel: false, alignment: 'left' } satisfies LabelPictogramElement,
+  ];
+
+  return {
+    id: 'builtin-logistics-2026',
+    name: 'Logistics 2026 (5-Zone)',
+    description: 'Professional logistics label with 5 zones: ID/Logistics, Regulatory/Origin, DPP/Barcode, PPWR/Sustainability, Handling symbols. Compliant with EU 2026 requirements.',
+    category: 'logistics',
+    variant: 'b2b',
+    design,
+    isDefault: true,
+    createdAt: '2026-02-09T00:00:00Z',
+    updatedAt: '2026-02-09T00:00:00Z',
+  };
+}
+
 export const DEFAULT_MASTER_LABEL_TEMPLATES: MasterLabelTemplate[] = [
   createElectronicsTemplate(),
   createTextilesTemplate(),
   createToysTemplate(),
   createHouseholdTemplate(),
   createGeneralTemplate(),
+  createLogistics2026Template(),
 ];
 
 export function getDefaultDesignForGroup(group: string): LabelDesign {

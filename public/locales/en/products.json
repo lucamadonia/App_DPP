@@ -505,6 +505,11 @@
   "ml.section.sustainability": "Sustainability & Disposal",
   "ml.section.custom": "Custom",
   "ml.section.footer": "Footer",
+  "ml.section.logistics": "ZONE 1: Identification & Logistics",
+  "ml.section.regulatory": "ZONE 2: Regulatory & Origin",
+  "ml.section.dpp-barcode": "ZONE 3: DPP & Barcode",
+  "ml.section.packaging": "ZONE 4: PPWR & Sustainability",
+  "ml.section.handling": "ZONE 5: Handling Symbols",
 
   "ml.pictogram.library": "Pictogram Library",
   "ml.pictogram.search": "Search pictograms...",

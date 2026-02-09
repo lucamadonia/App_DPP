@@ -49,6 +49,7 @@ import { ShieldCheck } from 'lucide-react';
 
 interface MasterLabelEditorPageProps {
   data: MasterLabelData | null;
+  product: { manufacturer?: string; importer?: string; gtin: string };
   batches: BatchListItem[];
   variant: LabelVariant;
   onVariantChange: (v: LabelVariant) => void;
@@ -64,6 +65,7 @@ interface MasterLabelEditorPageProps {
 
 export function MasterLabelEditorPage({
   data,
+  product,
   batches,
   variant,
   onVariantChange,
@@ -664,6 +666,7 @@ export function MasterLabelEditorPage({
             onGeneratePDF={handleGeneratePDF}
             onOpenMultiLabelDialog={() => setShowMultiLabelDialog(true)}
             onBack={() => setView('gallery')}
+            product={product}
             productSuppliers={productSuppliers}
             manufacturerOverrideId={manufacturerOverrideId}
             onManufacturerOverride={onManufacturerOverride}
