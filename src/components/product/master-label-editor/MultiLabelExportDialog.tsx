@@ -86,6 +86,8 @@ export function MultiLabelExportDialog({
       onOpenChange(false);
     } catch (err) {
       console.error('Export failed:', err);
+      // Error is already shown via toast in parent component
+      // Don't close dialog on error so user can try again or adjust settings
     } finally {
       setIsExporting(false);
     }

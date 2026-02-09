@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import type {
   LabelDesign,
   LabelElement,
@@ -76,6 +77,7 @@ export function MasterLabelEditorPage({
   onImporterOverride,
 }: MasterLabelEditorPageProps) {
   const { t, i18n } = useTranslation('products');
+  const { toast } = useToast();
 
   // View state
   const [view, setView] = useState<LabelEditorView>('gallery');
@@ -357,20 +359,44 @@ export function MasterLabelEditorPage({
   // ---------------------------------------------------------------------------
 
   const handleGeneratePDF = useCallback(async () => {
-    if (!data) return;
+    if (!data) {
+      toast({
+        title: t('ml.export.error.noData'),
+        description: t('ml.export.error.noDataDesc'),
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsGenerating(true);
     try {
       const { generateMasterLabelEditorPDF } = await import('@/lib/master-label-pdf-renderer');
       await generateMasterLabelEditorPDF(design, data);
+      toast({
+        title: t('ml.export.success'),
+        description: t('ml.export.successDesc'),
+      });
     } catch (err) {
       console.error('PDF generation failed:', err);
+      toast({
+        title: t('ml.export.error.failed'),
+        description: err instanceof Error ? err.message : t('ml.export.error.unknown'),
+        variant: 'destructive',
+      });
+      throw err; // Re-throw to prevent dialog from closing
     } finally {
       setIsGenerating(false);
     }
-  }, [design, data]);
+  }, [design, data, toast, t]);
 
   const handleMultiLabelExport = useCallback(async (config: MultiLabelExportConfig) => {
-    if (!data) return;
+    if (!data) {
+      toast({
+        title: t('ml.export.error.noData'),
+        description: t('ml.export.error.noDataDesc'),
+        variant: 'destructive',
+      });
+      throw new Error('No data available for export');
+    }
     setIsGenerating(true);
     try {
       const { generateMasterLabelEditorPDF } = await import('@/lib/master-label-pdf-renderer');
@@ -381,12 +407,26 @@ export function MasterLabelEditorPage({
         config,
         i18n.language as 'en' | 'de'
       );
+
+      // Success notification
+      const labelCount = config.labelCount;
+      const fileCount = config.filenamePattern === 'batch' ? labelCount : 1;
+      toast({
+        title: t('ml.export.success'),
+        description: t('ml.export.successMulti', { count: labelCount, files: fileCount }),
+      });
     } catch (err) {
       console.error('Multi-label export failed:', err);
+      toast({
+        title: t('ml.export.error.failed'),
+        description: err instanceof Error ? err.message : t('ml.export.error.unknown'),
+        variant: 'destructive',
+      });
+      throw err; // Re-throw to prevent dialog from closing
     } finally {
       setIsGenerating(false);
     }
-  }, [design, data, i18n.language]);
+  }, [design, data, i18n.language, toast, t]);
 
   const hasCounterElement = design.elements.some(el => el.type === 'package-counter');
 
