@@ -27,7 +27,6 @@ import {
   Package,
   FileText,
   Settings,
-  Paintbrush,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,7 +57,6 @@ import { LANGUAGE_OPTIONS } from '@/components/product/LanguageSwitcher';
 import { useBranding } from '@/contexts/BrandingContext';
 import type { Tenant, BrandingSettings } from '@/types/database';
 import { validateDomain, validatePathPrefix, normalizeDomain, buildDomainUrl } from '@/lib/domain-utils';
-import { DPPDesignTab } from '@/components/settings/DPPDesignTab';
 import { CustomDomainWizard } from '@/components/settings/CustomDomainWizard';
 
 const apiKeys = [
@@ -422,10 +420,6 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           <TabsTrigger value="branding" className="flex items-center gap-2 flex-shrink-0">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">{t('App Branding')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="dpp-design" className="flex items-center gap-2 flex-shrink-0">
-            <Paintbrush className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('DPP Design')}</span>
           </TabsTrigger>
           <TabsTrigger value="domain" className="flex items-center gap-2 flex-shrink-0">
             <Globe className="h-4 w-4" />
@@ -1151,11 +1145,6 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               {brandingSaved ? t('Saved!') : t('Save Branding')}
             </Button>
           </div>
-        </TabsContent>
-
-        {/* DPP Design */}
-        <TabsContent value="dpp-design" className="space-y-6">
-          <DPPDesignTab />
         </TabsContent>
 
         {/* Domain */}

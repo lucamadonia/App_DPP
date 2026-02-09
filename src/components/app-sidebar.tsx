@@ -86,6 +86,7 @@ export function AppSidebar() {
         { title: t('Overview'), url: '/dpp' },
         { title: t('QR Generator'), url: '/dpp/qr-generator' },
         { title: t('Visibility'), url: '/dpp/visibility' },
+        { title: t('Design'), url: '/dpp/design' },
         { title: t('Batch Upload'), url: '/dpp/batch-upload' },
       ],
     },

@@ -74,6 +74,7 @@ const BatchDetailPage = lazy(() => import('@/pages/BatchDetailPage').then(m => (
 const DPPOverviewPage = lazy(() => import('@/pages/DPPOverviewPage').then(m => ({ default: m.DPPOverviewPage })));
 const QRGeneratorPage = lazy(() => import('@/pages/QRGeneratorPage').then(m => ({ default: m.QRGeneratorPage })));
 const DPPVisibilitySettingsPageV3 = lazy(() => import('@/pages/DPPVisibilitySettingsPageV3').then(m => ({ default: m.DPPVisibilitySettingsPageV3 })));
+const DPPDesignPage = lazy(() => import('@/pages/DPPDesignPage').then(m => ({ default: m.DPPDesignPage })));
 const DocumentsPage = lazy(() => import('@/pages/DocumentsPage').then(m => ({ default: m.DocumentsPage })));
 const SupplyChainPage = lazy(() => import('@/pages/SupplyChainPage').then(m => ({ default: m.SupplyChainPage })));
 const SuppliersPage = lazy(() => import('@/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
@@ -297,6 +298,7 @@ function NormalAppRoutes() {
           <Route path="dpp" element={<DPPOverviewPage />} />
           <Route path="dpp/qr-generator" element={<QRGeneratorPage />} />
           <Route path="dpp/visibility" element={<DPPVisibilitySettingsPageV3 />} />
+          <Route path="dpp/design" element={<DPPDesignPage />} />
           <Route path="dpp/batch-upload" element={<PlaceholderPage title="Batch-Upload" />} />
 
           {/* Documents */}
