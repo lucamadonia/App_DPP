@@ -190,7 +190,7 @@ export function SupplyChainRenderer({ product, displayMode, isFieldVisible, prim
     case 'vertical-timeline':
       return <VerticalTimelineMode product={product} isFieldVisible={isFieldVisible} primaryColor={primaryColor} locale={locale} t={t} />;
     case 'horizontal-timeline':
-      return <HorizontalTimelineMode product={product} isFieldVisible={isFieldVisible} primaryColor={primaryColor} t={t} />;
+      return <HorizontalTimelineMode product={product} isFieldVisible={isFieldVisible} primaryColor={primaryColor} />;
     case 'map-cards':
       return <MapCardsMode product={product} isFieldVisible={isFieldVisible} primaryColor={primaryColor} t={t} />;
     case 'table':

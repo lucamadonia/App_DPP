@@ -47,7 +47,6 @@ import type {
   DPPBorderRadius,
   DPPShadowDepth,
   DPPBorderStyle,
-  DPPTemplateName,
 } from '@/types/database';
 import {
   DPP_THEME_PRESETS,
@@ -61,7 +60,6 @@ import { DPPDisplayModeSelector } from './DPPDisplayModeSelector';
 
 interface Props {
   designForm: DPPDesignSettings;
-  templateCustomer: DPPTemplateName;
   updateColors: (key: string, value: string) => void;
   updateTypography: (key: string, value: string) => void;
   updateHero: (key: string, value: unknown) => void;
@@ -91,7 +89,6 @@ const SECTION_LABELS: Record<DPPSectionId, { icon: ReactNode; labelKey: string }
 
 export function DPPDesignSettingsPanel({
   designForm,
-  templateCustomer,
   updateColors,
   updateTypography,
   updateHero,

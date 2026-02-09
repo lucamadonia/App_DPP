@@ -8,7 +8,6 @@ import type { Product } from '@/types/product';
 
 const MOCK_PREVIEW_PRODUCT: Product = {
   id: 'preview-mock',
-  tenantId: '',
   gtin: '4012345678901',
   serialNumber: 'SN-2025-001234',
   name: 'Premium Wireless Headphones',
@@ -80,10 +79,7 @@ const MOCK_PREVIEW_PRODUCT: Product = {
       { name: 'Headband Padding', partNumber: 'SP-HB-002', price: 14.99, currency: '€', available: true },
     ],
   },
-  documents: [],
   registrations: {},
-  createdAt: '2025-01-15',
-  updatedAt: '2025-01-15',
 };
 
 export function usePreviewProduct(): { product: Product; loading: boolean } {

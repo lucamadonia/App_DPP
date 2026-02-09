@@ -99,7 +99,7 @@ export function CustomConsumerView({ data, tenantId }: Props) {
             {packagingMats.map((material, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <PackageIcon className="h-4 w-4 text-muted-foreground" />
+                  <Package className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <span className="font-medium">{material.name}</span>
                     {isFieldVisible('materialOrigins') && material.origin && (
@@ -269,7 +269,6 @@ export function CustomConsumerView({ data, tenantId }: Props) {
                 showBadges={cl.showProductBadges}
                 cardStyle={cardStyle}
                 headingStyle={headingStyle}
-                primaryColor={primaryColor}
                 t={t}
               />
             </aside>
@@ -307,7 +306,6 @@ export function CustomConsumerView({ data, tenantId }: Props) {
           showBadges={cl.showProductBadges}
           cardStyle={cardStyle}
           headingStyle={headingStyle}
-          primaryColor={primaryColor}
           t={t}
         />
       )}

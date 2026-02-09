@@ -1,7 +1,7 @@
 /**
  * Split-pane editor layout: Toolbar + Settings Panel (left) + Live Preview (right).
  */
-import type { DPPDesignSettings, DPPSectionId, DPPTemplateName } from '@/types/database';
+import type { DPPDesignSettings, DPPSectionId } from '@/types/database';
 import type { Product } from '@/types/product';
 import type { Viewport, ViewMode } from './DPPDesignToolbar';
 import { DPPDesignToolbar } from './DPPDesignToolbar';
@@ -13,8 +13,6 @@ interface Props {
   designForm: DPPDesignSettings;
   viewMode: ViewMode;
   viewport: Viewport;
-  templateCustomer: DPPTemplateName;
-  templateCustoms: DPPTemplateName;
   product: Product;
   productLoading: boolean;
   primaryColor: string;
@@ -24,11 +22,8 @@ interface Props {
   heroInputRef: React.RefObject<HTMLInputElement | null>;
 
   // State setters
-  setDesignForm: (updater: (prev: DPPDesignSettings) => DPPDesignSettings) => void;
   setViewMode: (v: ViewMode) => void;
   setViewport: (v: Viewport) => void;
-  setTemplateCustomer: (v: DPPTemplateName) => void;
-  setTemplateCustoms: (v: DPPTemplateName) => void;
 
   // Update functions
   updateColors: (key: string, value: string) => void;
@@ -38,7 +33,6 @@ interface Props {
   updateFooter: (key: string, value: unknown) => void;
   updateCustomLayout: (key: string, value: unknown) => void;
   updateSocialLink: (key: string, value: string) => void;
-  updateSectionOrder: (order: DPPSectionId[]) => void;
   updateSectionConfig: (id: DPPSectionId, key: string, value: boolean) => void;
   applyPreset: (key: string) => void;
   moveSection: (index: number, direction: 'up' | 'down') => void;
@@ -50,8 +44,6 @@ export function DPPDesignEditorLayout({
   designForm,
   viewMode,
   viewport,
-  templateCustomer,
-  templateCustoms,
   product,
   productLoading,
   primaryColor,
@@ -59,11 +51,8 @@ export function DPPDesignEditorLayout({
   saved,
   isUploadingHero,
   heroInputRef,
-  setDesignForm,
   setViewMode,
   setViewport,
-  setTemplateCustomer,
-  setTemplateCustoms,
   updateColors,
   updateTypography,
   updateHero,
@@ -71,7 +60,6 @@ export function DPPDesignEditorLayout({
   updateFooter,
   updateCustomLayout,
   updateSocialLink,
-  updateSectionOrder,
   updateSectionConfig,
   applyPreset,
   moveSection,
@@ -96,10 +84,6 @@ export function DPPDesignEditorLayout({
         {/* Left: Settings */}
         <DPPDesignSettingsPanel
           designForm={designForm}
-          templateCustomer={templateCustomer}
-          templateCustoms={templateCustoms}
-          setTemplateCustomer={setTemplateCustomer}
-          setTemplateCustoms={setTemplateCustoms}
           updateColors={updateColors}
           updateTypography={updateTypography}
           updateHero={updateHero}
@@ -107,7 +91,6 @@ export function DPPDesignEditorLayout({
           updateFooter={updateFooter}
           updateCustomLayout={updateCustomLayout}
           updateSocialLink={updateSocialLink}
-          updateSectionOrder={updateSectionOrder}
           updateSectionConfig={updateSectionConfig}
           applyPreset={applyPreset}
           moveSection={moveSection}
@@ -115,7 +98,6 @@ export function DPPDesignEditorLayout({
           handleHeroUpload={handleHeroUpload}
           isUploadingHero={isUploadingHero}
           primaryColor={primaryColor}
-          setDesignForm={setDesignForm}
         />
 
         {/* Right: Live Preview */}
@@ -126,7 +108,6 @@ export function DPPDesignEditorLayout({
             designForm={designForm}
             product={product}
             loading={productLoading}
-            primaryColor={primaryColor}
           />
         </div>
       </div>
