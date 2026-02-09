@@ -73,7 +73,7 @@ export function LabelCanvas({
       <div
         style={{
           width: `${canvasWidth}px`,
-          height: `${canvasHeight}px`,
+          minHeight: `${canvasHeight}px`,
           transform: `scale(${scale})`,
           transformOrigin: 'top center',
           padding: `${design.padding * pxPerPt}px`,
@@ -82,7 +82,7 @@ export function LabelCanvas({
           fontSize: `${design.baseFontSize * 1.2}px`,
           color: design.baseTextColor,
         }}
-        className="bg-white border border-gray-300 rounded shadow-md overflow-hidden"
+        className="bg-white border border-gray-300 rounded shadow-md"
       >
         {sortedSections.map((section, sectionIndex) => {
           const sectionElements = design.elements.filter(el => el.sectionId === section.id);
