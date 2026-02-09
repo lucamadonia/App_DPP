@@ -7,7 +7,6 @@ import type { DPPDesignSettings } from '@/types/database';
 import type { Product } from '@/types/product';
 import type { Viewport } from './DPPDesignToolbar';
 import { TemplateCustom } from '@/components/public/TemplateCustom';
-import { FONT_FAMILY_MAP } from '@/lib/dpp-design-defaults';
 import { resolveDesign, getPageStyle } from '@/lib/dpp-design-utils';
 
 interface Props {
@@ -16,7 +15,6 @@ interface Props {
   designForm: DPPDesignSettings;
   product: Product;
   loading: boolean;
-  primaryColor: string;
 }
 
 const VIEWPORT_WIDTH: Record<Viewport, string> = {
@@ -31,7 +29,6 @@ export function DPPDesignPreviewPanel({
   designForm,
   product,
   loading,
-  primaryColor,
 }: Props) {
   const resolved = resolveDesign(designForm);
   const maxWidth = VIEWPORT_WIDTH[viewport];

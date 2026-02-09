@@ -5,14 +5,12 @@ import { useState, type ReactNode } from 'react';
 import {
   Package, Leaf, Award, Truck, Globe, Building2, ShieldCheck, Download,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { formatDate } from '@/lib/format';
 import type { DPPTemplateData } from '@/hooks/use-dpp-template-data';
-import type { DPPCustomSectionStyle, DPPCustomHeaderStyle } from '@/types/database';
-import { SECTION_INNER_PADDING_MAP } from '@/lib/dpp-design-defaults';
 import { DPPESPRSections } from '@/components/public/DPPESPRSections';
 import { CustomSectionHeader } from './CustomSectionHeader';
 

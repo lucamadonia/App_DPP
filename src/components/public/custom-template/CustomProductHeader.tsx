@@ -18,7 +18,6 @@ interface Props {
   showBadges: boolean;
   cardStyle: CSSProperties;
   headingStyle: CSSProperties;
-  primaryColor: string;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
@@ -49,7 +48,6 @@ export function CustomProductHeader({
   showBadges,
   cardStyle,
   headingStyle,
-  primaryColor,
   t,
 }: Props) {
   const imageEl = isFieldVisible('image') && product.imageUrl ? (

@@ -81,7 +81,7 @@ function VerticalTimelineMode({ product, isFieldVisible, primaryColor, locale, t
   );
 }
 
-function HorizontalTimelineMode({ product, isFieldVisible, primaryColor, t }: Omit<Props, 'displayMode' | 'locale'>) {
+function HorizontalTimelineMode({ product, isFieldVisible, primaryColor }: Omit<Props, 'displayMode' | 'locale' | 't'>) {
   return (
     <div className="overflow-x-auto pb-4">
       <div className="flex items-start gap-4 min-w-max relative pt-4">

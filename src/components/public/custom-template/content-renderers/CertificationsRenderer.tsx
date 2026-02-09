@@ -4,7 +4,7 @@
 import { ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
-import type { Certification } from '@/types/database';
+import type { Certification } from '@/types/product';
 import type { DPPCertificationsDisplayMode } from '@/types/database';
 
 interface Props {

@@ -28,8 +28,6 @@ import { CertificationsRenderer } from './content-renderers/CertificationsRender
 import { SupplyChainRenderer } from './content-renderers/SupplyChainRenderer';
 import { RecyclingRenderer } from './content-renderers/RecyclingRenderer';
 import { SupportRenderer } from './content-renderers/SupportRenderer';
-import { SafeHtml } from '@/components/ui/safe-html';
-import { Package as PackageIcon } from 'lucide-react';
 
 interface Props {
   data: DPPTemplateData;

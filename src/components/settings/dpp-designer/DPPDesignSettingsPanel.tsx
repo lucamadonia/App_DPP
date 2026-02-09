@@ -12,7 +12,6 @@ import {
   Minus,
   Columns2,
   PanelLeft,
-  RotateCcw,
   Upload,
   Loader2,
   Package,
@@ -45,23 +44,16 @@ import type {
   DPPFontFamily,
   DPPFontSize,
   DPPFontWeight,
-  DPPHeroStyle,
-  DPPHeroHeight,
   DPPBorderRadius,
   DPPShadowDepth,
   DPPBorderStyle,
   DPPTemplateName,
-  DPPCustomLayoutMode,
-  DPPCustomSectionStyle,
-  DPPCustomHeaderStyle,
 } from '@/types/database';
 import {
   DPP_THEME_PRESETS,
   BORDER_RADIUS_MAP,
   SHADOW_MAP,
   FONT_FAMILY_MAP,
-  HEADING_FONT_SIZE_MAP,
-  BODY_FONT_SIZE_MAP,
   FONT_WEIGHT_MAP,
 } from '@/lib/dpp-design-defaults';
 import { resolveDesign } from '@/lib/dpp-design-utils';
@@ -70,9 +62,6 @@ import { DPPDisplayModeSelector } from './DPPDisplayModeSelector';
 interface Props {
   designForm: DPPDesignSettings;
   templateCustomer: DPPTemplateName;
-  templateCustoms: DPPTemplateName;
-  setTemplateCustomer: (v: DPPTemplateName) => void;
-  setTemplateCustoms: (v: DPPTemplateName) => void;
   updateColors: (key: string, value: string) => void;
   updateTypography: (key: string, value: string) => void;
   updateHero: (key: string, value: unknown) => void;
@@ -80,7 +69,6 @@ interface Props {
   updateFooter: (key: string, value: unknown) => void;
   updateCustomLayout: (key: string, value: unknown) => void;
   updateSocialLink: (key: string, value: string) => void;
-  updateSectionOrder: (order: DPPSectionId[]) => void;
   updateSectionConfig: (id: DPPSectionId, key: string, value: boolean) => void;
   applyPreset: (key: string) => void;
   moveSection: (index: number, direction: 'up' | 'down') => void;
@@ -88,7 +76,6 @@ interface Props {
   handleHeroUpload: (file: File) => void;
   isUploadingHero: boolean;
   primaryColor: string;
-  setDesignForm: (updater: (prev: DPPDesignSettings) => DPPDesignSettings) => void;
 }
 
 const SECTION_LABELS: Record<DPPSectionId, { icon: ReactNode; labelKey: string }> = {
@@ -105,9 +92,6 @@ const SECTION_LABELS: Record<DPPSectionId, { icon: ReactNode; labelKey: string }
 export function DPPDesignSettingsPanel({
   designForm,
   templateCustomer,
-  templateCustoms,
-  setTemplateCustomer,
-  setTemplateCustoms,
   updateColors,
   updateTypography,
   updateHero,
@@ -115,7 +99,6 @@ export function DPPDesignSettingsPanel({
   updateFooter,
   updateCustomLayout,
   updateSocialLink,
-  updateSectionOrder,
   updateSectionConfig,
   applyPreset,
   moveSection,
@@ -123,7 +106,6 @@ export function DPPDesignSettingsPanel({
   handleHeroUpload,
   isUploadingHero,
   primaryColor,
-  setDesignForm,
 }: Props) {
   const { t } = useTranslation('settings');
   const resolved = resolveDesign(designForm);

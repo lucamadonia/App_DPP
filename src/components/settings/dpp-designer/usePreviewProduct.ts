@@ -33,9 +33,9 @@ const MOCK_PREVIEW_PRODUCT: Product = {
     { name: 'Copper Wiring', percentage: 15, recyclable: true, origin: 'Chile' },
   ],
   certifications: [
-    { name: 'CE Marking', issuedBy: 'TÜV Rheinland', validUntil: '2027-12-31', product_id: '' },
-    { name: 'RoHS Compliant', issuedBy: 'SGS', validUntil: '2026-06-30', product_id: '' },
-    { name: 'ISO 14001', issuedBy: 'Bureau Veritas', validUntil: '2026-09-15', product_id: '' },
+    { name: 'CE Marking', issuedBy: 'TÜV Rheinland', validUntil: '2027-12-31' },
+    { name: 'RoHS Compliant', issuedBy: 'SGS', validUntil: '2026-06-30' },
+    { name: 'ISO 14001', issuedBy: 'Bureau Veritas', validUntil: '2026-09-15' },
   ],
   carbonFootprint: {
     totalKgCO2: 12.5,

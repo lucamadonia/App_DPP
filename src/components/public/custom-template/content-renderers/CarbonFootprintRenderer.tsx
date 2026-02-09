@@ -54,7 +54,6 @@ function RatingBadge({ rating, style, primaryColor }: { rating: string; style: D
     }
 
     case 'speedometer': {
-      const angle = -90 + (ratingNum / 100) * 180;
       return (
         <svg width="100" height="60" viewBox="0 0 100 60" className="flex-shrink-0">
           <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#e5e7eb" strokeWidth="8" strokeLinecap="round" />

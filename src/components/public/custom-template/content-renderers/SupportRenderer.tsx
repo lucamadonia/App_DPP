@@ -3,7 +3,6 @@
  */
 import { useState } from 'react';
 import { BookOpen, Video, MessageSquare, ShieldCheck, Wrench, Package, MapPin } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Accordion,

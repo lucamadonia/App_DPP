@@ -48,7 +48,11 @@
       "Bash(done)",
       "Bash(for template in Classic Compact EcoFriendly Government Minimal Modern Premium Retail Scientific Technical)",
       "Bash(do)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(del C:Userslucaprojectsapp_dppcount-keys.mjs)",
+      "Bash(git update-index:*)",
+      "Bash(git hash-object:*)",
+      "WebFetch(domain:deno.land)"
     ]
   }
 }
