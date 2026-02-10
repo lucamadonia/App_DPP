@@ -26,10 +26,13 @@ import {
   Sparkles,
   Ticket,
   Database,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useBillingOptional } from '@/contexts/BillingContext';
+import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -62,6 +65,7 @@ export function AppSidebar() {
   const { user, signOut, isSuperAdmin } = useAuth();
   const { branding } = useBranding();
   const billing = useBillingOptional();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const { t } = useTranslation('common');
 
   const mainNavItems = useMemo(() => [
@@ -210,6 +214,10 @@ export function AppSidebar() {
     return location.pathname.startsWith(url);
   };
 
+  // Auto-expand collapsible sections that contain the active route
+  const hasActiveChild = (items: { url: string }[]) =>
+    items.some((item) => isActive(item.url));
+
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
@@ -229,16 +237,16 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainNavItems.map((item) =>
                 item.items ? (
-                  <Collapsible key={item.title} defaultOpen className="group/collapsible">
+                  <Collapsible key={item.title} defaultOpen={hasActiveChild(item.items)} className="group/collapsible">
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton>
-                          <item.icon className="h-4 w-4" />
+                          <item.icon className="h-4 w-4 transition-colors" />
                           <span>{item.title}</span>
-                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
-                      <CollapsibleContent>
+                      <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
                         <SidebarMenuSub>
                           {item.items.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.title}>
@@ -261,7 +269,7 @@ export function AppSidebar() {
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                         {item.badge && (
-                          <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-xs text-primary">
+                          <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-xs text-primary animate-pulse">
                             {item.badge}
                           </span>
                         )}
@@ -280,16 +288,16 @@ export function AppSidebar() {
             <SidebarMenu>
               {settingsNavItems.map((item) =>
                 item.items ? (
-                  <Collapsible key={item.title} className="group/collapsible">
+                  <Collapsible key={item.title} defaultOpen={hasActiveChild(item.items)} className="group/collapsible">
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton>
-                          <item.icon className="h-4 w-4" />
+                          <item.icon className="h-4 w-4 transition-colors" />
                           <span>{item.title}</span>
-                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
-                      <CollapsibleContent>
+                      <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
                         <SidebarMenuSub>
                           {item.items.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.title}>
@@ -358,6 +366,16 @@ export function AppSidebar() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+              title={resolvedTheme === 'dark' ? t('Light Mode') : t('Dark Mode')}
+              aria-label={resolvedTheme === 'dark' ? t('Switch to light mode') : t('Switch to dark mode')}
+            >
+              {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <LanguageSwitcher />
             <Button
               variant="ghost"

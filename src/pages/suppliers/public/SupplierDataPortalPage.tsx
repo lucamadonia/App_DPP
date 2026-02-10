@@ -964,7 +964,7 @@ export function SupplierDataPortalPage() {
           <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {branding.logoUrl ? (
-                <img src={branding.logoUrl} alt={tenant.name} className="h-9 w-9 rounded-lg object-contain" />
+                <img src={branding.logoUrl} alt={tenant.name} className="h-9 w-9 rounded-lg object-contain" loading="lazy" />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ backgroundColor: primaryColor }}>
                   <Package className="h-5 w-5" />
@@ -1133,7 +1133,7 @@ export function SupplierDataPortalPage() {
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt={tenant.name} className="h-9 w-9 rounded-lg object-contain" />
+              <img src={branding.logoUrl} alt={tenant.name} className="h-9 w-9 rounded-lg object-contain" loading="lazy" />
             ) : (
               <div className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ backgroundColor: primaryColor }}>
                 <Package className="h-5 w-5" />

@@ -1195,7 +1195,7 @@ export function QRGeneratorPage() {
                       {/* Branding logo hint */}
                       {branding.logo && !qrSettings.logoUrl && (
                         <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                          <img src={branding.logo} alt="Company logo" className="h-8 w-8 object-contain rounded" />
+                          <img src={branding.logo} alt="Company logo" className="h-8 w-8 object-contain rounded" loading="lazy" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{t('Company logo')}</p>
                             <p className="text-xs text-muted-foreground">{t('From branding settings')}</p>
@@ -1233,7 +1233,7 @@ export function QRGeneratorPage() {
                         </div>
                         {qrSettings.logoUrl && (
                           <div className="flex items-center gap-2">
-                            <img src={qrSettings.logoUrl} alt="Custom logo" className="h-8 w-8 object-contain rounded border" />
+                            <img src={qrSettings.logoUrl} alt="Custom logo" className="h-8 w-8 object-contain rounded border" loading="lazy" />
                             <Badge>{t('Custom logo active')}</Badge>
                           </div>
                         )}

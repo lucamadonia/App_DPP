@@ -23,6 +23,7 @@ export default defineConfig({
             '@tiptap/extension-underline',
           ],
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          'vendor-react-pdf': ['@react-pdf/renderer'],
         },
       },
     },

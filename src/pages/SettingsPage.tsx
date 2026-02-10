@@ -838,7 +838,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       <div className="flex items-center">
                         <div className="flex items-center gap-1.5 bg-background rounded-t-lg border border-b-0 px-3 py-1.5 max-w-[200px]">
                           {brandingForm.favicon ? (
-                            <img src={brandingForm.favicon} alt="" className="h-4 w-4 object-contain flex-shrink-0" />
+                            <img src={brandingForm.favicon} alt="" className="h-4 w-4 object-contain flex-shrink-0" loading="lazy" />
                           ) : (
                             <Globe className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           )}
@@ -867,7 +867,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     {/* Page content hint */}
                     <div className="p-4 flex items-center gap-2">
                       {brandingForm.favicon ? (
-                        <img src={brandingForm.favicon} alt="" className="h-5 w-5 object-contain" />
+                        <img src={brandingForm.favicon} alt="" className="h-5 w-5 object-contain" loading="lazy" />
                       ) : (
                         <div
                           className="h-5 w-5 rounded flex items-center justify-center text-white text-[10px] font-bold"
@@ -984,7 +984,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     {/* Logo + App Name */}
                     <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
                       {brandingForm.logo ? (
-                        <img src={brandingForm.logo} alt="Logo" className="h-8 w-8 rounded object-contain" />
+                        <img src={brandingForm.logo} alt="Logo" className="h-8 w-8 rounded object-contain" loading="lazy" />
                       ) : (
                         <div
                           className="h-8 w-8 rounded flex items-center justify-center text-white text-sm font-bold"
@@ -1025,7 +1025,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   {/* Mini header */}
                   <div className="border-b px-4 py-3 flex items-center gap-2">
                     {brandingForm.logo ? (
-                      <img src={brandingForm.logo} alt="Logo" className="h-6 w-6 rounded object-contain" />
+                      <img src={brandingForm.logo} alt="Logo" className="h-6 w-6 rounded object-contain" loading="lazy" />
                     ) : (
                       <div
                         className="h-6 w-6 rounded flex items-center justify-center text-white text-xs font-bold"

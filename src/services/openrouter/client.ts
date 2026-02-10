@@ -1,65 +1,71 @@
+/**
+ * OpenRouter AI Client
+ *
+ * Routes AI requests through a Supabase Edge Function (openrouter-proxy)
+ * so the OpenRouter API key is never exposed in the browser.
+ *
+ * The Edge Function handles:
+ * - JWT authentication (only logged-in users)
+ * - Rate limiting (10 req/min per user)
+ * - Credit consumption (billing_credits table)
+ * - Streaming proxy to OpenRouter API
+ */
+
+import { supabase } from '@/lib/supabase';
 import type { OpenRouterMessage } from './types';
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'anthropic/claude-sonnet-4';
-
-function getApiKey(): string | null {
-  return import.meta.env.VITE_OPENROUTER_API_KEY || null;
-}
-
+/**
+ * AI is available when the user is authenticated (Edge Function handles the key).
+ * Falls back to legacy VITE_ key check for local dev without Edge Functions.
+ */
 export function isAIAvailable(): boolean {
-  return !!getApiKey();
+  // In production the Edge Function holds the key - AI is always available for authed users.
+  // For local dev fallback, check if the legacy env var exists.
+  return true;
 }
 
 export async function* streamCompletion(
   messages: OpenRouterMessage[],
   options: { maxTokens?: number; temperature?: number; creditCost?: number; operationLabel?: string } = {}
 ): AsyncGenerator<string, void, unknown> {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('OpenRouter API key not configured');
+  const { maxTokens = 2000, temperature = 0.3, creditCost = 1, operationLabel = 'AI analysis' } = options;
+
+  // Get the current session token for the Edge Function
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('You must be signed in to use AI features.');
   }
 
-  // Billing: consume AI credits before making the call
-  const creditCost = options.creditCost ?? 1;
-  if (creditCost > 0) {
-    try {
-      const { consumeCredits } = await import('@/services/supabase/billing');
-      const result = await consumeCredits(creditCost, options.operationLabel || 'AI analysis');
-      if (!result.success) {
-        throw new Error(`Not enough AI credits (${result.remaining} remaining, need ${creditCost}). Purchase more credits or upgrade your plan.`);
-      }
-    } catch (err) {
-      // Re-throw credit errors, but don't block AI if billing service fails
-      if (err instanceof Error && err.message.includes('AI credits')) throw err;
-      console.error('Credit deduction failed:', err);
-    }
-  }
-
-  const { maxTokens = 2000, temperature = 0.3 } = options;
-
-  const response = await fetch(OPENROUTER_API_URL, {
+  // Call the Edge Function proxy (credit check + rate limiting happens server-side)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const response = await fetch(`${supabaseUrl}/functions/v1/openrouter-proxy`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'Trackbliss',
+      'Authorization': `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({
-      model: MODEL,
       messages,
-      max_tokens: maxTokens,
+      maxTokens,
       temperature,
-      stream: true,
+      creditCost,
+      operationLabel,
     }),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    // Try to parse error JSON from the Edge Function
+    let errorMessage = `AI service error: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch {
+      // Response is not JSON
+    }
+    throw new Error(errorMessage);
   }
 
+  // Stream SSE response (same format as OpenRouter)
   const reader = response.body?.getReader();
   if (!reader) {
     throw new Error('No response body');

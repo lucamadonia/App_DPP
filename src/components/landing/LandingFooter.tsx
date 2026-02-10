@@ -94,7 +94,7 @@ export function LandingFooter() {
 
         <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/trackbliss-logo.png" alt="Trackbliss" className="h-10 object-contain" />
+            <img src="/trackbliss-logo.png" alt="Trackbliss" className="h-10 object-contain" loading="lazy" />
             <p className="text-sm">
               {t('footer.copyright', { year: new Date().getFullYear() })}
             </p>

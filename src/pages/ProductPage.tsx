@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -57,12 +58,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getProductById, getProducts, getProductSuppliersWithDetails, getProductImages, getProductComponents, getProductsContaining } from '@/services/supabase';
-import { getBatches, deleteBatch, getBatchCostsBySupplier } from '@/services/supabase/batches';
-import type { SupplierBatchCost } from '@/services/supabase/batches';
-import type { Product, ProductComponent } from '@/types/product';
-import type { BatchListItem } from '@/types/product';
-import type { SupplierProduct, ProductImage } from '@/types/database';
+import { getProductImages, getProductComponents, getProductsContaining } from '@/services/supabase';
+import { useProduct, useProducts, useProductSuppliers, useBatches, useBatchCosts, useDeleteBatch } from '@/hooks/queries';
+import type { ProductComponent } from '@/types/product';
+import type { ProductImage } from '@/types/database';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
 import { ProductDocumentsTab } from '@/components/product/ProductDocumentsTab';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
@@ -95,79 +94,55 @@ export function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'stammdaten';
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [productSuppliers, setProductSuppliers] = useState<Array<SupplierProduct & { supplier_name: string; supplier_country: string }>>([]);
-  const [batches, setBatches] = useState<BatchListItem[]>([]);
-  const [batchesLoading, setBatchesLoading] = useState(false);
-  const [productImages, setProductImages] = useState<ProductImage[]>([]);
-  const [components, setComponents] = useState<ProductComponent[]>([]);
-  const [usedInSets, setUsedInSets] = useState<Array<{ id: string; name: string }>>([]);
-  const [supplierCosts, setSupplierCosts] = useState<SupplierBatchCost[]>([]);
-  const [dataRequests, setDataRequests] = useState<SupplierDataRequest[]>([]);
+
+  // Core data via TanStack Query
+  const { data: product, isLoading, error: productError } = useProduct(id);
+  const { data: productSuppliers = [] } = useProductSuppliers(id);
+  const { data: batches = [], isLoading: batchesLoading } = useBatches(id);
+  const { data: supplierCosts = [] } = useBatchCosts(id);
+  const deleteBatchMutation = useDeleteBatch(id || '');
+
+  const queryClient = useQueryClient();
   const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
-  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string }>>([]);
 
-  useEffect(() => {
-    async function loadProduct() {
-      if (!id) {
-        setError('No product ID provided');
-        setIsLoading(false);
-        return;
-      }
+  // Ancillary data loaded via inline useQuery
+  const { data: allProducts = [] } = useProducts();
+  const allProductsList = allProducts.map(p => ({ id: p.id, name: p.name }));
 
-      setIsLoading(true);
-      setError(null);
+  // Load images
+  const { data: productImages = [] } = useQuery<ProductImage[]>({
+    queryKey: ['product-images', id],
+    queryFn: () => getProductImages(id!),
+    enabled: !!id,
+  });
 
-      const [data, suppliersData, imagesData] = await Promise.all([
-        getProductById(id),
-        getProductSuppliersWithDetails(id),
-        getProductImages(id),
-      ]);
-      if (data) {
-        setProduct(data);
-      } else {
-        setError('Product not found');
-      }
-      setProductSuppliers(suppliersData);
-      setProductImages(imagesData);
+  // Load components (sets only)
+  const { data: components = [] } = useQuery<ProductComponent[]>({
+    queryKey: ['product-components', id],
+    queryFn: () => getProductComponents(id!),
+    enabled: !!id && product?.productType === 'set',
+  });
 
-      // Load components if this is a set, or "used in" for single products
-      if (data?.productType === 'set') {
-        getProductComponents(id).then(setComponents).catch(console.error);
-      } else {
-        getProductsContaining(id).then(setUsedInSets).catch(console.error);
-      }
+  // Load "used in sets" (single products only)
+  const { data: usedInSets = [] } = useQuery<Array<{ id: string; name: string }>>({
+    queryKey: ['product-used-in-sets', id],
+    queryFn: () => getProductsContaining(id!),
+    enabled: !!id && !!product && product.productType !== 'set',
+  });
 
-      setIsLoading(false);
+  // Load supplier data requests
+  const { data: dataRequests = [] } = useQuery<SupplierDataRequest[]>({
+    queryKey: ['supplier-data-requests', id],
+    queryFn: () => getSupplierDataRequests(id!),
+    enabled: !!id,
+  });
 
-      // Load batches + supplier costs
-      setBatchesLoading(true);
-      const [batchData, costData] = await Promise.all([
-        getBatches(id),
-        getBatchCostsBySupplier(id),
-      ]);
-      setBatches(batchData);
-      setSupplierCosts(costData);
-      setBatchesLoading(false);
-
-      // Load supplier data requests
-      getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
-
-      // Load all products for multi-product data request dialog
-      getProducts().then(list => setAllProducts(list.map(p => ({ id: p.id, name: p.name })))).catch(console.error);
-    }
-
-    loadProduct();
-  }, [id]);
+  const error = productError ? 'Product not found' : (!id ? 'No product ID provided' : null);
 
   const handleDeleteBatch = async (batchId: string) => {
     if (!confirm('Are you sure you want to delete this batch?')) return;
-    const result = await deleteBatch(batchId);
-    if (result.success) {
-      setBatches(batches.filter(b => b.id !== batchId));
-    } else {
+    const result = await deleteBatchMutation.mutateAsync(batchId);
+    if (!result.success) {
       alert('Error deleting batch: ' + result.error);
     }
   };
@@ -419,7 +394,7 @@ export function ProductPage() {
           <ProductImagesGallery
             productId={product.id}
             images={productImages}
-            onImagesChange={setProductImages}
+            onImagesChange={(_imgs: ProductImage[]) => queryClient.invalidateQueries({ queryKey: ['product-images', id] })}
           />
         </TabsContent>
 
@@ -889,7 +864,7 @@ export function ProductPage() {
               <SupplierDataRequestsTable
                 requests={dataRequests}
                 onRefresh={() => {
-                  if (id) getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
+                  queryClient.invalidateQueries({ queryKey: ['supplier-data-requests', id] });
                 }}
               />
             </CardContent>
@@ -900,10 +875,10 @@ export function ProductPage() {
               open={showCreateDataRequest}
               onOpenChange={setShowCreateDataRequest}
               initialProducts={[{ id: product.id, name: product.name }]}
-              allProducts={allProducts}
+              allProducts={allProductsList}
               suppliers={productSuppliers.map(sp => ({ id: sp.supplier_id, name: sp.supplier_name }))}
               onCreated={() => {
-                if (id) getSupplierDataRequests(id).then(setDataRequests).catch(console.error);
+                queryClient.invalidateQueries({ queryKey: ['supplier-data-requests', id] });
               }}
             />
           )}
@@ -1070,7 +1045,7 @@ export function ProductPage() {
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 {cp?.imageUrl ? (
-                                  <img src={cp.imageUrl} alt={cp.name} className="h-8 w-8 rounded object-cover" />
+                                  <img src={cp.imageUrl} alt={cp.name} className="h-8 w-8 rounded object-cover" loading="lazy" />
                                 ) : (
                                   <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
                                     <Package className="h-4 w-4 text-muted-foreground" />

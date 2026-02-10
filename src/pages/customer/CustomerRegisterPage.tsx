@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { customerSignUp } from '@/services/supabase/customer-portal';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
+import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 
 export function CustomerRegisterPage() {
   const { t } = useTranslation('customer-portal');
@@ -31,8 +32,8 @@ export function CustomerRegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError(t('Password must be at least 6 characters'));
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('Password must be at least {{count}} characters', { count: MIN_PASSWORD_LENGTH }));
       return;
     }
 

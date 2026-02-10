@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -16,7 +17,6 @@ import {
   Clock,
   AlertCircle,
   Package,
-  Loader2,
   Layers,
   Copy,
   Upload,
@@ -39,15 +39,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getProducts, deleteProduct, getProductsForExport, type ProductListItem } from '@/services/supabase/products';
+import { getProductsForExport } from '@/services/supabase/products';
 import { getCurrentTenant } from '@/services/supabase/tenants';
 import { generateProductCSV } from '@/lib/product-csv';
+import { useProducts, useDeleteProduct } from '@/hooks/queries';
 import { DuplicateProductDialog } from '@/components/product/DuplicateProductDialog';
 import { ExportProductsDropdown } from '@/components/product/ExportProductsDropdown';
 import { ImportProductsDialog } from '@/components/product/ImportProductsDialog';
 import { useBilling } from '@/hooks/use-billing';
 import { UpgradePrompt } from '@/components/billing';
+import { ProductsSkeleton } from '@/components/skeletons/ProductsSkeleton';
 
 const statusConfig = {
   live: {
@@ -80,15 +92,17 @@ export function ProductsPage() {
   const { t } = useTranslation('products');
   const { t: tBilling } = useTranslation('billing');
   const locale = useLocale();
-  const location = useLocation();
   const { entitlements } = useBilling();
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: products = [], isLoading, refetch: refetchProducts } = useProducts();
+  const deleteProductMutation = useDeleteProduct();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   // Duplicate
   const [duplicateTarget, setDuplicateTarget] = useState<{ id: string; name: string } | null>(null);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Export
   const [isExporting, setIsExporting] = useState(false);
@@ -97,32 +111,19 @@ export function ProductsPage() {
   // Import
   const [importOpen, setImportOpen] = useState(false);
 
-  useEffect(() => {
-    loadProducts();
-  }, [location.key]);
-
-  const loadProducts = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getProducts();
-      setProducts(data);
-    } catch (error) {
-      console.error('Failed to load products:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product? All batches will also be deleted.')) {
-      return;
-    }
-    const result = await deleteProduct(id);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const result = await deleteProductMutation.mutateAsync(deleteTarget.id);
     if (result.success) {
-      setProducts(products.filter(p => p.id !== id));
+      toast.success(t('Product deleted'), {
+        description: deleteTarget.name,
+      });
     } else {
-      alert('Error deleting: ' + result.error);
+      toast.error(t('Error deleting product'), {
+        description: result.error,
+      });
     }
+    setDeleteTarget(null);
   };
 
   // ------ Export handlers ------
@@ -204,14 +205,7 @@ export function ProductsPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-muted-foreground">{t('Loading products...')}</p>
-        </div>
-      </div>
-    );
+    return <ProductsSkeleton />;
   }
 
   return (
@@ -427,7 +421,7 @@ export function ProductsPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => handleDelete(product.id)}
+                              onClick={() => setDeleteTarget({ id: product.id, name: product.name })}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               {t('Delete')}
@@ -465,8 +459,30 @@ export function ProductsPage() {
       <ImportProductsDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        onImportComplete={loadProducts}
+        onImportComplete={() => refetchProducts()}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Delete Product')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('Are you sure you want to delete "{{name}}"? All batches will also be deleted. This action cannot be undone.', { name: deleteTarget?.name })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('Delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

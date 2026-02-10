@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { AnimatePresence } from 'framer-motion';
+import { Toaster } from 'sonner';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -10,12 +12,17 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { BrandingProvider, useBranding } from '@/contexts/BrandingContext';
 import { BillingProvider } from '@/contexts/BillingContext';
+import { queryClient } from '@/lib/query-client';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useCustomDomainDetection } from '@/hooks/useCustomDomainDetection';
+import { useTheme } from '@/hooks/use-theme';
 import { CustomDomainPortal } from '@/components/CustomDomainPortal';
 import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
+import { PageTransition } from '@/components/ui/page-transition';
 import './index.css';
 
 // --- Lazy page imports (code-split per route) ---
@@ -136,7 +143,24 @@ function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  return <AppLayout />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BillingProvider>
+        <AppLayout />
+      </BillingProvider>
+    </QueryClientProvider>
+  );
+}
+
+function AnimatedOutlet() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <PageTransition key={location.pathname}>
+        <Outlet />
+      </PageTransition>
+    </AnimatePresence>
+  );
 }
 
 function AppLayout() {
@@ -158,7 +182,7 @@ function AppLayout() {
           </Breadcrumb>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6">
-          <Outlet />
+          <AnimatedOutlet />
         </main>
       </SidebarInset>
     </SidebarProvider>
@@ -371,15 +395,31 @@ function NormalAppRoutes() {
   );
 }
 
+function ThemeInitializer({ children }: { children: React.ReactNode }) {
+  // Initialize theme on mount (applies .dark class to <html>)
+  useTheme();
+  return <>{children}</>;
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <BillingProvider>
-        <BrandingProvider>
-          <CustomDomainGate />
-        </BrandingProvider>
-      </BillingProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <ThemeInitializer>
+        <AuthProvider>
+          <BrandingProvider>
+            <CustomDomainGate />
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              toastOptions={{
+                className: 'font-sans',
+              }}
+            />
+          </BrandingProvider>
+        </AuthProvider>
+      </ThemeInitializer>
+    </ErrorBoundary>
   );
 }
 

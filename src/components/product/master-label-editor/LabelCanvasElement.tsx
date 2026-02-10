@@ -82,7 +82,7 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
         <div className="flex items-center gap-2" style={{ justifyContent: element.alignment === 'center' ? 'center' : element.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
           <div className="border border-gray-200" style={{ width: `${element.size * 0.8}px`, height: `${element.size * 0.8}px` }}>
             {data?.dppQr.qrDataUrl ? (
-              <img src={data.dppQr.qrDataUrl} alt="QR" className="w-full h-full" />
+              <img src={data.dppQr.qrDataUrl} alt="QR" className="w-full h-full" loading="lazy" />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
                 <span className="text-[8px] text-muted-foreground">QR</span>

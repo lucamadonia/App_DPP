@@ -13,8 +13,9 @@ import { LandingEmailEditor } from '@/components/landing/LandingEmailEditor';
 import { LandingQRSection } from '@/components/landing/LandingQRSection';
 import { LandingVisibility } from '@/components/landing/LandingVisibility';
 import { LandingStats } from '@/components/landing/LandingStats';
-import { LandingTeam } from '@/components/landing/LandingTeam';
 import { LandingPricing } from '@/components/landing/LandingPricing';
+import { LandingTestimonials } from '@/components/landing/LandingTestimonials';
+import { LandingFAQ } from '@/components/landing/LandingFAQ';
 import { LandingCTA } from '@/components/landing/LandingCTA';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
@@ -38,6 +39,7 @@ export function LandingPage() {
       <LandingSupplyChain />
       <GlowDivider />
       <LandingAISection />
+      <LandingTestimonials />
       <LandingReturnFlow />
       <LandingReturnsHub />
       <LandingCustomerPortal />
@@ -47,9 +49,9 @@ export function LandingPage() {
       <LandingQRSection />
       <LandingVisibility />
       <GlowDivider />
-      <LandingPricing />
       <LandingStats />
-      <LandingTeam />
+      <LandingPricing />
+      <LandingFAQ />
       <LandingCTA />
       <LandingFooter />
     </div>

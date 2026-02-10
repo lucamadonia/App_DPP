@@ -12,6 +12,7 @@ import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { updateCustomerProfile } from '@/services/supabase/customer-portal';
 import { supabase } from '@/lib/supabase';
 import type { RhCustomerAddress } from '@/types/returns-hub';
+import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 
 export function CustomerProfilePage() {
   const { t } = useTranslation('customer-portal');
@@ -74,8 +75,8 @@ export function CustomerProfilePage() {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      setPwError(t('Password must be at least 6 characters'));
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setPwError(t('Password must be at least {{count}} characters', { count: MIN_PASSWORD_LENGTH }));
       return;
     }
     if (newPassword !== confirmPassword) {

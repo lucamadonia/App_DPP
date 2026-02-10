@@ -173,7 +173,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
                   />
                   {portal.branding.logoUrl && (
                     <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                      <img src={portal.branding.logoUrl} alt="Logo" className="h-8 w-8 object-contain rounded" />
+                      <img src={portal.branding.logoUrl} alt="Logo" className="h-8 w-8 object-contain rounded" loading="lazy" />
                       <span className="text-xs text-muted-foreground">{t('Preview')}</span>
                     </div>
                   )}

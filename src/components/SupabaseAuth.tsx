@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -258,7 +259,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground text-center" dangerouslySetInnerHTML={{ __html: t('A password reset email has been sent to <strong>{{email}}</strong>. Please check your inbox.', { email }) }} />
+              <p className="text-sm text-muted-foreground text-center" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('A password reset email has been sent to <strong>{{email}}</strong>. Please check your inbox.', { email })) }} />
             )}
             <Button
               variant="ghost"

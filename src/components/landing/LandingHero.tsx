@@ -110,7 +110,7 @@ export function LandingHero() {
           </div>
 
           {/* Right: Hero Image Carousel */}
-          <div className="animate-landing-reveal [animation-delay:0.3s] hidden lg:block">
+          <div className="animate-landing-reveal [animation-delay:0.3s] hidden md:block">
             <div className="relative">
               {/* Floating Badges */}
               <div className="absolute -top-3 -right-3 z-20 landing-glass rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg animate-landing-float">

@@ -174,12 +174,20 @@ export interface AssembleMasterLabelParams {
     repairabilityScore?: number;
     dppRegistryId?: string;
     safetyInformation?: string;
+    // Packaging dimensions (cm)
+    packagingHeightCm?: number;
+    packagingWidthCm?: number;
+    packagingDepthCm?: number;
   };
   batch?: {
     batchNumber?: string;
     serialNumber: string;
     quantity?: number;
     grossWeight?: number;
+    // Packaging dimensions overrides (cm)
+    packagingHeightCm?: number;
+    packagingWidthCm?: number;
+    packagingDepthCm?: number;
     materialsOverride?: Array<{ name: string; percentage: number; recyclable: boolean; origin?: string; type?: 'product' | 'packaging' }>;
     certificationsOverride?: Array<{ name: string; issuedBy: string; validUntil: string }>;
     recyclabilityOverride?: {

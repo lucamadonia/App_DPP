@@ -689,3 +689,15 @@ code, .font-mono {
 .guide-chapter-glow {
   box-shadow: 0 0 40px rgba(59, 130, 246, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
+
+/* Accessibility: Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

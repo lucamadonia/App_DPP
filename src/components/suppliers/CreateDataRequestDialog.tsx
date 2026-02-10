@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Loader2, Copy, Check, Search, X, Package } from 'lucide-react';
+import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,7 +66,7 @@ export function CreateDataRequestDialog({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  const canSubmit = password.length >= 4 && selectedProducts.length > 0 && (allowedProductFields.length > 0 || allowedBatchFields.length > 0);
+  const canSubmit = password.length >= MIN_PASSWORD_LENGTH && selectedProducts.length > 0 && (allowedProductFields.length > 0 || allowedBatchFields.length > 0);
 
   // Filter products for the search
   const filteredProducts = useMemo(() => {

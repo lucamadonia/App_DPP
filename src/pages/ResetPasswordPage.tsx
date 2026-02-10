@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Leaf, Lock, Loader2, CheckCircle } from 'lucide-react';
 import { updatePassword } from '@/services/supabase/auth';
+import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 
 export function ResetPasswordPage() {
   const { t } = useTranslation('auth');
@@ -20,8 +21,8 @@ export function ResetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      setError(t('Password must be at least 8 characters long.'));
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('Password must be at least {{count}} characters long.', { count: MIN_PASSWORD_LENGTH }));
       return;
     }
 

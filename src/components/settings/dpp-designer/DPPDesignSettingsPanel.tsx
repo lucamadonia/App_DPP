@@ -534,7 +534,7 @@ export function DPPDesignSettingsPanel({
                         {isUploadingHero ? (
                           <Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" />
                         ) : resolved.hero.backgroundImage ? (
-                          <img src={resolved.hero.backgroundImage} alt="Hero" className="h-16 mx-auto rounded object-cover" />
+                          <img src={resolved.hero.backgroundImage} alt="Hero" className="h-16 mx-auto rounded object-cover" loading="lazy" />
                         ) : (
                           <><Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" /><p className="text-xs text-muted-foreground">{t('PNG, JPG, WebP up to 2MB')}</p></>
                         )}

@@ -34,20 +34,11 @@ export function LandingTrustBar() {
         ))}
       </div>
 
-      {/* Trusted by row */}
-      <div className="mt-4 flex items-center justify-center gap-6 px-4">
+      {/* Compliance standards row */}
+      <div className="mt-4 flex items-center justify-center gap-2 px-4">
         <span className="text-xs font-medium text-slate-400 whitespace-nowrap">
-          {t('trust.trustedBy')}
+          {t('trust.compliantWith')}
         </span>
-        <div className="flex items-center gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-6 rounded bg-slate-200/60"
-              style={{ width: `${60 + i * 10}px` }}
-            />
-          ))}
-        </div>
       </div>
     </section>
   );

@@ -21,7 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { getCategories } from '@/services/api';
+import { getCategories } from '@/services/supabase/master-data';
 import type { Category } from '@/types/database';
 
 // Fallback data in case the API is unreachable

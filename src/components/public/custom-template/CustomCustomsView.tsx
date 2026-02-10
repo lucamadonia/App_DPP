@@ -236,7 +236,7 @@ export function CustomCustomsView({ data }: Props) {
             <div className="flex flex-col md:flex-row gap-6">
               {isFieldVisible('image') && product.imageUrl && (
                 <div className="w-full md:w-48 flex-shrink-0">
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-48 md:h-full object-cover rounded-lg border" />
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-48 md:h-full object-cover rounded-lg border" loading="lazy" />
                 </div>
               )}
               <div className="flex-1 space-y-3">
@@ -294,7 +294,7 @@ export function CustomCustomsView({ data }: Props) {
           <div className="flex flex-col md:flex-row gap-6">
             {isFieldVisible('image') && product.imageUrl && (
               <div className="w-full md:w-48 flex-shrink-0">
-                <img src={product.imageUrl} alt={product.name} className="w-full h-48 md:h-full object-cover rounded-lg border" />
+                <img src={product.imageUrl} alt={product.name} className="w-full h-48 md:h-full object-cover rounded-lg border" loading="lazy" />
               </div>
             )}
             <div className="flex-1 space-y-3">
