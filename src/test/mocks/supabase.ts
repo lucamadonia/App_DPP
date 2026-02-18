@@ -82,7 +82,7 @@ for (const method of authMethods) {
 
 // Mock functions invoke
 const mockFunctions = {
-  invoke: vi.fn(async () => ({ data: null, error: null })),
+  invoke: vi.fn(async (): Promise<{ data: unknown; error: unknown }> => ({ data: null, error: null })),
 }
 
 // Mock storage
@@ -116,4 +116,4 @@ export const mockSupabaseAnon = {
 }
 
 // Mock getCurrentTenantId
-export const mockGetCurrentTenantId = vi.fn(async () => 'test-tenant-id')
+export const mockGetCurrentTenantId = vi.fn(async (): Promise<string | null> => 'test-tenant-id')

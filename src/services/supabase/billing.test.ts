@@ -23,6 +23,12 @@ import {
   consumeCredits,
   refundCredits,
   invalidateEntitlementCache,
+  createCheckoutSession,
+  createPortalSession,
+  getInvoices,
+  getUsageSummary,
+  getCreditTransactions,
+  getCreditBalance,
 } from './billing'
 
 import { PLAN_CONFIGS } from '@/types/billing'
@@ -477,6 +483,294 @@ describe('Billing Service', () => {
 
       // Act & Assert - should not throw
       await refundCredits(5, 'test')
+    })
+  })
+
+  // ==========================================
+  // createCheckoutSession
+  // ==========================================
+  describe('createCheckoutSession', () => {
+    it('returns checkout URL on success (subscription mode)', async () => {
+      // Arrange
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { url: 'https://checkout.stripe.com/session_123' },
+        error: null,
+      })
+
+      // Act
+      const result = await createCheckoutSession({
+        priceId: 'price_pro_monthly',
+        mode: 'subscription',
+        successUrl: 'https://app.trackbliss.com/billing?success=true',
+        cancelUrl: 'https://app.trackbliss.com/billing',
+      })
+
+      // Assert
+      expect(result.url).toBe('https://checkout.stripe.com/session_123')
+      expect('error' in result && result.error).toBeFalsy()
+    })
+
+    it('returns checkout URL on success (payment mode for credits)', async () => {
+      // Arrange
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { url: 'https://checkout.stripe.com/session_456' },
+        error: null,
+      })
+
+      // Act
+      const result = await createCheckoutSession({
+        priceId: 'price_credits_50',
+        mode: 'payment',
+        successUrl: 'https://app.trackbliss.com/billing?credits=true',
+        cancelUrl: 'https://app.trackbliss.com/billing',
+        metadata: { pack: 'small' },
+      })
+
+      // Assert
+      expect(result.url).toBe('https://checkout.stripe.com/session_456')
+    })
+
+    it('returns error when edge function fails', async () => {
+      // Arrange
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: null,
+        error: { message: 'Edge function error', context: { error: 'Stripe Tax not enabled' } },
+      })
+
+      // Act
+      const result = await createCheckoutSession({
+        priceId: 'price_pro',
+        mode: 'subscription',
+        successUrl: 'https://app.trackbliss.com',
+        cancelUrl: 'https://app.trackbliss.com',
+      })
+
+      // Assert
+      expect(result.error).toBeTruthy()
+      expect(result.url).toBeUndefined()
+    })
+
+    it('returns error when no URL returned', async () => {
+      // Arrange
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { error: 'Missing Stripe customer' },
+        error: null,
+      })
+
+      // Act
+      const result = await createCheckoutSession({
+        priceId: 'price_pro',
+        mode: 'subscription',
+        successUrl: 'https://app.trackbliss.com',
+        cancelUrl: 'https://app.trackbliss.com',
+      })
+
+      // Assert
+      expect(result.error).toBe('Missing Stripe customer')
+    })
+  })
+
+  // ==========================================
+  // createPortalSession
+  // ==========================================
+  describe('createPortalSession', () => {
+    it('returns portal URL on success', async () => {
+      // Arrange
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { url: 'https://billing.stripe.com/portal_123' },
+        error: null,
+      })
+
+      // Act
+      const result = await createPortalSession('https://app.trackbliss.com/billing')
+
+      // Assert
+      expect(result.url).toBe('https://billing.stripe.com/portal_123')
+    })
+
+    it('returns error when no stripe customer', async () => {
+      // Arrange
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { error: 'No Stripe customer found for this tenant' },
+        error: null,
+      })
+
+      // Act
+      const result = await createPortalSession('https://app.trackbliss.com/billing')
+
+      // Assert
+      expect(result.error).toBe('No Stripe customer found for this tenant')
+    })
+  })
+
+  // ==========================================
+  // getInvoices
+  // ==========================================
+  describe('getInvoices', () => {
+    it('returns transformed invoices', async () => {
+      // Arrange
+      mockSupabaseTable('billing_invoices', {
+        data: [
+          {
+            id: 'inv-1',
+            tenant_id: 'test-tenant-id',
+            stripe_invoice_id: 'in_stripe_1',
+            stripe_invoice_url: 'https://invoice.stripe.com/1',
+            stripe_pdf_url: 'https://pdf.stripe.com/1',
+            amount_due: 4900,
+            amount_paid: 4900,
+            currency: 'eur',
+            status: 'paid',
+            period_start: '2026-01-01',
+            period_end: '2026-02-01',
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        error: null,
+      })
+
+      // Act
+      const invoices = await getInvoices()
+
+      // Assert
+      expect(invoices).toHaveLength(1)
+      expect(invoices[0].stripeInvoiceId).toBe('in_stripe_1')
+      expect(invoices[0].amountDue).toBe(4900)
+      expect(invoices[0].status).toBe('paid')
+    })
+
+    it('returns empty array when no invoices', async () => {
+      // Arrange
+      mockSupabaseTable('billing_invoices', { data: [], error: null })
+
+      // Act
+      const invoices = await getInvoices()
+
+      // Assert
+      expect(invoices).toEqual([])
+    })
+
+    it('returns empty array when no tenant', async () => {
+      // Arrange
+      mockGetCurrentTenantId.mockResolvedValue(null)
+
+      // Act
+      const invoices = await getInvoices()
+
+      // Assert
+      expect(invoices).toEqual([])
+    })
+  })
+
+  // ==========================================
+  // getUsageSummary
+  // ==========================================
+  describe('getUsageSummary', () => {
+    it('returns resource usage counts', async () => {
+      // Arrange - need entitlements + count queries
+      mockSupabaseTable('billing_subscriptions', {
+        data: { plan: 'pro', status: 'active', cancel_at_period_end: false },
+        error: null,
+      })
+      mockSupabaseTable('billing_module_subscriptions', { data: [], error: null })
+      mockSupabaseTable('billing_credits', { data: null, error: null })
+      mockSupabaseTable('products', { data: null, error: null, count: 12 })
+      mockSupabaseTable('documents', { data: null, error: null, count: 45 })
+      mockSupabaseTable('profiles', { data: null, error: null, count: 3 })
+
+      // Act
+      invalidateEntitlementCache()
+      const summary = await getUsageSummary()
+
+      // Assert
+      expect(summary.products).toBeDefined()
+      expect(summary.documents).toBeDefined()
+      expect(summary.adminUsers).toBeDefined()
+    })
+
+    it('returns empty object when no tenant', async () => {
+      // Arrange
+      mockGetCurrentTenantId.mockResolvedValue(null)
+
+      // Act
+      const summary = await getUsageSummary()
+
+      // Assert
+      expect(summary).toEqual({})
+    })
+  })
+
+  // ==========================================
+  // getCreditTransactions
+  // ==========================================
+  describe('getCreditTransactions', () => {
+    it('returns transformed transactions', async () => {
+      // Arrange
+      mockSupabaseTable('billing_credit_transactions', {
+        data: [
+          {
+            id: 'tx-1',
+            tenant_id: 'test-tenant-id',
+            type: 'consume',
+            amount: -3,
+            balance_after: 22,
+            source: 'monthly',
+            description: 'Compliance check',
+            metadata: {},
+            user_id: 'u-1',
+            created_at: '2026-02-10T10:00:00Z',
+          },
+        ],
+        error: null,
+      })
+
+      // Act
+      const txns = await getCreditTransactions()
+
+      // Assert
+      expect(txns).toHaveLength(1)
+      expect(txns[0].type).toBe('consume')
+      expect(txns[0].amount).toBe(-3)
+      expect(txns[0].balanceAfter).toBe(22)
+    })
+
+    it('returns empty array when no tenant', async () => {
+      // Arrange
+      mockGetCurrentTenantId.mockResolvedValue(null)
+
+      // Act
+      const txns = await getCreditTransactions()
+
+      // Assert
+      expect(txns).toEqual([])
+    })
+  })
+
+  // ==========================================
+  // getCreditBalance
+  // ==========================================
+  describe('getCreditBalance', () => {
+    it('returns credit balance from entitlements', async () => {
+      // Arrange
+      mockSupabaseTable('billing_subscriptions', {
+        data: { plan: 'pro', status: 'active', cancel_at_period_end: false },
+        error: null,
+      })
+      mockSupabaseTable('billing_module_subscriptions', { data: [], error: null })
+      mockSupabaseTable('billing_credits', {
+        data: { monthly_allowance: 25, monthly_used: 10, purchased_balance: 30, total_consumed: 10 },
+        error: null,
+      })
+
+      // Act
+      invalidateEntitlementCache()
+      const balance = await getCreditBalance('test-tenant-id')
+
+      // Assert
+      expect(balance.monthlyAllowance).toBe(25)
+      expect(balance.monthlyUsed).toBe(10)
+      expect(balance.purchasedBalance).toBe(30)
+      expect(balance.totalAvailable).toBe(45) // (25-10) + 30
     })
   })
 })

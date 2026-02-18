@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { fadeIn, scaleIn, useReducedMotion } from '@/lib/motion';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -204,6 +206,9 @@ export function ProductsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' : motion.div;
+
   if (isLoading) {
     return <ProductsSkeleton />;
   }
@@ -211,7 +216,10 @@ export function ProductsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Products')}</h1>
           <p className="text-muted-foreground">
@@ -231,7 +239,7 @@ export function ProductsPage() {
             </Link>
           </Button>
         )}
-      </div>
+      </MotionDiv>
 
       {entitlements && products.length >= entitlements.limits.maxProducts && entitlements.limits.maxProducts !== Infinity && (
         <UpgradePrompt
@@ -302,7 +310,10 @@ export function ProductsPage() {
       <Card>
         <CardContent className="p-0">
           {products.length === 0 ? (
-            <div className="py-16 text-center">
+            <MotionDiv
+              className="py-16 text-center"
+              {...(!prefersReduced && { variants: scaleIn, initial: 'initial', animate: 'animate' })}
+            >
               <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">{t('No products available')}</h3>
               <p className="mt-2 text-muted-foreground">
@@ -314,7 +325,7 @@ export function ProductsPage() {
                   {t('Create First Product')}
                 </Link>
               </Button>
-            </div>
+            </MotionDiv>
           ) : (
             <Table>
               <TableHeader>
@@ -329,10 +340,15 @@ export function ProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => {
+                {filteredProducts.map((product, index) => {
                   const status = statusConfig[(product.status as keyof typeof statusConfig) || 'draft'];
                   return (
-                    <TableRow key={product.id}>
+                    <TableRow
+                      key={product.id}
+                      style={!prefersReduced ? {
+                        animation: `fadeSlideIn ${0.3}s ease-out ${index * 0.03}s both`,
+                      } : undefined}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Link

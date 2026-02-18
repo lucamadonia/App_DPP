@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import { motion } from 'framer-motion';
+import { fadeIn, useReducedMotion } from '@/lib/motion';
 import { UsersTab } from '@/components/settings/UsersTab';
 import {
   Building2,
@@ -389,6 +391,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     return `${window.location.origin}/p/GTIN/SERIAL`;
   };
 
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' : motion.div;
+
   // Get a sample product for preview links
   const sampleProduct = products.length > 0 ? products[0] : null;
 
@@ -403,12 +408,14 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <MotionDiv
+        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+      >
         <h1 className="text-2xl font-bold text-foreground">{t('Settings')}</h1>
         <p className="text-muted-foreground">
           {t('Manage your company profile and system settings')}
         </p>
-      </div>
+      </MotionDiv>
 
       {/* Tabs */}
       <Tabs defaultValue={tab}>

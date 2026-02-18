@@ -28,6 +28,7 @@ import {
   Database,
   Sun,
   Moon,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -113,10 +114,12 @@ export function AppSidebar() {
       title: t('Suppliers'),
       url: '/suppliers',
       icon: Users,
+      locked: billing ? !billing.hasModule('supplier_portal') && billing.entitlements?.plan === 'free' : false,
     },
     {
       title: t('Returns Hub'),
       icon: RotateCcw,
+      locked: billing ? !billing.hasAnyReturnsHubModule() : false,
       items: [
         { title: t('Dashboard'), url: '/returns' },
         { title: t('Returns'), url: '/returns/list' },
@@ -161,7 +164,7 @@ export function AppSidebar() {
       icon: Calculator,
       badge: t('New'),
     },
-  ], [t]);
+  ], [t, billing]);
 
   const settingsNavItems = useMemo(() => [
     {
@@ -243,7 +246,11 @@ export function AppSidebar() {
                         <SidebarMenuButton>
                           <item.icon className="h-4 w-4 transition-colors" />
                           <span>{item.title}</span>
-                          <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                          {item.locked ? (
+                            <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
+                          ) : (
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                          )}
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
@@ -268,7 +275,10 @@ export function AppSidebar() {
                       <Link to={item.url!}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                        {item.badge && (
+                        {item.locked && (
+                          <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
+                        )}
+                        {!item.locked && item.badge && (
                           <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-xs text-primary animate-pulse">
                             {item.badge}
                           </span>
