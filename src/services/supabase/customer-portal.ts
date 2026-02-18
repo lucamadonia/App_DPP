@@ -984,7 +984,6 @@ export async function createPublicProductTicket(params: {
     category: 'product_inquiry',
     priority: 'normal',
     status: 'open',
-    source: 'public_dpp',
     tags: ['public-product-page'],
     metadata: {
       productName: productContext.productName,
