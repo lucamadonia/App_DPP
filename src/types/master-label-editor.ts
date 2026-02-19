@@ -366,14 +366,6 @@ export interface LabelEditorHistoryEntry {
   timestamp: number;
 }
 
-export interface LabelDragState {
-  isDragging: boolean;
-  sourceIndex: number | null;
-  targetIndex: number | null;
-  dragType: 'reorder' | 'insert' | 'section-reorder' | null;
-  insertElementType: LabelElementType | null;
-}
-
 // ---------------------------------------------------------------------------
 // Built-in Pictogram
 // ---------------------------------------------------------------------------

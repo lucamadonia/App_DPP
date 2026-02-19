@@ -1,4 +1,3 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -11,28 +10,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import type {
-  LabelDesign,
-  LabelElement,
-  LabelElementType,
-  LabelFieldKey,
-  LabelSectionId,
-  LabelEditorView,
-  LabelSettingsPanelTab,
-  MasterLabelTemplate,
-  BuiltinPictogram,
-  MultiLabelExportConfig,
-} from '@/types/master-label-editor';
+import { Textarea } from '@/components/ui/textarea';
+import { ShieldCheck } from 'lucide-react';
 import type { MasterLabelData, LabelVariant } from '@/types/master-label';
 import type { BatchListItem } from '@/types/product';
 import type { SupplierProduct } from '@/types/database';
-import { Textarea } from '@/components/ui/textarea';
-import { createBlankDesign, createElement, generateElementId, generateTemplateId } from '@/lib/master-label-defaults';
-import { useLabelEditorHistory } from './hooks/useLabelEditorHistory';
-import { useLabelDragReorder } from './hooks/useLabelDragReorder';
-import { useLabelAutosave } from './hooks/useLabelAutosave';
-import { saveMasterLabelTemplate, getMasterLabelTemplates, deleteMasterLabelTemplate } from '@/services/supabase/master-label-templates';
+import { detectProductGroup } from '@/lib/master-label-assembler';
+import { LabelEditorProvider, useLabelEditor } from './LabelEditorContext';
 import { LabelEditorLayout } from './LabelEditorLayout';
 import { LabelEditorToolbar } from './LabelEditorToolbar';
 import { LabelElementPalette } from './LabelElementPalette';
@@ -43,9 +27,10 @@ import { LabelPictogramLibrary } from './LabelPictogramLibrary';
 import { LabelComplianceChecker } from './LabelComplianceChecker';
 import { LabelTemplateGallery } from './LabelTemplateGallery';
 import { MultiLabelExportDialog } from './MultiLabelExportDialog';
-import { detectProductGroup } from '@/lib/master-label-assembler';
-import { useBranding } from '@/hooks/use-branding';
-import { ShieldCheck } from 'lucide-react';
+
+// ---------------------------------------------------------------------------
+// Public interface — same as before
+// ---------------------------------------------------------------------------
 
 interface MasterLabelEditorPageProps {
   data: MasterLabelData | null;
@@ -63,579 +48,30 @@ interface MasterLabelEditorPageProps {
   onImporterOverride: (id: string | null) => void;
 }
 
-export function MasterLabelEditorPage({
-  data,
-  product,
-  batches,
-  variant,
-  onVariantChange,
-  selectedBatchId,
-  onBatchChange,
-  onBack: _onBack,
-  productSuppliers = [],
-  manufacturerOverrideId,
-  onManufacturerOverride,
-  importerOverrideId,
-  onImporterOverride,
-}: MasterLabelEditorPageProps) {
-  const { t, i18n } = useTranslation('products');
-  const { toast } = useToast();
-
-  // View state
-  const [view, setView] = useState<LabelEditorView>('gallery');
-  const [activeTemplate, setActiveTemplate] = useState<MasterLabelTemplate | null>(null);
-  const [design, setDesign] = useState<LabelDesign>(createBlankDesign());
-  const [customTemplates, setCustomTemplates] = useState<MasterLabelTemplate[]>([]);
-
-  // Editor state
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [rightPanelTab, setRightPanelTab] = useState<LabelSettingsPanelTab>('settings');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [showMultiLabelDialog, setShowMultiLabelDialog] = useState(false);
-
-  // Save dialog
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [saveTemplateName, setSaveTemplateName] = useState('');
-  const [saveTemplateDescription, setSaveTemplateDescription] = useState('');
-  const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
-
-  // Hooks
-  const { branding } = useBranding();
-  const history = useLabelEditorHistory(design);
-  const drag = useLabelDragReorder();
-  const changeCountRef = useRef(0);
-  const dragSectionRef = useRef<LabelSectionId | null>(null);
-
-  // Autosave
-  const autosave = useLabelAutosave(
-    async () => {
-      if (activeTemplate && !activeTemplate.isDefault) {
-        await saveMasterLabelTemplate({ ...activeTemplate, design });
-      }
-    },
-    hasChanges,
+export function MasterLabelEditorPage(props: MasterLabelEditorPageProps) {
+  return (
+    <LabelEditorProvider {...props}>
+      <MasterLabelEditorInner />
+    </LabelEditorProvider>
   );
-
-  // Load custom templates
-  useEffect(() => {
-    getMasterLabelTemplates().then(setCustomTemplates).catch(console.error);
-  }, []);
-
-  // Design update helper
-  const updateDesign = useCallback((newDesign: LabelDesign) => {
-    setDesign(newDesign);
-    history.push(newDesign);
-    setHasChanges(true);
-    changeCountRef.current += 1;
-  }, [history]);
-
-  // ---------------------------------------------------------------------------
-  // Element CRUD
-  // ---------------------------------------------------------------------------
-
-  const addElement = useCallback((type: LabelElementType, sectionId: LabelSectionId, afterIndex = -1) => {
-    const sectionElements = design.elements.filter(e => e.sectionId === sectionId);
-    const newSortOrder = afterIndex >= 0 ? afterIndex + 1 : sectionElements.length;
-
-    // Shift existing elements
-    const updatedElements = design.elements.map(e => {
-      if (e.sectionId === sectionId && e.sortOrder >= newSortOrder) {
-        return { ...e, sortOrder: e.sortOrder + 1 };
-      }
-      return e;
-    });
-
-    const newElement = createElement(type, sectionId, newSortOrder);
-    updateDesign({ ...design, elements: [...updatedElements, newElement] });
-    setSelectedElementId(newElement.id);
-    setRightPanelTab('settings');
-  }, [design, updateDesign]);
-
-  const updateElement = useCallback((updated: LabelElement) => {
-    const elements = design.elements.map(e => e.id === updated.id ? updated : e);
-    updateDesign({ ...design, elements });
-  }, [design, updateDesign]);
-
-  const deleteElement = useCallback((elementId: string) => {
-    const elements = design.elements.filter(e => e.id !== elementId);
-    updateDesign({ ...design, elements });
-    if (selectedElementId === elementId) setSelectedElementId(null);
-  }, [design, updateDesign, selectedElementId]);
-
-  const duplicateElement = useCallback((elementId: string) => {
-    const source = design.elements.find(e => e.id === elementId);
-    if (!source) return;
-    const clone = { ...source, id: generateElementId(), sortOrder: source.sortOrder + 1 };
-    // Shift
-    const elements = design.elements.map(e => {
-      if (e.sectionId === source.sectionId && e.sortOrder > source.sortOrder) {
-        return { ...e, sortOrder: e.sortOrder + 1 };
-      }
-      return e;
-    });
-    updateDesign({ ...design, elements: [...elements, clone] });
-    setSelectedElementId(clone.id);
-  }, [design, updateDesign]);
-
-  const moveElement = useCallback((elementId: string, direction: 'up' | 'down') => {
-    const element = design.elements.find(e => e.id === elementId);
-    if (!element) return;
-
-    const sectionElements = design.elements
-      .filter(e => e.sectionId === element.sectionId)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-
-    const idx = sectionElements.findIndex(e => e.id === elementId);
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sectionElements.length) return;
-
-    const swapElement = sectionElements[swapIdx];
-    const elements = design.elements.map(e => {
-      if (e.id === elementId) return { ...e, sortOrder: swapElement.sortOrder };
-      if (e.id === swapElement.id) return { ...e, sortOrder: element.sortOrder };
-      return e;
-    });
-    updateDesign({ ...design, elements });
-  }, [design, updateDesign]);
-
-  // ---------------------------------------------------------------------------
-  // Section operations
-  // ---------------------------------------------------------------------------
-
-  const toggleSectionCollapsed = useCallback((sectionId: LabelSectionId) => {
-    const sections = design.sections.map(s =>
-      s.id === sectionId ? { ...s, collapsed: !s.collapsed } : s
-    );
-    setDesign({ ...design, sections });
-  }, [design]);
-
-  // ---------------------------------------------------------------------------
-  // Pictogram insert
-  // ---------------------------------------------------------------------------
-
-  const insertPictogram = useCallback((pictogram: BuiltinPictogram) => {
-    // Insert into the compliance section by default, or sustainability for recycling
-    const sectionId: LabelSectionId = pictogram.category === 'recycling' ? 'sustainability' : 'compliance';
-    const sectionElements = design.elements.filter(e => e.sectionId === sectionId);
-
-    const newElement = createElement('pictogram', sectionId, sectionElements.length);
-    (newElement as any).pictogramId = pictogram.id;
-    (newElement as any).source = 'builtin';
-    (newElement as any).showLabel = true;
-    (newElement as any).labelText = pictogram.name;
-
-    updateDesign({ ...design, elements: [...design.elements, newElement] });
-    setSelectedElementId(newElement.id);
-  }, [design, updateDesign]);
-
-  // ---------------------------------------------------------------------------
-  // Template operations
-  // ---------------------------------------------------------------------------
-
-  const handleSelectTemplate = useCallback((template: MasterLabelTemplate) => {
-    const clonedDesign: LabelDesign = JSON.parse(JSON.stringify(template.design));
-    setActiveTemplate(template);
-    setDesign(clonedDesign);
-    history.reset(clonedDesign);
-    setView('editor');
-    setHasChanges(false);
-    setSelectedElementId(null);
-  }, [history]);
-
-  const handleNewBlank = useCallback(() => {
-    const blank = createBlankDesign();
-    setActiveTemplate(null);
-    setDesign(blank);
-    history.reset(blank);
-    setView('editor');
-    setHasChanges(false);
-    setSelectedElementId(null);
-  }, [history]);
-
-  const handleDeleteTemplate = useCallback(async (templateId: string) => {
-    await deleteMasterLabelTemplate(templateId);
-    setCustomTemplates(prev => prev.filter(t => t.id !== templateId));
-  }, []);
-
-  const handleSaveTemplate = useCallback(async () => {
-    if (!saveTemplateName.trim()) return;
-
-    const isOverwrite = saveMode === 'save' && activeTemplate && !activeTemplate.isDefault;
-    const template: MasterLabelTemplate = {
-      id: isOverwrite ? activeTemplate.id : generateTemplateId(),
-      name: saveTemplateName,
-      description: saveTemplateDescription,
-      category: 'custom',
-      variant: 'universal',
-      design: JSON.parse(JSON.stringify(design)),
-      isDefault: false,
-      createdAt: isOverwrite ? activeTemplate.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const result = await saveMasterLabelTemplate(template);
-    if (result.success) {
-      setActiveTemplate(template);
-      setCustomTemplates(prev => {
-        const idx = prev.findIndex(t => t.id === template.id);
-        if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = template;
-          return updated;
-        }
-        return [...prev, template];
-      });
-      setHasChanges(false);
-      autosave.markSaved();
-    }
-    setShowSaveDialog(false);
-  }, [saveTemplateName, saveTemplateDescription, saveMode, activeTemplate, design, autosave]);
-
-  // Direct save for custom templates (no dialog)
-  const handleDirectSave = useCallback(async () => {
-    if (!activeTemplate || activeTemplate.isDefault) {
-      // For built-in or no template: open save-as dialog
-      setSaveMode('saveAs');
-      setSaveTemplateName(activeTemplate?.name ? `${activeTemplate.name} (Copy)` : '');
-      setSaveTemplateDescription(activeTemplate?.description || '');
-      setShowSaveDialog(true);
-      return;
-    }
-    // Overwrite existing custom template
-    const template: MasterLabelTemplate = {
-      ...activeTemplate,
-      design: JSON.parse(JSON.stringify(design)),
-      updatedAt: new Date().toISOString(),
-    };
-    const result = await saveMasterLabelTemplate(template);
-    if (result.success) {
-      setActiveTemplate(template);
-      setCustomTemplates(prev => {
-        const idx = prev.findIndex(t => t.id === template.id);
-        if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = template;
-          return updated;
-        }
-        return [...prev, template];
-      });
-      setHasChanges(false);
-      autosave.markSaved();
-    }
-  }, [activeTemplate, design, autosave]);
-
-  const handleSaveAs = useCallback(() => {
-    setSaveMode('saveAs');
-    const baseName = activeTemplate?.name || '';
-    const isBuiltin = activeTemplate?.isDefault;
-    setSaveTemplateName(isBuiltin ? `${baseName} (Copy)` : baseName);
-    setSaveTemplateDescription(activeTemplate?.description || '');
-    setShowSaveDialog(true);
-  }, [activeTemplate]);
-
-  // ---------------------------------------------------------------------------
-  // Undo/Redo
-  // ---------------------------------------------------------------------------
-
-  const handleUndo = useCallback(() => {
-    const entry = history.undo();
-    if (entry) {
-      setDesign(entry.design);
-      setHasChanges(true);
-    }
-  }, [history]);
-
-  const handleRedo = useCallback(() => {
-    const entry = history.redo();
-    if (entry) {
-      setDesign(entry.design);
-      setHasChanges(true);
-    }
-  }, [history]);
-
-  // ---------------------------------------------------------------------------
-  // PDF Generation
-  // ---------------------------------------------------------------------------
-
-  const handleGeneratePDF = useCallback(async () => {
-    if (!data) {
-      toast({
-        title: t('ml.export.error.noData'),
-        description: t('ml.export.error.noDataDesc'),
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const { generateMasterLabelEditorPDF } = await import('@/lib/master-label-pdf-renderer');
-      await generateMasterLabelEditorPDF(design, data);
-      toast({
-        title: t('ml.export.success'),
-        description: t('ml.export.successDesc'),
-      });
-    } catch (err) {
-      console.error('PDF generation failed:', err);
-      toast({
-        title: t('ml.export.error.failed'),
-        description: err instanceof Error ? err.message : t('ml.export.error.unknown'),
-        variant: 'destructive',
-      });
-      throw err; // Re-throw to prevent dialog from closing
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [design, data, toast, t]);
-
-  const handleMultiLabelExport = useCallback(async (config: MultiLabelExportConfig) => {
-    if (!data) {
-      toast({
-        title: t('ml.export.error.noData'),
-        description: t('ml.export.error.noDataDesc'),
-        variant: 'destructive',
-      });
-      throw new Error('No data available for export');
-    }
-    setIsGenerating(true);
-    try {
-      const { generateMasterLabelEditorPDF } = await import('@/lib/master-label-pdf-renderer');
-      await generateMasterLabelEditorPDF(
-        design,
-        data,
-        undefined,
-        config,
-        i18n.language as 'en' | 'de'
-      );
-
-      // Success notification
-      const labelCount = config.labelCount;
-      const fileCount = config.filenamePattern === 'batch' ? labelCount : 1;
-      toast({
-        title: t('ml.export.success'),
-        description: t('ml.export.successMulti', { count: labelCount, files: fileCount }),
-      });
-    } catch (err) {
-      console.error('Multi-label export failed:', err);
-      toast({
-        title: t('ml.export.error.failed'),
-        description: err instanceof Error ? err.message : t('ml.export.error.unknown'),
-        variant: 'destructive',
-      });
-      throw err; // Re-throw to prevent dialog from closing
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [design, data, i18n.language, toast, t]);
-
-  const hasCounterElement = design.elements.some(el => el.type === 'package-counter');
-
-  // ---------------------------------------------------------------------------
-  // Keyboard shortcuts
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (view !== 'editor') return;
-
-    const handler = (e: KeyboardEvent) => {
-      const isCtrl = e.ctrlKey || e.metaKey;
-
-      if (isCtrl && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      } else if (isCtrl && e.key === 'z' && e.shiftKey) {
-        e.preventDefault();
-        handleRedo();
-      } else if (isCtrl && e.key === 's') {
-        e.preventDefault();
-        handleDirectSave();
-      } else if (isCtrl && e.key === 'd' && selectedElementId) {
-        e.preventDefault();
-        duplicateElement(selectedElementId);
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementId && !isCtrl) {
-        // Only delete if not focused on an input
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
-          e.preventDefault();
-          deleteElement(selectedElementId);
-        }
-      } else if (e.key === 'Escape') {
-        setSelectedElementId(null);
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [view, handleUndo, handleRedo, handleDirectSave, selectedElementId, duplicateElement, deleteElement, activeTemplate]);
-
-  // ---------------------------------------------------------------------------
-  // Drag handlers
-  // ---------------------------------------------------------------------------
-
-  const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  const addFieldElement = useCallback((fieldKey: LabelFieldKey) => {
-    const firstVisible = design.sections.find(s => s.visible);
-    if (!firstVisible) return;
-
-    const sectionElements = design.elements.filter(e => e.sectionId === firstVisible.id);
-    const newSortOrder = sectionElements.length;
-
-    // Shift existing elements
-    const updatedElements = design.elements.map(e => {
-      if (e.sectionId === firstVisible.id && e.sortOrder >= newSortOrder) {
-        return { ...e, sortOrder: e.sortOrder + 1 };
-      }
-      return e;
-    });
-
-    const newElement = createElement('field-value', firstVisible.id, newSortOrder);
-    // Pre-configure with the selected field key
-    (newElement as any).fieldKey = fieldKey;
-    (newElement as any).showLabel = true;
-    (newElement as any).layout = 'inline';
-
-    updateDesign({ ...design, elements: [...updatedElements, newElement] });
-    setSelectedElementId(newElement.id);
-    setRightPanelTab('settings');
-  }, [design, updateDesign]);
-
-  const addComplianceBadge = useCallback((badgeId: string, symbol: string) => {
-    const compSection = design.sections.find(s => s.id === 'compliance' && s.visible) || design.sections.find(s => s.visible);
-    if (!compSection) return;
-
-    const sectionElements = design.elements.filter(e => e.sectionId === compSection.id);
-    const newElement = createElement('compliance-badge', compSection.id, sectionElements.length);
-    (newElement as any).badgeId = badgeId;
-    (newElement as any).symbol = symbol;
-
-    updateDesign({ ...design, elements: [...design.elements, newElement] });
-    setSelectedElementId(newElement.id);
-  }, [design, updateDesign]);
-
-  const addCompliancePictogram = useCallback((pictogramId: string) => {
-    const compSection = design.sections.find(s => s.id === 'compliance' && s.visible) || design.sections.find(s => s.visible);
-    if (!compSection) return;
-
-    const sectionElements = design.elements.filter(e => e.sectionId === compSection.id);
-    const newElement = createElement('pictogram', compSection.id, sectionElements.length);
-    (newElement as any).pictogramId = pictogramId;
-    (newElement as any).source = 'builtin';
-    (newElement as any).showLabel = false;
-
-    updateDesign({ ...design, elements: [...design.elements, newElement] });
-    setSelectedElementId(newElement.id);
-  }, [design, updateDesign]);
-
-  const handleElementDrop = useCallback((targetIndex: number): boolean => {
-    const result = drag.handleDrop(targetIndex);
-    if (!result) return false;
-
-    if (result.type === 'reorder' && dragSectionRef.current) {
-      const sectionId = dragSectionRef.current;
-      const sectionElements = design.elements
-        .filter(e => e.sectionId === sectionId)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-
-      const moved = sectionElements.splice(result.from, 1)[0];
-      if (!moved) { dragSectionRef.current = null; return false; }
-      sectionElements.splice(result.to, 0, moved);
-
-      const updated = design.elements.map(e => {
-        if (e.sectionId !== sectionId) return e;
-        const newOrder = sectionElements.findIndex(se => se.id === e.id);
-        return { ...e, sortOrder: newOrder };
-      });
-
-      updateDesign({ ...design, elements: updated });
-      dragSectionRef.current = null;
-      return true;
-    }
-
-    if (result.type === 'insert' && dragSectionRef.current) {
-      addElement(result.elementType, dragSectionRef.current, targetIndex);
-      dragSectionRef.current = null;
-      return true;
-    }
-
-    // insert without a tracked section — use first visible section
-    if (result.type === 'insert') {
-      const firstVisible = design.sections.find(s => s.visible);
-      if (firstVisible) {
-        addElement(result.elementType, firstVisible.id, targetIndex);
-      }
-      dragSectionRef.current = null;
-      return true;
-    }
-
-    dragSectionRef.current = null;
-    return false;
-  }, [drag, design, updateDesign, addElement]);
-
-  const handleSectionDrop = useCallback((targetIndex: number): boolean => {
-    const result = drag.handleDrop(targetIndex);
-    if (!result) return false;
-
-    if (result.type === 'section-reorder') {
-      const sorted = [...design.sections].sort((a, b) => a.sortOrder - b.sortOrder);
-      const moved = sorted.splice(result.from, 1)[0];
-      if (!moved) return false;
-      sorted.splice(result.to, 0, moved);
-
-      const sections = design.sections.map(s => {
-        const newOrder = sorted.findIndex(ss => ss.id === s.id);
-        return { ...s, sortOrder: newOrder };
-      });
-
-      updateDesign({ ...design, sections });
-      return true;
-    }
-
-    return false;
-  }, [drag, design, updateDesign]);
-
-  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const rawData = e.dataTransfer.getData('text/plain');
-
-    // Handle field: prefix from the Field Browser
-    if (rawData.startsWith('field:')) {
-      const fieldKey = rawData.slice(6) as LabelFieldKey;
-      addFieldElement(fieldKey);
-      return;
-    }
-
-    const elementType = rawData as LabelElementType;
-    if (elementType) {
-      // Insert into the first visible section
-      const firstVisible = design.sections.find(s => s.visible);
-      if (firstVisible) {
-        addElement(elementType, firstVisible.id);
-      }
-    }
-  }, [design.sections, addElement, addFieldElement]);
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  const selectedElement = selectedElementId
-    ? design.elements.find(e => e.id === selectedElementId) || null
-    : null;
+}
+
+// ---------------------------------------------------------------------------
+// Inner component — consumes context
+// ---------------------------------------------------------------------------
+
+function MasterLabelEditorInner() {
+  const { t } = useTranslation('products');
+  const ctx = useLabelEditor();
 
   // Gallery view
-  if (view === 'gallery') {
+  if (ctx.view === 'gallery') {
     return (
       <LabelTemplateGallery
-        customTemplates={customTemplates}
-        onSelect={handleSelectTemplate}
-        onNewBlank={handleNewBlank}
-        onDelete={handleDeleteTemplate}
+        customTemplates={ctx.customTemplates}
+        onSelect={ctx.handleSelectTemplate}
+        onNewBlank={ctx.handleNewBlank}
+        onDelete={ctx.handleDeleteTemplate}
       />
     );
   }
@@ -646,76 +82,69 @@ export function MasterLabelEditorPage({
       <LabelEditorLayout
         toolbar={
           <LabelEditorToolbar
-            templateName={activeTemplate?.name || t('ml.template.untitled')}
-            variant={variant}
-            onVariantChange={onVariantChange}
-            batches={batches}
-            selectedBatchId={selectedBatchId}
-            onBatchChange={onBatchChange}
-            canUndo={history.canUndo}
-            canRedo={history.canRedo}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            saveStatus={autosave.status}
-            onSave={handleDirectSave}
-            onSaveAs={handleSaveAs}
-            isBuiltinTemplate={!!activeTemplate?.isDefault}
-            zoom={zoom}
-            onZoomChange={setZoom}
-            isGenerating={isGenerating}
-            onGeneratePDF={handleGeneratePDF}
-            onOpenMultiLabelDialog={() => setShowMultiLabelDialog(true)}
-            onBack={() => setView('gallery')}
-            product={product}
-            productSuppliers={productSuppliers}
-            manufacturerOverrideId={manufacturerOverrideId}
-            onManufacturerOverride={onManufacturerOverride}
-            importerOverrideId={importerOverrideId}
-            onImporterOverride={onImporterOverride}
+            templateName={ctx.activeTemplate?.name || t('ml.template.untitled')}
+            variant={ctx.variant}
+            onVariantChange={ctx.onVariantChange}
+            batches={ctx.batches}
+            selectedBatchId={ctx.selectedBatchId}
+            onBatchChange={ctx.onBatchChange}
+            canUndo={ctx.canUndo}
+            canRedo={ctx.canRedo}
+            onUndo={ctx.handleUndo}
+            onRedo={ctx.handleRedo}
+            saveStatus={ctx.autosaveStatus}
+            onSave={ctx.handleDirectSave}
+            onSaveAs={ctx.handleSaveAs}
+            isBuiltinTemplate={!!ctx.activeTemplate?.isDefault}
+            zoom={ctx.zoom}
+            onZoomChange={ctx.setZoom}
+            isGenerating={ctx.isGenerating}
+            onGeneratePDF={ctx.handleGeneratePDF}
+            onOpenMultiLabelDialog={() => ctx.setShowMultiLabelDialog(true)}
+            onBack={() => ctx.setView('gallery')}
+            product={ctx.product}
+            productSuppliers={ctx.productSuppliers}
+            manufacturerOverrideId={ctx.manufacturerOverrideId}
+            onManufacturerOverride={ctx.onManufacturerOverride}
+            importerOverrideId={ctx.importerOverrideId}
+            onImporterOverride={ctx.onImporterOverride}
           />
         }
         palette={
           <LabelElementPalette
-            onDragStart={drag.handlePaletteDragStart}
+            onDragStart={() => {}}
             onClickAdd={(type) => {
-              const firstVisible = design.sections.find(s => s.visible);
-              if (firstVisible) addElement(type, firstVisible.id);
+              const firstVisible = ctx.design.sections.find(s => s.visible);
+              if (firstVisible) ctx.addElement(type, firstVisible.id);
             }}
             onFieldDragStart={() => {}}
-            onFieldClickAdd={(fieldKey) => addFieldElement(fieldKey)}
+            onFieldClickAdd={(fieldKey) => ctx.addFieldElement(fieldKey)}
           />
         }
         canvas={
           <LabelCanvas
-            design={design}
-            data={data}
-            zoom={zoom}
-            selectedElementId={selectedElementId}
-            hoveredElementId={hoveredElementId}
-            onSelectElement={setSelectedElementId}
-            onHoverElement={setHoveredElementId}
-            onMoveElement={moveElement}
-            onDuplicateElement={duplicateElement}
-            onDeleteElement={deleteElement}
-            onDragElementStart={(index, sectionId) => {
-              dragSectionRef.current = sectionId;
-              drag.handleDragStart(index);
-            }}
-            onInsertElement={addElement}
-            onToggleSectionCollapsed={toggleSectionCollapsed}
-            onSectionDragStart={drag.handleSectionDragStart}
-            onDragElementOver={drag.handleDragOver}
-            onDropElement={handleElementDrop}
-            onDragElementEnd={drag.handleDragEnd}
-            onSectionDragOver={drag.handleDragOver}
-            onDropSection={handleSectionDrop}
-            dragTargetSectionIndex={drag.dragState.isDragging ? drag.dragState.targetIndex : null}
-            onDragOver={handleCanvasDragOver}
-            onDrop={handleCanvasDrop}
+            design={ctx.design}
+            data={ctx.data}
+            zoom={ctx.zoom}
+            selectedElementId={ctx.selectedElementId}
+            hoveredElementId={ctx.hoveredElementId}
+            onSelectElement={ctx.setSelectedElementId}
+            onHoverElement={ctx.setHoveredElementId}
+            onMoveElement={ctx.moveElement}
+            onDuplicateElement={ctx.duplicateElement}
+            onDeleteElement={ctx.deleteElement}
+            onInsertElement={ctx.addElement}
+            onToggleSectionCollapsed={ctx.toggleSectionCollapsed}
+            onReorderElement={ctx.reorderElement}
+            onMoveElementToSection={ctx.moveElementToSection}
+            onReorderSections={ctx.reorderSections}
+            onCanvasDragOver={ctx.handleCanvasDragOver}
+            onCanvasDrop={ctx.handleCanvasDrop}
+            onZoomChange={ctx.setZoom}
           />
         }
         rightPane={
-          <Tabs value={rightPanelTab} onValueChange={(v) => setRightPanelTab(v as LabelSettingsPanelTab)}>
+          <Tabs value={ctx.rightPanelTab} onValueChange={(v) => ctx.setRightPanelTab(v as any)}>
             <TabsList className="w-full grid grid-cols-5 h-9">
               <TabsTrigger value="preview" className="text-xs">{t('ml.editor.tabPreview')}</TabsTrigger>
               <TabsTrigger value="settings" className="text-xs">{t('ml.editor.tabSettings')}</TabsTrigger>
@@ -730,12 +159,11 @@ export function MasterLabelEditorPage({
             <TabsContent value="preview" className="mt-0">
               <div className="p-4 flex flex-col items-center gap-2">
                 <p className="text-xs text-muted-foreground">{t('ml.editor.livePreview')}</p>
-                {/* Inline mini preview — reuses canvas at small scale */}
                 <div className="border rounded bg-white p-2 w-full overflow-hidden">
                   <div style={{ transform: 'scale(0.45)', transformOrigin: 'top left', width: '222%' }}>
                     <LabelCanvas
-                      design={design}
-                      data={data}
+                      design={ctx.design}
+                      data={ctx.data}
                       zoom={100}
                       selectedElementId={null}
                       hoveredElementId={null}
@@ -744,18 +172,8 @@ export function MasterLabelEditorPage({
                       onMoveElement={() => {}}
                       onDuplicateElement={() => {}}
                       onDeleteElement={() => {}}
-                      onDragElementStart={() => {}}
                       onInsertElement={() => {}}
                       onToggleSectionCollapsed={() => {}}
-                      onSectionDragStart={() => {}}
-                      onDragElementOver={() => {}}
-                      onDropElement={() => false}
-                      onDragElementEnd={() => {}}
-                      onSectionDragOver={() => {}}
-                      onDropSection={() => false}
-                      dragTargetSectionIndex={null}
-                      onDragOver={() => {}}
-                      onDrop={() => {}}
                     />
                   </div>
                 </div>
@@ -764,38 +182,38 @@ export function MasterLabelEditorPage({
 
             <TabsContent value="settings" className="mt-0">
               <LabelElementSettingsPanel
-                element={selectedElement}
-                onChange={updateElement}
+                element={ctx.selectedElement}
+                onChange={ctx.updateElement}
               />
             </TabsContent>
 
             <TabsContent value="design" className="mt-0">
               <LabelDesignSettingsPanel
-                design={design}
-                onDesignChange={updateDesign}
-                brandingLogo={branding.logo}
-                brandingPrimaryColor={branding.primaryColor}
+                design={ctx.design}
+                onDesignChange={ctx.updateDesign}
+                brandingLogo={ctx.branding.logo}
+                brandingPrimaryColor={ctx.branding.primaryColor}
               />
             </TabsContent>
 
             <TabsContent value="pictograms" className="mt-0">
               <LabelPictogramLibrary
-                onInsert={insertPictogram}
+                onInsert={ctx.insertPictogram}
               />
             </TabsContent>
 
             <TabsContent value="check" className="mt-0">
               <LabelComplianceChecker
-                design={design}
-                data={data}
-                productGroup={data ? data.productGroup : detectProductGroup('')}
-                variant={variant}
-                onAddField={(fieldKey) => addFieldElement(fieldKey)}
-                onAddBadge={(badgeId, symbol) => addComplianceBadge(badgeId, symbol)}
-                onAddPictogram={(pictogramId) => addCompliancePictogram(pictogramId)}
+                design={ctx.design}
+                data={ctx.data}
+                productGroup={ctx.data ? ctx.data.productGroup : detectProductGroup('')}
+                variant={ctx.variant}
+                onAddField={(fieldKey) => ctx.addFieldElement(fieldKey)}
+                onAddBadge={(badgeId, symbol) => ctx.addComplianceBadge(badgeId, symbol)}
+                onAddPictogram={(pictogramId) => ctx.addCompliancePictogram(pictogramId)}
                 onSelectElement={(elementId) => {
-                  setSelectedElementId(elementId);
-                  setRightPanelTab('settings');
+                  ctx.setSelectedElementId(elementId);
+                  ctx.setRightPanelTab('settings');
                 }}
               />
             </TabsContent>
@@ -804,40 +222,40 @@ export function MasterLabelEditorPage({
       />
 
       {/* Save Template Dialog */}
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+      <Dialog open={ctx.showSaveDialog} onOpenChange={ctx.setShowSaveDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {saveMode === 'saveAs' ? t('ml.editor.saveAs') : t('ml.template.saveTitle')}
+              {ctx.saveMode === 'saveAs' ? t('ml.editor.saveAs') : t('ml.template.saveTitle')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
             <div className="space-y-1.5">
               <Label>{t('ml.template.name')}</Label>
               <Input
-                value={saveTemplateName}
-                onChange={(e) => setSaveTemplateName(e.target.value)}
+                value={ctx.saveTemplateName}
+                onChange={(e) => ctx.setSaveTemplateName(e.target.value)}
                 placeholder={t('ml.template.namePlaceholder')}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveTemplate();
+                  if (e.key === 'Enter') ctx.handleSaveTemplate();
                 }}
               />
             </div>
             <div className="space-y-1.5">
               <Label>{t('ml.template.description')}</Label>
               <Textarea
-                value={saveTemplateDescription}
-                onChange={(e) => setSaveTemplateDescription(e.target.value)}
+                value={ctx.saveTemplateDescription}
+                onChange={(e) => ctx.setSaveTemplateDescription(e.target.value)}
                 placeholder={t('ml.template.descriptionPlaceholder')}
                 rows={2}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+            <Button variant="outline" onClick={() => ctx.setShowSaveDialog(false)}>
               {t('Cancel', { ns: 'common' })}
             </Button>
-            <Button onClick={handleSaveTemplate} disabled={!saveTemplateName.trim()}>
+            <Button onClick={ctx.handleSaveTemplate} disabled={!ctx.saveTemplateName.trim()}>
               {t('ml.template.save')}
             </Button>
           </DialogFooter>
@@ -846,10 +264,10 @@ export function MasterLabelEditorPage({
 
       {/* Multi-Label Export Dialog */}
       <MultiLabelExportDialog
-        open={showMultiLabelDialog}
-        onOpenChange={setShowMultiLabelDialog}
-        onExport={handleMultiLabelExport}
-        hasCounterElement={hasCounterElement}
+        open={ctx.showMultiLabelDialog}
+        onOpenChange={ctx.setShowMultiLabelDialog}
+        onExport={ctx.handleMultiLabelExport}
+        hasCounterElement={ctx.hasCounterElement}
       />
     </>
   );

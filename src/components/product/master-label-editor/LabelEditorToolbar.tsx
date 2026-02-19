@@ -7,6 +7,7 @@ import {
   Loader2,
   ZoomIn,
   ZoomOut,
+  Maximize2,
   Save,
   Copy,
   Factory,
@@ -14,6 +15,7 @@ import {
   Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -55,7 +57,9 @@ interface LabelEditorToolbarProps {
   onImporterOverride: (id: string | null) => void;
 }
 
-const ZOOM_LEVELS = [50, 75, 100, 150];
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
+const ZOOM_STEP = 10;
 
 function SaveStatusDot({ status }: { status: LabelSaveStatus }) {
   const colors: Record<LabelSaveStatus, string> = {
@@ -263,26 +267,37 @@ export function LabelEditorToolbar({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          disabled={zoom <= ZOOM_LEVELS[0]}
-          onClick={() => {
-            const idx = ZOOM_LEVELS.indexOf(zoom);
-            if (idx > 0) onZoomChange(ZOOM_LEVELS[idx - 1]);
-          }}
+          disabled={zoom <= ZOOM_MIN}
+          onClick={() => onZoomChange(Math.max(ZOOM_MIN, zoom - ZOOM_STEP))}
         >
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
-        <span className="text-xs text-muted-foreground w-8 text-center">{zoom}%</span>
+        <Slider
+          value={[zoom]}
+          onValueChange={([v]) => onZoomChange(v)}
+          min={ZOOM_MIN}
+          max={ZOOM_MAX}
+          step={ZOOM_STEP}
+          className="w-20"
+        />
+        <span className="text-xs text-muted-foreground w-9 text-center tabular-nums">{zoom}%</span>
         <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          disabled={zoom >= ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
-          onClick={() => {
-            const idx = ZOOM_LEVELS.indexOf(zoom);
-            if (idx < ZOOM_LEVELS.length - 1) onZoomChange(ZOOM_LEVELS[idx + 1]);
-          }}
+          disabled={zoom >= ZOOM_MAX}
+          onClick={() => onZoomChange(Math.min(ZOOM_MAX, zoom + ZOOM_STEP))}
         >
           <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onZoomChange(100)}
+          title={t('ml.editor.fitToWidth')}
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
         </Button>
       </div>
 

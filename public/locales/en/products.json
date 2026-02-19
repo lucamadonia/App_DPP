@@ -401,6 +401,10 @@
   "ml.editor.manufacturer": "Manufacturer",
   "ml.editor.importer": "EU Importer",
   "ml.editor.emptyState": "Drag elements from the left palette or choose a template to start.",
+  "ml.editor.emptySection": "Drag elements here or click + to add",
+  "ml.editor.fitToWidth": "Reset to 100%",
+  "ml.editor.pageOf": "Page {{current}} of {{total}}",
+  "ml.editor.totalPages": "{{count}} pages",
   "ml.editor.selectElement": "Select an element on the canvas to edit its settings.",
   "ml.editor.livePreview": "Live Preview",
   "ml.editor.tabPreview": "Preview",
@@ -473,6 +477,7 @@
   "ml.element.barcode": "Barcode",
   "ml.element.iconText": "Icon Text",
   "ml.element.icontext": "Icon Text",
+  "ml.element.packageCounter": "Counter",
 
   "ml.field.productName": "Product Name",
   "ml.field.gtin": "GTIN/EAN",

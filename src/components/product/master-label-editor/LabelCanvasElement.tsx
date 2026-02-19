@@ -1,8 +1,10 @@
+import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LabelElement } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
 import { resolveFieldValue } from '@/lib/master-label-assembler';
 import { getBuiltinPictogram } from '@/lib/master-label-builtin-pictograms';
+import { PT_TO_PX } from '@/lib/master-label-defaults';
 import { LabelFloatingToolbar } from './LabelFloatingToolbar';
 
 interface LabelCanvasElementProps {
@@ -16,37 +18,119 @@ interface LabelCanvasElementProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  onDragStart: () => void;
-  onDragOver: () => void;
-  onDrop: () => boolean;
-  onDragEnd: () => void;
+  // @dnd-kit props (used by SortableLabelElement)
+  dragListeners?: Record<string, Function>;
+  isDragging?: boolean;
+  // Inline edit callback (optional — provided by SortableLabelElement)
+  onContentChange?: (content: string) => void;
 }
 
-function ElementPreview({ element, data }: { element: LabelElement; data: MasterLabelData | null }) {
+// ---------------------------------------------------------------------------
+// Inline text editor (contentEditable)
+// ---------------------------------------------------------------------------
+
+function InlineTextEditor({
+  value,
+  style,
+  onSave,
+  onCancel,
+}: {
+  value: string;
+  style: React.CSSProperties;
+  onSave: (text: string) => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleBlur = useCallback(() => {
+    const text = ref.current?.textContent || '';
+    onSave(text);
+  }, [onSave]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      ref.current?.blur();
+    }
+  }, [onCancel]);
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      style={{
+        ...style,
+        outline: 'none',
+        cursor: 'text',
+        minHeight: '1em',
+        borderBottom: '1px dashed hsl(var(--primary) / 0.4)',
+      }}
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: value }}
+      // Auto-focus on mount
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      autoFocus
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Element preview
+// ---------------------------------------------------------------------------
+
+function ElementPreview({
+  element,
+  data,
+  isEditing,
+  onSave,
+  onCancel,
+}: {
+  element: LabelElement;
+  data: MasterLabelData | null;
+  isEditing?: boolean;
+  onSave?: (text: string) => void;
+  onCancel?: () => void;
+}) {
   const { t } = useTranslation('products');
 
   switch (element.type) {
-    case 'text':
-      return (
-        <div
-          style={{
-            fontSize: `${element.fontSize * 1.2}px`,
-            fontWeight: element.fontWeight,
-            color: element.color,
-            textAlign: element.alignment,
-            fontStyle: element.italic ? 'italic' : 'normal',
-            textTransform: element.uppercase ? 'uppercase' : 'none',
-          }}
-        >
-          {element.content}
-        </div>
-      );
+    case 'text': {
+      const textStyle: React.CSSProperties = {
+        fontSize: `${element.fontSize * PT_TO_PX}px`,
+        fontWeight: element.fontWeight,
+        color: element.color,
+        textAlign: element.alignment,
+        fontStyle: element.italic ? 'italic' : 'normal',
+        textTransform: element.uppercase ? 'uppercase' : 'none',
+      };
+
+      if (isEditing && onSave && onCancel) {
+        return (
+          <InlineTextEditor
+            value={element.content}
+            style={textStyle}
+            onSave={onSave}
+            onCancel={onCancel}
+          />
+        );
+      }
+
+      return <div style={textStyle}>{element.content}</div>;
+    }
 
     case 'field-value': {
       const value = data ? resolveFieldValue(element.fieldKey, data) : `{${element.fieldKey}}`;
       const displayValue = element.uppercase ? (value || `{${element.fieldKey}}`).toUpperCase() : (value || `{${element.fieldKey}}`);
       const fvStyle: React.CSSProperties = {
-        fontSize: `${element.fontSize * 1.2}px`,
+        fontSize: `${element.fontSize * PT_TO_PX}px`,
         fontWeight: element.fontWeight,
         color: element.color,
         fontStyle: element.italic ? 'italic' : 'normal',
@@ -57,7 +141,7 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
         return (
           <div style={{ textAlign: element.alignment, marginBottom: element.marginBottom != null ? `${element.marginBottom}px` : '2px' }}>
             {element.showLabel && (
-              <div style={{ fontSize: `${(element.fontSize - 1) * 1.2}px`, color: element.labelColor }}>
+              <div style={{ fontSize: `${(element.fontSize - 1) * PT_TO_PX}px`, color: element.labelColor }}>
                 {element.labelText || t(`ml.field.${element.fieldKey}`)}
               </div>
             )}
@@ -68,7 +152,7 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
       return (
         <div className="flex gap-1" style={{ justifyContent: element.alignment === 'center' ? 'center' : element.alignment === 'right' ? 'flex-end' : 'flex-start', marginBottom: element.marginBottom != null ? `${element.marginBottom}px` : '2px' }}>
           {element.showLabel && (
-            <span style={{ fontSize: `${(element.fontSize - 0.5) * 1.2}px`, color: element.labelColor, minWidth: '55px' }}>
+            <span style={{ fontSize: `${(element.fontSize - 0.5) * PT_TO_PX}px`, color: element.labelColor, minWidth: '55px' }}>
               {element.labelText || t(`ml.field.${element.fieldKey}`)}
             </span>
           )}
@@ -126,7 +210,7 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
           <span
             className="inline-block px-1 py-0.5 rounded text-center"
             style={{
-              fontSize: `${element.size * 1.2}px`,
+              fontSize: `${element.size * PT_TO_PX}px`,
               fontWeight: 'bold',
               color: element.style === 'filled' ? '#fff' : element.color,
               borderWidth: element.style === 'minimal' ? 0 : '1px',
@@ -191,7 +275,7 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
             <span
               key={i}
               className="px-1 py-0.5 border rounded-sm"
-              style={{ fontSize: `${element.fontSize * 1.1}px`, color: element.color, borderColor: element.borderColor }}
+              style={{ fontSize: `${element.fontSize * PT_TO_PX}px`, color: element.color, borderColor: element.borderColor }}
             >
               {code}
             </span>
@@ -216,14 +300,19 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
       );
     }
 
-    case 'icon-text':
+    case 'icon-text': {
+      const iconTextStyle: React.CSSProperties = {
+        fontSize: `${element.fontSize * PT_TO_PX}px`,
+        color: element.color,
+      };
+
       return (
         <div className="flex items-center gap-1" style={{ justifyContent: element.alignment === 'center' ? 'center' : element.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
           <div
             className="rounded-full flex items-center justify-center shrink-0"
             style={{
-              width: `${element.iconSize * 1.2}px`,
-              height: `${element.iconSize * 1.2}px`,
+              width: `${element.iconSize * PT_TO_PX}px`,
+              height: `${element.iconSize * PT_TO_PX}px`,
               backgroundColor: element.color + '20',
               color: element.color,
               fontSize: `${element.iconSize * 0.7}px`,
@@ -231,11 +320,19 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
           >
             i
           </div>
-          <span style={{ fontSize: `${element.fontSize * 1.2}px`, color: element.color }}>
-            {element.text}
-          </span>
+          {isEditing && onSave && onCancel ? (
+            <InlineTextEditor
+              value={element.text}
+              style={iconTextStyle}
+              onSave={onSave}
+              onCancel={onCancel}
+            />
+          ) : (
+            <span style={iconTextStyle}>{element.text}</span>
+          )}
         </div>
       );
+    }
 
     case 'package-counter': {
       const previewText = element.format === 'x-slash-y'
@@ -271,7 +368,7 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
           >
             <div
               style={{
-                fontSize: `${element.fontSize * 1.2}px`,
+                fontSize: `${element.fontSize * PT_TO_PX}px`,
                 fontWeight: element.fontWeight,
                 fontFamily: element.fontFamily || 'inherit',
                 color: element.color,
@@ -308,6 +405,10 @@ function ElementPreview({ element, data }: { element: LabelElement; data: Master
   }
 }
 
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export function LabelCanvasElement({
   element,
   data,
@@ -319,53 +420,67 @@ export function LabelCanvasElement({
   onMoveDown,
   onDuplicate,
   onDelete,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
+  dragListeners,
+  isDragging,
+  onContentChange,
 }: LabelCanvasElementProps) {
+  const [isEditing, setIsEditing] = useState(false);
+
+  const canInlineEdit = (element.type === 'text' || element.type === 'icon-text') && !!onContentChange;
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (!canInlineEdit) return;
+    e.stopPropagation();
+    setIsEditing(true);
+  }, [canInlineEdit]);
+
+  const handleSave = useCallback((text: string) => {
+    setIsEditing(false);
+    if (onContentChange && text !== (element.type === 'text' ? (element as any).content : (element as any).text)) {
+      onContentChange(text);
+    }
+  }, [onContentChange, element]);
+
+  const handleCancel = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
   return (
     <div
       className={`relative group transition-all duration-100 ${
-        isSelected
-          ? 'ring-2 ring-primary border-primary rounded-sm'
-          : isHovered
-            ? 'border-primary/30 -translate-y-[1px] shadow-sm rounded-sm'
-            : 'border-transparent'
+        isDragging
+          ? 'opacity-40'
+          : isSelected
+            ? 'ring-2 ring-primary border-primary rounded-sm'
+            : isHovered
+              ? 'border-primary/30 -translate-y-[1px] shadow-sm rounded-sm'
+              : 'border-transparent'
       }`}
       style={{ borderWidth: '1px', borderStyle: 'solid', borderColor: isSelected ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--primary) / 0.3)' : 'transparent' }}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect();
+        if (!isEditing) onSelect();
       }}
+      onDoubleClick={handleDoubleClick}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = 'move';
-        onDragStart();
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        onDragOver();
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        const handled = onDrop();
-        if (handled) e.stopPropagation();
-      }}
-      onDragEnd={onDragEnd}
     >
-      <ElementPreview element={element} data={data} />
+      <ElementPreview
+        element={element}
+        data={data}
+        isEditing={isEditing}
+        onSave={handleSave}
+        onCancel={handleCancel}
+      />
 
-      {/* Floating toolbar on hover */}
-      {isHovered && (
+      {/* Floating toolbar on hover or when selected (hide during inline edit) */}
+      {(isHovered || isSelected) && !isEditing && (
         <LabelFloatingToolbar
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
+          dragListeners={dragListeners}
         />
       )}
     </div>

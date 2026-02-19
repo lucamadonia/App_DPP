@@ -26,11 +26,17 @@ import type {
 } from '@/types/master-label-editor';
 
 // ---------------------------------------------------------------------------
-// A6 dimensions in points
+// A6 dimensions in points & pixels
 // ---------------------------------------------------------------------------
 
 export const A6_WIDTH_PT = 297.64;
 export const A6_HEIGHT_PT = 419.53;
+
+/** PDF points → screen pixels conversion factor (96 DPI / 72 DPI) */
+export const PT_TO_PX = 96 / 72; // 1.333...
+
+export const A6_WIDTH_PX = A6_WIDTH_PT * PT_TO_PX;
+export const A6_HEIGHT_PX = A6_HEIGHT_PT * PT_TO_PX;
 
 // ---------------------------------------------------------------------------
 // ID generation

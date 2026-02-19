@@ -401,6 +401,10 @@
   "ml.editor.manufacturer": "Hersteller",
   "ml.editor.importer": "EU Importeur",
   "ml.editor.emptyState": "Elemente aus der linken Palette ziehen oder eine Vorlage wählen.",
+  "ml.editor.emptySection": "Elemente hierher ziehen oder + klicken",
+  "ml.editor.fitToWidth": "Auf 100% zurücksetzen",
+  "ml.editor.pageOf": "Seite {{current}} von {{total}}",
+  "ml.editor.totalPages": "{{count}} Seiten",
   "ml.editor.selectElement": "Element auf der Arbeitsfläche auswählen, um Einstellungen zu bearbeiten.",
   "ml.editor.livePreview": "Live-Vorschau",
   "ml.editor.tabPreview": "Vorschau",
@@ -473,6 +477,7 @@
   "ml.element.barcode": "Barcode",
   "ml.element.iconText": "Icon-Text",
   "ml.element.icontext": "Icon-Text",
+  "ml.element.packageCounter": "Zähler",
 
   "ml.field.productName": "Produktname",
   "ml.field.gtin": "GTIN/EAN",

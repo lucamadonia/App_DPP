@@ -5,12 +5,18 @@ interface LabelFloatingToolbarProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** @dnd-kit drag listeners for the grip handle */
+  dragListeners?: Record<string, Function>;
 }
 
-export function LabelFloatingToolbar({ onMoveUp, onMoveDown, onDuplicate, onDelete }: LabelFloatingToolbarProps) {
+export function LabelFloatingToolbar({ onMoveUp, onMoveDown, onDuplicate, onDelete, dragListeners }: LabelFloatingToolbarProps) {
   return (
     <div className="absolute -right-1 top-0 -translate-y-1/2 flex items-center gap-0.5 bg-background border rounded-md shadow-md p-0.5 z-10">
-      <button className="p-0.5 hover:bg-muted rounded cursor-grab" title="Drag">
+      <button
+        className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
+        title="Drag"
+        {...(dragListeners || {})}
+      >
         <GripVertical className="h-3 w-3 text-muted-foreground" />
       </button>
       <button className="p-0.5 hover:bg-muted rounded" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} title="Move up">

@@ -1,8 +1,12 @@
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import type { LabelDesign, LabelElementType, LabelSectionId } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
-import { A6_WIDTH_PT, A6_HEIGHT_PT } from '@/lib/master-label-defaults';
-import { LabelCanvasSection } from './LabelCanvasSection';
+import { calculatePageBreaks } from '@/lib/master-label-page-break';
+import { useLabelDndKit } from './hooks/useLabelDndKit';
+import { LabelCanvasPage } from './LabelCanvasPage';
+import { LabelCanvasElement } from './LabelCanvasElement';
 
 interface LabelCanvasProps {
   design: LabelDesign;
@@ -15,19 +19,20 @@ interface LabelCanvasProps {
   onMoveElement: (elementId: string, direction: 'up' | 'down') => void;
   onDuplicateElement: (elementId: string) => void;
   onDeleteElement: (elementId: string) => void;
-  onDragElementStart: (index: number, sectionId: LabelSectionId) => void;
   onInsertElement: (type: LabelElementType, sectionId: LabelSectionId, afterIndex: number) => void;
   onToggleSectionCollapsed: (sectionId: LabelSectionId) => void;
-  onSectionDragStart: (index: number) => void;
-  onDragElementOver: (index: number) => void;
-  onDropElement: (index: number) => boolean;
-  onDragElementEnd: () => void;
-  onSectionDragOver: (index: number) => void;
-  onDropSection: (index: number) => boolean;
-  dragTargetSectionIndex: number | null;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent) => void;
+  // @dnd-kit mutation callbacks (optional — omit for read-only preview)
+  onReorderElement?: (sectionId: string, fromIndex: number, toIndex: number) => void;
+  onMoveElementToSection?: (elementId: string, fromSection: string, toSection: string, toIndex: number) => void;
+  onReorderSections?: (fromIndex: number, toIndex: number) => void;
+  // Palette HTML5 DnD (optional — for canvas-level palette drops)
+  onCanvasDragOver?: (e: React.DragEvent) => void;
+  onCanvasDrop?: (e: React.DragEvent) => void;
+  // Zoom (optional — for Ctrl+Scroll zoom)
+  onZoomChange?: (zoom: number) => void;
 }
+
+const noop = () => {};
 
 export function LabelCanvas({
   design,
@@ -40,59 +45,78 @@ export function LabelCanvas({
   onMoveElement,
   onDuplicateElement,
   onDeleteElement,
-  onDragElementStart,
   onInsertElement,
   onToggleSectionCollapsed,
-  onSectionDragStart,
-  onDragElementOver,
-  onDropElement,
-  onDragElementEnd,
-  onSectionDragOver,
-  onDropSection,
-  dragTargetSectionIndex,
-  onDragOver,
-  onDrop,
+  onReorderElement,
+  onMoveElementToSection,
+  onReorderSections,
+  onCanvasDragOver,
+  onCanvasDrop,
+  onZoomChange,
 }: LabelCanvasProps) {
   const { t } = useTranslation('products');
   const scale = zoom / 100;
 
-  // A6: 105mm x 148mm, rendered at ~2.66px per pt for screen preview
-  const pxPerPt = 0.95;
-  const canvasWidth = A6_WIDTH_PT * pxPerPt;
-  const canvasHeight = A6_HEIGHT_PT * pxPerPt;
+  // @dnd-kit hook — uses no-op callbacks when in preview mode
+  const dndKit = useLabelDndKit({
+    design,
+    onReorderElement: onReorderElement || noop as any,
+    onMoveElementToSection: onMoveElementToSection || noop as any,
+    onInsertElement,
+    onReorderSections: onReorderSections || noop as any,
+  });
 
-  const sortedSections = [...design.sections].sort((a, b) => a.sortOrder - b.sortOrder);
+  // Calculate page breaks
+  const pageBreaks = useMemo(
+    () => calculatePageBreaks(design),
+    [design],
+  );
+
+  const totalPages = pageBreaks.pages.length;
+
+  // Disable sensors when in preview/read-only mode (no callbacks provided)
+  const isInteractive = !!onReorderElement;
+
+  // Ctrl+Scroll zoom handler
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (!onZoomChange || !(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -10 : 10;
+    const newZoom = Math.min(200, Math.max(50, zoom + delta));
+    onZoomChange(newZoom);
+  }, [zoom, onZoomChange]);
 
   return (
-    <div
-      className="flex items-start justify-center p-8"
-      onClick={() => onSelectElement(null)}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+    <DndContext
+      sensors={isInteractive ? dndKit.sensors : undefined}
+      collisionDetection={closestCenter}
+      onDragStart={dndKit.handleDragStart}
+      onDragOver={dndKit.handleDragOver}
+      onDragEnd={dndKit.handleDragEnd}
+      onDragCancel={dndKit.handleDragCancel}
     >
       <div
-        style={{
-          width: `${canvasWidth}px`,
-          minHeight: `${canvasHeight}px`,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top center',
-          padding: `${design.padding * pxPerPt}px`,
-          backgroundColor: design.backgroundColor,
-          fontFamily: design.fontFamily === 'Courier' ? 'monospace' : design.fontFamily === 'Times-Roman' ? 'serif' : 'sans-serif',
-          fontSize: `${design.baseFontSize * 1.2}px`,
-          color: design.baseTextColor,
-        }}
-        className="bg-white border border-gray-300 rounded shadow-md"
+        className="flex flex-col items-center gap-8 p-8"
+        onClick={() => onSelectElement(null)}
+        onDragOver={onCanvasDragOver}
+        onDrop={onCanvasDrop}
+        onWheel={handleWheel}
       >
-        {sortedSections.map((section, sectionIndex) => {
-          const sectionElements = design.elements.filter(el => el.sectionId === section.id);
-
-          return (
-            <LabelCanvasSection
-              key={section.id}
-              section={section}
-              elements={sectionElements}
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+          }}
+          className="flex flex-col gap-8"
+        >
+          {pageBreaks.pages.map((page) => (
+            <LabelCanvasPage
+              key={page.pageIndex}
+              design={design}
               data={data}
+              pageIndex={page.pageIndex}
+              totalPages={totalPages}
+              sections={page.sections}
               selectedElementId={selectedElementId}
               hoveredElementId={hoveredElementId}
               onSelectElement={onSelectElement}
@@ -100,29 +124,42 @@ export function LabelCanvas({
               onMoveElement={onMoveElement}
               onDuplicateElement={onDuplicateElement}
               onDeleteElement={onDeleteElement}
-              onDragElementStart={(index) => onDragElementStart(index, section.id)}
-              onInsertElement={(type, afterIndex) => onInsertElement(type, section.id, afterIndex)}
-              onToggleCollapsed={() => onToggleSectionCollapsed(section.id)}
-              onSectionDragStart={() => onSectionDragStart(sectionIndex)}
-              onDragElementOver={onDragElementOver}
-              onDropElement={onDropElement}
-              onDragElementEnd={onDragElementEnd}
-              onSectionDragOver={() => onSectionDragOver(sectionIndex)}
-              onSectionDrop={() => onDropSection(sectionIndex)}
-              isDragTarget={dragTargetSectionIndex === sectionIndex}
+              onInsertElement={onInsertElement}
+              onToggleSectionCollapsed={onToggleSectionCollapsed}
             />
-          );
-        })}
+          ))}
+        </div>
 
-        {/* Empty state */}
-        {design.elements.length === 0 && (
-          <div className="h-full flex items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded">
-            <p className="text-[10px] text-muted-foreground text-center px-4">
-              {t('ml.editor.emptyState')}
-            </p>
+        {/* Page count indicator */}
+        {totalPages > 1 && (
+          <div className="text-xs text-muted-foreground">
+            {t('ml.editor.totalPages', { count: totalPages })}
           </div>
         )}
       </div>
-    </div>
+
+      {/* Drag overlay — semi-transparent clone of dragged element */}
+      <DragOverlay dropAnimation={null}>
+        {dndKit.activeElement && (
+          <div
+            className="shadow-lg rounded-sm ring-2 ring-primary pointer-events-none"
+            style={{ transform: 'scale(1.02)', opacity: 0.85 }}
+          >
+            <LabelCanvasElement
+              element={dndKit.activeElement}
+              data={data}
+              isSelected={false}
+              isHovered={false}
+              onSelect={noop}
+              onHover={noop}
+              onMoveUp={noop}
+              onMoveDown={noop}
+              onDuplicate={noop}
+              onDelete={noop}
+            />
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 }
