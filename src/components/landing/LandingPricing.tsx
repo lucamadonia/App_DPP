@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 import { PLAN_CONFIGS, MODULE_CONFIGS, CREDIT_PACKS } from '@/types/billing';
 import type { BillingPlan, ModuleId } from '@/types/billing';
-import { Check, RotateCcw, Building2, Users, Globe, Sparkles, Zap, Crown, ArrowRight } from 'lucide-react';
+import { Check, X, RotateCcw, Building2, Users, Globe, Sparkles, Zap, Crown, ArrowRight, ShieldCheck, CreditCard, Clock } from 'lucide-react';
 
 const plans: BillingPlan[] = ['free', 'pro', 'enterprise'];
 
@@ -216,6 +216,22 @@ export function LandingPricing() {
           })}
         </div>
 
+        {/* Trust Signals */}
+        <div className={`flex flex-wrap justify-center gap-6 mt-10 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '500ms' }}>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <CreditCard className="h-4 w-4 text-emerald-500" />
+            {t('pricing.trust.noCreditCard')}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Clock className="h-4 w-4 text-blue-500" />
+            {t('pricing.trust.cancelAnytime')}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <ShieldCheck className="h-4 w-4 text-violet-500" />
+            {t('pricing.trust.gdpr')}
+          </div>
+        </div>
+
         {/* Add-on Modules */}
         <div className={`mt-24 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '600ms' }}>
           <div className="text-center mb-10">
@@ -303,6 +319,68 @@ export function LandingPricing() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+        {/* Feature Comparison Table */}
+        <div className={`mt-20 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '1100ms' }}>
+          <div className="text-center mb-10">
+            <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+              {t('pricing.comparison.headline')}
+            </h3>
+            <p className="mt-2 text-slate-600">
+              {t('pricing.comparison.subtitle')}
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full max-w-4xl mx-auto text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700 w-1/3">{t('pricing.comparison.feature')}</th>
+                  <th className="text-center py-3 px-4 font-semibold text-slate-700">Free</th>
+                  <th className="text-center py-3 px-4 font-semibold text-blue-600">Pro</th>
+                  <th className="text-center py-3 px-4 font-semibold text-violet-600">Enterprise</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { key: 'products', free: '5', pro: '50', enterprise: t('pricing.comparison.unlimited') },
+                  { key: 'aiCredits', free: '3/mo', pro: '25/mo', enterprise: '100/mo' },
+                  { key: 'dppTemplates', free: '3', pro: '11', enterprise: '11 + CSS' },
+                  { key: 'adminUsers', free: '1', pro: '5', enterprise: '25' },
+                  { key: 'storage', free: '100 MB', pro: '2 GB', enterprise: '20 GB' },
+                  { key: 'customBranding', free: false, pro: true, enterprise: true },
+                  { key: 'whiteLabel', free: false, pro: false, enterprise: true },
+                  { key: 'visibilityTiers', free: '1', pro: '2', enterprise: '3' },
+                ].map((row) => (
+                  <tr key={row.key} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3 px-4 text-slate-700">{t(`pricing.comparison.row.${row.key}`)}</td>
+                    {(['free', 'pro', 'enterprise'] as const).map((plan) => {
+                      const val = row[plan];
+                      return (
+                        <td key={plan} className="text-center py-3 px-4">
+                          {typeof val === 'boolean' ? (
+                            val ? <Check className="h-4 w-4 text-emerald-500 mx-auto" /> : <X className="h-4 w-4 text-slate-300 mx-auto" />
+                          ) : (
+                            <span className="text-slate-700 font-medium">{val}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-center mt-8">
+            <button
+              onClick={() => navigate('/pricing')}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors group"
+            >
+              {t('pricing.comparison.seeFullPricing')}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
           </div>
         </div>
       </div>

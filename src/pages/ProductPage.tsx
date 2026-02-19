@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem, fadeIn, useReducedMotion } from '@/lib/motion';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -137,6 +139,9 @@ export function ProductPage() {
     enabled: !!id,
   });
 
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' : motion.div;
+
   const error = productError ? 'Product not found' : (!id ? 'No product ID provided' : null);
 
   const handleDeleteBatch = async (batchId: string) => {
@@ -178,7 +183,10 @@ export function ProductPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+      >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/products">
@@ -233,7 +241,7 @@ export function ProductPage() {
             </Link>
           </Button>
         </div>
-      </div>
+      </MotionDiv>
 
       {/* Compliance Status Bar */}
       <Card>
@@ -409,52 +417,31 @@ export function ProductPage() {
               ? batchesWithPrice.reduce((s, b) => s + (b.pricePerUnit || 0), 0) / batchesWithPrice.length
               : 0;
             return (
-              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <Hash className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">{t('Total Batches')}</p>
-                        <p className="text-2xl font-bold">{batches.length}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <Layers className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">{t('Total Quantity')}</p>
-                        <p className="text-2xl font-bold">{totalQty.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
-                        <p className="text-2xl font-bold">{totalValue > 0 ? formatCurrency(totalValue, 'EUR', locale) : '—'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <BarChart3 className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">{t('Avg. Price/Unit')}</p>
-                        <p className="text-2xl font-bold">{avgPrice > 0 ? formatCurrency(avgPrice, 'EUR', locale) : '—'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <MotionDiv
+                className="grid gap-4 grid-cols-2 lg:grid-cols-4"
+                {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+              >
+                {[
+                  { icon: Hash, label: t('Total Batches'), value: String(batches.length) },
+                  { icon: Layers, label: t('Total Quantity'), value: totalQty.toLocaleString() },
+                  { icon: DollarSign, label: t('Total Value'), value: totalValue > 0 ? formatCurrency(totalValue, 'EUR', locale) : '—' },
+                  { icon: BarChart3, label: t('Avg. Price/Unit'), value: avgPrice > 0 ? formatCurrency(avgPrice, 'EUR', locale) : '—' },
+                ].map(({ icon: Icon, label, value }) => (
+                  <MotionDiv key={label} {...(!prefersReduced && { variants: staggerItem })}>
+                    <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-5 w-5 text-primary" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                            <p className="text-2xl font-bold">{value}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </MotionDiv>
+                ))}
+              </MotionDiv>
             );
           })()}
 
@@ -511,11 +498,16 @@ export function ProductPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {batches.map((batch) => {
+                    {batches.map((batch, index) => {
                       const status = batchStatusConfig[batch.status];
                       const batchTotal = (batch.pricePerUnit || 0) * (batch.quantity || 0);
                       return (
-                        <TableRow key={batch.id}>
+                        <TableRow
+                          key={batch.id}
+                          style={!prefersReduced ? {
+                            animation: `fadeSlideIn 0.3s ease-out ${index * 0.03}s both`,
+                          } : undefined}
+                        >
                           <TableCell>
                             <Link
                               to={`/products/${id}/batches/${batch.id}`}

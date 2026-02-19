@@ -22,6 +22,7 @@ export function LandingFooter() {
         { label: t('footer.product.dpp'), href: '#features' },
         { label: t('footer.product.returns'), href: '#returns' },
         { label: t('footer.product.templates'), href: '#features' },
+        { label: t('footer.product.pricing'), href: '/pricing' },
       ],
     },
     {
@@ -45,7 +46,7 @@ export function LandingFooter() {
       title: t('footer.legal'),
       links: [
         { label: t('footer.legal.privacy'), href: '/privacy' },
-        { label: t('footer.legal.terms'), href: '#' },
+        { label: t('footer.legal.terms'), href: '/terms' },
         { label: t('footer.legal.imprint'), href: '/imprint' },
       ],
     },

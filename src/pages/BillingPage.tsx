@@ -11,6 +11,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { fadeIn, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import { CreditCard, Loader2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +28,7 @@ import {
   CreditPurchaseModal,
   UsageBar,
   InvoiceTable,
+  PlanComparisonTable,
 } from '@/components/billing';
 import {
   createCheckoutSession,
@@ -156,6 +159,9 @@ export function BillingPage() {
     handleManageBilling();
   }, [handleManageBilling]);
 
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' : motion.div;
+
   if (billingLoading || !entitlements) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -170,7 +176,10 @@ export function BillingPage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <MotionDiv
+        className="flex items-center justify-between"
+        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold">{t('Billing & Plans')}</h1>
           <p className="text-muted-foreground">{t('Manage your subscription, modules, and AI credits')}</p>
@@ -182,7 +191,7 @@ export function BillingPage() {
             <ExternalLink className="ml-2 h-3.5 w-3.5" />
           </Button>
         )}
-      </div>
+      </MotionDiv>
 
       {/* Cancellation notice */}
       {entitlements.cancelAtPeriodEnd && entitlements.currentPeriodEnd && (
@@ -217,18 +226,22 @@ export function BillingPage() {
           </Tabs>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <MotionDiv
+          className="grid gap-4 md:grid-cols-3"
+          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+        >
           {(['free', 'pro', 'enterprise'] as BillingPlan[]).map((plan) => (
-            <PlanCard
-              key={plan}
-              plan={plan}
-              currentPlan={currentPlan}
-              onSelect={handlePlanSelect}
-              isLoading={actionLoading}
-              interval={interval}
-            />
+            <MotionDiv key={plan} {...(!prefersReduced && { variants: staggerItem })}>
+              <PlanCard
+                plan={plan}
+                currentPlan={currentPlan}
+                onSelect={handlePlanSelect}
+                isLoading={actionLoading}
+                interval={interval}
+              />
+            </MotionDiv>
           ))}
-        </div>
+        </MotionDiv>
 
         {/* Usage bars */}
         <Card className="mt-6">
@@ -256,24 +269,32 @@ export function BillingPage() {
         </Card>
       </section>
 
+      {/* Plan Comparison Table */}
+      <PlanComparisonTable currentPlan={currentPlan} interval={interval} />
+
       <Separator />
 
       {/* Section 2: Add-on Modules */}
       <section>
         <h2 className="text-lg font-semibold mb-4">{t('Add-on Modules')}</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MotionDiv
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+        >
           {allModuleIds.map((moduleId) => (
-            <ModuleCard
-              key={moduleId}
-              moduleId={moduleId}
-              isActive={entitlements.modules.has(moduleId)}
-              currentPlan={currentPlan}
-              onActivate={handleModuleActivate}
-              onManage={handleModuleManage}
-              isLoading={actionLoading}
-            />
+            <MotionDiv key={moduleId} {...(!prefersReduced && { variants: staggerItem })}>
+              <ModuleCard
+                moduleId={moduleId}
+                isActive={entitlements.modules.has(moduleId)}
+                currentPlan={currentPlan}
+                activeModules={entitlements.modules}
+                onActivate={handleModuleActivate}
+                onManage={handleModuleManage}
+                isLoading={actionLoading}
+              />
+            </MotionDiv>
           ))}
-        </div>
+        </MotionDiv>
       </section>
 
       <Separator />

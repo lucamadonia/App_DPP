@@ -9,3 +9,5 @@ export { CreditPurchaseModal } from './CreditPurchaseModal';
 export { UsageBar } from './UsageBar';
 export { UpgradePrompt } from './UpgradePrompt';
 export { InvoiceTable } from './InvoiceTable';
+export { PaywallModal } from './PaywallModal';
+export { PlanComparisonTable } from './PlanComparisonTable';

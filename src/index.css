@@ -690,6 +690,12 @@ code, .font-mono {
   box-shadow: 0 0 40px rgba(59, 130, 246, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+/* Staggered table row fade-in for list pages */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Accessibility: Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,

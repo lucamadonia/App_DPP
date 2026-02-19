@@ -15,6 +15,7 @@ interface ModuleCardProps {
   moduleId: ModuleId;
   isActive: boolean;
   currentPlan: BillingPlan;
+  activeModules?: Set<ModuleId>;
   onActivate: (moduleId: ModuleId) => void;
   onManage: (moduleId: ModuleId) => void;
   isLoading?: boolean;
@@ -24,6 +25,7 @@ export function ModuleCard({
   moduleId,
   isActive,
   currentPlan,
+  activeModules,
   onActivate,
   onManage,
   isLoading,
@@ -32,6 +34,9 @@ export function ModuleCard({
   const config = MODULE_CONFIGS[moduleId];
   const planOrder: Record<BillingPlan, number> = { free: 0, pro: 1, enterprise: 2 };
   const meetsRequirement = planOrder[currentPlan] >= planOrder[config.requiresPlan];
+  const missingDependency = config.requiresModule?.length
+    ? !config.requiresModule.some(dep => activeModules?.has(dep))
+    : false;
 
   const features = getModuleFeatures(moduleId, t);
 
@@ -39,7 +44,7 @@ export function ModuleCard({
     <Card className={cn(
       'flex flex-col',
       isActive && 'border-green-300 dark:border-green-700',
-      !meetsRequirement && 'opacity-60',
+      (!meetsRequirement || missingDependency) && !isActive && 'opacity-60',
     )}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -75,6 +80,11 @@ export function ModuleCard({
           <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
             <Lock className="h-4 w-4 shrink-0" />
             <span>{t('Requires {{plan}} plan', { plan: config.requiresPlan === 'pro' ? 'Pro' : 'Enterprise' })}</span>
+          </div>
+        ) : missingDependency ? (
+          <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>{t('Requires {{module}}', { module: MODULE_CONFIGS[config.requiresModule![0]].name })}</span>
           </div>
         ) : isActive ? (
           <Button

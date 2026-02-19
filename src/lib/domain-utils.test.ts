@@ -218,4 +218,124 @@ describe('buildDomainUrl', () => {
     })
     expect(url).toBe('https://example.com')
   })
+
+  it('handles domain with port-like pattern', () => {
+    const url = buildDomainUrl({
+      domain: 'localhost',
+      useHttps: false,
+    })
+    expect(url).toBe('http://localhost')
+  })
+})
+
+// ==========================================
+// Edge Cases & Additional Coverage
+// ==========================================
+describe('isValidDomain - edge cases', () => {
+  it('rejects domain with consecutive dots', () => {
+    expect(isValidDomain('example..com')).toBe(false)
+  })
+
+  it('accepts domain starting with a hyphen (known regex limitation)', () => {
+    // The current regex /^(?!:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/ does not reject
+    // leading hyphens. This is a known limitation documented here.
+    expect(isValidDomain('-example.com')).toBe(true)
+  })
+
+  it('accepts very long subdomain', () => {
+    const longSub = 'a'.repeat(63) + '.example.com'
+    expect(isValidDomain(longSub)).toBe(true)
+  })
+
+  it('accepts multi-level subdomain', () => {
+    expect(isValidDomain('a.b.c.d.e.example.com')).toBe(true)
+  })
+
+  it('rejects domain with spaces in middle', () => {
+    expect(isValidDomain('ex ample.com')).toBe(false)
+  })
+
+  it('rejects domain with special characters', () => {
+    expect(isValidDomain('exam!ple.com')).toBe(false)
+    expect(isValidDomain('exam@ple.com')).toBe(false)
+    expect(isValidDomain('exam#ple.com')).toBe(false)
+  })
+
+  it('rejects IP address (not a domain name)', () => {
+    expect(isValidDomain('192.168.1.1')).toBe(false) // TLD is numeric
+  })
+
+  it('accepts .museum TLD (long TLD)', () => {
+    expect(isValidDomain('example.museum')).toBe(true)
+  })
+
+  it('accepts .co.uk style domain', () => {
+    expect(isValidDomain('example.co.uk')).toBe(true)
+  })
+})
+
+describe('normalizeDomain - edge cases', () => {
+  it('handles double protocol prefix', () => {
+    // Only strips one http:// prefix
+    const result = normalizeDomain('http://http://example.com')
+    expect(result).toBe('http://example.com')
+  })
+
+  it('handles domain with query string', () => {
+    const result = normalizeDomain('example.com?foo=bar')
+    expect(result).toBe('example.com?foo=bar')
+  })
+
+  it('handles null-like empty inputs', () => {
+    expect(normalizeDomain('')).toBe('')
+  })
+
+  it('preserves hyphens in domain', () => {
+    expect(normalizeDomain('my-awesome-domain.com')).toBe('my-awesome-domain.com')
+  })
+})
+
+describe('validateDomain - edge cases', () => {
+  it('validates and normalizes protocol + domain', () => {
+    const result = validateDomain('https://MyDomain.COM/')
+    expect(result.isValid).toBe(true)
+    expect(result.normalizedDomain).toBe('mydomain.com')
+  })
+
+  it('rejects whitespace-only input', () => {
+    const result = validateDomain('   ')
+    expect(result.isValid).toBe(false)
+    expect(result.errorMessage).toBeTruthy()
+  })
+})
+
+describe('buildDomainUrl - edge cases', () => {
+  it('handles empty path prefix', () => {
+    const url = buildDomainUrl({
+      domain: 'example.com',
+      useHttps: true,
+      pathPrefix: '',
+    })
+    expect(url).toBe('https://example.com')
+  })
+
+  it('strips path prefix leading/trailing slashes', () => {
+    const url = buildDomainUrl({
+      domain: 'example.com',
+      useHttps: true,
+      pathPrefix: '/my-path/',
+    })
+    expect(url).toBe('https://example.com/my-path')
+  })
+
+  it('handles both gtin and serial with path prefix', () => {
+    const url = buildDomainUrl({
+      domain: 'dpp.firma.de',
+      useHttps: true,
+      pathPrefix: 'v2',
+      gtin: '04012345678901',
+      serial: 'SN-999',
+    })
+    expect(url).toBe('https://dpp.firma.de/v2/p/04012345678901/SN-999')
+  })
 })

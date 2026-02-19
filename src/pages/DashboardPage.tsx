@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -28,6 +29,7 @@ import { staggerContainer, staggerItem } from '@/lib/motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { ComplianceWidget } from '@/components/dashboard/ComplianceWidget';
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 
 function AnimatedStatValue({ value }: { value: number }) {
   const prefersReduced = useReducedMotion();
@@ -59,6 +61,7 @@ export function DashboardPage() {
   const { data: docStats = { total: 0, valid: 0, expiring: 0, expired: 0 }, isLoading: docsLoading } = useDocumentStats();
   const isLoading = productsLoading || docsLoading;
   const prefersReduced = useReducedMotion();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const totalBatches = products.reduce((sum, p) => sum + (p.batchCount || 0), 0);
   const hour = new Date().getHours();
@@ -210,16 +213,21 @@ export function DashboardPage() {
                   {t('Create your first Digital Product Passport in minutes. Add a product, upload documents, and generate QR codes.')}
                 </p>
               </div>
-              <Button size="lg" asChild>
-                <Link to="/products/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('Create First Product')}
-                </Link>
+              <Button size="lg" onClick={() => setShowOnboarding(true)}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                {t('Get Started')}
               </Button>
             </CardContent>
           </Card>
         </motion.div>
       )}
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
 
       {/* Bottom Bento Grid - 3 columns on large screens */}
       <motion.div
