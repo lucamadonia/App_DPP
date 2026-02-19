@@ -240,6 +240,7 @@ export interface TenantSettings {
   supplierPortal?: SupplierPortalSettings;
   productLanguages?: string[];
   masterLabelTemplates?: MasterLabelTemplate[];
+  onboardingCompleted?: boolean;
 }
 
 // ============================================

@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
 import { GripHorizontal, ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import type { LabelSection, LabelElement, LabelElementType, LabelSectionId } from '@/types/master-label-editor';
+import type { LabelSection, LabelElement, LabelElementType } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
 import type { SectionDragData } from './hooks/useLabelDndKit';
 import { SortableLabelElement } from './SortableLabelElement';

@@ -92,8 +92,8 @@ export function LabelCanvasPage({
               onMoveElement={onMoveElement}
               onDuplicateElement={onDuplicateElement}
               onDeleteElement={onDeleteElement}
-              onInsertElement={(type, afterIndex) => onInsertElement(type, slice.sectionId, slice.elementRange[0] + afterIndex)}
-              onToggleCollapsed={() => onToggleSectionCollapsed(slice.sectionId)}
+              onInsertElement={(type, afterIndex) => onInsertElement(type, slice.sectionId as LabelSectionId, slice.elementRange[0] + afterIndex)}
+              onToggleCollapsed={() => onToggleSectionCollapsed(slice.sectionId as LabelSectionId)}
               isPartialContinuation={slice.isPartial && slice.elementRange[0] > 0}
             />
           );

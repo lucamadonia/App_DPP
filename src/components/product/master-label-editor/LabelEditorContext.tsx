@@ -17,6 +17,7 @@ import type {
   LabelFieldKey,
   LabelSectionId,
   LabelEditorView,
+  LabelSaveStatus,
   LabelSettingsPanelTab,
   MasterLabelTemplate,
   BuiltinPictogram,
@@ -31,7 +32,6 @@ import {
   generateElementId,
   generateTemplateId,
 } from '@/lib/master-label-defaults';
-import { detectProductGroup } from '@/lib/master-label-assembler';
 import { useLabelEditorHistory } from './hooks/useLabelEditorHistory';
 import { useLabelAutosave } from './hooks/useLabelAutosave';
 import {
@@ -86,7 +86,7 @@ interface LabelEditorState {
   canRedo: boolean;
 
   // Autosave
-  autosaveStatus: string;
+  autosaveStatus: LabelSaveStatus;
 }
 
 interface LabelEditorActions {
@@ -790,7 +790,7 @@ export function LabelEditorProvider({
     productSuppliers,
     manufacturerOverrideId,
     importerOverrideId,
-    branding: { logo: branding.logo, primaryColor: branding.primaryColor },
+    branding: { logo: branding.logo ?? undefined, primaryColor: branding.primaryColor },
     hasCounterElement,
     canUndo: history.canUndo,
     canRedo: history.canRedo,
