@@ -185,6 +185,22 @@ function ElementPreview({
       );
 
     case 'pictogram': {
+      if (element.source === 'tenant' && element.imageUrl) {
+        return (
+          <div style={{ textAlign: element.alignment }}>
+            <img
+              src={element.imageUrl}
+              alt={element.labelText || element.pictogramId}
+              style={{ width: `${element.size}px`, height: `${element.size}px`, objectFit: 'contain', display: 'inline-block' }}
+              loading="lazy"
+            />
+            {element.showLabel && element.labelText && (
+              <div className="text-[7px]" style={{ color: element.color }}>{element.labelText}</div>
+            )}
+          </div>
+        );
+      }
+
       const pic = element.source === 'builtin' ? getBuiltinPictogram(element.pictogramId) : null;
       return (
         <div style={{ textAlign: element.alignment }}>

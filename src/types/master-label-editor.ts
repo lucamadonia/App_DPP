@@ -75,7 +75,8 @@ export interface LabelQRCodeElement extends LabelElementBase {
 export interface LabelPictogramElement extends LabelElementBase {
   type: 'pictogram';
   pictogramId: string; // references BuiltinPictogram.id or DB pictogram.id
-  source: 'builtin' | 'database';
+  source: 'builtin' | 'database' | 'tenant';
+  imageUrl?: string; // storage URL for tenant pictograms
   size: number; // in pt
   color: string;
   showLabel: boolean;

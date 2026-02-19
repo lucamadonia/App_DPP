@@ -786,6 +786,26 @@ export interface ActivityLogEntry {
   createdAt: string;
 }
 
+// ============================================
+// TENANT PICTOGRAMS (Tenant-Daten)
+// ============================================
+
+export interface TenantPictogram {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string;
+  category: string;
+  regulationYear: string;
+  fileUrl: string;
+  fileType: 'svg' | 'png' | 'jpg' | 'jpeg';
+  fileSize: number;
+  tags: string[];
+  uploadedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Re-export from product.ts for convenience (Material is defined locally, so we only export the others)
 export type { Product, CarbonFootprint, RecyclabilityInfo } from './product';
 export type { SupplyChainEntry as ProductSupplyChainEntry } from './product';

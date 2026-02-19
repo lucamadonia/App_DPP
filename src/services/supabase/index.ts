@@ -432,6 +432,16 @@ export {
   publicMarkDataRequestInProgress,
 } from './supplier-data-portal';
 
+// Tenant Pictograms
+export {
+  getTenantPictograms,
+  uploadTenantPictogram,
+  updateTenantPictogram,
+  deleteTenantPictogram,
+  getTenantPictogramStorageUsage,
+  TENANT_PICTOGRAM_QUOTA,
+} from './tenant-pictograms';
+
 // Customer Portal
 export {
   getCustomerContext,

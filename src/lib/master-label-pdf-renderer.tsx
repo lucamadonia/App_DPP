@@ -178,6 +178,21 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
     }
 
     case 'pictogram': {
+      // Tenant pictogram — render as Image from URL
+      if (element.source === 'tenant' && element.imageUrl) {
+        return (
+          <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 2 }}>
+            <Image src={element.imageUrl} style={{ width: element.size, height: element.size, objectFit: 'contain' }} />
+            {element.showLabel && element.labelText && (
+              <Text style={{ fontSize: 5, color: element.color, marginTop: 1 }}>
+                {element.labelText}
+              </Text>
+            )}
+          </View>
+        );
+      }
+
+      // Built-in pictogram — render as SVG path
       const pic = element.source === 'builtin' ? getBuiltinPictogram(element.pictogramId) : null;
       if (!pic) return null;
 

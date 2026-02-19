@@ -122,6 +122,7 @@ interface LabelEditorActions {
   addComplianceBadge: (badgeId: string, symbol: string) => void;
   addCompliancePictogram: (pictogramId: string) => void;
   insertPictogram: (pictogram: BuiltinPictogram) => void;
+  insertTenantPictogram: (pictogram: { id: string; name: string; fileUrl: string; category: string }) => void;
 
   // Template operations
   handleSelectTemplate: (template: MasterLabelTemplate) => void;
@@ -346,6 +347,21 @@ export function LabelEditorProvider({
     const newElement = createElement('pictogram', sectionId, sectionElements.length);
     (newElement as any).pictogramId = pictogram.id;
     (newElement as any).source = 'builtin';
+    (newElement as any).showLabel = true;
+    (newElement as any).labelText = pictogram.name;
+
+    updateDesign({ ...design, elements: [...design.elements, newElement] });
+    setSelectedElementId(newElement.id);
+  }, [design, updateDesign]);
+
+  const insertTenantPictogram = useCallback((pictogram: { id: string; name: string; fileUrl: string; category: string }) => {
+    const sectionId: LabelSectionId = pictogram.category === 'recycling' ? 'sustainability' : 'compliance';
+    const sectionElements = design.elements.filter(e => e.sectionId === sectionId);
+
+    const newElement = createElement('pictogram', sectionId, sectionElements.length);
+    (newElement as any).pictogramId = pictogram.id;
+    (newElement as any).source = 'tenant';
+    (newElement as any).imageUrl = pictogram.fileUrl;
     (newElement as any).showLabel = true;
     (newElement as any).labelText = pictogram.name;
 
@@ -818,6 +834,7 @@ export function LabelEditorProvider({
     addComplianceBadge,
     addCompliancePictogram,
     insertPictogram,
+    insertTenantPictogram,
     handleSelectTemplate,
     handleNewBlank,
     handleDeleteTemplate,
@@ -846,7 +863,7 @@ export function LabelEditorProvider({
     importerOverrideId, branding, hasCounterElement, history.canUndo, history.canRedo,
     autosave.status, updateDesign, addElement, updateElement, deleteElement,
     duplicateElement, moveElement, toggleSectionCollapsed, addFieldElement, addComplianceBadge,
-    addCompliancePictogram, insertPictogram, handleSelectTemplate, handleNewBlank,
+    addCompliancePictogram, insertPictogram, insertTenantPictogram, handleSelectTemplate, handleNewBlank,
     handleDeleteTemplate, handleSaveTemplate, handleDirectSave, handleSaveAs, handleUndo,
     handleRedo, handleGeneratePDF, handleMultiLabelExport, reorderElement,
     moveElementToSection, reorderSections, handleCanvasDragOver, handleCanvasDrop,

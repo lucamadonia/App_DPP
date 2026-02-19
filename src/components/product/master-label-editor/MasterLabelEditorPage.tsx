@@ -199,6 +199,7 @@ function MasterLabelEditorInner() {
             <TabsContent value="pictograms" className="mt-0">
               <LabelPictogramLibrary
                 onInsert={ctx.insertPictogram}
+                onInsertTenant={ctx.insertTenantPictogram}
               />
             </TabsContent>
 

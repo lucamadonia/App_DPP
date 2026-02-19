@@ -29,6 +29,7 @@ import {
   Sun,
   Moon,
   Lock,
+  ImageIcon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -103,6 +104,11 @@ export function AppSidebar() {
         { title: t('Upload'), url: '/documents/upload' },
         { title: t('Validity Tracker'), url: '/documents/tracker' },
       ],
+    },
+    {
+      title: t('Pictograms'),
+      url: '/pictograms',
+      icon: ImageIcon,
     },
     {
       title: t('Supply Chain'),

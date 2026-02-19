@@ -104,6 +104,7 @@ const AdminMasterDataPage = lazy(() => import('@/pages/admin/AdminMasterDataPage
 const TrainingGuidePage = lazy(() => import('@/pages/TrainingGuidePage').then(m => ({ default: m.TrainingGuidePage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
+const PictogramsPage = lazy(() => import('@/pages/PictogramsPage').then(m => ({ default: m.PictogramsPage })));
 
 // Compliance
 const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
@@ -370,6 +371,9 @@ function NormalAppRoutes() {
           <Route path="checklists" element={<ChecklistPage />} />
           <Route path="checklists/:country" element={<ChecklistPage />} />
           <Route path="requirements-calculator" element={<RequirementsCalculatorPage />} />
+
+          {/* Pictograms */}
+          <Route path="pictograms" element={<PictogramsPage />} />
 
           {/* Settings */}
           <Route path="settings/company" element={<SettingsPage tab="company" />} />
