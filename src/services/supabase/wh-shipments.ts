@@ -96,6 +96,7 @@ export async function getShipments(filter?: ShipmentFilter): Promise<WhShipment[
   if (filter?.priority?.length) query = query.in('priority', filter.priority);
   if (filter?.carrier) query = query.eq('carrier', filter.carrier);
   if (filter?.recipientType?.length) query = query.in('recipient_type', filter.recipientType);
+  if (filter?.contactId) query = query.eq('contact_id', filter.contactId);
   if (filter?.dateFrom) query = query.gte('created_at', filter.dateFrom);
   if (filter?.dateTo) query = query.lte('created_at', filter.dateTo);
   if (filter?.search) {

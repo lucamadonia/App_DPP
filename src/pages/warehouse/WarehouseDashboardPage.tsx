@@ -39,7 +39,7 @@ function KPICard({
   const animated = useAnimatedNumber(loading ? 0 : value);
 
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
       <CardContent className="pt-6">
         <div className="flex items-center gap-3">
           <div className={`rounded-lg p-2.5 ${bgColor}`}>
@@ -203,7 +203,7 @@ export function WarehouseDashboardPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('Warehouse & Fulfillment')}</h1>
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Warehouse & Fulfillment')}</h1>
         <p className="text-muted-foreground">{t('Dashboard')}</p>
       </div>
 
@@ -248,7 +248,7 @@ export function WarehouseDashboardPage() {
                       <div className="flex items-center justify-between text-sm">
                         <Link
                           to={`/warehouse/locations/${loc.locationId}`}
-                          className="font-medium hover:underline truncate"
+                          className="font-medium hover:underline truncate transition-colors"
                         >
                           {loc.locationName}
                           {loc.locationCode ? ` (${loc.locationCode})` : ''}
@@ -370,7 +370,7 @@ export function WarehouseDashboardPage() {
                   return (
                     <div
                       key={tx.id}
-                      className="flex items-center gap-3 rounded-md p-2 -mx-2"
+                      className="flex items-center gap-3 rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors duration-150"
                     >
                       <div className="rounded-md bg-muted p-1.5 shrink-0">
                         <TxIcon className="h-4 w-4 text-muted-foreground" />
@@ -412,12 +412,12 @@ export function WarehouseDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {quickActions.map((action) => (
                 <Button
                   key={action.to}
                   variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
+                  className="h-auto py-4 flex-col gap-2 hover:shadow-md hover:border-primary/50 transition-all duration-200"
                   asChild
                 >
                   <Link to={action.to}>

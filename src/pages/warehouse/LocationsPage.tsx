@@ -64,8 +64,8 @@ export function LocationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t('Warehouse Locations')}</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Warehouse Locations')}</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           {t('Create Location')}
@@ -92,7 +92,7 @@ export function LocationsPage() {
             const usedPercent = locStats.capacityUsedPercent || 0;
             return (
               <Link key={loc.id} to={`/warehouse/locations/${loc.id}`}>
-                <Card className={`cursor-pointer hover:shadow-md transition-shadow${!loc.isActive ? ' opacity-60' : ''}`}>
+                <Card className={`cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5${!loc.isActive ? ' opacity-60' : ''}`}>
                   <CardHeader className="pb-3 flex flex-row items-start justify-between">
                     <div>
                       <CardTitle className="text-base">{loc.name}</CardTitle>
@@ -124,7 +124,7 @@ export function LocationsPage() {
                       </div>
                       <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
                         <div
-                          className={`h-full transition-all ${capacityColor(usedPercent)}`}
+                          className={`h-full transition-all duration-500 ${capacityColor(usedPercent)}`}
                           style={{ width: `${Math.min(usedPercent, 100)}%` }}
                         />
                       </div>

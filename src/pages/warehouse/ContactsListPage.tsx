@@ -108,15 +108,15 @@ export function ContactsListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t('Contacts')}</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Contacts')}</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           {t('Add Contact')}
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={t('Search contacts...')}
@@ -127,12 +127,13 @@ export function ContactsListPage() {
       </div>
 
       {/* Type Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 border-b overflow-x-auto">
         {(['all', 'b2b', 'b2c', 'supplier'] as const).map((tab) => (
           <Button
             key={tab}
             variant={typeFilter === tab ? 'default' : 'ghost'}
             size="sm"
+            className={typeFilter !== tab ? 'hover:bg-muted transition-colors' : ''}
             onClick={() => setTypeFilter(tab)}
           >
             {tab === 'all' ? t('All') : getTypeLabel(tab)}
@@ -142,6 +143,7 @@ export function ContactsListPage() {
 
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -150,8 +152,8 @@ export function ContactsListPage() {
                 <TableHead>{t('Company')}</TableHead>
                 <TableHead>{t('Email')}</TableHead>
                 <TableHead>{t('City')}</TableHead>
-                <TableHead>{t('Tags')}</TableHead>
-                <TableHead>{t('Customer Number')}</TableHead>
+                <TableHead className="hidden md:table-cell">{t('Tags')}</TableHead>
+                <TableHead className="hidden md:table-cell">{t('Customer Number')}</TableHead>
                 <TableHead>{t('Status')}</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
@@ -176,7 +178,7 @@ export function ContactsListPage() {
                   return (
                     <TableRow
                       key={c.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${!c.isActive ? 'opacity-60' : ''}`}
+                      className={`cursor-pointer hover:bg-muted/50 transition-colors duration-150 ${!c.isActive ? 'opacity-60' : ''}`}
                       onClick={() => navigate(`/warehouse/contacts/${c.id}`)}
                     >
                       <TableCell className="font-medium">{c.contactName}</TableCell>
@@ -192,7 +194,7 @@ export function ContactsListPage() {
                       <TableCell>{c.companyName || '—'}</TableCell>
                       <TableCell className="text-sm">{c.email || '—'}</TableCell>
                       <TableCell>{c.city || '—'}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {c.tags && c.tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {c.tags.map((tag) => (
@@ -205,7 +207,7 @@ export function ContactsListPage() {
                           '—'
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{c.customerNumber || '—'}</TableCell>
+                      <TableCell className="hidden md:table-cell font-mono text-xs">{c.customerNumber || '—'}</TableCell>
                       <TableCell>
                         <Badge variant={c.isActive ? 'default' : 'secondary'}>
                           {c.isActive ? t('Active') : t('Inactive')}
@@ -242,6 +244,7 @@ export function ContactsListPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -209,10 +209,10 @@ export function InventoryListPage() {
     const pct = (v: number) => `${(v / total) * 100}%`;
     return (
       <div className="flex h-2 w-full min-w-[80px] rounded-full overflow-hidden bg-muted">
-        {row.quantityAvailable > 0 && <div className="bg-emerald-500" style={{ width: pct(row.quantityAvailable) }} />}
-        {row.quantityReserved > 0 && <div className="bg-blue-500" style={{ width: pct(row.quantityReserved) }} />}
-        {row.quantityDamaged > 0 && <div className="bg-orange-500" style={{ width: pct(row.quantityDamaged) }} />}
-        {row.quantityQuarantine > 0 && <div className="bg-red-500" style={{ width: pct(row.quantityQuarantine) }} />}
+        {row.quantityAvailable > 0 && <div className="bg-emerald-500 transition-all duration-300" style={{ width: pct(row.quantityAvailable) }} />}
+        {row.quantityReserved > 0 && <div className="bg-blue-500 transition-all duration-300" style={{ width: pct(row.quantityReserved) }} />}
+        {row.quantityDamaged > 0 && <div className="bg-orange-500 transition-all duration-300" style={{ width: pct(row.quantityDamaged) }} />}
+        {row.quantityQuarantine > 0 && <div className="bg-red-500 transition-all duration-300" style={{ width: pct(row.quantityQuarantine) }} />}
       </div>
     );
   };
@@ -315,7 +315,7 @@ export function InventoryListPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('Inventory')}</h1>
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Inventory')}</h1>
         <p className="text-muted-foreground">
           {totalAvailable.toLocaleString()} {t('Available Quantity')} · {totalReserved.toLocaleString()} {t('Reserved Quantity')}
           {!loading && <span className="ml-2">({totalCount} {t('Items')})</span>}
@@ -325,7 +325,7 @@ export function InventoryListPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -333,7 +333,7 @@ export function InventoryListPage() {
                 placeholder={t('Search...')}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="pl-8 w-[220px] h-9"
+                className="pl-8 w-full sm:w-[220px] h-9"
               />
             </div>
 
@@ -379,7 +379,7 @@ export function InventoryListPage() {
             <div className="flex-1" />
 
             {/* Group by */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{t('Group by')}:</span>
               <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
@@ -400,29 +400,30 @@ export function InventoryListPage() {
       {/* Stock Table */}
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer select-none" onClick={() => handleSort('productName')}>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('productName')}>
                   {t('Product')}<SortIcon col="productName" />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none" onClick={() => handleSort('batchSerialNumber')}>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('batchSerialNumber')}>
                   {t('Batch')}<SortIcon col="batchSerialNumber" />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none" onClick={() => handleSort('locationName')}>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('locationName')}>
                   {t('Location')}<SortIcon col="locationName" />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none" onClick={() => handleSort('binLocation')}>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('binLocation')}>
                   {t('Bin Location')}<SortIcon col="binLocation" />
                 </TableHead>
                 <TableHead className="text-center">{t('Stock Level')}</TableHead>
-                <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('quantityAvailable')}>
+                <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityAvailable')}>
                   {t('Available Quantity')}<SortIcon col="quantityAvailable" />
                 </TableHead>
-                <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('quantityReserved')}>
+                <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityReserved')}>
                   {t('Reserved Quantity')}<SortIcon col="quantityReserved" />
                 </TableHead>
-                <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('reorderPoint')}>
+                <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('reorderPoint')}>
                   {t('Reorder Point')}<SortIcon col="reorderPoint" />
                 </TableHead>
               </TableRow>
@@ -478,10 +479,11 @@ export function InventoryListPage() {
               )}
             </TableBody>
           </Table>
+          </div>
 
           {/* Pagination */}
           {!loading && totalCount > 0 && (
-            <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
                   <SelectTrigger className="w-[70px] h-8">

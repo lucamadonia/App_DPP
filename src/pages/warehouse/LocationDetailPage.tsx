@@ -96,7 +96,7 @@ function KPICard({
 }) {
   const animated = useAnimatedNumber(value);
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-all duration-200">
       <CardContent className="flex items-center gap-4 pt-6">
         <div className="rounded-lg bg-primary/10 p-3">
           <Icon className="h-5 w-5 text-primary" />
@@ -314,7 +314,7 @@ export function LocationDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 {location.name}
               </h1>
               {location.code && (
@@ -370,13 +370,15 @@ export function LocationDetailPage() {
 
       {/* ---- Tabs ---- */}
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
-          <TabsTrigger value="zones">{t('Zones')}</TabsTrigger>
-          <TabsTrigger value="bins">{t('Bin Locations')}</TabsTrigger>
-          <TabsTrigger value="stock">{t('Stock')}</TabsTrigger>
-          <TabsTrigger value="activity">{t('Activity')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList>
+            <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
+            <TabsTrigger value="zones">{t('Zones')}</TabsTrigger>
+            <TabsTrigger value="bins">{t('Bin Locations')}</TabsTrigger>
+            <TabsTrigger value="stock">{t('Stock')}</TabsTrigger>
+            <TabsTrigger value="activity">{t('Activity')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ========== Overview ========== */}
         <TabsContent value="overview" className="space-y-6 mt-4">
@@ -495,7 +497,7 @@ export function LocationDetailPage() {
                       : cfg.labelEn
                     : '';
                 return (
-                  <Card key={zone.code}>
+                  <Card key={zone.code} className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
                     <CardHeader className="pb-3 flex flex-row items-start justify-between">
                       <div>
                         <CardTitle className="text-base">
@@ -569,39 +571,41 @@ export function LocationDetailPage() {
         <TabsContent value="bins" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Zone')}</TableHead>
-                    <TableHead>{t('Bin Code')}</TableHead>
-                    <TableHead className="text-right">
-                      {t('Stock Count')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allBins.length === 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        {t('No bin locations')}
-                      </TableCell>
+                      <TableHead>{t('Zone')}</TableHead>
+                      <TableHead>{t('Bin Code')}</TableHead>
+                      <TableHead className="text-right">
+                        {t('Stock Count')}
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    allBins.map((b) => (
-                      <TableRow key={`${b.zoneName}-${b.bin}`}>
-                        <TableCell>{b.zoneName}</TableCell>
-                        <TableCell className="font-mono">{b.bin}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {b.stockCount}
+                  </TableHeader>
+                  <TableBody>
+                    {allBins.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="h-24 text-center text-muted-foreground"
+                        >
+                          {t('No bin locations')}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      allBins.map((b) => (
+                        <TableRow key={`${b.zoneName}-${b.bin}`}>
+                          <TableCell>{b.zoneName}</TableCell>
+                          <TableCell className="font-mono">{b.bin}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {b.stockCount}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -610,72 +614,74 @@ export function LocationDetailPage() {
         <TabsContent value="stock" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Product')}</TableHead>
-                    <TableHead>{t('Batch')}</TableHead>
-                    <TableHead>{t('Bin Location')}</TableHead>
-                    <TableHead className="text-right">
-                      {t('Available Quantity')}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {t('Reserved Quantity')}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {t('Reorder Point')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stock.length === 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                        {t('No stock data')}
-                      </TableCell>
+                      <TableHead>{t('Product')}</TableHead>
+                      <TableHead>{t('Batch')}</TableHead>
+                      <TableHead>{t('Bin Location')}</TableHead>
+                      <TableHead className="text-right">
+                        {t('Available Quantity')}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t('Reserved Quantity')}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t('Reorder Point')}
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    stock.map((s) => {
-                      const isLow =
-                        s.reorderPoint != null &&
-                        s.quantityAvailable <= s.reorderPoint;
-                      return (
-                        <TableRow
-                          key={s.id}
-                          className={
-                            isLow
-                              ? 'bg-orange-50/50 dark:bg-orange-950/10'
-                              : ''
-                          }
+                  </TableHeader>
+                  <TableBody>
+                    {stock.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="h-24 text-center text-muted-foreground"
                         >
-                          <TableCell className="font-medium">
-                            {s.productName || s.productId.slice(0, 8)}
-                          </TableCell>
-                          <TableCell>
-                            {s.batchSerialNumber || s.batchId.slice(0, 8)}
-                          </TableCell>
-                          <TableCell>{s.binLocation || '\u2014'}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {s.quantityAvailable.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {s.quantityReserved.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {s.reorderPoint != null
-                              ? s.reorderPoint.toLocaleString()
-                              : '\u2014'}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                          <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                          {t('No stock data')}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      stock.map((s) => {
+                        const isLow =
+                          s.reorderPoint != null &&
+                          s.quantityAvailable <= s.reorderPoint;
+                        return (
+                          <TableRow
+                            key={s.id}
+                            className={
+                              isLow
+                                ? 'bg-orange-50/50 dark:bg-orange-950/10'
+                                : ''
+                            }
+                          >
+                            <TableCell className="font-medium">
+                              {s.productName || s.productId.slice(0, 8)}
+                            </TableCell>
+                            <TableCell>
+                              {s.batchSerialNumber || s.batchId.slice(0, 8)}
+                            </TableCell>
+                            <TableCell>{s.binLocation || '\u2014'}</TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {s.quantityAvailable.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {s.quantityReserved.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-muted-foreground">
+                              {s.reorderPoint != null
+                                ? s.reorderPoint.toLocaleString()
+                                : '\u2014'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -684,53 +690,55 @@ export function LocationDetailPage() {
         <TabsContent value="activity" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Type')}</TableHead>
-                    <TableHead>{t('Product')}</TableHead>
-                    <TableHead className="text-right">{t('Quantity')}</TableHead>
-                    <TableHead className="text-right">{t('Date')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.length === 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                        {t('No activity yet')}
-                      </TableCell>
+                      <TableHead>{t('Type')}</TableHead>
+                      <TableHead>{t('Product')}</TableHead>
+                      <TableHead className="text-right">{t('Quantity')}</TableHead>
+                      <TableHead className="text-right">{t('Date')}</TableHead>
                     </TableRow>
-                  ) : (
-                    transactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell>
-                          <Badge variant="outline">{t(tx.type)}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {tx.productName || tx.productId.slice(0, 8)}
-                        </TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.length === 0 ? (
+                      <TableRow>
                         <TableCell
-                          className={`text-right tabular-nums font-medium ${
-                            tx.quantity >= 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
-                          }`}
+                          colSpan={4}
+                          className="h-24 text-center text-muted-foreground"
                         >
-                          {tx.quantity >= 0 ? '+' : ''}
-                          {tx.quantity.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground whitespace-nowrap">
-                          {relativeTime(tx.createdAt, i18n.language)}
+                          <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                          {t('No activity yet')}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      transactions.map((tx) => (
+                        <TableRow key={tx.id} className="transition-colors">
+                          <TableCell>
+                            <Badge variant="outline">{t(tx.type)}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {tx.productName || tx.productId.slice(0, 8)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right tabular-nums font-medium ${
+                              tx.quantity >= 0
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-red-600 dark:text-red-400'
+                            }`}
+                          >
+                            {tx.quantity >= 0 ? '+' : ''}
+                            {tx.quantity.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground whitespace-nowrap">
+                            {relativeTime(tx.createdAt, i18n.language)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

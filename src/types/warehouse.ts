@@ -337,6 +337,7 @@ export interface ShipmentFilter {
   priority?: ShipmentPriority[];
   carrier?: string;
   recipientType?: RecipientType[];
+  contactId?: string;
   dateFrom?: string;
   dateTo?: string;
   search?: string;

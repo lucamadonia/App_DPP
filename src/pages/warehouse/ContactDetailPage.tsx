@@ -179,12 +179,12 @@ export function ContactDetailPage() {
           </Link>
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight truncate">{contact.contactName}</h1>
+          <h1 className="text-2xl font-bold tracking-tight truncate bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{contact.contactName}</h1>
           {contact.companyName && (
             <p className="text-muted-foreground text-sm">{contact.companyName}</p>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge className={`${typeConfig.bgColor} ${typeConfig.color} border-0`}>
             {typeLabel}
           </Badge>
@@ -200,7 +200,7 @@ export function ContactDetailPage() {
 
       {/* ── KPI Row ───────────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="hover:shadow-md transition-all duration-200">
           <CardContent className="flex items-center gap-3 pt-6">
             <div className="rounded-lg bg-blue-100 p-2.5 dark:bg-blue-900/30">
               <Truck className="h-5 w-5 text-blue-600" />
@@ -211,7 +211,7 @@ export function ContactDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-all duration-200">
           <CardContent className="flex items-center gap-3 pt-6">
             <div className="rounded-lg bg-green-100 p-2.5 dark:bg-green-900/30">
               <Package className="h-5 w-5 text-green-600" />
@@ -222,7 +222,7 @@ export function ContactDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-all duration-200">
           <CardContent className="flex items-center gap-3 pt-6">
             <div className="rounded-lg bg-amber-100 p-2.5 dark:bg-amber-900/30">
               <Clock className="h-5 w-5 text-amber-600" />
@@ -239,6 +239,7 @@ export function ContactDetailPage() {
 
       {/* ── Tabs ──────────────────────────────────────────────────────── */}
       <Tabs defaultValue="details">
+        <div className="overflow-x-auto">
         <TabsList>
           <TabsTrigger value="details">
             <FileText className="mr-1.5 h-4 w-4" />
@@ -253,11 +254,12 @@ export function ContactDetailPage() {
             {t('Products')}
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* ── Tab: Details ────────────────────────────────────────────── */}
         <TabsContent value="details" className="space-y-4 mt-4">
           {/* Contact Info */}
-          <Card>
+          <Card className="transition-shadow hover:shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">{t('Contact Details')}</CardTitle>
             </CardHeader>
@@ -317,7 +319,7 @@ export function ContactDetailPage() {
           </Card>
 
           {/* Business Information */}
-          <Card>
+          <Card className="transition-shadow hover:shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">{t('Business Information')}</CardTitle>
             </CardHeader>
@@ -349,7 +351,7 @@ export function ContactDetailPage() {
           </Card>
 
           {/* Notes */}
-          <Card>
+          <Card className="transition-shadow hover:shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">{t('Notes')}</CardTitle>
               {!editingNotes && (
@@ -397,6 +399,7 @@ export function ContactDetailPage() {
         <TabsContent value="shipments" className="mt-4">
           <Card>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -441,6 +444,7 @@ export function ContactDetailPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -452,6 +456,7 @@ export function ContactDetailPage() {
               <CardTitle className="text-base">{t('Top Products')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -484,6 +489,7 @@ export function ContactDetailPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
