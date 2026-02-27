@@ -13,6 +13,7 @@ import {
   Ruler,
   Box,
   Clock,
+  Map,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ import {
   getTransactionHistory,
 } from '@/services/supabase/wh-stock';
 import { ZoneDialog } from '@/components/warehouse/ZoneDialog';
+import { FloorMapTab } from '@/components/warehouse/floor-map';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
 import { ZONE_TYPE_CONFIG } from '@/lib/warehouse-constants';
@@ -377,6 +379,10 @@ export function LocationDetailPage() {
             <TabsTrigger value="bins">{t('Bin Locations')}</TabsTrigger>
             <TabsTrigger value="stock">{t('Stock')}</TabsTrigger>
             <TabsTrigger value="activity">{t('Activity')}</TabsTrigger>
+            <TabsTrigger value="floor-map">
+              <Map className="h-4 w-4 mr-1.5" />
+              {t('Floor Map')}
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -741,6 +747,19 @@ export function LocationDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ========== Floor Map ========== */}
+        <TabsContent value="floor-map" className="mt-4">
+          <FloorMapTab
+            location={location}
+            stock={stock}
+            onSaveZones={async (zones) => {
+              if (!id) return;
+              const updated = await updateLocation(id, { zones });
+              setLocation(updated);
+            }}
+          />
         </TabsContent>
       </Tabs>
 

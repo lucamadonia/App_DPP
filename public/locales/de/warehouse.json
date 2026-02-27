@@ -491,5 +491,23 @@
   "No shipping details provided": "Keine Versanddetails angegeben",
 
   "Shipment cancelled": "Sendung storniert",
-  "Reference": "Referenz"
+  "Reference": "Referenz",
+
+  "Floor Map": "Lagerkarte",
+  "Edit Layout": "Layout bearbeiten",
+  "View Mode": "Ansichtsmodus",
+  "Save Layout": "Layout speichern",
+  "Layout saved": "Layout gespeichert",
+  "Auto Layout": "Auto-Layout",
+  "Fit All": "Alles einpassen",
+  "Zoom In": "Vergrößern",
+  "Zoom Out": "Verkleinern",
+  "Bins": "Lagerplätze",
+  "Heatmap": "Heatmap",
+  "Low": "Niedrig",
+  "High": "Hoch",
+  "Reserved": "Reserviert",
+  "Some zones have no position. Switch to Edit mode to place them.": "Einige Zonen haben keine Position. Wechseln Sie in den Bearbeitungsmodus.",
+  "Add zones in the Zones tab to use the floor map.": "Fügen Sie Zonen im Zonen-Tab hinzu, um die Lagerkarte zu nutzen.",
+  "Unsaved changes will be lost. Continue?": "Nicht gespeicherte Änderungen gehen verloren. Fortfahren?"
 }

@@ -63,6 +63,13 @@ export type WarehouseLocationType = 'main' | 'external' | 'dropship' | 'consignm
 
 export type WarehouseZoneType = 'receiving' | 'storage' | 'picking' | 'packing' | 'shipping' | 'cold_storage' | 'hazmat' | 'returns' | 'other';
 
+export interface ZoneMapPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface WarehouseZone {
   name: string;
   code: string;
@@ -70,6 +77,7 @@ export interface WarehouseZone {
   areaM2?: number;
   volumeM3?: number;
   binLocations?: string[];
+  mapPosition?: ZoneMapPosition;
 }
 
 export interface WhLocation {

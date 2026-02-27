@@ -491,5 +491,23 @@
   "No shipping details provided": "No shipping details provided",
 
   "Shipment cancelled": "Shipment cancelled",
-  "Reference": "Reference"
+  "Reference": "Reference",
+
+  "Floor Map": "Floor Map",
+  "Edit Layout": "Edit Layout",
+  "View Mode": "View Mode",
+  "Save Layout": "Save Layout",
+  "Layout saved": "Layout saved",
+  "Auto Layout": "Auto Layout",
+  "Fit All": "Fit All",
+  "Zoom In": "Zoom In",
+  "Zoom Out": "Zoom Out",
+  "Bins": "Bins",
+  "Heatmap": "Heatmap",
+  "Low": "Low",
+  "High": "High",
+  "Reserved": "Reserved",
+  "Some zones have no position. Switch to Edit mode to place them.": "Some zones have no position. Switch to Edit mode to place them.",
+  "Add zones in the Zones tab to use the floor map.": "Add zones in the Zones tab to use the floor map.",
+  "Unsaved changes will be lost. Continue?": "Unsaved changes will be lost. Continue?"
 }
