@@ -20,6 +20,7 @@ import {
   DollarSign,
   Truck,
   Tag,
+  Ruler,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { getProductById } from '@/services/supabase';
 import { getBatchById, deleteBatch } from '@/services/supabase/batches';
 import { formatCurrency } from '@/lib/format';
+import { calculateVolume, formatVolumeM3 } from '@/lib/warehouse-volume';
 import type { Product, ProductBatch } from '@/types/product';
 
 const statusConfig = {
@@ -38,6 +40,7 @@ const statusConfig = {
 
 export function BatchDetailPage() {
   const { t } = useTranslation('products');
+  const { t: tW } = useTranslation('warehouse');
   const locale = useLocale();
   const { id: productId, batchId } = useParams<{ id: string; batchId: string }>();
   const [product, setProduct] = useState<Product | null>(null);
@@ -106,6 +109,9 @@ export function BatchDetailPage() {
     batch.recyclabilityOverride ||
     batch.descriptionOverride
   );
+
+  // Volume calculation
+  const batchVolume = calculateVolume(product, batch.quantity ?? 0, batch);
 
   // Merged values for display
   const displayDescription = batch.descriptionOverride || product.description;
@@ -301,6 +307,41 @@ export function BatchDetailPage() {
                     </p>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Storage Volume */}
+        {batchVolume && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ruler className="h-5 w-5 text-primary" />
+                {tW('Storage Volume')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">{tW('Volume per unit')}</p>
+                  <p className="text-lg font-semibold">{formatVolumeM3(batchVolume.unitVolumeM3)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{tW('Total batch volume')}</p>
+                  <p className="text-lg font-semibold text-primary">{formatVolumeM3(batchVolume.totalVolumeM3)}</p>
+                </div>
+              </div>
+              <Separator className="my-3" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>
+                  {batchVolume.dimensions.heightCm} × {batchVolume.dimensions.widthCm} × {batchVolume.dimensions.depthCm} cm
+                </span>
+                <span className="text-xs">
+                  ({batchVolume.source === 'packaging'
+                    ? tW('Based on packaging dimensions')
+                    : tW('Based on product dimensions (no packaging dimensions available)')})
+                </span>
               </div>
             </CardContent>
           </Card>

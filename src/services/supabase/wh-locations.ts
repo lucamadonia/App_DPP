@@ -4,7 +4,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { WhLocation, WhLocationInput, LocationStats } from '@/types/warehouse';
+import type { WhLocation, WhLocationInput, LocationStats, LocationCapacitySummary } from '@/types/warehouse';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformLocation(row: any): WhLocation {
@@ -22,6 +22,7 @@ function transformLocation(row: any): WhLocation {
     facilityIdentifier: row.facility_identifier || undefined,
     capacityUnits: row.capacity_units != null ? Number(row.capacity_units) : undefined,
     capacityVolumeM3: row.capacity_volume_m3 != null ? Number(row.capacity_volume_m3) : undefined,
+    areaM2: row.area_m2 != null ? Number(row.area_m2) : undefined,
     zones: row.zones || [],
     isActive: row.is_active,
     notes: row.notes || undefined,
@@ -100,6 +101,7 @@ export async function createLocation(input: WhLocationInput): Promise<WhLocation
       facility_identifier: input.facilityIdentifier || null,
       capacity_units: input.capacityUnits || null,
       capacity_volume_m3: input.capacityVolumeM3 || null,
+      area_m2: input.areaM2 || null,
       zones: input.zones || [],
       is_active: input.isActive !== false,
       notes: input.notes || null,
@@ -125,6 +127,7 @@ export async function updateLocation(id: string, input: Partial<WhLocationInput>
   if (input.facilityIdentifier !== undefined) update.facility_identifier = input.facilityIdentifier || null;
   if (input.capacityUnits !== undefined) update.capacity_units = input.capacityUnits || null;
   if (input.capacityVolumeM3 !== undefined) update.capacity_volume_m3 = input.capacityVolumeM3 || null;
+  if (input.areaM2 !== undefined) update.area_m2 = input.areaM2 || null;
   if (input.zones !== undefined) update.zones = input.zones;
   if (input.isActive !== undefined) update.is_active = input.isActive;
   if (input.notes !== undefined) update.notes = input.notes || null;
@@ -150,18 +153,91 @@ export async function deleteLocation(id: string): Promise<void> {
 }
 
 export async function getLocationStats(locationId: string): Promise<LocationStats> {
-  const { data, error } = await supabase
-    .from('wh_stock_levels')
-    .select('quantity_available, batch_id')
-    .eq('location_id', locationId);
+  const [stockRes, locationRes] = await Promise.all([
+    supabase
+      .from('wh_stock_levels')
+      .select('quantity_available, quantity_reserved, batch_id, reorder_point')
+      .eq('location_id', locationId),
+    supabase
+      .from('wh_locations')
+      .select('zones, capacity_units')
+      .eq('id', locationId)
+      .single(),
+  ]);
 
-  if (error || !data) return { totalItems: 0, totalBatches: 0 };
+  const stockData = stockRes.data || [];
+  const location = locationRes.data;
 
-  const totalItems = data.reduce((sum, r) => sum + (r.quantity_available || 0), 0);
-  const uniqueBatches = new Set(data.map(r => r.batch_id)).size;
+  const totalItems = stockData.reduce((sum, r) => sum + (r.quantity_available || 0) + (r.quantity_reserved || 0), 0);
+  const uniqueBatches = new Set(stockData.map(r => r.batch_id)).size;
+  const lowStockCount = stockData.filter(
+    r => r.reorder_point != null && r.quantity_available <= r.reorder_point
+  ).length;
+
+  const zones: { binLocations?: string[] }[] = location?.zones || [];
+  const zoneCount = zones.length;
+  const binLocationCount = zones.reduce(
+    (sum, z) => sum + (z.binLocations?.length || 0),
+    0,
+  );
+
+  let capacityUsedPercent: number | undefined;
+  if (location?.capacity_units && location.capacity_units > 0) {
+    capacityUsedPercent = Math.round((totalItems / location.capacity_units) * 100);
+  }
 
   return {
     totalItems,
     totalBatches: uniqueBatches,
+    capacityUsedPercent,
+    zoneCount,
+    binLocationCount,
+    lowStockCount,
   };
+}
+
+export async function getLocationCapacitySummaries(): Promise<LocationCapacitySummary[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const [locsRes, stockRes] = await Promise.all([
+    supabase
+      .from('wh_locations')
+      .select('id, name, code, capacity_units, capacity_volume_m3, area_m2')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('name'),
+    supabase
+      .from('wh_stock_levels')
+      .select('location_id, quantity_available, quantity_reserved')
+      .eq('tenant_id', tenantId),
+  ]);
+
+  const locations = locsRes.data || [];
+  const stock = stockRes.data || [];
+
+  const stockByLocation = new Map<string, number>();
+  for (const s of stock) {
+    const current = stockByLocation.get(s.location_id) || 0;
+    stockByLocation.set(s.location_id, current + (s.quantity_available || 0) + (s.quantity_reserved || 0));
+  }
+
+  return locations.map(loc => {
+    const totalUnits = stockByLocation.get(loc.id) || 0;
+    const capacityUnits = loc.capacity_units != null ? Number(loc.capacity_units) : undefined;
+    const fillPercentUnits = capacityUnits && capacityUnits > 0
+      ? Math.round((totalUnits / capacityUnits) * 100)
+      : undefined;
+
+    return {
+      locationId: loc.id,
+      locationName: loc.name,
+      locationCode: loc.code || undefined,
+      totalUnits,
+      capacityUnits,
+      fillPercentUnits,
+      capacityVolumeM3: loc.capacity_volume_m3 != null ? Number(loc.capacity_volume_m3) : undefined,
+      areaM2: loc.area_m2 != null ? Number(loc.area_m2) : undefined,
+    };
+  });
 }

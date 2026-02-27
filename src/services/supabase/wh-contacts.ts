@@ -4,7 +4,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { WhContact, WhContactInput } from '@/types/warehouse';
+import type { WhContact, WhContactInput, WhContactType, ContactStats, WhShipment } from '@/types/warehouse';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformContact(row: any): WhContact {
@@ -31,7 +31,7 @@ function transformContact(row: any): WhContact {
   };
 }
 
-export async function getContacts(filters?: { search?: string; activeOnly?: boolean }): Promise<WhContact[]> {
+export async function getContacts(filters?: { search?: string; activeOnly?: boolean; type?: WhContactType }): Promise<WhContact[]> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return [];
 
@@ -42,6 +42,10 @@ export async function getContacts(filters?: { search?: string; activeOnly?: bool
 
   if (filters?.activeOnly !== false) {
     query = query.eq('is_active', true);
+  }
+
+  if (filters?.type) {
+    query = query.eq('type', filters.type);
   }
 
   if (filters?.search) {
@@ -213,4 +217,98 @@ export async function searchRecipients(query: string): Promise<RecipientSearchRe
   }
 
   return results;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformShipmentBasic(row: any): WhShipment {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    shipmentNumber: row.shipment_number,
+    status: row.status,
+    recipientType: row.recipient_type,
+    recipientName: row.recipient_name,
+    recipientCompany: row.recipient_company || undefined,
+    recipientEmail: row.recipient_email || undefined,
+    recipientPhone: row.recipient_phone || undefined,
+    shippingStreet: row.shipping_street,
+    shippingCity: row.shipping_city,
+    shippingState: row.shipping_state || undefined,
+    shippingPostalCode: row.shipping_postal_code,
+    shippingCountry: row.shipping_country,
+    carrier: row.carrier || undefined,
+    trackingNumber: row.tracking_number || undefined,
+    totalItems: row.total_items || 0,
+    priority: row.priority || 'normal',
+    currency: row.currency || 'EUR',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    sourceLocationName: row.wh_locations?.name || undefined,
+    contactId: row.contact_id || undefined,
+  };
+}
+
+export async function getContactShipments(contactId: string): Promise<WhShipment[]> {
+  const { data, error } = await supabase
+    .from('wh_shipments')
+    .select('*, wh_locations(name)')
+    .eq('contact_id', contactId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error('Failed to load contact shipments:', error);
+    return [];
+  }
+  return (data || []).map(transformShipmentBasic);
+}
+
+export async function getContactStats(contactId: string): Promise<ContactStats> {
+  const { data: shipments, error } = await supabase
+    .from('wh_shipments')
+    .select('id, total_items, created_at')
+    .eq('contact_id', contactId)
+    .order('created_at', { ascending: false });
+
+  if (error || !shipments) {
+    return { totalShipments: 0, totalItemsShipped: 0, topProducts: [] };
+  }
+
+  const totalShipments = shipments.length;
+  const totalItemsShipped = shipments.reduce((sum, s) => sum + (s.total_items || 0), 0);
+  const lastShipmentDate = shipments[0]?.created_at || undefined;
+
+  // Get top products from shipment items
+  const shipmentIds = shipments.map(s => s.id);
+  const topProducts: ContactStats['topProducts'] = [];
+
+  if (shipmentIds.length > 0) {
+    const { data: items } = await supabase
+      .from('wh_shipment_items')
+      .select('product_id, quantity, products(name)')
+      .in('shipment_id', shipmentIds.slice(0, 50));
+
+    if (items) {
+      const productMap = new Map<string, { name: string; qty: number }>();
+      for (const item of items) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const row = item as any;
+        const existing = productMap.get(row.product_id);
+        if (existing) {
+          existing.qty += row.quantity;
+        } else {
+          productMap.set(row.product_id, {
+            name: row.products?.name || row.product_id.slice(0, 8),
+            qty: row.quantity,
+          });
+        }
+      }
+      for (const [productId, { name, qty }] of productMap) {
+        topProducts.push({ productId, productName: name, totalQuantity: qty });
+      }
+      topProducts.sort((a, b) => b.totalQuantity - a.totalQuantity);
+    }
+  }
+
+  return { totalShipments, totalItemsShipped, lastShipmentDate, topProducts };
 }

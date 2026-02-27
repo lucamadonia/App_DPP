@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Users, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,21 +11,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContacts, createContact, updateContact, deleteContact } from '@/services/supabase/wh-contacts';
-import type { WhContact, WhContactInput } from '@/types/warehouse';
+import { CONTACT_TYPE_CONFIG } from '@/lib/warehouse-constants';
+import type { WhContact, WhContactInput, WhContactType } from '@/types/warehouse';
 
 export function ContactsListPage() {
-  const { t } = useTranslation('warehouse');
+  const { t, i18n } = useTranslation('warehouse');
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState<WhContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<WhContactType | 'all'>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<WhContact | null>(null);
   const [form, setForm] = useState<WhContactInput>({ contactName: '' });
 
   const load = async () => {
     try {
-      const data = await getContacts({ search: search || undefined, activeOnly: false });
+      const data = await getContacts({
+        search: search || undefined,
+        activeOnly: false,
+        type: typeFilter !== 'all' ? typeFilter : undefined,
+      });
       setContacts(data);
     } finally {
       setLoading(false);
@@ -32,9 +41,10 @@ export function ContactsListPage() {
   };
 
   useEffect(() => {
+    setLoading(true);
     const timer = setTimeout(load, search ? 300 : 0);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, typeFilter]);
 
   const openCreate = () => {
     setEditing(null);
@@ -88,10 +98,18 @@ export function ContactsListPage() {
     }
   };
 
+  const locale = i18n.language === 'de' ? 'de' : 'en';
+
+  const getTypeLabel = (type: string) => {
+    const cfg = CONTACT_TYPE_CONFIG[type];
+    if (!cfg) return type;
+    return locale === 'de' ? cfg.labelDe : cfg.labelEn;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t('B2B Contacts')}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('Contacts')}</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           {t('Add Contact')}
@@ -108,15 +126,31 @@ export function ContactsListPage() {
         />
       </div>
 
+      {/* Type Tabs */}
+      <div className="flex gap-1 border-b">
+        {(['all', 'b2b', 'b2c', 'supplier'] as const).map((tab) => (
+          <Button
+            key={tab}
+            variant={typeFilter === tab ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setTypeFilter(tab)}
+          >
+            {tab === 'all' ? t('All') : getTypeLabel(tab)}
+          </Button>
+        ))}
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{t('Name')}</TableHead>
+                <TableHead>{t('Type')}</TableHead>
                 <TableHead>{t('Company')}</TableHead>
                 <TableHead>{t('Email')}</TableHead>
                 <TableHead>{t('City')}</TableHead>
+                <TableHead>{t('Tags')}</TableHead>
                 <TableHead>{t('Customer Number')}</TableHead>
                 <TableHead>{t('Status')}</TableHead>
                 <TableHead className="w-24" />
@@ -125,42 +159,86 @@ export function ContactsListPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     {t('Loading...', { ns: 'common' })}
                   </TableCell>
                 </TableRow>
               ) : contacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     <Users className="mx-auto h-8 w-8 mb-2 opacity-50" />
                     {t('No contacts yet')}
                   </TableCell>
                 </TableRow>
               ) : (
-                contacts.map((c) => (
-                  <TableRow key={c.id} className={!c.isActive ? 'opacity-60' : ''}>
-                    <TableCell className="font-medium">{c.contactName}</TableCell>
-                    <TableCell>{c.companyName || '—'}</TableCell>
-                    <TableCell className="text-sm">{c.email || '—'}</TableCell>
-                    <TableCell>{c.city || '—'}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.customerNumber || '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={c.isActive ? 'default' : 'secondary'}>
-                        {c.isActive ? t('Active') : t('Inactive')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-destructive">
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                contacts.map((c) => {
+                  const typeCfg = CONTACT_TYPE_CONFIG[c.type];
+                  return (
+                    <TableRow
+                      key={c.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${!c.isActive ? 'opacity-60' : ''}`}
+                      onClick={() => navigate(`/warehouse/contacts/${c.id}`)}
+                    >
+                      <TableCell className="font-medium">{c.contactName}</TableCell>
+                      <TableCell>
+                        {typeCfg ? (
+                          <Badge variant="outline" className={`${typeCfg.bgColor} ${typeCfg.color} border-0`}>
+                            {getTypeLabel(c.type)}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">{c.type}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{c.companyName || '—'}</TableCell>
+                      <TableCell className="text-sm">{c.email || '—'}</TableCell>
+                      <TableCell>{c.city || '—'}</TableCell>
+                      <TableCell>
+                        {c.tags && c.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags.map((tag) => (
+                              <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{c.customerNumber || '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={c.isActive ? 'default' : 'secondary'}>
+                          {c.isActive ? t('Active') : t('Inactive')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(c);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(c.id);
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -174,6 +252,24 @@ export function ContactsListPage() {
             <DialogTitle>{editing ? t('Edit Contact') : t('Add Contact')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Contact Type */}
+            <div className="space-y-2">
+              <Label>{t('Contact Type')}</Label>
+              <Select
+                value={form.type || 'b2b'}
+                onValueChange={(v) => setForm({ ...form, type: v as WhContactType })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="b2b">{t('B2B')}</SelectItem>
+                  <SelectItem value="b2c">{t('B2C')}</SelectItem>
+                  <SelectItem value="supplier">{t('Supplier')}</SelectItem>
+                  <SelectItem value="other">{t('Other')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('Contact Name')}</Label>

@@ -53,6 +53,7 @@ function transformShipment(row: any): WhShipment {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     sourceLocationName: row.wh_locations?.name || undefined,
+    contactId: row.contact_id || undefined,
   };
 }
 
@@ -166,6 +167,7 @@ export async function createShipment(input: WhShipmentInput): Promise<WhShipment
       source_location_id: input.sourceLocationId || null,
       order_reference: input.orderReference || null,
       customer_id: input.customerId || null,
+      contact_id: input.contactId || null,
       priority: input.priority || 'normal',
       notes: input.notes || null,
       internal_notes: input.internalNotes || null,

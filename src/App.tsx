@@ -118,6 +118,8 @@ const LocationsPage = lazy(() => import('@/pages/warehouse/LocationsPage').then(
 const ContactsListPage = lazy(() => import('@/pages/warehouse/ContactsListPage').then(m => ({ default: m.ContactsListPage })));
 const WarehouseSettingsPage = lazy(() => import('@/pages/warehouse/WarehouseSettingsPage').then(m => ({ default: m.WarehouseSettingsPage })));
 const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyIntegrationPage').then(m => ({ default: m.ShopifyIntegrationPage })));
+const LocationDetailPage = lazy(() => import('@/pages/warehouse/LocationDetailPage').then(m => ({ default: m.LocationDetailPage })));
+const ContactDetailPage = lazy(() => import('@/pages/warehouse/ContactDetailPage').then(m => ({ default: m.ContactDetailPage })));
 
 // Compliance
 const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
@@ -394,7 +396,9 @@ function NormalAppRoutes() {
           <Route path="warehouse/shipments/:id" element={<ShipmentDetailPage />} />
           <Route path="warehouse/transfers" element={<TransferListPage />} />
           <Route path="warehouse/locations" element={<LocationsPage />} />
+          <Route path="warehouse/locations/:id" element={<LocationDetailPage />} />
           <Route path="warehouse/contacts" element={<ContactsListPage />} />
+          <Route path="warehouse/contacts/:id" element={<ContactDetailPage />} />
           <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
           <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />
 

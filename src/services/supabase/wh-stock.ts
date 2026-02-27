@@ -11,6 +11,8 @@ import type {
   StockFilter,
   TransactionFilter,
   StockTransactionType,
+  PaginatedStockResult,
+  PendingAction,
 } from '@/types/warehouse';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,27 +73,40 @@ function transformTransaction(row: any): WhStockTransaction {
 // ============================================
 
 export async function getStockLevels(filter?: StockFilter): Promise<WhStockLevel[]> {
+  const result = await getStockLevelsPaginated(filter);
+  return result.data;
+}
+
+export async function getStockLevelsPaginated(filter?: StockFilter): Promise<PaginatedStockResult> {
   const tenantId = await getCurrentTenantId();
-  if (!tenantId) return [];
+  if (!tenantId) return { data: [], total: 0, page: 1, pageSize: 25 };
+
+  const page = filter?.page || 1;
+  const pageSize = filter?.pageSize || 500;
 
   let query = supabase
     .from('wh_stock_levels')
-    .select('*, products(name), product_batches(serial_number), wh_locations(name, code)')
+    .select('*, products(name), product_batches(serial_number), wh_locations(name, code)', { count: 'exact' })
     .eq('tenant_id', tenantId);
 
   if (filter?.locationId) query = query.eq('location_id', filter.locationId);
   if (filter?.productId) query = query.eq('product_id', filter.productId);
   if (filter?.batchId) query = query.eq('batch_id', filter.batchId);
+  if (filter?.zone) query = query.eq('zone', filter.zone);
   if (filter?.lowStockOnly) {
-    // Only items where available <= reorder_point
     query = query.not('reorder_point', 'is', null);
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     console.error('Failed to load stock levels:', error);
-    return [];
+    return { data: [], total: 0, page, pageSize };
   }
 
   let results = (data || []).map(transformStockLevel);
@@ -101,7 +116,18 @@ export async function getStockLevels(filter?: StockFilter): Promise<WhStockLevel
     results = results.filter(s => s.reorderPoint != null && s.quantityAvailable <= s.reorderPoint);
   }
 
-  return results;
+  // Client-side search filter across product name, batch serial, bin location
+  if (filter?.search) {
+    const q = filter.search.toLowerCase();
+    results = results.filter(s =>
+      (s.productName?.toLowerCase().includes(q)) ||
+      (s.batchSerialNumber?.toLowerCase().includes(q)) ||
+      (s.binLocation?.toLowerCase().includes(q)) ||
+      (s.locationName?.toLowerCase().includes(q))
+    );
+  }
+
+  return { data: results, total: count || results.length, page, pageSize };
 }
 
 export async function getStockForBatch(batchId: string): Promise<WhStockLevel[]> {
@@ -515,4 +541,78 @@ export async function getWarehouseStats(): Promise<{
   ).length;
 
   return { totalStock, totalLocations, lowStockAlerts };
+}
+
+export async function getRecentTransactions(limit = 10): Promise<WhStockTransaction[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data, error } = await supabase
+    .from('wh_stock_transactions')
+    .select('*, products(name), product_batches(serial_number), wh_locations(name)')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Failed to load recent transactions:', error);
+    return [];
+  }
+  return (data || []).map(transformTransaction);
+}
+
+export async function getPendingActions(): Promise<PendingAction[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const actions: PendingAction[] = [];
+
+  const [lowStockRes, draftShipmentsRes] = await Promise.all([
+    supabase
+      .from('wh_stock_levels')
+      .select('quantity_available, reorder_point, products(name), wh_locations(name)')
+      .eq('tenant_id', tenantId)
+      .not('reorder_point', 'is', null),
+    supabase
+      .from('wh_shipments')
+      .select('id, shipment_number, status, recipient_name')
+      .eq('tenant_id', tenantId)
+      .in('status', ['draft', 'picking']),
+  ]);
+
+  // Low stock alerts
+  const lowStockItems = (lowStockRes.data || []).filter(
+    (r: { quantity_available: number; reorder_point: number }) =>
+      r.reorder_point != null && r.quantity_available <= r.reorder_point
+  );
+
+  for (const item of lowStockItems) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = item as any;
+    const isZero = row.quantity_available === 0;
+    actions.push({
+      type: 'low_stock',
+      title: row.products?.name || 'Unknown product',
+      subtitle: `${row.quantity_available} / ${row.reorder_point} @ ${row.wh_locations?.name || ''}`,
+      linkTo: '/warehouse/inventory?lowStock=true',
+      severity: isZero ? 'critical' : 'warning',
+    });
+  }
+
+  // Draft/picking shipments
+  for (const ship of draftShipmentsRes.data || []) {
+    actions.push({
+      type: 'shipment_action',
+      title: ship.shipment_number,
+      subtitle: `${ship.recipient_name} — ${ship.status}`,
+      linkTo: `/warehouse/shipments/${ship.id}`,
+      severity: 'info',
+    });
+  }
+
+  // Sort: critical first, then warning, then info
+  const severityOrder = { critical: 0, warning: 1, info: 2 };
+  actions.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+  return actions;
 }

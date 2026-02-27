@@ -14,7 +14,7 @@
 // B2B CONTACTS
 // ============================================
 
-export type WhContactType = 'b2b' | 'other';
+export type WhContactType = 'b2b' | 'b2c' | 'supplier' | 'other';
 
 export interface WhContact {
   id: string;
@@ -61,10 +61,15 @@ export interface WhContactInput {
 
 export type WarehouseLocationType = 'main' | 'external' | 'dropship' | 'consignment' | 'returns';
 
+export type WarehouseZoneType = 'receiving' | 'storage' | 'picking' | 'packing' | 'shipping' | 'cold_storage' | 'hazmat' | 'returns' | 'other';
+
 export interface WarehouseZone {
   name: string;
   code: string;
-  type?: string;
+  type?: WarehouseZoneType;
+  areaM2?: number;
+  volumeM3?: number;
+  binLocations?: string[];
 }
 
 export interface WhLocation {
@@ -81,6 +86,7 @@ export interface WhLocation {
   facilityIdentifier?: string;
   capacityUnits?: number;
   capacityVolumeM3?: number;
+  areaM2?: number;
   zones: WarehouseZone[];
   isActive: boolean;
   notes?: string;
@@ -100,6 +106,7 @@ export interface WhLocationInput {
   facilityIdentifier?: string;
   capacityUnits?: number;
   capacityVolumeM3?: number;
+  areaM2?: number;
   zones?: WarehouseZone[];
   isActive?: boolean;
   notes?: string;
@@ -230,6 +237,7 @@ export interface WhShipment {
   sourceLocationId?: string;
   orderReference?: string;
   customerId?: string;
+  contactId?: string;
   priority: ShipmentPriority;
   notes?: string;
   internalNotes?: string;
@@ -262,6 +270,7 @@ export interface WhShipmentInput {
   sourceLocationId?: string;
   orderReference?: string;
   customerId?: string;
+  contactId?: string;
   priority?: ShipmentPriority;
   notes?: string;
   internalNotes?: string;
@@ -308,6 +317,9 @@ export interface StockFilter {
   batchId?: string;
   lowStockOnly?: boolean;
   search?: string;
+  zone?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface TransactionFilter {
@@ -343,4 +355,40 @@ export interface LocationStats {
   totalItems: number;
   totalBatches: number;
   capacityUsedPercent?: number;
+  zoneCount: number;
+  binLocationCount: number;
+  lowStockCount: number;
+}
+
+export interface LocationCapacitySummary {
+  locationId: string;
+  locationName: string;
+  locationCode?: string;
+  totalUnits: number;
+  capacityUnits?: number;
+  fillPercentUnits?: number;
+  capacityVolumeM3?: number;
+  areaM2?: number;
+}
+
+export interface PendingAction {
+  type: 'low_stock' | 'shipment_action';
+  title: string;
+  subtitle?: string;
+  linkTo: string;
+  severity: 'info' | 'warning' | 'critical';
+}
+
+export interface ContactStats {
+  totalShipments: number;
+  totalItemsShipped: number;
+  lastShipmentDate?: string;
+  topProducts: { productId: string; productName: string; totalQuantity: number }[];
+}
+
+export interface PaginatedStockResult {
+  data: WhStockLevel[];
+  total: number;
+  page: number;
+  pageSize: number;
 }

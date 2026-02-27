@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Check } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, Package, Ruler, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getProducts } from '@/services/supabase/products';
-import { getBatches } from '@/services/supabase/batches';
+import { Separator } from '@/components/ui/separator';
+import { getProducts, getProductById } from '@/services/supabase/products';
+import { getBatches, getBatchById } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
-import { createGoodsReceipt } from '@/services/supabase/wh-stock';
-import type { WhLocation } from '@/types/warehouse';
+import { createGoodsReceipt, getStockForBatch } from '@/services/supabase/wh-stock';
+import { calculateVolume, analyzeCapacity, formatVolumeM3 } from '@/lib/warehouse-volume';
+import type { Product, ProductBatch } from '@/types/product';
+import type { WhLocation, WhStockLevel } from '@/types/warehouse';
 
 export function GoodsReceiptPage() {
   const { t } = useTranslation('warehouse');
@@ -25,6 +28,14 @@ export function GoodsReceiptPage() {
   const [locations, setLocations] = useState<WhLocation[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Batch context state
+  const [batchStock, setBatchStock] = useState<WhStockLevel[]>([]);
+  const [loadingStock, setLoadingStock] = useState(false);
+
+  // Full product/batch for volume calculation
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedBatchFull, setSelectedBatchFull] = useState<ProductBatch | null>(null);
+
   // Form state
   const [productId, setProductId] = useState('');
   const [batchId, setBatchId] = useState('');
@@ -35,6 +46,22 @@ export function GoodsReceiptPage() {
   const [binLocation, setBinLocation] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Computed batch context
+  const selectedBatch = useMemo(() => batches.find(b => b.id === batchId), [batches, batchId]);
+  const batchTotal = selectedBatch?.quantity ?? 0;
+  const alreadyReceived = useMemo(
+    () => batchStock.reduce((sum, s) => sum + s.quantityAvailable + s.quantityReserved + s.quantityDamaged + s.quantityQuarantine, 0),
+    [batchStock]
+  );
+  const receiptCount = batchStock.length;
+  const remaining = Math.max(0, batchTotal - alreadyReceived);
+  const fullyReceived = batchTotal > 0 && remaining === 0;
+
+  // After-receipt preview
+  const afterReceived = alreadyReceived + quantity;
+  const afterPercent = batchTotal > 0 ? Math.min(100, Math.round((afterReceived / batchTotal) * 100)) : 0;
+  const exceedsBatch = batchTotal > 0 && afterReceived > batchTotal;
 
   useEffect(() => {
     async function load() {
@@ -57,8 +84,25 @@ export function GoodsReceiptPage() {
           quantity: batch.quantity ?? 0,
         })))
       );
+      getProductById(productId).then(setSelectedProduct);
+    } else {
+      setSelectedProduct(null);
     }
   }, [productId]);
+
+  // Load stock data and full batch when batch changes
+  useEffect(() => {
+    if (batchId) {
+      setLoadingStock(true);
+      getStockForBatch(batchId)
+        .then(setBatchStock)
+        .finally(() => setLoadingStock(false));
+      getBatchById(batchId).then(setSelectedBatchFull);
+    } else {
+      setBatchStock([]);
+      setSelectedBatchFull(null);
+    }
+  }, [batchId]);
 
   const handleSubmit = async () => {
     if (!productId || !batchId || !locationId || quantity <= 0) return;
@@ -85,6 +129,18 @@ export function GoodsReceiptPage() {
   };
 
   const goodQuantity = quantity - quantityDamaged - quantityQuarantine;
+
+  // Volume calculation
+  const receiptVolume = useMemo(() => {
+    if (!selectedProduct || quantity <= 0) return null;
+    return calculateVolume(selectedProduct, quantity, selectedBatchFull);
+  }, [selectedProduct, selectedBatchFull, quantity]);
+
+  const capacityAnalysis = useMemo(() => {
+    if (!receiptVolume || !locationId) return null;
+    const loc = locations.find(l => l.id === locationId);
+    return analyzeCapacity(receiptVolume.totalVolumeM3, loc?.capacityVolumeM3, null);
+  }, [receiptVolume, locationId, locations]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -135,6 +191,55 @@ export function GoodsReceiptPage() {
                 </Select>
               </div>
             )}
+
+            {/* Batch Context Card */}
+            {batchId && !loadingStock && batchTotal > 0 && (
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{t('{{received}} of {{total}} units', { received: alreadyReceived, total: batchTotal })}</span>
+                    <span>{Math.round((alreadyReceived / batchTotal) * 100)}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${fullyReceived ? 'bg-green-500' : 'bg-primary'}`}
+                      style={{ width: `${Math.min(100, Math.round((alreadyReceived / batchTotal) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* 3 Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-md bg-muted/50 p-2.5 text-center">
+                    <div className="text-xs text-muted-foreground">{t('Batch ordered')}</div>
+                    <div className="text-lg font-semibold">{batchTotal}</div>
+                  </div>
+                  <div className="rounded-md bg-muted/50 p-2.5 text-center">
+                    <div className="text-xs text-muted-foreground">{t('Already received')}</div>
+                    <div className="text-lg font-semibold">{alreadyReceived}</div>
+                  </div>
+                  <div className="rounded-md bg-muted/50 p-2.5 text-center">
+                    <div className="text-xs text-muted-foreground">{t('Outstanding')}</div>
+                    <div className={`text-lg font-semibold ${fullyReceived ? 'text-green-600' : ''}`}>{remaining}</div>
+                  </div>
+                </div>
+
+                {/* Info text */}
+                {fullyReceived ? (
+                  <div className="flex items-center gap-2 rounded-md bg-green-50 dark:bg-green-950/30 p-2.5 text-sm text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>{t('All units of this batch have been received')}</span>
+                  </div>
+                ) : alreadyReceived > 0 ? (
+                  <div className="flex items-center gap-2 rounded-md bg-blue-50 dark:bg-blue-950/30 p-2.5 text-sm text-blue-700 dark:text-blue-400">
+                    <Package className="h-4 w-4 shrink-0" />
+                    <span>{t('{{count}} units of this batch have already been received in {{receipts}} receipt(s)', { count: alreadyReceived, receipts: receiptCount })}</span>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             <Button onClick={() => setStep(2)} disabled={!productId || !batchId}>
               {t('Continue', { ns: 'common' })}
             </Button>
@@ -161,20 +266,135 @@ export function GoodsReceiptPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Quick-Fill button */}
+            {remaining > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setQuantity(remaining);
+                  setQuantityDamaged(0);
+                  setQuantityQuarantine(0);
+                }}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                {t('Use remaining quantity')} ({remaining})
+              </Button>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>{t('Good Condition')}</Label>
-                <Input type="number" min={0} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+                <p className="text-xs text-muted-foreground">{t('Enter the quantity you are receiving in this delivery')}</p>
+                <Input
+                  type="number"
+                  min={0}
+                  value={quantity || ''}
+                  placeholder={remaining > 0 ? String(remaining) : '0'}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                />
               </div>
               <div className="space-y-2">
                 <Label>{t('Damaged')}</Label>
-                <Input type="number" min={0} value={quantityDamaged} onChange={(e) => setQuantityDamaged(Number(e.target.value))} />
+                <Input type="number" min={0} value={quantityDamaged || ''} onChange={(e) => setQuantityDamaged(Number(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>{t('Quarantine')}</Label>
-                <Input type="number" min={0} value={quantityQuarantine} onChange={(e) => setQuantityQuarantine(Number(e.target.value))} />
+                <Input type="number" min={0} value={quantityQuarantine || ''} onChange={(e) => setQuantityQuarantine(Number(e.target.value))} />
               </div>
             </div>
+
+            {/* Exceeds batch warning */}
+            {exceedsBatch && (
+              <div className="flex items-center gap-2 rounded-md bg-yellow-50 dark:bg-yellow-950/30 p-2.5 text-sm text-yellow-700 dark:text-yellow-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>{t('Total would exceed batch size', { batchSize: batchTotal })}</span>
+              </div>
+            )}
+
+            {/* After-receipt progress preview */}
+            {quantity > 0 && batchTotal > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t('{{qty}} units will be received — then {{received}} of {{total}} stocked', { qty: quantity, received: afterReceived, total: batchTotal })}</span>
+                  <span>{afterPercent}%</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${exceedsBatch ? 'bg-yellow-500' : afterPercent >= 100 ? 'bg-green-500' : 'bg-primary'}`}
+                    style={{ width: `${Math.min(100, afterPercent)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Space Requirements */}
+            {receiptVolume && (
+              <>
+                <Separator />
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Ruler className="h-4 w-4 text-primary" />
+                    {t('Space Requirements')}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-md bg-muted/50 p-2.5">
+                      <div className="text-xs text-muted-foreground">{t('Volume per unit')}</div>
+                      <div className="font-semibold">{formatVolumeM3(receiptVolume.unitVolumeM3)}</div>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-2.5">
+                      <div className="text-xs text-muted-foreground">{t('Total for {{qty}} units', { qty: quantity })}</div>
+                      <div className="font-semibold text-primary">{formatVolumeM3(receiptVolume.totalVolumeM3)}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {receiptVolume.dimensions.heightCm} × {receiptVolume.dimensions.widthCm} × {receiptVolume.dimensions.depthCm} cm
+                    {' '}({receiptVolume.source === 'packaging'
+                      ? t('Based on packaging dimensions')
+                      : t('Based on product dimensions (no packaging dimensions available)')})
+                  </div>
+
+                  {/* Capacity analysis */}
+                  {capacityAnalysis && capacityAnalysis.status !== 'unknown' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{t('Capacity Volume')}</span>
+                        <span>{Math.round(capacityAnalysis.fillPercentAfter)}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            capacityAnalysis.status === 'over_capacity' ? 'bg-red-500' :
+                            capacityAnalysis.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(100, capacityAnalysis.fillPercentAfter)}%` }}
+                        />
+                      </div>
+                      {capacityAnalysis.status === 'over_capacity' && (
+                        <div className="flex items-center gap-2 rounded-md bg-red-50 dark:bg-red-950/30 p-2 text-xs text-red-700 dark:text-red-400">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t('This receipt would exceed the location capacity by {{excess}} m³', { excess: formatVolumeM3(Math.abs(capacityAnalysis.remainingAfterM3)).replace(' m³', '') })}</span>
+                        </div>
+                      )}
+                      {capacityAnalysis.status === 'warning' && (
+                        <div className="flex items-center gap-2 rounded-md bg-yellow-50 dark:bg-yellow-950/30 p-2 text-xs text-yellow-700 dark:text-yellow-400">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t('Location would be over 80% full after this receipt')}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {capacityAnalysis && capacityAnalysis.status === 'unknown' && (
+                    <div className="text-xs text-muted-foreground italic">
+                      {t('No volume capacity configured for this location')}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="space-y-2">
               <Label>{t('Bin Location')}</Label>
               <Input value={binLocation} onChange={(e) => setBinLocation(e.target.value)} placeholder="z.B. A-03-12" />
@@ -210,8 +430,22 @@ export function GoodsReceiptPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Quantity')}:</span>
-                <span className="font-medium">{quantity} ({goodQuantity} {t('Good Condition')}, {quantityDamaged} {t('Damaged')}, {quantityQuarantine} {t('Quarantine')})</span>
+                <span className="font-medium">
+                  {quantity} ({goodQuantity} {t('Good Condition')}, {quantityDamaged} {t('Damaged')}, {quantityQuarantine} {t('Quarantine')})
+                </span>
               </div>
+              {receiptVolume && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('Space Requirements')}:</span>
+                  <span className="font-medium">{formatVolumeM3(receiptVolume.totalVolumeM3)}</span>
+                </div>
+              )}
+              {batchTotal > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('Batch')}:</span>
+                  <span className="font-medium">{t('{{qty}} of {{total}} units of this batch will now be received', { qty: quantity, total: batchTotal })}</span>
+                </div>
+              )}
               {binLocation && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('Bin Location')}:</span>
