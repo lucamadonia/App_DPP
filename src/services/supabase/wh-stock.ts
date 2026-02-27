@@ -157,6 +157,37 @@ export async function getStockForLocation(locationId: string): Promise<WhStockLe
 }
 
 // ============================================
+// LOCATION VOLUME CALCULATION
+// ============================================
+
+/**
+ * Calculate the total used volume (m³) for a warehouse location.
+ * Loads all stock entries, fetches their products, and computes volume.
+ * Returns totalM3 and coverage (fraction of stock items that have dimensions).
+ */
+export async function getLocationUsedVolumeM3(locationId: string): Promise<{
+  totalM3: number;
+  coverage: number;
+}> {
+  const { getProductsByIds } = await import('./products');
+  const { calculateStockVolumeM3 } = await import('@/lib/warehouse-volume');
+
+  const stock = await getStockForLocation(locationId);
+  if (stock.length === 0) return { totalM3: 0, coverage: 1 };
+
+  // Collect unique product IDs
+  const productIds = [...new Set(stock.map(s => s.productId))];
+  const products = await getProductsByIds(productIds);
+  const productsMap = new Map(products.map(p => [p.id, p]));
+
+  const result = calculateStockVolumeM3(stock, productsMap);
+  const totalItems = result.itemsWithDimensions + result.itemsWithout;
+  const coverage = totalItems > 0 ? result.itemsWithDimensions / totalItems : 1;
+
+  return { totalM3: result.totalM3, coverage };
+}
+
+// ============================================
 // GOODS RECEIPT
 // ============================================
 

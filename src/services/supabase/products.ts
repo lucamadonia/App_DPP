@@ -198,6 +198,26 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 }
 
 /**
+ * Get multiple products by their IDs in a single query.
+ * Used for batch lookups (e.g. stock volume calculation).
+ */
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .in('id', ids);
+
+  if (error || !data) {
+    console.error('Failed to load products by IDs:', error);
+    return [];
+  }
+
+  return data.map(transformProduct);
+}
+
+/**
  * Get a product by GTIN and serial number (for public DPP view)
  * Two-step lookup: find product by GTIN, then batch by serial_number, then merge.
  * Falls back to legacy direct product lookup for backwards compatibility.

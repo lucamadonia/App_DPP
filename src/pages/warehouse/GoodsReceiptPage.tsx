@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertTriangle, Check, CheckCircle2, Package, Ruler, Zap } from 'lucide-react';
+import { AlertTriangle, Box, Check, CheckCircle2, Info, Package, Ruler, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { getProducts, getProductById } from '@/services/supabase/products';
 import { getBatches, getBatchById } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
-import { createGoodsReceipt, getStockForBatch } from '@/services/supabase/wh-stock';
+import { createGoodsReceipt, getStockForBatch, getLocationUsedVolumeM3 } from '@/services/supabase/wh-stock';
 import { calculateVolume, analyzeCapacity, formatVolumeM3 } from '@/lib/warehouse-volume';
 import type { Product, ProductBatch } from '@/types/product';
 import type { WhLocation, WhStockLevel } from '@/types/warehouse';
@@ -35,6 +35,11 @@ export function GoodsReceiptPage() {
   // Full product/batch for volume calculation
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedBatchFull, setSelectedBatchFull] = useState<ProductBatch | null>(null);
+
+  // Location capacity state
+  const [locationUsedM3, setLocationUsedM3] = useState<number | null>(null);
+  const [volumeCoverage, setVolumeCoverage] = useState(1);
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
 
   // Form state
   const [productId, setProductId] = useState('');
@@ -104,6 +109,26 @@ export function GoodsReceiptPage() {
     }
   }, [batchId]);
 
+  // Load used volume when location changes
+  useEffect(() => {
+    if (locationId) {
+      setLoadingCapacity(true);
+      getLocationUsedVolumeM3(locationId)
+        .then(({ totalM3, coverage }) => {
+          setLocationUsedM3(totalM3);
+          setVolumeCoverage(coverage);
+        })
+        .catch(() => {
+          setLocationUsedM3(null);
+          setVolumeCoverage(1);
+        })
+        .finally(() => setLoadingCapacity(false));
+    } else {
+      setLocationUsedM3(null);
+      setVolumeCoverage(1);
+    }
+  }, [locationId]);
+
   const handleSubmit = async () => {
     if (!productId || !batchId || !locationId || quantity <= 0) return;
     setLoading(true);
@@ -136,11 +161,18 @@ export function GoodsReceiptPage() {
     return calculateVolume(selectedProduct, quantity, selectedBatchFull);
   }, [selectedProduct, selectedBatchFull, quantity]);
 
+  const selectedLocation = useMemo(() => locations.find(l => l.id === locationId), [locationId, locations]);
+
   const capacityAnalysis = useMemo(() => {
     if (!receiptVolume || !locationId) return null;
-    const loc = locations.find(l => l.id === locationId);
-    return analyzeCapacity(receiptVolume.totalVolumeM3, loc?.capacityVolumeM3, null);
-  }, [receiptVolume, locationId, locations]);
+    return analyzeCapacity(receiptVolume.totalVolumeM3, selectedLocation?.capacityVolumeM3, locationUsedM3);
+  }, [receiptVolume, locationId, selectedLocation, locationUsedM3]);
+
+  // Current fill percentage (before this receipt)
+  const currentFillPercent = useMemo(() => {
+    if (locationUsedM3 == null || !selectedLocation?.capacityVolumeM3) return null;
+    return (locationUsedM3 / selectedLocation.capacityVolumeM3) * 100;
+  }, [locationUsedM3, selectedLocation]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -330,7 +362,123 @@ export function GoodsReceiptPage() {
               </div>
             )}
 
-            {/* Space Requirements */}
+            {/* Warehouse Capacity Card */}
+            {locationId && selectedLocation?.capacityVolumeM3 && locationUsedM3 != null && !loadingCapacity && (
+              <>
+                <Separator />
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Box className="h-4 w-4 text-primary" />
+                    {t('Warehouse Capacity')}
+                  </div>
+
+                  {/* 3 Stat boxes */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-md bg-muted/50 p-2.5 text-center">
+                      <div className="text-xs text-muted-foreground">{t('Currently Used')}</div>
+                      <div className="text-lg font-semibold">{formatVolumeM3(locationUsedM3)}</div>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-2.5 text-center">
+                      <div className="text-xs text-muted-foreground">{t('Available')}</div>
+                      <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+                        {formatVolumeM3(Math.max(0, selectedLocation.capacityVolumeM3 - locationUsedM3))}
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-2.5 text-center">
+                      <div className="text-xs text-muted-foreground">{t('Total Capacity')}</div>
+                      <div className="text-lg font-semibold">{formatVolumeM3(selectedLocation.capacityVolumeM3)}</div>
+                    </div>
+                  </div>
+
+                  {/* Current fill bar */}
+                  {currentFillPercent != null && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{t('Current utilization')}</span>
+                        <span>{currentFillPercent.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            currentFillPercent > 100 ? 'bg-red-500' :
+                            currentFillPercent >= 80 ? 'bg-yellow-500' : 'bg-primary'
+                          }`}
+                          style={{ width: `${Math.min(100, currentFillPercent)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* This delivery + after bar */}
+                  {receiptVolume && capacityAnalysis && capacityAnalysis.status !== 'unknown' && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          <Package className="inline h-3 w-3 mr-1" />
+                          {t('This delivery')}: +{formatVolumeM3(receiptVolume.totalVolumeM3)}
+                        </span>
+                        <span>{capacityAnalysis.fillPercentAfter.toFixed(1)}% {t('after receipt')}</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            capacityAnalysis.status === 'over_capacity' ? 'bg-red-500' :
+                            capacityAnalysis.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(100, capacityAnalysis.fillPercentAfter)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status indicator */}
+                  {capacityAnalysis && capacityAnalysis.status === 'ok' && (
+                    <div className="flex items-center gap-2 rounded-md bg-green-50 dark:bg-green-950/30 p-2 text-xs text-green-700 dark:text-green-400">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      <span>{t('Enough space available')}</span>
+                    </div>
+                  )}
+                  {capacityAnalysis && capacityAnalysis.status === 'warning' && (
+                    <div className="flex items-center gap-2 rounded-md bg-yellow-50 dark:bg-yellow-950/30 p-2 text-xs text-yellow-700 dark:text-yellow-400">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{t('Location would be over 80% full after this receipt')}</span>
+                    </div>
+                  )}
+                  {capacityAnalysis && capacityAnalysis.status === 'over_capacity' && (
+                    <div className="flex items-center gap-2 rounded-md bg-red-50 dark:bg-red-950/30 p-2 text-xs text-red-700 dark:text-red-400">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{t('Not enough space! Exceeds capacity by {{excess}}', { excess: formatVolumeM3(Math.abs(capacityAnalysis.remainingAfterM3)) })}</span>
+                    </div>
+                  )}
+
+                  {/* Coverage warning */}
+                  {volumeCoverage < 1 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Info className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {t('{{pct}}% of products have dimensions', { pct: Math.round(volumeCoverage * 100) })}
+                        {' — '}{t('Volume is an estimate')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Loading capacity */}
+            {locationId && loadingCapacity && (
+              <>
+                <Separator />
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Box className="h-4 w-4 animate-pulse" />
+                    {t('Loading capacity data...')}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Space Requirements (delivery volume details) */}
             {receiptVolume && (
               <>
                 <Separator />
@@ -356,36 +504,7 @@ export function GoodsReceiptPage() {
                       : t('Based on product dimensions (no packaging dimensions available)')})
                   </div>
 
-                  {/* Capacity analysis */}
-                  {capacityAnalysis && capacityAnalysis.status !== 'unknown' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{t('Capacity Volume')}</span>
-                        <span>{Math.round(capacityAnalysis.fillPercentAfter)}%</span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            capacityAnalysis.status === 'over_capacity' ? 'bg-red-500' :
-                            capacityAnalysis.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(100, capacityAnalysis.fillPercentAfter)}%` }}
-                        />
-                      </div>
-                      {capacityAnalysis.status === 'over_capacity' && (
-                        <div className="flex items-center gap-2 rounded-md bg-red-50 dark:bg-red-950/30 p-2 text-xs text-red-700 dark:text-red-400">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          <span>{t('This receipt would exceed the location capacity by {{excess}} m³', { excess: formatVolumeM3(Math.abs(capacityAnalysis.remainingAfterM3)).replace(' m³', '') })}</span>
-                        </div>
-                      )}
-                      {capacityAnalysis.status === 'warning' && (
-                        <div className="flex items-center gap-2 rounded-md bg-yellow-50 dark:bg-yellow-950/30 p-2 text-xs text-yellow-700 dark:text-yellow-400">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          <span>{t('Location would be over 80% full after this receipt')}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* No capacity configured hint */}
                   {capacityAnalysis && capacityAnalysis.status === 'unknown' && (
                     <div className="text-xs text-muted-foreground italic">
                       {t('No volume capacity configured for this location')}

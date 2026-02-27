@@ -365,6 +365,19 @@
 
   "Shopify module required": "Shopify integration requires the Warehouse Professional or Business module.",
 
+  "Warehouse Capacity": "Warehouse Capacity",
+  "Currently Used": "Currently Used",
+  "Available": "Available",
+  "Total Capacity": "Total Capacity",
+  "Current utilization": "Current utilization",
+  "This delivery": "This delivery",
+  "after receipt": "after receipt",
+  "Enough space available": "Enough space available",
+  "Not enough space! Exceeds capacity by {{excess}}": "Not enough space! Exceeds capacity by {{excess}}",
+  "{{pct}}% of products have dimensions": "{{pct}}% of products have dimensions",
+  "Volume is an estimate": "Volume is an estimate",
+  "Loading capacity data...": "Loading capacity data...",
+
   "Space Requirements": "Space Requirements",
   "Volume per unit": "Volume per unit",
   "Total for {{qty}} units": "Total for {{qty}} units",

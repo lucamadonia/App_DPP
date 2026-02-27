@@ -1,4 +1,5 @@
 import type { Product, ProductBatch } from '@/types/product';
+import type { WhStockLevel } from '@/types/warehouse';
 
 export type DimensionSource = 'packaging' | 'product';
 
@@ -124,6 +125,48 @@ export function analyzeCapacity(
   }
 
   return { status, fillPercentAfter, remainingAfterM3, locationCapacityM3 };
+}
+
+export interface StockVolumeResult {
+  totalM3: number;
+  itemsWithDimensions: number;
+  itemsWithout: number;
+}
+
+/**
+ * Calculate total volume occupied by stock entries.
+ * For each stock entry, looks up the product and resolves dimensions.
+ * Returns total m³ and coverage stats.
+ */
+export function calculateStockVolumeM3(
+  stock: WhStockLevel[],
+  products: Map<string, Product>,
+): StockVolumeResult {
+  let totalM3 = 0;
+  let itemsWithDimensions = 0;
+  let itemsWithout = 0;
+
+  for (const entry of stock) {
+    const product = products.get(entry.productId);
+    if (!product) {
+      itemsWithout++;
+      continue;
+    }
+
+    const resolved = resolveEffectiveDimensions(product);
+    if (!resolved) {
+      itemsWithout++;
+      continue;
+    }
+
+    itemsWithDimensions++;
+    const totalQty = entry.quantityAvailable + entry.quantityReserved + entry.quantityDamaged + entry.quantityQuarantine;
+    const cm3 = resolved.dimensions.heightCm * resolved.dimensions.widthCm * resolved.dimensions.depthCm;
+    const unitM3 = cm3 / 1_000_000;
+    totalM3 += unitM3 * totalQty;
+  }
+
+  return { totalM3, itemsWithDimensions, itemsWithout };
 }
 
 /**
