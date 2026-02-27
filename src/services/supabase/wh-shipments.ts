@@ -83,13 +83,16 @@ function transformShipmentItem(row: any): WhShipmentItem {
 // SHIPMENTS CRUD
 // ============================================
 
-export async function getShipments(filter?: ShipmentFilter): Promise<WhShipment[]> {
+export async function getShipments(filter?: ShipmentFilter): Promise<{ data: WhShipment[]; total: number }> {
   const tenantId = await getCurrentTenantId();
-  if (!tenantId) return [];
+  if (!tenantId) return { data: [], total: 0 };
+
+  const page = filter?.page || 1;
+  const pageSize = filter?.pageSize || 25;
 
   let query = supabase
     .from('wh_shipments')
-    .select('*, wh_locations(name)')
+    .select('*, wh_locations(name)', { count: 'exact' })
     .eq('tenant_id', tenantId);
 
   if (filter?.status?.length) query = query.in('status', filter.status);
@@ -105,15 +108,62 @@ export async function getShipments(filter?: ShipmentFilter): Promise<WhShipment[
     );
   }
 
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(200);
+  // Sorting
+  const SORT_COLUMN_MAP: Record<string, string> = {
+    shipmentNumber: 'shipment_number',
+    status: 'status',
+    recipientName: 'recipient_name',
+    carrier: 'carrier',
+    totalItems: 'total_items',
+    createdAt: 'created_at',
+    priority: 'priority',
+  };
+  const sortCol = SORT_COLUMN_MAP[filter?.sortBy || ''] || 'created_at';
+  const ascending = filter?.sortDir === 'asc';
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await query
+    .order(sortCol, { ascending })
+    .range(from, to);
 
   if (error) {
     console.error('Failed to load shipments:', error);
-    return [];
+    return { data: [], total: 0 };
   }
-  return (data || []).map(transformShipment);
+  return { data: (data || []).map(transformShipment), total: count || 0 };
+}
+
+export async function getShipmentStatusCounts(): Promise<Record<ShipmentStatus | 'all', number>> {
+  const tenantId = await getCurrentTenantId();
+  const result: Record<string, number> = {
+    all: 0, draft: 0, picking: 0, packed: 0, label_created: 0,
+    shipped: 0, in_transit: 0, delivered: 0, cancelled: 0,
+  };
+  if (!tenantId) return result as Record<ShipmentStatus | 'all', number>;
+
+  const statuses: ShipmentStatus[] = ['draft', 'picking', 'packed', 'label_created', 'shipped', 'in_transit', 'delivered', 'cancelled'];
+
+  const counts = await Promise.all(
+    statuses.map(s =>
+      supabase
+        .from('wh_shipments')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('status', s)
+    )
+  );
+
+  let total = 0;
+  statuses.forEach((s, i) => {
+    const c = counts[i].count || 0;
+    result[s] = c;
+    total += c;
+  });
+  result.all = total;
+
+  return result as Record<ShipmentStatus | 'all', number>;
 }
 
 export async function getShipment(id: string): Promise<WhShipment | null> {
@@ -241,10 +291,19 @@ export async function updateShipment(id: string, updates: Partial<{
   labelUrl: string;
   estimatedDelivery: string;
   shippingCost: number;
+  totalWeightGrams: number;
   priority: string;
   notes: string;
   internalNotes: string;
   orderReference: string;
+  recipientName: string;
+  recipientCompany: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  shippingStreet: string;
+  shippingCity: string;
+  shippingPostalCode: string;
+  shippingCountry: string;
 }>): Promise<WhShipment> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const update: Record<string, any> = {};
@@ -254,10 +313,19 @@ export async function updateShipment(id: string, updates: Partial<{
   if (updates.labelUrl !== undefined) update.label_url = updates.labelUrl || null;
   if (updates.estimatedDelivery !== undefined) update.estimated_delivery = updates.estimatedDelivery || null;
   if (updates.shippingCost !== undefined) update.shipping_cost = updates.shippingCost || null;
+  if (updates.totalWeightGrams !== undefined) update.total_weight_grams = updates.totalWeightGrams || null;
   if (updates.priority !== undefined) update.priority = updates.priority;
   if (updates.notes !== undefined) update.notes = updates.notes || null;
   if (updates.internalNotes !== undefined) update.internal_notes = updates.internalNotes || null;
   if (updates.orderReference !== undefined) update.order_reference = updates.orderReference || null;
+  if (updates.recipientName !== undefined) update.recipient_name = updates.recipientName;
+  if (updates.recipientCompany !== undefined) update.recipient_company = updates.recipientCompany || null;
+  if (updates.recipientEmail !== undefined) update.recipient_email = updates.recipientEmail || null;
+  if (updates.recipientPhone !== undefined) update.recipient_phone = updates.recipientPhone || null;
+  if (updates.shippingStreet !== undefined) update.shipping_street = updates.shippingStreet;
+  if (updates.shippingCity !== undefined) update.shipping_city = updates.shippingCity;
+  if (updates.shippingPostalCode !== undefined) update.shipping_postal_code = updates.shippingPostalCode;
+  if (updates.shippingCountry !== undefined) update.shipping_country = updates.shippingCountry;
 
   const { data, error } = await supabase
     .from('wh_shipments')

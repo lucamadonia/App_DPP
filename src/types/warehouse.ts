@@ -341,6 +341,10 @@ export interface ShipmentFilter {
   dateFrom?: string;
   dateTo?: string;
   search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface WarehouseStats {

@@ -157,6 +157,7 @@ export interface RecipientSearchResult {
   city?: string;
   postalCode?: string;
   country?: string;
+  contactId?: string;
 }
 
 export async function searchRecipients(query: string): Promise<RecipientSearchResult[]> {
@@ -187,6 +188,7 @@ export async function searchRecipients(query: string): Promise<RecipientSearchRe
         city: c.city || undefined,
         postalCode: c.postal_code || undefined,
         country: c.country || undefined,
+        contactId: c.id,
       });
     }
   }
