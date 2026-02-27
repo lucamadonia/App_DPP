@@ -106,6 +106,19 @@ const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.N
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
 const PictogramsPage = lazy(() => import('@/pages/PictogramsPage').then(m => ({ default: m.PictogramsPage })));
 
+// Warehouse & Fulfillment
+const WarehouseDashboardPage = lazy(() => import('@/pages/warehouse/WarehouseDashboardPage').then(m => ({ default: m.WarehouseDashboardPage })));
+const InventoryListPage = lazy(() => import('@/pages/warehouse/InventoryListPage').then(m => ({ default: m.InventoryListPage })));
+const GoodsReceiptPage = lazy(() => import('@/pages/warehouse/GoodsReceiptPage').then(m => ({ default: m.GoodsReceiptPage })));
+const ShipmentListPage = lazy(() => import('@/pages/warehouse/ShipmentListPage').then(m => ({ default: m.ShipmentListPage })));
+const ShipmentDetailPage = lazy(() => import('@/pages/warehouse/ShipmentDetailPage').then(m => ({ default: m.ShipmentDetailPage })));
+const CreateShipmentPage = lazy(() => import('@/pages/warehouse/CreateShipmentPage').then(m => ({ default: m.CreateShipmentPage })));
+const TransferListPage = lazy(() => import('@/pages/warehouse/TransferListPage').then(m => ({ default: m.TransferListPage })));
+const LocationsPage = lazy(() => import('@/pages/warehouse/LocationsPage').then(m => ({ default: m.LocationsPage })));
+const ContactsListPage = lazy(() => import('@/pages/warehouse/ContactsListPage').then(m => ({ default: m.ContactsListPage })));
+const WarehouseSettingsPage = lazy(() => import('@/pages/warehouse/WarehouseSettingsPage').then(m => ({ default: m.WarehouseSettingsPage })));
+const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyIntegrationPage').then(m => ({ default: m.ShopifyIntegrationPage })));
+
 // Compliance
 const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
 const RegulationsPage = lazy(() => import('@/pages/RegulationsPage').then(m => ({ default: m.RegulationsPage })));
@@ -371,6 +384,19 @@ function NormalAppRoutes() {
           <Route path="checklists" element={<ChecklistPage />} />
           <Route path="checklists/:country" element={<ChecklistPage />} />
           <Route path="requirements-calculator" element={<RequirementsCalculatorPage />} />
+
+          {/* Warehouse & Fulfillment */}
+          <Route path="warehouse" element={<WarehouseDashboardPage />} />
+          <Route path="warehouse/inventory" element={<InventoryListPage />} />
+          <Route path="warehouse/goods-receipt" element={<GoodsReceiptPage />} />
+          <Route path="warehouse/shipments" element={<ShipmentListPage />} />
+          <Route path="warehouse/shipments/new" element={<CreateShipmentPage />} />
+          <Route path="warehouse/shipments/:id" element={<ShipmentDetailPage />} />
+          <Route path="warehouse/transfers" element={<TransferListPage />} />
+          <Route path="warehouse/locations" element={<LocationsPage />} />
+          <Route path="warehouse/contacts" element={<ContactsListPage />} />
+          <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
+          <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />
 
           {/* Pictograms */}
           <Route path="pictograms" element={<PictogramsPage />} />

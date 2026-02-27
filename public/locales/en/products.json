@@ -784,6 +784,7 @@
   "pictograms.delete.confirm": "Delete this pictogram?",
   "pictograms.delete.warning": "This will also remove it from any labels using it. This action cannot be undone.",
   "pictograms.delete.success": "Pictogram deleted",
+  "pictograms.tryDifferentFilter": "Try adjusting your search or filters",
   "pictograms.myPictograms": "My Pictograms",
   "pictograms.builtIn": "Built-in",
   "pictograms.managePictograms": "Manage Pictograms"

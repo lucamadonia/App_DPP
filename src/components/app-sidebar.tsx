@@ -30,6 +30,7 @@ import {
   Moon,
   Lock,
   ImageIcon,
+  Warehouse,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -134,6 +135,22 @@ export function AppSidebar() {
         { title: t('Reports'), url: '/returns/reports' },
         { title: t('Workflows'), url: '/returns/workflows' },
         { title: t('Settings'), url: '/returns/settings' },
+      ],
+    },
+    {
+      title: t('Warehouse', { ns: 'warehouse' }),
+      icon: Warehouse,
+      locked: billing ? !billing.hasAnyWarehouseModule() : false,
+      items: [
+        { title: t('Dashboard'), url: '/warehouse' },
+        { title: t('Inventory', { ns: 'warehouse' }), url: '/warehouse/inventory' },
+        { title: t('Goods Receipt', { ns: 'warehouse' }), url: '/warehouse/goods-receipt' },
+        { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
+        { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
+        { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
+        { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
+        { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
+        { title: t('Settings'), url: '/warehouse/settings' },
       ],
     },
     {

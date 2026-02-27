@@ -18,6 +18,9 @@ const moduleKeyMap: Record<ModuleId, string> = {
   supplier_portal: 'supplierPortal',
   customer_portal: 'customerPortal',
   custom_domain: 'customDomain',
+  warehouse_starter: 'warehouseStarter',
+  warehouse_professional: 'warehouseProfessional',
+  warehouse_business: 'warehouseBusiness',
 };
 
 const FEATURE_ROWS = [

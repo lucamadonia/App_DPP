@@ -218,6 +218,9 @@ function getModulePaywallDescription(
     supplier_portal: t('Invite suppliers to self-register and manage their data'),
     customer_portal: t('Self-service portal for customers to track returns and tickets'),
     custom_domain: t('Serve your portal under your own domain with full white-labeling'),
+    warehouse_starter: t('Basic inventory management with 1 warehouse location'),
+    warehouse_professional: t('Multi-location warehouse with transfers and shipping labels'),
+    warehouse_business: t('Unlimited warehouse operations with API and webhooks'),
   };
   return map[moduleId];
 }
@@ -262,6 +265,24 @@ function getModuleHighlights(
       t('DNS verification wizard'),
       t('Full white-labeling'),
       t('SSL included'),
+    ],
+    warehouse_starter: [
+      t('1 warehouse location'),
+      t('100 shipments per month'),
+      t('Goods receipt & stock tracking'),
+      t('Basic inventory management'),
+    ],
+    warehouse_professional: [
+      t('5 warehouse locations'),
+      t('500 shipments per month'),
+      t('Stock transfers between locations'),
+      t('Shipping labels & barcode scanning'),
+    ],
+    warehouse_business: [
+      t('Unlimited locations & shipments'),
+      t('Full API access'),
+      t('Webhooks for automation'),
+      t('Advanced stock alerts'),
     ],
   };
   return map[moduleId] || [];

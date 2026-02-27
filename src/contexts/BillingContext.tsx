@@ -30,7 +30,7 @@ import type {
   BillingFeatures,
   BillingContextState,
 } from '@/types/billing';
-import { RETURNS_HUB_MODULES } from '@/types/billing';
+import { RETURNS_HUB_MODULES, WAREHOUSE_MODULES } from '@/types/billing';
 import type { DPPTemplateName } from '@/types/database';
 
 const BillingContext = createContext<BillingContextState | undefined>(undefined);
@@ -119,6 +119,11 @@ export function BillingProvider({ children }: BillingProviderProps) {
     return RETURNS_HUB_MODULES.some(m => entitlements.modules.has(m));
   }, [entitlements]);
 
+  const hasAnyWarehouseModule = useCallback((): boolean => {
+    if (!entitlements) return false;
+    return WAREHOUSE_MODULES.some(m => entitlements.modules.has(m));
+  }, [entitlements]);
+
   const canUseFeature = useCallback((feature: keyof BillingFeatures): boolean => {
     if (!entitlements) return false;
     return entitlements.features[feature];
@@ -139,12 +144,13 @@ export function BillingProvider({ children }: BillingProviderProps) {
     refundCredits,
     hasModule,
     hasAnyReturnsHubModule,
+    hasAnyWarehouseModule,
     canUseFeature,
     isTemplateAvailable,
   }), [
     entitlements, isLoading, error,
     refreshEntitlements, checkQuota, consumeCredits, refundCredits,
-    hasModule, hasAnyReturnsHubModule, canUseFeature, isTemplateAvailable,
+    hasModule, hasAnyReturnsHubModule, hasAnyWarehouseModule, canUseFeature, isTemplateAvailable,
   ]);
 
   return (

@@ -189,5 +189,13 @@
   "50 Products, Custom Branding, 25 AI Credits": "50 Products, Custom Branding, 25 AI Credits",
   "Skip for now": "Skip for now",
   "Back": "Back",
-  "Continue": "Continue"
+  "Continue": "Continue",
+  "Basic warehouse management with 1 location and 100 shipments/month": "Basic warehouse management with 1 location and 100 shipments/month",
+  "Multi-warehouse with transfers, labels and 500 shipments/month": "Multi-warehouse with transfers, labels and 500 shipments/month",
+  "Unlimited warehouses, shipments, API access and webhooks": "Unlimited warehouses, shipments, API access and webhooks",
+  "{{count}} Warehouse Locations": "{{count}} Warehouse Locations",
+  "{{count}} Shipments/month": "{{count}} Shipments/month",
+  "Multi-Warehouse Transfers": "Multi-Warehouse Transfers",
+  "Shipping Labels": "Shipping Labels",
+  "CSV Import/Export": "CSV Import/Export"
 }

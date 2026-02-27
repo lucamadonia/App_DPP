@@ -25,7 +25,10 @@ export type ModuleId =
   | 'returns_hub_business'
   | 'supplier_portal'
   | 'customer_portal'
-  | 'custom_domain';
+  | 'custom_domain'
+  | 'warehouse_starter'
+  | 'warehouse_professional'
+  | 'warehouse_business';
 
 export type SubscriptionStatus =
   | 'active'
@@ -60,6 +63,18 @@ export interface ModuleLimits {
   ticketsEnabled: boolean;
   webhooksEnabled: boolean;
   apiAccess: 'none' | 'read' | 'readwrite';
+  // Warehouse module limits
+  maxWarehouseLocations: number;
+  maxShipmentsPerMonth: number;
+  maxStockTransactionsPerMonth: number;
+  warehouseTransfersEnabled: boolean;
+  warehouseLabelsEnabled: boolean;
+  warehouseBarcodeScanEnabled: boolean;
+  warehouseCarrierIntegrations: number;
+  warehouseCsvEnabled: boolean;
+  warehouseStockAlerts: 'none' | 'basic' | 'advanced';
+  warehouseApiAccess: 'none' | 'read' | 'readwrite';
+  warehouseWebhooksEnabled: boolean;
 }
 
 // ============================================
@@ -158,7 +173,10 @@ export type UsageResourceType =
   | 'ticket'
   | 'supplier_invitation'
   | 'workflow_rule'
-  | 'email_template';
+  | 'email_template'
+  | 'warehouse_location'
+  | 'shipment'
+  | 'stock_transaction';
 
 export type UsageAction = 'create' | 'delete' | 'consume';
 
@@ -409,6 +427,60 @@ export const MODULE_CONFIGS: Record<ModuleId, {
     priceMonthly: 19,
     requiresPlan: 'pro',
   },
+  warehouse_starter: {
+    name: 'Warehouse Starter',
+    priceMonthly: 29,
+    requiresPlan: 'pro',
+    limits: {
+      maxWarehouseLocations: 1,
+      maxShipmentsPerMonth: 100,
+      maxStockTransactionsPerMonth: 500,
+      warehouseTransfersEnabled: false,
+      warehouseLabelsEnabled: false,
+      warehouseBarcodeScanEnabled: false,
+      warehouseCarrierIntegrations: 0,
+      warehouseCsvEnabled: false,
+      warehouseStockAlerts: 'none',
+      warehouseApiAccess: 'none',
+      warehouseWebhooksEnabled: false,
+    },
+  },
+  warehouse_professional: {
+    name: 'Warehouse Professional',
+    priceMonthly: 69,
+    requiresPlan: 'pro',
+    limits: {
+      maxWarehouseLocations: 5,
+      maxShipmentsPerMonth: 500,
+      maxStockTransactionsPerMonth: 5000,
+      warehouseTransfersEnabled: true,
+      warehouseLabelsEnabled: true,
+      warehouseBarcodeScanEnabled: true,
+      warehouseCarrierIntegrations: 3,
+      warehouseCsvEnabled: true,
+      warehouseStockAlerts: 'basic',
+      warehouseApiAccess: 'read',
+      warehouseWebhooksEnabled: false,
+    },
+  },
+  warehouse_business: {
+    name: 'Warehouse Business',
+    priceMonthly: 149,
+    requiresPlan: 'enterprise',
+    limits: {
+      maxWarehouseLocations: Infinity,
+      maxShipmentsPerMonth: Infinity,
+      maxStockTransactionsPerMonth: Infinity,
+      warehouseTransfersEnabled: true,
+      warehouseLabelsEnabled: true,
+      warehouseBarcodeScanEnabled: true,
+      warehouseCarrierIntegrations: Infinity,
+      warehouseCsvEnabled: true,
+      warehouseStockAlerts: 'advanced',
+      warehouseApiAccess: 'readwrite',
+      warehouseWebhooksEnabled: true,
+    },
+  },
 };
 
 // ============================================
@@ -439,6 +511,35 @@ export function getActiveReturnsHubTier(modules: Set<ModuleId>): ModuleId | null
 /** Check if any returns hub module is active */
 export function hasAnyReturnsHub(modules: Set<ModuleId>): boolean {
   return getActiveReturnsHubTier(modules) !== null;
+}
+
+// ============================================
+// WAREHOUSE MODULE HELPERS
+// ============================================
+
+/** All warehouse module IDs in tier order */
+export const WAREHOUSE_MODULES: ModuleId[] = [
+  'warehouse_starter',
+  'warehouse_professional',
+  'warehouse_business',
+];
+
+/** Check if a module is any warehouse tier */
+export function isWarehouseModule(moduleId: ModuleId): boolean {
+  return WAREHOUSE_MODULES.includes(moduleId);
+}
+
+/** Get the active warehouse tier from a set of modules */
+export function getActiveWarehouseTier(modules: Set<ModuleId>): ModuleId | null {
+  for (let i = WAREHOUSE_MODULES.length - 1; i >= 0; i--) {
+    if (modules.has(WAREHOUSE_MODULES[i])) return WAREHOUSE_MODULES[i];
+  }
+  return null;
+}
+
+/** Check if any warehouse module is active */
+export function hasAnyWarehouse(modules: Set<ModuleId>): boolean {
+  return getActiveWarehouseTier(modules) !== null;
 }
 
 // ============================================
@@ -479,6 +580,7 @@ export interface BillingContextState {
   refundCredits: (amount: number, operation: string) => Promise<void>;
   hasModule: (moduleId: ModuleId) => boolean;
   hasAnyReturnsHubModule: () => boolean;
+  hasAnyWarehouseModule: () => boolean;
   canUseFeature: (feature: keyof BillingFeatures) => boolean;
   isTemplateAvailable: (template: DPPTemplateName) => boolean;
 }

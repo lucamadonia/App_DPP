@@ -12,6 +12,7 @@ import {
   PLAN_CONFIGS,
   MODULE_CONFIGS,
   RETURNS_HUB_MODULES,
+  WAREHOUSE_MODULES,
   type BillingPlan,
   type ModuleId,
   type TenantEntitlements,
@@ -104,7 +105,16 @@ export async function getTenantEntitlements(
   for (let i = RETURNS_HUB_MODULES.length - 1; i >= 0; i--) {
     const rhModule = RETURNS_HUB_MODULES[i];
     if (activeModules.has(rhModule)) {
-      moduleLimits = MODULE_CONFIGS[rhModule].limits || {};
+      moduleLimits = { ...moduleLimits, ...MODULE_CONFIGS[rhModule].limits };
+      break;
+    }
+  }
+
+  // Merge warehouse module limits (from highest active warehouse tier)
+  for (let i = WAREHOUSE_MODULES.length - 1; i >= 0; i--) {
+    const whModule = WAREHOUSE_MODULES[i];
+    if (activeModules.has(whModule)) {
+      moduleLimits = { ...moduleLimits, ...MODULE_CONFIGS[whModule].limits };
       break;
     }
   }
@@ -226,6 +236,44 @@ export async function checkQuota(
       limit = limits.maxWorkflowRules || 0;
       break;
     }
+    case 'warehouse_location': {
+      const { count } = await supabase
+        .from('wh_locations')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tid)
+        .eq('is_active', true);
+      current = count || 0;
+      limit = limits.maxWarehouseLocations || 0;
+      break;
+    }
+    case 'shipment': {
+      // Count shipments created this month
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from('wh_shipments')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tid)
+        .gte('created_at', monthStart.toISOString());
+      current = count || 0;
+      limit = limits.maxShipmentsPerMonth || 0;
+      break;
+    }
+    case 'stock_transaction': {
+      // Count stock transactions this month
+      const monthStart2 = new Date();
+      monthStart2.setDate(1);
+      monthStart2.setHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from('wh_stock_transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tid)
+        .gte('created_at', monthStart2.toISOString());
+      current = count || 0;
+      limit = limits.maxStockTransactionsPerMonth || 0;
+      break;
+    }
     default:
       limit = Infinity;
   }
@@ -259,6 +307,14 @@ export async function hasModule(
 export async function hasAnyReturnsHubModule(tenantId?: string): Promise<boolean> {
   const entitlements = await getTenantEntitlements(tenantId);
   return RETURNS_HUB_MODULES.some(m => entitlements.modules.has(m));
+}
+
+/**
+ * Check if any warehouse module is active.
+ */
+export async function hasAnyWarehouseModule(tenantId?: string): Promise<boolean> {
+  const entitlements = await getTenantEntitlements(tenantId);
+  return WAREHOUSE_MODULES.some(m => entitlements.modules.has(m));
 }
 
 /**

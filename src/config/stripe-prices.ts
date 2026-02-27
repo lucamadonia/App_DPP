@@ -67,6 +67,18 @@ export const MODULE_PRICES: Record<
     productId: 'prod_TvgDLyypedZ6O6',
     priceId: 'price_1SxoqrG3F2f0Er10TDht6nRj',
   },
+  warehouse_starter: {
+    productId: 'prod_placeholder_wh_starter',
+    priceId: 'price_placeholder_wh_starter',
+  },
+  warehouse_professional: {
+    productId: 'prod_placeholder_wh_professional',
+    priceId: 'price_placeholder_wh_professional',
+  },
+  warehouse_business: {
+    productId: 'prod_placeholder_wh_business',
+    priceId: 'price_placeholder_wh_business',
+  },
 };
 
 // ============================================

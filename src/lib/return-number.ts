@@ -64,3 +64,31 @@ export function generateTicketNumber(prefix: string = 'TKT'): string {
 
   return `${prefix}-${date}-${random}${check}`;
 }
+
+export function generateShipmentNumber(prefix: string = 'SH'): string {
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('');
+
+  const random = randomAlphanumeric(4);
+  const check = luhnCheckDigit(random);
+
+  return `${prefix}-${date}-${random}${check}`;
+}
+
+export function generateTransactionNumber(prefix: string = 'WH'): string {
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('');
+
+  const random = randomAlphanumeric(4);
+  const check = luhnCheckDigit(random);
+
+  return `${prefix}-${date}-${random}${check}`;
+}

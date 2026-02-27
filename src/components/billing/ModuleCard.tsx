@@ -117,6 +117,9 @@ function getModuleDescription(moduleId: ModuleId, t: (key: string, opts?: Record
     supplier_portal: t('Invite suppliers to self-register and manage their data'),
     customer_portal: t('Self-service portal for customers to track returns and tickets'),
     custom_domain: t('Serve your portal under your own domain with full white-labeling'),
+    warehouse_starter: t('Basic warehouse management with 1 location and 100 shipments/month'),
+    warehouse_professional: t('Multi-warehouse with transfers, labels and 500 shipments/month'),
+    warehouse_business: t('Unlimited warehouses, shipments, API access and webhooks'),
   };
   return descriptions[moduleId];
 }
@@ -127,6 +130,7 @@ function getModuleFeatures(moduleId: ModuleId, t: (key: string, opts?: Record<st
   if (!limits) return [];
 
   const features: string[] = [];
+  // Returns Hub features
   if (limits.maxReturnsPerMonth !== undefined) {
     features.push(t('{{count}} Returns/month', {
       count: isFinite(limits.maxReturnsPerMonth) ? limits.maxReturnsPerMonth : t('Unlimited'),
@@ -141,6 +145,24 @@ function getModuleFeatures(moduleId: ModuleId, t: (key: string, opts?: Record<st
   if (limits.webhooksEnabled) features.push(t('Webhooks'));
   if (limits.apiAccess && limits.apiAccess !== 'none') {
     features.push(t('API Access ({{mode}})', { mode: limits.apiAccess }));
+  }
+  // Warehouse features
+  if (limits.maxWarehouseLocations !== undefined) {
+    features.push(t('{{count}} Warehouse Locations', {
+      count: isFinite(limits.maxWarehouseLocations) ? limits.maxWarehouseLocations : t('Unlimited'),
+    }));
+  }
+  if (limits.maxShipmentsPerMonth !== undefined) {
+    features.push(t('{{count}} Shipments/month', {
+      count: isFinite(limits.maxShipmentsPerMonth) ? limits.maxShipmentsPerMonth : t('Unlimited'),
+    }));
+  }
+  if (limits.warehouseTransfersEnabled) features.push(t('Multi-Warehouse Transfers'));
+  if (limits.warehouseLabelsEnabled) features.push(t('Shipping Labels'));
+  if (limits.warehouseCsvEnabled) features.push(t('CSV Import/Export'));
+  if (limits.warehouseWebhooksEnabled) features.push(t('Webhooks'));
+  if (limits.warehouseApiAccess && limits.warehouseApiAccess !== 'none') {
+    features.push(t('API Access ({{mode}})', { mode: limits.warehouseApiAccess }));
   }
   return features;
 }

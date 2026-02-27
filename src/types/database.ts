@@ -8,6 +8,7 @@
 import type { ReturnsHubSettings } from './returns-hub';
 import type { MasterLabelTemplate } from './master-label-editor';
 import type { SupplierPortalSettings } from './supplier-portal';
+import type { ShopifyIntegrationSettings } from './shopify';
 
 // ============================================
 // TENANT (Mandant)
@@ -241,6 +242,7 @@ export interface TenantSettings {
   productLanguages?: string[];
   masterLabelTemplates?: MasterLabelTemplate[];
   onboardingCompleted?: boolean;
+  shopifyIntegration?: ShopifyIntegrationSettings;
 }
 
 // ============================================

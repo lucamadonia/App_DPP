@@ -187,5 +187,13 @@
   "50 Products, Custom Branding, 25 AI Credits": "50 Produkte, eigenes Branding, 25 AI-Credits",
   "Skip for now": "Vorerst überspringen",
   "Back": "Zurück",
-  "Continue": "Weiter"
+  "Continue": "Weiter",
+  "Basic warehouse management with 1 location and 100 shipments/month": "Basis-Lagerverwaltung mit 1 Standort und 100 Sendungen/Monat",
+  "Multi-warehouse with transfers, labels and 500 shipments/month": "Multi-Lager mit Umlagerungen, Labels und 500 Sendungen/Monat",
+  "Unlimited warehouses, shipments, API access and webhooks": "Unbegrenzte Lager, Sendungen, API-Zugriff und Webhooks",
+  "{{count}} Warehouse Locations": "{{count}} Lagerstandorte",
+  "{{count}} Shipments/month": "{{count}} Sendungen/Monat",
+  "Multi-Warehouse Transfers": "Multi-Lager-Umlagerungen",
+  "Shipping Labels": "Versandetiketten",
+  "CSV Import/Export": "CSV Import/Export"
 }

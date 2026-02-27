@@ -407,6 +407,7 @@ export {
   refundCredits,
   hasModule,
   hasAnyReturnsHubModule,
+  hasAnyWarehouseModule,
   canUseFeature,
   getCreditBalance,
   getCreditTransactions,
@@ -441,6 +442,85 @@ export {
   getTenantPictogramStorageUsage,
   TENANT_PICTOGRAM_QUOTA,
 } from './tenant-pictograms';
+
+// Warehouse - Locations
+export {
+  getLocations,
+  getActiveLocations,
+  getLocation,
+  createLocation,
+  updateLocation,
+  deleteLocation,
+  getLocationStats,
+} from './wh-locations';
+
+// Warehouse - Contacts
+export {
+  getContacts as getWhContacts,
+  getContact as getWhContact,
+  createContact as createWhContact,
+  updateContact as updateWhContact,
+  deleteContact as deleteWhContact,
+  searchRecipients,
+  type RecipientSearchResult,
+} from './wh-contacts';
+
+// Warehouse - Stock
+export {
+  getStockLevels,
+  getStockForBatch,
+  getStockForLocation,
+  createGoodsReceipt,
+  createStockAdjustment,
+  createStockTransfer,
+  reserveStock,
+  releaseReservation,
+  getTransactionHistory,
+  getLowStockAlerts,
+  getWarehouseStats,
+} from './wh-stock';
+
+// Warehouse - Shipments
+export {
+  getShipments,
+  getShipment,
+  createShipment,
+  updateShipment,
+  updateShipmentStatus,
+  cancelShipment,
+  getShipmentItems,
+  addShipmentItem,
+  removeShipmentItem,
+  getShipmentStats,
+} from './wh-shipments';
+
+// Shopify Integration
+export {
+  getShopifySettings,
+  updateShopifySettings,
+  updateShopifySyncConfig,
+  saveShopifyAccessToken,
+  disconnectShopify,
+  getShopifyProductMaps,
+  createShopifyProductMap,
+  updateShopifyProductMap,
+  deleteShopifyProductMap,
+  autoMapByGtin,
+  getShopifyLocationMaps,
+  createShopifyLocationMap,
+  updateShopifyLocationMap,
+  deleteShopifyLocationMap,
+  getShopifySyncLogs,
+  getLatestSyncLog,
+  testShopifyConnection,
+  fetchShopifyProducts,
+  fetchShopifyLocations,
+  syncShopifyOrders,
+  syncInventoryImport,
+  syncInventoryExport,
+  createShopifyFulfillment,
+  runFullSync,
+} from './shopify-integration';
 
 // Customer Portal
 export {
