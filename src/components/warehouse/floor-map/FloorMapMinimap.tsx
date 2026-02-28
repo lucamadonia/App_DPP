@@ -31,8 +31,7 @@ export function FloorMapMinimap({
 }: FloorMapMinimapProps) {
   const draggingRef = useRef(false);
 
-  if (zones.length === 0) return null;
-
+  // Compute bounds (needed for scale used in hooks)
   let maxX = 0;
   let maxY = 0;
   for (const z of zones) {
@@ -41,24 +40,22 @@ export function FloorMapMinimap({
     maxY = Math.max(maxY, (z.mapPosition.y + z.mapPosition.height) * GRID_CELL);
   }
 
-  if (maxX === 0) return null;
-
   const pad = GRID_CELL * 2;
   const worldW = maxX + pad;
   const worldH = maxY + pad;
-  const scale = Math.min(MINIMAP_WIDTH / worldW, MINIMAP_HEIGHT / worldH);
+  const scale = maxX > 0 ? Math.min(MINIMAP_WIDTH / worldW, MINIMAP_HEIGHT / worldH) : 1;
 
   const vpX = (-viewport.x / viewport.zoom) * scale;
   const vpY = (-viewport.y / viewport.zoom) * scale;
   const vpW = (containerWidth / viewport.zoom) * scale;
   const vpH = (containerHeight / viewport.zoom) * scale;
 
+  // All hooks must be called before any early return
   const handleMinimapClick = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      // Convert minimap coords to world coords, then to viewport offset
       const worldX = mx / scale;
       const worldY = my / scale;
       onPanTo(
@@ -89,6 +86,9 @@ export function FloorMapMinimap({
   const handlePointerUp = useCallback(() => {
     draggingRef.current = false;
   }, []);
+
+  // Early returns after all hooks
+  if (zones.length === 0 || maxX === 0) return null;
 
   return (
     <div

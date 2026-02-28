@@ -60,9 +60,11 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
     setIsFullscreen((v) => !v);
   }, []);
 
+  const selectedZoneIdxRef = useRef(-1);
+
   const handleOpenDetail = useCallback(() => {
-    if (interaction.selectedZoneIdx >= 0) {
-      setDetailZoneIdx(interaction.selectedZoneIdx);
+    if (selectedZoneIdxRef.current >= 0) {
+      setDetailZoneIdx(selectedZoneIdxRef.current);
     }
   }, []);
 
@@ -87,6 +89,9 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
       onOpenDetail: handleOpenDetail,
     },
   );
+
+  // Keep ref in sync for stable handleOpenDetail callback
+  selectedZoneIdxRef.current = interaction.selectedZoneIdx;
 
   const handleToggleEdit = useCallback(() => {
     if (isEditing && isDirty) {
