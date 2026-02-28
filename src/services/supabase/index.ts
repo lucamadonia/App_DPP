@@ -522,6 +522,16 @@ export {
   runFullSync,
 } from './shopify-integration';
 
+// DHL Carrier Integration
+export {
+  getDHLSettings,
+  saveDHLCredentials,
+  testDHLConnection,
+  createDHLLabel,
+  cancelDHLLabel,
+  getDHLTracking,
+} from './dhl-carrier';
+
 // Customer Portal
 export {
   getCustomerContext,

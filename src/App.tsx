@@ -118,6 +118,7 @@ const LocationsPage = lazy(() => import('@/pages/warehouse/LocationsPage').then(
 const ContactsListPage = lazy(() => import('@/pages/warehouse/ContactsListPage').then(m => ({ default: m.ContactsListPage })));
 const WarehouseSettingsPage = lazy(() => import('@/pages/warehouse/WarehouseSettingsPage').then(m => ({ default: m.WarehouseSettingsPage })));
 const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyIntegrationPage').then(m => ({ default: m.ShopifyIntegrationPage })));
+const DHLIntegrationPage = lazy(() => import('@/pages/warehouse/DHLIntegrationPage').then(m => ({ default: m.DHLIntegrationPage })));
 const LocationDetailPage = lazy(() => import('@/pages/warehouse/LocationDetailPage').then(m => ({ default: m.LocationDetailPage })));
 const ContactDetailPage = lazy(() => import('@/pages/warehouse/ContactDetailPage').then(m => ({ default: m.ContactDetailPage })));
 
@@ -401,6 +402,7 @@ function NormalAppRoutes() {
           <Route path="warehouse/contacts/:id" element={<ContactDetailPage />} />
           <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
           <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />
+          <Route path="warehouse/integrations/dhl" element={<DHLIntegrationPage />} />
 
           {/* Pictograms */}
           <Route path="pictograms" element={<PictogramsPage />} />

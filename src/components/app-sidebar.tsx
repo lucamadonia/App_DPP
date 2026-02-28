@@ -150,6 +150,7 @@ export function AppSidebar() {
         { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
         { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
         { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
+        { title: t('DHL', { ns: 'warehouse' }), url: '/warehouse/integrations/dhl' },
         { title: t('Settings'), url: '/warehouse/settings' },
       ],
     },

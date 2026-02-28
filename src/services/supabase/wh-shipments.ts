@@ -48,6 +48,7 @@ function transformShipment(row: any): WhShipment {
     priority: row.priority || 'normal',
     notes: row.notes || undefined,
     internalNotes: row.internal_notes || undefined,
+    carrierLabelData: row.carrier_label_data || undefined,
     packedBy: row.packed_by || undefined,
     shippedBy: row.shipped_by || undefined,
     createdAt: row.created_at,
@@ -304,6 +305,8 @@ export async function updateShipment(id: string, updates: Partial<{
   shippingCity: string;
   shippingPostalCode: string;
   shippingCountry: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  carrierLabelData: any;
 }>): Promise<WhShipment> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const update: Record<string, any> = {};
@@ -326,6 +329,7 @@ export async function updateShipment(id: string, updates: Partial<{
   if (updates.shippingCity !== undefined) update.shipping_city = updates.shippingCity;
   if (updates.shippingPostalCode !== undefined) update.shipping_postal_code = updates.shippingPostalCode;
   if (updates.shippingCountry !== undefined) update.shipping_country = updates.shippingCountry;
+  if (updates.carrierLabelData !== undefined) update.carrier_label_data = updates.carrierLabelData;
 
   const { data, error } = await supabase
     .from('wh_shipments')

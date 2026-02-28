@@ -1,3 +1,5 @@
+import type { CarrierLabelData } from './dhl';
+
 /**
  * Warehouse & Fulfillment Module Types
  *
@@ -249,6 +251,7 @@ export interface WhShipment {
   priority: ShipmentPriority;
   notes?: string;
   internalNotes?: string;
+  carrierLabelData?: CarrierLabelData;
   packedBy?: string;
   shippedBy?: string;
   createdAt: string;

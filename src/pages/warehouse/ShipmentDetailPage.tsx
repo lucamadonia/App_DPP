@@ -24,6 +24,8 @@ import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment } f
 import { SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS, getTrackingUrl } from '@/lib/warehouse-constants';
 import type { WhShipment, WhShipmentItem, ShipmentStatus } from '@/types/warehouse';
 import { SHIPMENT_STATUS_ORDER } from '@/types/warehouse';
+import { DHLLabelActions } from '@/components/warehouse/DHLLabelActions';
+import { DHLTrackingPanel } from '@/components/warehouse/DHLTrackingPanel';
 
 /* -------------------------------------------------------------------------- */
 /*  STATUS TRANSITION LABELS                                                   */
@@ -176,6 +178,13 @@ export function ShipmentDetailPage() {
       }
     })();
   }, [id]);
+
+  const reloadShipment = async () => {
+    if (!id) return;
+    const [s, i] = await Promise.all([getShipment(id), getShipmentItems(id)]);
+    setShipment(s);
+    setItems(i);
+  };
 
   const handleStatusChange = async (newStatus: ShipmentStatus) => {
     if (!id || statusUpdating) return;
@@ -488,6 +497,22 @@ export function ShipmentDetailPage() {
               <EditableField label={t('Estimated Delivery')} value={shipment.estimatedDelivery ? new Date(shipment.estimatedDelivery).toLocaleDateString() : ''} editing={editingShipping} editValue={editFields.estimatedDelivery || ''} onChange={v => setEditFields(f => ({ ...f, estimatedDelivery: v }))} />
               <EditableField label={t('Shipping Cost')} value={shipment.shippingCost != null ? `€${shipment.shippingCost.toFixed(2)}` : ''} editing={editingShipping} editValue={editFields.shippingCost || ''} onChange={v => setEditFields(f => ({ ...f, shippingCost: v }))} />
               <EditableField label={t('Weight')} value={shipment.totalWeightGrams != null ? `${shipment.totalWeightGrams} g (${(shipment.totalWeightGrams / 1000).toFixed(1)} kg)` : ''} editing={editingShipping} editValue={editFields.totalWeightGrams || ''} onChange={v => setEditFields(f => ({ ...f, totalWeightGrams: v }))} />
+              {shipment.carrierLabelData?.carrier === 'DHL' && !editingShipping && (
+                <div className="border-t pt-2 mt-2 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-sm">{t('DHL Shipment Number')}</span>
+                    <span className="font-mono text-sm">{shipment.carrierLabelData.dhlShipmentNumber || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-sm">{t('Default Product')}</span>
+                    <span className="text-sm">{shipment.carrierLabelData.dhlProduct || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-sm">{t('Label Format')}</span>
+                    <span className="text-sm">{shipment.carrierLabelData.labelFormat || '—'}</span>
+                  </div>
+                </div>
+              )}
               {editingShipping && (
                 <div className="flex gap-2 pt-2">
                   <Button size="sm" onClick={() => saveEdit('shipping')} disabled={saving}><Check className="h-3.5 w-3.5 mr-1" />{t('Save', { ns: 'common' })}</Button>
@@ -636,6 +661,10 @@ export function ShipmentDetailPage() {
 
       {/* Tab: Activity */}
       {activeTab === 'activity' && (
+        <>
+        {shipment.carrier === 'DHL' && shipment.trackingNumber && (
+          <DHLTrackingPanel trackingNumber={shipment.trackingNumber} />
+        )}
         <Card>
           <CardContent className="pt-6">
             <div className="relative pl-6 space-y-6">
@@ -681,6 +710,7 @@ export function ShipmentDetailPage() {
             </div>
           </CardContent>
         </Card>
+        </>
       )}
 
       {/* Action Bar */}
@@ -694,7 +724,10 @@ export function ShipmentDetailPage() {
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {shipment.carrier === 'DHL' && (
+              <DHLLabelActions shipment={shipment} onUpdate={reloadShipment} />
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">{t('Cancel Shipment')}</Button>
