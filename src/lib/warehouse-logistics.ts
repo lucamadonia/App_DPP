@@ -199,6 +199,163 @@ export function calculateContainerFit(
   };
 }
 
+// ─── Shipping Carton Calculation ─────────────────────────────
+
+export interface ShippingCartonSpec {
+  id: string;
+  label: string;
+  innerLengthCm: number;
+  innerWidthCm: number;
+  innerHeightCm: number;
+  volumeLiters: number;
+  palletModule: string;
+}
+
+export const SHIPPING_CARTONS: ShippingCartonSpec[] = [
+  { id: 'xs',     label: '20×15×10',  innerLengthCm: 20,  innerWidthCm: 15, innerHeightCm: 10, volumeLiters: 3,   palletModule: '1/32' },
+  { id: 's',      label: '30×20×15',  innerLengthCm: 30,  innerWidthCm: 20, innerHeightCm: 15, volumeLiters: 9,   palletModule: '1/16' },
+  { id: 'm',      label: '40×30×20',  innerLengthCm: 40,  innerWidthCm: 30, innerHeightCm: 20, volumeLiters: 24,  palletModule: '1/4'  },
+  { id: 'm-tall', label: '40×30×30',  innerLengthCm: 40,  innerWidthCm: 30, innerHeightCm: 30, volumeLiters: 36,  palletModule: '1/4'  },
+  { id: 'l',      label: '50×40×30',  innerLengthCm: 50,  innerWidthCm: 40, innerHeightCm: 30, volumeLiters: 60,  palletModule: '—'    },
+  { id: 'euro',   label: '60×40×30',  innerLengthCm: 60,  innerWidthCm: 40, innerHeightCm: 30, volumeLiters: 72,  palletModule: '1/2'  },
+  { id: 'euro-l', label: '60×40×40',  innerLengthCm: 60,  innerWidthCm: 40, innerHeightCm: 40, volumeLiters: 96,  palletModule: '1/2'  },
+  { id: 'xl',     label: '80×60×40',  innerLengthCm: 80,  innerWidthCm: 60, innerHeightCm: 40, volumeLiters: 192, palletModule: '1/1'  },
+  { id: 'xxl',    label: '120×60×60', innerLengthCm: 120, innerWidthCm: 60, innerHeightCm: 60, volumeLiters: 432, palletModule: '1/1'  },
+];
+
+export interface CarrierParcelLimit {
+  id: string;
+  label: string;
+  maxLengthCm: number;
+  maxWidthCm: number;
+  maxHeightCm: number;
+  maxGirthCm: number;
+  maxWeightKg: number;
+}
+
+export const CARRIER_LIMITS: CarrierParcelLimit[] = [
+  // Europe
+  { id: 'dhl',       label: 'DHL Paket',    maxLengthCm: 120, maxWidthCm: 60,  maxHeightCm: 60,  maxGirthCm: 360, maxWeightKg: 31.5 },
+  { id: 'dpd',       label: 'DPD',          maxLengthCm: 175, maxWidthCm: 100, maxHeightCm: 100, maxGirthCm: 300, maxWeightKg: 31.5 },
+  { id: 'gls',       label: 'GLS',          maxLengthCm: 200, maxWidthCm: 80,  maxHeightCm: 60,  maxGirthCm: 300, maxWeightKg: 40   },
+  { id: 'hermes',    label: 'Hermes/Evri',  maxLengthCm: 120, maxWidthCm: 60,  maxHeightCm: 60,  maxGirthCm: 300, maxWeightKg: 31.5 },
+  { id: 'dhl_exp',   label: 'DHL Express',  maxLengthCm: 120, maxWidthCm: 80,  maxHeightCm: 80,  maxGirthCm: 300, maxWeightKg: 70   },
+  { id: 'colissimo', label: 'Colissimo',    maxLengthCm: 150, maxWidthCm: 100, maxHeightCm: 100, maxGirthCm: 300, maxWeightKg: 30   },
+  { id: 'postnl',    label: 'PostNL',       maxLengthCm: 176, maxWidthCm: 78,  maxHeightCm: 58,  maxGirthCm: 300, maxWeightKg: 30   },
+  { id: 'royalmail', label: 'Royal Mail',   maxLengthCm: 150, maxWidthCm: 45,  maxHeightCm: 45,  maxGirthCm: 300, maxWeightKg: 30   },
+  // International
+  { id: 'ups',       label: 'UPS',          maxLengthCm: 274, maxWidthCm: 150, maxHeightCm: 150, maxGirthCm: 400, maxWeightKg: 70   },
+  { id: 'fedex',     label: 'FedEx',        maxLengthCm: 274, maxWidthCm: 150, maxHeightCm: 150, maxGirthCm: 330, maxWeightKg: 68   },
+  { id: 'usps',      label: 'USPS',         maxLengthCm: 274, maxWidthCm: 152, maxHeightCm: 152, maxGirthCm: 330, maxWeightKg: 31.75},
+  { id: 'canadapost',label: 'Canada Post',  maxLengthCm: 200, maxWidthCm: 150, maxHeightCm: 150, maxGirthCm: 300, maxWeightKg: 30   },
+  { id: 'auspost',   label: 'Australia Post',maxLengthCm: 105, maxWidthCm: 105, maxHeightCm: 105, maxGirthCm: 400, maxWeightKg: 22  },
+];
+
+export interface CarrierComplianceResult {
+  carrierId: string;
+  carrierLabel: string;
+  fits: boolean;
+  reason?: string;
+}
+
+export interface CartonFitResult {
+  carton: ShippingCartonSpec;
+  unitsPerCarton: number;
+  layoutDesc: string;
+  cartonsNeeded: number;
+  lastCartonUnits: number;
+  lastCartonFillPct: number;
+  cartonWeightKg: number | null;
+  carrierCompliance: CarrierComplianceResult[];
+}
+
+const CARTON_TARE_WEIGHT_KG = 0.5;
+
+export function calculateCartonFit(
+  unitDims: Dimensions,
+  quantity: number,
+  unitWeightGrams: number | null,
+): CartonFitResult[] {
+  const results: CartonFitResult[] = [];
+
+  for (const carton of SHIPPING_CARTONS) {
+    // Try 2 upright orientations of the unit on the carton base
+    const orientations: [number, number, number][] = [
+      [unitDims.widthCm, unitDims.depthCm, unitDims.heightCm],
+      [unitDims.depthCm, unitDims.widthCm, unitDims.heightCm],
+    ];
+
+    let bestUnitsPerLayer = 0;
+    let bestLayers = 0;
+    let bestLayoutCols = '';
+
+    for (const [dimA, dimB, dimH] of orientations) {
+      const colsA = Math.floor(carton.innerLengthCm / dimA);
+      const colsB = Math.floor(carton.innerWidthCm / dimB);
+      const layers = Math.floor(carton.innerHeightCm / dimH);
+      const unitsPerLayer = colsA * colsB;
+
+      if (unitsPerLayer > 0 && layers > 0 && unitsPerLayer * layers > bestUnitsPerLayer * bestLayers) {
+        bestUnitsPerLayer = unitsPerLayer;
+        bestLayers = layers;
+        bestLayoutCols = `${colsA}×${colsB}`;
+      }
+    }
+
+    const unitsPerCarton = bestUnitsPerLayer * bestLayers;
+    if (unitsPerCarton < 1) continue;
+
+    const layoutDesc = `${bestLayoutCols} × ${bestLayers}`;
+    const cartonsNeeded = Math.ceil(quantity / unitsPerCarton);
+    const lastCartonUnits = quantity % unitsPerCarton || unitsPerCarton;
+    const lastCartonFillPct = (lastCartonUnits / unitsPerCarton) * 100;
+
+    const cartonWeightKg = unitWeightGrams != null
+      ? (unitsPerCarton * unitWeightGrams) / 1000 + CARTON_TARE_WEIGHT_KG
+      : null;
+
+    // Check carrier compliance
+    const girth = carton.innerLengthCm + 2 * carton.innerWidthCm + 2 * carton.innerHeightCm;
+    const carrierCompliance: CarrierComplianceResult[] = CARRIER_LIMITS.map((carrier) => {
+      // Sort carton dimensions descending for proper comparison
+      const sorted = [carton.innerLengthCm, carton.innerWidthCm, carton.innerHeightCm].sort((a, b) => b - a);
+      const [longest, mid, shortest] = sorted;
+
+      if (longest > carrier.maxLengthCm) {
+        return { carrierId: carrier.id, carrierLabel: carrier.label, fits: false, reason: `Length ${longest} > ${carrier.maxLengthCm} cm` };
+      }
+      if (mid > carrier.maxWidthCm) {
+        return { carrierId: carrier.id, carrierLabel: carrier.label, fits: false, reason: `Width ${mid} > ${carrier.maxWidthCm} cm` };
+      }
+      if (shortest > carrier.maxHeightCm) {
+        return { carrierId: carrier.id, carrierLabel: carrier.label, fits: false, reason: `Height ${shortest} > ${carrier.maxHeightCm} cm` };
+      }
+      if (girth > carrier.maxGirthCm) {
+        return { carrierId: carrier.id, carrierLabel: carrier.label, fits: false, reason: `Girth ${girth} > ${carrier.maxGirthCm} cm` };
+      }
+      if (cartonWeightKg != null && cartonWeightKg > carrier.maxWeightKg) {
+        return { carrierId: carrier.id, carrierLabel: carrier.label, fits: false, reason: `Weight ${cartonWeightKg.toFixed(1)} > ${carrier.maxWeightKg} kg` };
+      }
+      return { carrierId: carrier.id, carrierLabel: carrier.label, fits: true };
+    });
+
+    results.push({
+      carton,
+      unitsPerCarton,
+      layoutDesc,
+      cartonsNeeded,
+      lastCartonUnits,
+      lastCartonFillPct,
+      cartonWeightKg,
+      carrierCompliance,
+    });
+  }
+
+  // Sort by fewest cartons needed (most efficient first)
+  results.sort((a, b) => a.cartonsNeeded - b.cartonsNeeded);
+  return results;
+}
+
 // ─── Batch Space Summary ──────────────────────────────────────
 
 export interface BatchSpaceSummary {
@@ -207,6 +364,7 @@ export interface BatchSpaceSummary {
   dimensionSource: 'packaging' | 'product';
   pallet: PalletCalculation;
   containers: Record<ContainerType, ContainerCalculation>;
+  cartons: CartonFitResult[];
   totalWeightKg: number | null;
   unitWeightGrams: number | null;
   warnings: string[];
@@ -254,12 +412,16 @@ export function calculateBatchSpace(
     );
   }
 
+  // Shipping carton calculation
+  const cartons = calculateCartonFit(resolved.dimensions, quantity, unitWeightGrams);
+
   return {
     volume,
     dimensions: resolved.dimensions,
     dimensionSource: resolved.source,
     pallet,
     containers,
+    cartons,
     totalWeightKg,
     unitWeightGrams,
     warnings,

@@ -632,5 +632,27 @@
   "Where should I place fast-moving items?": "Wo sollte ich Schnelldreher platzieren?",
   "Which products should I reorder now?": "Welche Produkte sollte ich jetzt nachbestellen?",
   "Identify slow-moving stock in my warehouse": "Identifiziere Langsamdreher in meinem Lager",
-  "What are my top KPI improvement opportunities?": "Was sind meine wichtigsten KPI-Verbesserungsmöglichkeiten?"
+  "What are my top KPI improvement opportunities?": "Was sind meine wichtigsten KPI-Verbesserungsmöglichkeiten?",
+
+  "Total Items": "Gesamtpositionen",
+  "Available Stock": "Verfügbarer Bestand",
+  "Reserved Stock": "Reservierter Bestand",
+  "Adjust Stock": "Bestand anpassen",
+  "Transfer Stock": "Bestand umlagern",
+  "View Product": "Produkt anzeigen",
+  "View Batch": "Charge anzeigen",
+  "View Location": "Standort anzeigen",
+  "Copy SKU": "SKU kopieren",
+  "Stock Transfer": "Bestandsumbuchung",
+  "Destination Location": "Zielstandort",
+  "Transfer Reason": "Umbuchungsgrund",
+  "Current Stock": "Aktueller Bestand",
+  "New Stock Level": "Neuer Bestand",
+  "No items match your filters": "Keine Einträge zu Ihren Filtern gefunden",
+  "Clear Filters": "Filter zurücksetzen",
+  "No inventory yet": "Noch kein Bestand",
+  "Copied!": "Kopiert!",
+  "Active Filters": "Aktive Filter",
+  "Transfer saved": "Umbuchung gespeichert",
+  "Actions": "Aktionen"
 }

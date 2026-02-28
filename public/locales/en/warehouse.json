@@ -632,5 +632,27 @@
   "Where should I place fast-moving items?": "Where should I place fast-moving items?",
   "Which products should I reorder now?": "Which products should I reorder now?",
   "Identify slow-moving stock in my warehouse": "Identify slow-moving stock in my warehouse",
-  "What are my top KPI improvement opportunities?": "What are my top KPI improvement opportunities?"
+  "What are my top KPI improvement opportunities?": "What are my top KPI improvement opportunities?",
+
+  "Total Items": "Total Items",
+  "Available Stock": "Available Stock",
+  "Reserved Stock": "Reserved Stock",
+  "Adjust Stock": "Adjust Stock",
+  "Transfer Stock": "Transfer Stock",
+  "View Product": "View Product",
+  "View Batch": "View Batch",
+  "View Location": "View Location",
+  "Copy SKU": "Copy SKU",
+  "Stock Transfer": "Stock Transfer",
+  "Destination Location": "Destination Location",
+  "Transfer Reason": "Transfer Reason",
+  "Current Stock": "Current Stock",
+  "New Stock Level": "New Stock Level",
+  "No items match your filters": "No items match your filters",
+  "Clear Filters": "Clear Filters",
+  "No inventory yet": "No inventory yet",
+  "Copied!": "Copied!",
+  "Active Filters": "Active Filters",
+  "Transfer saved": "Transfer saved",
+  "Actions": "Actions"
 }
