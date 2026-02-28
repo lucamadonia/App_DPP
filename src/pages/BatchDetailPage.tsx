@@ -21,6 +21,11 @@ import {
   Truck,
   Tag,
   Ruler,
+  Star,
+  AlertTriangle,
+  Check,
+  X,
+  PackageOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +37,7 @@ import { formatCurrency } from '@/lib/format';
 import { formatVolumeM3 } from '@/lib/warehouse-volume';
 import { calculateBatchSpace, CONTAINERS, EURO_PALLET, type ContainerType } from '@/lib/warehouse-logistics';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Product, ProductBatch } from '@/types/product';
 
 const statusConfig = {
@@ -413,6 +419,117 @@ export function BatchDetailPage() {
                   </p>
                 )}
               </div>
+
+              <Separator />
+
+              {/* Shipping Cartons */}
+              {spaceInfo.cartons.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <PackageOpen className="h-4 w-4 text-primary" />
+                    <h4 className="text-sm font-medium text-muted-foreground">{tW('Shipping Cartons')}</h4>
+                  </div>
+                  {(() => {
+                    // Show top 3 carton options
+                    const top3 = spaceInfo.cartons.slice(0, 3);
+                    // The first one that has DHL compliance is recommended
+                    const recommended = spaceInfo.cartons.find(c =>
+                      c.carrierCompliance.some(cc => cc.carrierId === 'dhl' && cc.fits)
+                    ) ?? top3[0];
+
+                    return (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          {tW('Recommended')}: <span className="font-semibold text-foreground">{recommended.carton.label} cm</span>
+                          {recommended.carton.palletModule !== '—' && (
+                            <span className="ml-1">({tW('pallet module')} {recommended.carton.palletModule})</span>
+                          )}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {top3.map((fit) => {
+                            const isRecommended = fit.carton.id === recommended.carton.id;
+                            return (
+                              <div
+                                key={fit.carton.id}
+                                className={`rounded-lg border p-3 space-y-2.5 ${isRecommended ? 'border-primary bg-primary/5' : ''}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-semibold">{fit.carton.label} cm</p>
+                                  {isRecommended && <Star className="h-3.5 w-3.5 text-primary fill-primary" />}
+                                </div>
+
+                                <div className="space-y-1">
+                                  <p className="text-sm tabular-nums">
+                                    <span className="font-bold">{fit.unitsPerCarton}</span>{' '}
+                                    <span className="text-muted-foreground">{tW('per carton')}</span>
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">({fit.layoutDesc})</p>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <p className="text-sm tabular-nums">
+                                    <span className="font-bold">{fit.cartonsNeeded}</span>{' '}
+                                    <span className="text-muted-foreground">
+                                      {fit.cartonsNeeded === 1 ? tW('Carton') : tW('Cartons')}
+                                    </span>
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <Progress
+                                      value={Math.min(fit.lastCartonFillPct, 100)}
+                                      className="h-1.5 flex-1"
+                                    />
+                                    <span className="text-[10px] tabular-nums w-8 text-right">
+                                      {Math.round(fit.lastCartonFillPct)}%
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {tW('Last carton')}: {fit.lastCartonUnits}/{fit.unitsPerCarton}
+                                  </p>
+                                </div>
+
+                                {fit.cartonWeightKg != null && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ~{fit.cartonWeightKg.toFixed(1)} kg/{tW('Carton')}
+                                  </p>
+                                )}
+
+                                <TooltipProvider delayDuration={200}>
+                                  <div className="flex flex-wrap gap-1.5 pt-1 border-t">
+                                    {fit.carrierCompliance.map((cc) => (
+                                      <Tooltip key={cc.carrierId}>
+                                        <TooltipTrigger asChild>
+                                          <span className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded ${
+                                            cc.fits
+                                              ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
+                                              : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400'
+                                          }`}>
+                                            {cc.fits
+                                              ? <Check className="h-2.5 w-2.5" />
+                                              : <X className="h-2.5 w-2.5" />}
+                                            {cc.carrierLabel}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="text-xs">
+                                          {cc.fits ? tW('fits') : cc.reason}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ))}
+                                  </div>
+                                </TooltipProvider>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : batch.quantity && batch.quantity > 0 && spaceInfo ? (
+                <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>{tW('No standard carton fits')} — {tW('Single item shipping required')}</span>
+                </div>
+              ) : null}
 
               <Separator />
 

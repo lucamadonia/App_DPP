@@ -121,6 +121,7 @@ const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyInteg
 const DHLIntegrationPage = lazy(() => import('@/pages/warehouse/DHLIntegrationPage').then(m => ({ default: m.DHLIntegrationPage })));
 const LocationDetailPage = lazy(() => import('@/pages/warehouse/LocationDetailPage').then(m => ({ default: m.LocationDetailPage })));
 const ContactDetailPage = lazy(() => import('@/pages/warehouse/ContactDetailPage').then(m => ({ default: m.ContactDetailPage })));
+const AILogisticsHubPage = lazy(() => import('@/pages/warehouse/AILogisticsHubPage').then(m => ({ default: m.AILogisticsHubPage })));
 
 // Compliance
 const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
@@ -400,6 +401,7 @@ function NormalAppRoutes() {
           <Route path="warehouse/locations/:id" element={<LocationDetailPage />} />
           <Route path="warehouse/contacts" element={<ContactsListPage />} />
           <Route path="warehouse/contacts/:id" element={<ContactDetailPage />} />
+          <Route path="warehouse/ai" element={<AILogisticsHubPage />} />
           <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
           <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />
           <Route path="warehouse/integrations/dhl" element={<DHLIntegrationPage />} />
