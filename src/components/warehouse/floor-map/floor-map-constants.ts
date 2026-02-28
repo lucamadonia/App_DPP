@@ -95,3 +95,22 @@ export const HEATMAP_COLORS = [
   '#FB923C', // 80% — orange
   '#EF4444', // 100% — red
 ];
+
+/** Canvas height presets */
+export const CANVAS_HEIGHT_NORMAL = 'clamp(400px, 65vh, 85vh)';
+export const CANVAS_HEIGHT_FULLSCREEN = '100vh';
+
+/** Bin dot fill-level colors */
+export const BIN_DOT_COLORS = {
+  empty: '#9CA3AF',   // gray
+  low: '#22C55E',     // green < 70%
+  medium: '#F59E0B',  // yellow 70-90%
+  high: '#EF4444',    // red > 90%
+} as const;
+
+/** Thresholds */
+export const CRITICAL_FILL_THRESHOLD = 0.9;
+export const WARNING_FILL_THRESHOLD = 0.7;
+
+/** Keyboard nav pan step in SVG units */
+export const PAN_STEP = 40;

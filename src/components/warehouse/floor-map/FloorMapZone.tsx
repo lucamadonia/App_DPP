@@ -5,6 +5,7 @@ import {
   ZONE_FILL_COLORS,
   ISO_DX,
   ISO_DY,
+  CRITICAL_FILL_THRESHOLD,
   type FloorMapViewMode,
 } from './floor-map-constants';
 import { FloorMapZoneHandles } from './FloorMapZoneHandles';
@@ -28,6 +29,7 @@ interface FloorMapZoneProps {
   isEditing: boolean;
   viewMode: FloorMapViewMode;
   gradientId: string;
+  dimmed: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
   onPointerEnter: (e: React.PointerEvent) => void;
   onPointerLeave: () => void;
@@ -45,6 +47,7 @@ export function FloorMapZone({
   isEditing,
   viewMode,
   gradientId,
+  dimmed,
   onPointerDown,
   onPointerEnter,
   onPointerLeave,
@@ -70,61 +73,107 @@ export function FloorMapZone({
   const extrusion = viewMode === '3d' ? getExtrusionDepth(fillRatio) : 0;
   const heatColor = viewMode === 'heatmap' ? getHeatmapColor(fillRatio) : null;
 
-  // Lift effect on hover/select
-  const liftY = (isHovered || isSelected) && !isEditing ? -2 : 0;
-  const shadowBlur = isHovered ? 8 : isSelected ? 6 : 3;
+  // Enhanced lift effect on hover/select
+  const liftY = (isHovered || isSelected) && !isEditing ? -4 : 0;
+  const shadowBlur = isHovered ? 12 : isSelected ? 10 : 4;
+
+  const isCritical = fillRatio > CRITICAL_FILL_THRESHOLD && totalUnits > 0;
+  const isEmpty = totalUnits === 0;
 
   // Capacity bar inside zone (mini progress)
   const barWidth = Math.max(0, w - 12);
   const barFill = fillRatio * barWidth;
+
+  // Capacity bar gradient color
+  const barColor = isCritical ? '#EF4444' : fillRatio > 0.7 ? '#F59E0B' : '#22C55E';
 
   return (
     <g
       transform={`translate(${x}, ${y + liftY})`}
       style={{
         cursor: isEditing ? 'move' : 'pointer',
-        transition: 'transform 0.2s ease',
+        transition: 'transform 0.3s ease, opacity 0.3s ease',
+        opacity: dimmed ? 0.2 : isEmpty && viewMode !== 'heatmap' ? 0.5 : 1,
       }}
       onPointerDown={onPointerDown}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       onDoubleClick={onDoubleClick}
     >
-      {/* Drop shadow */}
+      {/* Drop shadow — enhanced */}
       <rect
-        x={2}
-        y={2 + extrusion}
+        x={3}
+        y={3 + extrusion}
         width={w}
         height={h}
         rx={5}
         fill="black"
-        opacity={isHovered ? 0.12 : 0.06}
-        filter={`blur(${shadowBlur}px)`}
-        style={{ transition: 'opacity 0.2s, filter 0.2s' }}
+        opacity={isHovered ? 0.18 : 0.08}
+        style={{
+          filter: `blur(${shadowBlur}px)`,
+          transition: 'opacity 0.3s, filter 0.3s',
+        }}
       />
 
       {/* === 3D Extrusion faces === */}
       {extrusion > 0 && (
         <>
+          {/* Right face with gradient */}
+          <defs>
+            <linearGradient id={`side-grad-${zone.code}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={colors.side} stopOpacity={0.9} />
+              <stop offset="100%" stopColor={colors.side} stopOpacity={0.6} />
+            </linearGradient>
+            <linearGradient id={`front-grad-${zone.code}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={colors.front} stopOpacity={0.8} />
+              <stop offset="100%" stopColor={colors.front} stopOpacity={0.5} />
+            </linearGradient>
+          </defs>
           {/* Right face */}
           <path
             d={`M ${w} ${h} L ${w + extrusion * ISO_DX} ${h - extrusion * ISO_DY} L ${w + extrusion * ISO_DX} ${-extrusion * ISO_DY} L ${w} 0 Z`}
-            fill={colors.side}
-            opacity={0.85}
+            fill={`url(#side-grad-${zone.code})`}
             style={{ transition: 'all 0.3s ease' }}
           />
           {/* Bottom face */}
           <path
             d={`M 0 ${h} L ${extrusion * ISO_DX} ${h - extrusion * ISO_DY} L ${w + extrusion * ISO_DX} ${h - extrusion * ISO_DY} L ${w} ${h} Z`}
-            fill={colors.front}
-            opacity={0.7}
+            fill={`url(#front-grad-${zone.code})`}
             style={{ transition: 'all 0.3s ease' }}
           />
         </>
       )}
 
+      {/* Critical glow (>90% fill, pulsating red) */}
+      {isCritical && viewMode !== 'heatmap' && (
+        <rect
+          x={-5}
+          y={-5}
+          width={w + 10}
+          height={h + 10}
+          rx={9}
+          fill="none"
+          stroke="#EF4444"
+          strokeWidth={2.5}
+          opacity={0.4}
+        >
+          <animate
+            attributeName="opacity"
+            values="0.2;0.6;0.2"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="stroke-width"
+            values="2;3.5;2"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+        </rect>
+      )}
+
       {/* Ambient glow for high-stock zones */}
-      {fillRatio > 0.5 && viewMode !== 'heatmap' && (
+      {fillRatio > 0.5 && !isCritical && viewMode !== 'heatmap' && (
         <rect
           x={-4}
           y={-4}
@@ -136,16 +185,7 @@ export function FloorMapZone({
           strokeWidth={2}
           opacity={0.3 + fillRatio * 0.4}
           style={{ transition: 'opacity 0.4s' }}
-        >
-          {fillRatio > 0.8 && (
-            <animate
-              attributeName="opacity"
-              values={`${0.3 + fillRatio * 0.3};${0.6 + fillRatio * 0.2};${0.3 + fillRatio * 0.3}`}
-              dur="2.5s"
-              repeatCount="indefinite"
-            />
-          )}
-        </rect>
+        />
       )}
 
       {/* Main top face */}
@@ -153,11 +193,11 @@ export function FloorMapZone({
         width={w}
         height={h}
         rx={5}
-        fill={heatColor ?? `url(#${gradientId})`}
+        fill={isEmpty && viewMode !== 'heatmap' ? '#F3F4F6' : (heatColor ?? `url(#${gradientId})`)}
         stroke={isSelected ? '#3B82F6' : heatColor ? 'rgba(0,0,0,0.15)' : colors.stroke}
         strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1.2}
         opacity={viewMode === 'heatmap' ? 0.85 : 0.95}
-        style={{ transition: 'all 0.25s ease' }}
+        style={{ transition: 'all 0.3s ease' }}
       />
 
       {/* Inner highlight (glass edge effect) */}
@@ -168,39 +208,53 @@ export function FloorMapZone({
         height={Math.min(h * 0.35, 20)}
         rx={4}
         fill="white"
-        opacity={viewMode === 'heatmap' ? 0.08 : 0.18}
+        opacity={viewMode === 'heatmap' ? 0.08 : 0.22}
         style={{ pointerEvents: 'none' }}
       />
 
-      {/* Selection ring */}
+      {/* Selection ring with glow */}
       {isSelected && (
-        <rect
-          x={-2}
-          y={-2}
-          width={w + 4}
-          height={h + 4}
-          rx={7}
-          fill="none"
-          stroke="#3B82F6"
-          strokeWidth={1.5}
-          strokeDasharray="5 3"
-          opacity={0.6}
-        >
-          <animate
-            attributeName="stroke-dashoffset"
-            from="0"
-            to="16"
-            dur="1s"
-            repeatCount="indefinite"
+        <>
+          <rect
+            x={-3}
+            y={-3}
+            width={w + 6}
+            height={h + 6}
+            rx={8}
+            fill="none"
+            stroke="#3B82F6"
+            strokeWidth={1}
+            opacity={0.2}
+            style={{ filter: 'blur(3px)' }}
           />
-        </rect>
+          <rect
+            x={-2}
+            y={-2}
+            width={w + 4}
+            height={h + 4}
+            rx={7}
+            fill="none"
+            stroke="#3B82F6"
+            strokeWidth={1.5}
+            strokeDasharray="6 3"
+            opacity={0.7}
+          >
+            <animate
+              attributeName="stroke-dashoffset"
+              from="0"
+              to="18"
+              dur="1s"
+              repeatCount="indefinite"
+            />
+          </rect>
+        </>
       )}
 
       {/* Zone label */}
       <foreignObject x={6} y={4} width={w - 12} height={h * 0.5}>
         <div
           style={{
-            color: heatColor ? '#1E293B' : colors.text,
+            color: isEmpty ? '#9CA3AF' : (heatColor ? '#1E293B' : colors.text),
             fontSize: Math.min(12, Math.max(9, w / 8)),
             fontWeight: 700,
             lineHeight: 1.15,
@@ -216,7 +270,7 @@ export function FloorMapZone({
         </div>
         <div
           style={{
-            color: heatColor ? '#475569' : colors.text,
+            color: isEmpty ? '#D1D5DB' : (heatColor ? '#475569' : colors.text),
             fontSize: Math.min(8, Math.max(7, w / 12)),
             opacity: 0.6,
             fontFamily: 'monospace',
@@ -259,7 +313,7 @@ export function FloorMapZone({
         </g>
       )}
 
-      {/* Capacity bar (bottom of zone) */}
+      {/* Capacity bar (bottom of zone) with gradient */}
       {h > GRID_CELL * 2.5 && (
         <g transform={`translate(6, ${h - 10})`}>
           <rect
@@ -273,10 +327,19 @@ export function FloorMapZone({
             width={barFill}
             height={4}
             rx={2}
-            fill={heatColor ?? colors.stroke}
-            opacity={0.6}
-            style={{ transition: 'width 0.4s ease' }}
-          />
+            fill={heatColor ?? barColor}
+            opacity={0.7}
+            style={{ transition: 'width 0.6s ease, fill 0.3s ease' }}
+          >
+            {isCritical && (
+              <animate
+                attributeName="opacity"
+                values="0.5;0.9;0.5"
+                dur="1.5s"
+                repeatCount="indefinite"
+              />
+            )}
+          </rect>
         </g>
       )}
 
@@ -304,6 +367,8 @@ export function FloorMapZone({
         pos={pos}
         bins={zone.binLocations ?? []}
         strokeColor={heatColor ?? colors.stroke}
+        stock={stock}
+        zoneName={zone.name}
       />
 
       {/* Resize handles (edit mode + selected) */}

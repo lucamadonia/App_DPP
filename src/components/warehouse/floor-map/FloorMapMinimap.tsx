@@ -1,3 +1,4 @@
+import { useCallback, useRef } from 'react';
 import type { WarehouseZone, WhStockLevel } from '@/types/warehouse';
 import {
   GRID_CELL,
@@ -16,6 +17,7 @@ interface FloorMapMinimapProps {
   containerWidth: number;
   containerHeight: number;
   viewMode: FloorMapViewMode;
+  onPanTo: (x: number, y: number) => void;
 }
 
 export function FloorMapMinimap({
@@ -25,7 +27,10 @@ export function FloorMapMinimap({
   containerWidth,
   containerHeight,
   viewMode,
+  onPanTo,
 }: FloorMapMinimapProps) {
+  const draggingRef = useRef(false);
+
   if (zones.length === 0) return null;
 
   let maxX = 0;
@@ -48,16 +53,60 @@ export function FloorMapMinimap({
   const vpW = (containerWidth / viewport.zoom) * scale;
   const vpH = (containerHeight / viewport.zoom) * scale;
 
+  const handleMinimapClick = useCallback(
+    (e: React.PointerEvent<SVGSVGElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      // Convert minimap coords to world coords, then to viewport offset
+      const worldX = mx / scale;
+      const worldY = my / scale;
+      onPanTo(
+        -(worldX * viewport.zoom) + containerWidth / 2,
+        -(worldY * viewport.zoom) + containerHeight / 2,
+      );
+    },
+    [scale, viewport.zoom, containerWidth, containerHeight, onPanTo],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<SVGSVGElement>) => {
+      draggingRef.current = true;
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+      handleMinimapClick(e);
+    },
+    [handleMinimapClick],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<SVGSVGElement>) => {
+      if (!draggingRef.current) return;
+      handleMinimapClick(e);
+    },
+    [handleMinimapClick],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    draggingRef.current = false;
+  }, []);
+
   return (
     <div
-      className="absolute bottom-3 right-3 rounded-lg border shadow-md overflow-hidden"
+      className="absolute bottom-3 right-3 rounded-lg border shadow-md overflow-hidden cursor-crosshair"
       style={{
         background: 'rgba(255,255,255,0.7)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <svg width={MINIMAP_WIDTH} height={MINIMAP_HEIGHT}>
+      <svg
+        width={MINIMAP_WIDTH}
+        height={MINIMAP_HEIGHT}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
         <rect width="100%" height="100%" fill="transparent" />
         {zones.map((z) => {
           if (!z.mapPosition) return null;
@@ -82,16 +131,24 @@ export function FloorMapMinimap({
             />
           );
         })}
-        {/* Viewport rect */}
+        {/* Semi-transparent overlay outside viewport */}
+        <rect
+          width="100%"
+          height="100%"
+          fill="rgba(0,0,0,0.15)"
+          style={{ pointerEvents: 'none' }}
+        />
+        {/* Viewport rect (clear hole) */}
         <rect
           x={vpX}
           y={vpY}
           width={vpW}
           height={vpH}
-          fill="rgba(59,130,246,0.06)"
+          fill="rgba(255,255,255,0.3)"
           stroke="#3B82F6"
-          strokeWidth={1.2}
+          strokeWidth={1.5}
           rx={2}
+          style={{ pointerEvents: 'none' }}
         />
       </svg>
     </div>

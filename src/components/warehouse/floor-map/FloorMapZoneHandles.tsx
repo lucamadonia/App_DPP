@@ -45,9 +45,16 @@ export function FloorMapZoneHandles({
           <circle
             cx={cx}
             cy={cy}
-            r={HANDLE_SIZE}
-            fill="rgba(59,130,246,0.15)"
-          />
+            r={HANDLE_SIZE + 1}
+            fill="rgba(59,130,246,0.12)"
+          >
+            <animate
+              attributeName="r"
+              values={`${HANDLE_SIZE};${HANDLE_SIZE + 2};${HANDLE_SIZE}`}
+              dur="2s"
+              repeatCount="indefinite"
+            />
+          </circle>
           {/* Handle */}
           <rect
             x={cx - half}
@@ -58,7 +65,7 @@ export function FloorMapZoneHandles({
             fill="white"
             stroke="#3B82F6"
             strokeWidth={1.5}
-            style={{ cursor: CURSORS[dir], filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}
+            style={{ cursor: CURSORS[dir], filter: 'drop-shadow(0 1px 3px rgba(59,130,246,0.25))' }}
             onPointerDown={(e) => onResizeStart(e, dir)}
           />
         </g>

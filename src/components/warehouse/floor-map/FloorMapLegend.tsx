@@ -6,9 +6,16 @@ import type { WarehouseZoneType } from '@/types/warehouse';
 interface FloorMapLegendProps {
   visibleTypes: WarehouseZoneType[];
   viewMode: FloorMapViewMode;
+  highlightedType: WarehouseZoneType | null;
+  onToggleHighlight: (type: WarehouseZoneType) => void;
 }
 
-export function FloorMapLegend({ visibleTypes, viewMode }: FloorMapLegendProps) {
+export function FloorMapLegend({
+  visibleTypes,
+  viewMode,
+  highlightedType,
+  onToggleHighlight,
+}: FloorMapLegendProps) {
   const { t, i18n } = useTranslation('warehouse');
 
   if (viewMode === 'heatmap') {
@@ -34,19 +41,30 @@ export function FloorMapLegend({ visibleTypes, viewMode }: FloorMapLegendProps) 
         const colors = ZONE_FILL_COLORS[type];
         const cfg = ZONE_TYPE_CONFIG[type];
         const label = i18n.language.startsWith('de') ? cfg.labelDe : cfg.labelEn;
+        const isActive = highlightedType === type;
         return (
-          <div key={type} className="flex items-center gap-1.5 shrink-0">
+          <button
+            key={type}
+            className="flex items-center gap-1.5 shrink-0 rounded-md px-1.5 py-0.5 transition-all hover:bg-muted/50"
+            style={{
+              outline: isActive ? `2px solid ${colors.stroke}` : 'none',
+              outlineOffset: '1px',
+              opacity: highlightedType && !isActive ? 0.4 : 1,
+            }}
+            onClick={() => onToggleHighlight(type)}
+          >
             <div
-              className="w-3.5 h-3.5 rounded border shadow-sm"
+              className="w-3.5 h-3.5 rounded border shadow-sm transition-transform"
               style={{
                 background: `linear-gradient(135deg, ${colors.fill}, ${colors.fillEnd})`,
                 borderColor: colors.stroke,
+                transform: isActive ? 'scale(1.15)' : 'scale(1)',
               }}
             />
             <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
               {label}
             </span>
-          </div>
+          </button>
         );
       })}
     </div>

@@ -1,13 +1,15 @@
-import { useState, useCallback, useRef, type RefObject } from 'react';
-import type { ZoneMapPosition } from '@/types/warehouse';
+import { useState, useCallback, useRef, useEffect, type RefObject } from 'react';
+import type { WarehouseZone, ZoneMapPosition } from '@/types/warehouse';
 import {
   GRID_CELL,
   MIN_ZOOM,
   MAX_ZOOM,
   ZOOM_STEP,
   MIN_ZONE_SIZE,
+  PAN_STEP,
 } from './floor-map-constants';
-import { snapPositionToGrid } from './floor-map-utils';
+import { snapPositionToGrid, panToZoneViewport } from './floor-map-utils';
+import type { FloorMapViewMode } from './floor-map-constants';
 
 export type HandleDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
@@ -58,13 +60,26 @@ export interface FloorMapInteraction {
   pendingMove: { zoneIdx: number; pos: ZoneMapPosition } | null;
   zoomIn: () => void;
   zoomOut: () => void;
+  setZoom: (zoom: number) => void;
   isDragging: boolean;
+  panTo: (x: number, y: number) => void;
+}
+
+interface UseFloorMapInteractionOptions {
+  zones?: WarehouseZone[];
+  containerRef?: RefObject<HTMLDivElement | null>;
+  viewMode?: FloorMapViewMode;
+  isFullscreen?: boolean;
+  onViewModeChange?: (mode: FloorMapViewMode) => void;
+  onToggleFullscreen?: () => void;
+  onOpenDetail?: () => void;
 }
 
 export function useFloorMapInteraction(
   svgRef: RefObject<SVGSVGElement | null>,
   isEditing: boolean,
   onZoneMove?: (zoneIdx: number, pos: ZoneMapPosition) => void,
+  options?: UseFloorMapInteractionOptions,
 ): FloorMapInteraction {
   const [viewport, setViewport] = useState<FloorMapViewport>({
     x: 20,
@@ -81,6 +96,114 @@ export function useFloorMapInteraction(
 
   const dragRef = useRef<DragState | null>(null);
   const panRef = useRef<PanState | null>(null);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const zones = options?.zones;
+    if (!zones || zones.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't capture if user is in an input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'Tab': {
+          e.preventDefault();
+          const dir = e.shiftKey ? -1 : 1;
+          setSelectedZoneIdx((prev) => {
+            const next = prev + dir;
+            if (next < 0) return zones.length - 1;
+            if (next >= zones.length) return 0;
+            return next;
+          });
+          break;
+        }
+        case 'Escape':
+          if (options?.isFullscreen) {
+            options.onToggleFullscreen?.();
+          } else {
+            setSelectedZoneIdx(-1);
+          }
+          break;
+        case '+':
+        case '=':
+          setViewport((v) => ({ ...v, zoom: Math.min(MAX_ZOOM, v.zoom + ZOOM_STEP) }));
+          break;
+        case '-':
+          setViewport((v) => ({ ...v, zoom: Math.max(MIN_ZOOM, v.zoom - ZOOM_STEP) }));
+          break;
+        case 'f':
+        case 'F':
+          options?.onToggleFullscreen?.();
+          break;
+        case '1':
+          options?.onViewModeChange?.('flat');
+          break;
+        case '2':
+          options?.onViewModeChange?.('3d');
+          break;
+        case '3':
+          options?.onViewModeChange?.('heatmap');
+          break;
+        case 'Enter':
+          if (selectedZoneIdx >= 0) {
+            options?.onOpenDetail?.();
+          }
+          break;
+        case 'ArrowUp':
+          if (selectedZoneIdx < 0) {
+            e.preventDefault();
+            setViewport((v) => ({ ...v, y: v.y + PAN_STEP }));
+          }
+          break;
+        case 'ArrowDown':
+          if (selectedZoneIdx < 0) {
+            e.preventDefault();
+            setViewport((v) => ({ ...v, y: v.y - PAN_STEP }));
+          }
+          break;
+        case 'ArrowLeft':
+          if (selectedZoneIdx < 0) {
+            e.preventDefault();
+            setViewport((v) => ({ ...v, x: v.x + PAN_STEP }));
+          }
+          break;
+        case 'ArrowRight':
+          if (selectedZoneIdx < 0) {
+            e.preventDefault();
+            setViewport((v) => ({ ...v, x: v.x - PAN_STEP }));
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [options, selectedZoneIdx]);
+
+  // Pan to selected zone
+  useEffect(() => {
+    const zones = options?.zones;
+    const container = options?.containerRef?.current;
+    if (!zones || selectedZoneIdx < 0 || !container) return;
+    const zone = zones[selectedZoneIdx];
+    if (!zone?.mapPosition) return;
+
+    const target = panToZoneViewport(
+      zone,
+      container.clientWidth,
+      container.clientHeight,
+      viewport.zoom,
+    );
+    setViewport(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedZoneIdx]);
 
   const handleZoneDragStart = useCallback(
     (e: React.PointerEvent, zoneIdx: number, pos: ZoneMapPosition) => {
@@ -235,6 +358,14 @@ export function useFloorMapInteraction(
     setViewport((v) => ({ ...v, zoom: Math.max(MIN_ZOOM, v.zoom - ZOOM_STEP) }));
   }, []);
 
+  const setZoom = useCallback((zoom: number) => {
+    setViewport((v) => ({ ...v, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) }));
+  }, []);
+
+  const panTo = useCallback((x: number, y: number) => {
+    setViewport((v) => ({ ...v, x, y }));
+  }, []);
+
   return {
     viewport,
     setViewport,
@@ -251,6 +382,8 @@ export function useFloorMapInteraction(
     pendingMove,
     zoomIn,
     zoomOut,
+    setZoom,
     isDragging,
+    panTo,
   };
 }

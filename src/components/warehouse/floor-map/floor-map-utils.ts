@@ -139,6 +139,23 @@ function hexToRgb(hex: string) {
   };
 }
 
+/** Compute target viewport that centers a specific zone */
+export function panToZoneViewport(
+  zone: WarehouseZone,
+  containerWidth: number,
+  containerHeight: number,
+  zoom: number,
+): { x: number; y: number; zoom: number } {
+  if (!zone.mapPosition) return { x: 20, y: 20, zoom };
+  const cx = (zone.mapPosition.x + zone.mapPosition.width / 2) * GRID_CELL;
+  const cy = (zone.mapPosition.y + zone.mapPosition.height / 2) * GRID_CELL;
+  return {
+    x: containerWidth / 2 - cx * zoom,
+    y: containerHeight / 2 - cy * zoom,
+    zoom,
+  };
+}
+
 /** Fit all zones into viewport */
 export function fitAllViewport(
   zones: WarehouseZone[],

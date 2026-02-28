@@ -1,21 +1,24 @@
 import { useTranslation } from 'react-i18next';
 import { ZONE_TYPE_CONFIG } from '@/lib/warehouse-constants';
-import { ZONE_FILL_COLORS } from './floor-map-constants';
+import { ZONE_FILL_COLORS, GRID_CELL } from './floor-map-constants';
 import type { WarehouseZone, WhStockLevel } from '@/types/warehouse';
 import { getStockByZone, getZoneFillRatio } from './floor-map-utils';
+import type { FloorMapViewport } from './useFloorMapInteraction';
 
 interface FloorMapZoneTooltipProps {
   zone: WarehouseZone;
   stock: WhStockLevel[];
   allZones: WarehouseZone[];
-  position: { x: number; y: number };
+  viewport: FloorMapViewport;
+  containerRect: DOMRect | null;
 }
 
 export function FloorMapZoneTooltip({
   zone,
   stock,
   allZones,
-  position,
+  viewport,
+  containerRect,
 }: FloorMapZoneTooltipProps) {
   const { t, i18n } = useTranslation('warehouse');
   const cfg = zone.type ? ZONE_TYPE_CONFIG[zone.type] : ZONE_TYPE_CONFIG.other;
@@ -25,20 +28,54 @@ export function FloorMapZoneTooltip({
   const fillRatio = getZoneFillRatio(stock, allZones, zone.name);
   const fillPercent = Math.round(fillRatio * 100);
 
+  // Calculate anchored position (centered above zone)
+  const pos = zone.mapPosition ?? { x: 0, y: 0, width: 4, height: 3 };
+  const zoneCenterX = (pos.x + pos.width / 2) * GRID_CELL;
+  const zoneTopY = pos.y * GRID_CELL;
+
+  const screenX = zoneCenterX * viewport.zoom + viewport.x;
+  const screenY = zoneTopY * viewport.zoom + viewport.y;
+
+  // Clamp to container bounds
+  const cw = containerRect?.width ?? 800;
+  const tooltipW = 220;
+  const clampedX = Math.max(tooltipW / 2 + 8, Math.min(cw - tooltipW / 2 - 8, screenX));
+
+  // Flip below if too close to top
+  const flipBelow = screenY < 140;
+
   return (
     <div
       className="absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
-      style={{ left: position.x, top: position.y }}
+      style={{
+        left: clampedX,
+        top: flipBelow ? screenY + (pos.height * GRID_CELL * viewport.zoom) + 12 : screenY,
+        transform: flipBelow ? 'translateX(-50%)' : 'translateX(-50%) translateY(-100%)',
+      }}
     >
       <div
-        className="rounded-xl shadow-xl px-4 py-3 text-sm min-w-[200px] -translate-x-1/2 -translate-y-full -mt-3 border"
+        className="rounded-xl shadow-xl px-4 py-3 text-sm min-w-[200px] border"
         style={{
-          background: 'rgba(255,255,255,0.85)',
+          background: 'rgba(255,255,255,0.88)',
           backdropFilter: 'blur(16px) saturate(1.8)',
           WebkitBackdropFilter: 'blur(16px) saturate(1.8)',
           borderColor: 'rgba(0,0,0,0.08)',
+          marginBottom: flipBelow ? 0 : 8,
+          marginTop: flipBelow ? 8 : 0,
         }}
       >
+        {/* Arrow */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rotate-45 border"
+          style={{
+            background: 'rgba(255,255,255,0.88)',
+            borderColor: 'rgba(0,0,0,0.08)',
+            ...(flipBelow
+              ? { top: -5, borderRight: 'none', borderBottom: 'none' }
+              : { bottom: -5, borderLeft: 'none', borderTop: 'none' }),
+          }}
+        />
+
         {/* Color accent bar */}
         <div
           className="absolute top-0 left-4 right-4 h-[2px] rounded-full"
@@ -76,7 +113,7 @@ export function FloorMapZoneTooltip({
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${fillPercent}%`,
-                  background: `linear-gradient(90deg, ${colors.stroke}80, ${colors.stroke})`,
+                  background: `linear-gradient(90deg, #22C55E, ${fillPercent > 70 ? '#F59E0B' : '#22C55E'}, ${fillPercent > 90 ? '#EF4444' : fillPercent > 70 ? '#F59E0B' : '#22C55E'})`,
                 }}
               />
             </div>
@@ -101,7 +138,7 @@ export function FloorMapZoneTooltip({
             )}
             {zone.areaM2 != null && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('Area (m\u00B2)')}</span>
+                <span className="text-muted-foreground">{t('Area (m²)')}</span>
                 <span className="font-semibold tabular-nums">{zone.areaM2}</span>
               </div>
             )}

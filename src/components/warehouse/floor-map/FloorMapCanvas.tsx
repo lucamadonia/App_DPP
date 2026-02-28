@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState } from 'react';
-import type { WarehouseZone, ZoneMapPosition, WhStockLevel } from '@/types/warehouse';
+import type { WarehouseZone, ZoneMapPosition, WhStockLevel, WarehouseZoneType } from '@/types/warehouse';
 import {
   GRID_CELL,
   ZONE_FILL_COLORS,
@@ -15,6 +15,9 @@ interface FloorMapCanvasProps {
   stock: WhStockLevel[];
   isEditing: boolean;
   viewMode: FloorMapViewMode;
+  canvasHeight: string;
+  highlightedType: WarehouseZoneType | null;
+  searchQuery: string;
   onZoneDoubleClick?: (zoneIdx: number) => void;
   onZoneClick?: (zoneIdx: number) => void;
   interaction: FloorMapInteraction;
@@ -25,6 +28,9 @@ export function FloorMapCanvas({
   stock,
   isEditing,
   viewMode,
+  canvasHeight,
+  highlightedType,
+  searchQuery,
   onZoneDoubleClick,
   onZoneClick,
   interaction,
@@ -32,11 +38,7 @@ export function FloorMapCanvas({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [tooltipZone, setTooltipZone] = useState<{
-    zone: WarehouseZone;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [tooltipZone, setTooltipZone] = useState<WarehouseZone | null>(null);
 
   const {
     viewport,
@@ -52,6 +54,7 @@ export function FloorMapCanvas({
     handleWheel,
     pendingMove,
     isDragging,
+    panTo,
   } = interaction;
 
   const getEffectivePos = useCallback(
@@ -63,16 +66,10 @@ export function FloorMapCanvas({
   );
 
   const handleZonePointerEnter = useCallback(
-    (e: React.PointerEvent, zone: WarehouseZone, idx: number) => {
+    (_e: React.PointerEvent, zone: WarehouseZone, idx: number) => {
       if (isDragging) return;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
       setHoveredZoneIdx(idx);
-      setTooltipZone({
-        zone,
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
+      setTooltipZone(zone);
     },
     [isDragging, setHoveredZoneIdx],
   );
@@ -81,6 +78,29 @@ export function FloorMapCanvas({
     setHoveredZoneIdx(-1);
     setTooltipZone(null);
   }, [setHoveredZoneIdx]);
+
+  // Check if zone is dimmed by legend filter or search
+  const isZoneDimmed = useCallback(
+    (zone: WarehouseZone): boolean => {
+      if (highlightedType && zone.type !== highlightedType) return true;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          !zone.name.toLowerCase().includes(q) &&
+          !zone.code.toLowerCase().includes(q)
+        );
+      }
+      return false;
+    },
+    [highlightedType, searchQuery],
+  );
+
+  const handleMinimapPanTo = useCallback(
+    (x: number, y: number) => {
+      panTo(x, y);
+    },
+    [panTo],
+  );
 
   // Collect unique zone types for gradient definitions
   const zoneTypes = new Set(zones.map((z) => z.type ?? 'other'));
@@ -91,17 +111,18 @@ export function FloorMapCanvas({
       className="relative w-full overflow-hidden rounded-xl border shadow-sm"
       style={{
         minHeight: 320,
-        height: 'clamp(320px, 55vh, 650px)',
+        height: canvasHeight,
         touchAction: 'none',
         background: viewMode === 'heatmap'
-          ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
-          : 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%)',
-        transition: 'background 0.5s ease',
+          ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)'
+          : 'linear-gradient(145deg, #FAFBFC 0%, #F1F5F9 40%, #E8ECF1 100%)',
+        transition: 'background 0.5s ease, height 0.3s ease',
       }}
+      tabIndex={0}
     >
       <svg
         ref={svgRef}
-        className="w-full h-full"
+        className="w-full h-full outline-none"
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
@@ -139,7 +160,7 @@ export function FloorMapCanvas({
               cx={GRID_CELL / 2}
               cy={GRID_CELL / 2}
               r={0.6}
-              fill={viewMode === 'heatmap' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}
+              fill={viewMode === 'heatmap' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}
             />
           </pattern>
 
@@ -153,23 +174,17 @@ export function FloorMapCanvas({
             <path
               d={`M ${GRID_CELL} 0 L 0 0 0 ${GRID_CELL}`}
               fill="none"
-              stroke={viewMode === 'heatmap' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
+              stroke={viewMode === 'heatmap' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}
               strokeWidth={0.4}
             />
           </pattern>
-
-          {/* Ambient glow filter */}
-          <filter id="floor-glow">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
         {/* World group */}
-        <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.zoom})`}>
+        <g
+          transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.zoom})`}
+          style={{ transition: isDragging ? 'none' : 'transform 0.15s ease-out' }}
+        >
           {/* Background grid */}
           <rect x={-3000} y={-3000} width={6000} height={6000} fill="url(#floor-grid-dots)" />
           {isEditing && (
@@ -180,7 +195,6 @@ export function FloorMapCanvas({
           {zones
             .map((zone, idx) => ({ zone, idx, pos: getEffectivePos(zone, idx) }))
             .sort((a, b) => {
-              // In 3D mode, render from top-to-bottom for correct overlap
               if (viewMode === '3d') return a.pos.y - b.pos.y;
               return 0;
             })
@@ -197,6 +211,7 @@ export function FloorMapCanvas({
                 isEditing={isEditing}
                 viewMode={viewMode}
                 gradientId={`zone-grad-${zone.type ?? 'other'}`}
+                dimmed={isZoneDimmed(zone)}
                 onPointerDown={(e) => {
                   if (isEditing) {
                     handleZoneDragStart(e, idx, pos);
@@ -214,13 +229,14 @@ export function FloorMapCanvas({
         </g>
       </svg>
 
-      {/* Tooltip */}
+      {/* Tooltip — anchored to zone */}
       {tooltipZone && !isDragging && (
         <FloorMapZoneTooltip
-          zone={tooltipZone.zone}
+          zone={tooltipZone}
           stock={stock}
           allZones={zones}
-          position={{ x: tooltipZone.x, y: tooltipZone.y }}
+          viewport={viewport}
+          containerRect={containerRef.current?.getBoundingClientRect() ?? null}
         />
       )}
 
@@ -232,6 +248,7 @@ export function FloorMapCanvas({
         containerWidth={containerRef.current?.clientWidth ?? 800}
         containerHeight={containerRef.current?.clientHeight ?? 500}
         viewMode={viewMode}
+        onPanTo={handleMinimapPanTo}
       />
 
       {/* View mode label (subtle) */}
