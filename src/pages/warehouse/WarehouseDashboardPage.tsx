@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Package, Truck, Warehouse, AlertTriangle, ArrowRight,
-  TrendingUp, ArrowRightLeft, ClipboardList, MapPin, Clock,
+  TrendingUp, ArrowRightLeft, ClipboardList, MapPin, Clock, Box,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { getShipmentStats } from '@/services/supabase/wh-shipments';
 import { getLocationCapacitySummaries } from '@/services/supabase/wh-locations';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
+import { formatVolumeM3 } from '@/lib/warehouse-volume';
 import type { WhStockTransaction, LocationCapacitySummary, PendingAction } from '@/types/warehouse';
 
 /* -------------------------------------------------------------------------- */
@@ -216,12 +217,12 @@ export function WarehouseDashboardPage() {
 
       {/* Top row: Capacity + Pending Actions */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Capacity by Location */}
+        {/* Warehouse Capacity */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Warehouse className="h-4 w-4 text-muted-foreground" />
-              {t('Capacity by Location')}
+              {t('Warehouse Capacity')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -240,9 +241,42 @@ export function WarehouseDashboardPage() {
               </p>
             ) : (
               <div className="space-y-4">
+                {/* Total Volume Utilization */}
+                {(() => {
+                  const totalCap = locations.reduce((s, l) => s + (l.capacityVolumeM3 ?? 0), 0);
+                  const totalUsed = locations.reduce((s, l) => s + (l.usedVolumeM3 ?? 0), 0);
+                  const totalFill = totalCap > 0 ? Math.round((totalUsed / totalCap) * 100) : 0;
+                  if (totalCap <= 0) return null;
+                  return (
+                    <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium flex items-center gap-1.5">
+                          <Box className="h-3.5 w-3.5 text-primary" />
+                          {t('Total Utilization')}
+                        </span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {formatVolumeM3(totalUsed)} / {formatVolumeM3(totalCap)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress
+                          value={Math.min(totalFill, 100)}
+                          className={`h-2.5 flex-1 ${capacityColor(totalFill)}`}
+                        />
+                        <span className="text-xs font-medium tabular-nums w-8 text-right">{totalFill}%</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Per-location rows */}
                 {locations.map((loc) => {
-                  const fill = loc.fillPercentUnits ?? 0;
-                  const capacity = loc.capacityUnits ?? 0;
+                  const fillUnits = loc.fillPercentUnits ?? 0;
+                  const capacityUnits = loc.capacityUnits ?? 0;
+                  const fillVol = loc.fillPercentVolume ?? 0;
+                  const hasVolume = loc.capacityVolumeM3 != null && loc.capacityVolumeM3 > 0;
+                  const maxFill = Math.max(fillUnits, fillVol);
+
                   return (
                     <div key={loc.locationId} className="space-y-1.5">
                       <div className="flex items-center justify-between text-sm">
@@ -254,22 +288,46 @@ export function WarehouseDashboardPage() {
                           {loc.locationCode ? ` (${loc.locationCode})` : ''}
                         </Link>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            {loc.totalUnits.toLocaleString()}
-                            {capacity > 0 ? ` / ${capacity.toLocaleString()} ${t('units')}` : ` ${t('units')}`}
-                          </span>
-                          {fill > 90 && (
+                          {maxFill > 90 && (
                             <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
                               {t('Almost full')}
                             </Badge>
                           )}
                         </div>
                       </div>
-                      {capacity > 0 && (
-                        <Progress
-                          value={Math.min(fill, 100)}
-                          className={`h-2 ${capacityColor(fill)}`}
-                        />
+                      {/* Units bar */}
+                      {capacityUnits > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Units')}</span>
+                          <Progress
+                            value={Math.min(fillUnits, 100)}
+                            className={`h-1.5 flex-1 ${capacityColor(fillUnits)}`}
+                          />
+                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-24 text-right">
+                            {loc.totalUnits.toLocaleString()} / {capacityUnits.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {!capacityUnits && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Units')}</span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {loc.totalUnits.toLocaleString()} {t('units')}
+                          </span>
+                        </div>
+                      )}
+                      {/* Volume bar */}
+                      {hasVolume && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Volume')}</span>
+                          <Progress
+                            value={Math.min(fillVol, 100)}
+                            className={`h-1.5 flex-1 ${capacityColor(fillVol)}`}
+                          />
+                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-24 text-right">
+                            {formatVolumeM3(loc.usedVolumeM3 ?? 0)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   );

@@ -29,7 +29,9 @@ import { Separator } from '@/components/ui/separator';
 import { getProductById } from '@/services/supabase';
 import { getBatchById, deleteBatch } from '@/services/supabase/batches';
 import { formatCurrency } from '@/lib/format';
-import { calculateVolume, formatVolumeM3 } from '@/lib/warehouse-volume';
+import { formatVolumeM3 } from '@/lib/warehouse-volume';
+import { calculateBatchSpace, CONTAINERS, EURO_PALLET, type ContainerType } from '@/lib/warehouse-logistics';
+import { Progress } from '@/components/ui/progress';
 import type { Product, ProductBatch } from '@/types/product';
 
 const statusConfig = {
@@ -110,8 +112,8 @@ export function BatchDetailPage() {
     batch.descriptionOverride
   );
 
-  // Volume calculation
-  const batchVolume = calculateVolume(product, batch.quantity ?? 0, batch);
+  // Space & logistics calculation
+  const spaceInfo = calculateBatchSpace(product, batch, batch.quantity ?? 0);
 
   // Merged values for display
   const displayDescription = batch.descriptionOverride || product.description;
@@ -312,40 +314,169 @@ export function BatchDetailPage() {
           </Card>
         )}
 
-        {/* Storage Volume */}
-        {batchVolume && (
-          <Card>
+        {/* Space & Logistics */}
+        {spaceInfo ? (
+          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Ruler className="h-5 w-5 text-primary" />
-                {tW('Storage Volume')}
+                {tW('Space & Logistics')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Volume & Weight row */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">{tW('Volume')}</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{tW('Per Unit')}</p>
+                      <p className="text-sm font-semibold tabular-nums">{formatVolumeM3(spaceInfo.volume.unitVolumeM3)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{tW('Total')}</p>
+                      <p className="text-sm font-semibold tabular-nums text-primary">{formatVolumeM3(spaceInfo.volume.totalVolumeM3)}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {spaceInfo.dimensions.heightCm}×{spaceInfo.dimensions.widthCm}×{spaceInfo.dimensions.depthCm} cm
+                    {' '}({spaceInfo.dimensionSource === 'packaging'
+                      ? tW('Based on packaging dimensions')
+                      : tW('Based on product dimensions (no packaging dimensions available)')})
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">{tW('Weight')}</h4>
+                  {spaceInfo.unitWeightGrams ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">{tW('Per Unit')}</p>
+                        <p className="text-sm font-semibold tabular-nums">
+                          {spaceInfo.unitWeightGrams >= 1000
+                            ? `${(spaceInfo.unitWeightGrams / 1000).toFixed(2)} kg`
+                            : `${spaceInfo.unitWeightGrams} g`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">{tW('Total Weight')}</p>
+                        <p className="text-sm font-semibold tabular-nums text-primary">
+                          {spaceInfo.totalWeightKg != null
+                            ? `${spaceInfo.totalWeightKg.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">{tW('No weight data')}</p>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Euro-Pallets */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">{tW('Euro-Pallets')} (EUR 1)</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{tW('Units per pallet')}</p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {spaceInfo.pallet.unitsPerPallet}
+                      <span className="text-xs font-normal text-muted-foreground ml-1">
+                        ({spaceInfo.pallet.layoutDesc})
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{tW('Pallets needed')}</p>
+                    <p className="text-sm font-semibold tabular-nums">{spaceInfo.pallet.palletsNeeded}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-muted-foreground mb-1">{tW('Last pallet')}</p>
+                    <div className="flex items-center gap-2">
+                      <Progress
+                        value={Math.min(spaceInfo.pallet.lastPalletFillPct, 100)}
+                        className="h-2 flex-1"
+                      />
+                      <span className="text-xs font-medium tabular-nums w-10 text-right">
+                        {Math.round(spaceInfo.pallet.lastPalletFillPct)}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {spaceInfo.pallet.lastPalletUnits}/{spaceInfo.pallet.unitsPerPallet} {tW('units')}
+                    </p>
+                  </div>
+                </div>
+                {spaceInfo.pallet.weightLimited && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                    <span>&#9888;</span> {tW('Weight-limited')} ({EURO_PALLET.maxWeightKg.toLocaleString()} kg max)
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Container Fit */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">{tW('Container Fit')}</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  {(Object.keys(CONTAINERS) as ContainerType[]).map((type) => {
+                    const c = spaceInfo.containers[type];
+                    return (
+                      <div key={type} className="rounded-lg border p-3 space-y-2">
+                        <p className="text-xs font-medium">{c.containerLabel}</p>
+                        <p className="text-lg font-bold tabular-nums">
+                          {c.containersNeeded}
+                          <span className="text-xs font-normal text-muted-foreground ml-1">
+                            {c.containersNeeded === 1 ? tW('container') : tW('containers')}
+                          </span>
+                        </p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <Progress
+                              value={Math.min(c.fillPercentVolume, 100)}
+                              className="h-1.5 flex-1"
+                            />
+                            <span className="text-[10px] tabular-nums w-8 text-right">
+                              {Math.round(c.fillPercentVolume)}%
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">{tW('Volume fill')}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Warnings */}
+              {spaceInfo.warnings.length > 0 && !spaceInfo.pallet.weightLimited && (
+                <div className="text-xs text-muted-foreground italic space-y-0.5">
+                  {spaceInfo.warnings.map((w, i) => (
+                    <p key={i}>&#9888; {tW(w)} — {tW('Weight limit not checked')}</p>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : batch.quantity && batch.quantity > 0 ? (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ruler className="h-5 w-5 text-primary" />
+                {tW('Space & Logistics')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">{tW('Volume per unit')}</p>
-                  <p className="text-lg font-semibold">{formatVolumeM3(batchVolume.unitVolumeM3)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{tW('Total batch volume')}</p>
-                  <p className="text-lg font-semibold text-primary">{formatVolumeM3(batchVolume.totalVolumeM3)}</p>
-                </div>
-              </div>
-              <Separator className="my-3" />
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>
-                  {batchVolume.dimensions.heightCm} × {batchVolume.dimensions.widthCm} × {batchVolume.dimensions.depthCm} cm
-                </span>
-                <span className="text-xs">
-                  ({batchVolume.source === 'packaging'
-                    ? tW('Based on packaging dimensions')
-                    : tW('Based on product dimensions (no packaging dimensions available)')})
-                </span>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                {tW('No dimensions available')} —{' '}
+                <Link to={`/products/${productId}/edit`} className="text-primary hover:underline">
+                  {tW('Add product dimensions')}
+                </Link>
+              </p>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

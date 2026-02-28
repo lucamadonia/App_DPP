@@ -222,11 +222,31 @@ export async function getLocationCapacitySummaries(): Promise<LocationCapacitySu
     stockByLocation.set(s.location_id, current + (s.quantity_available || 0) + (s.quantity_reserved || 0));
   }
 
+  // Load volume data for locations that have volume capacity configured
+  const { getLocationUsedVolumeM3 } = await import('./wh-stock');
+  const locationsWithVolume = locations.filter(
+    loc => loc.capacity_volume_m3 != null && Number(loc.capacity_volume_m3) > 0
+  );
+  const volumeResults = await Promise.all(
+    locationsWithVolume.map(async loc => {
+      const result = await getLocationUsedVolumeM3(loc.id);
+      return { locationId: loc.id, ...result };
+    })
+  );
+  const volumeByLocation = new Map(volumeResults.map(v => [v.locationId, v]));
+
   return locations.map(loc => {
     const totalUnits = stockByLocation.get(loc.id) || 0;
     const capacityUnits = loc.capacity_units != null ? Number(loc.capacity_units) : undefined;
     const fillPercentUnits = capacityUnits && capacityUnits > 0
       ? Math.round((totalUnits / capacityUnits) * 100)
+      : undefined;
+
+    const capacityVolumeM3 = loc.capacity_volume_m3 != null ? Number(loc.capacity_volume_m3) : undefined;
+    const volumeData = volumeByLocation.get(loc.id);
+    const usedVolumeM3 = volumeData?.totalM3;
+    const fillPercentVolume = capacityVolumeM3 && capacityVolumeM3 > 0 && usedVolumeM3 != null
+      ? Math.round((usedVolumeM3 / capacityVolumeM3) * 100)
       : undefined;
 
     return {
@@ -236,8 +256,10 @@ export async function getLocationCapacitySummaries(): Promise<LocationCapacitySu
       totalUnits,
       capacityUnits,
       fillPercentUnits,
-      capacityVolumeM3: loc.capacity_volume_m3 != null ? Number(loc.capacity_volume_m3) : undefined,
+      capacityVolumeM3,
       areaM2: loc.area_m2 != null ? Number(loc.area_m2) : undefined,
+      usedVolumeM3,
+      fillPercentVolume,
     };
   });
 }

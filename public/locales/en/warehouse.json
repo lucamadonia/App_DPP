@@ -561,5 +561,26 @@
   "No tracking events": "No tracking events available yet",
   "Label Created Successfully": "DHL label created successfully",
   "Label Cancelled Successfully": "DHL label cancelled successfully",
-  "DHL requires professional": "DHL integration requires the Warehouse Professional or Business module."
+  "DHL requires professional": "DHL integration requires the Warehouse Professional or Business module.",
+
+  "Space & Logistics": "Space & Logistics",
+  "Per Unit": "Per Unit",
+  "Total": "Total",
+  "Total Weight": "Total Weight",
+  "Euro-Pallets": "Euro-Pallets",
+  "Units per pallet": "Units per pallet",
+  "Pallets needed": "Pallets needed",
+  "layers": "layers",
+  "Last pallet": "Last pallet",
+  "Weight-limited": "Weight-limited",
+  "Container Fit": "Container Fit",
+  "containers": "containers",
+  "container": "container",
+  "Volume fill": "Volume fill",
+  "No dimensions available": "No dimensions available — please add product or packaging dimensions",
+  "Add product dimensions": "Add product dimensions",
+  "No weight data": "No weight data",
+  "Weight limit not checked": "pallet weight limit not checked",
+  "Total Utilization": "Total Utilization",
+  "Volume": "Volume"
 }

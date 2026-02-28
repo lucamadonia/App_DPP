@@ -385,6 +385,8 @@ export interface LocationCapacitySummary {
   fillPercentUnits?: number;
   capacityVolumeM3?: number;
   areaM2?: number;
+  usedVolumeM3?: number;
+  fillPercentVolume?: number;
 }
 
 export interface PendingAction {
