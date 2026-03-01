@@ -20,7 +20,11 @@ function transformContentPost(row: any): WhContentPost {
     views: row.views != null ? Number(row.views) : undefined,
     likes: row.likes != null ? Number(row.likes) : undefined,
     comments: row.comments != null ? Number(row.comments) : undefined,
+    shares: row.shares != null ? Number(row.shares) : undefined,
     engagementRate: row.engagement_rate != null ? Number(row.engagement_rate) : undefined,
+    thumbnailUrl: row.thumbnail_url || undefined,
+    estimatedReach: row.estimated_reach != null ? Number(row.estimated_reach) : undefined,
+    contentType: row.content_type || undefined,
     notes: row.notes || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -89,7 +93,11 @@ export async function createContentPost(input: WhContentPostInput): Promise<WhCo
       views: input.views || null,
       likes: input.likes || null,
       comments: input.comments || null,
+      shares: input.shares || null,
       engagement_rate: input.engagementRate || null,
+      thumbnail_url: input.thumbnailUrl || null,
+      estimated_reach: input.estimatedReach || null,
+      content_type: input.contentType || 'post',
       notes: input.notes || null,
     })
     .select()
@@ -114,7 +122,11 @@ export async function updateContentPost(
   if (input.views !== undefined) update.views = input.views || null;
   if (input.likes !== undefined) update.likes = input.likes || null;
   if (input.comments !== undefined) update.comments = input.comments || null;
+  if (input.shares !== undefined) update.shares = input.shares || null;
   if (input.engagementRate !== undefined) update.engagement_rate = input.engagementRate || null;
+  if (input.thumbnailUrl !== undefined) update.thumbnail_url = input.thumbnailUrl || null;
+  if (input.estimatedReach !== undefined) update.estimated_reach = input.estimatedReach || null;
+  if (input.contentType !== undefined) update.content_type = input.contentType;
   if (input.notes !== undefined) update.notes = input.notes || null;
 
   const { data, error } = await supabase

@@ -18,6 +18,9 @@ import {
   Clipboard,
   X,
   Pencil,
+  LayoutGrid,
+  TableIcon,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -44,55 +47,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { getStockLevelsPaginated, createStockAdjustment, createStockTransfer } from '@/services/supabase/wh-stock';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
-import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
+import { InventoryCardView } from '@/components/warehouse/InventoryCardView';
 import type { WhStockLevel, WhLocation, WarehouseZone } from '@/types/warehouse';
 
 type SortKey = 'productName' | 'batchSerialNumber' | 'locationName' | 'binLocation' | 'quantityAvailable' | 'quantityReserved' | 'reorderPoint';
 type SortDir = 'asc' | 'desc';
 type GroupBy = 'none' | 'location' | 'product';
+type ViewMode = 'table' | 'cards';
 
-/* ─── KPI Card ─── */
-function KPICard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  bgColor,
-  loading,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  loading: boolean;
-}) {
-  const animated = useAnimatedNumber(loading ? 0 : value);
-  return (
-    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-3">
-          <div className={`rounded-lg p-2.5 ${bgColor}`}>
-            <Icon className={`h-5 w-5 ${color}`} />
-          </div>
-          <div className="min-w-0">
-            {loading ? (
-              <Skeleton className="h-7 w-16 mb-1" />
-            ) : (
-              <p className="text-2xl font-bold tabular-nums leading-none">
-                {animated.toLocaleString()}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+const STORAGE_KEY = 'wh-inventory-view';
 
 /* ─── Skeleton Rows ─── */
 function SkeletonRows() {
@@ -115,10 +91,61 @@ function SkeletonRows() {
   );
 }
 
+/* ─── Skeleton Cards ─── */
+function SkeletonCards() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i}>
+          <CardContent className="pt-4 pb-3 px-4 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-7 w-7 rounded" />
+            </div>
+            <div className="flex gap-1.5">
+              <Skeleton className="h-4 w-20 rounded-full" />
+              <Skeleton className="h-4 w-14 rounded-full" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-12" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export function InventoryListPage() {
   const { t } = useTranslation('warehouse');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
+
+  // View mode: persist in localStorage, default to cards on mobile
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'table' || stored === 'cards') return stored;
+    return 'table'; // will override to cards on mobile via effect
+  });
+
+  // On first render, default to cards on mobile if no stored preference
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored && isMobile) {
+      setViewMode('cards');
+    }
+  }, [isMobile]);
+
+  // Persist view mode
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, viewMode);
+  }, [viewMode]);
 
   // Data
   const [stock, setStock] = useState<WhStockLevel[]>([]);
@@ -132,6 +159,9 @@ export function InventoryListPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [zoneFilter, setZoneFilter] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(searchParams.get('lowStock') === 'true');
+
+  // Mobile filter sheet
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Grouping & sorting
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
@@ -528,6 +558,182 @@ export function InventoryListPage() {
 
   const colCount = 9;
 
+  // Active filter count for mobile badge
+  const filterCount = activeFilters.length;
+
+  // ── Filter controls (shared between inline and sheet) ──
+  const filterControls = (isSheet: boolean) => (
+    <div className={isSheet ? 'space-y-4' : 'flex flex-wrap gap-2 sm:gap-3 items-center'}>
+      {/* Search */}
+      <div className={`relative ${isSheet ? '' : ''}`}>
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={t('Search...')}
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className={`pl-8 pr-8 h-9 ${isSheet ? 'w-full' : 'w-full sm:w-[220px]'}`}
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            onClick={() => { setSearchTerm(''); setDebouncedSearch(''); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Location */}
+      <div className={isSheet ? '' : ''}>
+        {isSheet && <Label className="text-xs text-muted-foreground mb-1.5 block">{t('Location')}</Label>}
+        <Select value={locationFilter} onValueChange={setLocationFilter}>
+          <SelectTrigger className={`h-9 ${isSheet ? 'w-full' : 'w-[180px]'}`}>
+            <SelectValue placeholder={t('All Locations')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('All Locations')}</SelectItem>
+            {locations.map(l => (
+              <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Zone (only when location selected) */}
+      {availableZones.length > 0 && (
+        <div>
+          {isSheet && <Label className="text-xs text-muted-foreground mb-1.5 block">{t('Zone')}</Label>}
+          <Select value={zoneFilter} onValueChange={setZoneFilter}>
+            <SelectTrigger className={`h-9 ${isSheet ? 'w-full' : 'w-[160px]'}`}>
+              <SelectValue placeholder={t('All Zones')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('All Zones')}</SelectItem>
+              {availableZones.map(z => (
+                <SelectItem key={z.code} value={z.code}>{z.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Low Stock toggle */}
+      <Button
+        variant={lowStockOnly ? 'default' : 'outline'}
+        size="sm"
+        className={`h-9 ${isSheet ? 'w-full justify-start' : ''}`}
+        onClick={() => setLowStockOnly(v => !v)}
+      >
+        <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
+        {t('Low Stock Alerts')}
+      </Button>
+
+      {/* Group by (only in sheet or desktop) */}
+      {isSheet ? (
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">{t('Group by')}</Label>
+          <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
+            <SelectTrigger className="w-full h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t('None')}</SelectItem>
+              <SelectItem value="location">{t('By Location')}</SelectItem>
+              <SelectItem value="product">{t('By Product')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  // Adjust dialog content
+  const adjustDialogContent = (
+    <div className="space-y-4 py-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{t('Current Stock')}</span>
+        <span className="font-medium tabular-nums">{adjustTarget?.quantityAvailable.toLocaleString()}</span>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="adj-delta">{t('Quantity Change')}</Label>
+        <Input
+          id="adj-delta"
+          type="number"
+          placeholder="+10 / -5"
+          value={adjustDelta}
+          onChange={e => setAdjustDelta(e.target.value)}
+        />
+      </div>
+      {adjustPreview != null && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{t('New Stock Level')}</span>
+          <span className={`font-medium tabular-nums ${adjustPreview < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+            {adjustPreview.toLocaleString()}
+          </span>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label htmlFor="adj-reason">{t('Adjustment Reason')}</Label>
+        <Input
+          id="adj-reason"
+          placeholder={t('Adjustment Reason')}
+          value={adjustReason}
+          onChange={e => setAdjustReason(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+
+  // Transfer dialog content
+  const transferDialogContent = (
+    <div className="space-y-4 py-2">
+      <div className="space-y-1.5">
+        <Label>{t('From Location')}</Label>
+        <Input value={transferTarget?.locationName ?? ''} readOnly className="bg-muted" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>{t('Destination Location')}</Label>
+        <Select value={transferDest} onValueChange={setTransferDest}>
+          <SelectTrigger>
+            <SelectValue placeholder={t('Destination Location')} />
+          </SelectTrigger>
+          <SelectContent>
+            {locations
+              .filter(l => l.id !== transferTarget?.locationId)
+              .map(l => (
+                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>{t('Transfer Quantity')}</Label>
+        <Input
+          type="number"
+          min={1}
+          max={transferTarget?.quantityAvailable ?? 9999}
+          placeholder="0"
+          value={transferQty}
+          onChange={e => setTransferQty(e.target.value)}
+        />
+        {transferTarget && (
+          <p className="text-xs text-muted-foreground">
+            {t('Available Quantity')}: {transferTarget.quantityAvailable.toLocaleString()}
+          </p>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <Label>{t('Transfer Reason')}</Label>
+        <Input
+          placeholder={t('Transfer Reason')}
+          value={transferReason}
+          onChange={e => setTransferReason(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -538,35 +744,35 @@ export function InventoryListPage() {
         </p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards — using WarehouseKPICard */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: t('Total Items'), value: totalCount, icon: Package, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-950' },
-          { label: t('Available Stock'), value: totalAvailable, icon: CircleCheck, color: 'text-emerald-600', bgColor: 'bg-emerald-100 dark:bg-emerald-950' },
-          { label: t('Reserved Stock'), value: totalReserved, icon: Clock, color: 'text-amber-600', bgColor: 'bg-amber-100 dark:bg-amber-950' },
-          { label: t('Low Stock Alerts'), value: lowStockCount, icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-950' },
+          { label: t('Total Items'), value: totalCount, icon: Package, color: 'text-blue-600', gradient: 'from-blue-500/20 to-blue-600/10', sparkColor: '#3B82F6' },
+          { label: t('Available Stock'), value: totalAvailable, icon: CircleCheck, color: 'text-emerald-600', gradient: 'from-emerald-500/20 to-emerald-600/10', sparkColor: '#10B981' },
+          { label: t('Reserved Stock'), value: totalReserved, icon: Clock, color: 'text-amber-600', gradient: 'from-amber-500/20 to-amber-600/10', sparkColor: '#F59E0B' },
+          { label: t('Low Stock Alerts'), value: lowStockCount, icon: AlertTriangle, color: 'text-red-600', gradient: 'from-red-500/20 to-red-600/10', sparkColor: '#EF4444', onClick: () => setLowStockOnly(true) },
         ].map((kpi, i) => (
           <div
             key={kpi.label}
             className={`transition-all duration-300 ${kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
           >
-            <KPICard {...kpi} loading={loading} />
+            <WarehouseKPICard {...kpi} loading={loading} />
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <Card className="backdrop-blur-sm bg-card/80 border">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-            {/* Search with clear button */}
-            <div className="relative">
+      {/* Filters — Desktop: inline card, Mobile: Sheet trigger */}
+      {isMobile ? (
+        <>
+          <div className="flex items-center gap-2">
+            {/* Mobile: search always visible */}
+            <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('Search...')}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="pl-8 pr-8 w-full sm:w-[220px] h-9"
+                className="pl-8 pr-8 h-9 w-full"
               />
               {searchTerm && (
                 <button
@@ -579,235 +785,377 @@ export function InventoryListPage() {
               )}
             </div>
 
-            {/* Location */}
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-[180px] h-9">
-                <SelectValue placeholder={t('All Locations')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('All Locations')}</SelectItem>
-                {locations.map(l => (
-                  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Zone (only when location selected) */}
-            {availableZones.length > 0 && (
-              <Select value={zoneFilter} onValueChange={setZoneFilter}>
-                <SelectTrigger className="w-[160px] h-9">
-                  <SelectValue placeholder={t('All Zones')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('All Zones')}</SelectItem>
-                  {availableZones.map(z => (
-                    <SelectItem key={z.code} value={z.code}>{z.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Low Stock toggle */}
+            {/* Filter trigger */}
             <Button
-              variant={lowStockOnly ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
-              className="h-9"
-              onClick={() => setLowStockOnly(v => !v)}
+              className="h-9 gap-1.5 shrink-0"
+              onClick={() => setFilterSheetOpen(true)}
             >
-              <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
-              {t('Low Stock Alerts')}
+              <SlidersHorizontal className="h-4 w-4" />
+              {t('Filters')}
+              {filterCount > 0 && (
+                <Badge variant="secondary" className="h-5 min-w-[20px] px-1 text-[10px]">
+                  {filterCount}
+                </Badge>
+              )}
             </Button>
 
-            <div className="flex-1" />
-
-            {/* Group by */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{t('Group by')}:</span>
-              <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('None')}</SelectItem>
-                  <SelectItem value="location">{t('By Location')}</SelectItem>
-                  <SelectItem value="product">{t('By Product')}</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* View toggle */}
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                size="icon"
+                className="h-9 w-9 rounded-r-none"
+                onClick={() => setViewMode('cards')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="icon"
+                className="h-9 w-9 rounded-l-none"
+                onClick={() => setViewMode('table')}
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
-          {/* Active filter pills */}
-          {activeFilters.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t">
-              <span className="text-xs text-muted-foreground mr-1">{t('Active Filters')}:</span>
-              {activeFilters.map(f => (
-                <Badge key={f.key} variant="secondary" className="gap-1 pr-1 text-xs">
-                  {f.label}
-                  <button
-                    type="button"
-                    onClick={f.onRemove}
-                    className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-              {activeFilters.length > 1 && (
-                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearAllFilters}>
-                  {t('Clear Filters')}
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Stock Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('productName')}>
-                    {t('Product')}<SortIcon col="productName" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('batchSerialNumber')}>
-                    {t('Batch')}<SortIcon col="batchSerialNumber" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('locationName')}>
-                    {t('Location')}<SortIcon col="locationName" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('binLocation')}>
-                    {t('Bin Location')}<SortIcon col="binLocation" />
-                  </TableHead>
-                  <TableHead className="text-center">{t('Stock Level')}</TableHead>
-                  <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityAvailable')}>
-                    {t('Available Quantity')}<SortIcon col="quantityAvailable" />
-                  </TableHead>
-                  <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityReserved')}>
-                    {t('Reserved Quantity')}<SortIcon col="quantityReserved" />
-                  </TableHead>
-                  <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('reorderPoint')}>
-                    {t('Reorder Point')}<SortIcon col="reorderPoint" />
-                  </TableHead>
-                  <TableHead className="w-10">
-                    <span className="sr-only">{t('Actions')}</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <SkeletonRows />
-                ) : sortedStock.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={colCount} className="h-48 text-center">
-                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                        <div className="rounded-full bg-muted p-4">
-                          <Package className="h-8 w-8 opacity-50" />
-                        </div>
-                        {activeFilters.length > 0 ? (
-                          <>
-                            <p className="font-medium">{t('No items match your filters')}</p>
-                            <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                              {t('Clear Filters')}
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="font-medium">{t('No inventory yet')}</p>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to="/warehouse/goods-receipt">{t('Goods Receipt')}</Link>
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : groups ? (
-                  groups.map(([key, group]) => {
-                    const isCollapsed = collapsedGroups.has(key);
-                    return (
-                      <>{/* Fragment per group */}
-                        <TableRow
-                          key={`group-${key}`}
-                          className="bg-muted/50 hover:bg-muted/70 cursor-pointer"
-                          onClick={() => toggleGroup(key)}
-                        >
-                          <TableCell colSpan={colCount} className="py-2">
-                            <div className="flex items-center gap-2 font-medium">
-                              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              {group.linkTo ? (
-                                <Link
-                                  to={group.linkTo}
-                                  className="hover:underline text-primary"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  {group.label}
-                                </Link>
-                              ) : group.label}
-                              <Badge variant="secondary" className="ml-1 text-xs">
-                                {group.rows.length}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {!isCollapsed && group.rows.map((row, idx) => renderRow(row, idx))}
-                      </>
-                    );
-                  })
-                ) : (
-                  sortedStock.map((row, idx) => renderRow(row, idx))
+          {/* Mobile Filter Sheet */}
+          <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+            <SheetContent side="bottom" className="max-h-[70vh] rounded-t-2xl">
+              <SheetHeader>
+                <SheetTitle>{t('Filters')}</SheetTitle>
+                <SheetDescription>{t('Filter inventory items')}</SheetDescription>
+              </SheetHeader>
+              <div className="px-4 overflow-y-auto flex-1">
+                {filterControls(true)}
+              </div>
+              <SheetFooter className="flex-row gap-2">
+                {activeFilters.length > 0 && (
+                  <Button variant="outline" className="flex-1" onClick={() => { clearAllFilters(); setFilterSheetOpen(false); }}>
+                    {t('Clear Filters')}
+                  </Button>
                 )}
-              </TableBody>
-            </Table>
-          </div>
+                <Button className="flex-1" onClick={() => setFilterSheetOpen(false)}>
+                  {t('Apply')}
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : (
+        <Card className="backdrop-blur-sm bg-card/80 border">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+              {filterControls(false)}
 
-          {/* Pagination */}
-          {!loading && totalCount > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
-                  <SelectTrigger className="w-[70px] h-8">
+              <div className="flex-1" />
+
+              {/* Group by */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{t('Group by')}:</span>
+                <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
+                  <SelectTrigger className="w-[140px] h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="none">{t('None')}</SelectItem>
+                    <SelectItem value="location">{t('By Location')}</SelectItem>
+                    <SelectItem value="product">{t('By Product')}</SelectItem>
                   </SelectContent>
                 </Select>
-                <span>{t('per page')}</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* View Toggle — desktop */}
+              <div className="flex items-center border rounded-md ml-1">
                 <Button
-                  variant="outline"
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
                   size="icon"
-                  className="h-8 w-8"
-                  disabled={page <= 1}
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="h-9 w-9 rounded-r-none"
+                  onClick={() => setViewMode('table')}
+                  title={t('Table View')}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <TableIcon className="h-4 w-4" />
                 </Button>
-                <span className="text-muted-foreground">
-                  {t('Page')} {page} {t('of')} {totalPages}
-                </span>
                 <Button
-                  variant="outline"
+                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
                   size="icon"
-                  className="h-8 w-8"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="h-9 w-9 rounded-l-none"
+                  onClick={() => setViewMode('cards')}
+                  title={t('Card View')}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <LayoutGrid className="h-4 w-4" />
                 </Button>
               </div>
             </div>
+
+            {/* Active filter pills */}
+            {activeFilters.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t">
+                <span className="text-xs text-muted-foreground mr-1">{t('Active Filters')}:</span>
+                {activeFilters.map(f => (
+                  <Badge key={f.key} variant="secondary" className="gap-1 pr-1 text-xs">
+                    {f.label}
+                    <button
+                      type="button"
+                      onClick={f.onRemove}
+                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                {activeFilters.length > 1 && (
+                  <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearAllFilters}>
+                    {t('Clear Filters')}
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mobile active filter pills (shown outside sheet) */}
+      {isMobile && activeFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 -mt-3">
+          {activeFilters.map(f => (
+            <Badge key={f.key} variant="secondary" className="gap-1 pr-1 text-xs">
+              {f.label}
+              <button
+                type="button"
+                onClick={f.onRemove}
+                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+          {activeFilters.length > 1 && (
+            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearAllFilters}>
+              {t('Clear Filters')}
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {/* Content: Card View or Table View */}
+      {viewMode === 'cards' ? (
+        loading ? (
+          <SkeletonCards />
+        ) : sortedStock.length === 0 ? (
+          <Card>
+            <CardContent className="py-16">
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <div className="rounded-full bg-muted p-4">
+                  <Package className="h-8 w-8 opacity-50" />
+                </div>
+                {activeFilters.length > 0 ? (
+                  <>
+                    <p className="font-medium">{t('No items match your filters')}</p>
+                    <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                      {t('Clear Filters')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">{t('No inventory yet')}</p>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/warehouse/goods-receipt">{t('Goods Receipt')}</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <InventoryCardView
+              stock={sortedStock}
+              onAdjust={s => { setAdjustTarget(s); setAdjustDelta(''); setAdjustReason(''); }}
+              onTransfer={s => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); }}
+            />
+            {/* Card View Pagination */}
+            {totalCount > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>{t('per page')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-muted-foreground">
+                    {t('Page')} {page} {t('of')} {totalPages}
+                  </span>
+                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )
+      ) : (
+        /* Table View */
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('productName')}>
+                      {t('Product')}<SortIcon col="productName" />
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('batchSerialNumber')}>
+                      {t('Batch')}<SortIcon col="batchSerialNumber" />
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('locationName')}>
+                      {t('Location')}<SortIcon col="locationName" />
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('binLocation')}>
+                      {t('Bin Location')}<SortIcon col="binLocation" />
+                    </TableHead>
+                    <TableHead className="text-center">{t('Stock Level')}</TableHead>
+                    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityAvailable')}>
+                      {t('Available Quantity')}<SortIcon col="quantityAvailable" />
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityReserved')}>
+                      {t('Reserved Quantity')}<SortIcon col="quantityReserved" />
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('reorderPoint')}>
+                      {t('Reorder Point')}<SortIcon col="reorderPoint" />
+                    </TableHead>
+                    <TableHead className="w-10">
+                      <span className="sr-only">{t('Actions')}</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <SkeletonRows />
+                  ) : sortedStock.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={colCount} className="h-48 text-center">
+                        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                          <div className="rounded-full bg-muted p-4">
+                            <Package className="h-8 w-8 opacity-50" />
+                          </div>
+                          {activeFilters.length > 0 ? (
+                            <>
+                              <p className="font-medium">{t('No items match your filters')}</p>
+                              <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                                {t('Clear Filters')}
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-medium">{t('No inventory yet')}</p>
+                              <Button variant="outline" size="sm" asChild>
+                                <Link to="/warehouse/goods-receipt">{t('Goods Receipt')}</Link>
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : groups ? (
+                    groups.map(([key, group]) => {
+                      const isCollapsed = collapsedGroups.has(key);
+                      return (
+                        <>{/* Fragment per group */}
+                          <TableRow
+                            key={`group-${key}`}
+                            className="bg-muted/50 hover:bg-muted/70 cursor-pointer"
+                            onClick={() => toggleGroup(key)}
+                          >
+                            <TableCell colSpan={colCount} className="py-2">
+                              <div className="flex items-center gap-2 font-medium">
+                                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                {group.linkTo ? (
+                                  <Link
+                                    to={group.linkTo}
+                                    className="hover:underline text-primary"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    {group.label}
+                                  </Link>
+                                ) : group.label}
+                                <Badge variant="secondary" className="ml-1 text-xs">
+                                  {group.rows.length}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {!isCollapsed && group.rows.map((row, idx) => renderRow(row, idx))}
+                        </>
+                      );
+                    })
+                  ) : (
+                    sortedStock.map((row, idx) => renderRow(row, idx))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination */}
+            {!loading && totalCount > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>{t('per page')}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={page <= 1}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-muted-foreground">
+                    {t('Page')} {page} {t('of')} {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Right-click context menu (positioned absolutely) */}
       {ctxMenu && (
@@ -827,125 +1175,101 @@ export function InventoryListPage() {
         </div>
       )}
 
-      {/* Stock Adjustment Dialog */}
-      <Dialog open={!!adjustTarget} onOpenChange={open => { if (!open) setAdjustTarget(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('Stock Adjustment')}</DialogTitle>
-            <DialogDescription>
-              {adjustTarget?.productName ?? ''} — {adjustTarget?.batchSerialNumber ?? ''}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('Current Stock')}</span>
-              <span className="font-medium tabular-nums">{adjustTarget?.quantityAvailable.toLocaleString()}</span>
+      {/* Stock Adjustment — Sheet on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <Sheet open={!!adjustTarget} onOpenChange={open => { if (!open) setAdjustTarget(null); }}>
+          <SheetContent side="bottom" className="max-h-[70vh] rounded-t-2xl">
+            <SheetHeader>
+              <SheetTitle>{t('Stock Adjustment')}</SheetTitle>
+              <SheetDescription>
+                {adjustTarget?.productName ?? ''} — {adjustTarget?.batchSerialNumber ?? ''}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="px-4 overflow-y-auto flex-1">
+              {adjustDialogContent}
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="adj-delta">{t('Quantity Change')}</Label>
-              <Input
-                id="adj-delta"
-                type="number"
-                placeholder="+10 / -5"
-                value={adjustDelta}
-                onChange={e => setAdjustDelta(e.target.value)}
-              />
-            </div>
-            {adjustPreview != null && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{t('New Stock Level')}</span>
-                <span className={`font-medium tabular-nums ${adjustPreview < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                  {adjustPreview.toLocaleString()}
-                </span>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="adj-reason">{t('Adjustment Reason')}</Label>
-              <Input
-                id="adj-reason"
-                placeholder={t('Adjustment Reason')}
-                value={adjustReason}
-                onChange={e => setAdjustReason(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAdjustTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
-            <Button
-              disabled={adjustSaving || !adjustDelta || !adjustReason.trim()}
-              onClick={handleAdjustSubmit}
-            >
-              {t('Apply')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <SheetFooter className="flex-row gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setAdjustTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button
+                className="flex-1"
+                disabled={adjustSaving || !adjustDelta || !adjustReason.trim()}
+                onClick={handleAdjustSubmit}
+              >
+                {t('Apply')}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={!!adjustTarget} onOpenChange={open => { if (!open) setAdjustTarget(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t('Stock Adjustment')}</DialogTitle>
+              <DialogDescription>
+                {adjustTarget?.productName ?? ''} — {adjustTarget?.batchSerialNumber ?? ''}
+              </DialogDescription>
+            </DialogHeader>
+            {adjustDialogContent}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAdjustTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button
+                disabled={adjustSaving || !adjustDelta || !adjustReason.trim()}
+                onClick={handleAdjustSubmit}
+              >
+                {t('Apply')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* Stock Transfer Dialog */}
-      <Dialog open={!!transferTarget} onOpenChange={open => { if (!open) setTransferTarget(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('Stock Transfer')}</DialogTitle>
-            <DialogDescription>
-              {transferTarget?.productName ?? ''} — {transferTarget?.batchSerialNumber ?? ''}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>{t('From Location')}</Label>
-              <Input value={transferTarget?.locationName ?? ''} readOnly className="bg-muted" />
+      {/* Stock Transfer — Sheet on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <Sheet open={!!transferTarget} onOpenChange={open => { if (!open) setTransferTarget(null); }}>
+          <SheetContent side="bottom" className="max-h-[70vh] rounded-t-2xl">
+            <SheetHeader>
+              <SheetTitle>{t('Stock Transfer')}</SheetTitle>
+              <SheetDescription>
+                {transferTarget?.productName ?? ''} — {transferTarget?.batchSerialNumber ?? ''}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="px-4 overflow-y-auto flex-1">
+              {transferDialogContent}
             </div>
-            <div className="space-y-1.5">
-              <Label>{t('Destination Location')}</Label>
-              <Select value={transferDest} onValueChange={setTransferDest}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('Destination Location')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations
-                    .filter(l => l.id !== transferTarget?.locationId)
-                    .map(l => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('Transfer Quantity')}</Label>
-              <Input
-                type="number"
-                min={1}
-                max={transferTarget?.quantityAvailable ?? 9999}
-                placeholder="0"
-                value={transferQty}
-                onChange={e => setTransferQty(e.target.value)}
-              />
-              {transferTarget && (
-                <p className="text-xs text-muted-foreground">
-                  {t('Available Quantity')}: {transferTarget.quantityAvailable.toLocaleString()}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('Transfer Reason')}</Label>
-              <Input
-                placeholder={t('Transfer Reason')}
-                value={transferReason}
-                onChange={e => setTransferReason(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
-            <Button
-              disabled={transferSaving || !transferDest || !transferQty || parseInt(transferQty, 10) <= 0}
-              onClick={handleTransferSubmit}
-            >
-              {t('Transfer')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <SheetFooter className="flex-row gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setTransferTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button
+                className="flex-1"
+                disabled={transferSaving || !transferDest || !transferQty || parseInt(transferQty, 10) <= 0}
+                onClick={handleTransferSubmit}
+              >
+                {t('Transfer')}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={!!transferTarget} onOpenChange={open => { if (!open) setTransferTarget(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t('Stock Transfer')}</DialogTitle>
+              <DialogDescription>
+                {transferTarget?.productName ?? ''} — {transferTarget?.batchSerialNumber ?? ''}
+              </DialogDescription>
+            </DialogHeader>
+            {transferDialogContent}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTransferTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button
+                disabled={transferSaving || !transferDest || !transferQty || parseInt(transferQty, 10) <= 0}
+                onClick={handleTransferSubmit}
+              >
+                {t('Transfer')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -1,20 +1,60 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Package, Camera, RotateCcw, AlertTriangle, CheckCircle, Megaphone, Truck,
+  Package, Camera, RotateCcw, AlertTriangle, CheckCircle, Megaphone, Truck, CheckSquare, Square,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getSampleShipments, getSampleDashboardStats, getOverdueSamples } from '@/services/supabase/wh-samples';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getSampleShipments, getSampleDashboardStats, getOverdueSamples, updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
+import { getContentPosts } from '@/services/supabase/wh-content';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
-import type { WhShipment, SampleDashboardStats, SampleStatus } from '@/types/warehouse';
+import type { WhShipment, SampleDashboardStats, SampleStatus, WhContentPost } from '@/types/warehouse';
 
 /** Sample statuses that are considered "final" (not shown in active table) */
 const FINAL_SAMPLE_STATUSES: SampleStatus[] = ['returned', 'kept'];
+
+function DeadlineCountdownBadge({ deadline }: { deadline: string | undefined }) {
+  const { t } = useTranslation('warehouse');
+  if (!deadline) return <span className="text-muted-foreground">—</span>;
+
+  const now = new Date();
+  const dl = new Date(deadline);
+  const diffMs = dl.getTime() - now.getTime();
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (days < 0) {
+    return (
+      <Badge variant="destructive" className="text-xs">
+        {Math.abs(days)}d {t('overdue')}
+      </Badge>
+    );
+  }
+  if (days <= 3) {
+    return (
+      <Badge className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+        {days}d {t('days left')}
+      </Badge>
+    );
+  }
+  if (days <= 7) {
+    return (
+      <Badge className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+        {days}d {t('days left')}
+      </Badge>
+    );
+  }
+  return (
+    <span className="text-sm text-muted-foreground">
+      {dl.toLocaleDateString()}
+    </span>
+  );
+}
 
 export function SampleDashboardPage() {
   const { t } = useTranslation('warehouse');
@@ -23,7 +63,10 @@ export function SampleDashboardPage() {
   const [stats, setStats] = useState<SampleDashboardStats | null>(null);
   const [activeSamples, setActiveSamples] = useState<WhShipment[]>([]);
   const [overdueSamples, setOverdueSamples] = useState<WhShipment[]>([]);
+  const [contentPosts, setContentPosts] = useState<WhContentPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   // -- Animated KPIs ----------------------------------------------------------
   const animatedSamplesOut = useAnimatedNumber(stats?.samplesOut ?? 0);
@@ -34,33 +77,30 @@ export function SampleDashboardPage() {
   const animatedCampaigns = useAnimatedNumber(stats?.totalCampaigns ?? 0);
 
   // -- Load data --------------------------------------------------------------
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [st, allSamples, overdue, posts] = await Promise.all([
+        getSampleDashboardStats(),
+        getSampleShipments(),
+        getOverdueSamples(),
+        getContentPosts(),
+      ]);
+      setStats(st);
+      setOverdueSamples(overdue);
+      setContentPosts(posts);
 
-    async function load() {
-      setLoading(true);
-      try {
-        const [st, allSamples, overdue] = await Promise.all([
-          getSampleDashboardStats(),
-          getSampleShipments(),
-          getOverdueSamples(),
-        ]);
-        if (cancelled) return;
-        setStats(st);
-        setOverdueSamples(overdue);
-
-        // Filter active samples: exclude final statuses
-        const active = allSamples.filter(
-          (s) => s.sampleMeta && !FINAL_SAMPLE_STATUSES.includes(s.sampleMeta.sampleStatus)
-        );
-        setActiveSamples(active);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      // Filter active samples: exclude final statuses
+      const active = allSamples.filter(
+        (s) => s.sampleMeta && !FINAL_SAMPLE_STATUSES.includes(s.sampleMeta.sampleStatus)
+      );
+      setActiveSamples(active);
+    } finally {
+      setLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   /** Calculate days overdue for a given deadline */
   function daysOverdue(deadline: string | undefined): number {
@@ -68,6 +108,56 @@ export function SampleDashboardPage() {
     const diff = Date.now() - new Date(deadline).getTime();
     return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
   }
+
+  // -- Bulk selection helpers --------------------------------------------------
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === activeSamples.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(activeSamples.map(s => s.id)));
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: SampleStatus) => {
+    if (selectedIds.size === 0) return;
+    setBulkUpdating(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id => updateSampleStatus(id, status))
+      );
+      setSelectedIds(new Set());
+      await load();
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleBulkContentUpdate = async (status: 'received' | 'verified') => {
+    if (selectedIds.size === 0) return;
+    setBulkUpdating(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id => updateContentStatus(id, status))
+      );
+      setSelectedIds(new Set());
+      await load();
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  // Find content post linked to a shipment
+  const getContentLink = (shipmentId: string) => {
+    return contentPosts.find(p => p.shipmentId === shipmentId);
+  };
 
   // -- Loading ----------------------------------------------------------------
   if (loading) {
@@ -157,16 +247,55 @@ export function SampleDashboardPage() {
         </Card>
       </div>
 
-      {/* -- Active Samples -------------------------------------------------- */}
+      {/* -- Active Samples with Bulk Actions -------------------------------- */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">{t('Active Samples')}</CardTitle>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedIds.size} {t('selected')}
+              </span>
+              <Select
+                onValueChange={(v) => handleBulkStatusUpdate(v as SampleStatus)}
+                disabled={bulkUpdating}
+              >
+                <SelectTrigger className="h-8 w-[180px] text-xs">
+                  <SelectValue placeholder={t('Bulk Update Status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="awaiting_content">{t('awaiting_content')}</SelectItem>
+                  <SelectItem value="content_received">{t('content_received')}</SelectItem>
+                  <SelectItem value="return_pending">{t('return_pending')}</SelectItem>
+                  <SelectItem value="returned">{t('returned')}</SelectItem>
+                  <SelectItem value="kept">{t('kept')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => handleBulkContentUpdate('received')}
+                disabled={bulkUpdating}
+              >
+                {t('Mark Content Received')}
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <button onClick={toggleSelectAll} className="p-1 hover:bg-muted rounded">
+                      {selectedIds.size === activeSamples.length && activeSamples.length > 0
+                        ? <CheckSquare className="h-4 w-4" />
+                        : <Square className="h-4 w-4 text-muted-foreground" />
+                      }
+                    </button>
+                  </TableHead>
                   <TableHead>{t('Shipment Number')}</TableHead>
                   <TableHead>{t('Recipient')}</TableHead>
                   <TableHead>{t('Sample Type')}</TableHead>
@@ -174,57 +303,79 @@ export function SampleDashboardPage() {
                   <TableHead>{t('Content Status')}</TableHead>
                   <TableHead>{t('Return Deadline')}</TableHead>
                   <TableHead>{t('Content Deadline')}</TableHead>
+                  <TableHead>{t('Content')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activeSamples.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
                       {t('No active samples')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  activeSamples.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>
-                        <Link
-                          to={`/warehouse/shipments/${s.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {s.shipmentNumber}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-sm">{s.recipientName}</TableCell>
-                      <TableCell>
-                        {s.sampleMeta?.sampleType && (
-                          <Badge variant="outline" className="text-xs">
-                            {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {s.sampleMeta?.sampleStatus && (
-                          <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {s.sampleMeta?.contentStatus && (
-                          <ContentStatusBadge status={s.sampleMeta.contentStatus} />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {s.sampleMeta?.returnDeadline
-                          ? new Date(s.sampleMeta.returnDeadline).toLocaleDateString()
-                          : '—'}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {s.sampleMeta?.contentDeadline
-                          ? new Date(s.sampleMeta.contentDeadline).toLocaleDateString()
-                          : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  activeSamples.map((s) => {
+                    const contentPost = getContentLink(s.id);
+                    return (
+                      <TableRow key={s.id} className={selectedIds.has(s.id) ? 'bg-primary/5' : ''}>
+                        <TableCell>
+                          <button onClick={() => toggleSelect(s.id)} className="p-1 hover:bg-muted rounded">
+                            {selectedIds.has(s.id)
+                              ? <CheckSquare className="h-4 w-4 text-primary" />
+                              : <Square className="h-4 w-4 text-muted-foreground" />
+                            }
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            to={`/warehouse/shipments/${s.id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {s.shipmentNumber}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-sm">{s.recipientName}</TableCell>
+                        <TableCell>
+                          {s.sampleMeta?.sampleType && (
+                            <Badge variant="outline" className="text-xs">
+                              {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {s.sampleMeta?.sampleStatus && (
+                            <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {s.sampleMeta?.contentStatus && (
+                            <ContentStatusBadge status={s.sampleMeta.contentStatus} />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <DeadlineCountdownBadge deadline={s.sampleMeta?.returnDeadline} />
+                        </TableCell>
+                        <TableCell>
+                          <DeadlineCountdownBadge deadline={s.sampleMeta?.contentDeadline} />
+                        </TableCell>
+                        <TableCell>
+                          {contentPost ? (
+                            <a
+                              href={contentPost.postUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline truncate max-w-[120px] block"
+                            >
+                              {contentPost.platform}
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -290,29 +441,11 @@ export function SampleDashboardPage() {
                             <ContentStatusBadge status={meta.contentStatus} />
                           )}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {meta?.returnDeadline ? (
-                            <span className={returnDays > 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}>
-                              {new Date(meta.returnDeadline).toLocaleDateString()}
-                              {returnDays > 0 && (
-                                <span className="ml-1 text-xs">
-                                  ({t('Return overdue')})
-                                </span>
-                              )}
-                            </span>
-                          ) : '—'}
+                        <TableCell>
+                          <DeadlineCountdownBadge deadline={meta?.returnDeadline} />
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {meta?.contentDeadline ? (
-                            <span className={contentDays > 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}>
-                              {new Date(meta.contentDeadline).toLocaleDateString()}
-                              {contentDays > 0 && (
-                                <span className="ml-1 text-xs">
-                                  ({t('Content overdue')})
-                                </span>
-                              )}
-                            </span>
-                          ) : '—'}
+                        <TableCell>
+                          <DeadlineCountdownBadge deadline={meta?.contentDeadline} />
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge variant="destructive" className="text-xs">

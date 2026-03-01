@@ -9,7 +9,17 @@ export type InfluencerTier = 'nano' | 'micro' | 'mid' | 'macro' | 'mega';
 export type SampleType = 'gift' | 'loan';
 export type SampleStatus = 'distributed' | 'awaiting_content' | 'content_received' | 'return_pending' | 'returned' | 'kept';
 export type ContentStatus = 'no_content' | 'awaiting' | 'received' | 'verified';
-export type CampaignStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+export type CampaignStatus = 'draft' | 'planning' | 'outreach' | 'active' | 'review' | 'completed' | 'cancelled';
+export type CampaignInfluencerStatus = 'invited' | 'accepted' | 'negotiating' | 'contracted' | 'sample_sent' | 'content_pending' | 'content_delivered' | 'completed' | 'declined' | 'cancelled';
+export type CompensationType = 'product_only' | 'paid' | 'affiliate' | 'hybrid';
+export type ContentType = 'post' | 'story' | 'reel' | 'video' | 'short' | 'other';
+export type CampaignEventType =
+  | 'campaign_created' | 'campaign_updated' | 'campaign_status_changed'
+  | 'influencer_added' | 'influencer_removed' | 'influencer_status_changed'
+  | 'sample_shipped' | 'sample_delivered' | 'sample_returned'
+  | 'content_received' | 'content_verified'
+  | 'budget_updated' | 'deadline_approaching' | 'milestone_reached'
+  | 'note_added';
 
 export interface SampleShipmentMeta {
   sampleType: SampleType;
@@ -22,6 +32,14 @@ export interface SampleShipmentMeta {
   contentStatus: ContentStatus;
 }
 
+export interface CampaignDeliverable {
+  platform: SocialPlatform;
+  contentType: ContentType;
+  quantity: number;
+  deadline?: string;
+  notes?: string;
+}
+
 export interface WhCampaign {
   id: string;
   tenantId: string;
@@ -31,6 +49,7 @@ export interface WhCampaign {
   startDate?: string;
   endDate?: string;
   budget?: number;
+  budgetSpent?: number;
   currency: string;
   goals?: string;
   productIds: string[];
@@ -65,7 +84,11 @@ export interface WhContentPost {
   views?: number;
   likes?: number;
   comments?: number;
+  shares?: number;
   engagementRate?: number;
+  thumbnailUrl?: string;
+  estimatedReach?: number;
+  contentType?: ContentType;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -81,8 +104,143 @@ export interface WhContentPostInput {
   views?: number;
   likes?: number;
   comments?: number;
+  shares?: number;
   engagementRate?: number;
+  thumbnailUrl?: string;
+  estimatedReach?: number;
+  contentType?: ContentType;
   notes?: string;
+}
+
+export interface WhCampaignInfluencer {
+  id: string;
+  tenantId: string;
+  campaignId: string;
+  contactId: string;
+  status: CampaignInfluencerStatus;
+  budgetAllocated: number;
+  budgetSpent: number;
+  currency: string;
+  deliverables: CampaignDeliverable[];
+  compensationType: CompensationType;
+  contractTerms?: string;
+  paymentTerms?: string;
+  notes?: string;
+  invitedAt?: string;
+  acceptedAt?: string;
+  completedAt?: string;
+  shipmentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Joined
+  contact?: WhContact;
+}
+
+export interface WhCampaignInfluencerInput {
+  campaignId: string;
+  contactId: string;
+  status?: CampaignInfluencerStatus;
+  budgetAllocated?: number;
+  budgetSpent?: number;
+  currency?: string;
+  deliverables?: CampaignDeliverable[];
+  compensationType?: CompensationType;
+  contractTerms?: string;
+  paymentTerms?: string;
+  notes?: string;
+  shipmentId?: string;
+}
+
+export interface WhCampaignEvent {
+  id: string;
+  tenantId: string;
+  campaignId: string;
+  eventType: CampaignEventType;
+  description?: string;
+  actorId?: string;
+  actorType: 'system' | 'user';
+  contactId?: string;
+  shipmentId?: string;
+  contentPostId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface WhCampaignEventInput {
+  campaignId: string;
+  eventType: CampaignEventType;
+  description?: string;
+  actorType?: 'system' | 'user';
+  contactId?: string;
+  shipmentId?: string;
+  contentPostId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// ============================================
+// INFLUENCER HUB DASHBOARD TYPES
+// ============================================
+
+export interface InfluencerHubStats {
+  activeCampaigns: number;
+  totalReach: number;
+  avgEngagement: number;
+  samplesOut: number;
+  contentReceived: number;
+  budgetSpent: number;
+  totalViews: number;
+  overdueItems: number;
+}
+
+export interface InfluencerRanking {
+  contactId: string;
+  contactName: string;
+  platform: SocialPlatform;
+  followerCount: number;
+  engagementRate: number;
+  contentCount: number;
+  totalViews: number;
+}
+
+export interface ActivityItem {
+  id: string;
+  eventType: CampaignEventType;
+  description: string;
+  campaignName?: string;
+  contactName?: string;
+  createdAt: string;
+}
+
+export interface DeadlineItem {
+  id: string;
+  type: 'content' | 'return' | 'campaign_end';
+  label: string;
+  campaignName?: string;
+  contactName?: string;
+  deadline: string;
+  daysRemaining: number;
+}
+
+export interface PlatformBreakdown {
+  platform: SocialPlatform;
+  count: number;
+  totalViews: number;
+  totalEngagement: number;
+}
+
+export interface DailyEngagement {
+  date: string;
+  views: number;
+  likes: number;
+  comments: number;
+}
+
+export interface CampaignAnalytics {
+  campaign: WhCampaign;
+  stats: CampaignStats;
+  influencerCount: number;
+  platformBreakdown: PlatformBreakdown[];
+  topContent: WhContentPost[];
 }
 
 export interface CampaignStats {

@@ -22,6 +22,7 @@ function transformCampaign(row: any): WhCampaign {
     startDate: row.start_date || undefined,
     endDate: row.end_date || undefined,
     budget: row.budget != null ? Number(row.budget) : undefined,
+    budgetSpent: row.budget_spent != null ? Number(row.budget_spent) : undefined,
     currency: row.currency || 'EUR',
     goals: row.goals || undefined,
     productIds: row.product_ids || [],

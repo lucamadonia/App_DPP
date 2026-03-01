@@ -126,6 +126,10 @@ const CampaignListPage = lazy(() => import('@/pages/warehouse/CampaignListPage')
 const CampaignFormPage = lazy(() => import('@/pages/warehouse/CampaignFormPage').then(m => ({ default: m.CampaignFormPage })));
 const CampaignDetailPage = lazy(() => import('@/pages/warehouse/CampaignDetailPage').then(m => ({ default: m.CampaignDetailPage })));
 const SampleDashboardPage = lazy(() => import('@/pages/warehouse/SampleDashboardPage').then(m => ({ default: m.SampleDashboardPage })));
+const InfluencerHubPage = lazy(() => import('@/pages/warehouse/InfluencerHubPage').then(m => ({ default: m.InfluencerHubPage })));
+const InfluencerDirectoryPage = lazy(() => import('@/pages/warehouse/InfluencerDirectoryPage').then(m => ({ default: m.InfluencerDirectoryPage })));
+const ContentGalleryPage = lazy(() => import('@/pages/warehouse/ContentGalleryPage').then(m => ({ default: m.ContentGalleryPage })));
+const InfluencerAnalyticsPage = lazy(() => import('@/pages/warehouse/InfluencerAnalyticsPage').then(m => ({ default: m.InfluencerAnalyticsPage })));
 
 // Compliance
 const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
@@ -410,6 +414,10 @@ function NormalAppRoutes() {
           <Route path="warehouse/campaigns/:id" element={<CampaignDetailPage />} />
           <Route path="warehouse/campaigns/:id/edit" element={<CampaignFormPage />} />
           <Route path="warehouse/samples" element={<SampleDashboardPage />} />
+          <Route path="warehouse/influencer-hub" element={<InfluencerHubPage />} />
+          <Route path="warehouse/influencer-directory" element={<InfluencerDirectoryPage />} />
+          <Route path="warehouse/content-gallery" element={<ContentGalleryPage />} />
+          <Route path="warehouse/influencer-analytics" element={<InfluencerAnalyticsPage />} />
           <Route path="warehouse/ai" element={<AILogisticsHubPage />} />
           <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
           <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />

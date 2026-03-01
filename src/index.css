@@ -690,6 +690,14 @@ code, .font-mono {
   box-shadow: 0 0 40px rgba(59, 130, 246, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+/* Warehouse Stepper Animation */
+@keyframes stepper-press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+.animate-stepper-press { animation: stepper-press 0.15s ease-out; }
+
 /* Staggered table row fade-in for list pages */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(4px); }

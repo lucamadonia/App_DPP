@@ -2,7 +2,7 @@
  * Warehouse zone type configuration with icons, colors, and labels.
  */
 
-import type { WarehouseZoneType, ShipmentStatus, SampleStatus, ContentStatus, CampaignStatus, InfluencerTier, SocialPlatform } from '@/types/warehouse';
+import type { WarehouseZoneType, ShipmentStatus, SampleStatus, ContentStatus, CampaignStatus, CampaignInfluencerStatus, CompensationType, ContentType, CampaignEventType, InfluencerTier, SocialPlatform } from '@/types/warehouse';
 
 export interface ZoneTypeConfig {
   icon: string;
@@ -154,9 +154,69 @@ export const CONTENT_STATUS_COLORS: Record<ContentStatus, string> = {
 
 export const CAMPAIGN_STATUS_COLORS: Record<CampaignStatus, string> = {
   draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  planning: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  outreach: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
   active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  review: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
+export const CAMPAIGN_INFLUENCER_STATUS_COLORS: Record<CampaignInfluencerStatus, string> = {
+  invited: 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200',
+  accepted: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+  negotiating: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  contracted: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  sample_sent: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  content_pending: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  content_delivered: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+  completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  declined: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
+export const CAMPAIGN_KANBAN_COLUMNS: { key: CampaignStatus; labelEn: string; labelDe: string; borderColor: string }[] = [
+  { key: 'draft', labelEn: 'Draft', labelDe: 'Entwurf', borderColor: 'border-t-gray-400' },
+  { key: 'planning', labelEn: 'Planning', labelDe: 'Planung', borderColor: 'border-t-indigo-500' },
+  { key: 'outreach', labelEn: 'Outreach', labelDe: 'Kontaktaufnahme', borderColor: 'border-t-amber-500' },
+  { key: 'active', labelEn: 'Active', labelDe: 'Aktiv', borderColor: 'border-t-green-500' },
+  { key: 'review', labelEn: 'Review', labelDe: 'Prüfung', borderColor: 'border-t-purple-500' },
+  { key: 'completed', labelEn: 'Completed', labelDe: 'Abgeschlossen', borderColor: 'border-t-blue-500' },
+  { key: 'cancelled', labelEn: 'Cancelled', labelDe: 'Abgebrochen', borderColor: 'border-t-red-500' },
+];
+
+export const COMPENSATION_TYPE_CONFIG: Record<CompensationType, { labelEn: string; labelDe: string; icon: string }> = {
+  product_only: { labelEn: 'Product Only', labelDe: 'Nur Produkt', icon: 'Package' },
+  paid: { labelEn: 'Paid', labelDe: 'Bezahlt', icon: 'Banknote' },
+  affiliate: { labelEn: 'Affiliate', labelDe: 'Affiliate', icon: 'Link' },
+  hybrid: { labelEn: 'Hybrid', labelDe: 'Hybrid', icon: 'Layers' },
+};
+
+export const CONTENT_TYPE_CONFIG: Record<ContentType, { labelEn: string; labelDe: string; icon: string }> = {
+  post: { labelEn: 'Post', labelDe: 'Beitrag', icon: 'Image' },
+  story: { labelEn: 'Story', labelDe: 'Story', icon: 'CircleDot' },
+  reel: { labelEn: 'Reel', labelDe: 'Reel', icon: 'Film' },
+  video: { labelEn: 'Video', labelDe: 'Video', icon: 'Video' },
+  short: { labelEn: 'Short', labelDe: 'Short', icon: 'Smartphone' },
+  other: { labelEn: 'Other', labelDe: 'Sonstige', icon: 'FileText' },
+};
+
+export const CAMPAIGN_EVENT_ICONS: Record<CampaignEventType, string> = {
+  campaign_created: 'Plus',
+  campaign_updated: 'Pencil',
+  campaign_status_changed: 'RefreshCw',
+  influencer_added: 'UserPlus',
+  influencer_removed: 'UserMinus',
+  influencer_status_changed: 'UserCheck',
+  sample_shipped: 'Truck',
+  sample_delivered: 'PackageCheck',
+  sample_returned: 'RotateCcw',
+  content_received: 'Camera',
+  content_verified: 'CheckCircle',
+  budget_updated: 'Banknote',
+  deadline_approaching: 'Clock',
+  milestone_reached: 'Flag',
+  note_added: 'MessageSquare',
 };
 
 export const INFLUENCER_TIER_CONFIG: Record<InfluencerTier, { labelEn: string; labelDe: string; color: string; range: string }> = {

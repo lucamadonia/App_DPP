@@ -11,58 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getWarehouseStats, getRecentTransactions, getPendingActions } from '@/services/supabase/wh-stock';
+import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
+import { StockMovementChart, StockByLocationChart } from '@/components/warehouse/WarehouseCharts';
+import { getWarehouseStats, getRecentTransactions, getPendingActions, getStockMovementTrend } from '@/services/supabase/wh-stock';
 import { getShipmentStats } from '@/services/supabase/wh-shipments';
 import { getLocationCapacitySummaries } from '@/services/supabase/wh-locations';
 import { getSampleDashboardStats } from '@/services/supabase/wh-samples';
-import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { relativeTime } from '@/lib/animations';
 import { formatVolumeM3 } from '@/lib/warehouse-volume';
 import type { WhStockTransaction, LocationCapacitySummary, PendingAction } from '@/types/warehouse';
-
-/* -------------------------------------------------------------------------- */
-/*  Animated KPI card                                                         */
-/* -------------------------------------------------------------------------- */
-
-function KPICard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  bgColor,
-  loading,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  loading: boolean;
-}) {
-  const animated = useAnimatedNumber(loading ? 0 : value);
-
-  return (
-    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-3">
-          <div className={`rounded-lg p-2.5 ${bgColor}`}>
-            <Icon className={`h-5 w-5 ${color}`} />
-          </div>
-          <div className="min-w-0">
-            {loading ? (
-              <Skeleton className="h-7 w-16 mb-1" />
-            ) : (
-              <p className="text-2xl font-bold tabular-nums leading-none">
-                {animated.toLocaleString()}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*  Transaction type icon helper                                              */
@@ -122,18 +80,20 @@ export function WarehouseDashboardPage() {
   const [locations, setLocations] = useState<LocationCapacitySummary[]>([]);
   const [actions, setActions] = useState<PendingAction[]>([]);
   const [transactions, setTransactions] = useState<WhStockTransaction[]>([]);
+  const [movementData, setMovementData] = useState<{ date: string; receipts: number; shipments: number; adjustments: number }[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const [s, ss, loc, act, tx, samples] = await Promise.all([
+        const [s, ss, loc, act, tx, samples, movement] = await Promise.all([
           getWarehouseStats(),
           getShipmentStats(),
           getLocationCapacitySummaries(),
           getPendingActions(),
           getRecentTransactions(8),
           getSampleDashboardStats(),
+          getStockMovementTrend(7),
         ]);
         if (cancelled) return;
         setStats(s);
@@ -142,6 +102,7 @@ export function WarehouseDashboardPage() {
         setLocations(loc);
         setActions(act);
         setTransactions(tx);
+        setMovementData(movement);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -149,6 +110,8 @@ export function WarehouseDashboardPage() {
     load();
     return () => { cancelled = true; };
   }, []);
+
+  const movementSparkData = movementData.map(d => d.receipts + d.shipments + d.adjustments);
 
   /* ---- KPI definitions -------------------------------------------------- */
 
@@ -158,77 +121,102 @@ export function WarehouseDashboardPage() {
       value: stats.totalStock,
       icon: Package,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-100 dark:bg-blue-950',
+      gradient: 'from-blue-500/20 to-blue-600/10',
+      sparkData: movementSparkData,
+      sparkColor: '#3B82F6',
     },
     {
       label: t('Total Locations'),
       value: stats.totalLocations,
       icon: Warehouse,
       color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-950',
+      gradient: 'from-green-500/20 to-green-600/10',
     },
     {
       label: t('Open Shipments'),
       value: shipmentStats.openShipments,
       icon: Truck,
       color: 'text-orange-600',
-      bgColor: 'bg-orange-100 dark:bg-orange-950',
+      gradient: 'from-orange-500/20 to-orange-600/10',
     },
     {
       label: t('Shipped Today'),
       value: shipmentStats.shippedToday,
       icon: TrendingUp,
       color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-950',
+      gradient: 'from-purple-500/20 to-purple-600/10',
     },
     {
       label: t('Low Stock Alerts'),
       value: stats.lowStockAlerts,
       icon: AlertTriangle,
       color: stats.lowStockAlerts > 0 ? 'text-red-600' : 'text-muted-foreground',
-      bgColor: stats.lowStockAlerts > 0
-        ? 'bg-red-100 dark:bg-red-950'
-        : 'bg-muted',
+      gradient: stats.lowStockAlerts > 0
+        ? 'from-red-500/20 to-red-600/10'
+        : 'from-muted/50 to-muted/30',
     },
   ];
+
+  const kpiVisible = useStaggeredList(kpis.length, { interval: 80, initialDelay: 100 });
 
   /* ---- Quick action definitions ----------------------------------------- */
 
   const quickActions = [
-    { label: t('Goods Receipt'), to: '/warehouse/goods-receipt', icon: Package },
-    { label: t('Create Shipment'), to: '/warehouse/shipments/new', icon: Truck },
-    { label: t('Transfer'), to: '/warehouse/transfers', icon: ArrowRightLeft },
-    { label: t('Inventory'), to: '/warehouse/inventory', icon: ClipboardList },
-    { label: t('Warehouses'), to: '/warehouse/locations', icon: MapPin },
-    { label: t('Low Stock Alerts'), to: '/warehouse/inventory?lowStock=true', icon: AlertTriangle },
+    { label: t('Goods Receipt'), to: '/warehouse/goods-receipt', icon: Package, gradient: 'from-blue-500 to-blue-600' },
+    { label: t('Create Shipment'), to: '/warehouse/shipments/new', icon: Truck, gradient: 'from-purple-500 to-purple-600' },
+    { label: t('Transfer'), to: '/warehouse/transfers', icon: ArrowRightLeft, gradient: 'from-orange-500 to-orange-600' },
+    { label: t('Inventory'), to: '/warehouse/inventory', icon: ClipboardList, gradient: 'from-emerald-500 to-emerald-600' },
+    { label: t('Warehouses'), to: '/warehouse/locations', icon: MapPin, gradient: 'from-cyan-500 to-cyan-600' },
+    { label: t('Low Stock Alerts'), to: '/warehouse/inventory?lowStock=true', icon: AlertTriangle, gradient: 'from-red-500 to-red-600' },
   ];
+
+  /* ---- Stock by location data for chart --------------------------------- */
+
+  const stockByLocation = locations.map(l => ({
+    locationName: l.locationName + (l.locationCode ? ` (${l.locationCode})` : ''),
+    totalUnits: l.totalUnits,
+  })).filter(l => l.totalUnits > 0);
+
+  /* ---- Timeline stagger ------------------------------------------------- */
+  const txVisible = useStaggeredList(transactions.length, { interval: 60, initialDelay: 200 });
 
   /* ---- Render ----------------------------------------------------------- */
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Warehouse & Fulfillment')}</h1>
-        <p className="text-muted-foreground">{t('Dashboard')}</p>
+      {/* Hero Header */}
+      <div className="rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5 text-white">
+        <h1 className="text-2xl font-bold tracking-tight">{t('Warehouse & Fulfillment')}</h1>
+        <p className="text-white/70 text-sm mt-0.5">{t('Dashboard Overview')}</p>
       </div>
 
       {/* KPI cards */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-        {kpis.map((kpi) => (
-          <KPICard key={kpi.label} {...kpi} loading={loading} />
+        {kpis.map((kpi, i) => (
+          <div
+            key={kpi.label}
+            className={`transition-all duration-300 ${kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+          >
+            <WarehouseKPICard {...kpi} loading={loading} />
+          </div>
         ))}
       </div>
 
       {/* Sample Tracking KPIs */}
       {(sampleStats.samplesOut > 0 || sampleStats.totalCampaigns > 0) && (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          <KPICard label={t('Samples Out')} value={sampleStats.samplesOut} icon={Package} color="text-pink-600" bgColor="bg-pink-100 dark:bg-pink-950" loading={loading} />
-          <KPICard label={t('Returns Pending')} value={sampleStats.returnsPending} icon={RotateCcw} color="text-orange-600" bgColor="bg-orange-100 dark:bg-orange-950" loading={loading} />
-          <KPICard label={t('Content Awaiting')} value={sampleStats.awaitingContent} icon={Camera} color="text-amber-600" bgColor="bg-amber-100 dark:bg-amber-950" loading={loading} />
-          <KPICard label={t('Active Campaigns')} value={sampleStats.totalCampaigns} icon={Megaphone} color="text-violet-600" bgColor="bg-violet-100 dark:bg-violet-950" loading={loading} />
+          <WarehouseKPICard label={t('Samples Out')} value={sampleStats.samplesOut} icon={Package} color="text-pink-600" gradient="from-pink-500/20 to-pink-600/10" loading={loading} />
+          <WarehouseKPICard label={t('Returns Pending')} value={sampleStats.returnsPending} icon={RotateCcw} color="text-orange-600" gradient="from-orange-500/20 to-orange-600/10" loading={loading} />
+          <WarehouseKPICard label={t('Content Awaiting')} value={sampleStats.awaitingContent} icon={Camera} color="text-amber-600" gradient="from-amber-500/20 to-amber-600/10" loading={loading} />
+          <WarehouseKPICard label={t('Active Campaigns')} value={sampleStats.totalCampaigns} icon={Megaphone} color="text-violet-600" gradient="from-violet-500/20 to-violet-600/10" loading={loading} />
         </div>
       )}
+
+      {/* Charts Section */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StockMovementChart data={movementData} />
+        <StockByLocationChart data={stockByLocation} />
+      </div>
 
       {/* Top row: Capacity + Pending Actions */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -310,7 +298,6 @@ export function WarehouseDashboardPage() {
                           )}
                         </div>
                       </div>
-                      {/* Units bar */}
                       {capacityUnits > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Units')}</span>
@@ -331,7 +318,6 @@ export function WarehouseDashboardPage() {
                           </span>
                         </div>
                       )}
-                      {/* Volume bar */}
                       {hasVolume && (
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Volume')}</span>
@@ -402,9 +388,9 @@ export function WarehouseDashboardPage() {
         </Card>
       </div>
 
-      {/* Bottom row: Recent Activity + Quick Actions */}
+      {/* Bottom row: Recent Activity Timeline + Quick Actions */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Activity */}
+        {/* Recent Activity — Timeline */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -436,47 +422,57 @@ export function WarehouseDashboardPage() {
                 {t('No recent activity')}
               </p>
             ) : (
-              <div className="space-y-2">
-                {transactions.map((tx) => {
-                  const TxIcon = txIcon(tx.type);
-                  const isPositive = tx.quantity > 0;
-                  return (
-                    <div
-                      key={tx.id}
-                      className="flex items-center gap-3 rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors duration-150"
-                    >
-                      <div className="rounded-md bg-muted p-1.5 shrink-0">
-                        <TxIcon className="h-4 w-4 text-muted-foreground" />
+              <div className="relative pl-6">
+                {/* Vertical timeline line */}
+                <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
+
+                <div className="space-y-1">
+                  {transactions.map((tx, i) => {
+                    const TxIcon = txIcon(tx.type);
+                    const isPositive = tx.quantity > 0;
+                    return (
+                      <div
+                        key={tx.id}
+                        className={`relative flex items-center gap-3 rounded-md p-2 -ml-6 pl-6 hover:bg-muted/50 transition-all duration-200 ${
+                          txVisible[i] ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
+                        }`}
+                        style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out' }}
+                      >
+                        {/* Timeline dot */}
+                        <div className="absolute left-[7px] top-1/2 -translate-y-1/2 flex h-[9px] w-[9px] items-center justify-center rounded-full bg-background border-2 border-primary z-10" />
+                        <div className="rounded-md bg-muted p-1.5 shrink-0">
+                          <TxIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {tx.productName || tx.productId}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {tx.locationName ?? t(tx.type)}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p
+                            className={`text-sm font-semibold tabular-nums ${
+                              isPositive ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {isPositive ? '+' : ''}{tx.quantity.toLocaleString()}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {relativeTime(tx.createdAt, locale)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">
-                          {tx.productName || tx.productId}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {tx.locationName ?? t(tx.type)}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p
-                          className={`text-sm font-semibold tabular-nums ${
-                            isPositive ? 'text-green-600' : 'text-red-600'
-                          }`}
-                        >
-                          {isPositive ? '+' : ''}{tx.quantity.toLocaleString()}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {relativeTime(tx.createdAt, locale)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — 3D Cards */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -487,17 +483,16 @@ export function WarehouseDashboardPage() {
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {quickActions.map((action) => (
-                <Button
+                <Link
                   key={action.to}
-                  variant="outline"
-                  className="h-auto py-4 flex-col gap-2 hover:shadow-md hover:border-primary/50 transition-all duration-200"
-                  asChild
+                  to={action.to}
+                  className="landing-3d-card rounded-xl border bg-card p-4 flex flex-col items-center gap-2.5 text-center group"
                 >
-                  <Link to={action.to}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${action.gradient} text-white transition-transform group-hover:scale-110`}>
                     <action.icon className="h-5 w-5" />
-                    <span className="text-xs text-center leading-tight">{action.label}</span>
-                  </Link>
-                </Button>
+                  </div>
+                  <span className="text-xs font-medium leading-tight">{action.label}</span>
+                </Link>
               ))}
             </div>
           </CardContent>

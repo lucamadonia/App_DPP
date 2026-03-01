@@ -592,6 +592,46 @@ export async function getRecentTransactions(limit = 10): Promise<WhStockTransact
   return (data || []).map(transformTransaction);
 }
 
+export async function getStockMovementTrend(days = 7): Promise<{ date: string; receipts: number; shipments: number; adjustments: number }[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceStr = since.toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('wh_stock_transactions')
+    .select('type, created_at')
+    .eq('tenant_id', tenantId)
+    .gte('created_at', sinceStr);
+
+  if (error) {
+    console.error('Failed to load stock movement trend:', error);
+    return [];
+  }
+
+  // Bucket by date
+  const map = new Map<string, { receipts: number; shipments: number; adjustments: number }>();
+  for (let d = 0; d < days; d++) {
+    const dt = new Date();
+    dt.setDate(dt.getDate() - (days - 1 - d));
+    const key = dt.toISOString().split('T')[0];
+    map.set(key, { receipts: 0, shipments: 0, adjustments: 0 });
+  }
+
+  for (const row of data || []) {
+    const key = row.created_at.split('T')[0];
+    const bucket = map.get(key);
+    if (!bucket) continue;
+    if (row.type === 'goods_receipt' || row.type === 'return_receipt') bucket.receipts++;
+    else if (row.type === 'shipment') bucket.shipments++;
+    else bucket.adjustments++;
+  }
+
+  return [...map.entries()].map(([date, counts]) => ({ date, ...counts }));
+}
+
 export async function getPendingActions(): Promise<PendingAction[]> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return [];

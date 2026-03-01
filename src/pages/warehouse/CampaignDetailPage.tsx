@@ -5,25 +5,30 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Pencil, Trash2, Package, Camera, RotateCcw, Eye,
   FileText, Truck, Tag, Calendar, Target, DollarSign,
+  Heart, Clock, Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { getCampaign, getCampaignStats, deleteCampaign } from '@/services/supabase/wh-campaigns';
 import { getSampleShipments } from '@/services/supabase/wh-samples';
-import { getContentPosts } from '@/services/supabase/wh-content';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
-import { CAMPAIGN_STATUS_COLORS } from '@/lib/warehouse-constants';
+import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
-import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
-import type { WhCampaign, CampaignStats, WhShipment, WhContentPost } from '@/types/warehouse';
+import { CampaignStatusPipeline } from '@/components/warehouse/influencer/CampaignStatusPipeline';
+import { BudgetTrackingWidget } from '@/components/warehouse/influencer/BudgetTrackingWidget';
+import { CampaignInfluencerRoster } from '@/components/warehouse/influencer/CampaignInfluencerRoster';
+import { CampaignTimeline } from '@/components/warehouse/influencer/CampaignTimeline';
+import { ContentGalleryGrid } from '@/components/warehouse/influencer/ContentGalleryGrid';
+import type { WhCampaign, CampaignStats, WhShipment } from '@/types/warehouse';
 
 export function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +39,6 @@ export function CampaignDetailPage() {
   const [campaign, setCampaign] = useState<WhCampaign | null>(null);
   const [stats, setStats] = useState<CampaignStats | null>(null);
   const [shipments, setShipments] = useState<WhShipment[]>([]);
-  const [contentPosts, setContentPosts] = useState<WhContentPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -42,24 +46,25 @@ export function CampaignDetailPage() {
   // -- Animated KPIs ----------------------------------------------------------
   const animatedSamples = useAnimatedNumber(stats?.totalSamples ?? 0);
   const animatedContentReceived = useAnimatedNumber(stats?.contentReceived ?? 0);
+  const animatedContentPending = useAnimatedNumber(stats?.contentPending ?? 0);
   const animatedReturnsPending = useAnimatedNumber(stats?.returnsPending ?? 0);
   const animatedViews = useAnimatedNumber(stats?.totalViews ?? 0);
+  const animatedEngagement = useAnimatedNumber(stats?.totalEngagement ?? 0);
+  const kpiVisible = useStaggeredList(6);
 
   // -- Load data --------------------------------------------------------------
   const loadData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const [c, st, sh, cp] = await Promise.all([
+      const [c, st, sh] = await Promise.all([
         getCampaign(id),
         getCampaignStats(id),
         getSampleShipments({ campaignId: id }),
-        getContentPosts({ campaignId: id }),
       ]);
       setCampaign(c);
       setStats(st);
       setShipments(sh);
-      setContentPosts(cp);
     } finally {
       setLoading(false);
     }
@@ -85,15 +90,28 @@ export function CampaignDetailPage() {
     }
   };
 
-  // -- Loading / Not found ----------------------------------------------------
+  // -- Loading ----------------------------------------------------------------
   if (loading) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="space-y-6">
+        <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 p-6">
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-96" />
+          <div className="mt-4">
+            <Skeleton className="h-10 w-full max-w-lg" />
+          </div>
+        </div>
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+        <Skeleton className="h-96 rounded-lg" />
       </div>
     );
   }
 
+  // -- Not found --------------------------------------------------------------
   if (!campaign) {
     return (
       <div className="space-y-4 text-center py-12">
@@ -108,94 +126,87 @@ export function CampaignDetailPage() {
     );
   }
 
+  // -- KPI data ---------------------------------------------------------------
+  const kpiCards = [
+    { label: 'Samples', value: animatedSamples, icon: Package, color: 'blue' },
+    { label: 'Content Received', value: animatedContentReceived, icon: Camera, color: 'green' },
+    { label: 'Content Pending', value: animatedContentPending, icon: Clock, color: 'amber' },
+    { label: 'Returns Pending', value: animatedReturnsPending, icon: RotateCcw, color: 'orange' },
+    { label: 'Total Views', value: animatedViews, icon: Eye, color: 'purple', format: true },
+    { label: 'Total Engagement', value: animatedEngagement, icon: Heart, color: 'pink', format: true },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* -- Header ---------------------------------------------------------- */}
-      <div className="flex items-start gap-4">
-        <Button variant="ghost" size="icon" asChild className="mt-1">
-          <Link to="/warehouse/campaigns">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight truncate bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            {campaign.name}
-          </h1>
-          {campaign.description && (
-            <p className="text-muted-foreground text-sm truncate">{campaign.description}</p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className={`${CAMPAIGN_STATUS_COLORS[campaign.status] || ''} border-0`}>
-            {t(campaign.status)}
-          </Badge>
-          <Button variant="outline" size="sm" asChild>
-            <Link to={`/warehouse/campaigns/${id}/edit`}>
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              {t('Edit Campaign')}
+      {/* -- Premium Header ---------------------------------------------------- */}
+      <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 p-6">
+        <div className="flex items-start gap-4">
+          <Button variant="ghost" size="icon" asChild className="mt-1 flex-shrink-0">
+            <Link to="/warehouse/campaigns">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="mr-2 h-3.5 w-3.5" />
-            {t('Delete Campaign')}
-          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight truncate">
+              {campaign.name}
+            </h1>
+            {campaign.description && (
+              <p className="text-muted-foreground text-sm mt-0.5 truncate">{campaign.description}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/warehouse/campaigns/${id}/edit`}>
+                <Pencil className="mr-2 h-3.5 w-3.5" />
+                {t('Edit Campaign')}
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-3.5 w-3.5" />
+              {t('Delete Campaign')}
+            </Button>
+          </div>
+        </div>
+
+        {/* Pipeline */}
+        <div className="mt-5">
+          <CampaignStatusPipeline currentStatus={campaign.status} />
         </div>
       </div>
 
-      {/* -- KPI Row --------------------------------------------------------- */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-blue-100 p-2.5 dark:bg-blue-900/30">
-              <Package className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('Samples')}</p>
-              <p className="text-2xl font-bold">{animatedSamples}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-green-100 p-2.5 dark:bg-green-900/30">
-              <Camera className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('Content Received')}</p>
-              <p className="text-2xl font-bold">{animatedContentReceived}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-orange-100 p-2.5 dark:bg-orange-900/30">
-              <RotateCcw className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('Returns Pending')}</p>
-              <p className="text-2xl font-bold">{animatedReturnsPending}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-purple-100 p-2.5 dark:bg-purple-900/30">
-              <Eye className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('Total Views')}</p>
-              <p className="text-2xl font-bold">{animatedViews.toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* -- KPI Row ----------------------------------------------------------- */}
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+        {kpiCards.map((kpi, i) => {
+          const Icon = kpi.icon;
+          return (
+            <Card
+              key={kpi.label}
+              className={`transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md ${
+                kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className={`rounded-lg bg-${kpi.color}-100 p-2.5 dark:bg-${kpi.color}-900/30`}>
+                  <Icon className={`h-5 w-5 text-${kpi.color}-600`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground truncate">{t(kpi.label)}</p>
+                  <p className="text-2xl font-bold">
+                    {kpi.format ? kpi.value.toLocaleString() : kpi.value}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* -- Tabs ------------------------------------------------------------- */}
+      {/* -- Tabs --------------------------------------------------------------- */}
       <Tabs defaultValue="overview">
         <div className="overflow-x-auto">
           <TabsList>
@@ -203,95 +214,123 @@ export function CampaignDetailPage() {
               <FileText className="mr-1.5 h-4 w-4" />
               {t('Overview')}
             </TabsTrigger>
+            <TabsTrigger value="roster">
+              <Users className="mr-1.5 h-4 w-4" />
+              {t('Influencer Roster')}
+            </TabsTrigger>
+            <TabsTrigger value="content">
+              <Camera className="mr-1.5 h-4 w-4" />
+              {t('Content Gallery')}
+            </TabsTrigger>
             <TabsTrigger value="shipments">
               <Truck className="mr-1.5 h-4 w-4" />
               {t('Shipments')}
             </TabsTrigger>
-            <TabsTrigger value="content">
-              <Camera className="mr-1.5 h-4 w-4" />
-              {t('Content Posts')}
+            <TabsTrigger value="timeline">
+              <Clock className="mr-1.5 h-4 w-4" />
+              {t('Timeline')}
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* -- Tab: Overview -------------------------------------------------- */}
+        {/* -- Tab: Overview ---------------------------------------------------- */}
         <TabsContent value="overview" className="space-y-4 mt-4">
-          <Card className="transition-shadow hover:shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">{t('Campaign Details')}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              {campaign.description && (
-                <div className="sm:col-span-2 flex items-start gap-2">
-                  <FileText className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Campaign details card */}
+            <Card className="transition-shadow hover:shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">{t('Campaign Details')}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {campaign.description && (
+                  <div className="sm:col-span-2 flex items-start gap-2">
+                    <FileText className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t('Campaign Description')}</p>
+                      <p className="text-sm font-medium whitespace-pre-wrap">{campaign.description}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start gap-2">
+                  <Calendar className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">{t('Campaign Description')}</p>
-                    <p className="text-sm font-medium whitespace-pre-wrap">{campaign.description}</p>
+                    <p className="text-xs text-muted-foreground">{t('Start Date')}</p>
+                    <p className="text-sm font-medium">
+                      {campaign.startDate
+                        ? new Date(campaign.startDate).toLocaleDateString()
+                        : '\u2014'}
+                    </p>
                   </div>
                 </div>
-              )}
-              <div className="flex items-start gap-2">
-                <Calendar className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('Start Date')}</p>
-                  <p className="text-sm font-medium">
-                    {campaign.startDate
-                      ? new Date(campaign.startDate).toLocaleDateString()
-                      : '—'}
-                  </p>
+                <div className="flex items-start gap-2">
+                  <Calendar className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('End Date')}</p>
+                    <p className="text-sm font-medium">
+                      {campaign.endDate
+                        ? new Date(campaign.endDate).toLocaleDateString()
+                        : '\u2014'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Calendar className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('End Date')}</p>
-                  <p className="text-sm font-medium">
-                    {campaign.endDate
-                      ? new Date(campaign.endDate).toLocaleDateString()
-                      : '—'}
-                  </p>
+                <div className="flex items-start gap-2">
+                  <DollarSign className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('Budget')}</p>
+                    <p className="text-sm font-medium">
+                      {campaign.budget != null
+                        ? `${campaign.budget.toLocaleString()} ${campaign.currency}`
+                        : '\u2014'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <DollarSign className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('Budget')}</p>
-                  <p className="text-sm font-medium">
-                    {campaign.budget != null
-                      ? `${campaign.budget.toLocaleString()} ${campaign.currency}`
-                      : '—'}
-                  </p>
+                <div className="flex items-start gap-2">
+                  <Target className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('Goals')}</p>
+                    <p className="text-sm font-medium whitespace-pre-wrap">
+                      {campaign.goals || '\u2014'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Target className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('Goals')}</p>
-                  <p className="text-sm font-medium whitespace-pre-wrap">
-                    {campaign.goals || '—'}
-                  </p>
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1">{t('Tags')}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {campaign.tags.length > 0 ? (
+                      campaign.tags.map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          <Tag className="mr-1 h-3 w-3" />
+                          {tag}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">{'\u2014'}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-muted-foreground mb-1">{t('Tags')}</p>
-                <div className="flex flex-wrap gap-1">
-                  {campaign.tags.length > 0 ? (
-                    campaign.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        <Tag className="mr-1 h-3 w-3" />
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Budget widget */}
+            <BudgetTrackingWidget
+              budget={campaign.budget}
+              budgetSpent={campaign.budgetSpent}
+              currency={campaign.currency}
+            />
+          </div>
         </TabsContent>
 
-        {/* -- Tab: Shipments ------------------------------------------------- */}
+        {/* -- Tab: Influencer Roster ------------------------------------------- */}
+        <TabsContent value="roster" className="mt-4">
+          {id && <CampaignInfluencerRoster campaignId={id} />}
+        </TabsContent>
+
+        {/* -- Tab: Content Gallery --------------------------------------------- */}
+        <TabsContent value="content" className="mt-4">
+          {id && <ContentGalleryGrid campaignId={id} />}
+        </TabsContent>
+
+        {/* -- Tab: Shipments --------------------------------------------------- */}
         <TabsContent value="shipments" className="mt-4">
           <Card>
             <CardHeader>
@@ -360,18 +399,13 @@ export function CampaignDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* -- Tab: Content --------------------------------------------------- */}
-        <TabsContent value="content" className="mt-4">
-          <ContentPostsTable
-            posts={contentPosts}
-            shipmentId=""
-            campaignId={id}
-            onRefresh={loadData}
-          />
+        {/* -- Tab: Timeline ---------------------------------------------------- */}
+        <TabsContent value="timeline" className="mt-4">
+          {id && <CampaignTimeline campaignId={id} />}
         </TabsContent>
       </Tabs>
 
-      {/* -- Delete Confirmation Dialog --------------------------------------- */}
+      {/* -- Delete Confirmation Dialog ----------------------------------------- */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

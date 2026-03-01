@@ -2,17 +2,20 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Megaphone, Search, Trash2, Calendar, Tag } from 'lucide-react';
+import { Plus, Megaphone, Search, Trash2, Calendar, Tag, List, LayoutGrid } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getCampaigns, deleteCampaign } from '@/services/supabase/wh-campaigns';
+import { getCampaigns, deleteCampaign, updateCampaign } from '@/services/supabase/wh-campaigns';
 import { CAMPAIGN_STATUS_COLORS } from '@/lib/warehouse-constants';
+import { CampaignKanbanBoard } from '@/components/warehouse/influencer/CampaignKanbanBoard';
+import { CampaignCalendarView } from '@/components/warehouse/influencer/CampaignCalendarView';
 import type { WhCampaign, CampaignStatus } from '@/types/warehouse';
 
 type StatusTab = 'all' | CampaignStatus;
+type ViewMode = 'list' | 'board' | 'calendar';
 
 export function CampaignListPage() {
   const { t } = useTranslation('warehouse');
@@ -21,6 +24,7 @@ export function CampaignListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusTab>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const load = async () => {
     try {
@@ -52,6 +56,16 @@ export function CampaignListPage() {
     }
   };
 
+  const handleStatusChange = async (id: string, status: CampaignStatus) => {
+    try {
+      await updateCampaign(id, { status });
+      toast.success(t('Status updated'));
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error');
+    }
+  };
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString();
@@ -73,6 +87,12 @@ export function CampaignListPage() {
     { key: 'active', label: t('active') },
     { key: 'completed', label: t('completed') },
     { key: 'cancelled', label: t('cancelled') },
+  ];
+
+  const viewModes: { key: ViewMode; icon: typeof List; label: string }[] = [
+    { key: 'list', icon: List, label: t('List') },
+    { key: 'board', icon: LayoutGrid, label: t('Board') },
+    { key: 'calendar', icon: Calendar, label: t('Calendar') },
   ];
 
   return (
@@ -114,103 +134,129 @@ export function CampaignListPage() {
         ))}
       </div>
 
-      {/* Campaigns Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Name')}</TableHead>
-                  <TableHead>{t('Status')}</TableHead>
-                  <TableHead className="text-right">{t('Products')}</TableHead>
-                  <TableHead className="text-right">{t('Budget')}</TableHead>
-                  <TableHead>{t('Start Date')}</TableHead>
-                  <TableHead>{t('End Date')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Tags')}</TableHead>
-                  <TableHead className="w-16" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+      {/* View Toggle */}
+      <div className="flex items-center gap-1">
+        {viewModes.map(({ key, icon: Icon, label }) => (
+          <Button
+            key={key}
+            variant="ghost"
+            size="sm"
+            title={label}
+            className={viewMode === key ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-muted'}
+            onClick={() => setViewMode(key)}
+          >
+            <Icon className="h-4 w-4" />
+          </Button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {viewMode === 'board' ? (
+        <CampaignKanbanBoard
+          campaigns={campaigns}
+          onStatusChange={handleStatusChange}
+        />
+      ) : viewMode === 'calendar' ? (
+        <CampaignCalendarView campaigns={campaigns} />
+      ) : (
+        /* List View (existing table) */
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                      {t('Loading...', { ns: 'common' })}
-                    </TableCell>
+                    <TableHead>{t('Name')}</TableHead>
+                    <TableHead>{t('Status')}</TableHead>
+                    <TableHead className="text-right">{t('Products')}</TableHead>
+                    <TableHead className="text-right">{t('Budget')}</TableHead>
+                    <TableHead>{t('Start Date')}</TableHead>
+                    <TableHead>{t('End Date')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('Tags')}</TableHead>
+                    <TableHead className="w-16" />
                   </TableRow>
-                ) : campaigns.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                      <Megaphone className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                      <p>{t('No campaigns yet')}</p>
-                      <p className="text-xs mt-1">{t('Create your first campaign to start tracking influencer collaborations')}</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  campaigns.map((campaign) => (
-                    <TableRow
-                      key={campaign.id}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors duration-150"
-                      onClick={() => navigate(`/warehouse/campaigns/${campaign.id}`)}
-                    >
-                      <TableCell className="font-medium">{campaign.name}</TableCell>
-                      <TableCell>
-                        <Badge className={`${CAMPAIGN_STATUS_COLORS[campaign.status]} border-0`}>
-                          {t(campaign.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {campaign.productIds.length}
-                      </TableCell>
-                      <TableCell className="text-right text-sm">
-                        {formatBudget(campaign.budget, campaign.currency)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {campaign.startDate ? (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(campaign.startDate)}
-                          </span>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(campaign.endDate)}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {campaign.tags.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {campaign.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
-                                <Tag className="mr-0.5 h-2.5 w-2.5" />
-                                {tag}
-                              </Badge>
-                            ))}
-                            {campaign.tags.length > 3 && (
-                              <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                +{campaign.tags.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleDelete(campaign.id, e)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        {t('Loading...', { ns: 'common' })}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  ) : campaigns.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                        <Megaphone className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                        <p>{t('No campaigns yet')}</p>
+                        <p className="text-xs mt-1">{t('Create your first campaign to start tracking influencer collaborations')}</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    campaigns.map((campaign) => (
+                      <TableRow
+                        key={campaign.id}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors duration-150"
+                        onClick={() => navigate(`/warehouse/campaigns/${campaign.id}`)}
+                      >
+                        <TableCell className="font-medium">{campaign.name}</TableCell>
+                        <TableCell>
+                          <Badge className={`${CAMPAIGN_STATUS_COLORS[campaign.status]} border-0`}>
+                            {t(campaign.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {campaign.productIds.length}
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
+                          {formatBudget(campaign.budget, campaign.currency)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {campaign.startDate ? (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(campaign.startDate)}
+                            </span>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(campaign.endDate)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {campaign.tags.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {campaign.tags.slice(0, 3).map((tag) => (
+                                <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                                  <Tag className="mr-0.5 h-2.5 w-2.5" />
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {campaign.tags.length > 3 && (
+                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                  +{campaign.tags.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => handleDelete(campaign.id, e)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
