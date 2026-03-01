@@ -119,7 +119,7 @@ export function ContactsListPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Contacts')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Contacts')}</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           {t('Add Contact')}
@@ -137,7 +137,7 @@ export function ContactsListPage() {
       </div>
 
       {/* Type Tabs */}
-      <div className="flex gap-1 border-b overflow-x-auto">
+      <div className="flex gap-1 border-b overflow-x-auto -mx-1 px-1">
         {(['all', 'b2b', 'b2c', 'supplier', 'influencer'] as const).map((tab) => (
           <Button
             key={tab}
@@ -159,13 +159,13 @@ export function ContactsListPage() {
               <TableRow>
                 <TableHead>{t('Name')}</TableHead>
                 <TableHead>{t('Type')}</TableHead>
-                <TableHead>{t('Company')}</TableHead>
-                <TableHead>{t('Email')}</TableHead>
-                <TableHead>{t('City')}</TableHead>
-                <TableHead className="hidden md:table-cell">{t('Tags')}</TableHead>
-                <TableHead className="hidden md:table-cell">{t('Customer Number')}</TableHead>
-                <TableHead>{t('Status')}</TableHead>
-                <TableHead className="w-24" />
+                <TableHead className="hidden sm:table-cell">{t('Company')}</TableHead>
+                <TableHead className="hidden md:table-cell">{t('Email')}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t('City')}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t('Tags')}</TableHead>
+                <TableHead className="hidden xl:table-cell">{t('Customer Number')}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t('Status')}</TableHead>
+                <TableHead className="w-20 sm:w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -201,10 +201,10 @@ export function ContactsListPage() {
                           <Badge variant="outline">{c.type}</Badge>
                         )}
                       </TableCell>
-                      <TableCell>{c.companyName || '—'}</TableCell>
-                      <TableCell className="text-sm">{c.email || '—'}</TableCell>
-                      <TableCell>{c.city || '—'}</TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden sm:table-cell">{c.companyName || '—'}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">{c.email || '—'}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{c.city || '—'}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {c.tags && c.tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {c.tags.map((tag) => (
@@ -217,8 +217,8 @@ export function ContactsListPage() {
                           '—'
                         )}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell font-mono text-xs">{c.customerNumber || '—'}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell font-mono text-xs">{c.customerNumber || '—'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Badge variant={c.isActive ? 'default' : 'secondary'}>
                           {c.isActive ? t('Active') : t('Inactive')}
                         </Badge>

@@ -195,9 +195,9 @@ export function GoodsReceiptPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('Create Goods Receipt')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Create Goods Receipt')}</h1>
       </div>
 
       {/* Step Indicator */}
@@ -207,13 +207,13 @@ export function GoodsReceiptPage() {
       {step === 0 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="h-5 w-5" />
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('Select Product & Batch')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
               <div className="space-y-2">
                 <Label>{t('Product')}</Label>
                 <Select value={productId} onValueChange={(v) => { setProductId(v); setBatchId(''); }}>
@@ -226,9 +226,9 @@ export function GoodsReceiptPage() {
 
               {/* Product preview card */}
               {productId && selectedProduct && (
-                <div className="rounded-lg border bg-muted/30 p-3 flex items-center gap-3 animate-scale-in">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Package className="h-5 w-5 text-primary" />
+                <div className="rounded-lg border bg-muted/30 p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 animate-scale-in">
+                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{selectedProduct.name}</p>
@@ -257,7 +257,7 @@ export function GoodsReceiptPage() {
 
               {/* Batch Context Card */}
               {batchId && !loadingStock && batchTotal > 0 && (
-                <div className="rounded-lg border bg-card p-4 space-y-3 animate-fade-in-up">
+                <div className="rounded-lg border bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 animate-fade-in-up">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{t('{{received}} of {{total}} units', { received: alreadyReceived, total: batchTotal })}</span>
@@ -270,18 +270,18 @@ export function GoodsReceiptPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-md bg-muted/50 p-2.5 text-center">
-                      <div className="text-xs text-muted-foreground">{t('Batch ordered')}</div>
-                      <div className="text-lg font-semibold">{batchTotal}</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Batch ordered')}</div>
+                      <div className="text-base sm:text-lg font-semibold">{batchTotal}</div>
                     </div>
-                    <div className="rounded-md bg-muted/50 p-2.5 text-center">
-                      <div className="text-xs text-muted-foreground">{t('Already received')}</div>
-                      <div className="text-lg font-semibold">{alreadyReceived}</div>
+                    <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Already received')}</div>
+                      <div className="text-base sm:text-lg font-semibold">{alreadyReceived}</div>
                     </div>
-                    <div className="rounded-md bg-muted/50 p-2.5 text-center">
-                      <div className="text-xs text-muted-foreground">{t('Outstanding')}</div>
-                      <div className={`text-lg font-semibold ${fullyReceived ? 'text-green-600' : ''}`}>{remaining}</div>
+                    <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Outstanding')}</div>
+                      <div className={`text-base sm:text-lg font-semibold ${fullyReceived ? 'text-green-600' : ''}`}>{remaining}</div>
                     </div>
                   </div>
                   {fullyReceived ? (
@@ -310,13 +310,13 @@ export function GoodsReceiptPage() {
       {step === 1 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Warehouse className="h-5 w-5" />
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <Warehouse className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('Location & Quantity')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
               <div className="space-y-2">
                 <Label>{t('Location')}</Label>
                 <Select value={locationId} onValueChange={setLocationId}>
@@ -344,7 +344,7 @@ export function GoodsReceiptPage() {
               )}
 
               {/* Quantity Steppers */}
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-3">
                 <QuantityStepper
                   label={t('Good Condition')}
                   value={quantity}
@@ -394,25 +394,25 @@ export function GoodsReceiptPage() {
               {locationId && selectedLocation?.capacityVolumeM3 && locationUsedM3 != null && !loadingCapacity && (
                 <>
                   <Separator />
-                  <div className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Box className="h-4 w-4 text-primary" />
+                  <div className="rounded-lg border p-3 sm:p-4 space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-medium">
+                      <Box className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                       {t('Warehouse Capacity')}
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="rounded-md bg-muted/50 p-2.5 text-center">
-                        <div className="text-xs text-muted-foreground">{t('Currently Used')}</div>
-                        <div className="text-lg font-semibold">{formatVolumeM3(locationUsedM3)}</div>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                      <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Currently Used')}</div>
+                        <div className="text-sm sm:text-lg font-semibold">{formatVolumeM3(locationUsedM3)}</div>
                       </div>
-                      <div className="rounded-md bg-muted/50 p-2.5 text-center">
-                        <div className="text-xs text-muted-foreground">{t('Available')}</div>
-                        <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+                      <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Available')}</div>
+                        <div className="text-sm sm:text-lg font-semibold text-green-600 dark:text-green-400">
                           {formatVolumeM3(Math.max(0, selectedLocation.capacityVolumeM3 - locationUsedM3))}
                         </div>
                       </div>
-                      <div className="rounded-md bg-muted/50 p-2.5 text-center">
-                        <div className="text-xs text-muted-foreground">{t('Total Capacity')}</div>
-                        <div className="text-lg font-semibold">{formatVolumeM3(selectedLocation.capacityVolumeM3)}</div>
+                      <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Total Capacity')}</div>
+                        <div className="text-sm sm:text-lg font-semibold">{formatVolumeM3(selectedLocation.capacityVolumeM3)}</div>
                       </div>
                     </div>
                     {currentFillPercent != null && (
@@ -485,18 +485,18 @@ export function GoodsReceiptPage() {
               {receiptVolume && (
                 <>
                   <Separator />
-                  <div className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Ruler className="h-4 w-4 text-primary" />{t('Space Requirements')}
+                  <div className="rounded-lg border p-3 sm:p-4 space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-medium">
+                      <Ruler className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />{t('Space Requirements')}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-md bg-muted/50 p-2.5">
-                        <div className="text-xs text-muted-foreground">{t('Volume per unit')}</div>
-                        <div className="font-semibold">{formatVolumeM3(receiptVolume.unitVolumeM3)}</div>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="rounded-md bg-muted/50 p-2 sm:p-2.5">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Volume per unit')}</div>
+                        <div className="text-sm sm:text-base font-semibold">{formatVolumeM3(receiptVolume.unitVolumeM3)}</div>
                       </div>
-                      <div className="rounded-md bg-muted/50 p-2.5">
-                        <div className="text-xs text-muted-foreground">{t('Total for {{qty}} units', { qty: quantity })}</div>
-                        <div className="font-semibold text-primary">{formatVolumeM3(receiptVolume.totalVolumeM3)}</div>
+                      <div className="rounded-md bg-muted/50 p-2 sm:p-2.5">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Total for {{qty}} units', { qty: quantity })}</div>
+                        <div className="text-sm sm:text-base font-semibold text-primary">{formatVolumeM3(receiptVolume.totalVolumeM3)}</div>
                       </div>
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -526,18 +526,18 @@ export function GoodsReceiptPage() {
       {step === 2 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ClipboardCheck className="h-5 w-5" />
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('Receipt Summary')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
               {/* Visual receipt card */}
-              <div className="rounded-xl border-2 border-dashed bg-muted/30 p-5 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Package className="h-5 w-5 text-primary" />
+              <div className="rounded-xl border-2 border-dashed bg-muted/30 p-3 sm:p-5 space-y-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
                   <div>
                     <p className="font-medium">{products.find(p => p.id === productId)?.name}</p>
@@ -545,18 +545,18 @@ export function GoodsReceiptPage() {
                   </div>
                 </div>
                 <Separator />
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-2">
-                    <div className="text-lg font-bold text-green-600">{goodQuantity}</div>
-                    <div className="text-[10px] text-green-700/70">{t('Good Condition')}</div>
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+                  <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-1.5 sm:p-2">
+                    <div className="text-base sm:text-lg font-bold text-green-600">{goodQuantity}</div>
+                    <div className="text-[9px] sm:text-[10px] text-green-700/70">{t('Good Condition')}</div>
                   </div>
-                  <div className="rounded-lg bg-orange-50 dark:bg-orange-950/30 p-2">
-                    <div className="text-lg font-bold text-orange-600">{quantityDamaged}</div>
-                    <div className="text-[10px] text-orange-700/70">{t('Damaged')}</div>
+                  <div className="rounded-lg bg-orange-50 dark:bg-orange-950/30 p-1.5 sm:p-2">
+                    <div className="text-base sm:text-lg font-bold text-orange-600">{quantityDamaged}</div>
+                    <div className="text-[9px] sm:text-[10px] text-orange-700/70">{t('Damaged')}</div>
                   </div>
-                  <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-2">
-                    <div className="text-lg font-bold text-red-600">{quantityQuarantine}</div>
-                    <div className="text-[10px] text-red-700/70">{t('Quarantine')}</div>
+                  <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-1.5 sm:p-2">
+                    <div className="text-base sm:text-lg font-bold text-red-600">{quantityQuarantine}</div>
+                    <div className="text-[9px] sm:text-[10px] text-red-700/70">{t('Quarantine')}</div>
                   </div>
                 </div>
                 {batchTotal > 0 && (

@@ -289,13 +289,13 @@ export function CreateShipmentPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-24">
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6 pb-24 px-0 sm:px-0">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => step > 0 ? goToStep(step - 1) : navigate('/warehouse/shipments')}>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => step > 0 ? goToStep(step - 1) : navigate('/warehouse/shipments')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Create Shipment')}</h1>
+        <h1 className="text-lg sm:text-2xl font-bold tracking-tight">{t('Create Shipment')}</h1>
       </div>
 
       {/* Step Indicator */}
@@ -305,8 +305,8 @@ export function CreateShipmentPage() {
       {step === 0 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
           <Card>
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><User className="h-5 w-5" /> {t('Recipient & Priority')}</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader className="px-4 sm:px-6"><CardTitle className="text-base sm:text-lg flex items-center gap-2"><User className="h-4 w-4 sm:h-5 sm:w-5" /> {t('Recipient & Priority')}</CardTitle></CardHeader>
+            <CardContent className="space-y-4 px-4 sm:px-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input placeholder={t('Search recipients...')} value={recipientSearch} onChange={(e) => setRecipientSearch(e.target.value)} className="pl-9" />
@@ -392,8 +392,8 @@ export function CreateShipmentPage() {
       {step === 1 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
           <Card>
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Package className="h-5 w-5" /> {t('Items')}</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader className="px-4 sm:px-6"><CardTitle className="text-base sm:text-lg flex items-center gap-2"><Package className="h-4 w-4 sm:h-5 sm:w-5" /> {t('Items')}</CardTitle></CardHeader>
+            <CardContent className="space-y-4 px-4 sm:px-6">
               {items.map((item, idx) => (
                 <div key={idx} className="rounded-lg border p-3 sm:p-4 space-y-3 relative">
                   <div className="flex justify-between items-center">
@@ -458,8 +458,8 @@ export function CreateShipmentPage() {
       {step === 2 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
           <Card>
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5" /> {t('Shipping')}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardHeader className="px-4 sm:px-6"><CardTitle className="text-base sm:text-lg flex items-center gap-2"><Truck className="h-4 w-4 sm:h-5 sm:w-5" /> {t('Shipping')}</CardTitle></CardHeader>
+            <CardContent className="space-y-3 px-4 sm:px-6">
               {/* Carrier & Tracking */}
               <Collapsible open={carrierOpen} onOpenChange={setCarrierOpen}>
                 <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
@@ -540,13 +540,13 @@ export function CreateShipmentPage() {
       {/* Step 3: Confirmation */}
       {step === 3 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Card>
-              <CardHeader className="pb-2 flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> {t('Recipient')}</CardTitle>
+              <CardHeader className="pb-2 flex-row items-center justify-between px-4 sm:px-6">
+                <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2"><User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {t('Recipient')}</CardTitle>
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => goToStep(0)}><Pencil className="h-3 w-3 mr-1" /> {t('Edit step')}</Button>
               </CardHeader>
-              <CardContent className="text-sm space-y-1">
+              <CardContent className="text-sm space-y-1 px-4 sm:px-6">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">{recipientName}</span>
                   {recipientCompany && <span className="text-muted-foreground">({recipientCompany})</span>}
@@ -563,32 +563,34 @@ export function CreateShipmentPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2 flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2"><Package className="h-4 w-4" /> {t('Items')} ({items.length})</CardTitle>
+              <CardHeader className="pb-2 flex-row items-center justify-between px-4 sm:px-6">
+                <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2"><Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {t('Items')} ({items.length})</CardTitle>
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => goToStep(1)}><Pencil className="h-3 w-3 mr-1" /> {t('Edit step')}</Button>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs sm:text-sm">
                     <thead><tr className="border-b">
-                      <th className="text-left px-4 py-2 font-medium">{t('Product')}</th>
-                      <th className="text-left px-4 py-2 font-medium">{t('Batch')}</th>
-                      <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">{t('Location')}</th>
-                      <th className="text-right px-4 py-2 font-medium">{t('Quantity')}</th>
+                      <th className="text-left px-3 sm:px-4 py-2 font-medium">{t('Product')}</th>
+                      <th className="text-left px-3 sm:px-4 py-2 font-medium hidden sm:table-cell">{t('Batch')}</th>
+                      <th className="text-left px-3 sm:px-4 py-2 font-medium hidden md:table-cell">{t('Location')}</th>
+                      <th className="text-right px-3 sm:px-4 py-2 font-medium">{t('Quantity')}</th>
                     </tr></thead>
                     <tbody>
                       {items.map((item, idx) => (
                         <tr key={idx} className="border-b last:border-0">
-                          <td className="px-4 py-2">{item.productName || '—'}</td>
-                          <td className="px-4 py-2">{item.batchSerial || '—'}</td>
-                          <td className="px-4 py-2 hidden sm:table-cell">{item.locationName || '—'}</td>
-                          <td className="px-4 py-2 text-right tabular-nums font-medium">{item.quantity}</td>
+                          <td className="px-3 sm:px-4 py-2">{item.productName || '—'}</td>
+                          <td className="px-3 sm:px-4 py-2 hidden sm:table-cell">{item.batchSerial || '—'}</td>
+                          <td className="px-3 sm:px-4 py-2 hidden md:table-cell">{item.locationName || '—'}</td>
+                          <td className="px-3 sm:px-4 py-2 text-right tabular-nums font-medium">{item.quantity}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot><tr className="bg-muted/50">
-                      <td colSpan={3} className="px-4 py-2 font-medium">{t('Total')}</td>
-                      <td className="px-4 py-2 text-right tabular-nums font-bold">{totalUnits}</td>
+                      <td className="px-3 sm:px-4 py-2 font-medium">{t('Total')}</td>
+                      <td className="hidden sm:table-cell" />
+                      <td className="hidden md:table-cell" />
+                      <td className="px-3 sm:px-4 py-2 text-right tabular-nums font-bold">{totalUnits}</td>
                     </tr></tfoot>
                   </table>
                 </div>
@@ -596,12 +598,12 @@ export function CreateShipmentPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2 flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2"><Truck className="h-4 w-4" /> {t('Shipping')}</CardTitle>
+              <CardHeader className="pb-2 flex-row items-center justify-between px-4 sm:px-6">
+                <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2"><Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {t('Shipping')}</CardTitle>
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => goToStep(2)}><Pencil className="h-3 w-3 mr-1" /> {t('Edit step')}</Button>
               </CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <div className="grid grid-cols-2 gap-y-1 gap-x-4">
+              <CardContent className="text-sm space-y-1 px-4 sm:px-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4">
                   {carrier && <><span className="text-muted-foreground">{t('Carrier')}</span><span>{carrier}</span></>}
                   {trackingNumber && <><span className="text-muted-foreground">{t('Tracking Number')}</span><span className="font-mono">{trackingNumber}</span></>}
                   {serviceLevel && <><span className="text-muted-foreground">{t('Service Level')}</span><span>{serviceLevel}</span></>}

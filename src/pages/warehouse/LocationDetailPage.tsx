@@ -99,13 +99,13 @@ function KPICard({
   const animated = useAnimatedNumber(value);
   return (
     <Card className="hover:shadow-md transition-all duration-200">
-      <CardContent className="flex items-center gap-4 pt-6">
-        <div className="rounded-lg bg-primary/10 p-3">
-          <Icon className="h-5 w-5 text-primary" />
+      <CardContent className="flex items-center gap-3 sm:gap-4 pt-4 sm:pt-6">
+        <div className="rounded-lg bg-primary/10 p-2 sm:p-3">
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold tabular-nums">
+          <p className="text-xs sm:text-sm text-muted-foreground">{label}</p>
+          <p className="text-xl sm:text-2xl font-bold tabular-nums">
             {animated.toLocaleString()}
           </p>
         </div>
@@ -316,7 +316,7 @@ export function LocationDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 {location.name}
               </h1>
               {location.code && (
@@ -347,7 +347,7 @@ export function LocationDetailPage() {
       </div>
 
       {/* ---- KPI Row ---- */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <KPICard
           icon={Package}
           label={t('Units')}
@@ -388,7 +388,7 @@ export function LocationDetailPage() {
 
         {/* ========== Overview ========== */}
         <TabsContent value="overview" className="space-y-6 mt-4">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Location Info */}
             <Card>
               <CardHeader>
@@ -491,7 +491,7 @@ export function LocationDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {location.zones.map((zone, idx) => {
                 const cfg = zone.type
                   ? ZONE_TYPE_CONFIG[zone.type]
@@ -625,15 +625,15 @@ export function LocationDetailPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('Product')}</TableHead>
-                      <TableHead>{t('Batch')}</TableHead>
-                      <TableHead>{t('Bin Location')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('Batch')}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t('Bin Location')}</TableHead>
                       <TableHead className="text-right">
                         {t('Available Quantity')}
                       </TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-right hidden sm:table-cell">
                         {t('Reserved Quantity')}
                       </TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-right hidden lg:table-cell">
                         {t('Reorder Point')}
                       </TableHead>
                     </TableRow>
@@ -666,17 +666,17 @@ export function LocationDetailPage() {
                             <TableCell className="font-medium">
                               {s.productName || s.productId.slice(0, 8)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden sm:table-cell">
                               {s.batchSerialNumber || s.batchId.slice(0, 8)}
                             </TableCell>
-                            <TableCell>{s.binLocation || '\u2014'}</TableCell>
+                            <TableCell className="hidden md:table-cell">{s.binLocation || '\u2014'}</TableCell>
                             <TableCell className="text-right tabular-nums">
                               {s.quantityAvailable.toLocaleString()}
                             </TableCell>
-                            <TableCell className="text-right tabular-nums">
+                            <TableCell className="text-right tabular-nums hidden sm:table-cell">
                               {s.quantityReserved.toLocaleString()}
                             </TableCell>
-                            <TableCell className="text-right tabular-nums text-muted-foreground">
+                            <TableCell className="text-right tabular-nums text-muted-foreground hidden lg:table-cell">
                               {s.reorderPoint != null
                                 ? s.reorderPoint.toLocaleString()
                                 : '\u2014'}
@@ -701,7 +701,7 @@ export function LocationDetailPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('Type')}</TableHead>
-                      <TableHead>{t('Product')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('Product')}</TableHead>
                       <TableHead className="text-right">{t('Quantity')}</TableHead>
                       <TableHead className="text-right">{t('Date')}</TableHead>
                     </TableRow>
@@ -723,7 +723,7 @@ export function LocationDetailPage() {
                           <TableCell>
                             <Badge variant="outline">{t(tx.type)}</Badge>
                           </TableCell>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium hidden sm:table-cell">
                             {tx.productName || tx.productId.slice(0, 8)}
                           </TableCell>
                           <TableCell

@@ -56,14 +56,14 @@ export function InfluencerHubPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <Skeleton className="h-28 w-full rounded-xl" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-lg" />
           ))}
         </div>
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
           <Skeleton className="lg:col-span-2 h-64 rounded-lg" />
           <Skeleton className="h-64 rounded-lg" />
         </div>
@@ -83,13 +83,13 @@ export function InfluencerHubPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-pink-500/10 via-purple-500/10 to-blue-500/10 border rounded-xl p-6">
-        <h1 className="bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent text-2xl font-bold">
+      <div className="bg-gradient-to-br from-pink-500/10 via-purple-500/10 to-blue-500/10 border rounded-xl px-4 py-4 sm:px-6 sm:py-5">
+        <h1 className="bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent text-xl sm:text-2xl font-bold">
           {t('Influencer Hub')}
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
           {t('Manage campaigns, track content, and measure influencer performance')}
         </p>
         <div className="flex flex-wrap gap-2 mt-4">
@@ -120,7 +120,7 @@ export function InfluencerHubPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
         {kpis.map((kpi, i) => (
           <InfluencerKPICard
             key={kpi.label}
@@ -135,13 +135,13 @@ export function InfluencerHubPage() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         <EngagementTrendChart className="lg:col-span-2" />
         <PlatformDonutChart data={platformBreakdown} />
       </div>
 
       {/* Detail Row */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         <InfluencerLeaderboard influencers={topInfluencers} />
         <ActivityFeed activities={recentActivity} />
         <DeadlinesList deadlines={upcomingDeadlines} />

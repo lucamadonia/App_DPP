@@ -29,22 +29,22 @@ export function ContentGalleryPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
-          <Image className="h-6 w-6 text-pink-600" />
+        <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+          <Image className="h-5 w-5 sm:h-6 sm:w-6 text-pink-600" />
           {t('Content Gallery')}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           {t('Browse all influencer content posts')}
         </p>
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-3">
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder={t('All Campaigns')} />
           </SelectTrigger>
           <SelectContent>
@@ -58,7 +58,7 @@ export function ContentGalleryPage() {
         </Select>
 
         <Select value={selectedPlatform} onValueChange={(v) => setSelectedPlatform(v as SocialPlatform | 'all')}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder={t('All Platforms')} />
           </SelectTrigger>
           <SelectContent>

@@ -169,79 +169,79 @@ export function SampleDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* -- Header ---------------------------------------------------------- */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           {t('Sample Dashboard')}
         </h1>
       </div>
 
       {/* -- KPI Row --------------------------------------------------------- */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-blue-100 p-2.5 dark:bg-blue-900/30">
-              <Package className="h-5 w-5 text-blue-600" />
+          <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6">
+            <div className="rounded-lg bg-blue-100 p-2 sm:p-2.5 dark:bg-blue-900/30">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Samples Out')}</p>
-              <p className="text-2xl font-bold">{animatedSamplesOut}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Samples Out')}</p>
+              <p className="text-lg sm:text-2xl font-bold">{animatedSamplesOut}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-amber-100 p-2.5 dark:bg-amber-900/30">
-              <Camera className="h-5 w-5 text-amber-600" />
+          <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6">
+            <div className="rounded-lg bg-amber-100 p-2 sm:p-2.5 dark:bg-amber-900/30">
+              <Camera className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Awaiting Content')}</p>
-              <p className="text-2xl font-bold">{animatedAwaitingContent}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Awaiting Content')}</p>
+              <p className="text-lg sm:text-2xl font-bold">{animatedAwaitingContent}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-orange-100 p-2.5 dark:bg-orange-900/30">
-              <RotateCcw className="h-5 w-5 text-orange-600" />
+          <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6">
+            <div className="rounded-lg bg-orange-100 p-2 sm:p-2.5 dark:bg-orange-900/30">
+              <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Returns Pending')}</p>
-              <p className="text-2xl font-bold">{animatedReturnsPending}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Returns Pending')}</p>
+              <p className="text-lg sm:text-2xl font-bold">{animatedReturnsPending}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-red-100 p-2.5 dark:bg-red-900/30">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+          <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6">
+            <div className="rounded-lg bg-red-100 p-2 sm:p-2.5 dark:bg-red-900/30">
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Overdue')}</p>
-              <p className="text-2xl font-bold">{animatedOverdue}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Overdue')}</p>
+              <p className="text-lg sm:text-2xl font-bold">{animatedOverdue}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-green-100 p-2.5 dark:bg-green-900/30">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+          <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6">
+            <div className="rounded-lg bg-green-100 p-2 sm:p-2.5 dark:bg-green-900/30">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Content Received')}</p>
-              <p className="text-2xl font-bold">{animatedContentReceived}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Content Received')}</p>
+              <p className="text-lg sm:text-2xl font-bold">{animatedContentReceived}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-purple-100 p-2.5 dark:bg-purple-900/30">
-              <Megaphone className="h-5 w-5 text-purple-600" />
+          <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6">
+            <div className="rounded-lg bg-purple-100 p-2 sm:p-2.5 dark:bg-purple-900/30">
+              <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Active Campaigns')}</p>
-              <p className="text-2xl font-bold">{animatedCampaigns}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Active Campaigns')}</p>
+              <p className="text-lg sm:text-2xl font-bold">{animatedCampaigns}</p>
             </div>
           </CardContent>
         </Card>
@@ -249,18 +249,18 @@ export function SampleDashboardPage() {
 
       {/* -- Active Samples with Bulk Actions -------------------------------- */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">{t('Active Samples')}</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <CardTitle className="text-sm sm:text-base">{t('Active Samples')}</CardTitle>
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 {selectedIds.size} {t('selected')}
               </span>
               <Select
                 onValueChange={(v) => handleBulkStatusUpdate(v as SampleStatus)}
                 disabled={bulkUpdating}
               >
-                <SelectTrigger className="h-8 w-[180px] text-xs">
+                <SelectTrigger className="h-8 w-[150px] sm:w-[180px] text-xs">
                   <SelectValue placeholder={t('Bulk Update Status')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -297,13 +297,13 @@ export function SampleDashboardPage() {
                     </button>
                   </TableHead>
                   <TableHead>{t('Shipment Number')}</TableHead>
-                  <TableHead>{t('Recipient')}</TableHead>
-                  <TableHead>{t('Sample Type')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('Recipient')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('Sample Type')}</TableHead>
                   <TableHead>{t('Sample Status')}</TableHead>
-                  <TableHead>{t('Content Status')}</TableHead>
-                  <TableHead>{t('Return Deadline')}</TableHead>
-                  <TableHead>{t('Content Deadline')}</TableHead>
-                  <TableHead>{t('Content')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Content Status')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Return Deadline')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('Content Deadline')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('Content')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -335,8 +335,8 @@ export function SampleDashboardPage() {
                             {s.shipmentNumber}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-sm">{s.recipientName}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm">{s.recipientName}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {s.sampleMeta?.sampleType && (
                             <Badge variant="outline" className="text-xs">
                               {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
@@ -348,18 +348,18 @@ export function SampleDashboardPage() {
                             <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           {s.sampleMeta?.contentStatus && (
                             <ContentStatusBadge status={s.sampleMeta.contentStatus} />
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <DeadlineCountdownBadge deadline={s.sampleMeta?.returnDeadline} />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           <DeadlineCountdownBadge deadline={s.sampleMeta?.contentDeadline} />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {contentPost ? (
                             <a
                               href={contentPost.postUrl}
@@ -397,11 +397,11 @@ export function SampleDashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('Shipment Number')}</TableHead>
-                  <TableHead>{t('Recipient')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('Recipient')}</TableHead>
                   <TableHead>{t('Sample Status')}</TableHead>
-                  <TableHead>{t('Content Status')}</TableHead>
-                  <TableHead>{t('Return Deadline')}</TableHead>
-                  <TableHead>{t('Content Deadline')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Content Status')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Return Deadline')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('Content Deadline')}</TableHead>
                   <TableHead className="text-right">{t('Overdue')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -430,21 +430,21 @@ export function SampleDashboardPage() {
                             {s.shipmentNumber}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-sm">{s.recipientName}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm">{s.recipientName}</TableCell>
                         <TableCell>
                           {meta?.sampleStatus && (
                             <SampleStatusBadge status={meta.sampleStatus} />
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           {meta?.contentStatus && (
                             <ContentStatusBadge status={meta.contentStatus} />
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <DeadlineCountdownBadge deadline={meta?.returnDeadline} />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           <DeadlineCountdownBadge deadline={meta?.contentDeadline} />
                         </TableCell>
                         <TableCell className="text-right">

@@ -17,13 +17,13 @@ export function WarehouseSettingsPage() {
   const limits = billing.entitlements?.limits;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('Warehouse Settings')}</h1>
-          <p className="text-muted-foreground">{t('Manage your warehouse module configuration')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Warehouse Settings')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">{t('Manage your warehouse module configuration')}</p>
         </div>
-        <Button variant="outline" asChild>
+        <Button variant="outline" size="sm" className="shrink-0" asChild>
           <Link to="/settings/billing">
             <CreditCard className="mr-2 h-4 w-4" />
             {t('Manage Plan', { ns: 'billing' })}
@@ -46,40 +46,40 @@ export function WarehouseSettingsPage() {
         </CardHeader>
         {limits && (
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Warehouse className="h-4 w-4" />
-                  {t('Warehouse Locations')}
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border p-2.5 sm:p-3">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Warehouse className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="truncate">{t('Warehouse Locations')}</span>
                 </div>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-base sm:text-lg font-semibold">
                   {limits.maxWarehouseLocations === Infinity ? t('Unlimited') : (limits.maxWarehouseLocations ?? 0)}
                 </p>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Truck className="h-4 w-4" />
-                  {t('Shipments / Month')}
+              <div className="rounded-lg border p-2.5 sm:p-3">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="truncate">{t('Shipments / Month')}</span>
                 </div>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-base sm:text-lg font-semibold">
                   {limits.maxShipmentsPerMonth === Infinity ? t('Unlimited') : (limits.maxShipmentsPerMonth ?? 0)}
                 </p>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  {t('Stock Transactions / Month')}
+              <div className="rounded-lg border p-2.5 sm:p-3">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="truncate">{t('Stock Transactions / Month')}</span>
                 </div>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-base sm:text-lg font-semibold">
                   {limits.maxStockTransactionsPerMonth === Infinity ? t('Unlimited') : (limits.maxStockTransactionsPerMonth ?? 0)}
                 </p>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  {t('Carrier Integrations')}
+              <div className="rounded-lg border p-2.5 sm:p-3">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="truncate">{t('Carrier Integrations')}</span>
                 </div>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-base sm:text-lg font-semibold">
                   {limits.warehouseCarrierIntegrations === Infinity ? t('Unlimited') : (limits.warehouseCarrierIntegrations ?? 0)}
                 </p>
               </div>
@@ -144,8 +144,8 @@ export function WarehouseSettingsPage() {
 
       {!warehouseModule && (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <Warehouse className="h-10 w-10 mb-3 text-muted-foreground opacity-50" />
+          <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+            <Warehouse className="h-8 w-8 sm:h-10 sm:w-10 mb-3 text-muted-foreground opacity-50" />
             <p className="font-medium">{t('Activate Warehouse Module')}</p>
             <p className="text-sm text-muted-foreground mt-1">{t('Start managing your inventory and shipments')}</p>
             <Button className="mt-4" asChild>

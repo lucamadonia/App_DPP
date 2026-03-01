@@ -50,18 +50,18 @@ interface ExpertCardProps {
 function ExpertCard({ id, icon, name, description, onSelect }: ExpertCardProps) {
   const { t } = useTranslation('warehouse');
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card p-6 transition-all duration-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 dark:hover:border-blue-700 dark:hover:shadow-blue-500/10">
+    <div className="group relative rounded-2xl border border-border/60 bg-card p-4 sm:p-6 transition-all duration-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 dark:hover:border-blue-700 dark:hover:shadow-blue-500/10">
       {/* Gradient border effect on hover */}
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      <div className="relative space-y-4">
+      <div className="relative space-y-3 sm:space-y-4">
         {/* Icon */}
-        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400">
+        <div className="flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400">
           {icon}
         </div>
 
         {/* Name */}
-        <h3 className="text-lg font-semibold">{name}</h3>
+        <h3 className="text-base sm:text-lg font-semibold">{name}</h3>
 
         {/* Description */}
         <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
@@ -153,16 +153,16 @@ export function AILogisticsHubPage() {
 
   if (!selectedExpert) {
     return (
-      <div className="container mx-auto max-w-5xl px-4 py-8 space-y-8">
+      <div className="container mx-auto max-w-5xl px-4 py-4 sm:py-8 space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
-              <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{t('AI Logistics Hub')}</h1>
-              <p className="text-sm text-muted-foreground">{t('Expert AI advisors for your warehouse operations')}</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t('AI Logistics Hub')}</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Expert AI advisors for your warehouse operations')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-2">
@@ -174,9 +174,9 @@ export function AILogisticsHubPage() {
         </div>
 
         {/* Expert Selection */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-muted-foreground">{t('Select an AI Expert')}</h2>
-          <div className="grid gap-6 md:grid-cols-3">
+        <div className="space-y-3 sm:space-y-4">
+          <h2 className="text-base sm:text-lg font-semibold text-muted-foreground">{t('Select an AI Expert')}</h2>
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             {(Object.keys(expertConfig) as WarehouseExpertId[]).map((id) => {
               const cfg = expertConfig[id];
               return (
@@ -203,27 +203,28 @@ export function AILogisticsHubPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Chat Header */}
-      <div className="flex items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b bg-background/80 backdrop-blur-sm px-3 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-0">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={clearExpert}
-            className="gap-1.5"
+            className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3"
           >
-            <ArrowLeft className="h-4 w-4" />
-            {t('Back to Experts')}
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">{t('Back to Experts')}</span>
+            <span className="sm:hidden">{t('Back')}</span>
           </Button>
-          <div className="h-5 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400">
+          <div className="h-5 w-px bg-border hidden sm:block" />
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center justify-center h-6 w-6 sm:h-7 sm:w-7 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400">
               {cfg.icon}
             </div>
-            <span className="font-medium text-sm">{t(cfg.nameKey)}</span>
+            <span className="font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{t(cfg.nameKey)}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
             <Sparkles className="h-3 w-3" />
             {t('1 AI credit per message')}
           </span>
@@ -232,9 +233,9 @@ export function AILogisticsHubPage() {
               onClick={clearChat}
               variant="ghost"
               size="sm"
-              className="text-muted-foreground gap-1.5 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="text-muted-foreground gap-1 sm:gap-1.5 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs sm:text-sm"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               {t('Clear Chat')}
             </Button>
           )}
@@ -269,11 +270,11 @@ export function AILogisticsHubPage() {
       {!isLoadingContext && !contextError && (
         <>
           <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
-            <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
+            <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
               {/* Empty State */}
               {messages.length === 0 && !isStreaming && (
-                <div className="text-center py-12 space-y-4 animate-fade-in-up">
-                  <div className="flex items-center justify-center h-14 w-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+                <div className="text-center py-8 sm:py-12 space-y-3 sm:space-y-4 animate-fade-in-up">
+                  <div className="flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10">
                     {cfg.icon}
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -336,9 +337,9 @@ export function AILogisticsHubPage() {
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="border-t bg-background/80 backdrop-blur-sm p-4">
+          <div className="border-t bg-background/80 backdrop-blur-sm p-3 sm:p-4">
             <div className="max-w-3xl mx-auto">
-              <div className="flex items-center gap-2 border rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-300 transition-all duration-200">
+              <div className="flex items-center gap-2 border rounded-xl px-2 sm:px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-300 transition-all duration-200">
                 <input
                   ref={inputRef}
                   value={input}

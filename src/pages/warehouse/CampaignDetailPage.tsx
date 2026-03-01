@@ -93,20 +93,20 @@ export function CampaignDetailPage() {
   // -- Loading ----------------------------------------------------------------
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 p-6">
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-96" />
+      <div className="space-y-4 sm:space-y-6">
+        <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 px-4 py-4 sm:px-6 sm:py-5">
+          <Skeleton className="h-7 sm:h-8 w-48 sm:w-64 mb-2" />
+          <Skeleton className="h-4 w-64 sm:w-96" />
           <div className="mt-4">
             <Skeleton className="h-10 w-full max-w-lg" />
           </div>
         </div>
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
+            <Skeleton key={i} className="h-20 sm:h-24 rounded-lg" />
           ))}
         </div>
-        <Skeleton className="h-96 rounded-lg" />
+        <Skeleton className="h-64 sm:h-96 rounded-lg" />
       </div>
     );
   }
@@ -137,16 +137,26 @@ export function CampaignDetailPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* -- Premium Header ---------------------------------------------------- */}
-      <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 p-6">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" asChild className="mt-1 flex-shrink-0">
+      <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" asChild className="mt-1 flex-shrink-0 hidden sm:flex">
             <Link to="/warehouse/campaigns">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 sm:hidden">
+            <Button variant="ghost" size="icon" asChild className="flex-shrink-0">
+              <Link to="/warehouse/campaigns">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <h1 className="text-xl font-bold tracking-tight truncate">
+              {campaign.name}
+            </h1>
+          </div>
+          <div className="flex-1 min-w-0 hidden sm:block">
             <h1 className="text-2xl font-bold tracking-tight truncate">
               {campaign.name}
             </h1>
@@ -154,11 +164,15 @@ export function CampaignDetailPage() {
               <p className="text-muted-foreground text-sm mt-0.5 truncate">{campaign.description}</p>
             )}
           </div>
+          {campaign.description && (
+            <p className="text-muted-foreground text-xs sm:hidden truncate">{campaign.description}</p>
+          )}
           <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
             <Button variant="outline" size="sm" asChild>
               <Link to={`/warehouse/campaigns/${id}/edit`}>
-                <Pencil className="mr-2 h-3.5 w-3.5" />
-                {t('Edit Campaign')}
+                <Pencil className="mr-1.5 sm:mr-2 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t('Edit Campaign')}</span>
+                <span className="sm:hidden">{t('Edit', { ns: 'common' })}</span>
               </Link>
             </Button>
             <Button
@@ -167,8 +181,9 @@ export function CampaignDetailPage() {
               className="text-destructive hover:text-destructive"
               onClick={() => setDeleteOpen(true)}
             >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              {t('Delete Campaign')}
+              <Trash2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t('Delete Campaign')}</span>
+              <span className="sm:hidden">{t('Delete', { ns: 'common' })}</span>
             </Button>
           </div>
         </div>
@@ -180,7 +195,7 @@ export function CampaignDetailPage() {
       </div>
 
       {/* -- KPI Row ----------------------------------------------------------- */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         {kpiCards.map((kpi, i) => {
           const Icon = kpi.icon;
           return (
@@ -190,13 +205,13 @@ export function CampaignDetailPage() {
                 kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               }`}
             >
-              <CardContent className="flex items-center gap-3 pt-6">
-                <div className={`rounded-lg bg-${kpi.color}-100 p-2.5 dark:bg-${kpi.color}-900/30`}>
-                  <Icon className={`h-5 w-5 text-${kpi.color}-600`} />
+              <CardContent className="flex items-center gap-2 sm:gap-3 p-3 sm:pt-6 sm:px-6 sm:pb-6">
+                <div className={`rounded-lg bg-${kpi.color}-100 p-2 sm:p-2.5 dark:bg-${kpi.color}-900/30`}>
+                  <Icon className={`h-4 w-4 sm:h-5 sm:w-5 text-${kpi.color}-600`} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground truncate">{t(kpi.label)}</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t(kpi.label)}</p>
+                  <p className="text-xl sm:text-2xl font-bold">
                     {kpi.format ? kpi.value.toLocaleString() : kpi.value}
                   </p>
                 </div>
@@ -235,7 +250,7 @@ export function CampaignDetailPage() {
 
         {/* -- Tab: Overview ---------------------------------------------------- */}
         <TabsContent value="overview" className="space-y-4 mt-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Campaign details card */}
             <Card className="transition-shadow hover:shadow-sm">
               <CardHeader>
@@ -343,10 +358,10 @@ export function CampaignDetailPage() {
                     <TableRow>
                       <TableHead>{t('Shipment Number')}</TableHead>
                       <TableHead>{t('Recipient')}</TableHead>
-                      <TableHead>{t('Sample Type')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('Sample Type')}</TableHead>
                       <TableHead>{t('Sample Status')}</TableHead>
-                      <TableHead>{t('Content Status')}</TableHead>
-                      <TableHead>{t('Date')}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t('Content Status')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('Date')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -369,7 +384,7 @@ export function CampaignDetailPage() {
                             </Link>
                           </TableCell>
                           <TableCell className="text-sm">{s.recipientName}</TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             {s.sampleMeta?.sampleType && (
                               <Badge variant="outline" className="text-xs">
                                 {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
@@ -381,12 +396,12 @@ export function CampaignDetailPage() {
                               <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {s.sampleMeta?.contentStatus && (
                               <ContentStatusBadge status={s.sampleMeta.contentStatus} />
                             )}
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                             {new Date(s.createdAt).toLocaleDateString()}
                           </TableCell>
                         </TableRow>

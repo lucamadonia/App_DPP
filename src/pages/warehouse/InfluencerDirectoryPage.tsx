@@ -53,10 +53,10 @@ export function InfluencerDirectoryPage() {
   }, [search, tierFilter, platformFilter, sort]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
           {t('Influencer Directory')}
         </h1>
         <Button onClick={() => navigate('/warehouse/contacts')}>
@@ -78,7 +78,7 @@ export function InfluencerDirectoryPage() {
         </div>
 
         <Select value={tierFilter} onValueChange={(val) => setTierFilter(val as InfluencerTier | 'all')}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue placeholder={t('Tier')} />
           </SelectTrigger>
           <SelectContent>
@@ -92,7 +92,7 @@ export function InfluencerDirectoryPage() {
         </Select>
 
         <Select value={platformFilter} onValueChange={(val) => setPlatformFilter(val as SocialPlatform | 'all')}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder={t('Platform')} />
           </SelectTrigger>
           <SelectContent>
@@ -106,7 +106,7 @@ export function InfluencerDirectoryPage() {
         </Select>
 
         <Select value={sort} onValueChange={(val) => setSort(val as SortOption)}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder={t('Sort')} />
           </SelectTrigger>
           <SelectContent>
@@ -120,7 +120,7 @@ export function InfluencerDirectoryPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-lg border bg-card overflow-hidden">
               <Skeleton className="h-16 w-full" />
@@ -149,7 +149,7 @@ export function InfluencerDirectoryPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {contacts.map((contact, idx) => (
             <InfluencerProfileCard
               key={contact.id}

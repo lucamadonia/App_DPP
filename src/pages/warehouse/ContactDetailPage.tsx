@@ -182,23 +182,33 @@ export function ContactDetailPage() {
   return (
     <div className="space-y-6">
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-4">
-        <Button variant="ghost" size="icon" asChild className="mt-1">
-          <Link to="/warehouse/contacts">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight truncate bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{contact.contactName}</h1>
-          {contact.companyName && (
-            <p className="text-muted-foreground text-sm">{contact.companyName}</p>
-          )}
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+          <Button variant="ghost" size="icon" asChild className="mt-0.5 sm:mt-1 shrink-0">
+            <Link to="/warehouse/contacts">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{contact.contactName}</h1>
+            {contact.companyName && (
+              <p className="text-muted-foreground text-xs sm:text-sm">{contact.companyName}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1 sm:hidden">
+              <Badge className={`${typeConfig.bgColor} ${typeConfig.color} border-0`}>
+                {typeLabel}
+              </Badge>
+              <Badge variant={contact.isActive ? 'default' : 'secondary'}>
+                {contact.isActive ? t('Active') : t('Inactive')}
+              </Badge>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className={`${typeConfig.bgColor} ${typeConfig.color} border-0`}>
+        <div className="flex flex-wrap items-center gap-2 pl-11 sm:pl-0">
+          <Badge className={`${typeConfig.bgColor} ${typeConfig.color} border-0 hidden sm:inline-flex`}>
             {typeLabel}
           </Badge>
-          <Badge variant={contact.isActive ? 'default' : 'secondary'}>
+          <Badge variant={contact.isActive ? 'default' : 'secondary'} className="hidden sm:inline-flex">
             {contact.isActive ? t('Active') : t('Inactive')}
           </Badge>
           <Button variant="outline" size="sm" onClick={openEditDialog}>
@@ -209,37 +219,37 @@ export function ContactDetailPage() {
       </div>
 
       {/* ── KPI Row ───────────────────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-blue-100 p-2.5 dark:bg-blue-900/30">
-              <Truck className="h-5 w-5 text-blue-600" />
+          <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
+            <div className="rounded-lg bg-blue-100 p-2 sm:p-2.5 dark:bg-blue-900/30">
+              <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Total Shipments')}</p>
-              <p className="text-2xl font-bold">{animatedShipments}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Total Shipments')}</p>
+              <p className="text-xl sm:text-2xl font-bold">{animatedShipments}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-green-100 p-2.5 dark:bg-green-900/30">
-              <Package className="h-5 w-5 text-green-600" />
+          <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
+            <div className="rounded-lg bg-green-100 p-2 sm:p-2.5 dark:bg-green-900/30">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Total Items Shipped')}</p>
-              <p className="text-2xl font-bold">{animatedItems}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Total Items Shipped')}</p>
+              <p className="text-xl sm:text-2xl font-bold">{animatedItems}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-all duration-200">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-amber-100 p-2.5 dark:bg-amber-900/30">
-              <Clock className="h-5 w-5 text-amber-600" />
+          <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
+            <div className="rounded-lg bg-amber-100 p-2 sm:p-2.5 dark:bg-amber-900/30">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{t('Last Shipment')}</p>
-              <p className="text-2xl font-bold">
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('Last Shipment')}</p>
+              <p className="text-xl sm:text-2xl font-bold">
                 {stats?.lastShipmentDate ? relativeTime(stats.lastShipmentDate, locale) : '—'}
               </p>
             </div>
@@ -273,27 +283,27 @@ export function ContactDetailPage() {
             <CardHeader>
               <CardTitle className="text-base">{t('Contact Details')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
+            <CardContent className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               <div className="flex items-start gap-2">
                 <Building className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">{t('Name')}</p>
-                  <p className="text-sm font-medium">{contact.contactName}</p>
+                  <p className="text-sm font-medium truncate">{contact.contactName}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Building className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">{t('Company')}</p>
-                  <p className="text-sm font-medium">{contact.companyName || '—'}</p>
+                  <p className="text-sm font-medium truncate">{contact.companyName || '—'}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Mail className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">{t('Email')}</p>
                   {contact.email ? (
-                    <a href={`mailto:${contact.email}`} className="text-sm font-medium text-primary hover:underline">
+                    <a href={`mailto:${contact.email}`} className="text-sm font-medium text-primary hover:underline truncate block">
                       {contact.email}
                     </a>
                   ) : (
@@ -303,7 +313,7 @@ export function ContactDetailPage() {
               </div>
               <div className="flex items-start gap-2">
                 <Phone className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">{t('Phone')}</p>
                   {contact.phone ? (
                     <a href={`tel:${contact.phone}`} className="text-sm font-medium text-primary hover:underline">
@@ -316,9 +326,9 @@ export function ContactDetailPage() {
               </div>
               <div className="flex items-start gap-2 sm:col-span-2">
                 <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">{t('Shipping Address')}</p>
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-medium break-words">
                     {[contact.street, [contact.postalCode, contact.city].filter(Boolean).join(' '), contact.country]
                       .filter(Boolean)
                       .join(', ') || '—'}
@@ -333,7 +343,7 @@ export function ContactDetailPage() {
             <CardHeader>
               <CardTitle className="text-base">{t('Business Information')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
+            <CardContent className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground">{t('Customer Number')}</p>
                 <p className="text-sm font-medium font-mono">{contact.customerNumber || '—'}</p>
@@ -369,7 +379,7 @@ export function ContactDetailPage() {
                   {t('Social Media Profiles')}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
+              <CardContent className="grid gap-3 sm:gap-4 sm:grid-cols-2">
                 {contact.instagramHandle && (
                   <div className="flex items-center gap-2">
                     <Instagram className="h-4 w-4 text-pink-500" />
@@ -485,9 +495,9 @@ export function ContactDetailPage() {
                   <TableRow>
                     <TableHead>{t('Shipment Number')}</TableHead>
                     <TableHead>{t('Status')}</TableHead>
-                    <TableHead>{t('Carrier')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('Carrier')}</TableHead>
                     <TableHead className="text-right">{t('Items')}</TableHead>
-                    <TableHead>{t('Date')}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t('Date')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -514,9 +524,9 @@ export function ContactDetailPage() {
                             {t(s.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{s.carrier || '—'}</TableCell>
+                        <TableCell className="hidden md:table-cell">{s.carrier || '—'}</TableCell>
                         <TableCell className="text-right">{s.totalItems}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                           {new Date(s.createdAt).toLocaleDateString()}
                         </TableCell>
                       </TableRow>

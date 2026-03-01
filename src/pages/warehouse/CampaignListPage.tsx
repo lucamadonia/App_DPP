@@ -96,10 +96,10 @@ export function CampaignListPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           {t('Campaigns')}
         </h1>
         <Button onClick={() => navigate('/warehouse/campaigns/new')}>
@@ -168,12 +168,12 @@ export function CampaignListPage() {
                   <TableRow>
                     <TableHead>{t('Name')}</TableHead>
                     <TableHead>{t('Status')}</TableHead>
-                    <TableHead className="text-right">{t('Products')}</TableHead>
-                    <TableHead className="text-right">{t('Budget')}</TableHead>
-                    <TableHead>{t('Start Date')}</TableHead>
-                    <TableHead>{t('End Date')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Tags')}</TableHead>
-                    <TableHead className="w-16" />
+                    <TableHead className="hidden sm:table-cell text-right">{t('Products')}</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right">{t('Budget')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('Start Date')}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t('End Date')}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t('Tags')}</TableHead>
+                    <TableHead className="w-12 sm:w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -198,19 +198,19 @@ export function CampaignListPage() {
                         className="cursor-pointer hover:bg-muted/50 transition-colors duration-150"
                         onClick={() => navigate(`/warehouse/campaigns/${campaign.id}`)}
                       >
-                        <TableCell className="font-medium">{campaign.name}</TableCell>
+                        <TableCell className="font-medium max-w-[180px] sm:max-w-none truncate">{campaign.name}</TableCell>
                         <TableCell>
                           <Badge className={`${CAMPAIGN_STATUS_COLORS[campaign.status]} border-0`}>
                             {t(campaign.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="hidden sm:table-cell text-right font-mono text-sm">
                           {campaign.productIds.length}
                         </TableCell>
-                        <TableCell className="text-right text-sm">
+                        <TableCell className="hidden sm:table-cell text-right text-sm">
                           {formatBudget(campaign.budget, campaign.currency)}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                           {campaign.startDate ? (
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -218,10 +218,10 @@ export function CampaignListPage() {
                             </span>
                           ) : '—'}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                           {formatDate(campaign.endDate)}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell className="hidden lg:table-cell">
                           {campaign.tags.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {campaign.tags.slice(0, 3).map((tag) => (

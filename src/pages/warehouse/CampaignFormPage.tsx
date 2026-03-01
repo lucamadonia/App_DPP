@@ -145,21 +145,21 @@ export function CampaignFormPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/warehouse/campaigns">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           {isEdit ? t('Edit Campaign') : t('Create Campaign')}
         </h1>
       </div>
 
       {/* Form */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Main fields */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="hover:shadow-md transition-all duration-200">

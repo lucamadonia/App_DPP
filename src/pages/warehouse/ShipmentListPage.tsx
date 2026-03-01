@@ -34,18 +34,18 @@ function KPICard({ label, value, icon: Icon, color, bgColor, loading }: {
   const animated = useAnimatedNumber(loading ? 0 : value);
   return (
     <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className={`rounded-lg p-2.5 ${bgColor}`}>
-            <Icon className={`h-5 w-5 ${color}`} />
+      <CardContent className="pt-4 sm:pt-5 pb-3 sm:pb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`rounded-lg p-2 sm:p-2.5 ${bgColor}`}>
+            <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${color}`} />
           </div>
           <div className="min-w-0">
             {loading ? (
-              <Skeleton className="h-7 w-12 mb-1" />
+              <Skeleton className="h-6 sm:h-7 w-12 mb-1" />
             ) : (
-              <p className="text-2xl font-bold tabular-nums leading-none">{animated}</p>
+              <p className="text-xl sm:text-2xl font-bold tabular-nums leading-none">{animated}</p>
             )}
-            <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{label}</p>
           </div>
         </div>
       </CardContent>
@@ -201,15 +201,15 @@ export function ShipmentListPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-2.5">
-            <Truck className="h-6 w-6 text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-2 sm:p-2.5">
+            <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               {t('Shipments')}
             </h1>
           </div>
@@ -223,7 +223,7 @@ export function ShipmentListPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         <KPICard label={t('Total Shipments')} value={kpiTotal} icon={Package} color="text-blue-600" bgColor="bg-blue-100 dark:bg-blue-900/30" loading={countsLoading} />
         <KPICard label={t('Drafts')} value={kpiDraft} icon={FileText} color="text-gray-600" bgColor="bg-gray-100 dark:bg-gray-800" loading={countsLoading} />
         <KPICard label={t('In Progress')} value={kpiInProgress} icon={ArrowUpDown} color="text-yellow-600" bgColor="bg-yellow-100 dark:bg-yellow-900/30" loading={countsLoading} />
@@ -232,7 +232,7 @@ export function ShipmentListPage() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 -mb-1">
+      <div className="flex gap-1 overflow-x-auto pb-1 -mb-1 -mx-1 px-1">
         {STATUS_TAB_ORDER.map((status) => {
           const count = statusCounts[status] || 0;
           const isActive = activeTab === status;
@@ -240,7 +240,7 @@ export function ShipmentListPage() {
             <button
               key={status}
               onClick={() => setActiveTab(status)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-muted hover:bg-muted/80 text-muted-foreground'
@@ -258,8 +258,8 @@ export function ShipmentListPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('Search...')}
@@ -289,20 +289,22 @@ export function ShipmentListPage() {
             <SelectItem value="urgent">{t('urgent')}</SelectItem>
           </SelectContent>
         </Select>
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="w-full sm:w-40"
-          placeholder={t('Date from')}
-        />
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="w-full sm:w-40"
-          placeholder={t('Date to')}
-        />
+        <div className="flex gap-2 sm:contents">
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="flex-1 sm:flex-none sm:w-40"
+            placeholder={t('Date from')}
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="flex-1 sm:flex-none sm:w-40"
+            placeholder={t('Date to')}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -320,7 +322,7 @@ export function ShipmentListPage() {
                   <TableHead className="text-right">{t('Items')}</TableHead>
                   <TableHead className="hidden lg:table-cell">{t('Tracking Number')}</TableHead>
                   <TableHead className="hidden xl:table-cell">{t('Sample Status')}</TableHead>
-                  <SortableHeader label={t('Created', { ns: 'common' })} sortKey="createdAt" currentSort={sortBy} currentDir={sortDir} onSort={handleSort} />
+                  <SortableHeader label={t('Created', { ns: 'common' })} sortKey="createdAt" currentSort={sortBy} currentDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -328,7 +330,7 @@ export function ShipmentListPage() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                       {Array.from({ length: 9 }).map((_, j) => (
-                        <TableCell key={j} className={j === 4 ? 'hidden sm:table-cell' : j === 3 ? 'hidden md:table-cell' : j === 6 ? 'hidden lg:table-cell' : j === 7 ? 'hidden xl:table-cell' : ''}>
+                        <TableCell key={j} className={j === 4 || j === 8 ? 'hidden sm:table-cell' : j === 3 ? 'hidden md:table-cell' : j === 6 ? 'hidden lg:table-cell' : j === 7 ? 'hidden xl:table-cell' : ''}>
                           <Skeleton className="h-5 w-full" />
                         </TableCell>
                       ))}
@@ -380,7 +382,7 @@ export function ShipmentListPage() {
                           <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
                         ) : '—'}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-sm whitespace-nowrap">
                         {new Date(s.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
@@ -394,8 +396,8 @@ export function ShipmentListPage() {
 
       {/* Pagination */}
       {totalCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             {t('Page')} {page} {t('of')} {totalPages} ({totalCount} {t('Total Shipments')})
           </div>
           <div className="flex items-center gap-2">

@@ -70,7 +70,7 @@ function StatusPipeline({ current, createdAt, shippedAt, deliveredAt, t }: {
 
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex items-center min-w-[600px] px-4">
+      <div className="flex items-center min-w-[500px] px-2 sm:px-4">
         {SHIPMENT_STATUS_ORDER.map((status, idx) => {
           const isPast = !isCancelled && currentIdx > idx;
           const isCurrent = !isCancelled && status === current;
@@ -141,12 +141,12 @@ function EditableField({ label, value, editing, editValue, onChange }: {
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex justify-between items-center gap-2">
-      <span className="text-muted-foreground text-sm shrink-0">{label}</span>
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+      <span className="text-muted-foreground text-xs sm:text-sm shrink-0">{label}</span>
       {editing ? (
-        <Input value={editValue} onChange={(e) => onChange(e.target.value)} className="max-w-[200px] h-8 text-sm" />
+        <Input value={editValue} onChange={(e) => onChange(e.target.value)} className="sm:max-w-[200px] h-8 text-sm" />
       ) : (
-        <span className="text-sm text-right">{value || '—'}</span>
+        <span className="text-sm sm:text-right">{value || '—'}</span>
       )}
     </div>
   );
@@ -301,18 +301,18 @@ export function ShipmentDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10 rounded" />
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded" />
           <div className="flex-1">
-            <Skeleton className="h-7 w-48 mb-2" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-6 sm:h-7 w-40 sm:w-48 mb-2" />
+            <Skeleton className="h-4 w-28 sm:w-32" />
           </div>
         </div>
-        <Skeleton className="h-20 w-full rounded-lg" />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Skeleton className="h-48 rounded-lg" />
-          <Skeleton className="h-48 rounded-lg" />
+        <Skeleton className="h-16 sm:h-20 w-full rounded-lg" />
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+          <Skeleton className="h-40 sm:h-48 rounded-lg" />
+          <Skeleton className="h-40 sm:h-48 rounded-lg" />
         </div>
       </div>
     );
@@ -348,15 +348,15 @@ export function ShipmentDetailPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/warehouse/shipments"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight">{shipment.shipmentNumber}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{shipment.shipmentNumber}</h1>
             <Badge variant="secondary" className={SHIPMENT_STATUS_COLORS[shipment.status]}>{t(shipment.status)}</Badge>
             <Badge variant="secondary" className={PRIORITY_COLORS[shipment.priority]}>{t(shipment.priority)}</Badge>
           </div>
@@ -368,7 +368,7 @@ export function ShipmentDetailPage() {
 
       {/* Status Pipeline */}
       <Card>
-        <CardContent className="pt-6 pb-4">
+        <CardContent className="pt-4 sm:pt-6 pb-3 sm:pb-4 px-2 sm:px-6">
           <StatusPipeline
             current={shipment.status}
             createdAt={shipment.createdAt}
@@ -382,8 +382,8 @@ export function ShipmentDetailPage() {
       {/* Sample Status Pipeline (influencer shipments) */}
       {hasSampleMeta && (
         <Card>
-          <CardContent className="pt-6 pb-4">
-            <div className="flex items-center gap-3 mb-4">
+          <CardContent className="pt-4 sm:pt-6 pb-3 sm:pb-4 px-3 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Gift className="h-4 w-4 text-pink-500" />
                 <span className="text-sm font-medium">
@@ -441,48 +441,48 @@ export function ShipmentDetailPage() {
       )}
 
       {/* Inline KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="flex items-center gap-2 rounded-lg border p-3">
-          <Package className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-semibold tabular-nums">{shipment.totalItems}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
+          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold tabular-nums">{shipment.totalItems}</p>
             <p className="text-[10px] text-muted-foreground">{t('Items')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border p-3">
-          <Weight className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-semibold tabular-nums">
+        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
+          <Weight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold tabular-nums truncate">
               {shipment.totalWeightGrams != null ? `${(shipment.totalWeightGrams / 1000).toFixed(1)} kg` : '—'}
             </p>
             <p className="text-[10px] text-muted-foreground">{t('Weight')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border p-3">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-semibold tabular-nums">
+        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
+          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold tabular-nums truncate">
               {shipment.shippingCost != null ? `€${shipment.shippingCost.toFixed(2)}` : '—'}
             </p>
             <p className="text-[10px] text-muted-foreground">{t('Shipping Cost')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border p-3">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-semibold truncate">{shipment.sourceLocationName || '—'}</p>
+        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
+          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold truncate">{shipment.sourceLocationName || '—'}</p>
             <p className="text-[10px] text-muted-foreground">{t('Location')}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 border-b overflow-x-auto -mx-1 px-1">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.key
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -495,7 +495,7 @@ export function ShipmentDetailPage() {
 
       {/* Tab: Overview */}
       {activeTab === 'overview' && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           {/* Recipient Card */}
           <Card>
             <CardHeader className="pb-3 flex-row items-center justify-between">
@@ -681,8 +681,8 @@ export function ShipmentDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('Product')}</TableHead>
-                    <TableHead>{t('Batch')}</TableHead>
-                    <TableHead>{t('Location')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('Batch')}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t('Location')}</TableHead>
                     <TableHead className="text-right">{t('Quantity')}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t('picking')}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t('packed')}</TableHead>
@@ -700,16 +700,16 @@ export function ShipmentDetailPage() {
                       return (
                         <TableRow key={item.id}>
                           <TableCell>
-                            <Link to={`/products/${item.productId}`} className="font-medium text-primary hover:underline">
+                            <Link to={`/products/${item.productId}`} className="font-medium text-primary hover:underline text-xs sm:text-sm">
                               {item.productName || item.productId.slice(0, 8)}
                             </Link>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <Link to={`/products/${item.productId}/batches/${item.batchId}`} className="hover:underline">
                               {item.batchSerialNumber || item.batchId.slice(0, 8)}
                             </Link>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             {item.locationName ? (
                               <Link to={`/warehouse/locations/${item.locationId}`} className="hover:underline">{item.locationName}</Link>
                             ) : '—'}
@@ -805,7 +805,7 @@ export function ShipmentDetailPage() {
 
       {/* Action Bar */}
       {!isTerminal && (
-        <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t -mx-4 px-4 py-3 sm:-mx-6 sm:px-6 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t -mx-4 px-3 py-2 sm:-mx-6 sm:px-6 sm:py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
           <div className="flex gap-2">
             {prevStatus && currentIdx > 0 && (
               <Button variant="outline" size="sm" onClick={() => handleStatusChange(prevStatus)} disabled={statusUpdating}>
@@ -868,14 +868,14 @@ function TimelineEntry({ icon, title, date, description, variant }: {
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
           <span className="font-medium text-sm">{title}</span>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <span className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {new Date(date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
           </span>
         </div>
-        {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
+        {description && <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{description}</p>}
       </div>
     </div>
   );

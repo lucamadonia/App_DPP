@@ -121,9 +121,9 @@ export function TransferListPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t('Stock Transfers')}</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Stock Transfers')}</h1>
         <Button onClick={openDialog}>
           <Plus className="mr-2 h-4 w-4" />
           {t('New Transfer')}
@@ -132,65 +132,67 @@ export function TransferListPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('Transaction Number')}</TableHead>
-                <TableHead>{t('Type')}</TableHead>
-                <TableHead>{t('Product')}</TableHead>
-                <TableHead>{t('Location')}</TableHead>
-                <TableHead className="text-right">{t('Quantity')}</TableHead>
-                <TableHead>{t('Date')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    {t('Loading...', { ns: 'common' })}
-                  </TableCell>
+                  <TableHead>{t('Transaction Number')}</TableHead>
+                  <TableHead>{t('Type')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('Product')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Location')}</TableHead>
+                  <TableHead className="text-right">{t('Quantity')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('Date')}</TableHead>
                 </TableRow>
-              ) : transactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    <ArrowRightLeft className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                    {t('No transfers yet')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="font-mono text-xs">{tx.transactionNumber}</TableCell>
-                    <TableCell>
-                      <Badge className={TYPE_COLORS[tx.type] || 'bg-gray-100 text-gray-800'}>
-                        {t(tx.type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{tx.productName || tx.productId.slice(0, 8)}</TableCell>
-                    <TableCell>{tx.locationName || '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">
-                      <span className={tx.quantity > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {tx.quantity > 0 ? '+' : ''}{tx.quantity}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {new Date(tx.createdAt).toLocaleDateString()}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      {t('Loading...', { ns: 'common' })}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      <ArrowRightLeft className="mx-auto h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
+                      {t('No transfers yet')}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="font-mono text-[10px] sm:text-xs">{tx.transactionNumber}</TableCell>
+                      <TableCell>
+                        <Badge className={`${TYPE_COLORS[tx.type] || 'bg-gray-100 text-gray-800'} text-[10px] sm:text-xs`}>
+                          {t(tx.type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{tx.productName || tx.productId.slice(0, 8)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{tx.locationName || '—'}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        <span className={tx.quantity > 0 ? 'text-green-600' : 'text-red-600'}>
+                          {tx.quantity > 0 ? '+' : ''}{tx.quantity}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-sm whitespace-nowrap">
+                        {new Date(tx.createdAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Transfer Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t('New Transfer')}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{t('New Transfer')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
               <Label>{t('Product')}</Label>
               <Select value={productId} onValueChange={(v) => { setProductId(v); setBatchId(''); }}>

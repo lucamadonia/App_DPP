@@ -135,9 +135,9 @@ export function DHLIntegrationPage() {
   // Billing gate
   if (!hasModule) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <Lock className="h-12 w-12 text-muted-foreground/50" />
-        <h2 className="text-xl font-semibold">{t('DHL Integration')}</h2>
+      <div className="flex flex-col items-center justify-center py-12 sm:py-24 gap-3 sm:gap-4 px-4">
+        <Lock className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/50" />
+        <h2 className="text-lg sm:text-xl font-semibold">{t('DHL Integration')}</h2>
         <p className="text-muted-foreground text-center max-w-md">
           {t('DHL requires professional')}
         </p>
@@ -161,20 +161,22 @@ export function DHLIntegrationPage() {
   const isConnected = settings?.hasCredentials;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4 sm:space-y-6 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-          <Truck className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('DHL Integration')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('Connect your DHL business account to create shipping labels directly')}
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+            <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('DHL Integration')}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {t('Connect your DHL business account to create shipping labels directly')}
+            </p>
+          </div>
         </div>
         {isConnected && (
-          <Badge variant="secondary" className="ml-auto gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          <Badge variant="secondary" className="sm:ml-auto gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
             <CheckCircle2 className="h-3 w-3" /> {t('Connected')}
           </Badge>
         )}
@@ -189,12 +191,12 @@ export function DHLIntegrationPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Label className="min-w-[100px]">{t('Enabled')}</Label>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Label className="min-w-[80px] sm:min-w-[100px] text-sm">{t('Enabled')}</Label>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
-          <div className="flex items-center gap-3">
-            <Label className="min-w-[100px]">{t('Sandbox Mode')}</Label>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Label className="min-w-[80px] sm:min-w-[100px] text-sm">{t('Sandbox Mode')}</Label>
             <Switch checked={sandbox} onCheckedChange={setSandbox} />
             {sandbox && <Badge variant="outline" className="text-xs">Sandbox</Badge>}
           </div>
@@ -217,7 +219,7 @@ export function DHLIntegrationPage() {
                   placeholder={settings?.hasCredentials ? '••••••••' : 'Enter API key'}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs text-muted-foreground">{t('Username')}</Label>
                   <Input
@@ -268,7 +270,7 @@ export function DHLIntegrationPage() {
             <p className="text-xs text-muted-foreground mt-1">14-{t('digit DHL billing number (Abrechnungsnummer)')}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <Label className="text-xs text-muted-foreground">{t('Default Product')}</Label>
               <Select value={defaultProduct} onValueChange={(v) => setDefaultProduct(v as DHLParcelProduct)}>
@@ -302,7 +304,7 @@ export function DHLIntegrationPage() {
           <CardTitle className="text-base">{t('Default Shipper')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <Label className="text-xs text-muted-foreground">{t('Name')} 1 *</Label>
               <Input value={shipperName} onChange={(e) => setShipperName(e.target.value)} placeholder="Firma GmbH" />
@@ -316,7 +318,7 @@ export function DHLIntegrationPage() {
             <Label className="text-xs text-muted-foreground">{t('Street')} *</Label>
             <Input value={shipperStreet} onChange={(e) => setShipperStreet(e.target.value)} placeholder="Musterstr. 1" />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <Label className="text-xs text-muted-foreground">{t('Postal Code')} *</Label>
               <Input value={shipperPostal} onChange={(e) => setShipperPostal(e.target.value)} placeholder="12345" />
@@ -337,7 +339,7 @@ export function DHLIntegrationPage() {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <Label className="text-xs text-muted-foreground">{t('Email')}</Label>
               <Input value={shipperEmail} onChange={(e) => setShipperEmail(e.target.value)} placeholder="versand@firma.de" />
@@ -351,8 +353,8 @@ export function DHLIntegrationPage() {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end gap-2 pb-8">
-        <Button onClick={handleSave} disabled={saving} className="min-w-[140px]">
+      <div className="flex justify-end gap-2 pb-4 sm:pb-8">
+        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto sm:min-w-[140px]">
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
           {t('Save', { ns: 'common' })}
         </Button>

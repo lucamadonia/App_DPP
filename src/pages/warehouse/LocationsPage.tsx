@@ -65,7 +65,7 @@ export function LocationsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Warehouse Locations')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Warehouse Locations')}</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           {t('Create Location')}
@@ -86,7 +86,7 @@ export function LocationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
           {locs.map((loc) => {
             const locStats = stats[loc.id] || { totalItems: 0, totalBatches: 0, zoneCount: 0, binLocationCount: 0, lowStockCount: 0 };
             const usedPercent = locStats.capacityUsedPercent || 0;
