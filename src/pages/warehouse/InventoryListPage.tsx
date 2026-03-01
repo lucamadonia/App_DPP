@@ -515,7 +515,7 @@ export function InventoryListPage() {
             {s.productName || s.productId.slice(0, 8)}
           </Link>
         </TableCell>
-        <TableCell>
+        <TableCell className="hidden md:table-cell">
           <Link to={`/products/${s.productId}/batches/${s.batchId}`} className="hover:underline text-primary font-mono text-xs">
             {s.batchSerialNumber || s.batchId.slice(0, 8)}
           </Link>
@@ -524,10 +524,10 @@ export function InventoryListPage() {
           <Link to={`/warehouse/locations/${s.locationId}`} className="hover:underline text-primary">
             {s.locationName ?? '—'}
           </Link>
-          {s.locationCode && <span className="text-muted-foreground ml-1 text-xs">({s.locationCode})</span>}
+          {s.locationCode && <span className="text-muted-foreground ml-1 text-xs hidden sm:inline">({s.locationCode})</span>}
         </TableCell>
-        <TableCell className="text-muted-foreground">{s.binLocation || '—'}</TableCell>
-        <TableCell className="w-[120px] px-2">
+        <TableCell className="hidden lg:table-cell text-muted-foreground">{s.binLocation || '—'}</TableCell>
+        <TableCell className="hidden sm:table-cell w-[120px] px-2">
           <StockBar row={s} />
         </TableCell>
         <TableCell className="text-right tabular-nums">
@@ -536,8 +536,8 @@ export function InventoryListPage() {
             {s.quantityAvailable.toLocaleString()}
           </span>
         </TableCell>
-        <TableCell className="text-right tabular-nums">{s.quantityReserved.toLocaleString()}</TableCell>
-        <TableCell className="text-right tabular-nums text-muted-foreground">
+        <TableCell className="hidden md:table-cell text-right tabular-nums">{s.quantityReserved.toLocaleString()}</TableCell>
+        <TableCell className="hidden lg:table-cell text-right tabular-nums text-muted-foreground">
           {s.reorderPoint != null ? s.reorderPoint.toLocaleString() : '—'}
         </TableCell>
         <TableCell className="w-10">
@@ -1020,23 +1020,25 @@ export function InventoryListPage() {
                     <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('productName')}>
                       {t('Product')}<SortIcon col="productName" />
                     </TableHead>
-                    <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('batchSerialNumber')}>
+                    <TableHead className="hidden md:table-cell cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('batchSerialNumber')}>
                       {t('Batch')}<SortIcon col="batchSerialNumber" />
                     </TableHead>
                     <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('locationName')}>
                       {t('Location')}<SortIcon col="locationName" />
                     </TableHead>
-                    <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('binLocation')}>
+                    <TableHead className="hidden lg:table-cell cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('binLocation')}>
                       {t('Bin Location')}<SortIcon col="binLocation" />
                     </TableHead>
-                    <TableHead className="text-center">{t('Stock Level')}</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center">{t('Stock Level')}</TableHead>
                     <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityAvailable')}>
-                      {t('Available Quantity')}<SortIcon col="quantityAvailable" />
+                      <span className="hidden sm:inline">{t('Available Quantity')}</span>
+                      <span className="sm:hidden">{t('Avail.')}</span>
+                      <SortIcon col="quantityAvailable" />
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityReserved')}>
+                    <TableHead className="hidden md:table-cell text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityReserved')}>
                       {t('Reserved Quantity')}<SortIcon col="quantityReserved" />
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('reorderPoint')}>
+                    <TableHead className="hidden lg:table-cell text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('reorderPoint')}>
                       {t('Reorder Point')}<SortIcon col="reorderPoint" />
                     </TableHead>
                     <TableHead className="w-10">

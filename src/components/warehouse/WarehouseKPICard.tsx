@@ -58,17 +58,17 @@ export function WarehouseKPICard({
       className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
-      <CardContent className="pt-5 pb-4 px-4">
-        <div className="flex items-start gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient}`}>
-            <Icon className={`h-5 w-5 ${color}`} />
+      <CardContent className="pt-4 pb-3 px-3 sm:pt-5 sm:pb-4 sm:px-4">
+        <div className="flex items-start gap-2.5 sm:gap-3">
+          <div className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl bg-gradient-to-br ${gradient} shrink-0`}>
+            <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${color}`} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground truncate">{label}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{label}</p>
             {loading ? (
-              <Skeleton className="h-7 w-16 mt-0.5" />
+              <Skeleton className="h-6 sm:h-7 w-14 sm:w-16 mt-0.5" />
             ) : (
-              <p className="text-xl font-bold tabular-nums leading-tight mt-0.5">
+              <p className="text-lg sm:text-xl font-bold tabular-nums leading-tight mt-0.5">
                 {displayValue}
               </p>
             )}

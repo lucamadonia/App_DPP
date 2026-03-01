@@ -185,13 +185,13 @@ export function WarehouseDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Hero Header */}
-      <div className="rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5 text-white">
-        <h1 className="text-2xl font-bold tracking-tight">{t('Warehouse & Fulfillment')}</h1>
-        <p className="text-white/70 text-sm mt-0.5">{t('Dashboard Overview')}</p>
+      <div className="rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-4 sm:px-6 sm:py-5 text-white">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Warehouse & Fulfillment')}</h1>
+        <p className="text-white/70 text-xs sm:text-sm mt-0.5">{t('Dashboard Overview')}</p>
       </div>
 
       {/* KPI cards */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {kpis.map((kpi, i) => (
           <div
             key={kpi.label}
@@ -204,7 +204,7 @@ export function WarehouseDashboardPage() {
 
       {/* Sample Tracking KPIs */}
       {(sampleStats.samplesOut > 0 || sampleStats.totalCampaigns > 0) && (
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           <WarehouseKPICard label={t('Samples Out')} value={sampleStats.samplesOut} icon={Package} color="text-pink-600" gradient="from-pink-500/20 to-pink-600/10" loading={loading} />
           <WarehouseKPICard label={t('Returns Pending')} value={sampleStats.returnsPending} icon={RotateCcw} color="text-orange-600" gradient="from-orange-500/20 to-orange-600/10" loading={loading} />
           <WarehouseKPICard label={t('Content Awaiting')} value={sampleStats.awaitingContent} icon={Camera} color="text-amber-600" gradient="from-amber-500/20 to-amber-600/10" loading={loading} />
@@ -213,13 +213,13 @@ export function WarehouseDashboardPage() {
       )}
 
       {/* Charts Section */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         <StockMovementChart data={movementData} />
         <StockByLocationChart data={stockByLocation} />
       </div>
 
       {/* Top row: Capacity + Pending Actions */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Warehouse Capacity */}
         <Card>
           <CardHeader className="pb-3">
@@ -252,12 +252,12 @@ export function WarehouseDashboardPage() {
                   if (totalCap <= 0) return null;
                   return (
                     <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2 text-sm">
                         <span className="font-medium flex items-center gap-1.5">
                           <Box className="h-3.5 w-3.5 text-primary" />
                           {t('Total Utilization')}
                         </span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground tabular-nums">
                           {formatVolumeM3(totalUsed)} / {formatVolumeM3(totalCap)}
                         </span>
                       </div>
@@ -299,33 +299,33 @@ export function WarehouseDashboardPage() {
                         </div>
                       </div>
                       {capacityUnits > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Units')}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-[10px] text-muted-foreground w-8 sm:w-10 shrink-0">{t('Units')}</span>
                           <Progress
                             value={Math.min(fillUnits, 100)}
                             className={`h-1.5 flex-1 ${capacityColor(fillUnits)}`}
                           />
-                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-24 text-right">
-                            {loc.totalUnits.toLocaleString()} / {capacityUnits.toLocaleString()}
+                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-auto sm:w-24 text-right">
+                            {loc.totalUnits.toLocaleString()}<span className="hidden sm:inline"> / {capacityUnits.toLocaleString()}</span>
                           </span>
                         </div>
                       )}
                       {!capacityUnits && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Units')}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-[10px] text-muted-foreground w-8 sm:w-10 shrink-0">{t('Units')}</span>
                           <span className="text-[10px] text-muted-foreground tabular-nums">
                             {loc.totalUnits.toLocaleString()} {t('units')}
                           </span>
                         </div>
                       )}
                       {hasVolume && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('Volume')}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-[10px] text-muted-foreground w-8 sm:w-10 shrink-0">{t('Volume')}</span>
                           <Progress
                             value={Math.min(fillVol, 100)}
                             className={`h-1.5 flex-1 ${capacityColor(fillVol)}`}
                           />
-                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-24 text-right">
+                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-auto sm:w-24 text-right">
                             {formatVolumeM3(loc.usedVolumeM3 ?? 0)}
                           </span>
                         </div>
@@ -389,17 +389,18 @@ export function WarehouseDashboardPage() {
       </div>
 
       {/* Bottom row: Recent Activity Timeline + Quick Actions */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Recent Activity — Timeline */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              {t('Recent Activity')}
+          <CardHeader className="flex flex-row items-center justify-between pb-3 gap-2">
+            <CardTitle className="text-sm sm:text-base font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">{t('Recent Activity')}</span>
             </CardTitle>
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" className="shrink-0 text-xs sm:text-sm" asChild>
               <Link to="/warehouse/transfers">
-                {t('View All')} <ArrowRight className="ml-1 h-3 w-3" />
+                <span className="hidden sm:inline">{t('View All')}</span>
+                <ArrowRight className="sm:ml-1 h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>
@@ -481,17 +482,17 @@ export function WarehouseDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {quickActions.map((action) => (
                 <Link
                   key={action.to}
                   to={action.to}
-                  className="landing-3d-card rounded-xl border bg-card p-4 flex flex-col items-center gap-2.5 text-center group"
+                  className="landing-3d-card rounded-xl border bg-card p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-2.5 text-center group"
                 >
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${action.gradient} text-white transition-transform group-hover:scale-110`}>
-                    <action.icon className="h-5 w-5" />
+                  <div className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${action.gradient} text-white transition-transform group-hover:scale-110`}>
+                    <action.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <span className="text-xs font-medium leading-tight">{action.label}</span>
+                  <span className="text-[11px] sm:text-xs font-medium leading-tight">{action.label}</span>
                 </Link>
               ))}
             </div>

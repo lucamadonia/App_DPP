@@ -120,7 +120,7 @@ export function StockMovementChart({ data }: { data: StockMovementData[] }) {
           </div>
         </div>
         {/* Legend */}
-        <div className="flex gap-4 mt-3 text-[10px] text-muted-foreground">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 sm:gap-4 mt-2 sm:mt-3 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{t('receipts')}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{t('shipments')}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" />{t('adjustments')}</span>
@@ -161,9 +161,9 @@ export function StockByLocationChart({ data }: { data: StockByLocationData[] }) 
       <CardContent>
         <div className="space-y-2.5">
           {data.map((entry, i) => (
-            <div key={entry.locationName} className="flex items-center gap-2">
-              <span className="text-xs truncate w-24 shrink-0" title={entry.locationName}>{entry.locationName}</span>
-              <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
+            <div key={entry.locationName} className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-[10px] sm:text-xs truncate w-16 sm:w-24 shrink-0" title={entry.locationName}>{entry.locationName}</span>
+              <div className="flex-1 h-5 sm:h-6 bg-muted rounded overflow-hidden">
                 <div
                   className="h-full bg-primary/60 rounded animate-bar-grow"
                   style={{
@@ -172,7 +172,7 @@ export function StockByLocationChart({ data }: { data: StockByLocationData[] }) 
                   }}
                 />
               </div>
-              <span className="text-xs font-medium w-12 text-right tabular-nums shrink-0">{entry.totalUnits.toLocaleString()}</span>
+              <span className="text-[10px] sm:text-xs font-medium w-10 sm:w-12 text-right tabular-nums shrink-0">{entry.totalUnits.toLocaleString()}</span>
             </div>
           ))}
         </div>
