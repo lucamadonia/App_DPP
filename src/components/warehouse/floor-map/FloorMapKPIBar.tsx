@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Package, LayoutGrid, Activity, AlertTriangle } from 'lucide-react';
+import { Package, LayoutGrid, Activity, AlertTriangle, Armchair } from 'lucide-react';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import type { WarehouseZone, WhStockLevel } from '@/types/warehouse';
-import { getStockByZone, getZoneFillRatio } from './floor-map-utils';
+import { getStockByZone, getZoneFillRatio, getTotalFurnitureCount } from './floor-map-utils';
 import { CRITICAL_FILL_THRESHOLD } from './floor-map-constants';
 
 interface FloorMapKPIBarProps {
@@ -13,7 +13,12 @@ interface FloorMapKPIBarProps {
 
 export function FloorMapKPIBar({ zones, stock }: FloorMapKPIBarProps) {
   const { t } = useTranslation('warehouse');
-  const stagger = useStaggeredList(4, { interval: 80, initialDelay: 100 });
+
+  const totalFurniture = getTotalFurnitureCount(zones);
+  const hasFurniture = totalFurniture > 0;
+  const kpiCount = hasFurniture ? 5 : 4;
+
+  const stagger = useStaggeredList(kpiCount, { interval: 80, initialDelay: 100 });
 
   const totalUnits = stock.reduce((sum, s) => sum + s.quantityAvailable, 0);
   const activeZones = zones.filter((z) => {
@@ -41,6 +46,7 @@ export function FloorMapKPIBar({ zones, stock }: FloorMapKPIBarProps) {
   const animActive = useAnimatedNumber(activeZones, { duration: 700, delay: 80 });
   const animUtil = useAnimatedNumber(avgUtil, { duration: 800, delay: 160 });
   const animAlerts = useAnimatedNumber(alerts, { duration: 600, delay: 240 });
+  const animFurniture = useAnimatedNumber(totalFurniture, { duration: 700, delay: 320 });
 
   const kpis = [
     {
@@ -73,8 +79,18 @@ export function FloorMapKPIBar({ zones, stock }: FloorMapKPIBarProps) {
     },
   ];
 
+  if (hasFurniture) {
+    kpis.push({
+      label: t('Furniture Count'),
+      value: String(animFurniture),
+      icon: Armchair,
+      color: 'text-violet-600 dark:text-violet-400',
+      bg: 'bg-violet-500/10',
+    });
+  }
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className={`grid grid-cols-2 ${hasFurniture ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2`}>
       {kpis.map((kpi, i) => (
         <div
           key={kpi.label}

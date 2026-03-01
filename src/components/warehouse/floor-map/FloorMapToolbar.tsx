@@ -12,12 +12,13 @@ import {
   Layers,
   Flame,
   Search,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { MIN_ZOOM, MAX_ZOOM, type FloorMapViewMode } from './floor-map-constants';
+import { MIN_ZOOM, MAX_ZOOM, type FloorMapViewMode, type FloorMapLevel } from './floor-map-constants';
 
 interface FloorMapToolbarProps {
   isEditing: boolean;
@@ -28,6 +29,8 @@ interface FloorMapToolbarProps {
   zoneCount: number;
   isFullscreen: boolean;
   searchQuery: string;
+  level: FloorMapLevel;
+  showEmpty: boolean;
   onToggleEdit: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -38,6 +41,8 @@ interface FloorMapToolbarProps {
   onViewModeChange: (mode: FloorMapViewMode) => void;
   onToggleFullscreen: () => void;
   onSearchChange: (query: string) => void;
+  onToggleShowEmpty?: () => void;
+  onBackToOverview?: () => void; // reserved for future breadcrumb in toolbar
 }
 
 export function FloorMapToolbar({
@@ -49,6 +54,8 @@ export function FloorMapToolbar({
   zoneCount,
   isFullscreen,
   searchQuery,
+  level,
+  showEmpty,
   onToggleEdit,
   onZoomIn,
   onZoomOut,
@@ -59,8 +66,10 @@ export function FloorMapToolbar({
   onViewModeChange,
   onToggleFullscreen,
   onSearchChange,
+  onToggleShowEmpty,
 }: FloorMapToolbarProps) {
   const { t } = useTranslation('warehouse');
+  const isInterior = level === 'zone-interior';
 
   const viewModes: { key: FloorMapViewMode; icon: typeof Layers; label: string }[] = [
     { key: 'flat', icon: Layers, label: '2D' },
@@ -136,10 +145,23 @@ export function FloorMapToolbar({
         {t('Fit All')}
       </Button>
 
-      {isEditing && (
+      {isEditing && !isInterior && (
         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onAutoLayout}>
           <LayoutGrid className="h-3 w-3 mr-1" />
           {t('Auto Layout')}
+        </Button>
+      )}
+
+      {/* Show Empty toggle (interior mode only) */}
+      {isInterior && onToggleShowEmpty && (
+        <Button
+          variant={showEmpty ? 'default' : 'ghost'}
+          size="sm"
+          className={`h-7 text-xs ${showEmpty ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+          onClick={onToggleShowEmpty}
+        >
+          <EyeOff className="h-3 w-3 mr-1" />
+          {t('Show Empty Spots')}
         </Button>
       )}
 
@@ -149,7 +171,7 @@ export function FloorMapToolbar({
         <Input
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={t('Search zones...')}
+          placeholder={isInterior ? t('Search products...') : t('Search zones...')}
           className="h-7 w-36 text-xs pl-7 bg-transparent border-muted"
         />
       </div>
@@ -157,11 +179,13 @@ export function FloorMapToolbar({
       <div className="flex-1" />
 
       {/* Zone count badge */}
-      <Badge variant="secondary" className="text-xs font-medium">
-        {zoneCount} {t('Zones')}
-      </Badge>
+      {!isInterior && (
+        <Badge variant="secondary" className="text-xs font-medium">
+          {zoneCount} {t('Zones')}
+        </Badge>
+      )}
 
-      {hasUnplaced && !isEditing && (
+      {hasUnplaced && !isEditing && !isInterior && (
         <span className="text-xs text-amber-600 dark:text-amber-400 max-w-[200px] truncate">
           {t('Some zones have no position. Switch to Edit mode to place them.')}
         </span>

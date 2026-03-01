@@ -1,11 +1,13 @@
 import { useRef, useCallback, useState } from 'react';
-import type { WarehouseZone, ZoneMapPosition, WhStockLevel, WarehouseZoneType } from '@/types/warehouse';
+import type { WarehouseZone, ZoneMapPosition, WhStockLevel, WarehouseZoneType, ZoneFurniture } from '@/types/warehouse';
 import {
   GRID_CELL,
   ZONE_FILL_COLORS,
   type FloorMapViewMode,
+  type FloorMapLevel,
 } from './floor-map-constants';
 import { FloorMapZone } from './FloorMapZone';
+import { FloorMapInterior } from './FloorMapInterior';
 import { FloorMapZoneTooltip } from './FloorMapZoneTooltip';
 import { FloorMapMinimap } from './FloorMapMinimap';
 import type { FloorMapInteraction } from './useFloorMapInteraction';
@@ -18,8 +20,19 @@ interface FloorMapCanvasProps {
   canvasHeight: string;
   highlightedType: WarehouseZoneType | null;
   searchQuery: string;
+  level: FloorMapLevel;
+  interiorZoneIdx: number;
+  showEmpty: boolean;
+  searchHighlightIds: Set<string>;
+  selectedFurnitureId: string | null;
+  hoveredFurnitureId: string | null;
   onZoneDoubleClick?: (zoneIdx: number) => void;
   onZoneClick?: (zoneIdx: number) => void;
+  onFurnitureSelect: (id: string | null) => void;
+  onFurnitureHover: (id: string | null) => void;
+  onFurniturePointerDown: (e: React.PointerEvent, furniture: ZoneFurniture) => void;
+  onFurnitureDoubleClick?: (furniture: ZoneFurniture) => void;
+  onFurnitureContextMenu?: (e: React.MouseEvent, furniture: ZoneFurniture) => void;
   interaction: FloorMapInteraction;
 }
 
@@ -31,8 +44,19 @@ export function FloorMapCanvas({
   canvasHeight,
   highlightedType,
   searchQuery,
+  level,
+  interiorZoneIdx,
+  showEmpty,
+  searchHighlightIds,
+  selectedFurnitureId,
+  hoveredFurnitureId,
   onZoneDoubleClick,
   onZoneClick,
+  onFurnitureSelect,
+  onFurnitureHover,
+  onFurniturePointerDown,
+  onFurnitureDoubleClick,
+  onFurnitureContextMenu,
   interaction,
 }: FloorMapCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -69,9 +93,9 @@ export function FloorMapCanvas({
     (_e: React.PointerEvent, zone: WarehouseZone, idx: number) => {
       if (isDragging) return;
       setHoveredZoneIdx(idx);
-      setTooltipZone(zone);
+      if (level === 'zone-overview') setTooltipZone(zone);
     },
-    [isDragging, setHoveredZoneIdx],
+    [isDragging, setHoveredZoneIdx, level],
   );
 
   const handleZonePointerLeave = useCallback(() => {
@@ -83,7 +107,7 @@ export function FloorMapCanvas({
   const isZoneDimmed = useCallback(
     (zone: WarehouseZone): boolean => {
       if (highlightedType && zone.type !== highlightedType) return true;
-      if (searchQuery) {
+      if (searchQuery && level === 'zone-overview') {
         const q = searchQuery.toLowerCase();
         return (
           !zone.name.toLowerCase().includes(q) &&
@@ -92,7 +116,7 @@ export function FloorMapCanvas({
       }
       return false;
     },
-    [highlightedType, searchQuery],
+    [highlightedType, searchQuery, level],
   );
 
   const handleMinimapPanTo = useCallback(
@@ -104,6 +128,9 @@ export function FloorMapCanvas({
 
   // Collect unique zone types for gradient definitions
   const zoneTypes = new Set(zones.map((z) => z.type ?? 'other'));
+
+  const isInterior = level === 'zone-interior';
+  const interiorZone = isInterior && interiorZoneIdx >= 0 ? zones[interiorZoneIdx] : null;
 
   return (
     <div
@@ -191,8 +218,8 @@ export function FloorMapCanvas({
             <rect x={-3000} y={-3000} width={6000} height={6000} fill="url(#floor-grid-lines)" />
           )}
 
-          {/* Zone rendering — sort by Y for proper overlap in 3D mode */}
-          {zones
+          {/* ===== LEVEL 1: Zone Overview ===== */}
+          {!isInterior && zones
             .map((zone, idx) => ({ zone, idx, pos: getEffectivePos(zone, idx) }))
             .sort((a, b) => {
               if (viewMode === '3d') return a.pos.y - b.pos.y;
@@ -222,15 +249,35 @@ export function FloorMapCanvas({
                 }}
                 onPointerEnter={(e) => handleZonePointerEnter(e, zone, idx)}
                 onPointerLeave={handleZonePointerLeave}
-                onDoubleClick={isEditing ? () => onZoneDoubleClick?.(idx) : undefined}
+                onDoubleClick={() => onZoneDoubleClick?.(idx)}
                 onResizeStart={(e, handle) => handleResizeStart(e, idx, pos, handle)}
               />
             ))}
+
+          {/* ===== LEVEL 2: Zone Interior ===== */}
+          {isInterior && interiorZone && (
+            <FloorMapInterior
+              zone={interiorZone}
+              stock={stock}
+              isEditing={isEditing}
+              viewMode={viewMode}
+              zoom={viewport.zoom}
+              showEmpty={showEmpty}
+              searchHighlightIds={searchHighlightIds}
+              selectedFurnitureId={selectedFurnitureId}
+              hoveredFurnitureId={hoveredFurnitureId}
+              onFurnitureSelect={onFurnitureSelect}
+              onFurnitureHover={onFurnitureHover}
+              onFurniturePointerDown={onFurniturePointerDown}
+              onFurnitureDoubleClick={onFurnitureDoubleClick}
+              onFurnitureContextMenu={onFurnitureContextMenu}
+            />
+          )}
         </g>
       </svg>
 
-      {/* Tooltip — anchored to zone */}
-      {tooltipZone && !isDragging && (
+      {/* Tooltip — anchored to zone (only in overview mode) */}
+      {tooltipZone && !isDragging && level === 'zone-overview' && (
         <FloorMapZoneTooltip
           zone={tooltipZone}
           stock={stock}
@@ -261,7 +308,9 @@ export function FloorMapCanvas({
             backdropFilter: 'blur(4px)',
           }}
         >
-          {viewMode === '3d' ? '3D View' : viewMode === 'heatmap' ? 'Stock Density' : 'Floor Plan'}
+          {isInterior
+            ? 'Interior'
+            : viewMode === '3d' ? '3D View' : viewMode === 'heatmap' ? 'Stock Density' : 'Floor Plan'}
         </div>
       </div>
     </div>

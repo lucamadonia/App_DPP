@@ -114,3 +114,43 @@ export const WARNING_FILL_THRESHOLD = 0.7;
 
 /** Keyboard nav pan step in SVG units */
 export const PAN_STEP = 40;
+
+// ============================================
+// FURNITURE / INTERIOR VIEW CONSTANTS
+// ============================================
+
+/** Interior grid cell size (finer grid inside zones) */
+export const INTERIOR_GRID_CELL = 20;
+
+/** Min furniture size in interior grid units */
+export const MIN_FURNITURE_SIZE = 1;
+
+/** 3D extrusion depth for furniture (flatter than zones) */
+export const FURNITURE_EXTRUSION = 4;
+
+/** Furniture resize handle size */
+export const FURNITURE_HANDLE_SIZE = 5;
+
+/** Floor map navigation level */
+export type FloorMapLevel = 'zone-overview' | 'zone-interior';
+
+/** Stock badge threshold: show per-section breakdown at this zoom level */
+export const SECTION_BADGE_ZOOM_THRESHOLD = 1.5;
+
+/** Fill level colors for furniture sections */
+export const FURNITURE_FILL_COLORS = {
+  empty: '#E5E7EB',      // gray-200
+  low: '#BBF7D0',        // green-200 (<70%)
+  medium: '#FDE68A',     // yellow-200 (70-90%)
+  high: '#FECACA',       // red-200 (>90%)
+  full: '#FCA5A5',       // red-300 (100%)
+} as const;
+
+/** Fill level stroke colors for furniture sections */
+export const FURNITURE_FILL_STROKES = {
+  empty: '#9CA3AF',
+  low: '#22C55E',
+  medium: '#F59E0B',
+  high: '#EF4444',
+  full: '#DC2626',
+} as const;

@@ -362,6 +362,33 @@ export function FloorMapZone({
         </circle>
       )}
 
+      {/* Furniture count badge (top-left, below label) */}
+      {(zone.furniture?.length ?? 0) > 0 && h > GRID_CELL * 2 && (
+        <g transform={`translate(6, ${Math.min(h * 0.5, 30)})`}>
+          <rect
+            x={0}
+            y={0}
+            width={28}
+            height={12}
+            rx={6}
+            fill={heatColor ?? colors.stroke}
+            opacity={0.2}
+          />
+          <text
+            x={14}
+            y={9}
+            textAnchor="middle"
+            fill={heatColor ? '#1E293B' : colors.text}
+            fontSize={7}
+            fontWeight={600}
+            fontFamily="system-ui"
+            style={{ pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {zone.furniture!.length} F
+          </text>
+        </g>
+      )}
+
       {/* Bin dots */}
       <FloorMapBinDots
         pos={pos}

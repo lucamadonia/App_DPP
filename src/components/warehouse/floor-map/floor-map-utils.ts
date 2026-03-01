@@ -1,4 +1,4 @@
-import type { WarehouseZone, ZoneMapPosition, WhStockLevel } from '@/types/warehouse';
+import type { WarehouseZone, ZoneMapPosition, WhStockLevel, ZoneFurniture, FurnitureSection } from '@/types/warehouse';
 import {
   GRID_CELL,
   GRID_COLS,
@@ -8,6 +8,8 @@ import {
   MAX_EXTRUSION,
   MIN_EXTRUSION,
   HEATMAP_COLORS,
+  WARNING_FILL_THRESHOLD,
+  CRITICAL_FILL_THRESHOLD,
 } from './floor-map-constants';
 
 /** Snap a position object to grid */
@@ -197,4 +199,184 @@ export function fitAllViewport(
     y: containerHeight / 2 - cy * zoom,
     zoom,
   };
+}
+
+// ============================================
+// FURNITURE STOCK UTILITIES
+// ============================================
+
+/**
+ * Get stock assigned to a specific furniture piece.
+ * Stock is linked via `binLocation` field: format "{furnitureId}:{sectionId}"
+ */
+export function getStockByFurniture(
+  stock: WhStockLevel[],
+  furnitureId: string,
+): { totalUnits: number; totalBatches: number; reserved: number; items: WhStockLevel[] } {
+  const items = stock.filter((s) => s.binLocation?.startsWith(`${furnitureId}:`));
+  return {
+    totalUnits: items.reduce((acc, s) => acc + s.quantityAvailable, 0),
+    totalBatches: new Set(items.map((s) => s.batchId)).size,
+    reserved: items.reduce((acc, s) => acc + s.quantityReserved, 0),
+    items,
+  };
+}
+
+/**
+ * Get stock for a specific section within a furniture piece.
+ * binLocation format: "{furnitureId}:{sectionId}"
+ */
+export function getStockBySection(
+  stock: WhStockLevel[],
+  furnitureId: string,
+  sectionId: string,
+): { totalUnits: number; reserved: number; items: WhStockLevel[] } {
+  const binKey = `${furnitureId}:${sectionId}`;
+  const items = stock.filter((s) => s.binLocation === binKey);
+  return {
+    totalUnits: items.reduce((acc, s) => acc + s.quantityAvailable, 0),
+    reserved: items.reduce((acc, s) => acc + s.quantityReserved, 0),
+    items,
+  };
+}
+
+/**
+ * Calculate fill ratio (0-1) for a furniture piece based on section capacities.
+ * If no capacity defined, returns ratio based on whether sections have stock.
+ */
+export function getFurnitureFillRatio(
+  stock: WhStockLevel[],
+  furniture: ZoneFurniture,
+): number {
+  if (furniture.sections.length === 0) return 0;
+
+  const totalCapacity = furniture.sections.reduce((sum, s) => sum + (s.capacity ?? 0), 0);
+  const { totalUnits } = getStockByFurniture(stock, furniture.id);
+
+  if (totalCapacity > 0) {
+    return Math.min(1, totalUnits / totalCapacity);
+  }
+
+  // No capacity defined — use section occupancy as heuristic
+  let occupiedSections = 0;
+  for (const section of furniture.sections) {
+    const sectionStock = getStockBySection(stock, furniture.id, section.id);
+    if (sectionStock.totalUnits > 0) occupiedSections++;
+  }
+  return furniture.sections.length > 0 ? occupiedSections / furniture.sections.length : 0;
+}
+
+/**
+ * Get section fill ratio (0-1) for a specific section.
+ */
+export function getSectionFillRatio(
+  stock: WhStockLevel[],
+  furnitureId: string,
+  section: FurnitureSection,
+): number {
+  const { totalUnits } = getStockBySection(stock, furnitureId, section.id);
+  if (section.capacity && section.capacity > 0) {
+    return Math.min(1, totalUnits / section.capacity);
+  }
+  return totalUnits > 0 ? 0.5 : 0; // heuristic when no capacity defined
+}
+
+/**
+ * Get fill level category for color coding.
+ */
+export function getFillLevel(ratio: number): 'empty' | 'low' | 'medium' | 'high' | 'full' {
+  if (ratio <= 0) return 'empty';
+  if (ratio < WARNING_FILL_THRESHOLD) return 'low';
+  if (ratio < CRITICAL_FILL_THRESHOLD) return 'medium';
+  if (ratio >= 1) return 'full';
+  return 'high';
+}
+
+/**
+ * Count total furniture pieces across all zones.
+ */
+export function getTotalFurnitureCount(zones: WarehouseZone[]): number {
+  return zones.reduce((sum, z) => sum + (z.furniture?.length ?? 0), 0);
+}
+
+/**
+ * Count total furniture capacity across all zones.
+ */
+export function getTotalFurnitureCapacity(zones: WarehouseZone[]): number {
+  let total = 0;
+  for (const zone of zones) {
+    for (const f of zone.furniture ?? []) {
+      for (const s of f.sections) {
+        total += s.capacity ?? 0;
+      }
+    }
+  }
+  return total;
+}
+
+/**
+ * Compute viewport that zooms into a zone's interior.
+ */
+export function zoomToZoneInterior(
+  zone: WarehouseZone,
+  containerWidth: number,
+  containerHeight: number,
+): { x: number; y: number; zoom: number } {
+  if (!zone.mapPosition) return { x: 20, y: 20, zoom: 1 };
+  const pos = zone.mapPosition;
+
+  const zonePixelW = pos.width * GRID_CELL;
+  const zonePixelH = pos.height * GRID_CELL;
+
+  const padX = GRID_CELL * 2;
+  const padY = GRID_CELL * 2;
+
+  const zoomX = containerWidth / (zonePixelW + padX * 2);
+  const zoomY = containerHeight / (zonePixelH + padY * 2);
+  const zoom = Math.min(zoomX, zoomY, 3) * 0.9;
+
+  const cx = (pos.x + pos.width / 2) * GRID_CELL;
+  const cy = (pos.y + pos.height / 2) * GRID_CELL;
+
+  return {
+    x: containerWidth / 2 - cx * zoom,
+    y: containerHeight / 2 - cy * zoom,
+    zoom,
+  };
+}
+
+/**
+ * Search stock across all furniture in all zones by product name, GTIN, or batch number.
+ * Returns matching furniture IDs with their zone indices.
+ */
+export function searchStockInFurniture(
+  zones: WarehouseZone[],
+  stock: WhStockLevel[],
+  query: string,
+): { zoneIdx: number; furnitureId: string; zoneName: string; furnitureName: string }[] {
+  if (!query.trim()) return [];
+  const q = query.toLowerCase();
+  const results: { zoneIdx: number; furnitureId: string; zoneName: string; furnitureName: string }[] = [];
+
+  for (let zoneIdx = 0; zoneIdx < zones.length; zoneIdx++) {
+    const zone = zones[zoneIdx];
+    for (const furniture of zone.furniture ?? []) {
+      const furnitureStock = stock.filter((s) => s.binLocation?.startsWith(`${furniture.id}:`));
+      const hasMatch = furnitureStock.some(
+        (s) =>
+          s.productName?.toLowerCase().includes(q) ||
+          s.batchSerialNumber?.toLowerCase().includes(q),
+      );
+      if (hasMatch) {
+        results.push({
+          zoneIdx,
+          furnitureId: furniture.id,
+          zoneName: zone.name,
+          furnitureName: furniture.name,
+        });
+      }
+    }
+  }
+
+  return results;
 }
