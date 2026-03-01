@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Package, Truck, Warehouse, AlertTriangle, ArrowRight,
   TrendingUp, ArrowRightLeft, ClipboardList, MapPin, Clock, Box,
+  Camera, RotateCcw, Megaphone,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getWarehouseStats, getRecentTransactions, getPendingActions } from '@/services/supabase/wh-stock';
 import { getShipmentStats } from '@/services/supabase/wh-shipments';
 import { getLocationCapacitySummaries } from '@/services/supabase/wh-locations';
+import { getSampleDashboardStats } from '@/services/supabase/wh-samples';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
 import { formatVolumeM3 } from '@/lib/warehouse-volume';
@@ -116,6 +118,7 @@ export function WarehouseDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalStock: 0, totalLocations: 0, lowStockAlerts: 0 });
   const [shipmentStats, setShipmentStats] = useState({ openShipments: 0, shippedToday: 0 });
+  const [sampleStats, setSampleStats] = useState({ samplesOut: 0, awaitingContent: 0, returnsPending: 0, overdue: 0, contentReceived: 0, totalCampaigns: 0 });
   const [locations, setLocations] = useState<LocationCapacitySummary[]>([]);
   const [actions, setActions] = useState<PendingAction[]>([]);
   const [transactions, setTransactions] = useState<WhStockTransaction[]>([]);
@@ -124,16 +127,18 @@ export function WarehouseDashboardPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [s, ss, loc, act, tx] = await Promise.all([
+        const [s, ss, loc, act, tx, samples] = await Promise.all([
           getWarehouseStats(),
           getShipmentStats(),
           getLocationCapacitySummaries(),
           getPendingActions(),
           getRecentTransactions(8),
+          getSampleDashboardStats(),
         ]);
         if (cancelled) return;
         setStats(s);
         setShipmentStats(ss as { openShipments: number; shippedToday: number });
+        setSampleStats(samples);
         setLocations(loc);
         setActions(act);
         setTransactions(tx);
@@ -214,6 +219,16 @@ export function WarehouseDashboardPage() {
           <KPICard key={kpi.label} {...kpi} loading={loading} />
         ))}
       </div>
+
+      {/* Sample Tracking KPIs */}
+      {(sampleStats.samplesOut > 0 || sampleStats.totalCampaigns > 0) && (
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <KPICard label={t('Samples Out')} value={sampleStats.samplesOut} icon={Package} color="text-pink-600" bgColor="bg-pink-100 dark:bg-pink-950" loading={loading} />
+          <KPICard label={t('Returns Pending')} value={sampleStats.returnsPending} icon={RotateCcw} color="text-orange-600" bgColor="bg-orange-100 dark:bg-orange-950" loading={loading} />
+          <KPICard label={t('Content Awaiting')} value={sampleStats.awaitingContent} icon={Camera} color="text-amber-600" bgColor="bg-amber-100 dark:bg-amber-950" loading={loading} />
+          <KPICard label={t('Active Campaigns')} value={sampleStats.totalCampaigns} icon={Megaphone} color="text-violet-600" bgColor="bg-violet-100 dark:bg-violet-950" loading={loading} />
+        </div>
+      )}
 
       {/* Top row: Capacity + Pending Actions */}
       <div className="grid gap-6 lg:grid-cols-2">

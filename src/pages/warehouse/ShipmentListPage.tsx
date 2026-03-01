@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getShipments, getShipmentStatusCounts } from '@/services/supabase/wh-shipments';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
+import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import type { WhShipment, ShipmentStatus, ShipmentPriority } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
 
@@ -318,6 +319,7 @@ export function ShipmentListPage() {
                   <SortableHeader label={t('Priority')} sortKey="priority" currentSort={sortBy} currentDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
                   <TableHead className="text-right">{t('Items')}</TableHead>
                   <TableHead className="hidden lg:table-cell">{t('Tracking Number')}</TableHead>
+                  <TableHead className="hidden xl:table-cell">{t('Sample Status')}</TableHead>
                   <SortableHeader label={t('Created', { ns: 'common' })} sortKey="createdAt" currentSort={sortBy} currentDir={sortDir} onSort={handleSort} />
                 </TableRow>
               </TableHeader>
@@ -325,8 +327,8 @@ export function ShipmentListPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 8 }).map((_, j) => (
-                        <TableCell key={j} className={j === 4 ? 'hidden sm:table-cell' : j === 3 ? 'hidden md:table-cell' : j === 6 ? 'hidden lg:table-cell' : ''}>
+                      {Array.from({ length: 9 }).map((_, j) => (
+                        <TableCell key={j} className={j === 4 ? 'hidden sm:table-cell' : j === 3 ? 'hidden md:table-cell' : j === 6 ? 'hidden lg:table-cell' : j === 7 ? 'hidden xl:table-cell' : ''}>
                           <Skeleton className="h-5 w-full" />
                         </TableCell>
                       ))}
@@ -334,7 +336,7 @@ export function ShipmentListPage() {
                   ))
                 ) : shipments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-48 text-center">
+                    <TableCell colSpan={9} className="h-48 text-center">
                       <div className="flex flex-col items-center gap-3 py-8">
                         <div className="rounded-full bg-muted p-4">
                           <Truck className="h-8 w-8 text-muted-foreground" />
@@ -373,6 +375,11 @@ export function ShipmentListPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.totalItems}</TableCell>
                       <TableCell className="hidden lg:table-cell font-mono text-xs">{s.trackingNumber || '—'}</TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {s.sampleMeta ? (
+                          <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
+                        ) : '—'}
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                         {new Date(s.createdAt).toLocaleDateString()}
                       </TableCell>

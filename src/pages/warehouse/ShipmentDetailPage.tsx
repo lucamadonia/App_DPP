@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Package, Truck, User, MapPin, ExternalLink, Copy,
   Check, X, Pencil, FileText, Clock, Weight, DollarSign,
-  AlertTriangle,
+  AlertTriangle, Camera, Gift, RotateCcw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +21,17 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment } from '@/services/supabase/wh-shipments';
+import { getContentPosts } from '@/services/supabase/wh-content';
+import { updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
 import { SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS, getTrackingUrl } from '@/lib/warehouse-constants';
-import type { WhShipment, WhShipmentItem, ShipmentStatus } from '@/types/warehouse';
+import type { WhShipment, WhShipmentItem, ShipmentStatus, WhContentPost } from '@/types/warehouse';
 import { SHIPMENT_STATUS_ORDER } from '@/types/warehouse';
 import { DHLLabelActions } from '@/components/warehouse/DHLLabelActions';
 import { DHLTrackingPanel } from '@/components/warehouse/DHLTrackingPanel';
+import { SampleStatusPipeline } from '@/components/warehouse/SampleStatusPipeline';
+import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
+import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
+import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
 
 /* -------------------------------------------------------------------------- */
 /*  STATUS TRANSITION LABELS                                                   */
@@ -157,7 +163,8 @@ export function ShipmentDetailPage() {
   const [items, setItems] = useState<WhShipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'content' | 'activity'>('overview');
+  const [contentPosts, setContentPosts] = useState<WhContentPost[]>([]);
 
   // Edit mode
   const [editingRecipient, setEditingRecipient] = useState(false);
@@ -173,6 +180,10 @@ export function ShipmentDetailPage() {
         const [s, i] = await Promise.all([getShipment(id), getShipmentItems(id)]);
         setShipment(s);
         setItems(i);
+        if (s?.sampleMeta) {
+          const posts = await getContentPosts({ shipmentId: id });
+          setContentPosts(posts);
+        }
       } finally {
         setLoading(false);
       }
@@ -184,6 +195,10 @@ export function ShipmentDetailPage() {
     const [s, i] = await Promise.all([getShipment(id), getShipmentItems(id)]);
     setShipment(s);
     setItems(i);
+    if (s?.sampleMeta) {
+      const posts = await getContentPosts({ shipmentId: id });
+      setContentPosts(posts);
+    }
   };
 
   const handleStatusChange = async (newStatus: ShipmentStatus) => {
@@ -323,9 +338,12 @@ export function ShipmentDetailPage() {
   const isTerminal = shipment.status === 'delivered' || shipment.status === 'cancelled';
   const trackingUrl = getTrackingUrl(shipment.carrier, shipment.trackingNumber || '');
 
+  const hasSampleMeta = !!shipment.sampleMeta;
+
   const tabs = [
     { key: 'overview' as const, label: t('Overview') },
     { key: 'items' as const, label: `${t('Items')} (${items.length})` },
+    ...(hasSampleMeta ? [{ key: 'content' as const, label: `${t('Content')} (${contentPosts.length})` }] : []),
     { key: 'activity' as const, label: t('Activity') },
   ];
 
@@ -360,6 +378,67 @@ export function ShipmentDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Sample Status Pipeline (influencer shipments) */}
+      {hasSampleMeta && (
+        <Card>
+          <CardContent className="pt-6 pb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-pink-500" />
+                <span className="text-sm font-medium">
+                  {shipment.sampleMeta!.sampleType === 'gift' ? t('Gift') : t('Loan')}
+                </span>
+              </div>
+              <SampleStatusBadge status={shipment.sampleMeta!.sampleStatus} />
+              <ContentStatusBadge status={shipment.sampleMeta!.contentStatus} />
+            </div>
+            <SampleStatusPipeline
+              sampleType={shipment.sampleMeta!.sampleType}
+              currentStatus={shipment.sampleMeta!.sampleStatus}
+            />
+            <div className="flex gap-2 mt-4 flex-wrap">
+              {shipment.sampleMeta!.sampleStatus === 'distributed' && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  await updateSampleStatus(shipment.id, 'awaiting_content');
+                  reloadShipment();
+                  toast.success(t('Status updated successfully'));
+                }}>
+                  <Camera className="mr-1 h-3.5 w-3.5" /> {t('Mark Awaiting Content')}
+                </Button>
+              )}
+              {shipment.sampleMeta!.sampleStatus === 'awaiting_content' && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  await updateSampleStatus(shipment.id, 'content_received');
+                  await updateContentStatus(shipment.id, 'received');
+                  reloadShipment();
+                  toast.success(t('Status updated successfully'));
+                }}>
+                  <Check className="mr-1 h-3.5 w-3.5" /> {t('Content Received')}
+                </Button>
+              )}
+              {shipment.sampleMeta!.sampleType === 'loan' && shipment.sampleMeta!.sampleStatus === 'content_received' && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  await updateSampleStatus(shipment.id, 'return_pending');
+                  reloadShipment();
+                  toast.success(t('Status updated successfully'));
+                }}>
+                  <RotateCcw className="mr-1 h-3.5 w-3.5" /> {t('Mark Return Pending')}
+                </Button>
+              )}
+              {shipment.sampleMeta!.sampleType === 'gift' && shipment.sampleMeta!.sampleStatus === 'content_received' && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  await updateSampleStatus(shipment.id, 'kept');
+                  reloadShipment();
+                  toast.success(t('Status updated successfully'));
+                }}>
+                  <Gift className="mr-1 h-3.5 w-3.5" /> {t('Mark as Kept')}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Inline KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -657,6 +736,17 @@ export function ShipmentDetailPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Tab: Content (influencer shipments) */}
+      {activeTab === 'content' && hasSampleMeta && (
+        <ContentPostsTable
+          posts={contentPosts}
+          shipmentId={shipment.id}
+          campaignId={shipment.sampleMeta!.campaignId}
+          contactId={shipment.contactId}
+          onRefresh={reloadShipment}
+        />
       )}
 
       {/* Tab: Activity */}

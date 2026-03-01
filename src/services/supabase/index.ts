@@ -494,6 +494,34 @@ export {
   getShipmentStats,
 } from './wh-shipments';
 
+// Warehouse - Campaigns
+export {
+  getCampaigns,
+  getCampaign,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+  getCampaignStats,
+} from './wh-campaigns';
+
+// Warehouse - Content Posts
+export {
+  getContentPosts,
+  getContentPost,
+  createContentPost,
+  updateContentPost,
+  deleteContentPost,
+} from './wh-content';
+
+// Warehouse - Samples
+export {
+  getSampleShipments,
+  updateSampleStatus,
+  updateContentStatus,
+  getSampleDashboardStats,
+  getOverdueSamples,
+} from './wh-samples';
+
 // Shopify Integration
 export {
   getShopifySettings,

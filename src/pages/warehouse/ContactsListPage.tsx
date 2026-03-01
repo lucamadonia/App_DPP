@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContacts, createContact, updateContact, deleteContact } from '@/services/supabase/wh-contacts';
 import { CONTACT_TYPE_CONFIG } from '@/lib/warehouse-constants';
+import { InfluencerFields } from '@/components/warehouse/InfluencerFields';
 import type { WhContact, WhContactInput, WhContactType } from '@/types/warehouse';
 
 export function ContactsListPage() {
@@ -67,6 +68,15 @@ export function ContactsListPage() {
       vatId: c.vatId,
       notes: c.notes,
       type: c.type,
+      instagramHandle: c.instagramHandle,
+      tiktokHandle: c.tiktokHandle,
+      youtubeHandle: c.youtubeHandle,
+      otherSocialUrl: c.otherSocialUrl,
+      primaryPlatform: c.primaryPlatform,
+      followerCount: c.followerCount,
+      engagementRate: c.engagementRate,
+      niche: c.niche,
+      influencerTier: c.influencerTier,
     });
     setDialogOpen(true);
   };
@@ -128,7 +138,7 @@ export function ContactsListPage() {
 
       {/* Type Tabs */}
       <div className="flex gap-1 border-b overflow-x-auto">
-        {(['all', 'b2b', 'b2c', 'supplier'] as const).map((tab) => (
+        {(['all', 'b2b', 'b2c', 'supplier', 'influencer'] as const).map((tab) => (
           <Button
             key={tab}
             variant={typeFilter === tab ? 'default' : 'ghost'}
@@ -269,6 +279,7 @@ export function ContactsListPage() {
                   <SelectItem value="b2b">{t('B2B')}</SelectItem>
                   <SelectItem value="b2c">{t('B2C')}</SelectItem>
                   <SelectItem value="supplier">{t('Supplier')}</SelectItem>
+                  <SelectItem value="influencer">{t('Influencer')}</SelectItem>
                   <SelectItem value="other">{t('Other')}</SelectItem>
                 </SelectContent>
               </Select>
@@ -321,6 +332,13 @@ export function ContactsListPage() {
                 <Input value={form.vatId || ''} onChange={(e) => setForm({ ...form, vatId: e.target.value })} />
               </div>
             </div>
+            {/* Influencer fields (conditional) */}
+            {form.type === 'influencer' && (
+              <InfluencerFields
+                form={form}
+                onChange={(updates) => setForm({ ...form, ...updates })}
+              />
+            )}
             <div className="space-y-2">
               <Label>{t('Notes')}</Label>
               <Textarea value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />

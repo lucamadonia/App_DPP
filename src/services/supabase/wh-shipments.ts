@@ -51,6 +51,7 @@ function transformShipment(row: any): WhShipment {
     carrierLabelData: row.carrier_label_data || undefined,
     packedBy: row.packed_by || undefined,
     shippedBy: row.shipped_by || undefined,
+    sampleMeta: row.sample_meta || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     sourceLocationName: row.wh_locations?.name || undefined,
@@ -223,6 +224,7 @@ export async function createShipment(input: WhShipmentInput): Promise<WhShipment
       priority: input.priority || 'normal',
       notes: input.notes || null,
       internal_notes: input.internalNotes || null,
+      sample_meta: input.sampleMeta || null,
     })
     .select()
     .single();

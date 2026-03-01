@@ -26,6 +26,16 @@ function transformContact(row: any): WhContact {
     notes: row.notes || undefined,
     tags: row.tags || [],
     isActive: row.is_active,
+    // Influencer fields
+    instagramHandle: row.instagram_handle || undefined,
+    tiktokHandle: row.tiktok_handle || undefined,
+    youtubeHandle: row.youtube_handle || undefined,
+    otherSocialUrl: row.other_social_url || undefined,
+    primaryPlatform: row.primary_platform || undefined,
+    followerCount: row.follower_count != null ? Number(row.follower_count) : undefined,
+    engagementRate: row.engagement_rate != null ? Number(row.engagement_rate) : undefined,
+    niche: row.niche || undefined,
+    influencerTier: row.influencer_tier || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -96,6 +106,16 @@ export async function createContact(input: WhContactInput): Promise<WhContact> {
       vat_id: input.vatId || null,
       notes: input.notes || null,
       tags: input.tags || [],
+      // Influencer fields
+      instagram_handle: input.instagramHandle || null,
+      tiktok_handle: input.tiktokHandle || null,
+      youtube_handle: input.youtubeHandle || null,
+      other_social_url: input.otherSocialUrl || null,
+      primary_platform: input.primaryPlatform || null,
+      follower_count: input.followerCount || null,
+      engagement_rate: input.engagementRate || null,
+      niche: input.niche || null,
+      influencer_tier: input.influencerTier || null,
     })
     .select()
     .single();
@@ -121,6 +141,16 @@ export async function updateContact(id: string, input: Partial<WhContactInput>):
   if (input.vatId !== undefined) update.vat_id = input.vatId || null;
   if (input.notes !== undefined) update.notes = input.notes || null;
   if (input.tags !== undefined) update.tags = input.tags;
+  // Influencer fields
+  if (input.instagramHandle !== undefined) update.instagram_handle = input.instagramHandle || null;
+  if (input.tiktokHandle !== undefined) update.tiktok_handle = input.tiktokHandle || null;
+  if (input.youtubeHandle !== undefined) update.youtube_handle = input.youtubeHandle || null;
+  if (input.otherSocialUrl !== undefined) update.other_social_url = input.otherSocialUrl || null;
+  if (input.primaryPlatform !== undefined) update.primary_platform = input.primaryPlatform || null;
+  if (input.followerCount !== undefined) update.follower_count = input.followerCount || null;
+  if (input.engagementRate !== undefined) update.engagement_rate = input.engagementRate || null;
+  if (input.niche !== undefined) update.niche = input.niche || null;
+  if (input.influencerTier !== undefined) update.influencer_tier = input.influencerTier || null;
 
   const { data, error } = await supabase
     .from('wh_contacts')

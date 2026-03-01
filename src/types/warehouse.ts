@@ -1,5 +1,110 @@
 import type { CarrierLabelData } from './dhl';
 
+// ============================================
+// INFLUENCER & CAMPAIGN TYPES
+// ============================================
+
+export type SocialPlatform = 'instagram' | 'tiktok' | 'youtube' | 'twitter' | 'pinterest' | 'other';
+export type InfluencerTier = 'nano' | 'micro' | 'mid' | 'macro' | 'mega';
+export type SampleType = 'gift' | 'loan';
+export type SampleStatus = 'distributed' | 'awaiting_content' | 'content_received' | 'return_pending' | 'returned' | 'kept';
+export type ContentStatus = 'no_content' | 'awaiting' | 'received' | 'verified';
+export type CampaignStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+
+export interface SampleShipmentMeta {
+  sampleType: SampleType;
+  campaignId?: string;
+  returnExpected: boolean;
+  returnDeadline?: string;
+  contentExpected: boolean;
+  contentDeadline?: string;
+  sampleStatus: SampleStatus;
+  contentStatus: ContentStatus;
+}
+
+export interface WhCampaign {
+  id: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  status: CampaignStatus;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  currency: string;
+  goals?: string;
+  productIds: string[];
+  tags: string[];
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhCampaignInput {
+  name: string;
+  description?: string;
+  status?: CampaignStatus;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  currency?: string;
+  goals?: string;
+  productIds?: string[];
+  tags?: string[];
+}
+
+export interface WhContentPost {
+  id: string;
+  tenantId: string;
+  shipmentId: string;
+  campaignId?: string;
+  contactId?: string;
+  platform: SocialPlatform;
+  postUrl: string;
+  postedAt?: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  engagementRate?: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhContentPostInput {
+  shipmentId: string;
+  campaignId?: string;
+  contactId?: string;
+  platform: SocialPlatform;
+  postUrl: string;
+  postedAt?: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  engagementRate?: number;
+  notes?: string;
+}
+
+export interface CampaignStats {
+  totalShipments: number;
+  totalSamples: number;
+  contentReceived: number;
+  contentPending: number;
+  returnsPending: number;
+  totalViews: number;
+  totalLikes: number;
+  totalEngagement: number;
+}
+
+export interface SampleDashboardStats {
+  samplesOut: number;
+  awaitingContent: number;
+  returnsPending: number;
+  overdue: number;
+  contentReceived: number;
+  totalCampaigns: number;
+}
+
 /**
  * Warehouse & Fulfillment Module Types
  *
@@ -16,7 +121,7 @@ import type { CarrierLabelData } from './dhl';
 // B2B CONTACTS
 // ============================================
 
-export type WhContactType = 'b2b' | 'b2c' | 'supplier' | 'other';
+export type WhContactType = 'b2b' | 'b2c' | 'supplier' | 'influencer' | 'other';
 
 export interface WhContact {
   id: string;
@@ -36,6 +141,16 @@ export interface WhContact {
   notes?: string;
   tags: string[];
   isActive: boolean;
+  // Influencer fields
+  instagramHandle?: string;
+  tiktokHandle?: string;
+  youtubeHandle?: string;
+  otherSocialUrl?: string;
+  primaryPlatform?: SocialPlatform;
+  followerCount?: number;
+  engagementRate?: number;
+  niche?: string;
+  influencerTier?: InfluencerTier;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,6 +170,16 @@ export interface WhContactInput {
   vatId?: string;
   notes?: string;
   tags?: string[];
+  // Influencer fields
+  instagramHandle?: string;
+  tiktokHandle?: string;
+  youtubeHandle?: string;
+  otherSocialUrl?: string;
+  primaryPlatform?: SocialPlatform;
+  followerCount?: number;
+  engagementRate?: number;
+  niche?: string;
+  influencerTier?: InfluencerTier;
 }
 
 // ============================================
@@ -72,6 +197,45 @@ export interface ZoneMapPosition {
   height: number;
 }
 
+// ============================================
+// ZONE FURNITURE (Floor Planner)
+// ============================================
+
+/** Furniture types available for placement inside zones */
+export type FurnitureType =
+  | 'shelf'          // Standard shelf
+  | 'heavy_rack'     // Heavy-duty rack
+  | 'pallet_rack'    // Pallet rack
+  | 'cabinet'        // Cabinet
+  | 'drawer_unit'    // Drawer unit
+  | 'flow_rack'      // Flow rack
+  | 'table'          // Worktable / packing table
+  | 'bin_wall'       // Small parts bin wall
+  | 'cold_unit'      // Cold storage unit
+  | 'pallet_spot'    // Floor pallet spot
+  | 'staging_area'   // Staging area
+  | 'conveyor';      // Conveyor belt
+
+/** A single section/slot inside a furniture piece */
+export interface FurnitureSection {
+  id: string;           // e.g. "A1", "B2", "TOP", "BOTTOM"
+  label: string;        // Display label
+  capacity?: number;    // Max units (optional)
+}
+
+/** A physical furniture piece placed inside a zone */
+export interface ZoneFurniture {
+  id: string;                              // UUID
+  type: FurnitureType;
+  name: string;                            // e.g. "Shelf A-01"
+  position: { x: number; y: number };      // Grid position within zone
+  size: { w: number; h: number };          // Grid units
+  rotation: 0 | 90 | 180 | 270;
+  sections: FurnitureSection[];
+  color?: string;                          // Optional custom color
+  notes?: string;
+}
+
 export interface WarehouseZone {
   name: string;
   code: string;
@@ -80,6 +244,7 @@ export interface WarehouseZone {
   volumeM3?: number;
   binLocations?: string[];
   mapPosition?: ZoneMapPosition;
+  furniture?: ZoneFurniture[];             // Furniture pieces in this zone
 }
 
 export interface WhLocation {
@@ -204,7 +369,7 @@ export type ShipmentStatus =
   | 'delivered'
   | 'cancelled';
 
-export type RecipientType = 'customer' | 'b2b_partner' | 'warehouse' | 'other';
+export type RecipientType = 'customer' | 'b2b_partner' | 'warehouse' | 'influencer' | 'other';
 
 export type ShipmentPriority = 'low' | 'normal' | 'high' | 'urgent';
 
@@ -254,6 +419,7 @@ export interface WhShipment {
   carrierLabelData?: CarrierLabelData;
   packedBy?: string;
   shippedBy?: string;
+  sampleMeta?: SampleShipmentMeta;
   createdAt: string;
   updatedAt: string;
   // Joined
@@ -285,6 +451,7 @@ export interface WhShipmentInput {
   priority?: ShipmentPriority;
   notes?: string;
   internalNotes?: string;
+  sampleMeta?: SampleShipmentMeta;
   items: WhShipmentItemInput[];
 }
 

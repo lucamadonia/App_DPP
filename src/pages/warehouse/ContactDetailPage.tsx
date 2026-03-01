@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Pencil, Mail, Phone, MapPin, Building, Tag,
-  Package, Truck, FileText, Clock,
+  Package, Truck, FileText, Clock, Instagram, Youtube, Music2, Globe, Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
 import { CONTACT_TYPE_CONFIG } from '@/lib/warehouse-constants';
+import { InfluencerFields } from '@/components/warehouse/InfluencerFields';
 import type {
   WhContact, WhContactInput, WhContactType, ContactStats, WhShipment,
 } from '@/types/warehouse';
@@ -107,6 +108,15 @@ export function ContactDetailPage() {
       vatId: contact.vatId,
       tags: contact.tags,
       notes: contact.notes,
+      instagramHandle: contact.instagramHandle,
+      tiktokHandle: contact.tiktokHandle,
+      youtubeHandle: contact.youtubeHandle,
+      otherSocialUrl: contact.otherSocialUrl,
+      primaryPlatform: contact.primaryPlatform,
+      followerCount: contact.followerCount,
+      engagementRate: contact.engagementRate,
+      niche: contact.niche,
+      influencerTier: contact.influencerTier,
     });
     setEditOpen(true);
   };
@@ -350,6 +360,76 @@ export function ContactDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Influencer Profile */}
+          {contact.type === 'influencer' && (
+            <Card className="transition-shadow hover:shadow-sm border-pink-200 dark:border-pink-900/40">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-pink-500" />
+                  {t('Social Media Profiles')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {contact.instagramHandle && (
+                  <div className="flex items-center gap-2">
+                    <Instagram className="h-4 w-4 text-pink-500" />
+                    <span className="text-sm font-medium">@{contact.instagramHandle}</span>
+                  </div>
+                )}
+                {contact.tiktokHandle && (
+                  <div className="flex items-center gap-2">
+                    <Music2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">@{contact.tiktokHandle}</span>
+                  </div>
+                )}
+                {contact.youtubeHandle && (
+                  <div className="flex items-center gap-2">
+                    <Youtube className="h-4 w-4 text-red-500" />
+                    <span className="text-sm font-medium">@{contact.youtubeHandle}</span>
+                  </div>
+                )}
+                {contact.otherSocialUrl && (
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-gray-500" />
+                    <a href={contact.otherSocialUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline truncate">
+                      {contact.otherSocialUrl}
+                    </a>
+                  </div>
+                )}
+                {contact.influencerTier && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('Influencer Tier')}</p>
+                    <p className="text-sm font-medium">{t(contact.influencerTier)}</p>
+                  </div>
+                )}
+                {contact.followerCount != null && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('Follower Count')}</p>
+                    <p className="text-sm font-bold">
+                      {contact.followerCount >= 1_000_000
+                        ? `${(contact.followerCount / 1_000_000).toFixed(1)}M`
+                        : contact.followerCount >= 1_000
+                          ? `${(contact.followerCount / 1_000).toFixed(1)}K`
+                          : contact.followerCount}
+                    </p>
+                  </div>
+                )}
+                {contact.engagementRate != null && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('Engagement Rate')}</p>
+                    <p className="text-sm font-bold">{contact.engagementRate}%</p>
+                  </div>
+                )}
+                {contact.niche && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('Niche')}</p>
+                    <p className="text-sm font-medium">{contact.niche}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Notes */}
           <Card className="transition-shadow hover:shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -531,6 +611,7 @@ export function ContactDetailPage() {
                   <SelectItem value="b2b">{t('B2B')}</SelectItem>
                   <SelectItem value="b2c">{t('B2C')}</SelectItem>
                   <SelectItem value="supplier">{t('Supplier')}</SelectItem>
+                  <SelectItem value="influencer">{t('Influencer')}</SelectItem>
                   <SelectItem value="other">{t('Other')}</SelectItem>
                 </SelectContent>
               </Select>
@@ -598,6 +679,12 @@ export function ContactDetailPage() {
                 />
               </div>
             </div>
+            {editForm.type === 'influencer' && (
+              <InfluencerFields
+                form={editForm}
+                onChange={(updates) => setEditForm({ ...editForm, ...updates })}
+              />
+            )}
             <div className="space-y-2">
               <Label>{t('Notes')}</Label>
               <Textarea

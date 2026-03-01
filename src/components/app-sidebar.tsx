@@ -148,6 +148,8 @@ export function AppSidebar() {
         { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
         { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
         { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
+        { title: t('Campaigns', { ns: 'warehouse' }), url: '/warehouse/campaigns' },
+        { title: t('Sample Tracking', { ns: 'warehouse' }), url: '/warehouse/samples' },
         { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
         { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
         { title: t('DHL', { ns: 'warehouse' }), url: '/warehouse/integrations/dhl' },

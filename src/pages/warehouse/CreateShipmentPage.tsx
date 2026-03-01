@@ -20,7 +20,8 @@ import { getStockLevels } from '@/services/supabase/wh-stock';
 import { searchRecipients, type RecipientSearchResult } from '@/services/supabase/wh-contacts';
 import { createShipment } from '@/services/supabase/wh-shipments';
 import { PRIORITY_COLORS } from '@/lib/warehouse-constants';
-import type { WhLocation, WhShipmentItemInput, RecipientType, ShipmentPriority } from '@/types/warehouse';
+import { SampleMetaFields } from '@/components/warehouse/SampleMetaFields';
+import type { WhLocation, WhShipmentItemInput, RecipientType, ShipmentPriority, SampleShipmentMeta } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
 import type { BatchListItem } from '@/types/product';
 
@@ -112,6 +113,13 @@ export function CreateShipmentPage() {
   const [contactId, setContactId] = useState<string | undefined>();
   const [recipientSearch, setRecipientSearch] = useState('');
   const [recipientResults, setRecipientResults] = useState<RecipientSearchResult[]>([]);
+  const [sampleMeta, setSampleMeta] = useState<Partial<SampleShipmentMeta>>({
+    sampleType: 'gift',
+    returnExpected: false,
+    contentExpected: true,
+    sampleStatus: 'distributed',
+    contentStatus: 'awaiting',
+  });
 
   // Step 2: Items
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -261,6 +269,16 @@ export function CreateShipmentPage() {
         internalNotes: internalNotes || undefined,
         contactId: contactId || undefined,
         priority,
+        sampleMeta: recipientType === 'influencer' ? {
+          sampleType: sampleMeta.sampleType || 'gift',
+          campaignId: sampleMeta.campaignId,
+          returnExpected: sampleMeta.returnExpected ?? false,
+          returnDeadline: sampleMeta.returnDeadline,
+          contentExpected: sampleMeta.contentExpected ?? true,
+          contentDeadline: sampleMeta.contentDeadline,
+          sampleStatus: 'distributed',
+          contentStatus: sampleMeta.contentExpected ? 'awaiting' : 'no_content',
+        } : undefined,
         items: shipmentItems,
       });
       toast.success(t('Shipment created successfully'));
@@ -331,6 +349,7 @@ export function CreateShipmentPage() {
                     <SelectItem value="customer">{t('customer')}</SelectItem>
                     <SelectItem value="b2b_partner">{t('b2b_partner')}</SelectItem>
                     <SelectItem value="warehouse">{t('warehouse')}</SelectItem>
+                    <SelectItem value="influencer">{t('influencer')}</SelectItem>
                     <SelectItem value="other">{t('other')}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -399,6 +418,14 @@ export function CreateShipmentPage() {
                 <Input value={shippingCountry} onChange={(e) => setShippingCountry(e.target.value)} />
               </div>
             </div>
+
+            {/* Sample Meta (only for influencer) */}
+            {recipientType === 'influencer' && (
+              <SampleMetaFields
+                meta={sampleMeta}
+                onChange={setSampleMeta}
+              />
+            )}
 
             <div className="flex justify-end pt-2">
               <Button onClick={() => setStep(2)} disabled={!step1Valid}>
