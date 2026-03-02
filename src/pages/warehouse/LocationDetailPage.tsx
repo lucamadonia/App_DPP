@@ -527,31 +527,31 @@ export function LocationDetailPage() {
                 const furnitureCount = zone.furniture?.length ?? 0;
                 return (
                   <Card key={zone.code} className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-                    <CardHeader className="pb-3 flex flex-row items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base">
+                    <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 flex flex-row items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm sm:text-base truncate">
                           {zone.name}
                         </CardTitle>
-                        <p className="text-xs text-muted-foreground font-mono">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground font-mono">
                           {zone.code}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-wrap justify-end">
                         {furnitureCount > 0 && (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <LayoutGrid className="h-3 w-3" />
+                          <Badge variant="outline" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1">
+                            <LayoutGrid className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                             {furnitureCount} {t('shelves')}
                           </Badge>
                         )}
                         {zone.type && (
-                          <Badge className={`${cfg.bgColor} ${cfg.color} border-0`}>
+                          <Badge className={`${cfg.bgColor} ${cfg.color} border-0 text-[10px] sm:text-xs`}>
                             {zoneLabel}
                           </Badge>
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                    <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6">
+                      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-xs sm:text-sm">
                         {zone.areaM2 != null && (
                           <div>
                             <span className="text-muted-foreground">
@@ -581,7 +581,7 @@ export function LocationDetailPage() {
 
                       {/* Furniture summary */}
                       {furnitureCount > 0 && (
-                        <div className="space-y-1">
+                        <div className="space-y-0.5 sm:space-y-1">
                           {zone.furniture!.slice(0, 3).map((f) => {
                             const catalog = FURNITURE_CATALOG[f.type];
                             const fStock = getStockByFurniture(stock, f.id);
@@ -589,15 +589,15 @@ export function LocationDetailPage() {
                               <button
                                 key={f.id}
                                 type="button"
-                                className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-muted/50 transition-colors text-left"
+                                className="flex w-full items-center gap-1.5 sm:gap-2 rounded-md px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs hover:bg-muted/50 transition-colors text-left"
                                 onClick={() => setShelfViewFurniture({ furniture: f, zoneName: zone.name })}
                               >
                                 <span
-                                  className="h-2 w-2 rounded-full shrink-0"
+                                  className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full shrink-0"
                                   style={{ backgroundColor: catalog.stroke }}
                                 />
                                 <span className="truncate">{f.name}</span>
-                                <span className="text-muted-foreground ml-auto">
+                                <span className="text-muted-foreground ml-auto shrink-0">
                                   {fStock.totalUnits > 0
                                     ? `${fStock.totalUnits} ${t('items')}`
                                     : t('empty')}
@@ -606,34 +606,38 @@ export function LocationDetailPage() {
                             );
                           })}
                           {furnitureCount > 3 && (
-                            <p className="text-xs text-muted-foreground pl-2">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground pl-2">
                               +{furnitureCount - 3} ...
                             </p>
                           )}
                         </div>
                       )}
 
-                      <div className="flex gap-1 pt-1 flex-wrap">
+                      <div className="flex gap-0.5 sm:gap-1 pt-1 flex-wrap">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
                           onClick={() => openEditZone(zone, idx)}
                         >
                           <Pencil className="h-3 w-3 mr-1" />
-                          {t('Edit Zone')}
+                          <span className="hidden sm:inline">{t('Edit Zone')}</span>
+                          <span className="sm:hidden">{t('Edit', { ns: 'common' })}</span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
                           onClick={() => setFurnitureManagerZoneIdx(idx)}
                         >
                           <LayoutGrid className="h-3 w-3 mr-1" />
-                          {t('Manage Shelves')}
+                          <span className="hidden sm:inline">{t('Manage Shelves')}</span>
+                          <span className="sm:hidden">{t('shelves')}</span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-destructive"
+                          className="text-destructive h-7 sm:h-8 px-2 sm:px-3"
                           onClick={() => handleDeleteZone(idx)}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -851,9 +855,9 @@ export function LocationDetailPage() {
         open={furnitureManagerZoneIdx !== null}
         onOpenChange={(open) => !open && setFurnitureManagerZoneIdx(null)}
       >
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[85vh] overflow-y-auto px-3 sm:px-6">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {furnitureManagerZoneIdx !== null
                 ? `${location.zones[furnitureManagerZoneIdx]?.name} — ${t('Manage Shelves')}`
                 : t('Manage Shelves')}
@@ -874,9 +878,9 @@ export function LocationDetailPage() {
         open={shelfViewFurniture !== null}
         onOpenChange={(open) => !open && setShelfViewFurniture(null)}
       >
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[85vh] overflow-y-auto px-3 sm:px-6">
           <DialogHeader>
-            <DialogTitle>{t('Shelf Contents')}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{t('Shelf Contents')}</DialogTitle>
           </DialogHeader>
           {shelfViewFurniture && (
             <ShelfContentsView

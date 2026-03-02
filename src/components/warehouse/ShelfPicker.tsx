@@ -112,13 +112,13 @@ export function ShelfPicker({
 
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="secondary" className="gap-1.5 text-xs py-1 px-2.5">
-          {display}
+        <Badge variant="secondary" className="gap-1.5 text-[10px] sm:text-xs py-1 px-2 sm:px-2.5 max-w-full">
+          <span className="truncate">{display}</span>
           {!disabled && (
             <button
               type="button"
               onClick={handleClear}
-              className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+              className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 shrink-0"
             >
               <X className="h-3 w-3" />
             </button>
@@ -142,10 +142,10 @@ export function ShelfPicker({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {/* Toggle manual/picker */}
       <div className="flex items-center gap-2 justify-end">
-        <Label htmlFor="manual-toggle" className="text-xs text-muted-foreground cursor-pointer">
+        <Label htmlFor="manual-toggle" className="text-[10px] sm:text-xs text-muted-foreground cursor-pointer">
           {t('or enter manually')}
         </Label>
         <Switch
@@ -166,7 +166,7 @@ export function ShelfPicker({
           disabled={disabled}
         />
       ) : (
-        <div className="grid gap-2">
+        <div className="grid gap-1.5 sm:gap-2">
           {/* Zone select */}
           <Select
             value={selectedZone}

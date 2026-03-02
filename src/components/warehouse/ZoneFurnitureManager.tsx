@@ -208,13 +208,14 @@ export function ZoneFurnitureManager({
     getStockByFurniture(stock, furniture[deleteIdx].id).totalUnits > 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">{t('Shelves & Racks')}</h4>
+        <h4 className="text-xs sm:text-sm font-medium">{t('Shelves & Racks')}</h4>
         <Button size="sm" variant="outline" onClick={openAddDialog}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          {t('Add Shelf')}
+          <span className="hidden sm:inline">{t('Add Shelf')}</span>
+          <span className="sm:hidden">{t('Add')}</span>
         </Button>
       </div>
 
@@ -240,33 +241,33 @@ export function ZoneFurnitureManager({
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors rounded-lg"
+                      className="flex w-full items-center gap-2 sm:gap-3 p-2.5 sm:p-3 text-left hover:bg-muted/50 transition-colors rounded-lg"
                     >
                       {isOpen ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       )}
                       <div
-                        className="h-8 w-8 rounded-md flex items-center justify-center shrink-0"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-md flex items-center justify-center shrink-0"
                         style={{
                           backgroundColor: catalog.color,
                           color: catalog.textColor,
                         }}
                       >
-                        <Package className="h-4 w-4" />
+                        <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                        <p className="text-xs sm:text-sm font-medium truncate">
                           {f.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {getLabel(catalog)} · {f.sections.length}{' '}
                           {t('sections')}
                         </p>
                       </div>
                       {fStock.totalUnits > 0 && (
-                        <Badge variant="secondary" className="text-xs shrink-0">
+                        <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">
                           {fStock.totalUnits} {t('items')}
                         </Badge>
                       )}
@@ -274,7 +275,7 @@ export function ZoneFurnitureManager({
                   </CollapsibleTrigger>
 
                   <CollapsibleContent>
-                    <div className="border-t px-3 pb-3 pt-2 space-y-2">
+                    <div className="border-t px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-2 space-y-1.5 sm:space-y-2">
                       {/* Sections list */}
                       {f.sections.map((section) => {
                         const sStock = getStockBySection(
@@ -285,28 +286,28 @@ export function ZoneFurnitureManager({
                         return (
                           <div
                             key={section.id}
-                            className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-sm"
+                            className="flex items-center justify-between rounded-md bg-muted/30 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm"
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                              <span className="font-mono text-[10px] sm:text-xs text-muted-foreground">
                                 {section.label}
                               </span>
                               {section.capacity != null && (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">
                                   ({t('Capacity')}: {section.capacity})
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                               {sStock.totalUnits > 0 ? (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs"
+                                  className="text-[10px] sm:text-xs"
                                 >
                                   {sStock.totalUnits} {t('units')}
                                 </Badge>
                               ) : (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-[10px] sm:text-xs text-muted-foreground">
                                   {t('empty')}
                                 </span>
                               )}
@@ -316,10 +317,11 @@ export function ZoneFurnitureManager({
                       })}
 
                       {/* Actions */}
-                      <div className="flex gap-1 pt-1">
+                      <div className="flex gap-1 pt-1 flex-wrap">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 sm:h-8 text-xs sm:text-sm"
                           onClick={() => openEditDialog(idx)}
                         >
                           <Pencil className="h-3 w-3 mr-1" />
@@ -328,7 +330,7 @@ export function ZoneFurnitureManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-destructive"
+                          className="text-destructive h-7 sm:h-8 text-xs sm:text-sm"
                           onClick={() => setDeleteIdx(idx)}
                         >
                           <Trash2 className="h-3 w-3 mr-1" />
@@ -346,17 +348,17 @@ export function ZoneFurnitureManager({
 
       {/* Add/Edit Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[480px] px-4 sm:px-6 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {editingIdx !== null ? t('Edit Shelf') : t('Add Shelf')}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-3 sm:gap-4 py-2">
             {/* Furniture Type */}
             <div className="grid gap-1.5">
-              <Label>{t('Furniture Type')}</Label>
+              <Label className="text-xs sm:text-sm">{t('Furniture Type')}</Label>
               <Select
                 value={dialogType}
                 onValueChange={(v) =>
@@ -395,7 +397,7 @@ export function ZoneFurnitureManager({
 
             {/* Name */}
             <div className="grid gap-1.5">
-              <Label>{t('Shelf Name')}</Label>
+              <Label className="text-xs sm:text-sm">{t('Shelf Name')}</Label>
               <Input
                 value={dialogName}
                 onChange={(e) => setDialogName(e.target.value)}
@@ -405,7 +407,7 @@ export function ZoneFurnitureManager({
             {/* Sections */}
             <div className="grid gap-1.5">
               <div className="flex items-center justify-between">
-                <Label>{t('Sections')}</Label>
+                <Label className="text-xs sm:text-sm">{t('Sections')}</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -413,17 +415,18 @@ export function ZoneFurnitureManager({
                   onClick={addSection}
                 >
                   <Plus className="h-3 w-3 mr-1" />
-                  {t('Add Section')}
+                  <span className="hidden sm:inline">{t('Add Section')}</span>
+                  <span className="sm:hidden">{t('Add')}</span>
                 </Button>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
                 {dialogSections.map((section, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1.5 sm:gap-2"
                   >
                     <Input
-                      className="flex-1"
+                      className="flex-1 text-sm"
                       placeholder={t('Section Label')}
                       value={section.label}
                       onChange={(e) =>
@@ -434,7 +437,7 @@ export function ZoneFurnitureManager({
                       }
                     />
                     <Input
-                      className="w-20"
+                      className="w-16 sm:w-20 text-sm"
                       type="number"
                       min={0}
                       placeholder={t('Capacity')}
@@ -451,7 +454,7 @@ export function ZoneFurnitureManager({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="shrink-0 h-8 w-8"
+                      className="shrink-0 h-7 w-7 sm:h-8 sm:w-8"
                       onClick={() => removeSection(idx)}
                     >
                       <X className="h-3.5 w-3.5" />
