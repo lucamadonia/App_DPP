@@ -14,6 +14,7 @@ import {
   Box,
   Clock,
   Map,
+  LayoutGrid,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,14 +62,20 @@ import {
   getTransactionHistory,
 } from '@/services/supabase/wh-stock';
 import { ZoneDialog } from '@/components/warehouse/ZoneDialog';
+import { ZoneFurnitureManager } from '@/components/warehouse/ZoneFurnitureManager';
+import { ShelfContentsView } from '@/components/warehouse/ShelfContentsView';
 import { FloorMapTab } from '@/components/warehouse/floor-map';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
+import { formatBinLocation } from '@/lib/warehouse-utils';
 import { ZONE_TYPE_CONFIG } from '@/lib/warehouse-constants';
+import { getStockByFurniture } from '@/components/warehouse/floor-map/floor-map-utils';
+import { FURNITURE_CATALOG } from '@/components/warehouse/floor-map/furniture-catalog';
 import type {
   WhLocation,
   WhLocationInput,
   WarehouseZone,
+  ZoneFurniture,
   LocationStats,
   WhStockLevel,
   WhStockTransaction,
@@ -137,6 +144,8 @@ export function LocationDetailPage() {
     undefined,
   );
   const [editingZoneIdx, setEditingZoneIdx] = useState<number>(-1);
+  const [furnitureManagerZoneIdx, setFurnitureManagerZoneIdx] = useState<number | null>(null);
+  const [shelfViewFurniture, setShelfViewFurniture] = useState<{ furniture: ZoneFurniture; zoneName: string } | null>(null);
   const [editForm, setEditForm] = useState<WhLocationInput>({ name: '' });
 
   // ------- Load -------
@@ -245,6 +254,19 @@ export function LocationDetailPage() {
       const updated = await updateLocation(id, { zones });
       setLocation(updated);
       toast.success(t('Delete Zone'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error');
+    }
+  };
+
+  // ------- Furniture management -------
+  const handleUpdateZoneFromManager = async (updatedZone: WarehouseZone) => {
+    if (!location || !id || furnitureManagerZoneIdx === null) return;
+    const zones = [...location.zones];
+    zones[furnitureManagerZoneIdx] = updatedZone;
+    try {
+      const updated = await updateLocation(id, { zones });
+      setLocation(updated);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
     }
@@ -502,6 +524,7 @@ export function LocationDetailPage() {
                       ? cfg.labelDe
                       : cfg.labelEn
                     : '';
+                const furnitureCount = zone.furniture?.length ?? 0;
                 return (
                   <Card key={zone.code} className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
                     <CardHeader className="pb-3 flex flex-row items-start justify-between">
@@ -513,11 +536,19 @@ export function LocationDetailPage() {
                           {zone.code}
                         </p>
                       </div>
-                      {zone.type && (
-                        <Badge className={`${cfg.bgColor} ${cfg.color} border-0`}>
-                          {zoneLabel}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {furnitureCount > 0 && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <LayoutGrid className="h-3 w-3" />
+                            {furnitureCount} {t('shelves')}
+                          </Badge>
+                        )}
+                        {zone.type && (
+                          <Badge className={`${cfg.bgColor} ${cfg.color} border-0`}>
+                            {zoneLabel}
+                          </Badge>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="grid grid-cols-2 gap-2 text-sm">
@@ -547,7 +578,42 @@ export function LocationDetailPage() {
                           ))}
                         </div>
                       )}
-                      <div className="flex gap-1 pt-1">
+
+                      {/* Furniture summary */}
+                      {furnitureCount > 0 && (
+                        <div className="space-y-1">
+                          {zone.furniture!.slice(0, 3).map((f) => {
+                            const catalog = FURNITURE_CATALOG[f.type];
+                            const fStock = getStockByFurniture(stock, f.id);
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-muted/50 transition-colors text-left"
+                                onClick={() => setShelfViewFurniture({ furniture: f, zoneName: zone.name })}
+                              >
+                                <span
+                                  className="h-2 w-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: catalog.stroke }}
+                                />
+                                <span className="truncate">{f.name}</span>
+                                <span className="text-muted-foreground ml-auto">
+                                  {fStock.totalUnits > 0
+                                    ? `${fStock.totalUnits} ${t('items')}`
+                                    : t('empty')}
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {furnitureCount > 3 && (
+                            <p className="text-xs text-muted-foreground pl-2">
+                              +{furnitureCount - 3} ...
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-1 pt-1 flex-wrap">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -555,6 +621,14 @@ export function LocationDetailPage() {
                         >
                           <Pencil className="h-3 w-3 mr-1" />
                           {t('Edit Zone')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFurnitureManagerZoneIdx(idx)}
+                        >
+                          <LayoutGrid className="h-3 w-3 mr-1" />
+                          {t('Manage Shelves')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -669,7 +743,7 @@ export function LocationDetailPage() {
                             <TableCell className="hidden sm:table-cell">
                               {s.batchSerialNumber || s.batchId.slice(0, 8)}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">{s.binLocation || '\u2014'}</TableCell>
+                            <TableCell className="hidden md:table-cell">{formatBinLocation(s.binLocation, location)}</TableCell>
                             <TableCell className="text-right tabular-nums">
                               {s.quantityAvailable.toLocaleString()}
                             </TableCell>
@@ -771,6 +845,48 @@ export function LocationDetailPage() {
         existingCodes={location.zones.map((z) => z.code)}
         onSave={handleSaveZone}
       />
+
+      {/* ---- Furniture Manager Dialog ---- */}
+      <Dialog
+        open={furnitureManagerZoneIdx !== null}
+        onOpenChange={(open) => !open && setFurnitureManagerZoneIdx(null)}
+      >
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {furnitureManagerZoneIdx !== null
+                ? `${location.zones[furnitureManagerZoneIdx]?.name} — ${t('Manage Shelves')}`
+                : t('Manage Shelves')}
+            </DialogTitle>
+          </DialogHeader>
+          {furnitureManagerZoneIdx !== null && location.zones[furnitureManagerZoneIdx] && (
+            <ZoneFurnitureManager
+              zone={location.zones[furnitureManagerZoneIdx]}
+              stock={stock}
+              onUpdateZone={handleUpdateZoneFromManager}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---- Shelf Contents Dialog ---- */}
+      <Dialog
+        open={shelfViewFurniture !== null}
+        onOpenChange={(open) => !open && setShelfViewFurniture(null)}
+      >
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('Shelf Contents')}</DialogTitle>
+          </DialogHeader>
+          {shelfViewFurniture && (
+            <ShelfContentsView
+              furniture={shelfViewFurniture.furniture}
+              stock={stock}
+              zoneName={shelfViewFurniture.zoneName}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ---- Edit Location Dialog ---- */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

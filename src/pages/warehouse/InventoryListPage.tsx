@@ -61,6 +61,7 @@ import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
 import { InventoryCardView } from '@/components/warehouse/InventoryCardView';
+import { formatBinLocation } from '@/lib/warehouse-utils';
 import type { WhStockLevel, WhLocation, WarehouseZone } from '@/types/warehouse';
 
 type SortKey = 'productName' | 'batchSerialNumber' | 'locationName' | 'binLocation' | 'quantityAvailable' | 'quantityReserved' | 'reorderPoint';
@@ -526,7 +527,7 @@ export function InventoryListPage() {
           </Link>
           {s.locationCode && <span className="text-muted-foreground ml-1 text-xs hidden sm:inline">({s.locationCode})</span>}
         </TableCell>
-        <TableCell className="hidden lg:table-cell text-muted-foreground">{s.binLocation || '—'}</TableCell>
+        <TableCell className="hidden lg:table-cell text-muted-foreground">{formatBinLocation(s.binLocation, locations.find(l => l.id === s.locationId))}</TableCell>
         <TableCell className="hidden sm:table-cell w-[120px] px-2">
           <StockBar row={s} />
         </TableCell>
@@ -975,6 +976,7 @@ export function InventoryListPage() {
           <>
             <InventoryCardView
               stock={sortedStock}
+              locations={locations}
               onAdjust={s => { setAdjustTarget(s); setAdjustDelta(''); setAdjustReason(''); }}
               onTransfer={s => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); }}
             />

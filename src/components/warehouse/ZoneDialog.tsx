@@ -1,6 +1,6 @@
 import { useState, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react';
+import { X, ChevronDown, Package } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import type { WarehouseZone, WarehouseZoneType } from '@/types/warehouse';
 import { ZONE_TYPES } from '@/lib/warehouse-constants';
+import { FURNITURE_CATALOG } from '@/components/warehouse/floor-map/furniture-catalog';
 
 interface ZoneDialogProps {
   open: boolean;
@@ -131,6 +137,9 @@ export function ZoneDialog({
       areaM2: areaM2 ? Number(areaM2) : undefined,
       volumeM3: volumeM3 ? Number(volumeM3) : undefined,
       binLocations: binLocations.length > 0 ? binLocations : undefined,
+      // Preserve existing floor-map data when editing
+      ...(zone?.mapPosition ? { mapPosition: zone.mapPosition } : {}),
+      ...(zone?.furniture ? { furniture: zone.furniture } : {}),
     };
     onSave(result);
   }
@@ -146,7 +155,7 @@ export function ZoneDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-2">
+        <div className="grid gap-3 sm:gap-4 py-2">
           {/* Zone Name */}
           <div className="grid gap-1.5">
             <Label htmlFor="zone-name">{t('Zone Name')} *</Label>
@@ -193,7 +202,7 @@ export function ZoneDialog({
           </div>
 
           {/* Area & Volume */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="grid gap-1.5">
               <Label htmlFor="zone-area">{t('Area (m\u00B2)')}</Label>
               <Input
@@ -248,9 +257,53 @@ export function ZoneDialog({
               </div>
             )}
           </div>
+
+          {/* Furniture summary (read-only, editing in ZoneFurnitureManager) */}
+          {isEditing && zone?.furniture && zone.furniture.length > 0 && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                >
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{t('Shelves & Racks')}</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {zone.furniture.length} {t('shelves')}
+                  </Badge>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-2 space-y-1 rounded-md border p-2">
+                  {zone.furniture.map((f) => {
+                    const catalog = FURNITURE_CATALOG[f.type];
+                    return (
+                      <div
+                        key={f.id}
+                        className="flex items-center gap-2 text-xs px-2 py-1.5 rounded hover:bg-muted/30"
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: catalog.stroke }}
+                        />
+                        <span className="truncate">{f.name}</span>
+                        <span className="text-muted-foreground ml-auto">
+                          {f.sections.length} {t('sections')}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    {t('Manage Shelves')} →
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('Cancel', { ns: 'common' })}
           </Button>

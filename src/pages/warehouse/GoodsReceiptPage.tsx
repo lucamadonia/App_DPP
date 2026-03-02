@@ -19,6 +19,7 @@ import { getBatches, getBatchById } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
 import { createGoodsReceipt, getStockForBatch, getLocationUsedVolumeM3 } from '@/services/supabase/wh-stock';
 import { calculateVolume, analyzeCapacity, formatVolumeM3 } from '@/lib/warehouse-volume';
+import { ShelfPicker, type ShelfPickerValue } from '@/components/warehouse/ShelfPicker';
 import type { Product, ProductBatch } from '@/types/product';
 import type { WhLocation, WhStockLevel } from '@/types/warehouse';
 
@@ -62,6 +63,8 @@ export function GoodsReceiptPage() {
   const [quantityDamaged, setQuantityDamaged] = useState(0);
   const [quantityQuarantine, setQuantityQuarantine] = useState(0);
   const [binLocation, setBinLocation] = useState('');
+  const [binDisplayLabel, setBinDisplayLabel] = useState('');
+  const [zone, setZone] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -141,6 +144,7 @@ export function GoodsReceiptPage() {
         quantityDamaged: quantityDamaged || 0,
         quantityQuarantine: quantityQuarantine || 0,
         binLocation: binLocation || undefined,
+        zone: zone || undefined,
         referenceNumber: referenceNumber || undefined,
         notes: notes || undefined,
       });
@@ -510,8 +514,26 @@ export function GoodsReceiptPage() {
                 </>
               )}
               <div className="space-y-2">
-                <Label>{t('Bin Location')}</Label>
-                <Input value={binLocation} onChange={(e) => setBinLocation(e.target.value)} placeholder="z.B. A-03-12" />
+                <Label>{t('Storage Location')}</Label>
+                {selectedLocation ? (
+                  <ShelfPicker
+                    location={selectedLocation}
+                    value={binLocation || undefined}
+                    zone={zone || undefined}
+                    onSelect={(val: ShelfPickerValue) => {
+                      setBinLocation(val.binLocation);
+                      setBinDisplayLabel(val.displayLabel);
+                      if (val.zone) setZone(val.zone);
+                    }}
+                    onClear={() => {
+                      setBinLocation('');
+                      setBinDisplayLabel('');
+                      setZone('');
+                    }}
+                  />
+                ) : (
+                  <Input value={binLocation} onChange={(e) => setBinLocation(e.target.value)} placeholder="z.B. A-03-12" />
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => goToStep(0)}>{t('Back', { ns: 'common' })}</Button>
@@ -579,7 +601,7 @@ export function GoodsReceiptPage() {
                     <div className="flex justify-between"><span className="text-muted-foreground">{t('Space Requirements')}:</span><span className="font-medium">{formatVolumeM3(receiptVolume.totalVolumeM3)}</span></div>
                   )}
                   {binLocation && (
-                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Bin Location')}:</span><span className="font-medium">{binLocation}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Storage Location')}:</span><span className="font-medium">{binDisplayLabel || binLocation}</span></div>
                   )}
                 </div>
               </div>

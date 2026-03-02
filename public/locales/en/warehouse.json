@@ -1070,5 +1070,27 @@
   "receipts": "receipts",
   "shipments": "shipments",
   "adjustments": "adjustments",
-  "Stock Distribution": "Stock Distribution"
+  "Stock Distribution": "Stock Distribution",
+
+  "Shelves & Racks": "Shelves & Racks",
+  "Add Shelf": "Add Shelf",
+  "Edit Shelf": "Edit Shelf",
+  "Shelf Name": "Shelf Name",
+  "Select Furniture Type": "Select Furniture Type",
+  "Select Zone": "Select Zone",
+  "Select Shelf": "Select Shelf",
+  "Select Section": "Select Section",
+  "Manual Entry": "Manual Entry",
+  "Storage Location": "Storage Location",
+  "Shelf Contents": "Shelf Contents",
+  "No shelves configured": "No shelves configured in this zone",
+  "Manage Shelves": "Manage Shelves",
+  "items on shelf": "items on shelf",
+  "sections": "sections",
+  "Capacity": "Capacity",
+  "Delete shelf warning": "Stock has been assigned to sections. Deleting does not remove the stock.",
+  "shelves": "shelves",
+  "or enter manually": "or enter manually",
+  "Remove Shelf": "Remove Shelf",
+  "Furniture Type": "Furniture Type"
 }

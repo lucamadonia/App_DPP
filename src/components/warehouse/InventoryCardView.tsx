@@ -10,10 +10,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { WhStockLevel } from '@/types/warehouse';
+import { formatBinLocation } from '@/lib/warehouse-utils';
+import type { WhStockLevel, WhLocation } from '@/types/warehouse';
 
 interface InventoryCardViewProps {
   stock: WhStockLevel[];
+  locations?: WhLocation[];
   onAdjust: (s: WhStockLevel) => void;
   onTransfer: (s: WhStockLevel) => void;
 }
@@ -40,7 +42,7 @@ function StockBarVisual({ row }: { row: WhStockLevel }) {
   );
 }
 
-export function InventoryCardView({ stock, onAdjust, onTransfer }: InventoryCardViewProps) {
+export function InventoryCardView({ stock, locations, onAdjust, onTransfer }: InventoryCardViewProps) {
   const { t } = useTranslation('warehouse');
 
   return (
@@ -91,7 +93,7 @@ export function InventoryCardView({ stock, onAdjust, onTransfer }: InventoryCard
                   {s.locationName ?? '—'}
                 </Badge>
                 {s.binLocation && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{s.binLocation}</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{formatBinLocation(s.binLocation, locations?.find(l => l.id === s.locationId))}</Badge>
                 )}
                 {isLow && (
                   <Badge variant="destructive" className="text-[10px] gap-1 px-1.5 py-0">

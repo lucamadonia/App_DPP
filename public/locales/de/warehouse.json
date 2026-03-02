@@ -1070,5 +1070,27 @@
   "receipts": "Eingänge",
   "shipments": "Sendungen",
   "adjustments": "Korrekturen",
-  "Stock Distribution": "Bestandsverteilung"
+  "Stock Distribution": "Bestandsverteilung",
+
+  "Shelves & Racks": "Regale & Gestelle",
+  "Add Shelf": "Regal hinzufügen",
+  "Edit Shelf": "Regal bearbeiten",
+  "Shelf Name": "Regalname",
+  "Select Furniture Type": "Möbeltyp auswählen",
+  "Select Zone": "Zone auswählen",
+  "Select Shelf": "Regal auswählen",
+  "Select Section": "Fach auswählen",
+  "Manual Entry": "Manuelle Eingabe",
+  "Storage Location": "Lagerplatz",
+  "Shelf Contents": "Regalinhalt",
+  "No shelves configured": "Keine Regale in dieser Zone konfiguriert",
+  "Manage Shelves": "Regale verwalten",
+  "items on shelf": "Artikel im Regal",
+  "sections": "Fächer",
+  "Capacity": "Kapazität",
+  "Delete shelf warning": "Bestand wurde Fächern zugewiesen. Löschen entfernt den Bestand nicht.",
+  "shelves": "Regale",
+  "or enter manually": "oder manuell eingeben",
+  "Remove Shelf": "Regal entfernen",
+  "Furniture Type": "Möbeltyp"
 }
