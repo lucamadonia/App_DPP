@@ -26,6 +26,7 @@ interface FloorMapCanvasProps {
   searchHighlightIds: Set<string>;
   selectedFurnitureId: string | null;
   hoveredFurnitureId: string | null;
+  pendingFurnitureMove?: { furnitureId: string; position: { x: number; y: number } } | null;
   onZoneDoubleClick?: (zoneIdx: number) => void;
   onZoneClick?: (zoneIdx: number) => void;
   onFurnitureSelect: (id: string | null) => void;
@@ -33,6 +34,8 @@ interface FloorMapCanvasProps {
   onFurniturePointerDown: (e: React.PointerEvent, furniture: ZoneFurniture) => void;
   onFurnitureDoubleClick?: (furniture: ZoneFurniture) => void;
   onFurnitureContextMenu?: (e: React.MouseEvent, furniture: ZoneFurniture) => void;
+  onCanvasDrop?: (e: React.DragEvent) => void;
+  onCanvasDragOver?: (e: React.DragEvent) => void;
   interaction: FloorMapInteraction;
 }
 
@@ -50,6 +53,7 @@ export function FloorMapCanvas({
   searchHighlightIds,
   selectedFurnitureId,
   hoveredFurnitureId,
+  pendingFurnitureMove,
   onZoneDoubleClick,
   onZoneClick,
   onFurnitureSelect,
@@ -57,6 +61,8 @@ export function FloorMapCanvas({
   onFurniturePointerDown,
   onFurnitureDoubleClick,
   onFurnitureContextMenu,
+  onCanvasDrop,
+  onCanvasDragOver,
   interaction,
 }: FloorMapCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -156,6 +162,8 @@ export function FloorMapCanvas({
         onPointerUp={handleCanvasPointerUp}
         onPointerCancel={handleCanvasPointerUp}
         onWheel={handleWheel}
+        onDragOver={onCanvasDragOver}
+        onDrop={onCanvasDrop}
       >
         <defs>
           {/* Gradient fills for each zone type */}
@@ -266,6 +274,8 @@ export function FloorMapCanvas({
               searchHighlightIds={searchHighlightIds}
               selectedFurnitureId={selectedFurnitureId}
               hoveredFurnitureId={hoveredFurnitureId}
+              pendingFurnitureMove={pendingFurnitureMove}
+              isDragging={isDragging}
               onFurnitureSelect={onFurnitureSelect}
               onFurnitureHover={onFurnitureHover}
               onFurniturePointerDown={onFurniturePointerDown}

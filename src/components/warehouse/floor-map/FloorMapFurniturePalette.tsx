@@ -58,7 +58,7 @@ export function FloorMapFurniturePalette({
 
   return (
     <div
-      className="w-[220px] shrink-0 rounded-xl border shadow-sm overflow-hidden"
+      className="w-full sm:w-[220px] shrink-0 rounded-xl border shadow-sm overflow-hidden"
       style={{
         background: 'rgba(255,255,255,0.9)',
         backdropFilter: 'blur(8px)',
@@ -79,7 +79,7 @@ export function FloorMapFurniturePalette({
       </div>
 
       {/* Catalog items */}
-      <ScrollArea className="h-[calc(100%-72px)] max-h-[500px]">
+      <ScrollArea className="h-[calc(100%-72px)] max-h-[200px] sm:max-h-[500px]">
         <div className="p-2 space-y-3">
           {groupedByCategory.map((group) => (
             <div key={group.key}>
@@ -115,9 +115,23 @@ function PaletteItem({
 }) {
   const label = isDE ? entry.labelDe : entry.labelEn;
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData(
+      'application/floor-map-furniture',
+      JSON.stringify({
+        type: entry.type,
+        defaultSize: entry.defaultSize,
+        defaultSections: entry.defaultSections,
+      }),
+    );
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <button
-      className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/60 transition-colors group"
+      draggable
+      onDragStart={handleDragStart}
+      className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/60 transition-colors group cursor-grab active:cursor-grabbing"
       onClick={onAdd}
       title={`${label} (${entry.defaultSize.w}×${entry.defaultSize.h})`}
     >

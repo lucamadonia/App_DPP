@@ -22,9 +22,10 @@ import { FloorMapFurnitureDetail } from './FloorMapFurnitureDetail';
 import { FloorMapFurniturePalette } from './FloorMapFurniturePalette';
 import { FloorMapFurnitureContextMenu } from './FloorMapFurnitureContextMenu';
 import { FloorMapFurnitureTooltip } from './FloorMapFurnitureTooltip';
-import { autoLayoutZones, fitAllViewport, zoomToZoneInterior, searchStockInFurniture } from './floor-map-utils';
+import { autoLayoutZones, fitAllViewport, zoomToZoneInterior, searchStockInFurniture, clampFurnitureToZone } from './floor-map-utils';
 import { useFloorMapInteraction } from './useFloorMapInteraction';
-import { CANVAS_HEIGHT_NORMAL, CANVAS_HEIGHT_FULLSCREEN, type FloorMapViewMode, type FloorMapLevel } from './floor-map-constants';
+import { GRID_CELL, CANVAS_HEIGHT_NORMAL, CANVAS_HEIGHT_FULLSCREEN, type FloorMapViewMode, type FloorMapLevel } from './floor-map-constants';
+import { FURNITURE_CATALOG } from './furniture-catalog';
 
 interface FloorMapTabProps {
   location: WhLocation;
@@ -97,6 +98,28 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
     }
   }, [level, selectedFurnitureId]);
 
+  // Furniture move handler — clamps position to zone bounds, inlines zone update
+  const handleFurnitureMove = useCallback((furnitureId: string, pos: { x: number; y: number }) => {
+    if (interiorZoneIdx < 0) return;
+    setZones((prev) => {
+      const zone = prev[interiorZoneIdx];
+      const f = zone?.furniture?.find((f) => f.id === furnitureId);
+      if (!f || !zone?.mapPosition) return prev;
+      const clamped = clampFurnitureToZone(pos, f.size, {
+        width: zone.mapPosition.width,
+        height: zone.mapPosition.height,
+      });
+      const next = [...prev];
+      const updatedZone = { ...zone };
+      updatedZone.furniture = (zone.furniture ?? []).map((item) =>
+        item.id === furnitureId ? { ...item, position: clamped } : item,
+      );
+      next[interiorZoneIdx] = updatedZone;
+      return next;
+    });
+    setIsDirty(true);
+  }, [interiorZoneIdx]);
+
   const interaction = useFloorMapInteraction(
     svgRef,
     isEditing,
@@ -117,6 +140,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
       onToggleFullscreen: handleToggleFullscreen,
       onOpenDetail: handleOpenDetail,
     },
+    handleFurnitureMove,
   );
 
   // Keep ref in sync for stable handleOpenDetail callback
@@ -159,7 +183,10 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
   const handleFurniturePointerDown = useCallback((e: React.PointerEvent, furniture: ZoneFurniture) => {
     e.stopPropagation();
     setSelectedFurnitureId(furniture.id);
-  }, []);
+    if (isEditing) {
+      interaction.handleFurnitureDragStart(e, furniture.id, furniture.position, interiorZoneIdx);
+    }
+  }, [isEditing, interaction, interiorZoneIdx]);
 
   const handleFurnitureDoubleClick = useCallback((furniture: ZoneFurniture) => {
     setDetailFurnitureId(furniture.id);
@@ -229,6 +256,49 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
     );
   }, [updateInteriorZoneFurniture]);
 
+  // === Palette drag-to-canvas drop ===
+  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData('application/floor-map-furniture');
+    if (!data || interiorZoneIdx < 0) return;
+    const entry = JSON.parse(data) as { type: string; defaultSize: { w: number; h: number }; defaultSections: unknown[] };
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const { viewport } = interaction;
+    const svgX = (e.clientX - rect.left - viewport.x) / viewport.zoom;
+    const svgY = (e.clientY - rect.top - viewport.y) / viewport.zoom;
+    const zone = zones[interiorZoneIdx];
+    if (!zone?.mapPosition) return;
+    const zoneOriginX = zone.mapPosition.x * GRID_CELL;
+    const zoneOriginY = zone.mapPosition.y * GRID_CELL;
+    const gridX = Math.round((svgX - zoneOriginX) / GRID_CELL - entry.defaultSize.w / 2);
+    const gridY = Math.round((svgY - zoneOriginY) / GRID_CELL - entry.defaultSize.h / 2);
+    const clamped = clampFurnitureToZone(
+      { x: gridX, y: gridY },
+      entry.defaultSize,
+      { width: zone.mapPosition.width, height: zone.mapPosition.height },
+    );
+    // Resolve catalog entry for label
+    const catalogEntry = FURNITURE_CATALOG[entry.type as keyof typeof FURNITURE_CATALOG];
+    const isDE = document.documentElement.lang?.startsWith('de');
+    const furniture: ZoneFurniture = {
+      id: crypto.randomUUID(),
+      type: entry.type as ZoneFurniture['type'],
+      name: catalogEntry ? (isDE ? catalogEntry.labelDe : catalogEntry.labelEn) : entry.type,
+      position: clamped,
+      size: { ...entry.defaultSize },
+      rotation: 0,
+      sections: (entry.defaultSections as ZoneFurniture['sections']).map((s) => ({ ...s })),
+    };
+    handleAddFurniture(furniture);
+  }, [interiorZoneIdx, zones, interaction, handleAddFurniture]);
+
+  const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
   // === Keyboard shortcuts for interior mode ===
   useEffect(() => {
     if (level !== 'zone-interior') return;
@@ -273,6 +343,21 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
             setDetailFurnitureId(selectedFurnitureId);
           }
           break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+          if (selectedFurnitureId && isEditing) {
+            e.preventDefault();
+            const nudge: Record<string, [number, number]> = {
+              ArrowUp: [0, -1], ArrowDown: [0, 1],
+              ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+            };
+            const [ndx, ndy] = nudge[e.key]!;
+            const f = zones[interiorZoneIdx]?.furniture?.find((f) => f.id === selectedFurnitureId);
+            if (f) handleFurnitureMove(f.id, { x: f.position.x + ndx, y: f.position.y + ndy });
+          }
+          break;
         case 'Tab': {
           e.preventDefault();
           const furniture = zones[interiorZoneIdx]?.furniture ?? [];
@@ -288,7 +373,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [level, selectedFurnitureId, detailFurnitureId, contextMenu, isEditing, interiorZoneIdx, zones, handleBackToOverview, handleRotateFurniture, handleDeleteFurniture, handleDuplicateFurniture]);
+  }, [level, selectedFurnitureId, detailFurnitureId, contextMenu, isEditing, interiorZoneIdx, zones, handleBackToOverview, handleRotateFurniture, handleDeleteFurniture, handleDuplicateFurniture, handleFurnitureMove]);
 
   const handleToggleEdit = useCallback(() => {
     if (isEditing && isDirty) {
@@ -449,7 +534,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
   const isInterior = level === 'zone-interior';
 
   const content = (
-    <div className="space-y-3" ref={containerRef}>
+    <div className="space-y-2 sm:space-y-3" ref={containerRef}>
       {/* KPI Bar */}
       <FloorMapKPIBar zones={zones} stock={stock} />
 
@@ -489,7 +574,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
       />
 
       {/* Main content area with optional palette sidebar */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         {/* Furniture Palette (interior edit mode only) */}
         {isInterior && isEditing && (
           <FloorMapFurniturePalette
@@ -515,6 +600,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
             searchHighlightIds={searchHighlightIds}
             selectedFurnitureId={selectedFurnitureId}
             hoveredFurnitureId={hoveredFurnitureId}
+            pendingFurnitureMove={interaction.pendingFurnitureMove}
             onZoneDoubleClick={handleZoneDoubleClick}
             onZoneClick={handleZoneClick}
             onFurnitureSelect={setSelectedFurnitureId}
@@ -522,6 +608,8 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
             onFurniturePointerDown={handleFurniturePointerDown}
             onFurnitureDoubleClick={handleFurnitureDoubleClick}
             onFurnitureContextMenu={handleFurnitureContextMenu}
+            onCanvasDrop={handleCanvasDrop}
+            onCanvasDragOver={handleCanvasDragOver}
             interaction={interaction}
           />
         </div>
@@ -582,6 +670,10 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
             setDetailFurnitureId(contextMenu.furniture.id);
             setContextMenu(null);
           }}
+          onMoveTo={isEditing ? (pos) => {
+            handleFurnitureMove(contextMenu.furniture.id, pos);
+            setContextMenu(null);
+          } : undefined}
           onClose={() => setContextMenu(null)}
         />
       )}
@@ -597,7 +689,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
           animation: 'fade-in 0.2s ease',
         }}
       >
-        <div className="p-4 h-full overflow-hidden">
+        <div className="p-2 sm:p-4 h-full overflow-hidden">
           {content}
         </div>
       </div>

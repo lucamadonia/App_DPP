@@ -346,6 +346,20 @@ export function zoomToZoneInterior(
 }
 
 /**
+ * Clamp a furniture position within a zone's bounds, ensuring the piece doesn't overflow.
+ */
+export function clampFurnitureToZone(
+  pos: { x: number; y: number },
+  size: { w: number; h: number },
+  zoneBounds: { width: number; height: number },
+): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(Math.round(pos.x), zoneBounds.width - size.w)),
+    y: Math.max(0, Math.min(Math.round(pos.y), zoneBounds.height - size.h)),
+  };
+}
+
+/**
  * Search stock across all furniture in all zones by product name, GTIN, or batch number.
  * Returns matching furniture IDs with their zone indices.
  */

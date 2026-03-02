@@ -14,12 +14,14 @@ import type { FloorMapViewMode } from './floor-map-constants';
 export type HandleDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
 interface DragState {
-  type: 'move' | 'resize';
+  type: 'move' | 'resize' | 'furniture_move';
   zoneIdx: number;
   startMouseX: number;
   startMouseY: number;
   startPos: ZoneMapPosition;
   handle?: HandleDirection;
+  furnitureId?: string;
+  startFurniturePos?: { x: number; y: number };
 }
 
 interface PanState {
@@ -53,11 +55,18 @@ export interface FloorMapInteraction {
     pos: ZoneMapPosition,
     handle: HandleDirection,
   ) => void;
+  handleFurnitureDragStart: (
+    e: React.PointerEvent,
+    furnitureId: string,
+    pos: { x: number; y: number },
+    zoneIdx: number,
+  ) => void;
   handleCanvasPointerDown: (e: React.PointerEvent) => void;
   handleCanvasPointerMove: (e: React.PointerEvent) => void;
   handleCanvasPointerUp: () => void;
   handleWheel: (e: React.WheelEvent) => void;
   pendingMove: { zoneIdx: number; pos: ZoneMapPosition } | null;
+  pendingFurnitureMove: { furnitureId: string; position: { x: number; y: number } } | null;
   zoomIn: () => void;
   zoomOut: () => void;
   setZoom: (zoom: number) => void;
@@ -80,6 +89,7 @@ export function useFloorMapInteraction(
   isEditing: boolean,
   onZoneMove?: (zoneIdx: number, pos: ZoneMapPosition) => void,
   options?: UseFloorMapInteractionOptions,
+  onFurnitureMove?: (furnitureId: string, pos: { x: number; y: number }) => void,
 ): FloorMapInteraction {
   const [viewport, setViewport] = useState<FloorMapViewport>({
     x: 20,
@@ -93,6 +103,10 @@ export function useFloorMapInteraction(
     pos: ZoneMapPosition;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [pendingFurnitureMove, setPendingFurnitureMove] = useState<{
+    furnitureId: string;
+    position: { x: number; y: number };
+  } | null>(null);
 
   const dragRef = useRef<DragState | null>(null);
   const panRef = useRef<PanState | null>(null);
@@ -246,6 +260,25 @@ export function useFloorMapInteraction(
     [isEditing],
   );
 
+  const handleFurnitureDragStart = useCallback(
+    (e: React.PointerEvent, furnitureId: string, pos: { x: number; y: number }, zoneIdx: number) => {
+      if (!isEditing) return;
+      e.stopPropagation();
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+      setIsDragging(true);
+      dragRef.current = {
+        type: 'furniture_move',
+        zoneIdx,
+        startMouseX: e.clientX,
+        startMouseY: e.clientY,
+        startPos: { x: 0, y: 0, width: 0, height: 0 },
+        furnitureId,
+        startFurniturePos: { ...pos },
+      };
+    },
+    [isEditing],
+  );
+
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (dragRef.current) return;
@@ -299,6 +332,16 @@ export function useFloorMapInteraction(
             snapped.y = Math.round(p.y + p.height - MIN_ZONE_SIZE);
           }
           setPendingMove({ zoneIdx: drag.zoneIdx, pos: snapped });
+        } else if (drag.type === 'furniture_move' && drag.startFurniturePos) {
+          const fdx = (e.clientX - drag.startMouseX) / viewport.zoom / GRID_CELL;
+          const fdy = (e.clientY - drag.startMouseY) / viewport.zoom / GRID_CELL;
+          setPendingFurnitureMove({
+            furnitureId: drag.furnitureId!,
+            position: {
+              x: Math.round(drag.startFurniturePos.x + fdx),
+              y: Math.round(drag.startFurniturePos.y + fdy),
+            },
+          });
         }
         return;
       }
@@ -316,14 +359,17 @@ export function useFloorMapInteraction(
   );
 
   const handleCanvasPointerUp = useCallback(() => {
-    if (dragRef.current && pendingMove) {
+    if (dragRef.current?.type === 'furniture_move' && pendingFurnitureMove) {
+      onFurnitureMove?.(pendingFurnitureMove.furnitureId, pendingFurnitureMove.position);
+      setPendingFurnitureMove(null);
+    } else if (dragRef.current && pendingMove) {
       onZoneMove?.(pendingMove.zoneIdx, pendingMove.pos);
       setPendingMove(null);
     }
     dragRef.current = null;
     panRef.current = null;
     setIsDragging(false);
-  }, [pendingMove, onZoneMove]);
+  }, [pendingMove, onZoneMove, pendingFurnitureMove, onFurnitureMove]);
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -375,11 +421,13 @@ export function useFloorMapInteraction(
     setHoveredZoneIdx,
     handleZoneDragStart,
     handleResizeStart,
+    handleFurnitureDragStart,
     handleCanvasPointerDown,
     handleCanvasPointerMove,
     handleCanvasPointerUp,
     handleWheel,
     pendingMove,
+    pendingFurnitureMove,
     zoomIn,
     zoomOut,
     setZoom,

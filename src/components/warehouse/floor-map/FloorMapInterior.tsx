@@ -15,6 +15,8 @@ interface FloorMapInteriorProps {
   searchHighlightIds: Set<string>;
   selectedFurnitureId: string | null;
   hoveredFurnitureId: string | null;
+  pendingFurnitureMove?: { furnitureId: string; position: { x: number; y: number } } | null;
+  isDragging?: boolean;
   onFurnitureSelect: (id: string | null) => void;
   onFurnitureHover: (id: string | null) => void;
   onFurniturePointerDown: (e: React.PointerEvent, furniture: ZoneFurniture) => void;
@@ -36,6 +38,8 @@ export function FloorMapInterior({
   searchHighlightIds,
   selectedFurnitureId,
   hoveredFurnitureId,
+  pendingFurnitureMove,
+  isDragging: parentIsDragging,
   onFurnitureSelect,
   onFurnitureHover,
   onFurniturePointerDown,
@@ -149,32 +153,44 @@ export function FloorMapInterior({
       )}
 
       {/* Furniture pieces */}
-      {sortedFurniture.map((f) => (
-        <FloorMapFurniture
-          key={f.id}
-          furniture={f}
-          stock={zoneStock}
-          isSelected={selectedFurnitureId === f.id}
-          isHovered={hoveredFurnitureId === f.id}
-          isEditing={isEditing}
-          viewMode={viewMode}
-          dimmed={searchHighlightIds.size > 0 && !searchHighlightIds.has(f.id)}
-          highlighted={searchHighlightIds.has(f.id)}
-          showEmpty={showEmpty}
-          zoom={zoom}
-          onPointerDown={(e) => {
-            if (isEditing) {
-              onFurniturePointerDown(e, f);
-            } else {
-              onFurnitureSelect(selectedFurnitureId === f.id ? null : f.id);
-            }
-          }}
-          onPointerEnter={(e) => handleFurniturePointerEnter(e, f)}
-          onPointerLeave={handleFurniturePointerLeave}
-          onDoubleClick={() => onFurnitureDoubleClick?.(f)}
-          onContextMenu={(e) => onFurnitureContextMenu?.(e, f)}
-        />
-      ))}
+      {sortedFurniture.map((f) => {
+        // Override position for furniture being dragged
+        const isBeingDragged = pendingFurnitureMove?.furnitureId === f.id;
+        const effectivePosition = isBeingDragged
+          ? pendingFurnitureMove!.position
+          : f.position;
+        const effectiveFurniture = isBeingDragged
+          ? { ...f, position: effectivePosition }
+          : f;
+
+        return (
+          <FloorMapFurniture
+            key={f.id}
+            furniture={effectiveFurniture}
+            stock={zoneStock}
+            isSelected={selectedFurnitureId === f.id}
+            isHovered={hoveredFurnitureId === f.id}
+            isEditing={isEditing}
+            isDragging={isBeingDragged && !!parentIsDragging}
+            viewMode={viewMode}
+            dimmed={searchHighlightIds.size > 0 && !searchHighlightIds.has(f.id)}
+            highlighted={searchHighlightIds.has(f.id)}
+            showEmpty={showEmpty}
+            zoom={zoom}
+            onPointerDown={(e) => {
+              if (isEditing) {
+                onFurniturePointerDown(e, f);
+              } else {
+                onFurnitureSelect(selectedFurnitureId === f.id ? null : f.id);
+              }
+            }}
+            onPointerEnter={(e) => handleFurniturePointerEnter(e, f)}
+            onPointerLeave={handleFurniturePointerLeave}
+            onDoubleClick={() => onFurnitureDoubleClick?.(f)}
+            onContextMenu={(e) => onFurnitureContextMenu?.(e, f)}
+          />
+        );
+      })}
     </g>
   );
 }

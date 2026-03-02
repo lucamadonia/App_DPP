@@ -11,6 +11,7 @@ interface FloorMapFurnitureProps {
   isSelected: boolean;
   isHovered: boolean;
   isEditing: boolean;
+  isDragging?: boolean;
   viewMode: FloorMapViewMode;
   dimmed: boolean;
   highlighted: boolean;
@@ -29,6 +30,7 @@ export function FloorMapFurniture({
   isSelected,
   isHovered,
   isEditing,
+  isDragging,
   viewMode,
   dimmed,
   highlighted,
@@ -62,8 +64,8 @@ export function FloorMapFurniture({
   const isCritical = fillRatio > 0.9 && totalUnits > 0;
 
   const extrusion = viewMode === '3d' ? FURNITURE_EXTRUSION : 0;
-  const liftY = (isHovered || isSelected) && !isEditing ? -2 : 0;
-  const shadowBlur = isHovered ? 6 : isSelected ? 5 : 2;
+  const liftY = isDragging ? -1 : (isHovered || isSelected) && !isEditing ? -2 : 0;
+  const shadowBlur = isDragging ? 8 : isHovered ? 6 : isSelected ? 5 : 2;
 
   // Resolve fill color
   const fillColor = heatColor
@@ -129,9 +131,9 @@ export function FloorMapFurniture({
     <g
       transform={`translate(${x}, ${y + liftY})`}
       style={{
-        cursor: isEditing ? 'move' : 'pointer',
-        transition: 'transform 0.25s ease, opacity 0.25s ease',
-        opacity,
+        cursor: isDragging ? 'grabbing' : isEditing ? 'move' : 'pointer',
+        transition: isDragging ? 'none' : 'transform 0.25s ease, opacity 0.25s ease',
+        opacity: isDragging ? 0.75 : opacity,
       }}
       onPointerDown={onPointerDown}
       onPointerEnter={onPointerEnter}
@@ -335,6 +337,22 @@ export function FloorMapFurniture({
             fill={catalog.accent}
             opacity={0.08}
             style={{ pointerEvents: 'none' }}
+          />
+        )}
+
+        {/* Drag glow */}
+        {isDragging && (
+          <rect
+            x={-3}
+            y={-3}
+            width={w + 6}
+            height={h + 6}
+            rx={5}
+            fill="none"
+            stroke="#3B82F6"
+            strokeWidth={2}
+            opacity={0.5}
+            style={{ filter: 'blur(2px)' }}
           />
         )}
 
