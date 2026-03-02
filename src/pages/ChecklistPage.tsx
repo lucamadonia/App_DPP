@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
+import {
+  blurIn,
+  staggerContainer,
+  staggerItem,
+  spring,
+  useReducedMotion,
+} from '@/lib/motion';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import {
   CheckCircle2,
   Circle,
@@ -38,7 +47,6 @@ import {
 import type { ChecklistProgress } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -158,6 +166,8 @@ const statusColors: Record<string, string> = {
 
 export function ChecklistPage() {
   const { t } = useTranslation('compliance');
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [selectedCountry, setSelectedCountry] = useState('DE');
   const [selectedCategory, setSelectedCategory] = useState('electronics');
   const [searchQuery, setSearchQuery] = useState('');
@@ -293,7 +303,10 @@ export function ChecklistPage() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <MotionDiv
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+        >
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('Compliance Checklist')}</h1>
             <p className="text-muted-foreground">
@@ -310,7 +323,7 @@ export function ChecklistPage() {
               {t('PDF Export')}
             </Button>
           </div>
-        </div>
+        </MotionDiv>
 
         {/* Selection */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -426,9 +439,22 @@ export function ChecklistPage() {
                 <Shield className="h-5 w-5 text-primary" />
                 <span className="font-medium">{t('Compliance Progress')}</span>
               </div>
-              <span className="font-bold text-lg">{progress}%</span>
+              <span className="font-bold text-lg">
+                <AnimatedCounter value={progress} suffix="%" />
+              </span>
             </div>
-            <Progress value={progress} className="h-3" />
+            <div className="h-3 rounded-full bg-muted overflow-hidden">
+              {prefersReduced ? (
+                <div className="h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+              ) : (
+                <motion.div
+                  className="h-full bg-primary rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={spring.gentle}
+                />
+              )}
+            </div>
             <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
               <span>{t('{{completed}} of {{total}} mandatory items completed', { completed: completedMandatory.length, total: mandatoryItems.length })}</span>
               {progress === 100 ? (
@@ -480,7 +506,10 @@ export function ChecklistPage() {
         )}
 
         {/* Checklist by categories */}
-        <div className="space-y-4">
+        <MotionDiv
+          className="space-y-4"
+          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+        >
           {categories.map((category) => {
             const categoryItems = filteredChecklist.filter(i => i.category === category);
             if (categoryItems.length === 0) return null;
@@ -489,7 +518,8 @@ export function ChecklistPage() {
             const CategoryIcon = categoryIcons[category] || Shield;
 
             return (
-              <Collapsible key={category} defaultOpen>
+              <MotionDiv key={category} {...(!prefersReduced && { variants: staggerItem })}>
+              <Collapsible defaultOpen>
                 <Card>
                   <CollapsibleTrigger className="w-full">
                     <CardHeader className="pb-3">
@@ -675,9 +705,10 @@ export function ChecklistPage() {
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
+              </MotionDiv>
             );
           })}
-        </div>
+        </MotionDiv>
       </div>
     </TooltipProvider>
   );

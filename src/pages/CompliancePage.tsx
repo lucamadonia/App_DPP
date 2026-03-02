@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -14,10 +15,20 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import {
+  gridStagger,
+  gridItem,
+  blurIn,
+  staggerContainer,
+  staggerItem,
+  spring,
+  useReducedMotion,
+} from '@/lib/motion';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -50,7 +61,9 @@ const statusConfig = {
 export function CompliancePage() {
   const { t } = useTranslation('compliance');
   const locale = useLocale();
+  const prefersReduced = useReducedMotion();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('checklist');
   const [isLoading, setIsLoading] = useState(true);
   const [overview, setOverview] = useState<ComplianceOverview | null>(null);
   const [scores, setScores] = useState<ComplianceScore[]>([]);
@@ -87,10 +100,15 @@ export function CompliancePage() {
   const complianceRate = overview?.overallRate ?? 0;
   const warnings = overview?.warnings ?? [];
 
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Compliance & Audit')}</h1>
           <p className="text-muted-foreground">
@@ -107,11 +125,14 @@ export function CompliancePage() {
             {t('EU-Registry Export')}
           </Button>
         </div>
-      </div>
+      </MotionDiv>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <MotionDiv
+        className="grid gap-4 md:grid-cols-4"
+        {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
+      >
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Compliance Rate')}
@@ -119,42 +140,61 @@ export function CompliancePage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <div className="text-2xl font-bold">{complianceRate}%</div>
-              <Progress value={complianceRate} className="flex-1 h-2" />
+              <div className="text-2xl font-bold">
+                <AnimatedCounter value={complianceRate} suffix="%" />
+              </div>
+              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                {prefersReduced ? (
+                  <div className="h-full bg-primary rounded-full" style={{ width: `${complianceRate}%` }} />
+                ) : (
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${complianceRate}%` }}
+                    transition={spring.gentle}
+                  />
+                )}
+              </div>
             </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Compliant')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{overview?.compliant ?? 0}</div>
+            <div className="text-2xl font-bold text-success">
+              <AnimatedCounter value={overview?.compliant ?? 0} />
+            </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Pending')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{overview?.pending ?? 0}</div>
+            <div className="text-2xl font-bold text-warning">
+              <AnimatedCounter value={overview?.pending ?? 0} />
+            </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Non-Compliant')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{overview?.nonCompliant ?? 0}</div>
+            <div className="text-2xl font-bold text-destructive">
+              <AnimatedCounter value={overview?.nonCompliant ?? 0} />
+            </div>
           </CardContent>
-        </Card>
-      </div>
+        </GlassCard>
+      </MotionDiv>
 
       {/* Warnings Banner */}
       {warnings.length > 0 && (
@@ -191,7 +231,7 @@ export function CompliancePage() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="checklist">
+      <Tabs defaultValue="checklist" onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="checklist">
             <ShieldCheck className="mr-2 h-4 w-4" />
@@ -203,7 +243,8 @@ export function CompliancePage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="checklist" className="space-y-4">
+        <AnimatePresence mode="wait">
+        <TabsContent value="checklist" className="space-y-4" key={activeTab === 'checklist' ? 'checklist' : undefined}>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -235,16 +276,20 @@ export function CompliancePage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <MotionDiv
+                  className="space-y-4"
+                  {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+                >
                   {filteredScores.map((score) => {
                     const status = score.overallScore >= 80 ? 'compliant'
                       : score.overallScore >= 50 ? 'pending'
                       : 'non-compliant';
                     const config = statusConfig[status];
                     return (
-                      <div
+                      <MotionDiv
                         key={score.productId}
                         className="flex items-center justify-between p-4 rounded-lg border"
+                        {...(!prefersReduced && { variants: staggerItem })}
                       >
                         <div className="flex items-center gap-4">
                           <div className={`flex h-10 w-10 items-center justify-center rounded-full ${config.className}`}>
@@ -268,10 +313,10 @@ export function CompliancePage() {
                             {t(config.label)}
                           </Badge>
                         </div>
-                      </div>
+                      </MotionDiv>
                     );
                   })}
-                </div>
+                </MotionDiv>
               )}
             </CardContent>
           </Card>
@@ -292,11 +337,15 @@ export function CompliancePage() {
                   <p>{t('No audit entries available.')}</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <MotionDiv
+                  className="space-y-4"
+                  {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+                >
                   {auditLog.map((entry) => (
-                    <div
+                    <MotionDiv
                       key={entry.id}
                       className="flex items-start gap-4 p-4 rounded-lg border"
+                      {...(!prefersReduced && { variants: staggerItem })}
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                         <FileText className="h-5 w-5 text-muted-foreground" />
@@ -315,13 +364,14 @@ export function CompliancePage() {
                           )}
                         </p>
                       </div>
-                    </div>
+                    </MotionDiv>
                   ))}
-                </div>
+                </MotionDiv>
               )}
             </CardContent>
           </Card>
         </TabsContent>
+        </AnimatePresence>
       </Tabs>
     </div>
   );

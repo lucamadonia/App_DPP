@@ -198,7 +198,7 @@ function AppLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
+        <header className="relative flex h-14 shrink-0 items-center gap-2 bg-background px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
@@ -208,6 +208,8 @@ function AppLayout() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          {/* Gradient border-bottom line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent" />
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6">
           <AnimatedOutlet />

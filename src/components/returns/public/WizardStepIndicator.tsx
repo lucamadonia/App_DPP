@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { motion, useReducedMotion } from 'framer-motion';
 import { User, Package, HelpCircle, Camera, Lightbulb, Truck, ClipboardCheck, Check } from 'lucide-react';
 
 const STEP_ICONS = [User, Package, HelpCircle, Camera, Lightbulb, Truck, ClipboardCheck];
@@ -11,6 +12,7 @@ interface WizardStepIndicatorProps {
 
 export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardStepIndicatorProps) {
   const { t } = useTranslation('returns');
+  const prefersReduced = useReducedMotion();
 
   return (
     <div className="w-full">
@@ -19,9 +21,10 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
         {/* Progress line background */}
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200" />
         {/* Progress line fill */}
-        <div
-          className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500 ease-out"
-          style={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}
+        <motion.div
+          className="absolute top-5 left-0 h-0.5 bg-primary"
+          animate={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}
+          transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 25 }}
         />
 
         {Array.from({ length: totalSteps }, (_, i) => {
@@ -31,16 +34,26 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
 
           return (
             <div key={i} className="flex flex-col items-center relative z-10" style={{ width: `${100 / totalSteps}%` }}>
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                  isCompleted
-                    ? 'bg-primary border-primary text-primary-foreground'
-                    : isCurrent
-                    ? 'bg-white border-primary text-primary ring-4 ring-primary/20'
-                    : 'bg-white border-gray-200 text-gray-400'
-                }`}
-              >
-                {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              <div className="relative">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                    isCompleted
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : isCurrent
+                      ? 'bg-white border-primary text-primary'
+                      : 'bg-white border-gray-200 text-gray-400'
+                  }`}
+                >
+                  {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                </div>
+                {/* Animated ring for current step */}
+                {isCurrent && !prefersReduced && (
+                  <motion.div
+                    layoutId="wizard-active-ring"
+                    className="absolute inset-[-4px] rounded-full border-2 border-primary/30"
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  />
+                )}
               </div>
               <span
                 className={`mt-2 text-xs text-center leading-tight ${
@@ -64,11 +77,14 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
         </div>
         <div className="flex gap-1">
           {Array.from({ length: totalSteps }, (_, i) => (
-            <div
+            <motion.div
               key={i}
-              className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
-                i <= currentStep ? 'bg-primary' : 'bg-gray-200'
-              }`}
+              className="flex-1 h-1.5 rounded-full"
+              animate={{
+                backgroundColor: i <= currentStep
+                  ? 'hsl(var(--primary))' : 'rgb(229 231 235)',
+              }}
+              transition={prefersReduced ? { duration: 0 } : { duration: 0.3 }}
             />
           ))}
         </div>

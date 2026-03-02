@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2, Mail, Phone, Pencil, Users, Plus, Globe, Shield, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { EmptyState } from '@/components/returns/EmptyState';
-import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
-import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { relativeTime } from '@/lib/animations';
+import { pageVariants, pageTransition, gridStagger, gridItem, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import { getRhCustomer, getRhCustomerReturns, updateRhCustomer } from '@/services/supabase';
 import { supabase } from '@/lib/supabase';
 import type { RhCustomer, RhReturn } from '@/types/returns-hub';
@@ -120,16 +121,13 @@ export function CustomerDetailPage() {
     setSaving(false);
   };
 
-  // Animated values
-  const animTotalReturns = useAnimatedNumber(customer?.returnStats.totalReturns ?? 0, { duration: 800 });
-  const animTotalValue = useAnimatedNumber(customer?.returnStats.totalValue ?? 0, { duration: 800, delay: 100 });
-  const animReturnRate = useAnimatedNumber(customer?.returnStats.returnRate ?? 0, { duration: 800, delay: 200, decimals: 1 });
-  const animRiskScore = useAnimatedNumber(customer?.riskScore ?? 0, { duration: 1000, delay: 150 });
-  const rowVisibility = useStaggeredList(returns.length, { interval: 40 });
+  const prefersReduced = useReducedMotion();
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
           <div className="flex-1 space-y-2">
@@ -158,7 +156,7 @@ export function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <div className="animate-fade-in-up">
+      <div>
         <EmptyState
           icon={Users}
           title={t('Customer not found')}
@@ -179,7 +177,7 @@ export function CustomerDetailPage() {
   const riskProgress = Math.min((customer.riskScore / 100) * ringCircumference, ringCircumference);
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/customers')}>
           <ArrowLeft className="h-4 w-4" />
@@ -198,139 +196,266 @@ export function CustomerDetailPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Customer Profile')}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
-                {fullName.charAt(0).toUpperCase()}
+      {prefersReduced ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Customer Profile')}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
+                  {fullName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium">{fullName}</p>
+                  {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
+                </div>
               </div>
-              <div>
-                <p className="font-medium">{fullName}</p>
-                {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" />{customer.email}</div>
+                {customer.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{customer.phone}</div>}
               </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" />{customer.email}</div>
-              {customer.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{customer.phone}</div>}
-            </div>
-            {customer.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-2">
-                {customer.tags.map(tag => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
+              {customer.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-2">
+                  {customer.tags.map(tag => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Return Statistics')}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 rounded-lg bg-muted">
+                  <p className="text-2xl font-bold">{customer.returnStats.totalReturns}</p>
+                  <p className="text-xs text-muted-foreground">{t('Total Returns')}</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted">
+                  <p className="text-2xl font-bold">{'\u20AC'}{customer.returnStats.totalValue.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="animate-fade-in-up" style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Return Statistics')}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
               <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold">{animTotalReturns}</p>
-                <p className="text-xs text-muted-foreground">{t('Total Returns')}</p>
+                <p className="text-2xl font-bold">{customer.returnStats.returnRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">{t('Return Rate')}</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold">{'\u20AC'}{animTotalValue}</p>
-                <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Risk Score')}</CardTitle></CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-4">
+              <div className="relative">
+                <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+                  <circle cx="50" cy="50" r={ringRadius} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/40" />
+                  <circle cx="50" cy="50" r={ringRadius} fill="none" strokeWidth="6" strokeLinecap="round" className={riskBgColor} strokeDasharray={ringCircumference} strokeDashoffset={ringCircumference - riskProgress} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-2xl font-bold ${riskColor}`}>{customer.riskScore}</span>
+                </div>
               </div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-2xl font-bold">{animReturnRate}%</p>
-              <p className="text-xs text-muted-foreground">{t('Return Rate')}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Risk Score')}</CardTitle></CardHeader>
-          <CardContent className="flex flex-col items-center justify-center py-4">
-            <div className="relative">
-              <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
-                <circle cx="50" cy="50" r={ringRadius} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/40" />
-                <circle
-                  cx="50" cy="50" r={ringRadius} fill="none"
-                  strokeWidth="6" strokeLinecap="round"
-                  className={riskBgColor}
-                  strokeDasharray={ringCircumference}
-                  strokeDashoffset={ringCircumference - riskProgress}
-                  style={{ transition: 'stroke-dashoffset 1s ease-out' }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-2xl font-bold ${riskColor}`}>{animRiskScore}</span>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              {customer.riskScore >= 70 ? t('High') : customer.riskScore >= 40 ? t('Normal') : t('Low')} {t('Risk')}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {customer.riskScore >= 70 ? t('High') : customer.riskScore >= 40 ? t('Normal') : t('Low')} {t('Risk')}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
+          <motion.div variants={gridItem}>
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Customer Profile')}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
+                    {fullName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium">{fullName}</p>
+                    {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" />{customer.email}</div>
+                  {customer.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{customer.phone}</div>}
+                </div>
+                {customer.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-2">
+                    {customer.tags.map(tag => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={gridItem}>
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Return Statistics')}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-center p-3 rounded-lg bg-muted">
+                    <p className="text-2xl font-bold"><AnimatedCounter value={customer.returnStats.totalReturns} /></p>
+                    <p className="text-xs text-muted-foreground">{t('Total Returns')}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted">
+                    <p className="text-2xl font-bold"><AnimatedCounter value={customer.returnStats.totalValue} prefix={'\u20AC'} decimals={2} /></p>
+                    <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
+                  </div>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted">
+                  <p className="text-2xl font-bold"><AnimatedCounter value={customer.returnStats.returnRate} suffix="%" decimals={1} /></p>
+                  <p className="text-xs text-muted-foreground">{t('Return Rate')}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={gridItem}>
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Risk Score')}</CardTitle></CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-4">
+                <div className="relative">
+                  <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+                    <circle cx="50" cy="50" r={ringRadius} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/40" />
+                    <circle cx="50" cy="50" r={ringRadius} fill="none" strokeWidth="6" strokeLinecap="round" className={riskBgColor} strokeDasharray={ringCircumference} strokeDashoffset={ringCircumference - riskProgress} style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-2xl font-bold ${riskColor}`}><AnimatedCounter value={customer.riskScore} /></span>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {customer.riskScore >= 70 ? t('High') : customer.riskScore >= 40 ? t('Normal') : t('Low')} {t('Risk')}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Portal Status & CRM Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="animate-fade-in-up" style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" /> {t('Portal Status')}</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('Portal Account')}</span>
-              {portalProfile ? (
-                <Badge variant="default" className="text-[10px] bg-green-100 text-green-700">{t('Active')}</Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px]">{t('No Account')}</Badge>
-              )}
-            </div>
-            {portalProfile && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t('Email Verified')}</span>
-                  <span>{portalProfile.emailVerified ? '\u2705' : '\u274C'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t('Last Login')}</span>
-                  <span className="text-xs">{portalProfile.lastLoginAt ? new Date(portalProfile.lastLoginAt).toLocaleDateString() : '\u2014'}</span>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="animate-fade-in-up" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" /> {t('Lifecycle')}</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('Stage')}</span>
-              <Badge variant="outline" className="capitalize text-xs">{lifecycleStage}</Badge>
-            </div>
-            {satisfactionScore != null && (
+      {prefersReduced ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" /> {t('Portal Status')}</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t('Satisfaction')}</span>
-                <span className="font-medium">{satisfactionScore}/5</span>
+                <span className="text-muted-foreground">{t('Portal Account')}</span>
+                {portalProfile ? (
+                  <Badge variant="default" className="text-[10px] bg-green-100 text-green-700">{t('Active')}</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-[10px]">{t('No Account')}</Badge>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="animate-fade-in-up" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Heart className="h-4 w-4" /> {t('Communication')}</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('Email')}</span>
-              <span>{commPrefs.email ? '\u2705' : '\u274C'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">SMS</span>
-              <span>{commPrefs.sms ? '\u2705' : '\u274C'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('Marketing')}</span>
-              <span>{commPrefs.marketing ? '\u2705' : '\u274C'}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              {portalProfile && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('Email Verified')}</span>
+                    <span>{portalProfile.emailVerified ? '\u2705' : '\u274C'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('Last Login')}</span>
+                    <span className="text-xs">{portalProfile.lastLoginAt ? new Date(portalProfile.lastLoginAt).toLocaleDateString() : '\u2014'}</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" /> {t('Lifecycle')}</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Stage')}</span>
+                <Badge variant="outline" className="capitalize text-xs">{lifecycleStage}</Badge>
+              </div>
+              {satisfactionScore != null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Satisfaction')}</span>
+                  <span className="font-medium">{satisfactionScore}/5</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Heart className="h-4 w-4" /> {t('Communication')}</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Email')}</span>
+                <span>{commPrefs.email ? '\u2705' : '\u274C'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">SMS</span>
+                <span>{commPrefs.sms ? '\u2705' : '\u274C'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('Marketing')}</span>
+                <span>{commPrefs.marketing ? '\u2705' : '\u274C'}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
+          <motion.div variants={gridItem}>
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" /> {t('Portal Status')}</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Portal Account')}</span>
+                  {portalProfile ? (
+                    <Badge variant="default" className="text-[10px] bg-green-100 text-green-700">{t('Active')}</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px]">{t('No Account')}</Badge>
+                  )}
+                </div>
+                {portalProfile && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">{t('Email Verified')}</span>
+                      <span>{portalProfile.emailVerified ? '\u2705' : '\u274C'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">{t('Last Login')}</span>
+                      <span className="text-xs">{portalProfile.lastLoginAt ? new Date(portalProfile.lastLoginAt).toLocaleDateString() : '\u2014'}</span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={gridItem}>
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" /> {t('Lifecycle')}</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Stage')}</span>
+                  <Badge variant="outline" className="capitalize text-xs">{lifecycleStage}</Badge>
+                </div>
+                {satisfactionScore != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('Satisfaction')}</span>
+                    <span className="font-medium">{satisfactionScore}/5</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={gridItem}>
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Heart className="h-4 w-4" /> {t('Communication')}</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Email')}</span>
+                  <span>{commPrefs.email ? '\u2705' : '\u274C'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">SMS</span>
+                  <span>{commPrefs.sms ? '\u2705' : '\u274C'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('Marketing')}</span>
+                  <span>{commPrefs.marketing ? '\u2705' : '\u274C'}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
 
       <Tabs defaultValue="returns">
         <TabsList>
@@ -339,7 +464,7 @@ export function CustomerDetailPage() {
         </TabsList>
 
         <TabsContent value="returns" className="mt-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardContent className="pt-4">
               {returns.length === 0 ? (
                 <EmptyState
@@ -358,26 +483,44 @@ export function CustomerDetailPage() {
                         <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {returns.map((ret, i) => (
-                        <tr
-                          key={ret.id}
-                          className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
-                            rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-                          }`}
-                          style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
-                          onClick={() => navigate(`/returns/${ret.id}`)}
-                        >
-                          <td className="py-2.5 relative">
-                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <span className="text-primary hover:underline font-medium pl-2">{ret.returnNumber}</span>
-                          </td>
-                          <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
-                          <td className="py-2.5 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
-                          <td className="py-2.5 text-right font-medium">{ret.refundAmount != null ? `€${ret.refundAmount.toFixed(2)}` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
+                    {prefersReduced ? (
+                      <tbody>
+                        {returns.map((ret) => (
+                          <tr
+                            key={ret.id}
+                            className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
+                            onClick={() => navigate(`/returns/${ret.id}`)}
+                          >
+                            <td className="py-2.5 relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <span className="text-primary hover:underline font-medium pl-2">{ret.returnNumber}</span>
+                            </td>
+                            <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
+                            <td className="py-2.5 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
+                            <td className="py-2.5 text-right font-medium">{ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '\u2014'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    ) : (
+                      <motion.tbody variants={staggerContainer} initial="initial" animate="animate">
+                        {returns.map((ret) => (
+                          <motion.tr
+                            key={ret.id}
+                            variants={staggerItem}
+                            className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
+                            onClick={() => navigate(`/returns/${ret.id}`)}
+                          >
+                            <td className="py-2.5 relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <span className="text-primary hover:underline font-medium pl-2">{ret.returnNumber}</span>
+                            </td>
+                            <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
+                            <td className="py-2.5 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
+                            <td className="py-2.5 text-right font-medium">{ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '\u2014'}</td>
+                          </motion.tr>
+                        ))}
+                      </motion.tbody>
+                    )}
                   </table>
                 </div>
               )}
@@ -386,7 +529,7 @@ export function CustomerDetailPage() {
         </TabsContent>
 
         <TabsContent value="addresses" className="mt-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardContent className="pt-4">
               {customer.addresses.length === 0 ? (
                 <EmptyState
@@ -464,6 +607,6 @@ export function CustomerDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Wrapper>
   );
 }

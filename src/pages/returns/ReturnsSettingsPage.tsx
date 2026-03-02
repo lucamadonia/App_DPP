@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Loader2, Save, Plus, Trash2, Mail, Pencil, MessageSquareText, ArrowRight, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,7 @@ import {
 import { EmptyState } from '@/components/returns/EmptyState';
 import { PortalDesignTab } from '@/components/returns/PortalDesignTab';
 import { PortalSetupTab } from '@/components/returns/PortalSetupTab';
-import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { pageVariants, pageTransition, useReducedMotion } from '@/lib/motion';
 import {
   getReturnsHubSettings, updateReturnsHubSettings,
   getReturnReasons, createReturnReason, updateReturnReason, deleteReturnReason,
@@ -171,12 +172,11 @@ export function ReturnsSettingsPage() {
     setSaving(false);
   };
 
-  const reasonVisibility = useStaggeredList(reasons.length, { interval: 40 });
-  const responseVisibility = useStaggeredList(cannedResponses.length, { interval: 40 });
+  const prefersReduced = useReducedMotion();
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
+      <div className="space-y-6">
         <div className="space-y-2">
           <div className="h-6 bg-muted rounded w-32 animate-pulse" />
           <div className="h-4 bg-muted rounded w-56 animate-pulse" />
@@ -196,25 +196,30 @@ export function ReturnsSettingsPage() {
 
   if (!settings) return null;
 
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
       <div>
         <h1 className="text-2xl font-bold">{t('Settings')}</h1>
         <p className="text-muted-foreground">{t('Configure your Returns Hub')}</p>
       </div>
 
       <Tabs defaultValue="general">
-        <TabsList>
-          <TabsTrigger value="general">{t('General')}</TabsTrigger>
-          <TabsTrigger value="reasons">{t('Return Reasons')}</TabsTrigger>
-          <TabsTrigger value="tickets">{t('Tickets & SLA')}</TabsTrigger>
-          <TabsTrigger value="notifications">{t('Notifications')}</TabsTrigger>
-          <TabsTrigger value="appearance">{t('Portal Design')}</TabsTrigger>
-          <TabsTrigger value="portal">{t('Portal Setup')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList className="w-full flex-nowrap">
+            <TabsTrigger value="general" className="text-xs sm:text-sm">{t('General')}</TabsTrigger>
+            <TabsTrigger value="reasons" className="text-xs sm:text-sm">{t('Return Reasons')}</TabsTrigger>
+            <TabsTrigger value="tickets" className="text-xs sm:text-sm">{t('Tickets & SLA')}</TabsTrigger>
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm">{t('Notifications')}</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-xs sm:text-sm">{t('Portal Design')}</TabsTrigger>
+            <TabsTrigger value="portal" className="text-xs sm:text-sm">{t('Portal Setup')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="general" className="mt-4 space-y-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('General')}</CardTitle>
               <CardDescription>{t('Basic Returns Hub configuration')}</CardDescription>
@@ -228,7 +233,7 @@ export function ReturnsSettingsPage() {
                 <Switch checked={settings.enabled} onCheckedChange={(v) => setSettings({ ...settings, enabled: v })} />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t('Return Number Prefix')}</Label>
                   <Input value={settings.prefix} onChange={(e) => setSettings({ ...settings, prefix: e.target.value })} placeholder="RET" />
@@ -258,20 +263,21 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="reasons" className="mt-4 space-y-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('Return Reasons')}</CardTitle>
               <CardDescription>{t('Configure return reason categories')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
                   placeholder={t('New reason category...')}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddReason()}
+                  className="flex-1"
                 />
-                <Button onClick={handleAddReason} disabled={!newCategory.trim()}>
+                <Button onClick={handleAddReason} disabled={!newCategory.trim()} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-1" /> {t('Add Reason')}
                 </Button>
               </div>
@@ -284,20 +290,17 @@ export function ReturnsSettingsPage() {
                 />
               ) : (
                 <div className="space-y-2">
-                  {reasons.map((reason, i) => (
+                  {reasons.map((reason) => (
                     <div
                       key={reason.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border hover:shadow-sm transition-all duration-200 ${
-                        reasonVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-                      }`}
-                      style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.2s ease' }}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-center gap-3">
                         <Switch checked={reason.active} onCheckedChange={(v) => handleToggleReason(reason.id, v)} />
                         <div>
                           <span className="font-medium">{reason.category}</span>
                           {reason.subcategories.length > 0 && (
-                            <div className="flex gap-1 mt-1">
+                            <div className="flex flex-wrap gap-1 mt-1">
                               {reason.subcategories.map(sub => (
                                 <Badge key={sub} variant="secondary" className="text-xs">{sub}</Badge>
                               ))}
@@ -305,7 +308,7 @@ export function ReturnsSettingsPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 ml-10 sm:ml-0">
                         {reason.requiresPhotos && <Badge variant="outline" className="text-xs">{t('Requires Photos')}</Badge>}
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteReason(reason.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
@@ -329,13 +332,13 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="tickets" className="mt-4 space-y-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('SLA')}</CardTitle>
               <CardDescription>{t('Default SLA times for new tickets')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t('SLA First Response')} ({t('hours')})</Label>
                   <Input
@@ -364,7 +367,7 @@ export function ReturnsSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+          <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <MessageSquareText className="h-4 w-4" />
@@ -411,19 +414,16 @@ export function ReturnsSettingsPage() {
                 />
               ) : (
                 <div className="space-y-2">
-                  {cannedResponses.map((resp, i) => (
+                  {cannedResponses.map((resp) => (
                     <div
                       key={resp.id}
-                      className={`flex items-start justify-between p-3 rounded-lg border hover:shadow-sm transition-all duration-200 ${
-                        responseVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-                      }`}
-                      style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.2s ease' }}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between p-3 rounded-lg border hover:shadow-sm transition-shadow"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{resp.title}</p>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resp.content}</p>
                       </div>
-                      <div className="flex items-center gap-1 ml-2">
+                      <div className="flex items-center gap-1 sm:ml-2">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenEditResponse(resp)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -440,7 +440,7 @@ export function ReturnsSettingsPage() {
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-4 space-y-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Mail className="h-4 w-4" />
@@ -500,18 +500,18 @@ export function ReturnsSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+          <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('Email Templates Configuration')}</CardTitle>
               <CardDescription>{t('Configure email templates for different events')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border bg-muted/30">
                 <div>
                   <p className="font-medium text-sm">{t('Email Template Editor')}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{t('Visual editor with 15 templates, block editor, and live preview')}</p>
                 </div>
-                <Button onClick={() => navigate('/returns/email-templates')} className="gap-1.5">
+                <Button onClick={() => navigate('/returns/email-templates')} className="gap-1.5 w-full sm:w-auto">
                   {t('Open Email Template Editor')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -556,6 +556,6 @@ export function ReturnsSettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Wrapper>
   );
 }

@@ -83,6 +83,8 @@ import { DocumentPreviewSheet } from '@/components/documents/DocumentPreviewShee
 import { DocumentDetailDialog } from '@/components/documents/DocumentDetailDialog';
 import type { DocumentFolder } from '@/types/database';
 
+import { motion } from 'framer-motion';
+import { blurIn, useReducedMotion } from '@/lib/motion';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import type { VisibilityLevel } from '@/types/visibility';
 
@@ -118,6 +120,8 @@ export function DocumentsPage() {
   const { t } = useTranslation('documents');
   const locale = useLocale();
   const isMobile = useIsMobile();
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -427,7 +431,10 @@ export function DocumentsPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Documents & Certificates')}</h1>
           <p className="text-muted-foreground">
@@ -438,7 +445,7 @@ export function DocumentsPage() {
           <Plus className="mr-2 h-4 w-4" />
           {t('Add Document')}
         </Button>
-      </div>
+      </MotionDiv>
 
       {/* Main layout: Sidebar + Content */}
       <div className="flex gap-0 rounded-lg border bg-card overflow-hidden" style={{ minHeight: '600px' }}>
@@ -580,12 +587,17 @@ export function DocumentsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDocs.map((doc) => {
+                    {filteredDocs.map((doc, index) => {
                       const status = statusConfig[doc.status as keyof typeof statusConfig] || statusConfig.valid;
                       const vis = visibilityBadgeConfig[doc.visibility || 'internal'];
                       const VisIcon = vis.icon;
                       return (
-                        <TableRow key={doc.id}>
+                        <TableRow
+                          key={doc.id}
+                          style={!prefersReduced ? {
+                            animation: `fadeSlideIn 0.3s ease-out ${index * 0.04}s both`,
+                          } : undefined}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded bg-muted shrink-0">

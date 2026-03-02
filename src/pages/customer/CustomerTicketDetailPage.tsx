@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { CustomerTicketThread } from '@/components/customer/CustomerTicketThread
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { getCustomerTicket, getCustomerTicketMessages, sendCustomerMessage } from '@/services/supabase/customer-portal';
 import { supabase } from '@/lib/supabase';
+import { cardEntrance, spring } from '@/lib/motion';
 import type { RhTicket, RhTicketMessage } from '@/types/returns-hub';
 
 const statusColors: Record<string, string> = {
@@ -117,17 +119,23 @@ export function CustomerTicketDetailPage() {
   }
 
   const isClosed = ticket.status === 'closed' || ticket.status === 'resolved';
+  const prefersReduced = useReducedMotion();
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-3 sm:space-y-4 h-full flex flex-col px-4 sm:px-0">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/customer/${tenantSlug}/tickets`)}>
+      <motion.div
+        className="flex items-start gap-2 sm:gap-4"
+        initial={prefersReduced ? false : { opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={prefersReduced ? { duration: 0 } : spring.snappy}
+      >
+        <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => navigate(`/customer/${tenantSlug}/tickets`)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold truncate">{ticket.subject}</h1>
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <h1 className="text-base sm:text-lg font-bold truncate">{ticket.subject}</h1>
             <Badge className={`text-[10px] px-1.5 shrink-0 ${statusColors[ticket.status] || ''}`}>
               {t(ticket.status)}
             </Badge>
@@ -136,22 +144,34 @@ export function CustomerTicketDetailPage() {
             {ticket.ticketNumber} &middot; {t('Created on {{date}}', { date: new Date(ticket.createdAt).toLocaleDateString() })}
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Thread */}
-      <Card className="flex-1 min-h-[400px] flex flex-col overflow-hidden">
-        <CustomerTicketThread
-          messages={messages}
-          onSend={handleSend}
-          sending={sending}
-          ticketId={ticket.id}
-        />
-      </Card>
+      <motion.div
+        className="flex-1 min-h-[250px] sm:min-h-[400px] flex flex-col"
+        variants={prefersReduced ? undefined : cardEntrance}
+        initial={prefersReduced ? undefined : 'initial'}
+        animate={prefersReduced ? undefined : 'animate'}
+      >
+        <Card className="flex-1 flex flex-col overflow-hidden">
+          <CustomerTicketThread
+            messages={messages}
+            onSend={handleSend}
+            sending={sending}
+            ticketId={ticket.id}
+          />
+        </Card>
+      </motion.div>
 
       {isClosed && (
-        <p className="text-center text-sm text-muted-foreground py-2">
+        <motion.p
+          className="text-center text-sm text-muted-foreground py-2"
+          initial={prefersReduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
           {t('This ticket has been resolved. You can still send a message to reopen it.')}
-        </p>
+        </motion.p>
       )}
     </div>
   );

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
+import { blurIn, scaleIn, useReducedMotion } from '@/lib/motion';
 import {
   Download,
   Copy,
@@ -174,6 +176,8 @@ async function generateCompositeQR(
 
 export function QRGeneratorPage() {
   const { t } = useTranslation('dpp');
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<ProductListItem | null>(null);
@@ -675,7 +679,10 @@ export function QRGeneratorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('QR Code Generator')}</h1>
           <p className="text-muted-foreground">
@@ -688,7 +695,7 @@ export function QRGeneratorPage() {
             {t('Domain Settings')}
           </Button>
         </div>
-      </div>
+      </MotionDiv>
 
       {products.length === 0 ? (
         <Card>
@@ -854,11 +861,16 @@ export function QRGeneratorPage() {
                       style={{ backgroundColor: localDomainSettings.backgroundColor }}
                     >
                       {qrDataUrl ? (
-                        <img
-                          src={qrDataUrl}
-                          alt="Customer QR Code"
-                          className="w-full max-w-[256px] h-auto"
-                        />
+                        <MotionDiv
+                          {...(!prefersReduced && { variants: scaleIn, initial: 'initial', animate: 'animate' })}
+                          key={qrDataUrl}
+                        >
+                          <img
+                            src={qrDataUrl}
+                            alt="Customer QR Code"
+                            className="w-full max-w-[256px] h-auto"
+                          />
+                        </MotionDiv>
                       ) : (
                         <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
                           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -885,11 +897,16 @@ export function QRGeneratorPage() {
                       style={{ backgroundColor: localDomainSettings.backgroundColor }}
                     >
                       {qrCustomsDataUrl ? (
-                        <img
-                          src={qrCustomsDataUrl}
-                          alt="Customs QR Code"
-                          className="w-full max-w-[256px] h-auto"
-                        />
+                        <MotionDiv
+                          {...(!prefersReduced && { variants: scaleIn, initial: 'initial', animate: 'animate' })}
+                          key={qrCustomsDataUrl}
+                        >
+                          <img
+                            src={qrCustomsDataUrl}
+                            alt="Customs QR Code"
+                            className="w-full max-w-[256px] h-auto"
+                          />
+                        </MotionDiv>
                       ) : (
                         <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
                           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />

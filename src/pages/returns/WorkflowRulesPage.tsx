@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Zap, Workflow } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Zap, Workflow, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { WorkflowRuleEditor } from '@/components/returns/WorkflowRuleEditor';
 import { EmptyState } from '@/components/returns/EmptyState';
-import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { pageVariants, pageTransition, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import { getRhWorkflowRules, createRhWorkflowRule, updateRhWorkflowRule, deleteRhWorkflowRule } from '@/services/supabase';
 import type { RhWorkflowRule } from '@/types/returns-hub';
 
@@ -77,12 +78,14 @@ export function WorkflowRulesPage() {
     }
   };
 
-  const ruleVisibility = useStaggeredList(rules.length, { interval: 50, initialDelay: 100 });
+  const prefersReduced = useReducedMotion();
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <div className="h-6 bg-muted rounded w-40 animate-pulse" />
             <div className="h-4 bg-muted rounded w-56 animate-pulse" />
@@ -107,18 +110,18 @@ export function WorkflowRulesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('Workflow Rules')}</h1>
           <p className="text-muted-foreground">{t('Automate return processing')}</p>
         </div>
         {!creating && !editing && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setCreating(true)}>
+            <Button variant="outline" onClick={() => setCreating(true)} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" /> {t('New Rule')}
             </Button>
-            <Button onClick={handleNewVisualWorkflow} disabled={saving}>
+            <Button onClick={handleNewVisualWorkflow} disabled={saving} className="flex-1 sm:flex-none">
               <Workflow className="h-4 w-4 mr-2" /> {t('Visual Builder')}
             </Button>
           </div>
@@ -126,24 +129,11 @@ export function WorkflowRulesPage() {
       </div>
 
       {creating && (
-        <div className="animate-fade-in-up">
-          <WorkflowRuleEditor
-            onSave={handleCreate}
-            onCancel={() => setCreating(false)}
-            saving={saving}
-          />
-        </div>
+        <WorkflowRuleEditor onSave={handleCreate} onCancel={() => setCreating(false)} saving={saving} />
       )}
 
       {editing && (
-        <div className="animate-fade-in-up">
-          <WorkflowRuleEditor
-            rule={editing}
-            onSave={handleUpdate}
-            onCancel={() => setEditing(null)}
-            saving={saving}
-          />
-        </div>
+        <WorkflowRuleEditor rule={editing} onSave={handleUpdate} onCancel={() => setEditing(null)} saving={saving} />
       )}
 
       {!creating && !editing && (
@@ -155,17 +145,11 @@ export function WorkflowRulesPage() {
             actionLabel={t('Visual Builder')}
             onAction={handleNewVisualWorkflow}
           />
-        ) : (
+        ) : prefersReduced ? (
           <div className="space-y-3">
-            {rules.map((rule, i) => (
-              <Card
-                key={rule.id}
-                className={`transition-all duration-300 ${
-                  ruleVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                }`}
-                style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-              >
-                <CardContent className="flex items-center justify-between py-4">
+            {rules.map((rule) => (
+              <Card key={rule.id}>
+                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-4">
                   <div className="flex items-center gap-4">
                     <div className="relative">
                       <Switch checked={rule.active} onCheckedChange={(v) => handleToggle(rule.id, v)} />
@@ -174,37 +158,59 @@ export function WorkflowRulesPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{rule.name}</p>
-                        {isGraphBased(rule) && (
-                          <Badge variant="outline" className="text-[10px] h-4 border-violet-300 text-violet-600">
-                            v2
-                          </Badge>
-                        )}
+                        {isGraphBased(rule) && <Badge variant="outline" className="text-[10px] h-4 border-violet-300 text-violet-600">v2</Badge>}
                       </div>
                       {rule.description && <p className="text-sm text-muted-foreground">{rule.description}</p>}
-                      <div className="flex gap-2 mt-1">
+                      <div className="flex flex-wrap gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">{t(rule.triggerType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</Badge>
                         <Badge variant="secondary" className="text-xs">{rule.actions.length} {t('Actions')}</Badge>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/returns/workflows/${rule.id}/builder`)}
-                    >
-                      <Workflow className="h-3.5 w-3.5 mr-1" />
-                      {t('Visual Builder')}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setEditing(rule)}>{t('Edit')}</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(rule.id)}>{t('Delete')}</Button>
+                  <div className="flex gap-2 ml-10 sm:ml-0">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/returns/workflows/${rule.id}/builder`)}><Workflow className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{t('Visual Builder')}</span></Button>
+                    <Button variant="outline" size="sm" onClick={() => setEditing(rule)}><Pencil className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{t('Edit')}</span></Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(rule.id)}><Trash2 className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{t('Delete')}</span></Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+        ) : (
+          <motion.div className="space-y-3" variants={staggerContainer} initial="initial" animate="animate">
+            {rules.map((rule) => (
+              <motion.div key={rule.id} variants={staggerItem}>
+                <Card>
+                  <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-4">
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <Switch checked={rule.active} onCheckedChange={(v) => handleToggle(rule.id, v)} />
+                        <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${rule.active ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{rule.name}</p>
+                          {isGraphBased(rule) && <Badge variant="outline" className="text-[10px] h-4 border-violet-300 text-violet-600">v2</Badge>}
+                        </div>
+                        {rule.description && <p className="text-sm text-muted-foreground">{rule.description}</p>}
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">{t(rule.triggerType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</Badge>
+                          <Badge variant="secondary" className="text-xs">{rule.actions.length} {t('Actions')}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-10 sm:ml-0">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/returns/workflows/${rule.id}/builder`)}><Workflow className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{t('Visual Builder')}</span></Button>
+                      <Button variant="outline" size="sm" onClick={() => setEditing(rule)}><Pencil className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{t('Edit')}</span></Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(rule.id)}><Trash2 className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{t('Delete')}</span></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
         )
       )}
-    </div>
+    </Wrapper>
   );
 }

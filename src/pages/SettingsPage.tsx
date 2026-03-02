@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import { motion } from 'framer-motion';
-import { fadeIn, useReducedMotion } from '@/lib/motion';
+import { blurIn, useReducedMotion } from '@/lib/motion';
 import { UsersTab } from '@/components/settings/UsersTab';
 import {
   Building2,
@@ -409,7 +409,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
     <div className="space-y-6">
       {/* Header */}
       <MotionDiv
-        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
       >
         <h1 className="text-2xl font-bold text-foreground">{t('Settings')}</h1>
         <p className="text-muted-foreground">

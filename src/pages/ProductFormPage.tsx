@@ -60,6 +60,8 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
+import { blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command';
@@ -93,6 +95,8 @@ export function ProductFormPage() {
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const { branding } = useBranding();
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -755,7 +759,10 @@ export function ProductFormPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <MotionDiv
+        className="flex items-center gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <Button variant="ghost" size="icon" asChild>
           <Link to={isEditMode ? `/products/${id}` : '/products'}>
             <ArrowLeft className="h-4 w-4" />
@@ -771,7 +778,7 @@ export function ProductFormPage() {
               : t('Create a new Digital Product Passport')}
           </p>
         </div>
-      </div>
+      </MotionDiv>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -852,6 +859,12 @@ export function ProductFormPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <AnimatePresence mode="wait">
+          <MotionDiv
+            key={currentStepId}
+            {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate', exit: 'exit' })}
+            className="space-y-6"
+          >
           {/* Step 1: Basic Data */}
           {currentStepId === 'master-data' && (
             <div className="grid gap-6 md:grid-cols-2">
@@ -2966,6 +2979,8 @@ export function ProductFormPage() {
               </div>
             </div>
           )}
+          </MotionDiv>
+          </AnimatePresence>
         </CardContent>
       </Card>
 

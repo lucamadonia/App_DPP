@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { fadeIn, scaleIn, useReducedMotion } from '@/lib/motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { blurIn, scaleIn, useReducedMotion } from '@/lib/motion';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -218,7 +218,7 @@ export function ProductsPage() {
       {/* Header */}
       <MotionDiv
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
       >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Products')}</h1>
@@ -269,11 +269,21 @@ export function ProductsPage() {
                 <Button variant="outline">
                   <Filter className="mr-2 h-4 w-4" />
                   Status
-                  {statusFilter && (
-                    <Badge variant="secondary" className="ml-2">
-                      {statusConfig[statusFilter as keyof typeof statusConfig]?.label}
-                    </Badge>
-                  )}
+                  <AnimatePresence>
+                    {statusFilter && (
+                      <motion.span
+                        key="filter-badge"
+                        initial={prefersReduced ? undefined : { opacity: 0, scale: 0.8 }}
+                        animate={prefersReduced ? undefined : { opacity: 1, scale: 1 }}
+                        exit={prefersReduced ? undefined : { opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <Badge variant="secondary" className="ml-2">
+                          {statusConfig[statusFilter as keyof typeof statusConfig]?.label}
+                        </Badge>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -346,7 +356,7 @@ export function ProductsPage() {
                     <TableRow
                       key={product.id}
                       style={!prefersReduced ? {
-                        animation: `fadeSlideIn ${0.3}s ease-out ${index * 0.03}s both`,
+                        animation: `fadeSlideIn 0.3s ease-out ${index * 0.04}s both`,
                       } : undefined}
                     >
                       <TableCell>

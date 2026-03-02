@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import {
   Globe,
   FileText,
@@ -19,6 +20,16 @@ import {
   Printer,
   Loader2,
 } from 'lucide-react';
+import {
+  gridStagger,
+  gridItem,
+  blurIn,
+  staggerContainer,
+  staggerItem,
+  useReducedMotion,
+} from '@/lib/motion';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import {
   getCountries,
   getEURegulations,
@@ -74,6 +85,8 @@ const categoryIcons: Record<string, React.ElementType> = {
 export function RegulationsPage() {
   const { t } = useTranslation('compliance');
   const locale = useLocale();
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -166,7 +179,10 @@ export function RegulationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Regulations & Compliance')}</h1>
           <p className="text-muted-foreground">
@@ -183,63 +199,74 @@ export function RegulationsPage() {
             {t('Print', { ns: 'common' })}
           </Button>
         </div>
-      </div>
+      </MotionDiv>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <MotionDiv
+        className="grid gap-4 md:grid-cols-4"
+        {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
+      >
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                 <Globe className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{countries.length}</p>
+                <p className="text-2xl font-bold">
+                  <AnimatedCounter value={countries.length} />
+                </p>
                 <p className="text-sm text-muted-foreground">{t('Countries covered')}</p>
               </div>
             </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                 <FileText className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{euRegulations.length}</p>
+                <p className="text-2xl font-bold">
+                  <AnimatedCounter value={euRegulations.length} />
+                </p>
                 <p className="text-sm text-muted-foreground">{t('EU Regulations')}</p>
               </div>
             </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                 <Tag className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pictograms.length}</p>
+                <p className="text-2xl font-bold">
+                  <AnimatedCounter value={pictograms.length} />
+                </p>
                 <p className="text-sm text-muted-foreground">{t('Pictograms')}</p>
               </div>
             </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-warning/10">
                 <Bell className="h-6 w-6 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{news.filter(n => n.priority === 'high').length}</p>
+                <p className="text-2xl font-bold">
+                  <AnimatedCounter value={news.filter(n => n.priority === 'high').length} />
+                </p>
                 <p className="text-sm text-muted-foreground">{t('Important Updates')}</p>
               </div>
             </div>
           </CardContent>
-        </Card>
-      </div>
+        </GlassCard>
+      </MotionDiv>
 
       {/* Tabs */}
       <Tabs defaultValue="countries">
@@ -268,10 +295,14 @@ export function RegulationsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <MotionDiv
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+                {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+              >
                 {countries.map((country) => (
-                  <div
+                  <MotionDiv
                     key={country.code}
+                    {...(!prefersReduced && { variants: staggerItem })}
                     onClick={() => setSelectedCountry(country.code === selectedCountry ? null : country.code)}
                     className={`p-4 rounded-lg border cursor-pointer transition-all ${
                       selectedCountry === country.code
@@ -299,9 +330,9 @@ export function RegulationsPage() {
                         </Badge>
                       ))}
                     </div>
-                  </div>
+                  </MotionDiv>
                 ))}
-              </div>
+              </MotionDiv>
             </CardContent>
           </Card>
 
@@ -638,9 +669,16 @@ export function RegulationsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
+              <MotionDiv
+                className="grid gap-4 md:grid-cols-2"
+                {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+              >
                 {filteredPictograms.map((pictogram) => (
-                  <div key={pictogram.id} className="p-4 rounded-lg border">
+                  <MotionDiv
+                    key={pictogram.id}
+                    className="p-4 rounded-lg border"
+                    {...(!prefersReduced && { variants: staggerItem })}
+                  >
                     <div className="flex items-start gap-4 mb-3">
                       <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-2xl font-bold">
                         {pictogram.symbol}
@@ -676,9 +714,9 @@ export function RegulationsPage() {
                         <span>{pictogram.placement}</span>
                       </div>
                     </div>
-                  </div>
+                  </MotionDiv>
                 ))}
-              </div>
+              </MotionDiv>
             </CardContent>
           </Card>
 

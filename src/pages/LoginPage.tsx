@@ -26,16 +26,26 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4 overflow-hidden">
-      {/* Animated gradient background orbs */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4 overflow-hidden relative">
+      {/* Morphing background blobs */}
       {!prefersReduced && (
         <>
-          <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl animate-landing-gradient-mesh" />
-          <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl animate-landing-gradient-mesh [animation-delay:3s]" />
+          <div
+            className="pointer-events-none absolute top-1/4 -left-24 z-0 h-[28rem] w-[28rem] bg-primary/8 blur-3xl animate-landing-morph"
+            style={{ animationDuration: '8s' }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-12 right-[-6rem] z-0 h-[24rem] w-[24rem] bg-blue-400/6 blur-3xl animate-landing-morph"
+            style={{ animationDuration: '10s', animationDelay: '2s' }}
+          />
+          <div
+            className="pointer-events-none absolute top-[10%] right-[15%] z-0 h-[18rem] w-[18rem] bg-violet-400/5 blur-3xl animate-landing-morph"
+            style={{ animationDuration: '12s', animationDelay: '4s' }}
+          />
         </>
       )}
 
-      <div className="w-full max-w-md space-y-6 relative">
+      <div className="w-full max-w-md space-y-6 relative z-10">
         {/* Logo - Scale bounce in */}
         <motion.div
           className="text-center space-y-3"
@@ -60,15 +70,12 @@ export function LoginPage() {
           </motion.p>
         </motion.div>
 
-        {/* Auth Component - Fade in up with delay */}
+        {/* Auth Component - Glass card with animated gradient border */}
         <motion.div
-          initial={prefersReduced ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            delay: prefersReduced ? 0 : 0.2,
-            duration: 0.3,
-            ease: 'easeOut',
-          }}
+          className={prefersReduced ? '' : 'gradient-border-animated'}
+          initial={prefersReduced ? false : { opacity: 0, y: 16, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={prefersReduced ? { duration: 0 } : spring.snappy}
         >
           <SupabaseAuth
             mode="signin"

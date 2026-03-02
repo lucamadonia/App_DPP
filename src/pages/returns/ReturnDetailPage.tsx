@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { ReturnItemsTable } from '@/components/returns/ReturnItemsTable';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { relativeTime } from '@/lib/animations';
+import { pageVariants, pageTransition, staggerContainer, cardEntrance, useReducedMotion } from '@/lib/motion';
 import {
   getReturn, getReturnItems, getReturnTimeline,
   updateReturnStatus, updateReturn, cancelReturn,
@@ -36,6 +38,7 @@ export function ReturnDetailPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const prefersReduced = useReducedMotion();
 
   useEffect(() => {
     if (!id) return;
@@ -77,9 +80,12 @@ export function ReturnDetailPage() {
     setActionLoading(false);
   };
 
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
+      <div className="space-y-6">
         {/* Skeleton header */}
         <div className="flex items-center gap-4">
           <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
@@ -113,7 +119,7 @@ export function ReturnDetailPage() {
 
   if (!returnData) {
     return (
-      <div className="animate-fade-in-up">
+      <div>
         <EmptyState
           icon={Package}
           title={t('Return not found')}
@@ -153,7 +159,7 @@ export function ReturnDetailPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/list')}>
           <ArrowLeft className="h-4 w-4" />
@@ -194,7 +200,7 @@ export function ReturnDetailPage() {
       </div>
 
       {/* Status Pipeline */}
-      <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+      <Card>
         <CardContent className="py-4">
           <StatusPipeline status={returnData.status} />
         </CardContent>
@@ -209,34 +215,64 @@ export function ReturnDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="animate-fade-in-up" style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">{t('Return Information')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Desired Solution')}</span><span className="capitalize">{returnData.desiredSolution ? t(returnData.desiredSolution.charAt(0).toUpperCase() + returnData.desiredSolution.slice(1)) : '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Reason Category')}</span><span>{returnData.reasonCategory || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Reason Subcategory')}</span><span>{returnData.reasonSubcategory || '—'}</span></div>
-                {returnData.reasonText && <div className="pt-2 border-t"><p className="text-muted-foreground text-xs">{returnData.reasonText}</p></div>}
-              </CardContent>
-            </Card>
-
-            <Card className="animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">{t('Shipping & Refund')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Tracking Number')}</span><span>{returnData.trackingNumber || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Shipping Method')}</span><span>{returnData.shippingMethod || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Refund Amount')}</span><span className="font-medium">{returnData.refundAmount != null ? `€${returnData.refundAmount.toFixed(2)}` : '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">{t('Refund Method')}</span><span>{returnData.refundMethod || '—'}</span></div>
-              </CardContent>
-            </Card>
-          </div>
+          {prefersReduced ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{t('Return Information')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Desired Solution')}</span><span className="capitalize">{returnData.desiredSolution ? t(returnData.desiredSolution.charAt(0).toUpperCase() + returnData.desiredSolution.slice(1)) : '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Reason Category')}</span><span>{returnData.reasonCategory || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Reason Subcategory')}</span><span>{returnData.reasonSubcategory || '—'}</span></div>
+                  {returnData.reasonText && <div className="pt-2 border-t"><p className="text-muted-foreground text-xs">{returnData.reasonText}</p></div>}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{t('Shipping & Refund')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Tracking Number')}</span><span>{returnData.trackingNumber || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Shipping Method')}</span><span>{returnData.shippingMethod || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Refund Amount')}</span><span className="font-medium">{returnData.refundAmount != null ? `€${returnData.refundAmount.toFixed(2)}` : '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('Refund Method')}</span><span>{returnData.refundMethod || '—'}</span></div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-4" variants={staggerContainer} initial="initial" animate="animate">
+              <motion.div variants={cardEntrance}>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{t('Return Information')}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Desired Solution')}</span><span className="capitalize">{returnData.desiredSolution ? t(returnData.desiredSolution.charAt(0).toUpperCase() + returnData.desiredSolution.slice(1)) : '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Reason Category')}</span><span>{returnData.reasonCategory || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Reason Subcategory')}</span><span>{returnData.reasonSubcategory || '—'}</span></div>
+                    {returnData.reasonText && <div className="pt-2 border-t"><p className="text-muted-foreground text-xs">{returnData.reasonText}</p></div>}
+                  </CardContent>
+                </Card>
+              </motion.div>
+              <motion.div variants={cardEntrance}>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{t('Shipping & Refund')}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Tracking Number')}</span><span>{returnData.trackingNumber || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Shipping Method')}</span><span>{returnData.shippingMethod || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Refund Amount')}</span><span className="font-medium">{returnData.refundAmount != null ? `€${returnData.refundAmount.toFixed(2)}` : '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('Refund Method')}</span><span>{returnData.refundMethod || '—'}</span></div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+          )}
 
           {canRefund && (
-            <Card className="animate-fade-in-up" style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}>
+            <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Process Refund')}</CardTitle>
               </CardHeader>
@@ -261,7 +297,7 @@ export function ReturnDetailPage() {
           )}
 
           {returnData.internalNotes && (
-            <Card className="animate-fade-in-up" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
+            <Card className="">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Internal Notes')}</CardTitle>
               </CardHeader>
@@ -273,7 +309,7 @@ export function ReturnDetailPage() {
         </TabsContent>
 
         <TabsContent value="items" className="mt-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardContent className="pt-4">
               <ReturnItemsTable items={items} readonly />
             </CardContent>
@@ -281,7 +317,7 @@ export function ReturnDetailPage() {
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardContent className="pt-4">
               <AnimatedTimeline entries={timeline} />
             </CardContent>
@@ -289,7 +325,7 @@ export function ReturnDetailPage() {
         </TabsContent>
 
         <TabsContent value="customs" className="mt-4">
-          <Card className="animate-fade-in-up">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">{t('Customs Information')}</CardTitle>
             </CardHeader>
@@ -353,6 +389,6 @@ export function ReturnDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Wrapper>
   );
 }

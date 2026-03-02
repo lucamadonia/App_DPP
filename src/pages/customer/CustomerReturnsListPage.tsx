@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Loader2, Plus, Search, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AnimatedList, AnimatedListItem } from '@/components/ui/animated-list';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { getCustomerReturns } from '@/services/supabase/customer-portal';
+import { spring } from '@/lib/motion';
 import type { RhReturn, ReturnStatus } from '@/types/returns-hub';
 
 export function CustomerReturnsListPage() {
@@ -41,9 +44,16 @@ export function CustomerReturnsListPage() {
 
   const totalPages = Math.ceil(total / pageSize);
 
+  const prefersReduced = useReducedMotion();
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <motion.div
+        className="flex items-center justify-between"
+        initial={prefersReduced ? false : { opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={prefersReduced ? { duration: 0 } : spring.snappy}
+      >
         <div>
           <h1 className="text-2xl font-bold">{t('My Returns')}</h1>
           <p className="text-muted-foreground">{t('Track and manage your returns')}</p>
@@ -52,7 +62,7 @@ export function CustomerReturnsListPage() {
           <Plus className="h-4 w-4" />
           {t('New Return')}
         </Button>
-      </div>
+      </motion.div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -105,49 +115,50 @@ export function CustomerReturnsListPage() {
         </Card>
       ) : (
         <>
-          <div className="space-y-2">
+          <AnimatedList className="space-y-2" staggerDelay={0.04}>
             {returns.map((ret) => (
-              <Card
-                key={ret.id}
-                className="cursor-pointer border-0 shadow-sm hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/customer/${tenantSlug}/returns/${ret.id}`)}
-              >
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="font-medium text-sm">{ret.returnNumber}</p>
-                        {ret.orderId && (
-                          <p className="text-xs text-muted-foreground">
-                            {t('Order')}: {ret.orderId}
-                          </p>
-                        )}
+              <AnimatedListItem key={ret.id} itemKey={ret.id}>
+                <Card
+                  className="cursor-pointer border-0 shadow-sm hover:shadow-md transition-shadow"
+                  onClick={() => navigate(`/customer/${tenantSlug}/returns/${ret.id}`)}
+                >
+                  <CardContent className="py-3 px-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="font-medium text-sm">{ret.returnNumber}</p>
+                          {ret.orderId && (
+                            <p className="text-xs text-muted-foreground">
+                              {t('Order')}: {ret.orderId}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <ReturnStatusBadge status={ret.status as ReturnStatus} />
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
+                          {new Date(ret.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <ReturnStatusBadge status={ret.status as ReturnStatus} />
-                      <span className="text-xs text-muted-foreground hidden sm:inline">
-                        {new Date(ret.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                  {(ret.reasonCategory || ret.desiredSolution) && (
-                    <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
-                      {ret.reasonCategory && <span>{ret.reasonCategory}</span>}
-                      {ret.desiredSolution && (
-                        <span className="capitalize">{t(ret.desiredSolution)}</span>
-                      )}
-                      {ret.refundAmount != null && (
-                        <span className="font-medium text-foreground">
-                          {'\u20AC'}{ret.refundAmount.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    {(ret.reasonCategory || ret.desiredSolution) && (
+                      <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                        {ret.reasonCategory && <span>{ret.reasonCategory}</span>}
+                        {ret.desiredSolution && (
+                          <span className="capitalize">{t(ret.desiredSolution)}</span>
+                        )}
+                        {ret.refundAmount != null && (
+                          <span className="font-medium text-foreground">
+                            {'\u20AC'}{ret.refundAmount.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </AnimatedListItem>
             ))}
-          </div>
+          </AnimatedList>
 
           {/* Pagination */}
           {totalPages > 1 && (

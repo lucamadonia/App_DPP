@@ -1,5 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
+import {
+  blurIn,
+  gridStagger,
+  gridItem,
+  useReducedMotion,
+} from '@/lib/motion';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import {
   Calculator,
   CheckCircle2,
@@ -111,6 +120,8 @@ function useRequirementAnalysis() {
 
 export function RequirementsCalculatorPage() {
   const { t } = useTranslation('compliance');
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [productName, setProductName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
@@ -293,7 +304,10 @@ export function RequirementsCalculatorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Requirements Calculator')}</h1>
           <p className="text-muted-foreground">
@@ -312,7 +326,7 @@ export function RequirementsCalculatorPage() {
             </Button>
           </div>
         )}
-      </div>
+      </MotionDiv>
 
       {!showResults ? (
         <div className="space-y-6">
@@ -707,34 +721,41 @@ export function RequirementsCalculatorPage() {
           </Card>
 
           {/* Statistics */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
+          <MotionDiv
+            className="grid gap-4 md:grid-cols-4"
+            {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
+          >
+            <GlassCard {...(!prefersReduced && { variants: gridItem })}>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
                     <AlertTriangle className="h-6 w-6 text-destructive" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{criticalRequirements.length}</p>
+                    <p className="text-2xl font-bold">
+                      <AnimatedCounter value={criticalRequirements.length} />
+                    </p>
                     <p className="text-sm text-muted-foreground">{t('Critical Requirements')}</p>
                   </div>
                 </div>
               </CardContent>
-            </Card>
-            <Card>
+            </GlassCard>
+            <GlassCard {...(!prefersReduced && { variants: gridItem })}>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-warning/10">
                     <Clock className="h-6 w-6 text-warning" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{highRequirements.length}</p>
+                    <p className="text-2xl font-bold">
+                      <AnimatedCounter value={highRequirements.length} />
+                    </p>
                     <p className="text-sm text-muted-foreground">{t('High Priority')}</p>
                   </div>
                 </div>
               </CardContent>
-            </Card>
-            <Card>
+            </GlassCard>
+            <GlassCard {...(!prefersReduced && { variants: gridItem })}>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -742,14 +763,14 @@ export function RequirementsCalculatorPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {requirements.reduce((acc, r) => acc + r.documents.length, 0)}
+                      <AnimatedCounter value={requirements.reduce((acc, r) => acc + r.documents.length, 0)} />
                     </p>
                     <p className="text-sm text-muted-foreground">{t('Documents Required')}</p>
                   </div>
                 </div>
               </CardContent>
-            </Card>
-            <Card>
+            </GlassCard>
+            <GlassCard {...(!prefersReduced && { variants: gridItem })}>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
@@ -757,14 +778,14 @@ export function RequirementsCalculatorPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {requirements.reduce((acc, r) => acc + r.registrations.length, 0)}
+                      <AnimatedCounter value={requirements.reduce((acc, r) => acc + r.registrations.length, 0)} />
                     </p>
                     <p className="text-sm text-muted-foreground">{t('Registrations')}</p>
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          </div>
+            </GlassCard>
+          </MotionDiv>
 
           {/* AI Overall Assessment */}
           {aiAvailable && (

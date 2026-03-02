@@ -17,28 +17,21 @@ import {
   Sunrise,
   Moon,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { AnimatedList, AnimatedListItem } from '@/components/ui/animated-list';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProducts, useDocumentStats } from '@/hooks/queries';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
-import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
-import { staggerContainer, staggerItem } from '@/lib/motion';
+import { blurIn, gridStagger, gridItem, spring } from '@/lib/motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { ComplianceWidget } from '@/components/dashboard/ComplianceWidget';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
-
-function AnimatedStatValue({ value }: { value: number }) {
-  const prefersReduced = useReducedMotion();
-  const animated = useAnimatedNumber(value, {
-    duration: prefersReduced ? 0 : 800,
-    delay: prefersReduced ? 0 : 200,
-  });
-  return <>{prefersReduced ? value : animated}</>;
-}
 
 function getGreetingKey(hour: number): string {
   if (hour < 12) return 'Good morning';
@@ -116,16 +109,14 @@ export function DashboardPage() {
     return <DashboardSkeleton />;
   }
 
-  const MotionDiv = prefersReduced ? 'div' : motion.div;
-
   return (
     <div className="space-y-6">
       {/* Personalized Greeting */}
       <motion.div
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        initial={prefersReduced ? false : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
+        variants={prefersReduced ? undefined : blurIn}
+        initial={prefersReduced ? false : 'initial'}
+        animate="animate"
       >
         <div>
           <div className="flex items-center gap-2">
@@ -161,18 +152,21 @@ export function DashboardPage() {
       {/* Bento Stats Grid - first card spans 2 cols */}
       <motion.div
         className="grid gap-4 grid-cols-2 lg:grid-cols-4"
-        variants={prefersReduced ? undefined : staggerContainer}
-        initial="initial"
+        variants={prefersReduced ? undefined : gridStagger}
+        initial={prefersReduced ? false : 'initial'}
         animate="animate"
       >
         {stats.map((stat, index) => (
-          <MotionDiv
+          <motion.div
             key={stat.title}
-            variants={prefersReduced ? undefined : staggerItem}
+            variants={prefersReduced ? undefined : gridItem}
             className={index === 0 ? 'col-span-2 lg:col-span-1' : ''}
           >
             <Link to={stat.href} className="block h-full">
-              <Card className="h-full transition-colors hover:bg-muted/30">
+              <GlassCard
+                enableTilt={!prefersReduced}
+                className={`h-full transition-colors hover:bg-muted/30 ${index === 0 ? 'gradient-border-animated' : ''}`}
+              >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {stat.title}
@@ -182,14 +176,14 @@ export function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold tabular-nums">
-                    <AnimatedStatValue value={stat.value} />
+                  <div className="text-2xl font-bold">
+                    <AnimatedCounter value={stat.value} />
                   </div>
                   <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
                 </CardContent>
-              </Card>
+              </GlassCard>
             </Link>
-          </MotionDiv>
+          </motion.div>
         ))}
       </motion.div>
 
@@ -200,7 +194,7 @@ export function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <Card className="border-primary/20 bg-primary/5">
+          <GlassCard enableGlow className="border-primary/20 bg-primary/5">
             <CardContent className="flex flex-col items-center gap-4 py-8 text-center sm:flex-row sm:text-left">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
                 <Sparkles className="h-7 w-7 text-primary" />
@@ -218,7 +212,7 @@ export function DashboardPage() {
                 {t('Get Started')}
               </Button>
             </CardContent>
-          </Card>
+          </GlassCard>
         </motion.div>
       )}
 
@@ -232,13 +226,13 @@ export function DashboardPage() {
       {/* Bottom Bento Grid - 3 columns on large screens */}
       <motion.div
         className="grid gap-6 lg:grid-cols-3"
-        variants={prefersReduced ? undefined : staggerContainer}
-        initial="initial"
+        variants={prefersReduced ? undefined : gridStagger}
+        initial={prefersReduced ? false : 'initial'}
         animate="animate"
       >
         {/* Recent Products - spans 2 cols */}
-        <MotionDiv variants={prefersReduced ? undefined : staggerItem} className="lg:col-span-2">
-          <Card className="h-full">
+        <motion.div variants={prefersReduced ? undefined : gridItem} className="lg:col-span-2">
+          <GlassCard className="h-full">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -271,67 +265,63 @@ export function DashboardPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {recentProducts.map((product, index) => (
-                    <motion.div
-                      key={product.id}
-                      initial={prefersReduced ? false : { opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.2,
-                        delay: prefersReduced ? 0 : 0.3 + index * 0.03,
-                        ease: 'easeOut',
-                      }}
-                    >
-                      <Link
-                        to={`/products/${product.id}`}
-                        className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                <AnimatedList className="space-y-3">
+                  {recentProducts.map((product) => (
+                    <AnimatedListItem key={product.id} itemKey={product.id}>
+                      <motion.div
+                        whileHover={prefersReduced ? undefined : { x: 4 }}
+                        transition={spring.snappy}
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{product.name}</p>
-                            <Badge
-                              variant={product.status === 'live' ? 'default' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {product.status === 'live' && (
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                              )}
-                              {product.status === 'draft' && <Clock className="mr-1 h-3 w-3" />}
-                              {product.status || 'draft'}
-                            </Badge>
+                        <Link
+                          to={`/products/${product.id}`}
+                          className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{product.name}</p>
+                              <Badge
+                                variant={product.status === 'live' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {product.status === 'live' && (
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                )}
+                                {product.status === 'draft' && <Clock className="mr-1 h-3 w-3" />}
+                                {product.status || 'draft'}
+                              </Badge>
+                            </div>
+                            <p className="font-mono text-xs text-muted-foreground">
+                              GTIN: {product.gtin} · {product.batchCount || 0} {(product.batchCount || 0) === 1 ? 'Batch' : 'Batches'}
+                            </p>
                           </div>
-                          <p className="font-mono text-xs text-muted-foreground">
-                            GTIN: {product.gtin} · {product.batchCount || 0} {(product.batchCount || 0) === 1 ? 'Batch' : 'Batches'}
-                          </p>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {product.createdAt
-                            ? formatDate(product.createdAt, locale)
-                            : ''}
-                        </span>
-                      </Link>
-                    </motion.div>
+                          <span className="text-xs text-muted-foreground">
+                            {product.createdAt
+                              ? formatDate(product.createdAt, locale)
+                              : ''}
+                          </span>
+                        </Link>
+                      </motion.div>
+                    </AnimatedListItem>
                   ))}
-                </div>
+                </AnimatedList>
               )}
             </CardContent>
-          </Card>
-        </MotionDiv>
+          </GlassCard>
+        </motion.div>
 
         {/* Activity Feed - right column */}
-        <MotionDiv variants={prefersReduced ? undefined : staggerItem}>
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
           <ActivityFeed className="h-full" />
-        </MotionDiv>
+        </motion.div>
 
         {/* Compliance Widget - spans 2 cols */}
-        <MotionDiv variants={prefersReduced ? undefined : staggerItem} className="lg:col-span-2">
+        <motion.div variants={prefersReduced ? undefined : gridItem} className="lg:col-span-2">
           <ComplianceWidget className="h-full" />
-        </MotionDiv>
+        </motion.div>
 
         {/* Quick Actions */}
-        <MotionDiv variants={prefersReduced ? undefined : staggerItem}>
-          <Card className="h-full">
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
+          <GlassCard className="h-full">
             <CardHeader>
               <CardTitle>{t('Quick Start')}</CardTitle>
               <CardDescription>
@@ -342,34 +332,29 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 grid-cols-2">
-                <Button variant="outline" className="h-auto flex-col gap-2 p-4 group" asChild>
-                  <Link to="/products/new">
-                    <Package className="h-6 w-6 transition-transform group-hover:scale-110" />
-                    <span className="text-xs">{t('Create Product')}</span>
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-auto flex-col gap-2 p-4 group" asChild>
-                  <Link to="/documents">
-                    <FileWarning className="h-6 w-6 transition-transform group-hover:scale-110" />
-                    <span className="text-xs">{t('Documents', { ns: 'common' })}</span>
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-auto flex-col gap-2 p-4 group" asChild>
-                  <Link to="/dpp/qr-generator">
-                    <QrCode className="h-6 w-6 transition-transform group-hover:scale-110" />
-                    <span className="text-xs">{t('Create QR Code')}</span>
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-auto flex-col gap-2 p-4 group" asChild>
-                  <Link to="/regulations">
-                    <TrendingUp className="h-6 w-6 transition-transform group-hover:scale-110" />
-                    <span className="text-xs">{t('Regulations', { ns: 'common' })}</span>
-                  </Link>
-                </Button>
+                {[
+                  { to: '/products/new', icon: Package, label: t('Create Product') },
+                  { to: '/documents', icon: FileWarning, label: t('Documents', { ns: 'common' }) },
+                  { to: '/dpp/qr-generator', icon: QrCode, label: t('Create QR Code') },
+                  { to: '/regulations', icon: TrendingUp, label: t('Regulations', { ns: 'common' }) },
+                ].map((action) => (
+                  <motion.div
+                    key={action.to}
+                    whileHover={prefersReduced ? undefined : { scale: 1.04, y: -2 }}
+                    transition={spring.bouncy}
+                  >
+                    <Button variant="outline" className="h-auto w-full flex-col gap-2 p-4 group" asChild>
+                      <Link to={action.to}>
+                        <action.icon className="h-6 w-6 transition-transform group-hover:scale-110" />
+                        <span className="text-xs">{action.label}</span>
+                      </Link>
+                    </Button>
+                  </motion.div>
+                ))}
               </div>
             </CardContent>
-          </Card>
-        </MotionDiv>
+          </GlassCard>
+        </motion.div>
       </motion.div>
     </div>
   );

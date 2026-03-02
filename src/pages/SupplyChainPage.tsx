@@ -22,6 +22,8 @@ import {
 } from '@/services/supabase';
 import type { SupplyChainEntry, Supplier } from '@/types/database';
 
+import { motion, AnimatePresence } from 'framer-motion';
+import { blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
 import { SupplyChainStats } from '@/components/supply-chain/SupplyChainStats';
 import { SupplyChainFilters } from '@/components/supply-chain/SupplyChainFilters';
 import { SupplyChainProductCard } from '@/components/supply-chain/SupplyChainProductCard';
@@ -43,6 +45,8 @@ type ViewMode = 'cards' | 'table' | 'timeline';
 
 export function SupplyChainPage() {
   const { t } = useTranslation('settings');
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<ViewMode>('cards');
@@ -214,7 +218,10 @@ export function SupplyChainPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Supply Chain')}</h1>
           <p className="text-muted-foreground">{t('Supply chain transparency and traceability')}</p>
@@ -223,7 +230,7 @@ export function SupplyChainPage() {
           <Plus className="mr-2 h-4 w-4" />
           {t('New Entry')}
         </Button>
-      </div>
+      </MotionDiv>
 
       {/* Statistics */}
       <SupplyChainStats entries={supplyChainEntries} />
@@ -277,77 +284,86 @@ export function SupplyChainPage() {
             </div>
           ) : isEmpty ? (
             <SupplyChainEmptyState onCreateFirst={openCreateDialog} />
-          ) : activeView === 'cards' ? (
-            /* Cards View — Product Cards */
-            <div className="space-y-4">
-              {Object.keys(entriesByProduct).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">{t('No entries found')}</div>
-              ) : (
-                Object.entries(entriesByProduct).map(([productId, entries]) => (
-                  <SupplyChainProductCard
-                    key={productId}
-                    productId={productId}
-                    productName={getProductName(productId)}
-                    entries={entries}
-                    suppliers={suppliers}
-                    onEdit={openEditDialog}
-                    onDelete={handleDelete}
-                  />
-                ))
-              )}
-            </div>
-          ) : activeView === 'table' ? (
-            /* Table View */
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60px]">{t('Step')}</TableHead>
-                    <TableHead>{t('Product')}</TableHead>
-                    <TableHead>{t('Process Type')}</TableHead>
-                    <TableHead>{t('Location')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Country')}</TableHead>
-                    <TableHead>{t('Status')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Date')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('Transport')}</TableHead>
-                    <TableHead>{t('Risk')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('Emissions (kg CO₂)')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('Cost')}</TableHead>
-                    <TableHead>{t('Verified')}</TableHead>
-                    <TableHead className="w-[100px]">{t('Actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEntries.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
-                        {t('No entries found')}
-                      </TableCell>
-                    </TableRow>
+          ) : (
+            <AnimatePresence mode="wait">
+              <MotionDiv
+                key={activeView}
+                {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate', exit: 'exit' })}
+              >
+              {activeView === 'cards' ? (
+                /* Cards View — Product Cards */
+                <div className="space-y-4">
+                  {Object.keys(entriesByProduct).length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">{t('No entries found')}</div>
                   ) : (
-                    filteredEntries.map(entry => (
-                      <SupplyChainStepRow
-                        key={entry.id}
-                        entry={entry}
-                        productName={getProductName(entry.product_id)}
-                        supplierName={getSupplierName(entry) || undefined}
+                    Object.entries(entriesByProduct).map(([productId, entries]) => (
+                      <SupplyChainProductCard
+                        key={productId}
+                        productId={productId}
+                        productName={getProductName(productId)}
+                        entries={entries}
+                        suppliers={suppliers}
                         onEdit={openEditDialog}
                         onDelete={handleDelete}
                       />
                     ))
                   )}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            /* Timeline View */
-            <SupplyChainTimeline
-              entriesByProduct={entriesByProduct}
-              getProductName={getProductName}
-              getSupplierName={getSupplierName}
-              onEdit={openEditDialog}
-              onDelete={handleDelete}
-            />
+                </div>
+              ) : activeView === 'table' ? (
+                /* Table View */
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60px]">{t('Step')}</TableHead>
+                        <TableHead>{t('Product')}</TableHead>
+                        <TableHead>{t('Process Type')}</TableHead>
+                        <TableHead>{t('Location')}</TableHead>
+                        <TableHead className="hidden md:table-cell">{t('Country')}</TableHead>
+                        <TableHead>{t('Status')}</TableHead>
+                        <TableHead className="hidden md:table-cell">{t('Date')}</TableHead>
+                        <TableHead className="hidden lg:table-cell">{t('Transport')}</TableHead>
+                        <TableHead>{t('Risk')}</TableHead>
+                        <TableHead className="hidden lg:table-cell">{t('Emissions (kg CO₂)')}</TableHead>
+                        <TableHead className="hidden lg:table-cell">{t('Cost')}</TableHead>
+                        <TableHead>{t('Verified')}</TableHead>
+                        <TableHead className="w-[100px]">{t('Actions')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEntries.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                            {t('No entries found')}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredEntries.map(entry => (
+                          <SupplyChainStepRow
+                            key={entry.id}
+                            entry={entry}
+                            productName={getProductName(entry.product_id)}
+                            supplierName={getSupplierName(entry) || undefined}
+                            onEdit={openEditDialog}
+                            onDelete={handleDelete}
+                          />
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                /* Timeline View */
+                <SupplyChainTimeline
+                  entriesByProduct={entriesByProduct}
+                  getProductName={getProductName}
+                  getSupplierName={getSupplierName}
+                  onEdit={openEditDialog}
+                  onDelete={handleDelete}
+                />
+              )}
+              </MotionDiv>
+            </AnimatePresence>
           )}
         </CardContent>
       </Card>

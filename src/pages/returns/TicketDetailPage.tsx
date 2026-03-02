@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2, Printer, RotateCcw, X, GitMerge, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,7 @@ import { TicketTagsEditor } from '@/components/returns/TicketTagsEditor';
 import { TicketActivityLog } from '@/components/returns/TicketActivityLog';
 import { SLAProgressBar } from '@/components/returns/SLAProgressBar';
 import { EmptyState } from '@/components/returns/EmptyState';
-import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { pageVariants, pageTransition, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import {
   getRhTicket, getRhTickets, getRhTicketMessages, addRhTicketMessage, updateRhTicket, getRhCustomer,
   logTicketActivity, mergeTickets,
@@ -201,11 +202,13 @@ export function TicketDetailPage() {
     setActivityKey((k) => k + 1);
   };
 
-  const sidebarVisibility = useStaggeredList(8, { interval: 50, initialDelay: 200 });
+  const prefersReduced = useReducedMotion();
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
           <div className="flex-1 space-y-2">
@@ -248,7 +251,7 @@ export function TicketDetailPage() {
 
   if (!ticket) {
     return (
-      <div className="animate-fade-in-up">
+      <div>
         <EmptyState
           icon={MessageSquareText}
           title={t('Ticket not found')}
@@ -262,7 +265,7 @@ export function TicketDetailPage() {
   const isClosedOrResolved = ticket.status === 'resolved' || ticket.status === 'closed';
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/tickets')}>
@@ -311,7 +314,7 @@ export function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Thread */}
         <div className="lg:col-span-2">
-          <Card className="h-[600px] flex flex-col animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+          <Card className="h-[600px] flex flex-col">
             <CardHeader className="pb-2 flex-shrink-0">
               <CardTitle className="text-sm">{t('Communication')}</CardTitle>
             </CardHeader>
@@ -327,26 +330,15 @@ export function TicketDetailPage() {
         </div>
 
         {/* Sidebar */}
+        {prefersReduced ? (
         <div className="space-y-4">
-          {/* Assignment */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[0] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Assignee')}</CardTitle></CardHeader>
             <CardContent>
-              <TicketAssigneeSelect
-                value={ticket.assignedTo}
-                onValueChange={handleAssigneeChange}
-              />
+              <TicketAssigneeSelect value={ticket.assignedTo} onValueChange={handleAssigneeChange} />
             </CardContent>
           </Card>
-
-          {/* Priority */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[1] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Priority')}</CardTitle></CardHeader>
             <CardContent>
               <Select value={ticket.priority} onValueChange={handlePriorityChange}>
@@ -367,17 +359,11 @@ export function TicketDetailPage() {
             </CardContent>
           </Card>
 
-          {/* SLA */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[2] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('SLA')}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <TicketSLABadge ticket={ticket} />
-              {ticket.slaResolutionAt && (
-                <SLAProgressBar ticket={ticket} />
-              )}
+              {ticket.slaResolutionAt && <SLAProgressBar ticket={ticket} />}
               {ticket.firstRespondedAt && (
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">{t('First Responded')}</span>
@@ -392,78 +378,102 @@ export function TicketDetailPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* Tags */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[3] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Tags')}</CardTitle></CardHeader>
-            <CardContent>
-              <TicketTagsEditor tags={ticket.tags} onChange={handleTagsChange} />
-            </CardContent>
+            <CardContent><TicketTagsEditor tags={ticket.tags} onChange={handleTagsChange} /></CardContent>
           </Card>
-
-          {/* Category */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[4] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Category')}</CardTitle></CardHeader>
-            <CardContent>
-              <Input
-                value={ticket.category || ''}
-                onChange={(e) => handleCategoryChange(e.target.value)}
-                placeholder={t('Category')}
-              />
-            </CardContent>
+            <CardContent><Input value={ticket.category || ''} onChange={(e) => handleCategoryChange(e.target.value)} placeholder={t('Category')} /></CardContent>
           </Card>
-
-          {/* Timestamps */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[5] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Ticket Details')}</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('Created At')}</span>
-                <span>{new Date(ticket.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('Updated At')}</span>
-                <span>{new Date(ticket.updatedAt).toLocaleString()}</span>
-              </div>
-              {ticket.returnId && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('Linked Return')}</span>
-                  <a href={`/returns/${ticket.returnId}`} className="text-primary hover:underline">{t('View')}</a>
-                </div>
-              )}
+              <div className="flex justify-between"><span className="text-muted-foreground">{t('Created At')}</span><span>{new Date(ticket.createdAt).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t('Updated At')}</span><span>{new Date(ticket.updatedAt).toLocaleString()}</span></div>
+              {ticket.returnId && <div className="flex justify-between"><span className="text-muted-foreground">{t('Linked Return')}</span><a href={`/returns/${ticket.returnId}`} className="text-primary hover:underline">{t('View')}</a></div>}
             </CardContent>
           </Card>
-
-          {/* Customer */}
-          {customer && (
-            <div
-              className={`transition-all duration-300 ${sidebarVisibility[6] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-              style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-            >
-              <CustomerCard customer={customer} />
-            </div>
-          )}
-
-          {/* Activity Log */}
-          <Card
-            className={`transition-all duration-300 ${sidebarVisibility[7] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-            style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out' }}
-          >
+          {customer && <CustomerCard customer={customer} />}
+          <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Activity Log')}</CardTitle></CardHeader>
-            <CardContent>
-              <TicketActivityLog ticketId={ticket.id} refreshKey={activityKey} />
-            </CardContent>
+            <CardContent><TicketActivityLog ticketId={ticket.id} refreshKey={activityKey} /></CardContent>
           </Card>
         </div>
+        ) : (
+        <motion.div className="space-y-4" variants={staggerContainer} initial="initial" animate="animate">
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Assignee')}</CardTitle></CardHeader>
+              <CardContent><TicketAssigneeSelect value={ticket.assignedTo} onValueChange={handleAssigneeChange} /></CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Priority')}</CardTitle></CardHeader>
+              <CardContent>
+                <Select value={ticket.priority} onValueChange={handlePriorityChange}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(priorityLabels) as ReturnPriority[]).map(p => (
+                      <SelectItem key={p} value={p}>
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2 w-2 rounded-full ${p === 'urgent' ? 'bg-red-500' : p === 'high' ? 'bg-orange-500' : p === 'normal' ? 'bg-blue-500' : 'bg-gray-400'}`} />
+                          {t(priorityLabels[p])}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('SLA')}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <TicketSLABadge ticket={ticket} />
+                {ticket.slaResolutionAt && <SLAProgressBar ticket={ticket} />}
+                {ticket.firstRespondedAt && (
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">{t('First Responded')}</span><span>{new Date(ticket.firstRespondedAt).toLocaleString()}</span></div>
+                )}
+                {ticket.resolvedAt && (
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">{t('Resolved At')}</span><span>{new Date(ticket.resolvedAt).toLocaleString()}</span></div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Tags')}</CardTitle></CardHeader>
+              <CardContent><TicketTagsEditor tags={ticket.tags} onChange={handleTagsChange} /></CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Category')}</CardTitle></CardHeader>
+              <CardContent><Input value={ticket.category || ''} onChange={(e) => handleCategoryChange(e.target.value)} placeholder={t('Category')} /></CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Ticket Details')}</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">{t('Created At')}</span><span>{new Date(ticket.createdAt).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t('Updated At')}</span><span>{new Date(ticket.updatedAt).toLocaleString()}</span></div>
+                {ticket.returnId && <div className="flex justify-between"><span className="text-muted-foreground">{t('Linked Return')}</span><a href={`/returns/${ticket.returnId}`} className="text-primary hover:underline">{t('View')}</a></div>}
+              </CardContent>
+            </Card>
+          </motion.div>
+          {customer && <motion.div variants={staggerItem}><CustomerCard customer={customer} /></motion.div>}
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Activity Log')}</CardTitle></CardHeader>
+              <CardContent><TicketActivityLog ticketId={ticket.id} refreshKey={activityKey} /></CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+        )}
       </div>
 
       {/* Close Dialog */}
@@ -520,6 +530,6 @@ export function TicketDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Wrapper>
   );
 }

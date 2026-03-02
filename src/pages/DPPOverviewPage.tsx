@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -18,6 +19,14 @@ import {
   Package,
   Layers,
 } from 'lucide-react';
+import {
+  gridStagger,
+  gridItem,
+  blurIn,
+  useReducedMotion,
+} from '@/lib/motion';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +75,8 @@ const statusConfig = {
 export function DPPOverviewPage() {
   const { t } = useTranslation('dpp');
   const locale = useLocale();
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [dpps, setDpps] = useState<DPPBatchItem[]>([]);
@@ -110,7 +121,10 @@ export function DPPOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Digital Product Passports')}</h1>
           <p className="text-muted-foreground">
@@ -130,51 +144,62 @@ export function DPPOverviewPage() {
             </Link>
           </Button>
         </div>
-      </div>
+      </MotionDiv>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <MotionDiv
+        className="grid gap-4 md:grid-cols-4"
+        {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
+      >
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Total DPPs')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold">
+              <AnimatedCounter value={stats.total} />
+            </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Published')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{stats.live}</div>
+            <div className="text-2xl font-bold text-success">
+              <AnimatedCounter value={stats.live} />
+            </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Drafts')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{stats.draft}</div>
+            <div className="text-2xl font-bold text-warning">
+              <AnimatedCounter value={stats.draft} />
+            </div>
           </CardContent>
-        </Card>
-        <Card>
+        </GlassCard>
+        <GlassCard {...(!prefersReduced && { variants: gridItem })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('Archived')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.archived}</div>
+            <div className="text-2xl font-bold">
+              <AnimatedCounter value={stats.archived} />
+            </div>
           </CardContent>
-        </Card>
-      </div>
+        </GlassCard>
+      </MotionDiv>
 
       {/* Filters */}
       <Card>

@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import {
   LayoutDashboard,
   Package,
@@ -70,6 +72,7 @@ export function AppSidebar() {
   const billing = useBillingOptional();
   const { resolvedTheme, toggleTheme } = useTheme();
   const { t } = useTranslation('common');
+  const prefersReduced = useReducedMotion();
 
   const mainNavItems = useMemo(() => [
     {
@@ -301,8 +304,15 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                   </Collapsible>
                 ) : (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url!)}>
+                  <SidebarMenuItem key={item.title} className="relative">
+                    {!prefersReduced && isActive(item.url!) && (
+                      <motion.div
+                        layoutId="sidebar-active"
+                        className="absolute inset-0 rounded-md bg-sidebar-accent"
+                        transition={spring.snappy}
+                      />
+                    )}
+                    <SidebarMenuButton asChild isActive={isActive(item.url!)} className="relative z-10">
                       <Link to={item.url!}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -358,8 +368,15 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                   </Collapsible>
                 ) : (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url!)}>
+                  <SidebarMenuItem key={item.title} className="relative">
+                    {!prefersReduced && isActive(item.url!) && (
+                      <motion.div
+                        layoutId="sidebar-active"
+                        className="absolute inset-0 rounded-md bg-sidebar-accent"
+                        transition={spring.snappy}
+                      />
+                    )}
+                    <SidebarMenuButton asChild isActive={isActive(item.url!)} className="relative z-10">
                       <Link to={item.url!}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -376,27 +393,45 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {/* Credit Badge */}
         {billing?.entitlements && (
-          <Link
-            to="/settings/billing"
-            className="mb-2 flex items-center justify-between rounded-md bg-sidebar-accent/50 px-3 py-1.5 text-xs transition-colors hover:bg-sidebar-accent"
+          <motion.div
+            animate={prefersReduced ? undefined : {
+              boxShadow: [
+                '0 0 0px rgba(59,130,246,0)',
+                '0 0 8px rgba(59,130,246,0.15)',
+                '0 0 0px rgba(59,130,246,0)',
+              ],
+            }}
+            transition={prefersReduced ? undefined : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            className="mb-2 rounded-md"
           >
-            <span className="flex items-center gap-1.5 text-sidebar-foreground/70">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="font-medium tabular-nums">{billing.entitlements.credits.totalAvailable}</span>
-              <span>Credits</span>
-            </span>
-            <Badge className="h-5 text-[10px] px-1.5 capitalize bg-sidebar-accent text-sidebar-foreground/70">
-              {billing.entitlements.plan}
-            </Badge>
-          </Link>
+            <Link
+              to="/settings/billing"
+              className="flex items-center justify-between rounded-md bg-sidebar-accent/50 px-3 py-1.5 text-xs transition-colors hover:bg-sidebar-accent"
+            >
+              <span className="flex items-center gap-1.5 text-sidebar-foreground/70">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="font-medium tabular-nums">{billing.entitlements.credits.totalAvailable}</span>
+                <span>Credits</span>
+              </span>
+              <Badge className="h-5 text-[10px] px-1.5 capitalize bg-sidebar-accent text-sidebar-foreground/70">
+                {billing.entitlements.plan}
+              </Badge>
+            </Link>
+          </motion.div>
         )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                {userInitials}
-              </AvatarFallback>
-            </Avatar>
+            <motion.div
+              whileHover={prefersReduced ? undefined : { scale: 1.08 }}
+              whileTap={prefersReduced ? undefined : { scale: 0.95 }}
+              transition={spring.snappy}
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            </motion.div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-sidebar-foreground">
                 {userName}

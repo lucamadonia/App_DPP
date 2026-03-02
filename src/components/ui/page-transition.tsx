@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { pageVariants, pageTransition } from '@/lib/motion';
+import { pageVariants, spring } from '@/lib/motion';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -20,7 +20,7 @@ export function PageTransition({ children, className }: PageTransitionProps) {
       animate="animate"
       exit="exit"
       variants={pageVariants}
-      transition={pageTransition}
+      transition={spring.gentle}
     >
       {children}
     </motion.div>

@@ -12,7 +12,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { fadeIn, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
+import { blurIn, gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
+import { GlassCard } from '@/components/ui/glass-card';
 import { CreditCard, Loader2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -178,7 +179,7 @@ export function BillingPage() {
       {/* Page Header */}
       <MotionDiv
         className="flex items-center justify-between"
-        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
       >
         <div>
           <h1 className="text-2xl font-bold">{t('Billing & Plans')}</h1>
@@ -228,10 +229,14 @@ export function BillingPage() {
 
         <MotionDiv
           className="grid gap-4 md:grid-cols-3"
-          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+          {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
         >
           {(['free', 'pro', 'enterprise'] as BillingPlan[]).map((plan) => (
-            <MotionDiv key={plan} {...(!prefersReduced && { variants: staggerItem })}>
+            <GlassCard
+              key={plan}
+              className={plan === 'pro' ? 'gradient-border-animated' : ''}
+              {...(!prefersReduced && { variants: gridItem })}
+            >
               <PlanCard
                 plan={plan}
                 currentPlan={currentPlan}
@@ -239,7 +244,7 @@ export function BillingPage() {
                 isLoading={actionLoading}
                 interval={interval}
               />
-            </MotionDiv>
+            </GlassCard>
           ))}
         </MotionDiv>
 
@@ -279,10 +284,10 @@ export function BillingPage() {
         <h2 className="text-lg font-semibold mb-4">{t('Add-on Modules')}</h2>
         <MotionDiv
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+          {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
         >
           {allModuleIds.map((moduleId) => (
-            <MotionDiv key={moduleId} {...(!prefersReduced && { variants: staggerItem })}>
+            <GlassCard key={moduleId} {...(!prefersReduced && { variants: gridItem })}>
               <ModuleCard
                 moduleId={moduleId}
                 isActive={entitlements.modules.has(moduleId)}
@@ -292,7 +297,7 @@ export function BillingPage() {
                 onManage={handleModuleManage}
                 isLoading={actionLoading}
               />
-            </MotionDiv>
+            </GlassCard>
           ))}
         </MotionDiv>
       </section>

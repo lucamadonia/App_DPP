@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem, fadeIn, useReducedMotion } from '@/lib/motion';
+import { staggerContainer, staggerItem, blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -105,6 +106,7 @@ export function ProductPage() {
   const deleteBatchMutation = useDeleteBatch(id || '');
 
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
 
   // Ancillary data loaded via inline useQuery
@@ -185,7 +187,7 @@ export function ProductPage() {
       {/* Header */}
       <MotionDiv
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
       >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
@@ -254,7 +256,7 @@ export function ProductPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Progress value={complianceScore} className="h-2 w-48" />
-                <span className="text-sm font-medium text-success">{complianceScore}%</span>
+                <AnimatedCounter value={complianceScore} suffix="%" className="text-sm font-medium text-success" />
               </div>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -272,7 +274,7 @@ export function ProductPage() {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue={defaultTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex w-full overflow-x-auto">
           <TabsTrigger value="stammdaten" className="flex items-center gap-2 flex-shrink-0">
             <Package className="h-4 w-4" />
@@ -334,6 +336,9 @@ export function ProductPage() {
 
         {/* Master Data Tab */}
         <TabsContent value="stammdaten" className="space-y-6">
+          <MotionDiv
+            {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate' })}
+          >
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -404,10 +409,12 @@ export function ProductPage() {
             images={productImages}
             onImagesChange={(_imgs: ProductImage[]) => queryClient.invalidateQueries({ queryKey: ['product-images', id] })}
           />
+          </MotionDiv>
         </TabsContent>
 
         {/* Batches Tab */}
         <TabsContent value="batches" className="space-y-6">
+          <MotionDiv {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate' })}>
           {/* KPI Cards */}
           {batches.length > 0 && (() => {
             const totalQty = batches.reduce((s, b) => s + (b.quantity || 0), 0);
@@ -422,11 +429,11 @@ export function ProductPage() {
                 {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
               >
                 {[
-                  { icon: Hash, label: t('Total Batches'), value: String(batches.length) },
-                  { icon: Layers, label: t('Total Quantity'), value: totalQty.toLocaleString() },
-                  { icon: DollarSign, label: t('Total Value'), value: totalValue > 0 ? formatCurrency(totalValue, 'EUR', locale) : '—' },
-                  { icon: BarChart3, label: t('Avg. Price/Unit'), value: avgPrice > 0 ? formatCurrency(avgPrice, 'EUR', locale) : '—' },
-                ].map(({ icon: Icon, label, value }) => (
+                  { icon: Hash, label: t('Total Batches'), numValue: batches.length, strValue: undefined },
+                  { icon: Layers, label: t('Total Quantity'), numValue: totalQty, strValue: undefined },
+                  { icon: DollarSign, label: t('Total Value'), numValue: undefined, strValue: totalValue > 0 ? formatCurrency(totalValue, 'EUR', locale) : '—' },
+                  { icon: BarChart3, label: t('Avg. Price/Unit'), numValue: undefined, strValue: avgPrice > 0 ? formatCurrency(avgPrice, 'EUR', locale) : '—' },
+                ].map(({ icon: Icon, label, numValue, strValue }) => (
                   <MotionDiv key={label} {...(!prefersReduced && { variants: staggerItem })}>
                     <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
                       <CardContent className="pt-6">
@@ -434,7 +441,11 @@ export function ProductPage() {
                           <Icon className="h-5 w-5 text-primary" />
                           <div>
                             <p className="text-xs text-muted-foreground">{label}</p>
-                            <p className="text-2xl font-bold">{value}</p>
+                            <p className="text-2xl font-bold">
+                              {numValue !== undefined ? (
+                                <AnimatedCounter value={numValue} />
+                              ) : strValue}
+                            </p>
                           </div>
                         </div>
                       </CardContent>
@@ -612,6 +623,7 @@ export function ProductPage() {
               )}
             </CardContent>
           </Card>
+          </MotionDiv>
         </TabsContent>
 
         {/* Sustainability Tab */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Plus, Search, Loader2, LayoutList, LayoutGrid, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +14,7 @@ import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { PaginationBar } from '@/components/returns/PaginationBar';
 import { CustomerGridCard } from '@/components/returns/CustomerGridCard';
-import { useStaggeredList } from '@/hooks/useStaggeredList';
+import { pageVariants, pageTransition, gridStagger, gridItem, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import { getRhCustomers, createRhCustomer } from '@/services/supabase';
 import type { RhCustomer, PaginatedResult } from '@/types/returns-hub';
 
@@ -89,7 +90,7 @@ export function CustomersListPage() {
     setCreating(false);
   };
 
-  const rowVisibility = useStaggeredList(result.data.length, { interval: 40 });
+  const prefersReduced = useReducedMotion();
 
   // Skeleton for grid view
   const GridSkeleton = () => (
@@ -115,8 +116,11 @@ export function CustomersListPage() {
     </div>
   );
 
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('Customer List')}</h1>
@@ -174,17 +178,21 @@ export function CustomersListPage() {
             />
           ) : viewMode === 'grid' ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {result.data.map((cust, i) => (
-                  <div
-                    key={cust.id}
-                    className={`${rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-                    style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out' }}
-                  >
-                    <CustomerGridCard customer={cust} />
-                  </div>
-                ))}
-              </div>
+              {prefersReduced ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {result.data.map((cust) => (
+                    <div key={cust.id}><CustomerGridCard customer={cust} /></div>
+                  ))}
+                </div>
+              ) : (
+                <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
+                  {result.data.map((cust) => (
+                    <motion.div key={cust.id} variants={gridItem}>
+                      <CustomerGridCard customer={cust} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
               <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
             </>
           ) : (
@@ -201,35 +209,39 @@ export function CustomersListPage() {
                       <th className="pb-2 font-medium text-center">{t('Risk Score')}</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {result.data.map((cust, i) => {
-                      const name = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
-                      return (
-                        <tr
-                          key={cust.id}
-                          className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
-                            rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-                          }`}
-                          style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
-                          onClick={() => navigate(`/returns/customers/${cust.id}`)}
-                        >
-                          <td className="py-3 relative">
-                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <span className="text-primary font-medium pl-2">{name}</span>
-                          </td>
-                          <td className="py-3 text-muted-foreground">{cust.email}</td>
-                          <td className="py-3">{cust.company || '—'}</td>
-                          <td className="py-3 text-center">{cust.returnStats.totalReturns}</td>
-                          <td className="py-3 text-right">{'\u20AC'}{cust.returnStats.totalValue.toFixed(2)}</td>
-                          <td className="py-3 text-center">
-                            <Badge variant="outline" className={riskColor(cust.riskScore)}>
-                              {cust.riskScore}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
+                  {prefersReduced ? (
+                    <tbody>
+                      {result.data.map((cust) => {
+                        const name = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
+                        return (
+                          <tr key={cust.id} className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors" onClick={() => navigate(`/returns/customers/${cust.id}`)}>
+                            <td className="py-3 relative"><div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" /><span className="text-primary font-medium pl-2">{name}</span></td>
+                            <td className="py-3 text-muted-foreground">{cust.email}</td>
+                            <td className="py-3">{cust.company || '—'}</td>
+                            <td className="py-3 text-center">{cust.returnStats.totalReturns}</td>
+                            <td className="py-3 text-right">{'\u20AC'}{cust.returnStats.totalValue.toFixed(2)}</td>
+                            <td className="py-3 text-center"><Badge variant="outline" className={riskColor(cust.riskScore)}>{cust.riskScore}</Badge></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  ) : (
+                    <motion.tbody variants={staggerContainer} initial="initial" animate="animate">
+                      {result.data.map((cust) => {
+                        const name = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
+                        return (
+                          <motion.tr key={cust.id} variants={staggerItem} className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors" onClick={() => navigate(`/returns/customers/${cust.id}`)}>
+                            <td className="py-3 relative"><div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" /><span className="text-primary font-medium pl-2">{name}</span></td>
+                            <td className="py-3 text-muted-foreground">{cust.email}</td>
+                            <td className="py-3">{cust.company || '—'}</td>
+                            <td className="py-3 text-center">{cust.returnStats.totalReturns}</td>
+                            <td className="py-3 text-right">{'\u20AC'}{cust.returnStats.totalValue.toFixed(2)}</td>
+                            <td className="py-3 text-center"><Badge variant="outline" className={riskColor(cust.riskScore)}>{cust.riskScore}</Badge></td>
+                          </motion.tr>
+                        );
+                      })}
+                    </motion.tbody>
+                  )}
                 </table>
               </div>
               <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
@@ -291,6 +303,6 @@ export function CustomersListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Wrapper>
   );
 }

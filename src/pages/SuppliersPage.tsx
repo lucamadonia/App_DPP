@@ -81,6 +81,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { motion } from 'framer-motion';
+import { blurIn, useReducedMotion } from '@/lib/motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
@@ -145,6 +147,8 @@ export function SuppliersPage() {
   const locale = useLocale();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -1222,7 +1226,10 @@ export function SuppliersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <MotionDiv
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
+      >
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('Suppliers')}</h1>
           <p className="text-muted-foreground">
@@ -1239,7 +1246,7 @@ export function SuppliersPage() {
             {t('New Supplier')}
           </Button>
         </div>
-      </div>
+      </MotionDiv>
 
       {/* Statistics cards */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
@@ -1457,10 +1464,13 @@ export function SuppliersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSuppliers.map(supplier => (
+                  {filteredSuppliers.map((supplier, index) => (
                     <TableRow
                       key={supplier.id}
                       className="cursor-pointer hover:bg-muted/50"
+                      style={!prefersReduced ? {
+                        animation: `fadeSlideIn 0.3s ease-out ${index * 0.04}s both`,
+                      } : undefined}
                       onClick={() => openDetailView(supplier)}
                       onDoubleClick={() => navigate(`/suppliers/${supplier.id}`)}
                     >
@@ -1525,24 +1535,28 @@ export function SuppliersPage() {
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                           {supplier.status === 'pending_approval' ? (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openApproveDialog(supplier)}
-                                title={t('Approve')}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openRejectDialog(supplier)}
-                                title={t('Reject')}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
+                              <motion.div whileTap={prefersReduced ? undefined : { scale: 0.9 }}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openApproveDialog(supplier)}
+                                  title={t('Approve')}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                              <motion.div whileTap={prefersReduced ? undefined : { scale: 0.9 }}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openRejectDialog(supplier)}
+                                  title={t('Reject')}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
                             </>
                           ) : (
                             <>

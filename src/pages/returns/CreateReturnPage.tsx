@@ -169,23 +169,23 @@ export function CreateReturnPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
+    <div className="space-y-6 max-w-4xl px-4 sm:px-0">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/returns/list')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{t('Create Return')}</h1>
-          <p className="text-muted-foreground">{t('Register a new return')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold">{t('Create Return')}</h1>
+          <p className="text-sm text-muted-foreground">{t('Register a new return')}</p>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Order Information')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t('Order ID')}</Label>
               <Input value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="ORD-..." />
@@ -223,10 +223,10 @@ export function CreateReturnPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Return Reason')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           <ReturnReasonSelect
             reasons={reasons}
             selectedCategory={reasonCategory}
@@ -240,46 +240,62 @@ export function CreateReturnPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">{t('Items')}</CardTitle>
             <Button variant="outline" size="sm" onClick={addItem}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              {t('Add Item')}
+              <span className="hidden sm:inline">{t('Add Item')}</span>
+              <span className="sm:hidden">{t('Add')}</span>
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4">
           {items.map((item, index) => (
-            <div key={index} className="p-3 rounded-lg border space-y-3">
-              <div className="grid grid-cols-6 gap-3">
-                <div className="col-span-2 space-y-1">
-                  <Label className="text-xs">{t('Product')}</Label>
-                  <Select
-                    value={item.productId || 'manual'}
-                    onValueChange={(v) => handleProductSelect(index, v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('Select product...')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manual">{t('Manual entry')}</SelectItem>
-                      {products.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name} {p.gtin ? `(${p.gtin})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!item.productId && (
-                    <Input
-                      value={item.name}
-                      onChange={(e) => updateItem(index, 'name', e.target.value)}
-                      placeholder={t('Product name')}
-                      className="mt-1"
-                    />
-                  )}
-                </div>
+            <div key={index} className="p-3 sm:p-4 rounded-lg border space-y-3">
+              {/* Item header with delete button on mobile */}
+              <div className="flex items-center justify-between sm:hidden">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {t('Item')} {index + 1}
+                </span>
+                {items.length > 1 && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeItem(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Product field - full width */}
+              <div className="space-y-1">
+                <Label className="text-xs">{t('Product')}</Label>
+                <Select
+                  value={item.productId || 'manual'}
+                  onValueChange={(v) => handleProductSelect(index, v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('Select product...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">{t('Manual entry')}</SelectItem>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} {p.gtin ? `(${p.gtin})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!item.productId && (
+                  <Input
+                    value={item.name}
+                    onChange={(e) => updateItem(index, 'name', e.target.value)}
+                    placeholder={t('Product name')}
+                    className="mt-1"
+                  />
+                )}
+              </div>
+
+              {/* SKU, Quantity, Unit Price - responsive grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">{t('SKU')}</Label>
                   <Input
@@ -292,13 +308,14 @@ export function CreateReturnPage() {
                   <Label className="text-xs">{t('Quantity')}</Label>
                   <Input type="number" min={1} value={item.quantity} onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)} />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">{t('Unit Price')}</Label>
-                  <Input value={item.unitPrice} onChange={(e) => updateItem(index, 'unitPrice', e.target.value)} placeholder="0.00" />
-                </div>
-                <div className="space-y-1 flex items-end">
+                <div className="flex items-end gap-2">
+                  <div className="space-y-1 flex-1">
+                    <Label className="text-xs">{t('Unit Price')}</Label>
+                    <Input value={item.unitPrice} onChange={(e) => updateItem(index, 'unitPrice', e.target.value)} placeholder="0.00" />
+                  </div>
+                  {/* Delete button - desktop only (mobile has it in header) */}
                   {items.length > 1 && (
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem(index)}>
+                    <Button variant="ghost" size="icon" className="hidden sm:flex text-destructive shrink-0" onClick={() => removeItem(index)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -307,7 +324,7 @@ export function CreateReturnPage() {
 
               {/* Photo upload */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Label className="text-xs">{t('Photos')}</Label>
                   <input
                     type="file"
@@ -355,12 +372,12 @@ export function CreateReturnPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Desired Solution')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           <Select value={desiredSolution} onValueChange={(v) => setDesiredSolution(v as DesiredSolution)}>
-            <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="refund">{t('Refund')}</SelectItem>
               <SelectItem value="exchange">{t('Exchange')}</SelectItem>
@@ -372,10 +389,10 @@ export function CreateReturnPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Internal Notes')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           <Textarea
             value={internalNotes}
             onChange={(e) => setInternalNotes(e.target.value)}
@@ -385,9 +402,9 @@ export function CreateReturnPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => navigate('/returns/list')}>{t('Cancel')}</Button>
-        <Button onClick={handleSubmit} disabled={saving || !items.some(i => i.name.trim())}>
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+        <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/returns/list')}>{t('Cancel')}</Button>
+        <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={saving || !items.some(i => i.name.trim())}>
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {t('Create Return')}
         </Button>

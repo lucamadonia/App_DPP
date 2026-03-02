@@ -8,6 +8,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
+import { fadeIn, useReducedMotion } from '@/lib/motion';
 import { Loader2, Save } from 'lucide-react';
 import type { VisibilityConfigV3, IndependentFieldVisibility } from '@/types/visibility';
 import { defaultVisibilityConfigV3, fieldDefinitions } from '@/types/visibility';
@@ -43,6 +45,7 @@ export function DPPVisibilitySettingsPageV3() {
   const { t } = useTranslation('dpp');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const prefersReduced = useReducedMotion();
 
   // State
   const [config, setConfig] = useState<VisibilityConfigV3>(defaultVisibilityConfigV3);
@@ -300,8 +303,13 @@ export function DPPVisibilitySettingsPageV3() {
     );
   }
 
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
+
   return (
-    <div className="h-screen flex flex-col">
+    <MotionDiv
+      className="h-screen flex flex-col"
+      {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
+    >
       <HeaderToolbar
         hasChanges={hasChanges}
         changeCount={changes.length}
@@ -390,6 +398,6 @@ export function DPPVisibilitySettingsPageV3() {
           </Button>
         </div>
       )}
-    </div>
+    </MotionDiv>
   );
 }

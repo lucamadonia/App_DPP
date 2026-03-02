@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Loader2, Save, Plus, Trash2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { updateCustomerProfile } from '@/services/supabase/customer-portal';
 import { supabase } from '@/lib/supabase';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import type { RhCustomerAddress } from '@/types/returns-hub';
 import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 
@@ -148,20 +150,28 @@ export function CustomerProfilePage() {
     );
   }
 
+  const prefersReduced = useReducedMotion();
+
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">{t('My Profile')}</h1>
+    <motion.div
+      className="space-y-4 sm:space-y-6 max-w-2xl px-4 sm:px-0"
+      variants={prefersReduced ? undefined : staggerContainer}
+      initial={prefersReduced ? undefined : 'initial'}
+      animate={prefersReduced ? undefined : 'animate'}
+    >
+      <motion.div variants={prefersReduced ? undefined : staggerItem}>
+        <h1 className="text-xl sm:text-2xl font-bold">{t('My Profile')}</h1>
         <p className="text-muted-foreground">{t('Manage your account information')}</p>
-      </div>
+      </motion.div>
 
       {/* Personal Information */}
+      <motion.div variants={prefersReduced ? undefined : staggerItem}>
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Personal Information')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t('First Name')}</Label>
               <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -176,7 +186,7 @@ export function CustomerProfilePage() {
             <Input value={customerProfile.email} disabled className="bg-muted" />
             <p className="text-xs text-muted-foreground">{t('Contact support to change your email')}</p>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t('Phone')}</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -188,10 +198,12 @@ export function CustomerProfilePage() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Addresses */}
+      <motion.div variants={prefersReduced ? undefined : staggerItem}>
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">{t('Addresses')}</CardTitle>
             <Button variant="outline" size="sm" onClick={openAddAddress} className="gap-1">
@@ -200,15 +212,15 @@ export function CustomerProfilePage() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           {addresses.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">{t('No addresses saved')}</p>
           ) : (
             <div className="space-y-3">
               {addresses.map((addr, i) => (
-                <div key={i} className="flex items-start justify-between p-3 rounded-lg border">
+                <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between p-3 rounded-lg border">
                   <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="text-sm">
                       <span className="text-xs font-medium uppercase text-muted-foreground">{addr.type}</span>
                       <p>{addr.street}</p>
@@ -216,7 +228,7 @@ export function CustomerProfilePage() {
                       <p>{addr.country}</p>
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 sm:shrink-0">
                     <Button variant="ghost" size="sm" onClick={() => openEditAddress(i)}>
                       {t('Edit', { ns: 'common' })}
                     </Button>
@@ -230,14 +242,16 @@ export function CustomerProfilePage() {
           )}
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Communication Preferences */}
+      <motion.div variants={prefersReduced ? undefined : staggerItem}>
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Communication Preferences')}</CardTitle>
           <CardDescription>{t('Choose how you want to be notified')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
           <div className="flex items-center justify-between">
             <Label>{t('Email Notifications')}</Label>
             <Switch checked={commPrefs.email} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, email: v })} />
@@ -252,26 +266,29 @@ export function CustomerProfilePage() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Security */}
+      <motion.div variants={prefersReduced ? undefined : staggerItem}>
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-base">{t('Security')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Button variant="outline" onClick={() => setPwDialogOpen(true)}>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setPwDialogOpen(true)}>
             {t('Change Password')}
           </Button>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Save Button */}
-      <div className="flex justify-end gap-3">
-        <Button onClick={handleSaveProfile} disabled={saving} className="gap-2">
+      <motion.div variants={prefersReduced ? undefined : staggerItem} className="flex justify-end gap-3">
+        <Button onClick={handleSaveProfile} disabled={saving} className="gap-2 w-full sm:w-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saved ? t('Saved!') : t('Save Changes')}
         </Button>
-      </div>
+      </motion.div>
 
       {/* Password Dialog */}
       <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
@@ -325,7 +342,7 @@ export function CustomerProfilePage() {
               <Label>{t('Street')}</Label>
               <Input value={addrStreet} onChange={(e) => setAddrStreet(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t('Postal Code')}</Label>
                 <Input value={addrPostalCode} onChange={(e) => setAddrPostalCode(e.target.value)} />
@@ -348,6 +365,6 @@ export function CustomerProfilePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Filter, Loader2,
   LayoutList, LayoutGrid, Download, ArrowUpDown, ArrowUp, ArrowDown, X, MessageSquareText,
@@ -29,8 +30,8 @@ import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { PaginationBar } from '@/components/returns/PaginationBar';
-import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { relativeTime } from '@/lib/animations';
+import { pageVariants, pageTransition, staggerContainer, staggerItem, fadeIn, useReducedMotion } from '@/lib/motion';
 import type {
   RhTicket, RhCustomer, TicketStatus, TicketStats, TicketsFilter, TicketSortField,
   PaginatedResult,
@@ -230,10 +231,12 @@ export function TicketsListPage() {
     setCreating(false);
   };
 
-  const rowVisibility = useStaggeredList(result.data.length, { interval: 40 });
+  const prefersReduced = useReducedMotion();
+  const Wrapper = prefersReduced ? 'div' : motion.div;
+  const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <Wrapper className="space-y-6" {...wrapperProps as any}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -337,129 +340,155 @@ export function TicketsListPage() {
             </div>
           )}
 
-          {loading ? (
-            viewMode === 'kanban' ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-8 bg-muted rounded animate-pulse" />
-                    {Array.from({ length: 3 }, (_, j) => (
-                      <Card key={j}>
-                        <CardContent className="p-3 animate-pulse space-y-2">
-                          <div className="h-3 bg-muted rounded w-16" />
-                          <div className="h-4 bg-muted rounded w-full" />
-                          <div className="h-3 bg-muted rounded w-20" />
-                        </CardContent>
-                      </Card>
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div key="loading" variants={fadeIn} initial={prefersReduced ? false : 'initial'} animate="animate" exit="exit">
+                {viewMode === 'kanban' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="h-8 bg-muted rounded animate-pulse" />
+                        {Array.from({ length: 3 }, (_, j) => (
+                          <Card key={j}>
+                            <CardContent className="p-3 animate-pulse space-y-2">
+                              <div className="h-3 bg-muted rounded w-16" />
+                              <div className="h-4 bg-muted rounded w-full" />
+                              <div className="h-3 bg-muted rounded w-20" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
                     ))}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <SkeletonTable rows={8} columns={10} />
+                )}
+              </motion.div>
+            ) : viewMode === 'kanban' ? (
+              <motion.div key="kanban" variants={fadeIn} initial={prefersReduced ? false : 'initial'} animate="animate" exit="exit">
+                <TicketKanbanBoard tickets={result.data} onStatusChange={handleKanbanStatusChange} />
+              </motion.div>
+            ) : result.data.length === 0 ? (
+              <motion.div key="empty" variants={fadeIn} initial={prefersReduced ? false : 'initial'} animate="animate" exit="exit">
+                <EmptyState
+                  icon={MessageSquareText}
+                  title={t('No tickets found')}
+                  description={t('No results match your filters')}
+                  actionLabel={t('New Ticket')}
+                  onAction={openDialog}
+                />
+              </motion.div>
             ) : (
-              <SkeletonTable rows={8} columns={10} />
-            )
-          ) : viewMode === 'kanban' ? (
-            <TicketKanbanBoard tickets={result.data} onStatusChange={handleKanbanStatusChange} />
-          ) : result.data.length === 0 ? (
-            <EmptyState
-              icon={MessageSquareText}
-              title={t('No tickets found')}
-              description={t('No results match your filters')}
-              actionLabel={t('New Ticket')}
-              onAction={openDialog}
-            />
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left">
-                      <th className="pb-2 pr-2">
-                        <Checkbox
-                          checked={selectedIds.size === result.data.length && result.data.length > 0}
-                          onCheckedChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('created_at')}>
-                        <span className="inline-flex items-center">{t('Ticket Number')}<SortIcon field="created_at" /></span>
-                      </th>
-                      <th className="pb-2 font-medium">{t('Subject')}</th>
-                      <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('status')}>
-                        <span className="inline-flex items-center">{t('Status')}<SortIcon field="status" /></span>
-                      </th>
-                      <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('priority')}>
-                        <span className="inline-flex items-center">{t('Priority')}<SortIcon field="priority" /></span>
-                      </th>
-                      <th className="pb-2 font-medium">{t('Assignee')}</th>
-                      <th className="pb-2 font-medium">{t('Category')}</th>
-                      <th className="pb-2 font-medium">{t('Tags')}</th>
-                      <th className="pb-2 font-medium">{t('Date')}</th>
-                      <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('sla_resolution_at')}>
-                        <span className="inline-flex items-center">{t('SLA')}<SortIcon field="sla_resolution_at" /></span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.data.map((ticket, i) => (
-                      <tr
-                        key={ticket.id}
-                        className={`border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-all duration-200 ${
-                          rowVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-                        }`}
-                        style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.15s ease' }}
-                        onClick={() => navigate(`/returns/tickets/${ticket.id}`)}
-                      >
-                        <td className="py-3 pr-2" onClick={(e) => e.stopPropagation()}>
+              <motion.div key="table" variants={fadeIn} initial={prefersReduced ? false : 'initial'} animate="animate" exit="exit">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-2 pr-2">
                           <Checkbox
-                            checked={selectedIds.has(ticket.id)}
-                            onCheckedChange={() => toggleSelect(ticket.id)}
+                            checked={selectedIds.size === result.data.length && result.data.length > 0}
+                            onCheckedChange={toggleSelectAll}
                           />
-                        </td>
-                        <td className="py-3 relative">
-                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <span className="text-primary font-medium pl-2">{ticket.ticketNumber}</span>
-                        </td>
-                        <td className="py-3 max-w-xs truncate">{ticket.subject}</td>
-                        <td className="py-3">
-                          <Badge variant="outline" className={`${
-                            ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
-                            ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                            ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
-                            ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-600'
-                          }`}>
-                            {t(statusLabels[ticket.status])}
-                          </Badge>
-                        </td>
-                        <td className="py-3"><TicketPriorityBadge priority={ticket.priority} /></td>
-                        <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                          <TicketAssigneeSelect
-                            value={ticket.assignedTo}
-                            onValueChange={async (v) => {
-                              await updateRhTicket(ticket.id, { assignedTo: v || undefined });
-                              load();
-                            }}
-                            compact
-                          />
-                        </td>
-                        <td className="py-3 text-xs text-muted-foreground">{ticket.category || '—'}</td>
-                        <td className="py-3">
-                          <TicketTagsEditor tags={ticket.tags} readOnly />
-                        </td>
-                        <td className="py-3 text-muted-foreground text-xs">
-                          {relativeTime(ticket.createdAt, i18n.language)}
-                        </td>
-                        <td className="py-3">
-                          <TicketSLABadge ticket={ticket} className="text-[10px]" />
-                        </td>
+                        </th>
+                        <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('created_at')}>
+                          <span className="inline-flex items-center">{t('Ticket Number')}<SortIcon field="created_at" /></span>
+                        </th>
+                        <th className="pb-2 font-medium">{t('Subject')}</th>
+                        <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('status')}>
+                          <span className="inline-flex items-center">{t('Status')}<SortIcon field="status" /></span>
+                        </th>
+                        <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('priority')}>
+                          <span className="inline-flex items-center">{t('Priority')}<SortIcon field="priority" /></span>
+                        </th>
+                        <th className="pb-2 font-medium">{t('Assignee')}</th>
+                        <th className="pb-2 font-medium">{t('Category')}</th>
+                        <th className="pb-2 font-medium">{t('Tags')}</th>
+                        <th className="pb-2 font-medium">{t('Date')}</th>
+                        <th className="pb-2 font-medium cursor-pointer" onClick={() => toggleSort('sla_resolution_at')}>
+                          <span className="inline-flex items-center">{t('SLA')}<SortIcon field="sla_resolution_at" /></span>
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
-            </>
-          )}
+                    </thead>
+                    {prefersReduced ? (
+                      <tbody>
+                        {result.data.map((ticket) => (
+                          <tr
+                            key={ticket.id}
+                            className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
+                            onClick={() => navigate(`/returns/tickets/${ticket.id}`)}
+                          >
+                            <td className="py-3 pr-2" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={selectedIds.has(ticket.id)} onCheckedChange={() => toggleSelect(ticket.id)} />
+                            </td>
+                            <td className="py-3 relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <span className="text-primary font-medium pl-2">{ticket.ticketNumber}</span>
+                            </td>
+                            <td className="py-3 max-w-xs truncate">{ticket.subject}</td>
+                            <td className="py-3">
+                              <Badge variant="outline" className={`${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>{t(statusLabels[ticket.status])}</Badge>
+                            </td>
+                            <td className="py-3"><TicketPriorityBadge priority={ticket.priority} /></td>
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <TicketAssigneeSelect value={ticket.assignedTo} onValueChange={async (v) => { await updateRhTicket(ticket.id, { assignedTo: v || undefined }); load(); }} compact />
+                            </td>
+                            <td className="py-3 text-xs text-muted-foreground">{ticket.category || '—'}</td>
+                            <td className="py-3"><TicketTagsEditor tags={ticket.tags} readOnly /></td>
+                            <td className="py-3 text-muted-foreground text-xs">{relativeTime(ticket.createdAt, i18n.language)}</td>
+                            <td className="py-3"><TicketSLABadge ticket={ticket} className="text-[10px]" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    ) : (
+                      <motion.tbody variants={staggerContainer} initial="initial" animate="animate">
+                        {result.data.map((ticket) => (
+                          <motion.tr
+                            key={ticket.id}
+                            variants={staggerItem}
+                            className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
+                            onClick={() => navigate(`/returns/tickets/${ticket.id}`)}
+                          >
+                            <td className="py-3 pr-2" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={selectedIds.has(ticket.id)} onCheckedChange={() => toggleSelect(ticket.id)} />
+                            </td>
+                            <td className="py-3 relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <span className="text-primary font-medium pl-2">{ticket.ticketNumber}</span>
+                            </td>
+                            <td className="py-3 max-w-xs truncate">{ticket.subject}</td>
+                            <td className="py-3">
+                              <Badge variant="outline" className={`${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>{t(statusLabels[ticket.status])}</Badge>
+                            </td>
+                            <td className="py-3"><TicketPriorityBadge priority={ticket.priority} /></td>
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <TicketAssigneeSelect value={ticket.assignedTo} onValueChange={async (v) => { await updateRhTicket(ticket.id, { assignedTo: v || undefined }); load(); }} compact />
+                            </td>
+                            <td className="py-3 text-xs text-muted-foreground">{ticket.category || '—'}</td>
+                            <td className="py-3"><TicketTagsEditor tags={ticket.tags} readOnly /></td>
+                            <td className="py-3 text-muted-foreground text-xs">{relativeTime(ticket.createdAt, i18n.language)}</td>
+                            <td className="py-3"><TicketSLABadge ticket={ticket} className="text-[10px]" /></td>
+                          </motion.tr>
+                        ))}
+                      </motion.tbody>
+                    )}
+                  </table>
+                </div>
+                <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
 
@@ -543,6 +572,6 @@ export function TicketsListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Wrapper>
   );
 }

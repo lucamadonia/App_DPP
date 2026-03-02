@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import {
   Newspaper,
   ExternalLink,
@@ -9,6 +10,13 @@ import {
   Search,
   Globe,
 } from 'lucide-react';
+import {
+  blurIn,
+  staggerContainer,
+  staggerItem,
+  useReducedMotion,
+} from '@/lib/motion';
+import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -51,6 +59,8 @@ const PRIORITY_COLORS: Record<string, string> = {
 export function NewsPage() {
   const { t } = useTranslation('compliance');
   const locale = useLocale();
+  const prefersReduced = useReducedMotion();
+  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -91,7 +101,7 @@ export function NewsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <MotionDiv {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Newspaper className="h-6 w-6" />
           {t('Regulatory News')}
@@ -99,7 +109,7 @@ export function NewsPage() {
         <p className="text-muted-foreground mt-1">
           {t('Latest updates on EU regulations, standards, and deadlines')}
         </p>
-      </div>
+      </MotionDiv>
 
       {/* Upcoming Deadlines */}
       {upcomingDeadlines.length > 0 && (
@@ -176,7 +186,10 @@ export function NewsPage() {
       </div>
 
       {/* News cards */}
-      <div className="space-y-4">
+      <MotionDiv
+        className="space-y-4"
+        {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+      >
         {filteredNews.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
@@ -189,7 +202,7 @@ export function NewsPage() {
           </Card>
         ) : (
           filteredNews.map(item => (
-            <Card key={item.id} className="hover:shadow-md transition-shadow">
+            <GlassCard key={item.id} className="hover:shadow-md transition-shadow" {...(!prefersReduced && { variants: staggerItem })}>
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-4">
                   {item.imageUrl && (
@@ -260,10 +273,10 @@ export function NewsPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </GlassCard>
           ))
         )}
-      </div>
+      </MotionDiv>
 
       <p className="text-sm text-muted-foreground text-center">
         {t('Showing {{count}} of {{total}} news items', {

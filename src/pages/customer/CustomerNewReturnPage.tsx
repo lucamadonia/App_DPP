@@ -1,11 +1,13 @@
 import { useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { createCustomerReturn } from '@/services/supabase/customer-portal';
+import { spring } from '@/lib/motion';
 import type { DesiredSolution, ItemCondition } from '@/types/returns-hub';
 
 import { WizardStepIndicator } from '@/components/returns/public/WizardStepIndicator';
@@ -138,25 +140,37 @@ export function CustomerNewReturnPage() {
     setSubmitting(false);
   };
 
+  const prefersReduced = useReducedMotion();
+
   if (submitted) {
     return (
-      <div className="max-w-lg mx-auto py-12 text-center space-y-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 mx-auto">
+      <motion.div
+        className="max-w-lg mx-auto px-4 sm:px-0 py-8 sm:py-12 text-center space-y-4 sm:space-y-6"
+        initial={prefersReduced ? false : { opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={prefersReduced ? { duration: 0 } : spring.bouncy}
+      >
+        <motion.div
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 mx-auto"
+          initial={prefersReduced ? false : { scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={prefersReduced ? { duration: 0 } : { ...spring.bouncy, delay: 0.15 }}
+        >
           <CheckCircle className="h-8 w-8" />
-        </div>
+        </motion.div>
         <h2 className="text-2xl font-bold">{t('Return Submitted')}</h2>
         <p className="text-muted-foreground">
           {t('Your return {{number}} has been submitted successfully.', { number: returnNumber })}
         </p>
-        <div className="flex justify-center gap-3">
-          <Button variant="outline" onClick={() => navigate(`/customer/${tenantSlug}/returns`)}>
+        <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/customer/${tenantSlug}/returns`)}>
             {t('View All Returns')}
           </Button>
-          <Button onClick={() => navigate(`/customer/${tenantSlug}`)}>
+          <Button className="w-full sm:w-auto" onClick={() => navigate(`/customer/${tenantSlug}`)}>
             {t('Back to Dashboard')}
           </Button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -229,11 +243,16 @@ export function CustomerNewReturnPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">{t('New Return')}</h1>
+    <motion.div
+      className="max-w-2xl mx-auto px-4 sm:px-0"
+      initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={prefersReduced ? { duration: 0 } : spring.gentle}
+    >
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{t('New Return')}</h1>
 
       {/* Step Indicator */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <WizardStepIndicator
           currentStep={state.step}
           totalSteps={STEP_LABELS.length}
@@ -243,7 +262,7 @@ export function CustomerNewReturnPage() {
 
       {/* Step Content */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <WizardStepTransition direction={state.direction} stepKey={state.step}>
             {renderStep()}
           </WizardStepTransition>
@@ -251,9 +270,10 @@ export function CustomerNewReturnPage() {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between mt-6">
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-between mt-4 sm:mt-6">
         <Button
           variant="outline"
+          className="w-full sm:w-auto"
           onClick={() => state.step === 0 ? navigate(`/customer/${tenantSlug}/returns`) : dispatch({ type: 'PREV_STEP' })}
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
@@ -262,6 +282,7 @@ export function CustomerNewReturnPage() {
 
         {state.step < STEP_LABELS.length - 1 ? (
           <Button
+            className="w-full sm:w-auto"
             onClick={() => dispatch({ type: 'NEXT_STEP' })}
             disabled={!canProceed()}
           >
@@ -269,12 +290,12 @@ export function CustomerNewReturnPage() {
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {t('Submit Return', { ns: 'returns' })}
           </Button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
