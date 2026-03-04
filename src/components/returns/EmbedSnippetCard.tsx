@@ -34,9 +34,7 @@ export function EmbedSnippetCard({ tenantSlug, tenantName, allowedDomains = [], 
   const [copied, setCopied] = useState(false);
   const [newDomain, setNewDomain] = useState('');
 
-  // Always use the canonical app URL for the embed script, not the current origin
-  // (user may access settings via custom domain like www.trackbliss.eu)
-  const embedOrigin = import.meta.env.VITE_APP_URL || 'https://dpp-app.fambliss.eu';
+  const embedOrigin = window.location.origin;
   const previewOrigin = window.location.origin;
 
   const snippet = `<script src="${embedOrigin}/embed.js"></script>
