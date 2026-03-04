@@ -3,12 +3,13 @@
  * Sends events to the parent window when running inside an iframe.
  */
 
-type EmbedEventType = 'trackbliss:ready' | 'trackbliss:resize' | 'trackbliss:return_created';
+type EmbedEventType = 'trackbliss:ready' | 'trackbliss:resize' | 'trackbliss:return_created' | 'trackbliss:ticket_created';
 
 interface EmbedEventPayload {
   type: EmbedEventType;
   height?: number;
   returnNumber?: string;
+  ticketNumber?: string;
 }
 
 function isInIframe(): boolean {
@@ -55,6 +56,16 @@ export function sendReturnCreatedEvent(returnNumber: string) {
   postToParent({
     type: 'trackbliss:return_created',
     returnNumber,
+  });
+}
+
+/**
+ * Send a ticket_created event with the ticket number.
+ */
+export function sendTicketCreatedEvent(ticketNumber: string) {
+  postToParent({
+    type: 'trackbliss:ticket_created',
+    ticketNumber,
   });
 }
 

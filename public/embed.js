@@ -7,7 +7,7 @@
  *   <script>
  *     Trackbliss.embed({
  *       tenant: 'my-tenant-slug',
- *       type: 'portal',           // 'portal' | 'register' | 'track'
+ *       type: 'portal',           // 'portal' | 'register' | 'track' | 'support'
  *       selector: '#trackbliss-returns',
  *       lang: 'de',               // optional, defaults to browser language
  *     });
@@ -84,11 +84,19 @@
 
         case 'trackbliss:return_created':
           // Dispatch a custom event on the container so the host page can react
-          var customEvent = new CustomEvent('trackbliss:return_created', {
+          var returnEvent = new CustomEvent('trackbliss:return_created', {
             detail: { returnNumber: event.data.returnNumber },
             bubbles: true,
           });
-          container.dispatchEvent(customEvent);
+          container.dispatchEvent(returnEvent);
+          break;
+
+        case 'trackbliss:ticket_created':
+          var ticketEvent = new CustomEvent('trackbliss:ticket_created', {
+            detail: { ticketNumber: event.data.ticketNumber },
+            bubbles: true,
+          });
+          container.dispatchEvent(ticketEvent);
           break;
       }
     });

@@ -15,7 +15,7 @@ interface EmbedSnippetCardProps {
   onAllowedDomainsChange?: (domains: string[]) => void;
 }
 
-type WidgetType = 'portal' | 'register' | 'track';
+type WidgetType = 'portal' | 'register' | 'track' | 'support';
 
 function normalizeDomain(input: string): string {
   let d = input.trim().toLowerCase();
@@ -73,6 +73,7 @@ export function EmbedSnippetCard({ tenantSlug, tenantName, allowedDomains = [], 
     portal: t('Portal (Full)'),
     register: t('Registration Only'),
     track: t('Tracking Only'),
+    support: t('Support / Contact'),
   };
 
   return (
@@ -98,6 +99,7 @@ export function EmbedSnippetCard({ tenantSlug, tenantName, allowedDomains = [], 
                 <SelectItem value="portal">{typeLabels.portal}</SelectItem>
                 <SelectItem value="register">{typeLabels.register}</SelectItem>
                 <SelectItem value="track">{typeLabels.track}</SelectItem>
+                <SelectItem value="support">{typeLabels.support}</SelectItem>
               </SelectContent>
             </Select>
           </div>

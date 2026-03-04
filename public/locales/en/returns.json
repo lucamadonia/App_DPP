@@ -1090,5 +1090,13 @@
   "Add Domain": "Add Domain",
   "No domain restrictions — embedding allowed from any website.": "No domain restrictions — embedding allowed from any website.",
   "Embedding not allowed": "Embedding not allowed",
-  "This domain is not authorized to embed this portal.": "This domain is not authorized to embed this portal."
+  "This domain is not authorized to embed this portal.": "This domain is not authorized to embed this portal.",
+  "Contact Us": "Contact Us",
+  "Get help from our support team": "Get help from our support team",
+  "Need help? Send us a message.": "Need help? Send us a message.",
+  "Support / Contact": "Support / Contact",
+  "Return Number (optional)": "Return Number (optional)",
+  "Send another message": "Send another message",
+  "Welcome to {{name}} Support": "Welcome to {{name}} Support",
+  "How can we help you?": "How can we help you?"
 }

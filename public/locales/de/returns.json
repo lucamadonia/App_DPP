@@ -1090,5 +1090,13 @@
   "Add Domain": "Domain hinzuf\u00fcgen",
   "No domain restrictions — embedding allowed from any website.": "Keine Domain-Einschr\u00e4nkungen \u2014 Einbettung von jeder Website erlaubt.",
   "Embedding not allowed": "Einbettung nicht erlaubt",
-  "This domain is not authorized to embed this portal.": "Diese Domain ist nicht berechtigt, dieses Portal einzubetten."
+  "This domain is not authorized to embed this portal.": "Diese Domain ist nicht berechtigt, dieses Portal einzubetten.",
+  "Contact Us": "Kontaktieren Sie uns",
+  "Get help from our support team": "Erhalten Sie Hilfe von unserem Support-Team",
+  "Need help? Send us a message.": "Brauchen Sie Hilfe? Senden Sie uns eine Nachricht.",
+  "Support / Contact": "Support / Kontakt",
+  "Return Number (optional)": "Retourennummer (optional)",
+  "Send another message": "Weitere Nachricht senden",
+  "Welcome to {{name}} Support": "Willkommen beim Support von {{name}}",
+  "How can we help you?": "Wie können wir Ihnen helfen?"
 }

@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { PackagePlus, Search, ClipboardList, Truck, CheckCircle2 } from 'lucide-react';
+import { PackagePlus, Search, MessageCircle, ClipboardList, Truck, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -11,12 +12,14 @@ import {
 } from '@/components/ui/accordion';
 import { useReturnsPortal } from '@/hooks/useReturnsPortal';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
 
 export function PublicReturnPortalPage() {
   const { t } = useTranslation('returns');
   const navigate = useNavigate();
   const { tenantSlug, tenantName, primaryColor } = useReturnsPortal();
   const { isEmbed } = useEmbedMode();
+  const [supportOpen, setSupportOpen] = useState(false);
 
   return (
     <div className="animate-fade-in-up">
@@ -37,7 +40,7 @@ export function PublicReturnPortalPage() {
 
       {/* CTA Cards */}
       <section className="max-w-4xl mx-auto px-4 -mt-8 sm:-mt-12 relative z-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
             onClick={() => navigate(isEmbed ? `/embed/register/${tenantSlug}` : `/returns/register/${tenantSlug}`)}
           >
@@ -71,6 +74,23 @@ export function PublicReturnPortalPage() {
               </p>
               <Button variant="outline" className="w-full">
                 {t('Track Status')}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
+            onClick={() => setSupportOpen(true)}
+          >
+            <CardContent className="p-6 sm:p-8 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <MessageCircle className="h-7 w-7" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">{t('Contact Us')}</h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                {t('Get help from our support team')}
+              </p>
+              <Button variant="outline" className="w-full">
+                {t('Contact Support')}
               </Button>
             </CardContent>
           </Card>
@@ -127,6 +147,8 @@ export function PublicReturnPortalPage() {
           ))}
         </Accordion>
       </section>
+
+      <ContactSupportForm open={supportOpen} onOpenChange={setSupportOpen} />
     </div>
   );
 }

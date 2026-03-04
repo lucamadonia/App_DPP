@@ -18,7 +18,7 @@ import { ReturnsPortalContext } from '@/pages/returns/public/ReturnsPortalLayout
 interface ContactSupportFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  returnNumber: string;
+  returnNumber?: string;
   tenantSlug?: string; // Optional - will use context if not provided
 }
 
@@ -27,7 +27,7 @@ export function ContactSupportForm({ open, onOpenChange, returnNumber, tenantSlu
   const context = useContext(ReturnsPortalContext);
   const tenantSlug = propTenantSlug || context?.tenantSlug;
 
-  const [subject, setSubject] = useState(`Return ${returnNumber}`);
+  const [subject, setSubject] = useState(returnNumber ? `Return ${returnNumber}` : '');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
@@ -61,7 +61,7 @@ export function ContactSupportForm({ open, onOpenChange, returnNumber, tenantSlu
           onOpenChange(false);
           setSent(false);
           setMessage('');
-          setSubject(`Return ${returnNumber}`);
+          setSubject(returnNumber ? `Return ${returnNumber}` : '');
           setEmail('');
           setTicketNumber('');
         }, 3000);
@@ -81,7 +81,7 @@ export function ContactSupportForm({ open, onOpenChange, returnNumber, tenantSlu
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('Contact Support')}</DialogTitle>
-          <DialogDescription>{t('Need help with your return?')}</DialogDescription>
+          <DialogDescription>{returnNumber ? t('Need help with your return?') : t('Need help? Send us a message.')}</DialogDescription>
         </DialogHeader>
 
         {sent ? (
