@@ -36,6 +36,7 @@ export function ReturnsSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [tenantSlug, setTenantSlug] = useState('');
+  const [tenantName, setTenantName] = useState('');
 
   // Canned responses
   const [cannedResponses, setCannedResponses] = useState<RhCannedResponse[]>([]);
@@ -62,7 +63,10 @@ export function ReturnsSettingsPage() {
       setSettings(s);
       setReasons(r);
       setCannedResponses(cr);
-      if (tenant) setTenantSlug(tenant.slug || tenant.id);
+      if (tenant) {
+        setTenantSlug(tenant.slug || tenant.id);
+        setTenantName(tenant.name || '');
+      }
       if (s?.features) {
         const slaSettings = (s as any).slaDefaults;
         if (slaSettings) {
@@ -529,7 +533,19 @@ export function ReturnsSettingsPage() {
             saving={saving}
             onSave={handleSaveSettings}
           />
-          {tenantSlug && <EmbedSnippetCard tenantSlug={tenantSlug} />}
+          {tenantSlug && (
+            <EmbedSnippetCard
+              tenantSlug={tenantSlug}
+              tenantName={tenantName}
+              allowedDomains={settings?.embedAllowedDomains ?? []}
+              onAllowedDomainsChange={async (domains) => {
+                if (!settings) return;
+                const updated = { ...settings, embedAllowedDomains: domains };
+                setSettings(updated);
+                await updateReturnsHubSettings(updated);
+              }}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

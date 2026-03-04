@@ -1082,5 +1082,13 @@
   "Tracking Only": "Nur Tracking",
   "Embed Code": "Einbettungscode",
   "Copy embed code": "Einbettungscode kopieren",
-  "Copied!": "Kopiert!"
+  "Copied!": "Kopiert!",
+  "Tenant": "Mandant",
+  "Preview embed": "Einbettung vorschauen",
+  "Allowed Domains": "Erlaubte Domains",
+  "Only these domains can embed your returns portal. Leave empty to allow all domains.": "Nur diese Domains d\u00fcrfen Ihr Retouren-Portal einbetten. Leer lassen, um alle Domains zu erlauben.",
+  "Add Domain": "Domain hinzuf\u00fcgen",
+  "No domain restrictions — embedding allowed from any website.": "Keine Domain-Einschr\u00e4nkungen \u2014 Einbettung von jeder Website erlaubt.",
+  "Embedding not allowed": "Einbettung nicht erlaubt",
+  "This domain is not authorized to embed this portal.": "Diese Domain ist nicht berechtigt, dieses Portal einzubetten."
 }

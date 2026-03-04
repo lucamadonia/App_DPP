@@ -567,6 +567,7 @@ export async function publicGetTenantBranding(tenantSlug: string): Promise<{
   name: string;
   primaryColor: string;
   logoUrl: string;
+  embedAllowedDomains?: string[];
 } | null> {
   const { data } = await supabaseAnon
     .from('tenants')
@@ -578,11 +579,13 @@ export async function publicGetTenantBranding(tenantSlug: string): Promise<{
 
   const settings = data.settings as Record<string, any> | null;
   const branding = settings?.returnsHub?.branding;
+  const embedAllowedDomains: string[] | undefined = settings?.returnsHub?.embedAllowedDomains;
 
   return {
     name: data.name || '',
     primaryColor: branding?.primaryColor || '#3B82F6',
     logoUrl: branding?.logoUrl || '',
+    embedAllowedDomains,
   };
 }
 

@@ -446,6 +446,7 @@ export interface ReturnsHubSettings {
   notifications: ReturnsHubNotificationSettings;
   customerPortal?: CustomerPortalSettings;
   portalDomain?: PortalDomainSettings;
+  embedAllowedDomains?: string[];
 }
 
 // ============================================

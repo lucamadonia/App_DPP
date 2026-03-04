@@ -1,13 +1,33 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useParams, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldX } from 'lucide-react';
 import { publicGetTenantBranding, getPublicReturnReasons, publicGetTenantProducts } from '@/services/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import { sendReadyEvent, initEmbedResizeObserver } from '@/lib/embed-messaging';
 import { ReturnsPortalContext } from '@/pages/returns/public/ReturnsPortalLayout';
 import type { RhReturnReason } from '@/types/returns-hub';
 import type { TenantProduct } from '@/pages/returns/public/ReturnsPortalLayout';
+
+function getParentDomain(): string | null {
+  try {
+    const ref = document.referrer;
+    if (!ref) return null;
+    const url = new URL(ref);
+    return url.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isDomainAllowed(parentDomain: string, allowedDomains: string[]): boolean {
+  return allowedDomains.some((allowed) => {
+    if (parentDomain === allowed) return true;
+    // Allow subdomains: *.example.com matches sub.example.com
+    if (parentDomain.endsWith('.' + allowed)) return true;
+    return false;
+  });
+}
 
 export function EmbedLayout() {
   const { tenantSlug: paramSlug } = useParams<{ tenantSlug: string }>();
@@ -20,6 +40,7 @@ export function EmbedLayout() {
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
   const [products, setProducts] = useState<TenantProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [domainBlocked, setDomainBlocked] = useState(false);
 
   const tenantSlug = paramSlug || '';
 
@@ -57,6 +78,17 @@ export function EmbedLayout() {
           publicGetTenantProducts(tenantSlug),
         ]);
         if (branding) {
+          // Check domain whitelist
+          const allowedDomains = branding.embedAllowedDomains;
+          if (allowedDomains && allowedDomains.length > 0) {
+            const parentDomain = getParentDomain();
+            if (parentDomain && !isDomainAllowed(parentDomain, allowedDomains)) {
+              setDomainBlocked(true);
+              setIsLoading(false);
+              return;
+            }
+          }
+
           setTenantName(branding.name);
           setPrimaryColor(branding.primaryColor);
           setLogoUrl(branding.logoUrl);
@@ -80,6 +112,20 @@ export function EmbedLayout() {
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="mt-3 text-sm text-muted-foreground">{t('Loading...')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (domainBlocked) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center max-w-sm">
+          <ShieldX className="h-10 w-10 text-destructive mx-auto mb-3" />
+          <p className="text-sm font-medium">{t('Embedding not allowed')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('This domain is not authorized to embed this portal.')}
+          </p>
         </div>
       </div>
     );

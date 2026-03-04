@@ -1082,5 +1082,13 @@
   "Tracking Only": "Tracking Only",
   "Embed Code": "Embed Code",
   "Copy embed code": "Copy embed code",
-  "Copied!": "Copied!"
+  "Copied!": "Copied!",
+  "Tenant": "Tenant",
+  "Preview embed": "Preview embed",
+  "Allowed Domains": "Allowed Domains",
+  "Only these domains can embed your returns portal. Leave empty to allow all domains.": "Only these domains can embed your returns portal. Leave empty to allow all domains.",
+  "Add Domain": "Add Domain",
+  "No domain restrictions — embedding allowed from any website.": "No domain restrictions — embedding allowed from any website.",
+  "Embedding not allowed": "Embedding not allowed",
+  "This domain is not authorized to embed this portal.": "This domain is not authorized to embed this portal."
 }
