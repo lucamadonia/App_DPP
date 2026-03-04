@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export function useEmbedMode() {
-  const isEmbed = useMemo(() => window.location.pathname.startsWith('/embed/'), []);
+  const location = useLocation();
+  const isEmbed = location.pathname.startsWith('/embed/');
   return { isEmbed };
 }
