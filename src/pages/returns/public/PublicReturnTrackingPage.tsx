@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Search, SearchX, Download, MessageSquare, Package, Ban } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, SearchX, Download, MessageSquare, Package, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +29,15 @@ interface ReturnItem {
 
 export function PublicReturnTrackingPage() {
   const { t } = useTranslation('returns');
-  const { returnNumber: paramReturnNumber } = useParams();
-  const [returnNumberInput, setReturnNumberInput] = useState(paramReturnNumber || '');
+  const navigate = useNavigate();
+  const params = useParams();
+  const { isEmbed } = useEmbedMode();
+
+  // In embed mode the param is tenantSlug, in public mode it's returnNumber
+  const paramReturnNumber = isEmbed ? '' : (params.returnNumber || '');
+  const embedTenantSlug = isEmbed ? (params.tenantSlug || '') : '';
+
+  const [returnNumberInput, setReturnNumberInput] = useState(paramReturnNumber);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +51,6 @@ export function PublicReturnTrackingPage() {
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
   const [branding, setBranding] = useState<CustomerPortalBrandingOverrides | null>(null);
-  const { isEmbed } = useEmbedMode();
 
   // Auto-search if returnNumber is in URL
   useEffect(() => {
@@ -182,11 +188,24 @@ export function PublicReturnTrackingPage() {
     </header>
   );
 
+  const backToPortal = isEmbed && embedTenantSlug ? (
+    <div className="max-w-lg mx-auto px-4 pt-4">
+      <button
+        onClick={() => navigate(`/embed/portal/${embedTenantSlug}`)}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t('Back to Overview')}
+      </button>
+    </div>
+  ) : null;
+
   // Search form view
   if (!returnData && !loading) {
     return (
       <div className={`flex flex-col ${isEmbed ? '' : 'min-h-screen bg-gray-50'}`}>
         {!isEmbed && renderHeader()}
+        {backToPortal}
         <div className="max-w-lg mx-auto px-4 py-12 animate-fade-in-up">
         <Card>
           <CardHeader className="text-center">
@@ -261,6 +280,7 @@ export function PublicReturnTrackingPage() {
   return (
     <div className={`flex flex-col ${isEmbed ? '' : 'min-h-screen bg-gray-50'}`}>
       {!isEmbed && renderHeader()}
+      {backToPortal}
       <main className="flex-1">
         <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-4 animate-fade-in-up">
       {/* Status Pipeline */}
