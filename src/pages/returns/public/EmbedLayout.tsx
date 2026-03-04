@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useParams, useSearchParams } from 'react-router-dom';
-import { Loader2, ShieldX } from 'lucide-react';
+import { Outlet, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { Loader2, ShieldX, Maximize2 } from 'lucide-react';
 import { publicGetTenantBranding, getPublicReturnReasons, publicGetTenantProducts } from '@/services/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import { sendReadyEvent, initEmbedResizeObserver } from '@/lib/embed-messaging';
@@ -32,6 +32,7 @@ function isDomainAllowed(parentDomain: string, allowedDomains: string[]): boolea
 export function EmbedLayout() {
   const { tenantSlug: paramSlug } = useParams<{ tenantSlug: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { t, i18n } = useTranslation('returns');
 
   const [tenantName, setTenantName] = useState('');
@@ -131,11 +132,27 @@ export function EmbedLayout() {
     );
   }
 
+  // Map /embed/... path to public /returns/... path
+  const fullPageUrl = (() => {
+    const path = location.pathname.replace(/^\/embed\//, '/returns/');
+    // portal → returns/portal, register → returns/register, track → returns/track, support → returns/support
+    return window.location.origin + path;
+  })();
+
   return (
     <ReturnsPortalContext.Provider
       value={{ tenantSlug, tenantName, primaryColor, logoUrl, reasons, products, isLoading }}
     >
-      <div className="bg-background">
+      <div className="bg-background relative">
+        <a
+          href={fullPageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={t('Open in new tab')}
+          className="absolute top-2 right-2 z-50 flex h-8 w-8 items-center justify-center rounded-lg bg-background/80 border text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </a>
         <Outlet />
       </div>
     </ReturnsPortalContext.Provider>
