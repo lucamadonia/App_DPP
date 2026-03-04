@@ -837,6 +837,15 @@ export function LocationDetailPage() {
               const updated = await updateLocation(id, { zones });
               setLocation(updated);
             }}
+            onStockChanged={async () => {
+              if (!id) return;
+              const [locStock, locStats] = await Promise.all([
+                getStockForLocation(id),
+                getLocationStats(id),
+              ]);
+              setStock(locStock);
+              setStats(locStats);
+            }}
           />
         </TabsContent>
       </Tabs>

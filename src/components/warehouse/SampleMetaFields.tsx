@@ -18,14 +18,14 @@ export function SampleMetaFields({ meta, onChange }: SampleMetaFieldsProps) {
   const isLoan = meta.sampleType === 'loan';
 
   return (
-    <div className="space-y-4 rounded-lg border border-pink-200 bg-pink-50/50 p-4 dark:border-pink-900/40 dark:bg-pink-950/20">
+    <div className="space-y-3 sm:space-y-4 rounded-lg border border-pink-200 bg-pink-50/50 px-3 py-3 sm:p-4 dark:border-pink-900/40 dark:bg-pink-950/20">
       <div className="flex items-center gap-2">
         <Gift className="h-4 w-4 text-pink-500" />
-        <h4 className="text-sm font-semibold">{t('Sample Information')}</h4>
+        <h4 className="text-xs sm:text-sm font-semibold">{t('Sample Information')}</h4>
       </div>
 
       {/* Sample Type */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>{t('Sample Type')}</Label>
           <Select
@@ -66,7 +66,7 @@ export function SampleMetaFields({ meta, onChange }: SampleMetaFieldsProps) {
 
       {/* Return settings (only for loans) */}
       {isLoan && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
           <div className="flex items-center gap-3">
             <Switch
               checked={meta.returnExpected ?? true}
@@ -92,7 +92,7 @@ export function SampleMetaFields({ meta, onChange }: SampleMetaFieldsProps) {
       )}
 
       {/* Content settings */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         <div className="flex items-center gap-3">
           <Switch
             checked={meta.contentExpected ?? true}

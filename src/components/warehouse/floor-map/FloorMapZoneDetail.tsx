@@ -75,8 +75,8 @@ export function FloorMapZoneDetail({
 
   return (
     <Sheet open={!!zone} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="right" className="w-[400px] sm:max-w-[400px] p-0">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b">
+      <SheetContent side="right" className="w-full sm:w-[400px] sm:max-w-[400px] p-0">
+        <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
           <div className="flex items-center gap-3">
             {colors && (
               <div
@@ -105,7 +105,7 @@ export function FloorMapZoneDetail({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-120px)]">
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
             {/* Stock Summary */}
             <section>
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">

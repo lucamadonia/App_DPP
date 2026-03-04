@@ -56,27 +56,27 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
+      <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
           {t('Sync Configuration')}
         </CardTitle>
-        <CardDescription>{t('Connect your Shopify store')}</CardDescription>
+        <CardDescription className="text-xs sm:text-sm">{t('Connect your Shopify store')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="px-3 sm:px-6 space-y-4 sm:space-y-6">
         {/* Import settings */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium">{t('import', { ns: 'warehouse' })}</h4>
+        <div className="space-y-3 sm:space-y-4">
+          <h4 className="text-xs sm:text-sm font-medium">{t('import', { ns: 'warehouse' })}</h4>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <Label>{t('Import Orders')}</Label>
+                <Label className="text-xs sm:text-sm">{t('Import Orders')}</Label>
               </div>
               <Switch checked={local.importOrders} onCheckedChange={() => toggle('importOrders')} />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <Label>{t('Import Customers')}</Label>
+                <Label className="text-xs sm:text-sm">{t('Import Customers')}</Label>
               </div>
               <Switch checked={local.importCustomers} onCheckedChange={() => toggle('importCustomers')} />
             </div>
@@ -84,18 +84,18 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
         </div>
 
         {/* Export settings */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium">{t('export', { ns: 'warehouse' })}</h4>
+        <div className="space-y-3 sm:space-y-4">
+          <h4 className="text-xs sm:text-sm font-medium">{t('export', { ns: 'warehouse' })}</h4>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <Label>{t('Export Stock Levels')}</Label>
+                <Label className="text-xs sm:text-sm">{t('Export Stock Levels')}</Label>
               </div>
               <Switch checked={local.exportStockLevels} onCheckedChange={() => toggle('exportStockLevels')} />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <Label>{t('Export Fulfillments')}</Label>
+                <Label className="text-xs sm:text-sm">{t('Export Fulfillments')}</Label>
               </div>
               <Switch checked={local.exportFulfillments} onCheckedChange={() => toggle('exportFulfillments')} />
             </div>
@@ -103,22 +103,22 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
         </div>
 
         {/* Automation */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium">Automation</h4>
+        <div className="space-y-3 sm:space-y-4">
+          <h4 className="text-xs sm:text-sm font-medium">Automation</h4>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>{t('Auto-Create Shipments')}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <Label className="text-xs sm:text-sm">{t('Auto-Create Shipments')}</Label>
                 <p className="text-xs text-muted-foreground">{t('Auto-Create Shipments Help')}</p>
               </div>
-              <Switch checked={local.autoCreateShipments} onCheckedChange={() => toggle('autoCreateShipments')} />
+              <Switch className="shrink-0" checked={local.autoCreateShipments} onCheckedChange={() => toggle('autoCreateShipments')} />
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>{t('Auto-Export Fulfillment')}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <Label className="text-xs sm:text-sm">{t('Auto-Export Fulfillment')}</Label>
                 <p className="text-xs text-muted-foreground">{t('Auto-Export Fulfillment Help')}</p>
               </div>
-              <Switch checked={local.autoExportFulfillment} onCheckedChange={() => toggle('autoExportFulfillment')} />
+              <Switch className="shrink-0" checked={local.autoExportFulfillment} onCheckedChange={() => toggle('autoExportFulfillment')} />
             </div>
           </div>
         </div>
@@ -126,17 +126,17 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
         {/* Order status filter */}
         <div className="space-y-3">
           <div>
-            <Label>{t('Order Status Filter')}</Label>
+            <Label className="text-xs sm:text-sm">{t('Order Status Filter')}</Label>
             <p className="text-xs text-muted-foreground">{t('Order Status Filter Help')}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {FINANCIAL_STATUSES.map(status => {
               const active = local.orderStatusFilter.includes(status);
               return (
                 <Badge
                   key={status}
                   variant={active ? 'default' : 'outline'}
-                  className="cursor-pointer"
+                  className="cursor-pointer text-xs"
                   onClick={() => toggleStatus(status)}
                 >
                   {t(status)}
@@ -146,7 +146,7 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           {t('Save', { ns: 'common' })}
         </Button>

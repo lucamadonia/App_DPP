@@ -92,7 +92,7 @@ export function FloorMapMinimap({
 
   return (
     <div
-      className="absolute bottom-3 right-3 rounded-lg border shadow-md overflow-hidden cursor-crosshair"
+      className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 rounded-lg border shadow-md overflow-hidden cursor-crosshair hidden sm:block"
       style={{
         background: 'rgba(255,255,255,0.7)',
         backdropFilter: 'blur(8px)',

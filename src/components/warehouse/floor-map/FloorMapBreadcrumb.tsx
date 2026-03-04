@@ -18,20 +18,20 @@ export function FloorMapBreadcrumb({
   if (!zoneName) return null;
 
   return (
-    <div className="flex items-center gap-1.5 text-sm">
+    <div className="flex items-center gap-1 sm:gap-1.5 text-sm">
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+        className="h-7 px-1.5 sm:px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
         onClick={onBackToOverview}
       >
         <ArrowLeft className="h-3 w-3" />
-        {t('Back to Overview')}
+        <span className="hidden sm:inline">{t('Back to Overview')}</span>
       </Button>
-      <div className="flex items-center gap-1 text-muted-foreground">
-        <span className="text-xs truncate max-w-[120px]">{locationName}</span>
+      <div className="flex items-center gap-1 text-muted-foreground min-w-0">
+        <span className="text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[120px]">{locationName}</span>
         <ChevronRight className="h-3 w-3 shrink-0" />
-        <span className="text-xs font-semibold text-foreground truncate max-w-[160px]">
+        <span className="text-[10px] sm:text-xs font-semibold text-foreground truncate max-w-[100px] sm:max-w-[160px]">
           {zoneName}
         </span>
       </div>

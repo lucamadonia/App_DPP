@@ -49,12 +49,12 @@ export function TopContentTable({ className }: TopContentTableProps) {
   if (!loading && posts.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t('Top Performing Content')}</CardTitle>
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="text-sm sm:text-base">{t('Top Performing Content')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <FileText className="h-10 w-10 mb-2 opacity-40" />
+        <CardContent className="px-3 sm:px-6">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-muted-foreground">
+            <FileText className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-40" />
             <p className="text-sm">{t('No content posts found')}</p>
           </div>
         </CardContent>
@@ -64,10 +64,10 @@ export function TopContentTable({ className }: TopContentTableProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Top Performing Content')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Top Performing Content')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -75,48 +75,50 @@ export function TopContentTable({ className }: TopContentTableProps) {
             ))}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">{t('Platform')}</TableHead>
-                <TableHead>{t('Post')}</TableHead>
-                <TableHead className="text-right">{t('Views')}</TableHead>
-                <TableHead className="text-right">{t('Likes')}</TableHead>
-                <TableHead className="text-right">{t('Comments')}</TableHead>
-                <TableHead className="text-right">{t('Total')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {posts.map((post) => {
-                const cfg = SOCIAL_PLATFORM_CONFIG[post.platform];
-                const PIcon = cfg ? PLATFORM_ICONS[cfg.icon] || Globe : Globe;
-                const total = (post.views ?? 0) + (post.likes ?? 0) + (post.comments ?? 0);
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">{t('Platform')}</TableHead>
+                  <TableHead>{t('Post')}</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">{t('Views')}</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">{t('Likes')}</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">{t('Comments')}</TableHead>
+                  <TableHead className="text-right">{t('Total')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => {
+                  const cfg = SOCIAL_PLATFORM_CONFIG[post.platform];
+                  const PIcon = cfg ? PLATFORM_ICONS[cfg.icon] || Globe : Globe;
+                  const total = (post.views ?? 0) + (post.likes ?? 0) + (post.comments ?? 0);
 
-                return (
-                  <TableRow key={post.id}>
-                    <TableCell>
-                      <PIcon className={`h-4 w-4 ${cfg?.color || 'text-gray-500'}`} />
-                    </TableCell>
-                    <TableCell>
-                      <a
-                        href={post.postUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:underline truncate max-w-[140px]"
-                      >
-                        <ExternalLink className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{post.postUrl.replace(/^https?:\/\//, '').slice(0, 30)}</span>
-                      </a>
-                    </TableCell>
-                    <TableCell className="text-right text-xs">{formatCompact(post.views ?? 0)}</TableCell>
-                    <TableCell className="text-right text-xs">{formatCompact(post.likes ?? 0)}</TableCell>
-                    <TableCell className="text-right text-xs">{formatCompact(post.comments ?? 0)}</TableCell>
-                    <TableCell className="text-right text-xs font-medium">{formatCompact(total)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow key={post.id}>
+                      <TableCell>
+                        <PIcon className={`h-4 w-4 ${cfg?.color || 'text-gray-500'}`} />
+                      </TableCell>
+                      <TableCell>
+                        <a
+                          href={post.postUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:underline truncate max-w-[100px] sm:max-w-[140px]"
+                        >
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{post.postUrl.replace(/^https?:\/\//, '').slice(0, 30)}</span>
+                        </a>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-right text-xs">{formatCompact(post.views ?? 0)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-right text-xs">{formatCompact(post.likes ?? 0)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-right text-xs">{formatCompact(post.comments ?? 0)}</TableCell>
+                      <TableCell className="text-right text-xs font-medium">{formatCompact(total)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

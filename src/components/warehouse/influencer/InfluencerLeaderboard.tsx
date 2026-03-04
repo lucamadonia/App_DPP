@@ -34,12 +34,12 @@ export function InfluencerLeaderboard({ influencers, className }: InfluencerLead
   if (influencers.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t('Top Influencers')}</CardTitle>
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="text-sm sm:text-base">{t('Top Influencers')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Trophy className="h-10 w-10 mb-2 opacity-40" />
+        <CardContent className="px-3 sm:px-6">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-muted-foreground">
+            <Trophy className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-40" />
             <p className="text-sm">{t('No influencers yet')}</p>
           </div>
         </CardContent>
@@ -49,10 +49,10 @@ export function InfluencerLeaderboard({ influencers, className }: InfluencerLead
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Top Influencers')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Top Influencers')}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="px-3 sm:px-6 space-y-2 sm:space-y-3">
         {influencers.slice(0, 5).map((inf, idx) => {
           const rank = idx + 1;
           const rankStyle = RANK_STYLES[rank] || 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
@@ -68,7 +68,7 @@ export function InfluencerLeaderboard({ influencers, className }: InfluencerLead
           return (
             <div
               key={inf.contactId}
-              className="flex items-center gap-3"
+              className="flex items-center gap-2 sm:gap-3"
             >
               {/* Rank badge */}
               <span
@@ -78,14 +78,14 @@ export function InfluencerLeaderboard({ influencers, className }: InfluencerLead
               </span>
 
               {/* Avatar */}
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-500 text-white text-xs font-medium">
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-500 text-white text-[10px] sm:text-xs font-medium">
                 {initials}
               </span>
 
               {/* Name + platform */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-sm truncate">{inf.contactName}</span>
+                  <span className="font-medium text-xs sm:text-sm truncate">{inf.contactName}</span>
                   {PlatformIcon && (
                     <PlatformIcon className={`h-3.5 w-3.5 shrink-0 ${platformCfg?.color || 'text-gray-500'}`} />
                   )}

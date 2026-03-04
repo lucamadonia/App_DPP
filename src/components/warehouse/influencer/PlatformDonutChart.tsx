@@ -27,12 +27,12 @@ export function PlatformDonutChart({ data, className }: PlatformDonutChartProps)
   if (data.length === 0 || total === 0) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t('Platform Distribution')}</CardTitle>
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="text-sm sm:text-base">{t('Platform Distribution')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <PieChart className="h-10 w-10 mb-2 opacity-40" />
+        <CardContent className="px-3 sm:px-6">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-muted-foreground">
+            <PieChart className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-40" />
             <p className="text-sm">{t('No data available')}</p>
           </div>
         </CardContent>
@@ -63,12 +63,12 @@ export function PlatformDonutChart({ data, className }: PlatformDonutChartProps)
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Platform Distribution')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Platform Distribution')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         <div className="flex flex-col items-center">
-          <svg viewBox="0 0 200 200" className="w-40 h-40">
+          <svg viewBox="0 0 200 200" className="w-32 h-32 sm:w-40 sm:h-40">
             {segments.map((seg) => (
               <circle
                 key={seg.platform}
@@ -105,12 +105,12 @@ export function PlatformDonutChart({ data, className }: PlatformDonutChartProps)
           </svg>
 
           {/* Legend */}
-          <div className="mt-4 space-y-1.5 w-full">
+          <div className="mt-3 sm:mt-4 space-y-1.5 w-full">
             {segments.map((seg) => {
               const cfg = SOCIAL_PLATFORM_CONFIG[seg.platform];
               const label = isDE ? cfg?.labelDe : cfg?.labelEn;
               return (
-                <div key={seg.platform} className="flex items-center justify-between text-sm">
+                <div key={seg.platform} className="flex items-center justify-between text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 rounded-full shrink-0"

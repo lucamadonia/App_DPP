@@ -3,7 +3,7 @@
  * Client-side wrapper for the dhl-shipping Edge Function
  */
 
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { supabase, getCurrentTenantId, supabaseAnon } from '@/lib/supabase';
 import type {
   DHLSettingsPublic,
   DHLLabelResponse,
@@ -15,7 +15,11 @@ async function callDHL(action: string, params?: Record<string, unknown>): Promis
   const { data, error } = await supabase.functions.invoke('dhl-shipping', {
     body: { action, params },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Try to extract the real error from the response context
+    const detail = typeof data === 'object' && data?.error ? data.error : error.message;
+    throw new Error(detail);
+  }
   if (data?.error) throw new Error(data.error);
   return data;
 }
@@ -100,5 +104,27 @@ export async function cancelDHLLabel(shipmentId: string): Promise<void> {
  */
 export async function getDHLTracking(trackingNumber: string): Promise<DHLTrackingEvent[]> {
   const data = await callDHL('get_tracking', { trackingNumber });
+  return data?.events || [];
+}
+
+/**
+ * Get DHL tracking events publicly (no auth required).
+ * Requires both trackingNumber and returnNumber for validation.
+ */
+export async function getPublicDHLTracking(
+  trackingNumber: string,
+  returnNumber: string
+): Promise<DHLTrackingEvent[]> {
+  const { data, error } = await supabaseAnon.functions.invoke('dhl-shipping', {
+    body: { action: 'get_public_tracking', params: { trackingNumber, returnNumber } },
+  });
+  if (error) {
+    console.warn('Public DHL tracking error:', error.message);
+    return [];
+  }
+  if (data?.error) {
+    console.warn('Public DHL tracking:', data.error);
+    return [];
+  }
   return data?.events || [];
 }

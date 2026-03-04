@@ -175,5 +175,14 @@
   "Account": "Account",
   "Other": "Other",
   "Unable to register. Please try again later.": "Unable to register. Please try again later.",
-  "No customer account found. Please register first.": "No customer account found. Please register first."
+  "No customer account found. Please register first.": "No customer account found. Please register first.",
+
+  "Shipment Tracking": "Shipment Tracking",
+  "Track on DHL": "Track on DHL",
+  "Last updated": "Last updated",
+  "In Transit": "In Transit",
+  "Delivered": "Delivered",
+  "Out for Delivery": "Out for Delivery",
+  "Tracking data unavailable": "Tracking data unavailable",
+  "Auto-refreshes every minute": "Auto-refreshes every minute"
 }

@@ -57,13 +57,13 @@ export function ContentPostsTable({ posts, shipmentId, campaignId, contactId, on
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">{t('Content Posts')}</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base">{t('Content Posts')}</CardTitle>
           <Button
             size="sm"
             onClick={() => { setEditing(null); setFormOpen(true); }}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-1.5 sm:mr-2 h-4 w-4" />
             {t('Add Content Post')}
           </Button>
         </CardHeader>
@@ -74,11 +74,11 @@ export function ContentPostsTable({ posts, shipmentId, campaignId, contactId, on
                 <TableRow>
                   <TableHead>{t('Primary Platform')}</TableHead>
                   <TableHead>{t('Post URL')}</TableHead>
-                  <TableHead>{t('Posted At')}</TableHead>
-                  <TableHead className="text-right">{t('Views')}</TableHead>
-                  <TableHead className="text-right">{t('Likes')}</TableHead>
-                  <TableHead className="text-right">{t('Comments')}</TableHead>
-                  <TableHead className="w-20" />
+                  <TableHead className="hidden md:table-cell">{t('Posted At')}</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">{t('Views')}</TableHead>
+                  <TableHead className="hidden lg:table-cell text-right">{t('Likes')}</TableHead>
+                  <TableHead className="hidden lg:table-cell text-right">{t('Comments')}</TableHead>
+                  <TableHead className="w-16 sm:w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -105,28 +105,28 @@ export function ContentPostsTable({ posts, shipmentId, campaignId, contactId, on
                             href={post.postUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline inline-flex items-center gap-1 text-sm max-w-[200px] truncate"
+                            className="text-primary hover:underline inline-flex items-center gap-1 text-xs sm:text-sm max-w-[120px] sm:max-w-[200px] truncate"
                           >
                             {post.postUrl.replace(/^https?:\/\//, '').slice(0, 40)}
                             <ExternalLink className="h-3 w-3 flex-shrink-0" />
                           </a>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                           {post.postedAt ? new Date(post.postedAt).toLocaleDateString() : '—'}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden sm:table-cell text-right">
                           <span className="inline-flex items-center gap-1 text-sm">
                             <Eye className="h-3 w-3 text-muted-foreground" />
                             {formatNumber(post.views)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden lg:table-cell text-right">
                           <span className="inline-flex items-center gap-1 text-sm">
                             <Heart className="h-3 w-3 text-pink-400" />
                             {formatNumber(post.likes)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden lg:table-cell text-right">
                           <span className="inline-flex items-center gap-1 text-sm">
                             <MessageCircle className="h-3 w-3 text-blue-400" />
                             {formatNumber(post.comments)}

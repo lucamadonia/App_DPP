@@ -101,7 +101,9 @@
   "Reason Subcategory": "Grund-Unterkategorie",
   "Additional Details": "Weitere Details",
   "Items": "Artikel",
+  "Item": "Artikel",
   "Add Item": "Artikel hinzuf\u00fcgen",
+  "Add": "Hinzuf\u00fcgen",
   "Remove Item": "Artikel entfernen",
   "Product": "Produkt",
   "SKU": "SKU",
@@ -1061,5 +1063,24 @@
 
   "Search product...": "Produkt suchen...",
   "No products found": "Keine Produkte gefunden",
-  "Or type custom name": "Oder eigenen Namen eingeben"
+  "Or type custom name": "Oder eigenen Namen eingeben",
+
+  "Shipment Tracking": "Sendungsverfolgung",
+  "Track on DHL": "Bei DHL verfolgen",
+  "Last updated": "Zuletzt aktualisiert",
+  "In Transit": "Unterwegs",
+  "Delivered": "Zugestellt",
+  "Out for Delivery": "In Zustellung",
+  "Tracking data unavailable": "Tracking-Daten nicht verfügbar",
+  "Auto-refreshes every minute": "Aktualisiert sich automatisch jede Minute",
+
+  "Embed Widget": "Einbettungs-Widget",
+  "Embed your returns portal on any website": "Betten Sie Ihr Retouren-Portal auf jeder Website ein",
+  "Widget Type": "Widget-Typ",
+  "Portal (Full)": "Portal (Komplett)",
+  "Registration Only": "Nur Registrierung",
+  "Tracking Only": "Nur Tracking",
+  "Embed Code": "Einbettungscode",
+  "Copy embed code": "Einbettungscode kopieren",
+  "Copied!": "Kopiert!"
 }

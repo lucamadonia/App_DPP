@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
+import { ShipmentTracker } from '@/components/returns/public/ShipmentTracker';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { getCustomerReturn, createCustomerTicket, customerCancelReturn } from '@/services/supabase/customer-portal';
 import { supabase } from '@/lib/supabase';
@@ -152,6 +153,15 @@ export function CustomerReturnDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Shipment Tracking */}
+      {returnData.trackingNumber && (
+        <ShipmentTracker
+          trackingNumber={returnData.trackingNumber}
+          returnNumber={returnData.returnNumber}
+          translationNamespace="customer-portal"
+        />
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Return Details */}
         <Card>
@@ -187,7 +197,14 @@ export function CustomerReturnDetailPage() {
               {returnData.trackingNumber && (
                 <>
                   <span className="text-muted-foreground">{t('Tracking')}</span>
-                  <span className="font-mono text-xs">{returnData.trackingNumber}</span>
+                  <a
+                    href={`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${returnData.trackingNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {returnData.trackingNumber}
+                  </a>
                 </>
               )}
               {returnData.refundAmount != null && (

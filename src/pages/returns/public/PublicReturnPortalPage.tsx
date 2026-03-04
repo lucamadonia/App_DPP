@@ -10,11 +10,13 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useReturnsPortal } from '@/hooks/useReturnsPortal';
+import { useEmbedMode } from '@/hooks/useEmbedMode';
 
 export function PublicReturnPortalPage() {
   const { t } = useTranslation('returns');
   const navigate = useNavigate();
   const { tenantSlug, tenantName, primaryColor } = useReturnsPortal();
+  const { isEmbed } = useEmbedMode();
 
   return (
     <div className="animate-fade-in-up">
@@ -37,7 +39,7 @@ export function PublicReturnPortalPage() {
       <section className="max-w-4xl mx-auto px-4 -mt-8 sm:-mt-12 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
-            onClick={() => navigate(`/returns/register/${tenantSlug}`)}
+            onClick={() => navigate(isEmbed ? `/embed/register/${tenantSlug}` : `/returns/register/${tenantSlug}`)}
           >
             <CardContent className="p-6 sm:p-8 text-center">
               <div
@@ -57,7 +59,7 @@ export function PublicReturnPortalPage() {
           </Card>
 
           <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
-            onClick={() => navigate('/returns/track')}
+            onClick={() => navigate(isEmbed ? `/embed/track/${tenantSlug}` : '/returns/track')}
           >
             <CardContent className="p-6 sm:p-8 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground mx-auto mb-4 group-hover:scale-110 transition-transform">

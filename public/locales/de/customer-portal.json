@@ -174,6 +174,15 @@
   "Return Issue": "Retourenproblem",
   "Account": "Konto",
   "Other": "Sonstiges",
-  "Unable to register. Please try again later.": "Registrierung derzeit nicht m\u00f6glich. Bitte versuchen Sie es sp\u00e4ter erneut.",
-  "No customer account found. Please register first.": "Kein Kundenkonto gefunden. Bitte registrieren Sie sich zuerst."
+  "Unable to register. Please try again later.": "Registrierung derzeit nicht möglich. Bitte versuchen Sie es später erneut.",
+  "No customer account found. Please register first.": "Kein Kundenkonto gefunden. Bitte registrieren Sie sich zuerst.",
+
+  "Shipment Tracking": "Sendungsverfolgung",
+  "Track on DHL": "Bei DHL verfolgen",
+  "Last updated": "Zuletzt aktualisiert",
+  "In Transit": "Unterwegs",
+  "Delivered": "Zugestellt",
+  "Out for Delivery": "In Zustellung",
+  "Tracking data unavailable": "Tracking-Daten nicht verfügbar",
+  "Auto-refreshes every minute": "Aktualisiert sich automatisch jede Minute"
 }

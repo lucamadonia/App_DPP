@@ -20,14 +20,14 @@ export function BudgetTrackingWidget({
   if (!budget) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             {t('Budget Progress')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{t('No budget set')}</p>
+        <CardContent className="px-3 sm:px-6">
+          <p className="text-xs sm:text-sm text-muted-foreground">{t('No budget set')}</p>
         </CardContent>
       </Card>
     );
@@ -46,25 +46,25 @@ export function BudgetTrackingWidget({
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           {t('Budget Progress')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="px-3 sm:px-6 space-y-2 sm:space-y-3">
         {/* Large numbers */}
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold">
+          <span className="text-xl sm:text-2xl font-bold">
             {sym}{budgetSpent.toLocaleString()}
           </span>
-          <span className="text-muted-foreground text-sm">
+          <span className="text-muted-foreground text-xs sm:text-sm">
             / {sym}{budget.toLocaleString()}
           </span>
         </div>
 
         {/* Progress bar */}
-        <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-2.5 sm:h-3 w-full overflow-hidden rounded-full bg-muted">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-700`}
             style={{ width: `${percent}%` }}

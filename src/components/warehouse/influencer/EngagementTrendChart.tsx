@@ -60,10 +60,10 @@ export function EngagementTrendChart({ className }: EngagementTrendChartProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Engagement Trend')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Engagement Trend')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full h-auto animate-fade-in"
@@ -96,7 +96,7 @@ export function EngagementTrendChart({ className }: EngagementTrendChartProps) {
         </svg>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
+        <div className="flex items-center justify-center gap-3 sm:gap-6 mt-2 sm:mt-3 text-[10px] sm:text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
             {t('Views')}

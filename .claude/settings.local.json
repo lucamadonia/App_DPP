@@ -52,7 +52,8 @@
       "Bash(del C:Userslucaprojectsapp_dppcount-keys.mjs)",
       "Bash(git update-index:*)",
       "Bash(git hash-object:*)",
-      "WebFetch(domain:deno.land)"
+      "WebFetch(domain:deno.land)",
+      "Bash(npx vite build)"
     ]
   }
 }

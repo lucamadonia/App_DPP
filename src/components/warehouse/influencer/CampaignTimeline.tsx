@@ -51,15 +51,15 @@ export function CampaignTimeline({ campaignId, className = '' }: CampaignTimelin
   if (loading) {
     return (
       <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <History className="h-4 w-4" />
+        <CardHeader className="px-3 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {t('Timeline')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="px-3 sm:px-6 space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-3">
+            <div key={i} className="flex gap-2 sm:gap-3">
               <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
               <div className="space-y-1 flex-1">
                 <Skeleton className="h-4 w-3/4" />
@@ -74,23 +74,23 @@ export function CampaignTimeline({ campaignId, className = '' }: CampaignTimelin
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <History className="h-4 w-4" />
+      <CardHeader className="px-3 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           {t('Timeline')}
           {events.length > 0 && (
             <Badge variant="secondary" className="ml-auto text-xs">{events.length}</Badge>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         {events.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <History className="h-10 w-10 text-muted-foreground/50" />
+          <div className="flex flex-col items-center gap-2 py-8 sm:py-12 text-center">
+            <History className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">{t('No timeline events')}</p>
           </div>
         ) : (
-          <div className="relative ml-4 border-l-2 border-muted pl-6 space-y-6">
+          <div className="relative ml-3 sm:ml-4 border-l-2 border-muted pl-4 sm:pl-6 space-y-4 sm:space-y-6">
             {events.map((event, i) => {
               const Icon = getEventIcon(event.eventType);
               const visible = staggered[i] ?? false;
@@ -103,13 +103,13 @@ export function CampaignTimeline({ campaignId, className = '' }: CampaignTimelin
                   }`}
                 >
                   {/* Circle on the timeline line */}
-                  <div className="absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full bg-background border-2 border-muted">
-                    <Icon className="h-3 w-3 text-muted-foreground" />
+                  <div className="absolute -left-[23px] sm:-left-[31px] flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-background border-2 border-muted">
+                    <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
                   </div>
 
                   {/* Content */}
                   <div className="space-y-1">
-                    <p className="text-sm">
+                    <p className="text-xs sm:text-sm">
                       {event.description || t(event.eventType)}
                     </p>
                     <div className="flex items-center gap-2">

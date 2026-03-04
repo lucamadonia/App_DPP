@@ -48,6 +48,9 @@ const PublicReturnPortalPage = lazy(() => import('@/pages/returns/public/PublicR
 const PublicReturnRegisterPage = lazy(() => import('@/pages/returns/public/PublicReturnRegisterPage').then(m => ({ default: m.PublicReturnRegisterPage })));
 const PublicReturnTrackingPage = lazy(() => import('@/pages/returns/public/PublicReturnTrackingPage').then(m => ({ default: m.PublicReturnTrackingPage })));
 
+// Embed Layout (iframe)
+const EmbedLayout = lazy(() => import('@/pages/returns/public/EmbedLayout').then(m => ({ default: m.EmbedLayout })));
+
 // Supplier Portal (public)
 const SupplierPortalLayout = lazy(() => import('@/pages/suppliers/public/SupplierPortalLayout').then(m => ({ default: m.SupplierPortalLayout })));
 const SupplierRegisterPage = lazy(() => import('@/pages/suppliers/public/SupplierRegisterPage').then(m => ({ default: m.SupplierRegisterPage })));
@@ -305,6 +308,13 @@ function NormalAppRoutes() {
 
         {/* Standalone tracking page (loads branding dynamically) */}
         <Route path="returns/track/:returnNumber?" element={<PublicReturnTrackingPage />} />
+
+        {/* Embed routes (for iframe embedding on external websites) */}
+        <Route element={<EmbedLayout />}>
+          <Route path="embed/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
+          <Route path="embed/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
+          <Route path="embed/track/:tenantSlug" element={<PublicReturnTrackingPage />} />
+        </Route>
 
         {/* Public Supplier Portal (no auth, invitation-based) */}
         <Route path="suppliers/register/:invitationCode" element={<SupplierPortalLayout />}>

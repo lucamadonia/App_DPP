@@ -211,14 +211,21 @@ export async function createGoodsReceipt(params: {
 
   const goodQty = params.quantity - (params.quantityDamaged || 0) - (params.quantityQuarantine || 0);
 
-  // Check if stock row exists
-  const { data: existing } = await supabase
+  // Check if stock row exists (match bin_location when provided for section-level tracking)
+  let existingQuery = supabase
     .from('wh_stock_levels')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('location_id', params.locationId)
-    .eq('batch_id', params.batchId)
-    .maybeSingle();
+    .eq('batch_id', params.batchId);
+
+  if (params.binLocation) {
+    existingQuery = existingQuery.eq('bin_location', params.binLocation);
+  } else {
+    existingQuery = existingQuery.is('bin_location', null);
+  }
+
+  const { data: existing } = await existingQuery.maybeSingle();
 
   let stockLevel: WhStockLevel;
   const quantityBefore = existing?.quantity_available || 0;
@@ -437,6 +444,146 @@ export async function createStockTransfer(params: {
       performed_by: userId,
     },
   ]);
+}
+
+// ============================================
+// MOVE STOCK BIN LOCATION (within same location)
+// ============================================
+
+export async function moveStockBinLocation(params: {
+  stockId: string;
+  newBinLocation: string;
+  quantity?: number;
+  notes?: string;
+}): Promise<void> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+
+  // Get source stock
+  const { data: source } = await supabase
+    .from('wh_stock_levels')
+    .select('*')
+    .eq('id', params.stockId)
+    .single();
+
+  if (!source) throw new Error('Stock not found');
+
+  const moveQty = params.quantity ?? source.quantity_available;
+  if (moveQty <= 0) throw new Error('Quantity must be positive');
+  if (moveQty > source.quantity_available) throw new Error('Insufficient stock');
+
+  const isPartial = moveQty < source.quantity_available;
+
+  // Check if target bin already has same batch at same location
+  const { data: existing } = await supabase
+    .from('wh_stock_levels')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('location_id', source.location_id)
+    .eq('batch_id', source.batch_id)
+    .eq('bin_location', params.newBinLocation)
+    .maybeSingle();
+
+  if (existing) {
+    // Merge into existing row
+    await supabase
+      .from('wh_stock_levels')
+      .update({ quantity_available: existing.quantity_available + moveQty })
+      .eq('id', existing.id);
+  } else {
+    // Create new row at target bin
+    await supabase.from('wh_stock_levels').insert({
+      tenant_id: tenantId,
+      location_id: source.location_id,
+      product_id: source.product_id,
+      batch_id: source.batch_id,
+      quantity_available: moveQty,
+      quantity_reserved: 0,
+      quantity_damaged: 0,
+      quantity_quarantine: 0,
+      bin_location: params.newBinLocation,
+      zone: source.zone,
+    });
+  }
+
+  // Decrement or delete source
+  if (isPartial) {
+    await supabase
+      .from('wh_stock_levels')
+      .update({ quantity_available: source.quantity_available - moveQty })
+      .eq('id', params.stockId);
+  } else {
+    await supabase
+      .from('wh_stock_levels')
+      .delete()
+      .eq('id', params.stockId);
+  }
+
+  // Log transaction
+  await supabase.from('wh_stock_transactions').insert({
+    tenant_id: tenantId,
+    transaction_number: generateTransactionNumber(),
+    type: 'adjustment' as StockTransactionType,
+    location_id: source.location_id,
+    product_id: source.product_id,
+    batch_id: source.batch_id,
+    quantity: moveQty,
+    quantity_before: source.quantity_available,
+    quantity_after: isPartial ? source.quantity_available - moveQty : 0,
+    reason: 'bin_move',
+    notes: params.notes || `Moved to ${params.newBinLocation}`,
+    performed_by: userId,
+  });
+}
+
+// ============================================
+// REMOVE STOCK FROM SECTION
+// ============================================
+
+export async function removeStockFromSection(params: {
+  stockId: string;
+  reason?: string;
+}): Promise<void> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+
+  const { data: stock } = await supabase
+    .from('wh_stock_levels')
+    .select('*')
+    .eq('id', params.stockId)
+    .single();
+
+  if (!stock) throw new Error('Stock not found');
+
+  const qtyBefore = stock.quantity_available;
+
+  // Delete the row
+  await supabase
+    .from('wh_stock_levels')
+    .delete()
+    .eq('id', params.stockId);
+
+  // Log transaction
+  await supabase.from('wh_stock_transactions').insert({
+    tenant_id: tenantId,
+    transaction_number: generateTransactionNumber(),
+    type: 'adjustment' as StockTransactionType,
+    location_id: stock.location_id,
+    product_id: stock.product_id,
+    batch_id: stock.batch_id,
+    quantity: -qtyBefore,
+    quantity_before: qtyBefore,
+    quantity_after: 0,
+    reason: params.reason || 'removed',
+    notes: 'Stock removed from section',
+    performed_by: userId,
+  });
 }
 
 // ============================================

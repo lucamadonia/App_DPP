@@ -72,13 +72,13 @@ export function CampaignInfluencerRoster({ campaignId, className = '' }: Campaig
   if (loading) {
     return (
       <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4" />
+        <CardHeader className="px-3 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {t('Influencer Roster')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="px-3 sm:px-6 space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full rounded" />
           ))}
@@ -89,9 +89,9 @@ export function CampaignInfluencerRoster({ campaignId, className = '' }: Campaig
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="h-4 w-4" />
+      <CardHeader className="px-3 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           {t('Influencer Roster')}
           {influencers.length > 0 && (
             <Badge variant="secondary" className="ml-auto text-xs">{influencers.length}</Badge>
@@ -100,8 +100,8 @@ export function CampaignInfluencerRoster({ campaignId, className = '' }: Campaig
       </CardHeader>
       <CardContent className="p-0">
         {influencers.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/50" />
+          <div className="flex flex-col items-center gap-2 py-8 sm:py-12 text-center">
+            <Users className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
             <p className="text-sm font-medium text-muted-foreground">{t('No influencers assigned')}</p>
             <p className="text-xs text-muted-foreground">{t('Add influencers to this campaign')}</p>
           </div>
@@ -111,10 +111,10 @@ export function CampaignInfluencerRoster({ campaignId, className = '' }: Campaig
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('Name')}</TableHead>
-                  <TableHead>{t('Platform')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('Platform')}</TableHead>
                   <TableHead>{t('Status')}</TableHead>
-                  <TableHead>{t('Compensation')}</TableHead>
-                  <TableHead className="text-right">{t('Content')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Compensation')}</TableHead>
+                  <TableHead className="hidden lg:table-cell text-right">{t('Content')}</TableHead>
                   <TableHead className="text-right">{t('Budget')}</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -140,7 +140,7 @@ export function CampaignInfluencerRoster({ campaignId, className = '' }: Campaig
                       </TableCell>
 
                       {/* Platform */}
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <div className="flex items-center gap-1.5">
                           <PlatformIcon className={`h-4 w-4 ${platformConfig?.color ?? ''}`} />
                           <span className="text-xs">{platformConfig?.labelEn ?? platform}</span>
@@ -155,12 +155,12 @@ export function CampaignInfluencerRoster({ campaignId, className = '' }: Campaig
                       </TableCell>
 
                       {/* Compensation */}
-                      <TableCell className="text-xs capitalize">
+                      <TableCell className="hidden md:table-cell text-xs capitalize">
                         {t(inf.compensationType.replace('_', ' '))}
                       </TableCell>
 
                       {/* Content delivered */}
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="hidden lg:table-cell text-right text-sm">
                         0
                       </TableCell>
 

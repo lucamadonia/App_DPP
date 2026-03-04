@@ -48,9 +48,9 @@ export function CampaignKanbanCard({ campaign, onStatusChange }: CampaignKanbanC
       className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer"
       onClick={() => navigate(`/warehouse/campaigns/${campaign.id}`)}
     >
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-2.5 sm:p-3 space-y-2">
         {/* Name */}
-        <p className="font-medium text-sm line-clamp-2">{campaign.name}</p>
+        <p className="font-medium text-xs sm:text-sm line-clamp-2">{campaign.name}</p>
 
         {/* Date range */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">

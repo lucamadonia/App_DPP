@@ -25,7 +25,7 @@ export function CampaignKanbanBoard({ campaigns, onStatusChange, className }: Ca
   };
 
   return (
-    <div className={`flex gap-4 overflow-x-auto pb-4 ${className || ''}`}>
+    <div className={`flex gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory ${className || ''}`}>
       {CAMPAIGN_KANBAN_COLUMNS.map((col) => {
         const columnCampaigns = campaigns.filter((c) => c.status === col.key);
         const budgetSum = formatBudgetSum(columnCampaigns);
@@ -33,12 +33,12 @@ export function CampaignKanbanBoard({ campaigns, onStatusChange, className }: Ca
         return (
           <div
             key={col.key}
-            className={`min-w-[260px] flex-1 rounded-lg bg-muted/30 border border-border/50 border-t-4 ${col.borderColor}`}
+            className={`min-w-[220px] sm:min-w-[260px] flex-1 rounded-lg bg-muted/30 border border-border/50 border-t-4 snap-start ${col.borderColor}`}
           >
             {/* Column header */}
-            <div className="p-3 pb-2">
+            <div className="p-2.5 sm:p-3 pb-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{t(col.labelEn)}</h3>
+                <h3 className="text-xs sm:text-sm font-semibold">{t(col.labelEn)}</h3>
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
                   {columnCampaigns.length}
                 </Badge>
@@ -49,7 +49,7 @@ export function CampaignKanbanBoard({ campaigns, onStatusChange, className }: Ca
             </div>
 
             {/* Cards area */}
-            <div className="space-y-3 p-2 min-h-[200px]">
+            <div className="space-y-2 sm:space-y-3 p-2 min-h-[150px] sm:min-h-[200px]">
               {columnCampaigns.map((campaign) => (
                 <CampaignKanbanCard
                   key={campaign.id}

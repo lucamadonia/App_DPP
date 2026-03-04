@@ -18,6 +18,7 @@ import {
 import { EmptyState } from '@/components/returns/EmptyState';
 import { PortalDesignTab } from '@/components/returns/PortalDesignTab';
 import { PortalSetupTab } from '@/components/returns/PortalSetupTab';
+import { EmbedSnippetCard } from '@/components/returns/EmbedSnippetCard';
 import { pageVariants, pageTransition, useReducedMotion } from '@/lib/motion';
 import {
   getReturnsHubSettings, updateReturnsHubSettings,
@@ -528,6 +529,7 @@ export function ReturnsSettingsPage() {
             saving={saving}
             onSave={handleSaveSettings}
           />
+          {tenantSlug && <EmbedSnippetCard tenantSlug={tenantSlug} />}
         </TabsContent>
       </Tabs>
 

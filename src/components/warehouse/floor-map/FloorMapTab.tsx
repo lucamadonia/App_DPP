@@ -22,9 +22,9 @@ import { FloorMapFurnitureDetail } from './FloorMapFurnitureDetail';
 import { FloorMapFurniturePalette } from './FloorMapFurniturePalette';
 import { FloorMapFurnitureContextMenu } from './FloorMapFurnitureContextMenu';
 import { FloorMapFurnitureTooltip } from './FloorMapFurnitureTooltip';
-import { autoLayoutZones, fitAllViewport, zoomToZoneInterior, searchStockInFurniture, clampFurnitureToZone } from './floor-map-utils';
+import { autoLayoutZones, fitAllViewport, zoomToZoneInterior, searchStockInFurniture, clampFurnitureToZone, findNonOverlappingPosition, screenToZoneGrid } from './floor-map-utils';
 import { useFloorMapInteraction } from './useFloorMapInteraction';
-import { GRID_CELL, CANVAS_HEIGHT_NORMAL, CANVAS_HEIGHT_FULLSCREEN, type FloorMapViewMode, type FloorMapLevel } from './floor-map-constants';
+import { CANVAS_HEIGHT_NORMAL, CANVAS_HEIGHT_FULLSCREEN, type FloorMapViewMode, type FloorMapLevel } from './floor-map-constants';
 import { FURNITURE_CATALOG } from './furniture-catalog';
 
 interface FloorMapTabProps {
@@ -32,9 +32,10 @@ interface FloorMapTabProps {
   stock: WhStockLevel[];
   loading?: boolean;
   onSaveZones: (zones: WarehouseZone[]) => Promise<void>;
+  onStockChanged?: () => void;
 }
 
-export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapTabProps) {
+export function FloorMapTab({ location, stock, loading, onSaveZones, onStockChanged }: FloorMapTabProps) {
   const { t } = useTranslation('warehouse');
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -252,9 +253,18 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
 
   const handleUpdateFurniture = useCallback((furnitureId: string, updates: Partial<ZoneFurniture>) => {
     updateInteriorZoneFurniture((prev) =>
-      prev.map((f) => (f.id === furnitureId ? { ...f, ...updates } : f)),
+      prev.map((f) => {
+        if (f.id !== furnitureId) return f;
+        const updated = { ...f, ...updates };
+        // Re-clamp position after size change
+        if (updates.size && zones[interiorZoneIdx]?.mapPosition) {
+          const zone = zones[interiorZoneIdx].mapPosition!;
+          updated.position = clampFurnitureToZone(updated.position, updated.size, zone);
+        }
+        return updated;
+      }),
     );
-  }, [updateInteriorZoneFurniture]);
+  }, [updateInteriorZoneFurniture, zones, interiorZoneIdx]);
 
   // === Palette drag-to-canvas drop ===
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
@@ -265,28 +275,26 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const { viewport } = interaction;
-    const svgX = (e.clientX - rect.left - viewport.x) / viewport.zoom;
-    const svgY = (e.clientY - rect.top - viewport.y) / viewport.zoom;
     const zone = zones[interiorZoneIdx];
     if (!zone?.mapPosition) return;
-    const zoneOriginX = zone.mapPosition.x * GRID_CELL;
-    const zoneOriginY = zone.mapPosition.y * GRID_CELL;
-    const gridX = Math.round((svgX - zoneOriginX) / GRID_CELL - entry.defaultSize.w / 2);
-    const gridY = Math.round((svgY - zoneOriginY) / GRID_CELL - entry.defaultSize.h / 2);
-    const clamped = clampFurnitureToZone(
-      { x: gridX, y: gridY },
-      entry.defaultSize,
-      { width: zone.mapPosition.width, height: zone.mapPosition.height },
+
+    const { gridX, gridY } = screenToZoneGrid(
+      e.clientX, e.clientY, rect, interaction.viewport,
+      { x: zone.mapPosition.x, y: zone.mapPosition.y },
     );
-    // Resolve catalog entry for label
+    const preferred = { x: gridX - Math.floor(entry.defaultSize.w / 2), y: gridY - Math.floor(entry.defaultSize.h / 2) };
+    const pos = findNonOverlappingPosition(
+      preferred, entry.defaultSize, zone.furniture ?? [],
+      zone.mapPosition.width, zone.mapPosition.height,
+    );
+
     const catalogEntry = FURNITURE_CATALOG[entry.type as keyof typeof FURNITURE_CATALOG];
     const isDE = document.documentElement.lang?.startsWith('de');
     const furniture: ZoneFurniture = {
       id: crypto.randomUUID(),
       type: entry.type as ZoneFurniture['type'],
       name: catalogEntry ? (isDE ? catalogEntry.labelDe : catalogEntry.labelEn) : entry.type,
-      position: clamped,
+      position: pos,
       size: { ...entry.defaultSize },
       rotation: 0,
       sections: (entry.defaultSections as ZoneFurniture['sections']).map((s) => ({ ...s })),
@@ -581,6 +589,10 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
             onAddFurniture={handleAddFurniture}
             zoneWidth={interiorZone?.mapPosition?.width ?? 10}
             zoneHeight={interiorZone?.mapPosition?.height ?? 10}
+            viewport={interaction.viewport}
+            containerRect={containerRef.current?.getBoundingClientRect() ?? null}
+            zonePosition={interiorZone?.mapPosition ? { x: interiorZone.mapPosition.x, y: interiorZone.mapPosition.y } : undefined}
+            existingFurniture={interiorZone?.furniture ?? []}
           />
         )}
 
@@ -643,6 +655,14 @@ export function FloorMapTab({ location, stock, loading, onSaveZones }: FloorMapT
           onClose={() => setDetailFurnitureId(null)}
           onUpdateFurniture={handleUpdateFurniture}
           onDeleteFurniture={handleDeleteFurniture}
+          locationId={location.id}
+          zoneName={interiorZone?.name ?? ''}
+          allFurniture={interiorZone?.furniture ?? []}
+          onStockChanged={onStockChanged}
+          zoneBounds={interiorZone?.mapPosition ? {
+            width: interiorZone.mapPosition.width,
+            height: interiorZone.mapPosition.height,
+          } : undefined}
         />
       )}
 

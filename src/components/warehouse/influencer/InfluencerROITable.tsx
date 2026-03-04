@@ -85,12 +85,12 @@ export function InfluencerROITable({ className }: InfluencerROITableProps) {
   if (!loading && ranked.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t('Influencer ROI')}</CardTitle>
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="text-sm sm:text-base">{t('Influencer ROI')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Users className="h-10 w-10 mb-2 opacity-40" />
+        <CardContent className="px-3 sm:px-6">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-muted-foreground">
+            <Users className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-40" />
             <p className="text-sm">{t('No data available')}</p>
           </div>
         </CardContent>
@@ -100,10 +100,10 @@ export function InfluencerROITable({ className }: InfluencerROITableProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Influencer ROI')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Influencer ROI')}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -111,37 +111,39 @@ export function InfluencerROITable({ className }: InfluencerROITableProps) {
             ))}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">#</TableHead>
-                <TableHead>{t('Name')}</TableHead>
-                <TableHead className="w-10">{t('Platform')}</TableHead>
-                <TableHead className="text-right">{t('Followers')}</TableHead>
-                <TableHead className="text-right">{t('Content')}</TableHead>
-                <TableHead className="text-right">{t('Total Views')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ranked.map((inf, idx) => {
-                const cfg = SOCIAL_PLATFORM_CONFIG[inf.platform as keyof typeof SOCIAL_PLATFORM_CONFIG];
-                const PIcon = cfg ? PLATFORM_ICONS[cfg.icon] || Globe : Globe;
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">#</TableHead>
+                  <TableHead>{t('Name')}</TableHead>
+                  <TableHead className="hidden sm:table-cell w-10">{t('Platform')}</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">{t('Followers')}</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">{t('Content')}</TableHead>
+                  <TableHead className="text-right">{t('Total Views')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ranked.map((inf, idx) => {
+                  const cfg = SOCIAL_PLATFORM_CONFIG[inf.platform as keyof typeof SOCIAL_PLATFORM_CONFIG];
+                  const PIcon = cfg ? PLATFORM_ICONS[cfg.icon] || Globe : Globe;
 
-                return (
-                  <TableRow key={inf.contactId}>
-                    <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
-                    <TableCell className="font-medium text-sm truncate max-w-[120px]">{inf.contactName}</TableCell>
-                    <TableCell>
-                      <PIcon className={`h-4 w-4 ${cfg?.color || 'text-gray-500'}`} />
-                    </TableCell>
-                    <TableCell className="text-right text-xs">{formatCompact(inf.followers)}</TableCell>
-                    <TableCell className="text-right text-xs">{inf.contentCount}</TableCell>
-                    <TableCell className="text-right text-xs font-medium">{formatCompact(inf.totalViews)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow key={inf.contactId}>
+                      <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[120px]">{inf.contactName}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <PIcon className={`h-4 w-4 ${cfg?.color || 'text-gray-500'}`} />
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-right text-xs">{formatCompact(inf.followers)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-right text-xs">{inf.contentCount}</TableCell>
+                      <TableCell className="text-right text-xs font-medium">{formatCompact(inf.totalViews)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

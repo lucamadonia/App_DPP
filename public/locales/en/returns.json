@@ -101,7 +101,9 @@
   "Reason Subcategory": "Reason Subcategory",
   "Additional Details": "Additional Details",
   "Items": "Items",
+  "Item": "Item",
   "Add Item": "Add Item",
+  "Add": "Add",
   "Remove Item": "Remove Item",
   "Product": "Product",
   "SKU": "SKU",
@@ -1061,5 +1063,24 @@
 
   "Search product...": "Search product...",
   "No products found": "No products found",
-  "Or type custom name": "Or type custom name"
+  "Or type custom name": "Or type custom name",
+
+  "Shipment Tracking": "Shipment Tracking",
+  "Track on DHL": "Track on DHL",
+  "Last updated": "Last updated",
+  "In Transit": "In Transit",
+  "Delivered": "Delivered",
+  "Out for Delivery": "Out for Delivery",
+  "Tracking data unavailable": "Tracking data unavailable",
+  "Auto-refreshes every minute": "Auto-refreshes every minute",
+
+  "Embed Widget": "Embed Widget",
+  "Embed your returns portal on any website": "Embed your returns portal on any website",
+  "Widget Type": "Widget Type",
+  "Portal (Full)": "Portal (Full)",
+  "Registration Only": "Registration Only",
+  "Tracking Only": "Tracking Only",
+  "Embed Code": "Embed Code",
+  "Copy embed code": "Copy embed code",
+  "Copied!": "Copied!"
 }

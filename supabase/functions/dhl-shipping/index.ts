@@ -26,17 +26,50 @@ function json(body: unknown, status = 200) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return json(null, 204);
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   try {
+    // --- Parse body first (before auth, so ping works) ---
+    const body = await req.json();
+    const { action, params } = body as { action: string; params?: Record<string, unknown> };
+
+    // --- Ping action (no auth needed, for debugging) ---
+    if (action === 'ping') {
+      return json({ pong: true, hasUrl: !!SUPABASE_URL, hasKey: !!SUPABASE_SERVICE_ROLE_KEY });
+    }
+
+    // --- Public tracking (no auth needed, validated by returnNumber + trackingNumber) ---
+    if (action === 'get_public_tracking') {
+      return await handlePublicTracking(params);
+    }
+
     // --- Auth ---
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'Missing authorization' }, 401);
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return json({ error: 'Server misconfigured: missing Supabase env vars' });
+    }
+
+    let supabase;
+    try {
+      supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    } catch (e) {
+      return json({ error: `createClient failed: ${e instanceof Error ? e.message : String(e)}` });
+    }
+
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !user) return json({ error: 'Invalid token' }, 401);
+    let user;
+    try {
+      const { data, error: authErr } = await supabase.auth.getUser(token);
+      if (authErr) return json({ error: `Auth error: ${authErr.message}` });
+      if (!data?.user) return json({ error: 'No user in token' });
+      user = data.user;
+    } catch (e) {
+      return json({ error: `getUser crashed: ${e instanceof Error ? e.message : String(e)}` });
+    }
 
     // --- Tenant ---
     const { data: profile } = await supabase
@@ -56,13 +89,10 @@ Deno.serve(async (req) => {
     const moduleIds = (activeMods || []).map((m: { module_id: string }) => m.module_id);
     const hasWarehousePro = moduleIds.includes('warehouse_professional') || moduleIds.includes('warehouse_business');
     if (!hasWarehousePro) {
-      return json({ error: 'Warehouse Professional or Business module required' }, 403);
+      return json({ error: 'Warehouse Professional or Business module required (modules: ' + moduleIds.join(',') + ')' });
     }
 
     // --- Dispatch ---
-    const body = await req.json();
-    const { action, params } = body as { action: string; params?: Record<string, unknown> };
-
     switch (action) {
       case 'save_credentials':
         return await handleSaveCredentials(supabase, tenantId, params);
@@ -79,7 +109,8 @@ Deno.serve(async (req) => {
     }
   } catch (err) {
     console.error('DHL shipping error:', err);
-    return json({ error: err instanceof Error ? err.message : 'Internal error' }, 500);
+    // Return 200 with error body so supabase-js passes through the error message
+    return json({ error: err instanceof Error ? err.message : 'Internal error' });
   }
 });
 
@@ -179,20 +210,15 @@ async function handleTestConnection(supabase: any, tenantId: string) {
       headers,
     });
 
-    // 200 or 401/403 tells us connection status
-    if (resp.ok || resp.status === 200) {
+    // 200 = OK, 400 = auth passed but missing params, 405 = method not allowed (auth passed)
+    // All these mean the API key + credentials are valid
+    if (resp.ok || resp.status === 200 || resp.status === 400 || resp.status === 405) {
       return json({ success: true });
     }
 
-    // DHL may return 401 for bad credentials
+    // DHL returns 401/403 for bad credentials
     if (resp.status === 401 || resp.status === 403) {
       return json({ success: false, error: 'Authentication failed — check credentials' });
-    }
-
-    // Other status — still connected but maybe not the right endpoint
-    // For sandbox, method not allowed is also acceptable (means auth passed)
-    if (resp.status === 405) {
-      return json({ success: true });
     }
 
     const text = await resp.text();
@@ -489,6 +515,80 @@ async function handleGetTracking(supabase: any, tenantId: string, params?: Recor
   } catch (err) {
     console.error('DHL tracking error:', err);
     return json({ events: [], error: err instanceof Error ? err.message : 'Tracking failed' });
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Action: get_public_tracking (no auth — validated by return+tracking match) */
+/* -------------------------------------------------------------------------- */
+
+async function handlePublicTracking(params?: Record<string, unknown>) {
+  const trackingNumber = params?.trackingNumber as string | undefined;
+  const returnNumber = params?.returnNumber as string | undefined;
+
+  if (!trackingNumber || !returnNumber) {
+    return json({ events: [], error: 'Missing trackingNumber or returnNumber' });
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return json({ events: [], error: 'Server misconfigured' });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  // Validate: return must exist with matching tracking number
+  const { data: returnRow, error: returnErr } = await supabase
+    .from('rh_returns')
+    .select('tenant_id')
+    .eq('return_number', returnNumber)
+    .eq('tracking_number', trackingNumber)
+    .single();
+
+  if (returnErr || !returnRow?.tenant_id) {
+    return json({ events: [], error: 'Return not found' });
+  }
+
+  // Load DHL settings from tenant
+  const settings = await getDHLSettings(supabase, returnRow.tenant_id);
+  if (!settings?.apiKey) {
+    return json({ events: [], error: 'Carrier not configured' });
+  }
+
+  // Call DHL Tracking API
+  try {
+    const trackingUrl = settings.sandbox
+      ? `https://api-sandbox.dhl.com/track/shipments?trackingNumber=${trackingNumber}`
+      : `https://api-eu.dhl.com/track/shipments?trackingNumber=${trackingNumber}`;
+
+    const resp = await fetch(trackingUrl, {
+      headers: { 'DHL-API-Key': settings.apiKey },
+    });
+
+    if (!resp.ok) {
+      if (resp.status === 404) return json({ events: [], carrier: 'DHL' });
+      return json({ events: [], error: `DHL tracking API error: ${resp.status}`, carrier: 'DHL' });
+    }
+
+    const data = await resp.json();
+    const shipments = data?.shipments || [];
+    if (shipments.length === 0) return json({ events: [], carrier: 'DHL' });
+
+    const events = (shipments[0]?.events || []).map((ev: {
+      timestamp?: string;
+      location?: { address?: { addressLocality?: string } };
+      description?: string;
+      statusCode?: string;
+    }) => ({
+      timestamp: ev.timestamp || '',
+      location: ev.location?.address?.addressLocality || undefined,
+      description: ev.description || '',
+      statusCode: ev.statusCode || undefined,
+    }));
+
+    return json({ events, carrier: 'DHL' });
+  } catch (err) {
+    console.error('Public DHL tracking error:', err);
+    return json({ events: [], error: err instanceof Error ? err.message : 'Tracking failed', carrier: 'DHL' });
   }
 }
 

@@ -12,6 +12,8 @@ import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
+import { ShipmentTracker } from '@/components/returns/public/ShipmentTracker';
+import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding, publicCancelReturn } from '@/services/supabase';
 import { supabaseAnon } from '@/lib/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
@@ -42,6 +44,7 @@ export function PublicReturnTrackingPage() {
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
   const [branding, setBranding] = useState<CustomerPortalBrandingOverrides | null>(null);
+  const { isEmbed } = useEmbedMode();
 
   // Auto-search if returnNumber is in URL
   useEffect(() => {
@@ -182,8 +185,8 @@ export function PublicReturnTrackingPage() {
   // Search form view
   if (!returnData && !loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        {renderHeader()}
+      <div className={`flex flex-col ${isEmbed ? '' : 'min-h-screen bg-gray-50'}`}>
+        {!isEmbed && renderHeader()}
         <div className="max-w-lg mx-auto px-4 py-12 animate-fade-in-up">
         <Card>
           <CardHeader className="text-center">
@@ -256,8 +259,8 @@ export function PublicReturnTrackingPage() {
   if (!returnData) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {renderHeader()}
+    <div className={`flex flex-col ${isEmbed ? '' : 'min-h-screen bg-gray-50'}`}>
+      {!isEmbed && renderHeader()}
       <main className="flex-1">
         <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-4 animate-fade-in-up">
       {/* Status Pipeline */}
@@ -298,7 +301,16 @@ export function PublicReturnTrackingPage() {
             {returnData.trackingNumber && (
               <div>
                 <span className="text-muted-foreground">{t('Tracking Number')}</span>
-                <p className="font-medium mt-1">{returnData.trackingNumber}</p>
+                <p className="font-medium mt-1">
+                  <a
+                    href={`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${returnData.trackingNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline font-mono text-xs"
+                  >
+                    {returnData.trackingNumber}
+                  </a>
+                </p>
               </div>
             )}
             {returnData.refundAmount != null && (
@@ -310,6 +322,14 @@ export function PublicReturnTrackingPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Shipment Tracking */}
+      {returnData.trackingNumber && (
+        <ShipmentTracker
+          trackingNumber={returnData.trackingNumber}
+          returnNumber={returnData.returnNumber}
+        />
+      )}
 
       {/* Items */}
       {items.length > 0 && (

@@ -5,40 +5,67 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ZoneFurniture } from '@/types/warehouse';
 import { FURNITURE_CATALOG, FURNITURE_CATEGORIES, type FurnitureCatalogEntry } from './furniture-catalog';
+import { findNonOverlappingPosition } from './floor-map-utils';
 
 interface FloorMapFurniturePaletteProps {
   onAddFurniture: (furniture: ZoneFurniture) => void;
   zoneWidth: number;
   zoneHeight: number;
+  viewport?: { x: number; y: number; zoom: number };
+  containerRect?: DOMRect | null;
+  zonePosition?: { x: number; y: number };
+  existingFurniture?: { position: { x: number; y: number }; size: { w: number; h: number } }[];
 }
 
 export function FloorMapFurniturePalette({
   onAddFurniture,
   zoneWidth,
   zoneHeight,
+  viewport,
+  containerRect,
+  zonePosition,
+  existingFurniture,
 }: FloorMapFurniturePaletteProps) {
   const { t, i18n } = useTranslation('warehouse');
   const [search, setSearch] = useState('');
   const isDE = i18n.language.startsWith('de');
 
   const createFurniture = useCallback((entry: FurnitureCatalogEntry) => {
-    // Place at a random position that fits within the zone
-    const maxX = Math.max(0, zoneWidth - entry.defaultSize.w);
-    const maxY = Math.max(0, zoneHeight - entry.defaultSize.h);
-    const x = Math.min(Math.floor(Math.random() * (maxX + 1)), maxX);
-    const y = Math.min(Math.floor(Math.random() * (maxY + 1)), maxY);
+    // Calculate viewport center in zone grid coordinates
+    let preferredX = Math.floor(zoneWidth / 2 - entry.defaultSize.w / 2);
+    let preferredY = Math.floor(zoneHeight / 2 - entry.defaultSize.h / 2);
+
+    if (viewport && containerRect && zonePosition) {
+      const GRID_CELL = 20;
+      const centerScreenX = containerRect.left + containerRect.width / 2;
+      const centerScreenY = containerRect.top + containerRect.height / 2;
+      const svgX = (centerScreenX - containerRect.left - viewport.x) / viewport.zoom;
+      const svgY = (centerScreenY - containerRect.top - viewport.y) / viewport.zoom;
+      const zoneOriginX = zonePosition.x * GRID_CELL;
+      const zoneOriginY = zonePosition.y * GRID_CELL;
+      preferredX = Math.round((svgX - zoneOriginX) / GRID_CELL - entry.defaultSize.w / 2);
+      preferredY = Math.round((svgY - zoneOriginY) / GRID_CELL - entry.defaultSize.h / 2);
+    }
+
+    const pos = findNonOverlappingPosition(
+      { x: preferredX, y: preferredY },
+      entry.defaultSize,
+      existingFurniture ?? [],
+      zoneWidth,
+      zoneHeight,
+    );
 
     const furniture: ZoneFurniture = {
       id: crypto.randomUUID(),
       type: entry.type,
       name: isDE ? entry.labelDe : entry.labelEn,
-      position: { x, y },
+      position: pos,
       size: { ...entry.defaultSize },
       rotation: 0,
       sections: entry.defaultSections.map((s) => ({ ...s })),
     };
     onAddFurniture(furniture);
-  }, [onAddFurniture, zoneWidth, zoneHeight, isDE]);
+  }, [onAddFurniture, zoneWidth, zoneHeight, isDE, viewport, containerRect, zonePosition, existingFurniture]);
 
   const filteredEntries = Object.values(FURNITURE_CATALOG).filter((entry) => {
     if (!search.trim()) return true;
@@ -58,7 +85,7 @@ export function FloorMapFurniturePalette({
 
   return (
     <div
-      className="w-full sm:w-[220px] shrink-0 rounded-xl border shadow-sm overflow-hidden"
+      className="w-full sm:w-[280px] shrink-0 rounded-xl border shadow-sm overflow-hidden"
       style={{
         background: 'rgba(255,255,255,0.9)',
         backdropFilter: 'blur(8px)',
@@ -113,6 +140,7 @@ function PaletteItem({
   isDE: boolean;
   onAdd: () => void;
 }) {
+  const { t } = useTranslation('warehouse');
   const label = isDE ? entry.labelDe : entry.labelEn;
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -127,26 +155,36 @@ function PaletteItem({
     e.dataTransfer.effectAllowed = 'copy';
   };
 
+  // Calculate proportional swatch dimensions (max 40px)
+  const maxDim = 40;
+  const scale = Math.min(maxDim / entry.defaultSize.w, maxDim / entry.defaultSize.h, 10);
+  const swatchW = Math.max(16, Math.round(entry.defaultSize.w * scale));
+  const swatchH = Math.max(16, Math.round(entry.defaultSize.h * scale));
+
   return (
     <button
       draggable
       onDragStart={handleDragStart}
-      className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/60 transition-colors group cursor-grab active:cursor-grabbing"
+      className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-muted/60 border border-transparent hover:border-muted-foreground/15 transition-all group cursor-grab active:cursor-grabbing"
       onClick={onAdd}
       title={`${label} (${entry.defaultSize.w}×${entry.defaultSize.h})`}
     >
       <div
-        className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+        className="rounded-md flex items-center justify-center shrink-0"
         style={{
+          width: `${Math.max(swatchW, 32)}px`,
+          height: `${Math.max(swatchH, 28)}px`,
           background: entry.color,
-          border: `1px solid ${entry.stroke}30`,
+          border: `1.5px solid ${entry.stroke}40`,
         }}
       >
         <div
-          className="h-4 w-4 rounded-sm"
+          className="rounded-sm"
           style={{
+            width: `${Math.round(swatchW * 0.6)}px`,
+            height: `${Math.round(swatchH * 0.55)}px`,
             background: entry.stroke,
-            opacity: 0.4,
+            opacity: 0.35,
           }}
         />
       </div>
@@ -155,7 +193,7 @@ function PaletteItem({
           {label}
         </div>
         <div className="text-[10px] text-muted-foreground">
-          {entry.defaultSize.w}×{entry.defaultSize.h} · {entry.defaultSections.length}s
+          {entry.defaultSize.w}×{entry.defaultSize.h} · {entry.defaultSections.length} {t('Sections').toLowerCase()}
         </div>
       </div>
     </button>

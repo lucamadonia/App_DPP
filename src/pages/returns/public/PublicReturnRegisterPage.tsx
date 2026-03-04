@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useReturnsPortal } from '@/hooks/useReturnsPortal';
+import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { sendReturnCreatedEvent } from '@/lib/embed-messaging';
 import { publicCreateReturn, publicUploadReturnPhoto } from '@/services/supabase';
 import type { DesiredSolution, ItemCondition } from '@/types/returns-hub';
 
@@ -103,6 +105,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 export function PublicReturnRegisterPage() {
   const { t } = useTranslation('returns');
   const { tenantSlug, reasons } = useReturnsPortal();
+  const { isEmbed } = useEmbedMode();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -148,6 +151,9 @@ export function PublicReturnRegisterPage() {
         }
       }
       setReturnNumber(result.returnNumber);
+      if (isEmbed) {
+        sendReturnCreatedEvent(result.returnNumber);
+      }
       setSubmitted(true);
     }
     setSubmitting(false);

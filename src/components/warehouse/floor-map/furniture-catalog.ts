@@ -15,6 +15,8 @@ export interface FurnitureCatalogEntry {
   icon: string; // Lucide icon name
   defaultSize: { w: number; h: number };
   defaultSections: FurnitureSection[];
+  /** Whether this furniture can hold stock/products */
+  isStorage: boolean;
   /** Base fill color for flat mode */
   color: string;
   /** Darker shade for 3D faces */
@@ -37,6 +39,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Regale',
     icon: 'LayoutGrid',
     defaultSize: { w: 3, h: 1 },
+    isStorage: true,
     defaultSections: [
       { id: 'A1', label: 'A1' },
       { id: 'A2', label: 'A2' },
@@ -57,6 +60,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Regale',
     icon: 'Container',
     defaultSize: { w: 4, h: 2 },
+    isStorage: true,
     defaultSections: [
       { id: 'L1', label: 'Level 1' },
       { id: 'L2', label: 'Level 2' },
@@ -76,6 +80,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Regale',
     icon: 'Layers',
     defaultSize: { w: 5, h: 2 },
+    isStorage: true,
     defaultSections: [
       { id: 'P1', label: 'Pallet 1' },
       { id: 'P2', label: 'Pallet 2' },
@@ -95,6 +100,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Regale',
     icon: 'DoorClosed',
     defaultSize: { w: 2, h: 1 },
+    isStorage: true,
     defaultSections: [
       { id: 'TOP', label: 'Top' },
       { id: 'MID', label: 'Middle' },
@@ -114,6 +120,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Regale',
     icon: 'Archive',
     defaultSize: { w: 2, h: 1 },
+    isStorage: true,
     defaultSections: [
       { id: 'D1', label: 'Drawer 1' },
       { id: 'D2', label: 'Drawer 2' },
@@ -135,6 +142,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Regale',
     icon: 'ArrowRightLeft',
     defaultSize: { w: 4, h: 1 },
+    isStorage: true,
     defaultSections: [
       { id: 'L1', label: 'Lane 1' },
       { id: 'L2', label: 'Lane 2' },
@@ -155,6 +163,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Arbeitsflächen',
     icon: 'Table2',
     defaultSize: { w: 3, h: 2 },
+    isStorage: false,
     defaultSections: [
       { id: 'SURFACE', label: 'Surface' },
     ],
@@ -172,6 +181,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Spezial',
     icon: 'Grid3x3',
     defaultSize: { w: 2, h: 2 },
+    isStorage: true,
     defaultSections: [
       { id: 'A1', label: 'A1' }, { id: 'A2', label: 'A2' },
       { id: 'A3', label: 'A3' }, { id: 'A4', label: 'A4' },
@@ -196,6 +206,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Spezial',
     icon: 'Snowflake',
     defaultSize: { w: 3, h: 1 },
+    isStorage: true,
     defaultSections: [
       { id: 'C1', label: 'Section 1' },
       { id: 'C2', label: 'Section 2' },
@@ -216,6 +227,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Bodenstellen',
     icon: 'Square',
     defaultSize: { w: 2, h: 2 },
+    isStorage: true,
     defaultSections: [
       { id: 'FLOOR', label: 'Floor' },
     ],
@@ -233,6 +245,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Bodenstellen',
     icon: 'Maximize2',
     defaultSize: { w: 4, h: 3 },
+    isStorage: false,
     defaultSections: [
       { id: 'AREA', label: 'Area' },
     ],
@@ -250,6 +263,7 @@ export const FURNITURE_CATALOG: Record<FurnitureType, FurnitureCatalogEntry> = {
     categoryLabelDe: 'Spezial',
     icon: 'MoveHorizontal',
     defaultSize: { w: 6, h: 1 },
+    isStorage: false,
     defaultSections: [],
     color: '#F0FDF4',
     colorDark: '#86EFAC',
@@ -278,4 +292,9 @@ export function getFurnitureCatalogEntry(type: FurnitureType): FurnitureCatalogE
 export function getFurnitureLabel(type: FurnitureType, locale: string): string {
   const entry = FURNITURE_CATALOG[type];
   return locale.startsWith('de') ? entry.labelDe : entry.labelEn;
+}
+
+/** Check if a furniture type can hold stock/products */
+export function isStorageFurniture(type: FurnitureType): boolean {
+  return FURNITURE_CATALOG[type].isStorage;
 }

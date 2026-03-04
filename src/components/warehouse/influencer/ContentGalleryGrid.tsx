@@ -52,11 +52,11 @@ export function ContentGalleryGrid({ campaignId, platformFilter, className }: Co
 
   if (loading) {
     return (
-      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${className ?? ''}`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 ${className ?? ''}`}>
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="rounded-lg border bg-card overflow-hidden">
-            <Skeleton className="h-40 w-full" />
-            <div className="p-3 space-y-2">
+            <Skeleton className="h-32 sm:h-40 w-full" />
+            <div className="p-2.5 sm:p-3 space-y-2">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-3 w-1/2" />
             </div>
@@ -68,15 +68,15 @@ export function ContentGalleryGrid({ campaignId, platformFilter, className }: Co
 
   if (filteredPosts.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center py-16 text-muted-foreground ${className ?? ''}`}>
-        <Image className="h-12 w-12 mb-3 opacity-40" />
+      <div className={`flex flex-col items-center justify-center py-10 sm:py-16 text-muted-foreground ${className ?? ''}`}>
+        <Image className="h-10 w-10 sm:h-12 sm:w-12 mb-3 opacity-40" />
         <p className="text-sm">{t('No content posts found')}</p>
       </div>
     );
   }
 
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${className ?? ''}`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 ${className ?? ''}`}>
       {filteredPosts.map((post, idx) => {
         const platformCfg = SOCIAL_PLATFORM_CONFIG[post.platform];
         const platformLabel = isDE ? platformCfg?.labelDe : platformCfg?.labelEn;
@@ -92,7 +92,7 @@ export function ContentGalleryGrid({ campaignId, platformFilter, className }: Co
             onClick={() => window.open(post.postUrl, '_blank', 'noopener')}
           >
             {/* Thumbnail placeholder */}
-            <div className={`relative h-40 bg-gradient-to-br ${gradient}`}>
+            <div className={`relative h-32 sm:h-40 bg-gradient-to-br ${gradient}`}>
               <Badge
                 variant="secondary"
                 className="absolute top-2 left-2 text-[10px]"
@@ -107,7 +107,7 @@ export function ContentGalleryGrid({ campaignId, platformFilter, className }: Co
             </div>
 
             {/* Stats */}
-            <div className="p-3 space-y-2">
+            <div className="p-2.5 sm:p-3 space-y-2">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Eye className="h-3.5 w-3.5" />

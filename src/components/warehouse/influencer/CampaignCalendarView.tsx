@@ -143,31 +143,31 @@ export function CampaignCalendarView({ campaigns, className }: CampaignCalendarV
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {t('Campaign Calendar')}
           </CardTitle>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevMonth}>
-              <ChevronLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={prevMonth}>
+              <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={goToToday}>
+            <Button variant="ghost" size="sm" className="text-[10px] sm:text-xs h-6 sm:h-7 px-1.5 sm:px-2 hidden sm:inline-flex" onClick={goToToday}>
               {t('Today')}
             </Button>
-            <span className="text-sm font-medium min-w-[120px] text-center">{monthLabel}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextMonth}>
-              <ChevronRight className="h-4 w-4" />
+            <span className="text-xs sm:text-sm font-medium min-w-[100px] sm:min-w-[120px] text-center">{monthLabel}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={nextMonth}>
+              <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6">
         {/* Day header */}
         <div className="grid grid-cols-7 mb-1">
           {dayNames.map((name) => (
-            <div key={name} className="text-xs text-muted-foreground text-center py-1">
+            <div key={name} className="text-[10px] sm:text-xs text-muted-foreground text-center py-0.5 sm:py-1">
               {name}
             </div>
           ))}
@@ -177,7 +177,7 @@ export function CampaignCalendarView({ campaigns, className }: CampaignCalendarV
         <div className="grid grid-cols-7">
           {calendarDays.map((day, idx) => {
             if (!day) {
-              return <div key={`blank-${idx}`} className="min-h-[80px] border border-transparent p-1" />;
+              return <div key={`blank-${idx}`} className="min-h-[48px] sm:min-h-[80px] border border-transparent p-0.5 sm:p-1" />;
             }
 
             const key = day.toISOString().slice(0, 10);
@@ -188,23 +188,23 @@ export function CampaignCalendarView({ campaigns, className }: CampaignCalendarV
             return (
               <div
                 key={key}
-                className={`min-h-[80px] border p-1 text-xs ${
+                className={`min-h-[48px] sm:min-h-[80px] border p-0.5 sm:p-1 text-[9px] sm:text-xs ${
                   isToday ? 'bg-primary/5 ring-1 ring-primary/20' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`${isToday ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
+                  <span className={`text-[10px] sm:text-xs ${isToday ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
                     {day.getDate()}
                   </span>
-                  {hasDeadline && <AlertTriangle className="h-3 w-3 text-red-500" />}
+                  {hasDeadline && <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500" />}
                 </div>
                 <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                  {entries.slice(0, 3).map(({ campaign, isStart, isEnd }) => {
+                  {entries.slice(0, 2).map(({ campaign, isStart, isEnd }) => {
                     const barColor = STATUS_BAR_COLORS[campaign.status] || 'bg-gray-400';
                     return (
                       <div
                         key={campaign.id}
-                        className={`text-[10px] px-1 truncate cursor-pointer text-white ${barColor} ${
+                        className={`text-[8px] sm:text-[10px] px-0.5 sm:px-1 truncate cursor-pointer text-white ${barColor} ${
                           isStart && isEnd ? 'rounded' : isStart ? 'rounded-l' : isEnd ? 'rounded-r' : ''
                         }`}
                         title={campaign.name}
@@ -214,9 +214,9 @@ export function CampaignCalendarView({ campaigns, className }: CampaignCalendarV
                       </div>
                     );
                   })}
-                  {entries.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground px-1">
-                      +{entries.length - 3}
+                  {entries.length > 2 && (
+                    <div className="text-[8px] sm:text-[10px] text-muted-foreground px-0.5 sm:px-1">
+                      +{entries.length - 2}
                     </div>
                   )}
                 </div>

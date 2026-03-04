@@ -20,15 +20,15 @@ export function FloorMapLegend({
 
   if (viewMode === 'heatmap') {
     return (
-      <div className="flex items-center gap-2 px-1">
-        <span className="text-xs text-muted-foreground shrink-0">{t('Low')}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2 px-1">
+        <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{t('Low')}</span>
         <div
-          className="h-2.5 flex-1 max-w-[200px] rounded-full"
+          className="h-2 sm:h-2.5 flex-1 max-w-[140px] sm:max-w-[200px] rounded-full"
           style={{
             background: `linear-gradient(90deg, ${HEATMAP_COLORS.join(', ')})`,
           }}
         />
-        <span className="text-xs text-muted-foreground shrink-0">{t('High')}</span>
+        <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{t('High')}</span>
       </div>
     );
   }
@@ -36,7 +36,7 @@ export function FloorMapLegend({
   if (visibleTypes.length === 0) return null;
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide px-1">
+    <div className="flex flex-wrap gap-1.5 sm:gap-3 overflow-x-auto pb-1 scrollbar-hide px-1">
       {visibleTypes.map((type) => {
         const colors = ZONE_FILL_COLORS[type];
         const cfg = ZONE_TYPE_CONFIG[type];
@@ -61,7 +61,7 @@ export function FloorMapLegend({
                 transform: isActive ? 'scale(1.15)' : 'scale(1)',
               }}
             />
-            <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
+            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-medium">
               {label}
             </span>
           </button>

@@ -90,22 +90,22 @@ export function FloorMapKPIBar({ zones, stock }: FloorMapKPIBarProps) {
   }
 
   return (
-    <div className={`grid grid-cols-2 ${hasFurniture ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2`}>
+    <div className={`grid grid-cols-2 ${hasFurniture ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-1.5 sm:gap-2`}>
       {kpis.map((kpi, i) => (
         <div
           key={kpi.label}
-          className="flex items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm px-3 py-2.5 shadow-sm transition-all duration-300"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl border bg-card/80 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2.5 shadow-sm transition-all duration-300"
           style={{
             opacity: stagger[i] ? 1 : 0,
             transform: stagger[i] ? 'translateY(0)' : 'translateY(8px)',
           }}
         >
-          <div className={`flex items-center justify-center h-9 w-9 rounded-lg ${kpi.bg} shrink-0`}>
-            <kpi.icon className={`h-4.5 w-4.5 ${kpi.color}`} />
+          <div className={`flex items-center justify-center h-7 w-7 sm:h-9 sm:w-9 rounded-lg ${kpi.bg} shrink-0`}>
+            <kpi.icon className={`h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 ${kpi.color}`} />
           </div>
           <div className="min-w-0">
-            <div className="text-xs text-muted-foreground truncate">{kpi.label}</div>
-            <div className="text-sm font-bold tabular-nums tracking-tight">{kpi.value}</div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{kpi.label}</div>
+            <div className="text-xs sm:text-sm font-bold tabular-nums tracking-tight">{kpi.value}</div>
           </div>
         </div>
       ))}

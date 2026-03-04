@@ -38,20 +38,20 @@ export function SampleStatusPipeline({ currentStatus, sampleType }: SampleStatus
         return (
           <div key={step.status} className="flex items-center flex-1 last:flex-none">
             {/* Node */}
-            <div className="flex flex-col items-center gap-1.5 relative">
+            <div className="flex flex-col items-center gap-1 sm:gap-1.5 relative">
               <div className={`
                 flex items-center justify-center rounded-full transition-all duration-500
                 ${isCurrent
-                  ? `h-10 w-10 ${step.color} bg-current/10 ring-2 ring-current/30 ring-offset-2 ring-offset-background shadow-lg`
+                  ? `h-8 w-8 sm:h-10 sm:w-10 ${step.color} bg-current/10 ring-2 ring-current/30 ring-offset-1 sm:ring-offset-2 ring-offset-background shadow-lg`
                   : isCompleted
-                    ? 'h-8 w-8 bg-green-100 text-green-600 dark:bg-green-900/40'
-                    : 'h-8 w-8 bg-muted text-muted-foreground'
+                    ? 'h-6 w-6 sm:h-8 sm:w-8 bg-green-100 text-green-600 dark:bg-green-900/40'
+                    : 'h-6 w-6 sm:h-8 sm:w-8 bg-muted text-muted-foreground'
                 }
               `}>
-                <Icon className={`${isCurrent ? 'h-5 w-5' : 'h-4 w-4'} ${isCurrent ? step.color : ''}`} />
+                <Icon className={`${isCurrent ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-3 w-3 sm:h-4 sm:w-4'} ${isCurrent ? step.color : ''}`} />
               </div>
-              <span className={`text-[10px] whitespace-nowrap text-center leading-tight max-w-[70px] ${
-                isCurrent ? 'font-semibold text-foreground' : isCompleted ? 'text-green-600' : 'text-muted-foreground'
+              <span className={`text-[9px] sm:text-[10px] whitespace-nowrap text-center leading-tight max-w-[50px] sm:max-w-[70px] hidden sm:block ${
+                isCurrent ? 'font-semibold text-foreground !block' : isCompleted ? 'text-green-600' : 'text-muted-foreground'
               }`}>
                 {t(step.status)}
               </span>
@@ -59,7 +59,7 @@ export function SampleStatusPipeline({ currentStatus, sampleType }: SampleStatus
 
             {/* Connector line */}
             {idx < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1.5 rounded-full transition-colors duration-500 ${
+              <div className={`flex-1 h-0.5 mx-0.5 sm:mx-1.5 rounded-full transition-colors duration-500 ${
                 isCompleted ? 'bg-green-400 dark:bg-green-600' : isPending ? 'bg-muted' : 'bg-gradient-to-r from-green-400 to-muted'
               }`} />
             )}

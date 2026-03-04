@@ -23,12 +23,12 @@ export function CampaignComparisonChart({ campaigns, className }: CampaignCompar
   if (withBudget.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t('Campaign Comparison')}</CardTitle>
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="text-sm sm:text-base">{t('Campaign Comparison')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
+        <CardContent className="px-3 sm:px-6">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-muted-foreground">
+            <BarChart3 className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-40" />
             <p className="text-sm">{t('No campaign data')}</p>
           </div>
         </CardContent>
@@ -40,24 +40,24 @@ export function CampaignComparisonChart({ campaigns, className }: CampaignCompar
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Campaign Comparison')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Campaign Comparison')}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="px-3 sm:px-6 space-y-2 sm:space-y-3">
         {withBudget.slice(0, 8).map((campaign) => {
           const budget = campaign.budget ?? 0;
           const widthPercent = maxBudget > 0 ? (budget / maxBudget) * 100 : 0;
 
           return (
             <div key={campaign.id} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="truncate font-medium max-w-[60%]">{campaign.name}</span>
                 <span className="text-muted-foreground text-xs shrink-0">
                   {campaign.currency === 'EUR' ? '\u20AC' : campaign.currency}{' '}
                   {budget.toLocaleString()}
                 </span>
               </div>
-              <div className="h-5 rounded bg-muted overflow-hidden">
+              <div className="h-4 sm:h-5 rounded bg-muted overflow-hidden">
                 <div
                   className="h-full rounded bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-700 ease-out"
                   style={{ width: animated ? `${widthPercent}%` : '0%' }}

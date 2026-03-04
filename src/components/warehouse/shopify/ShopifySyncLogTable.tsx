@@ -26,53 +26,53 @@ export function ShopifySyncLogTable({ logs }: Props) {
 
   if (logs.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
         {t('No sync logs yet')}
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>{t('Sync Type')}</TableHead>
-            <TableHead>{t('Direction')}</TableHead>
+            <TableHead className="hidden sm:table-cell">{t('Direction')}</TableHead>
             <TableHead>{t('Status')}</TableHead>
-            <TableHead className="text-center">{t('Total')}</TableHead>
-            <TableHead className="text-center">{t('Created')}</TableHead>
-            <TableHead className="text-center">{t('Updated')}</TableHead>
-            <TableHead className="text-center">{t('Skipped')}</TableHead>
-            <TableHead className="text-center">{t('Failed')}</TableHead>
-            <TableHead>{t('Trigger')}</TableHead>
+            <TableHead className="text-center hidden md:table-cell">{t('Total')}</TableHead>
+            <TableHead className="text-center hidden md:table-cell">{t('Created')}</TableHead>
+            <TableHead className="text-center hidden lg:table-cell">{t('Updated')}</TableHead>
+            <TableHead className="text-center hidden lg:table-cell">{t('Skipped')}</TableHead>
+            <TableHead className="text-center hidden md:table-cell">{t('Failed')}</TableHead>
+            <TableHead className="hidden lg:table-cell">{t('Trigger')}</TableHead>
             <TableHead>{t('Started')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {logs.map(log => (
             <TableRow key={log.id}>
-              <TableCell className="font-medium">{t(log.syncType)}</TableCell>
-              <TableCell>
+              <TableCell className="font-medium text-xs sm:text-sm">{t(log.syncType)}</TableCell>
+              <TableCell className="hidden sm:table-cell">
                 <Badge variant="outline" className="text-xs">{t(log.direction)}</Badge>
               </TableCell>
               <TableCell>
                 <StatusBadge status={log.status} />
               </TableCell>
-              <TableCell className="text-center">{log.totalCount}</TableCell>
-              <TableCell className="text-center">
+              <TableCell className="text-center hidden md:table-cell">{log.totalCount}</TableCell>
+              <TableCell className="text-center hidden md:table-cell">
                 {log.createdCount > 0 && <span className="text-green-600">{log.createdCount}</span>}
                 {log.createdCount === 0 && <span className="text-muted-foreground">0</span>}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="text-center hidden lg:table-cell">
                 {log.updatedCount > 0 && <span className="text-blue-600">{log.updatedCount}</span>}
                 {log.updatedCount === 0 && <span className="text-muted-foreground">0</span>}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="text-center hidden lg:table-cell">
                 {log.skippedCount > 0 && <span className="text-amber-600">{log.skippedCount}</span>}
                 {log.skippedCount === 0 && <span className="text-muted-foreground">0</span>}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="text-center hidden md:table-cell">
                 {log.failedCount > 0 ? (
                   <TooltipProvider>
                     <Tooltip>
@@ -99,10 +99,10 @@ export function ShopifySyncLogTable({ logs }: Props) {
                   <span className="text-muted-foreground">0</span>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <Badge variant="outline" className="text-xs">{t(log.triggerType)}</Badge>
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
+              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                 {new Date(log.startedAt).toLocaleString()}
               </TableCell>
             </TableRow>

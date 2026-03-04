@@ -38,8 +38,8 @@ export function DHLTrackingPanel({ trackingNumber }: DHLTrackingPanelProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3 flex-row items-center justify-between">
-        <CardTitle className="text-base flex items-center gap-2">
+      <CardHeader className="pb-3 flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+        <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Truck className="h-4 w-4 text-yellow-600" /> {t('DHL Tracking')}
         </CardTitle>
         <Button variant="ghost" size="sm" onClick={loadTracking} disabled={loading}>
@@ -61,11 +61,11 @@ export function DHLTrackingPanel({ trackingNumber }: DHLTrackingPanelProps) {
             {t('No tracking events')}
           </p>
         ) : (
-          <div className="relative pl-6 space-y-4">
-            <div className="absolute left-2.5 top-1 bottom-1 w-px bg-border" />
+          <div className="relative pl-5 sm:pl-6 space-y-3 sm:space-y-4">
+            <div className="absolute left-2 sm:left-2.5 top-1 bottom-1 w-px bg-border" />
             {events.map((event, idx) => (
               <div key={idx} className="relative flex gap-3">
-                <div className={`absolute -left-6 top-0 flex h-5 w-5 items-center justify-center rounded-full border ${
+                <div className={`absolute -left-5 sm:-left-6 top-0 flex h-5 w-5 items-center justify-center rounded-full border ${
                   idx === 0
                     ? 'bg-yellow-100 border-yellow-300 text-yellow-600 dark:bg-yellow-900/30 dark:border-yellow-700'
                     : 'bg-background border-border text-muted-foreground'
@@ -77,10 +77,10 @@ export function DHLTrackingPanel({ trackingNumber }: DHLTrackingPanelProps) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${idx === 0 ? 'font-medium' : ''}`}>
+                  <p className={`text-xs sm:text-sm ${idx === 0 ? 'font-medium' : ''}`}>
                     {event.description}
                   </p>
-                  <div className="flex items-center gap-3 mt-0.5">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-0.5">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {event.timestamp ? new Date(event.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''}

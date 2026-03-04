@@ -54,7 +54,7 @@ export function FloorMapZoneTooltip({
       }}
     >
       <div
-        className="rounded-xl shadow-xl px-4 py-3 text-sm min-w-[200px] border"
+        className="rounded-xl shadow-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm min-w-[170px] sm:min-w-[200px] max-w-[calc(100vw-32px)] border"
         style={{
           background: 'rgba(255,255,255,0.88)',
           backdropFilter: 'blur(16px) saturate(1.8)',
@@ -84,7 +84,7 @@ export function FloorMapZoneTooltip({
 
         <div className="flex items-start justify-between gap-3 mt-0.5">
           <div>
-            <div className="font-bold text-foreground">{zone.name}</div>
+            <div className="font-bold text-foreground text-xs sm:text-sm truncate">{zone.name}</div>
             <div className="text-xs text-muted-foreground font-mono">{zone.code}</div>
           </div>
           {zone.type && (

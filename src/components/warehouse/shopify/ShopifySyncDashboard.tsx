@@ -71,18 +71,18 @@ export function ShopifySyncDashboard({ logs, onRefresh }: Props) {
 
     return (
       <Card>
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">{label}</p>
-              <p className="text-xs text-muted-foreground">
+        <CardContent className="px-3 sm:px-6 pt-3 sm:pt-4 pb-3 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="space-y-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium">{label}</p>
+              <p className="text-xs text-muted-foreground truncate">
                 {t('Last Sync')}: {latest?.startedAt
                   ? new Date(latest.startedAt).toLocaleString()
                   : t('Never')
                 }
               </p>
               {latest && (
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
                   <StatusBadge status={latest.status} />
                   {latest.createdCount > 0 && (
                     <Badge variant="secondary" className="text-xs">{latest.createdCount} {t('Created')}</Badge>
@@ -96,6 +96,7 @@ export function ShopifySyncDashboard({ logs, onRefresh }: Props) {
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto shrink-0"
               onClick={() => handleSync(action)}
               disabled={running !== null}
             >
@@ -113,9 +114,9 @@ export function ShopifySyncDashboard({ logs, onRefresh }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Sync actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <SyncButton action="orders" label={t('Sync Orders')} icon={ArrowDownToLine} />
         <SyncButton action="inv_import" label={t('Sync Inventory (Import)')} icon={ArrowDownToLine} />
         <SyncButton action="inv_export" label={t('Sync Inventory (Export)')} icon={ArrowUpFromLine} />
@@ -124,18 +125,18 @@ export function ShopifySyncDashboard({ logs, onRefresh }: Props) {
 
       {/* Sync log table */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <CardTitle>{t('Sync Log')}</CardTitle>
-              <CardDescription>{t('No sync logs yet').replace('No sync logs yet. Run a sync to see the history.', '')}</CardDescription>
+              <CardTitle className="text-sm sm:text-base">{t('Sync Log')}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">{t('No sync logs yet').replace('No sync logs yet. Run a sync to see the history.', '')}</CardDescription>
             </div>
             <Button variant="ghost" size="icon" onClick={onRefresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           <ShopifySyncLogTable logs={logs} />
         </CardContent>
       </Card>

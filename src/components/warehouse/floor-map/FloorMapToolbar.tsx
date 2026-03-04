@@ -79,7 +79,7 @@ export function FloorMapToolbar({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 shadow-lg"
+      className="flex flex-wrap items-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-3 py-1.5 sm:py-2 shadow-lg"
       style={{
         background: 'rgba(255,255,255,0.8)',
         backdropFilter: 'blur(12px) saturate(1.5)',
@@ -91,7 +91,7 @@ export function FloorMapToolbar({
         {viewModes.map(({ key, icon: Icon, label }) => (
           <button
             key={key}
-            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1 rounded-md px-1.5 sm:px-2.5 py-1 text-xs font-medium transition-all ${
               viewMode === key
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -99,13 +99,13 @@ export function FloorMapToolbar({
             onClick={() => onViewModeChange(key)}
           >
             <Icon className="h-3 w-3" />
-            {label}
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
 
       {/* Zoom slider group */}
-      <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-2 py-0.5">
+      <div className="flex items-center gap-1 sm:gap-1.5 rounded-lg border bg-muted/40 px-1.5 sm:px-2 py-0.5">
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onZoomOut}>
           <ZoomOut className="h-3 w-3" />
         </Button>
@@ -114,13 +114,13 @@ export function FloorMapToolbar({
           min={MIN_ZOOM}
           max={MAX_ZOOM}
           step={0.05}
-          className="w-20"
+          className="w-14 sm:w-20"
           onValueChange={([v]) => onZoomChange(v)}
         />
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onZoomIn}>
           <ZoomIn className="h-3 w-3" />
         </Button>
-        <span className="text-[10px] tabular-nums min-w-[2.5rem] text-center text-muted-foreground font-medium">
+        <span className="text-[10px] tabular-nums min-w-[2.5rem] text-center text-muted-foreground font-medium hidden sm:inline">
           {Math.round(zoom * 100)}%
         </span>
       </div>
@@ -141,14 +141,14 @@ export function FloorMapToolbar({
       </Button>
 
       {/* Fit All */}
-      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onFitAll}>
+      <Button variant="ghost" size="sm" className="h-7 text-xs hidden sm:inline-flex" onClick={onFitAll}>
         {t('Fit All')}
       </Button>
 
       {isEditing && !isInterior && (
         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onAutoLayout}>
-          <LayoutGrid className="h-3 w-3 mr-1" />
-          {t('Auto Layout')}
+          <LayoutGrid className="h-3 w-3 sm:mr-1" />
+          <span className="hidden sm:inline">{t('Auto Layout')}</span>
         </Button>
       )}
 
@@ -160,8 +160,8 @@ export function FloorMapToolbar({
           className={`h-7 text-xs ${showEmpty ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
           onClick={onToggleShowEmpty}
         >
-          <EyeOff className="h-3 w-3 mr-1" />
-          {t('Show Empty Spots')}
+          <EyeOff className="h-3 w-3 sm:mr-1" />
+          <span className="hidden sm:inline">{t('Show Empty Spots')}</span>
         </Button>
       )}
 
@@ -172,7 +172,7 @@ export function FloorMapToolbar({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={isInterior ? t('Search products...') : t('Search zones...')}
-          className="h-7 w-36 text-xs pl-7 bg-transparent border-muted"
+          className="h-7 w-24 sm:w-36 text-xs pl-7 bg-transparent border-muted"
         />
       </div>
 
@@ -186,7 +186,7 @@ export function FloorMapToolbar({
       )}
 
       {hasUnplaced && !isEditing && !isInterior && (
-        <span className="text-xs text-amber-600 dark:text-amber-400 max-w-[200px] truncate">
+        <span className="text-xs text-amber-600 dark:text-amber-400 max-w-[140px] sm:max-w-[200px] truncate hidden sm:inline">
           {t('Some zones have no position. Switch to Edit mode to place them.')}
         </span>
       )}
@@ -198,9 +198,9 @@ export function FloorMapToolbar({
         onClick={onToggleEdit}
       >
         {isEditing ? (
-          <><Eye className="h-3 w-3 mr-1" />{t('View Mode')}</>
+          <><Eye className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">{t('View Mode')}</span></>
         ) : (
-          <><Pencil className="h-3 w-3 mr-1" />{t('Edit Layout')}</>
+          <><Pencil className="h-3 w-3 sm:mr-1" /><span className="hidden sm:inline">{t('Edit Layout')}</span></>
         )}
       </Button>
 
@@ -210,8 +210,8 @@ export function FloorMapToolbar({
           className="h-7 text-xs shadow-sm bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
           onClick={onSave}
         >
-          <Save className="h-3 w-3 mr-1" />
-          {t('Save Layout')}
+          <Save className="h-3 w-3 sm:mr-1" />
+          <span className="hidden sm:inline">{t('Save Layout')}</span>
         </Button>
       )}
     </div>

@@ -14,14 +14,14 @@ export function InfluencerFields({ form, onChange }: InfluencerFieldsProps) {
   const { t } = useTranslation('warehouse');
 
   return (
-    <div className="space-y-4 border-t pt-4">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="space-y-3 sm:space-y-4 border-t pt-3 sm:pt-4">
+      <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
         <div className="h-1.5 w-1.5 rounded-full bg-pink-500" />
-        <h4 className="text-sm font-semibold text-foreground">{t('Social Media Profiles')}</h4>
+        <h4 className="text-xs sm:text-sm font-semibold text-foreground">{t('Social Media Profiles')}</h4>
       </div>
 
       {/* Social handles */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <Instagram className="h-3.5 w-3.5 text-pink-500" />
@@ -69,7 +69,7 @@ export function InfluencerFields({ form, onChange }: InfluencerFieldsProps) {
       </div>
 
       {/* Platform, tier, niche */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
         <div className="space-y-2">
           <Label>{t('Primary Platform')}</Label>
           <Select
@@ -113,7 +113,7 @@ export function InfluencerFields({ form, onChange }: InfluencerFieldsProps) {
       </div>
 
       {/* Follower count & engagement rate */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>{t('Follower Count')}</Label>
           <Input

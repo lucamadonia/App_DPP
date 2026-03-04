@@ -360,6 +360,81 @@ export function clampFurnitureToZone(
 }
 
 /**
+ * Find a non-overlapping position for new furniture using spiral search.
+ * Starts at the preferred position and spirals outward.
+ */
+export function findNonOverlappingPosition(
+  preferred: { x: number; y: number },
+  size: { w: number; h: number },
+  existingFurniture: { position: { x: number; y: number }; size: { w: number; h: number } }[],
+  zoneW: number,
+  zoneH: number,
+): { x: number; y: number } {
+  const overlaps = (x: number, y: number) => {
+    for (const f of existingFurniture) {
+      if (
+        x < f.position.x + f.size.w &&
+        x + size.w > f.position.x &&
+        y < f.position.y + f.size.h &&
+        y + size.h > f.position.y
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const clamp = (x: number, y: number) => ({
+    x: Math.max(0, Math.min(x, zoneW - size.w)),
+    y: Math.max(0, Math.min(y, zoneH - size.h)),
+  });
+
+  // Try preferred position first
+  const p = clamp(preferred.x, preferred.y);
+  if (!overlaps(p.x, p.y)) return p;
+
+  // Spiral search outward
+  for (let radius = 1; radius < Math.max(zoneW, zoneH); radius++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (const dy of [-radius, radius]) {
+        const c = clamp(preferred.x + dx, preferred.y + dy);
+        if (!overlaps(c.x, c.y)) return c;
+      }
+    }
+    for (let dy = -radius + 1; dy < radius; dy++) {
+      for (const dx of [-radius, radius]) {
+        const c = clamp(preferred.x + dx, preferred.y + dy);
+        if (!overlaps(c.x, c.y)) return c;
+      }
+    }
+  }
+
+  // Fallback: return clamped preferred (will overlap, but we tried)
+  return p;
+}
+
+/**
+ * Convert screen pixel coordinates to zone-relative grid units.
+ * Used for palette drag-to-canvas drops and click placement.
+ */
+export function screenToZoneGrid(
+  clientX: number,
+  clientY: number,
+  svgRect: DOMRect,
+  viewport: { x: number; y: number; zoom: number },
+  zonePosition: { x: number; y: number },
+): { gridX: number; gridY: number } {
+  const svgX = (clientX - svgRect.left - viewport.x) / viewport.zoom;
+  const svgY = (clientY - svgRect.top - viewport.y) / viewport.zoom;
+  const zoneOriginX = zonePosition.x * GRID_CELL;
+  const zoneOriginY = zonePosition.y * GRID_CELL;
+  return {
+    gridX: Math.round((svgX - zoneOriginX) / GRID_CELL),
+    gridY: Math.round((svgY - zoneOriginY) / GRID_CELL),
+  };
+}
+
+/**
  * Search stock across all furniture in all zones by product name, GTIN, or batch number.
  * Returns matching furniture IDs with their zone indices.
  */

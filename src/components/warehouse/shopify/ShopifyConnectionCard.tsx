@@ -93,18 +93,18 @@ export function ShopifyConnectionCard({ settings, onRefresh }: Props) {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-start sm:items-center justify-between gap-2">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Plug className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Plug className="h-4 w-4 sm:h-5 sm:w-5" />
               {t('Connection')}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {t('Connect your Shopify store')}
             </CardDescription>
           </div>
-          <Badge variant={isConnected ? 'default' : 'secondary'} className={isConnected ? 'bg-green-500/10 text-green-600 border-green-200' : ''}>
+          <Badge variant={isConnected ? 'default' : 'secondary'} className={`shrink-0 ${isConnected ? 'bg-green-500/10 text-green-600 border-green-200' : ''}`}>
             {isConnected ? (
               <><CheckCircle2 className="mr-1 h-3 w-3" />{t('Connected')}</>
             ) : (
@@ -113,36 +113,36 @@ export function ShopifyConnectionCard({ settings, onRefresh }: Props) {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-3 sm:px-6 space-y-4">
         {isConnected ? (
           <>
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{t('Shop Domain')}</span>
-                <span className="text-sm font-medium">{settings?.shopDomain}</span>
+            <div className="rounded-lg border p-3 sm:p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs sm:text-sm text-muted-foreground">{t('Shop Domain')}</span>
+                <span className="text-xs sm:text-sm font-medium truncate">{settings?.shopDomain}</span>
               </div>
               {(settings?.shopName || testResult?.shopName) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('Shop Name')}</span>
-                  <span className="text-sm font-medium">{settings?.shopName || testResult?.shopName}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground">{t('Shop Name')}</span>
+                  <span className="text-xs sm:text-sm font-medium truncate">{settings?.shopName || testResult?.shopName}</span>
                 </div>
               )}
               {testResult?.plan && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('Shop Plan')}</span>
-                  <span className="text-sm font-medium">{testResult.plan}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground">{t('Shop Plan')}</span>
+                  <span className="text-xs sm:text-sm font-medium">{testResult.plan}</span>
                 </div>
               )}
               {settings?.connectedAt && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('Connected')}</span>
-                  <span className="text-sm font-medium">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground">{t('Connected')}</span>
+                  <span className="text-xs sm:text-sm font-medium">
                     {new Date(settings.connectedAt).toLocaleDateString()}
                   </span>
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button variant="outline" size="sm" onClick={handleTest} disabled={testing}>
                 {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('Test Connection')}

@@ -10,7 +10,7 @@ interface BlockInsertSidebarProps {
   onAddBlock: (blockType: EmailBlockType) => void;
 }
 
-const BLOCK_OPTIONS: Array<{ type: EmailBlockType; icon: typeof Type; label: string }> = [
+export const BLOCK_OPTIONS: Array<{ type: EmailBlockType; icon: typeof Type; label: string }> = [
   { type: 'image', icon: ImageIcon, label: 'Image' },
   { type: 'text', icon: Type, label: 'Text' },
   { type: 'button', icon: MousePointerClick, label: 'Button' },
@@ -22,8 +22,27 @@ const BLOCK_OPTIONS: Array<{ type: EmailBlockType; icon: typeof Type; label: str
   { type: 'social-links', icon: Share2, label: 'Social' },
 ];
 
-export function BlockInsertSidebar({ onDragStart, onAddBlock }: BlockInsertSidebarProps) {
+/** Reusable sidebar content — used in desktop sidebar and mobile sheet */
+export function BlockInsertSidebarContent({ onDragStart, onAddBlock, layout = 'vertical' }: BlockInsertSidebarProps & { layout?: 'vertical' | 'grid' }) {
   const { t } = useTranslation('returns');
+
+  if (layout === 'grid') {
+    return (
+      <div className="grid grid-cols-3 gap-2 p-3">
+        {BLOCK_OPTIONS.map((opt) => (
+          <button
+            key={opt.type}
+            type="button"
+            onClick={() => onAddBlock(opt.type)}
+            className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all border border-transparent hover:border-border"
+          >
+            <opt.icon className="h-5 w-5" />
+            <span className="text-xs font-medium leading-tight text-center">{t(opt.label)}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="py-2 px-1.5 space-y-1">
@@ -47,4 +66,8 @@ export function BlockInsertSidebar({ onDragStart, onAddBlock }: BlockInsertSideb
       ))}
     </div>
   );
+}
+
+export function BlockInsertSidebar({ onDragStart, onAddBlock }: BlockInsertSidebarProps) {
+  return <BlockInsertSidebarContent onDragStart={onDragStart} onAddBlock={onAddBlock} layout="vertical" />;
 }

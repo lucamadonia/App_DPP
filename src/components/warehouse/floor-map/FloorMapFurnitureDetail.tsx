@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, X } from 'lucide-react';
+import { Trash2, Plus, X, Pencil, ArrowRightLeft, PackageMinus, Check } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -13,9 +13,10 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import type { ZoneFurniture, WhStockLevel, FurnitureSection } from '@/types/warehouse';
-import { getFurnitureCatalogEntry } from './furniture-catalog';
+import { getFurnitureCatalogEntry, isStorageFurniture } from './furniture-catalog';
 import { getStockByFurniture, getStockBySection, getFurnitureFillRatio, getSectionFillRatio, getFillLevel } from './floor-map-utils';
 import { FURNITURE_FILL_STROKES } from './floor-map-constants';
+import { FloorMapQuickStockDialog, type QuickStockMode } from './FloorMapQuickStockDialog';
 
 interface FloorMapFurnitureDetailProps {
   furniture: ZoneFurniture | null;
@@ -24,6 +25,11 @@ interface FloorMapFurnitureDetailProps {
   onClose: () => void;
   onUpdateFurniture: (id: string, updates: Partial<ZoneFurniture>) => void;
   onDeleteFurniture: (id: string) => void;
+  locationId?: string;
+  zoneName?: string;
+  allFurniture?: ZoneFurniture[];
+  onStockChanged?: () => void;
+  zoneBounds?: { width: number; height: number };
 }
 
 export function FloorMapFurnitureDetail({
@@ -33,10 +39,31 @@ export function FloorMapFurnitureDetail({
   onClose,
   onUpdateFurniture,
   onDeleteFurniture,
+  locationId,
+  zoneName,
+  allFurniture,
+  onStockChanged,
+  zoneBounds,
 }: FloorMapFurnitureDetailProps) {
   const { t, i18n } = useTranslation('warehouse');
   const [editName, setEditName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+
+  // Inline section editing
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editSectionLabel, setEditSectionLabel] = useState('');
+  const [editSectionCapacity, setEditSectionCapacity] = useState('');
+
+  // New section inline form
+  const [addingSectionInline, setAddingSectionInline] = useState(false);
+  const [newSectionLabel, setNewSectionLabel] = useState('');
+  const [newSectionCapacity, setNewSectionCapacity] = useState('');
+
+  // Quick stock dialog
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockDialogMode, setStockDialogMode] = useState<QuickStockMode>('add');
+  const [stockDialogSectionId, setStockDialogSectionId] = useState<string | undefined>();
+  const [stockDialogItem, setStockDialogItem] = useState<WhStockLevel | undefined>();
 
   const catalog = furniture ? getFurnitureCatalogEntry(furniture.type) : null;
   const label = catalog
@@ -69,13 +96,59 @@ export function FloorMapFurnitureDetail({
     setIsEditingName(false);
   };
 
+  // Section inline editing handlers
+  const startEditSection = (section: FurnitureSection) => {
+    setEditingSectionId(section.id);
+    setEditSectionLabel(section.label);
+    setEditSectionCapacity(section.capacity != null ? String(section.capacity) : '');
+  };
+
+  const saveEditSection = () => {
+    if (!furniture || !editingSectionId) return;
+    const updatedSections = furniture.sections.map((s) => {
+      if (s.id !== editingSectionId) return s;
+      return {
+        ...s,
+        label: editSectionLabel.trim() || s.label,
+        capacity: editSectionCapacity ? parseInt(editSectionCapacity, 10) || undefined : undefined,
+      };
+    });
+    onUpdateFurniture(furniture.id, { sections: updatedSections });
+    setEditingSectionId(null);
+  };
+
+  const cancelEditSection = () => {
+    setEditingSectionId(null);
+  };
+
+  // Add section with custom label + capacity
   const handleAddSection = () => {
     if (!furniture) return;
-    const nextId = `S${furniture.sections.length + 1}`;
-    const newSection: FurnitureSection = { id: nextId, label: nextId };
+    if (!addingSectionInline) {
+      setAddingSectionInline(true);
+      setNewSectionLabel(`S${furniture.sections.length + 1}`);
+      setNewSectionCapacity('');
+      return;
+    }
+    const sectionLabel = newSectionLabel.trim() || `S${furniture.sections.length + 1}`;
+    const sectionId = sectionLabel.replace(/\s+/g, '_');
+    const newSection: FurnitureSection = {
+      id: sectionId,
+      label: sectionLabel,
+      capacity: newSectionCapacity ? parseInt(newSectionCapacity, 10) || undefined : undefined,
+    };
     onUpdateFurniture(furniture.id, {
       sections: [...furniture.sections, newSection],
     });
+    setAddingSectionInline(false);
+    setNewSectionLabel('');
+    setNewSectionCapacity('');
+  };
+
+  const cancelAddSection = () => {
+    setAddingSectionInline(false);
+    setNewSectionLabel('');
+    setNewSectionCapacity('');
   };
 
   const handleRemoveSection = (sectionId: string) => {
@@ -90,10 +163,18 @@ export function FloorMapFurnitureDetail({
     onUpdateFurniture(furniture.id, { notes });
   };
 
+  // Stock action openers
+  const openStockDialog = (mode: QuickStockMode, sectionId?: string, item?: WhStockLevel) => {
+    setStockDialogMode(mode);
+    setStockDialogSectionId(sectionId);
+    setStockDialogItem(item);
+    setStockDialogOpen(true);
+  };
+
   return (
     <Sheet open={!!furniture} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b">
+      <SheetContent side="right" className="w-full sm:w-[420px] sm:max-w-[420px] p-0">
+        <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
           <div className="flex items-center gap-3">
             {catalog && (
               <div
@@ -144,7 +225,7 @@ export function FloorMapFurnitureDetail({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-120px)]">
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
             {/* Capacity Ring */}
             <section className="flex flex-col items-center">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 self-start">
@@ -185,12 +266,25 @@ export function FloorMapFurnitureDetail({
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {t('Sections')} ({furniture?.sections.length ?? 0})
                 </h4>
-                {isEditing && (
-                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleAddSection}>
-                    <Plus className="h-3 w-3 mr-1" />
-                    {t('Add Section')}
-                  </Button>
-                )}
+                <div className="flex items-center gap-1">
+                  {locationId && furniture && isStorageFurniture(furniture.type) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => openStockDialog('add')}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {t('Add Stock')}
+                    </Button>
+                  )}
+                  {isEditing && (
+                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleAddSection}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      {t('Add Section')}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 {furniture?.sections.map((section) => {
@@ -199,6 +293,7 @@ export function FloorMapFurnitureDetail({
                   const sectionLevel = getFillLevel(sectionFill);
                   const sectionColor = FURNITURE_FILL_STROKES[sectionLevel];
                   const sectionPercent = Math.round(sectionFill * 100);
+                  const isEditingThis = editingSectionId === section.id;
 
                   return (
                     <div key={section.id} className="rounded-lg border p-2.5">
@@ -208,17 +303,62 @@ export function FloorMapFurnitureDetail({
                             className="h-2 w-2 rounded-full"
                             style={{ background: sectionColor }}
                           />
-                          <span className="text-xs font-semibold">{section.label}</span>
-                          <span className="text-[10px] text-muted-foreground font-mono">
-                            {section.id}
-                          </span>
+                          {isEditingThis ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                value={editSectionLabel}
+                                onChange={(e) => setEditSectionLabel(e.target.value)}
+                                className="h-6 text-xs w-16"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveEditSection();
+                                  if (e.key === 'Escape') cancelEditSection();
+                                }}
+                              />
+                              <Input
+                                value={editSectionCapacity}
+                                onChange={(e) => setEditSectionCapacity(e.target.value)}
+                                className="h-6 text-xs w-14"
+                                type="number"
+                                placeholder={t('Cap.')}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveEditSection();
+                                  if (e.key === 'Escape') cancelEditSection();
+                                }}
+                              />
+                              <button
+                                className="h-5 w-5 rounded hover:bg-primary/10 flex items-center justify-center text-primary"
+                                onClick={saveEditSection}
+                              >
+                                <Check className="h-3 w-3" />
+                              </button>
+                              <button
+                                className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center text-muted-foreground"
+                                onClick={cancelEditSection}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <span
+                                className={`text-xs font-semibold ${isEditing ? 'cursor-pointer hover:text-primary' : ''}`}
+                                onClick={() => { if (isEditing) startEditSection(section); }}
+                              >
+                                {section.label}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {section.id}
+                              </span>
+                            </>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs tabular-nums font-medium">
                             {sectionStock.totalUnits.toLocaleString()}
                             {section.capacity ? ` / ${section.capacity}` : ''}
                           </span>
-                          {isEditing && (
+                          {isEditing && !isEditingThis && (
                             <button
                               className="h-4 w-4 rounded hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive"
                               onClick={() => handleRemoveSection(section.id)}
@@ -228,7 +368,7 @@ export function FloorMapFurnitureDetail({
                           )}
                         </div>
                       </div>
-                      {section.capacity && (
+                      {section.capacity && !isEditingThis && (
                         <div className="h-1 rounded-full bg-muted overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all duration-500"
@@ -240,15 +380,40 @@ export function FloorMapFurnitureDetail({
                       {sectionStock.items.length > 0 && (
                         <div className="mt-1.5 space-y-0.5">
                           {sectionStock.items.map((item) => (
-                            <div key={item.id} className="flex justify-between text-[10px] text-muted-foreground">
-                              <span className="truncate max-w-[180px]">
+                            <div key={item.id} className="flex justify-between text-[10px] text-muted-foreground group/stock-item">
+                              <span className="truncate max-w-[120px] sm:max-w-[150px]">
                                 {item.productName ?? 'Unknown Product'}
                               </span>
-                              <span className="tabular-nums shrink-0 ml-2">
+                              <span className="flex items-center gap-1 tabular-nums shrink-0 ml-2">
                                 {item.quantityAvailable}
                                 {item.batchSerialNumber && (
-                                  <span className="text-muted-foreground/60 ml-1">
+                                  <span className="text-muted-foreground/60">
                                     #{item.batchSerialNumber}
+                                  </span>
+                                )}
+                                {locationId && (
+                                  <span className="hidden group-hover/stock-item:inline-flex items-center gap-0.5 ml-1">
+                                    <button
+                                      className="h-4 w-4 rounded hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
+                                      onClick={() => openStockDialog('adjust', section.id, item)}
+                                      title={t('Adjust Quantity')}
+                                    >
+                                      <Pencil className="h-2.5 w-2.5" />
+                                    </button>
+                                    <button
+                                      className="h-4 w-4 rounded hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
+                                      onClick={() => openStockDialog('move', section.id, item)}
+                                      title={t('Move Stock')}
+                                    >
+                                      <ArrowRightLeft className="h-2.5 w-2.5" />
+                                    </button>
+                                    <button
+                                      className="h-4 w-4 rounded hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive"
+                                      onClick={() => openStockDialog('remove', section.id, item)}
+                                      title={t('Remove Stock')}
+                                    >
+                                      <PackageMinus className="h-2.5 w-2.5" />
+                                    </button>
                                   </span>
                                 )}
                               </span>
@@ -258,12 +423,64 @@ export function FloorMapFurnitureDetail({
                       )}
                       {sectionStock.items.length === 0 && (
                         <div className="text-[10px] text-muted-foreground/50 mt-1">
-                          {t('No stock assigned')}
+                          {locationId ? (
+                            <button
+                              className="hover:text-primary transition-colors"
+                              onClick={() => openStockDialog('add', section.id)}
+                            >
+                              + {t('Add Stock')}
+                            </button>
+                          ) : (
+                            t('No stock assigned')
+                          )}
                         </div>
                       )}
                     </div>
                   );
                 })}
+
+                {/* No-storage hint */}
+                {furniture && !isStorageFurniture(furniture.type) && (
+                  <div className="rounded-lg border border-dashed border-muted-foreground/30 p-2.5 text-xs text-muted-foreground">
+                    {t('No storage — stock cannot be placed on this furniture type')}
+                  </div>
+                )}
+
+                {/* Inline add section form */}
+                {addingSectionInline && (
+                  <div className="rounded-lg border border-dashed border-primary/30 p-2.5 bg-primary/5">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newSectionLabel}
+                        onChange={(e) => setNewSectionLabel(e.target.value)}
+                        className="h-7 text-xs flex-1"
+                        placeholder={t('Label')}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddSection();
+                          if (e.key === 'Escape') cancelAddSection();
+                        }}
+                      />
+                      <Input
+                        value={newSectionCapacity}
+                        onChange={(e) => setNewSectionCapacity(e.target.value)}
+                        className="h-7 text-xs w-20"
+                        type="number"
+                        placeholder={t('Cap.')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddSection();
+                          if (e.key === 'Escape') cancelAddSection();
+                        }}
+                      />
+                      <Button size="sm" className="h-7 px-2" onClick={handleAddSection}>
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={cancelAddSection}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -277,11 +494,41 @@ export function FloorMapFurnitureDetail({
                   <span className="text-muted-foreground">{t('Type')}</span>
                   <span className="font-semibold">{label}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('Size')}</span>
-                  <span className="font-semibold tabular-nums">
-                    {furniture?.size.w} x {furniture?.size.h}
-                  </span>
+                  {isEditing && furniture ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground text-[10px]">{t('Width')}:</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={zoneBounds?.width ?? 50}
+                        value={furniture.size.w}
+                        onChange={(e) => {
+                          const w = Math.max(1, Math.min(zoneBounds?.width ?? 50, parseInt(e.target.value, 10) || 1));
+                          onUpdateFurniture(furniture.id, { size: { w, h: furniture.size.h } });
+                        }}
+                        className="h-6 w-12 text-xs text-center tabular-nums px-1"
+                      />
+                      <span className="text-muted-foreground mx-0.5">x</span>
+                      <span className="text-muted-foreground text-[10px]">{t('Height')}:</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={zoneBounds?.height ?? 50}
+                        value={furniture.size.h}
+                        onChange={(e) => {
+                          const h = Math.max(1, Math.min(zoneBounds?.height ?? 50, parseInt(e.target.value, 10) || 1));
+                          onUpdateFurniture(furniture.id, { size: { w: furniture.size.w, h } });
+                        }}
+                        className="h-6 w-12 text-xs text-center tabular-nums px-1"
+                      />
+                    </div>
+                  ) : (
+                    <span className="font-semibold tabular-nums">
+                      {furniture?.size.w} x {furniture?.size.h}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('Position')}</span>
@@ -344,6 +591,22 @@ export function FloorMapFurnitureDetail({
           </div>
         </ScrollArea>
       </SheetContent>
+
+      {/* Quick Stock Dialog */}
+      {furniture && locationId && (
+        <FloorMapQuickStockDialog
+          open={stockDialogOpen}
+          onClose={() => setStockDialogOpen(false)}
+          mode={stockDialogMode}
+          furniture={furniture}
+          sectionId={stockDialogSectionId}
+          stockItem={stockDialogItem}
+          locationId={locationId}
+          zoneName={zoneName ?? ''}
+          allFurniture={allFurniture ?? []}
+          onStockChanged={onStockChanged}
+        />
+      )}
     </Sheet>
   );
 }

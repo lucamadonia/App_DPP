@@ -85,77 +85,79 @@ export function ShopifyProductPicker({ products, existingMaps, onClose, onMapped
 
   return (
     <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[80vh] overflow-auto px-3 sm:px-6">
         <DialogHeader>
-          <DialogTitle>{t('Shopify Products')}</DialogTitle>
-          <DialogDescription>{t('Select product...')}</DialogDescription>
+          <DialogTitle className="text-sm sm:text-base">{t('Shopify Products')}</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">{t('Select product...')}</DialogDescription>
         </DialogHeader>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('Product')}</TableHead>
-              <TableHead>{t('Variant')}</TableHead>
-              <TableHead>{t('SKU')}</TableHead>
-              <TableHead>{t('Barcode')}</TableHead>
-              <TableHead>{t('Trackbliss Product')}</TableHead>
-              <TableHead className="w-24" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.flatMap(product =>
-              product.variants.map(variant => {
-                const isMapped = mappedVariantIds.has(variant.id);
-                return (
-                  <TableRow key={variant.id} className={isMapped ? 'opacity-50' : ''}>
-                    <TableCell className="font-medium">{product.title}</TableCell>
-                    <TableCell>{variant.title !== 'Default Title' ? variant.title : '—'}</TableCell>
-                    <TableCell className="text-xs font-mono">{variant.sku || '—'}</TableCell>
-                    <TableCell className="text-xs font-mono">{variant.barcode || '—'}</TableCell>
-                    <TableCell>
-                      {isMapped ? (
-                        <Badge variant="secondary"><Check className="mr-1 h-3 w-3" />{t('mapped')}</Badge>
-                      ) : (
-                        <Select
-                          value={selectedProductMap[variant.id] || ''}
-                          onValueChange={v => setSelectedProductMap(prev => ({ ...prev, [variant.id]: v }))}
-                        >
-                          <SelectTrigger className="w-48 h-8 text-xs">
-                            <SelectValue placeholder={t('Select product...')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {tbProducts.map(p => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name} {p.gtin ? `(${p.gtin})` : ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {!isMapped && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8"
-                          disabled={!selectedProductMap[variant.id] || creating === variant.id}
-                          onClick={() => handleMap(variant, product)}
-                        >
-                          {creating === variant.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto -mx-3 sm:-mx-6 px-3 sm:px-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('Product')}</TableHead>
+                <TableHead className="hidden md:table-cell">{t('Variant')}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t('SKU')}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t('Barcode')}</TableHead>
+                <TableHead>{t('Trackbliss Product')}</TableHead>
+                <TableHead className="w-12 sm:w-24" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.flatMap(product =>
+                product.variants.map(variant => {
+                  const isMapped = mappedVariantIds.has(variant.id);
+                  return (
+                    <TableRow key={variant.id} className={isMapped ? 'opacity-50' : ''}>
+                      <TableCell className="font-medium text-xs sm:text-sm">{product.title}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs sm:text-sm">{variant.title !== 'Default Title' ? variant.title : '—'}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs font-mono">{variant.sku || '—'}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs font-mono">{variant.barcode || '—'}</TableCell>
+                      <TableCell>
+                        {isMapped ? (
+                          <Badge variant="secondary"><Check className="mr-1 h-3 w-3" />{t('mapped')}</Badge>
+                        ) : (
+                          <Select
+                            value={selectedProductMap[variant.id] || ''}
+                            onValueChange={v => setSelectedProductMap(prev => ({ ...prev, [variant.id]: v }))}
+                          >
+                            <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
+                              <SelectValue placeholder={t('Select product...')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tbProducts.map(p => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name} {p.gtin ? `(${p.gtin})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {!isMapped && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8"
+                            disabled={!selectedProductMap[variant.id] || creating === variant.id}
+                            onClick={() => handleMap(variant, product)}
+                          >
+                            {creating === variant.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </DialogContent>
     </Dialog>
   );

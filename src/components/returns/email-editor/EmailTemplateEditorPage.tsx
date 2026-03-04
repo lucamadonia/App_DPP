@@ -16,7 +16,7 @@ import { getDefaultTemplate, getDefaultDesignConfig } from './emailTemplateDefau
 import { renderEmailHtml } from './emailHtmlRenderer';
 import { TemplateGallery } from './TemplateGallery';
 import { EditorToolbar } from './EditorToolbar';
-import { EditorLayout } from './EditorLayout';
+import { ResponsiveEditorLayout } from './EditorLayout';
 import { BlockInsertSidebar } from './BlockInsertSidebar';
 import { BlockInsertHandle } from './BlockInsertHandle';
 import { CanvasBlock } from './CanvasBlock';
@@ -83,6 +83,10 @@ export function EmailTemplateEditorPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<SettingsPanelTab>('preview');
   const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Mobile panel state
+  const [showMobileBlockSidebar, setShowMobileBlockSidebar] = useState(false);
+  const [showMobileRightPane, setShowMobileRightPane] = useState(false);
 
   // Change counter to trigger autosave
   const changeCounterRef = useRef(0);
@@ -411,14 +415,14 @@ export function EmailTemplateEditorPage() {
   // Gallery view (no template being edited)
   if (!editingTemplate) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/returns/settings')}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{t('Email Template Editor')}</h1>
-            <p className="text-sm text-muted-foreground">{t('Manage your email templates')}</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold truncate">{t('Email Template Editor')}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">{t('Manage your email templates')}</p>
           </div>
         </div>
         <TemplateGallery
@@ -434,7 +438,7 @@ export function EmailTemplateEditorPage() {
   const selectedBlock = selectedBlockIndex !== null ? blocks[selectedBlockIndex] : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -m-6 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-4rem)] -mx-2 sm:-m-6 overflow-hidden">
       {/* Glassmorphism toolbar */}
       <EditorToolbar
         templateName={editingTemplate.name || editingTemplate.eventType}
@@ -451,10 +455,19 @@ export function EmailTemplateEditorPage() {
         saveStatus={autosave.status}
         viewportMode={viewportMode}
         onViewportChange={setViewportMode}
+        showMobileToggles
+        onToggleBlockSidebar={() => setShowMobileBlockSidebar(true)}
+        onToggleRightPane={() => setShowMobileRightPane(true)}
       />
 
       {/* Split-pane layout */}
-      <EditorLayout
+      <ResponsiveEditorLayout
+        showMobileBlockSidebar={showMobileBlockSidebar}
+        onMobileBlockSidebarChange={setShowMobileBlockSidebar}
+        showMobileRightPane={showMobileRightPane}
+        onMobileRightPaneChange={setShowMobileRightPane}
+        onAddBlockMobile={(type) => handleAddBlock(type)}
+        onDragStartMobile={dragReorder.handleSidebarDragStart}
         sidebar={
           <BlockInsertSidebar
             onDragStart={dragReorder.handleSidebarDragStart}

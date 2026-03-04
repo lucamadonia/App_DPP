@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Undo2, Redo2, Save, Loader2, RotateCcw, Monitor, Smartphone } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Save, Loader2, RotateCcw, Monitor, Smartphone, Plus, PanelRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SaveStatusIndicator } from './SaveStatusIndicator';
 import type { SaveStatus } from './emailEditorTypes';
@@ -19,6 +19,12 @@ interface EditorToolbarProps {
   saveStatus: SaveStatus;
   viewportMode: 'desktop' | 'mobile';
   onViewportChange: (mode: 'desktop' | 'mobile') => void;
+  /** Mobile: toggle block sidebar sheet */
+  onToggleBlockSidebar?: () => void;
+  /** Mobile: toggle right pane sheet */
+  onToggleRightPane?: () => void;
+  /** Whether mobile panel toggles should be shown */
+  showMobileToggles?: boolean;
 }
 
 export function EditorToolbar({
@@ -36,11 +42,14 @@ export function EditorToolbar({
   saveStatus,
   viewportMode,
   onViewportChange,
+  onToggleBlockSidebar,
+  onToggleRightPane,
+  showMobileToggles = false,
 }: EditorToolbarProps) {
   const { t } = useTranslation('returns');
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-b border-white/20 shadow-sm shrink-0 z-10">
+    <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-b border-white/20 shadow-sm shrink-0 z-10">
       {/* Back button */}
       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onBack}>
         <ArrowLeft className="h-4 w-4" />
@@ -50,6 +59,20 @@ export function EditorToolbar({
       <div className="min-w-0 flex-1">
         <h2 className="text-sm font-semibold truncate">{t(templateName)}</h2>
       </div>
+
+      {/* Mobile: Block sidebar toggle */}
+      {showMobileToggles && (
+        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 lg:hidden" onClick={onToggleBlockSidebar} title="Add Block">
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      )}
+
+      {/* Mobile: Right pane toggle */}
+      {showMobileToggles && (
+        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 lg:hidden" onClick={onToggleRightPane} title="Settings & Preview">
+          <PanelRight className="h-3.5 w-3.5" />
+        </Button>
+      )}
 
       {/* Locale switch */}
       <div className="flex items-center gap-0.5 p-0.5 bg-muted rounded-md shrink-0">
@@ -71,8 +94,8 @@ export function EditorToolbar({
         </button>
       </div>
 
-      {/* Viewport toggle */}
-      <div className="flex items-center gap-0.5 p-0.5 bg-muted rounded-md shrink-0">
+      {/* Viewport toggle — hidden on mobile */}
+      <div className="hidden sm:flex items-center gap-0.5 p-0.5 bg-muted rounded-md shrink-0">
         <button
           onClick={() => onViewportChange('desktop')}
           className={`p-1 rounded transition-colors ${
@@ -91,8 +114,8 @@ export function EditorToolbar({
         </button>
       </div>
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-border shrink-0" />
+      {/* Divider — hidden on mobile */}
+      <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
 
       {/* Undo/Redo */}
       <div className="flex items-center gap-0.5 shrink-0">
@@ -104,19 +127,21 @@ export function EditorToolbar({
         </Button>
       </div>
 
-      {/* Save status */}
-      <SaveStatusIndicator status={saveStatus} />
+      {/* Save status — hidden on mobile */}
+      <div className="hidden sm:block">
+        <SaveStatusIndicator status={saveStatus} />
+      </div>
 
-      {/* Reset */}
-      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs shrink-0" onClick={onReset}>
+      {/* Reset — hidden on mobile, icon-only on tablet */}
+      <Button variant="ghost" size="sm" className="hidden sm:inline-flex h-7 gap-1 text-xs shrink-0" onClick={onReset}>
         <RotateCcw className="h-3 w-3" />
-        {t('Reset')}
+        <span className="hidden md:inline">{t('Reset')}</span>
       </Button>
 
       {/* Save button */}
       <Button size="sm" className="h-7 gap-1 text-xs shrink-0" onClick={onSave} disabled={saving}>
         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-        {t('Save')}
+        <span className="hidden sm:inline">{t('Save')}</span>
       </Button>
     </div>
   );

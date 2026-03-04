@@ -72,10 +72,10 @@ export function ContentPostForm({ open, onOpenChange, shipmentId, campaignId, co
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? t('Edit Content Post') : t('Add Content Post')}</DialogTitle>
+          <DialogTitle className="text-sm sm:text-base">{editing ? t('Edit Content Post') : t('Add Content Post')}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>{t('Primary Platform')}</Label>
               <Select
@@ -109,7 +109,7 @@ export function ContentPostForm({ open, onOpenChange, shipmentId, campaignId, co
               onChange={(e) => setForm({ ...form, postUrl: e.target.value })}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3">
             <div className="space-y-2">
               <Label>{t('Views')}</Label>
               <Input
@@ -158,7 +158,7 @@ export function ContentPostForm({ open, onOpenChange, shipmentId, campaignId, co
             />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Cancel', { ns: 'common' })}</Button>
           <Button onClick={handleSave} disabled={!form.postUrl || saving}>{t('Save', { ns: 'common' })}</Button>
         </DialogFooter>

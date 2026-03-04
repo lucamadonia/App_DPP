@@ -28,12 +28,12 @@ export function DeadlinesList({ deadlines, className }: DeadlinesListProps) {
   if (deadlines.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t('Upcoming Deadlines')}</CardTitle>
+        <CardHeader className="px-3 sm:px-6 pb-2">
+          <CardTitle className="text-sm sm:text-base">{t('Upcoming Deadlines')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <CalendarClock className="h-10 w-10 mb-2 opacity-40" />
+        <CardContent className="px-3 sm:px-6">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-muted-foreground">
+            <CalendarClock className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-40" />
             <p className="text-sm">{t('No upcoming deadlines')}</p>
           </div>
         </CardContent>
@@ -43,16 +43,16 @@ export function DeadlinesList({ deadlines, className }: DeadlinesListProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('Upcoming Deadlines')}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 pb-2">
+        <CardTitle className="text-sm sm:text-base">{t('Upcoming Deadlines')}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="max-h-80 overflow-y-auto space-y-3 pr-1">
+      <CardContent className="px-3 sm:px-6">
+        <div className="max-h-80 overflow-y-auto space-y-2.5 sm:space-y-3 pr-1">
           {deadlines.map((dl) => (
-            <div key={dl.id} className="flex items-center gap-3">
+            <div key={dl.id} className="flex items-center gap-2 sm:gap-3">
               <span className={`h-2 w-2 rounded-full shrink-0 ${urgencyColor(dl.daysRemaining)}`} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{t(dl.label)}</p>
+                <p className="text-xs sm:text-sm font-medium truncate">{t(dl.label)}</p>
                 {dl.campaignName && (
                   <p className="text-xs text-muted-foreground truncate">{dl.campaignName}</p>
                 )}

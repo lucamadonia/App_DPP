@@ -132,19 +132,20 @@ export function ShopifyLocationMappingTable({ maps, onRefresh }: Props) {
   const unmappedShopifyLocations = shopifyLocations.filter(l => !mappedShopifyLocIds.has(l.id));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={handleFetchLocations} disabled={fetching}>
           {fetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-          {t('Fetch Locations')}
+          <span className="hidden sm:inline">{t('Fetch Locations')}</span>
+          <span className="sm:hidden">{t('Fetch')}</span>
         </Button>
       </div>
 
       {/* Add new mapping */}
       {unmappedShopifyLocations.length > 0 && (
-        <div className="flex items-center gap-2 rounded-lg border p-3 bg-muted/30">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-lg border p-3 bg-muted/30">
           <Select value={selectedShopifyLoc} onValueChange={setSelectedShopifyLoc}>
-            <SelectTrigger className="w-48 h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
               <SelectValue placeholder={t('Shopify Location')} />
             </SelectTrigger>
             <SelectContent>
@@ -153,9 +154,9 @@ export function ShopifyLocationMappingTable({ maps, onRefresh }: Props) {
               ))}
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground">→</span>
+          <span className="text-muted-foreground hidden sm:inline text-center">→</span>
           <Select value={selectedWhLoc} onValueChange={setSelectedWhLoc}>
-            <SelectTrigger className="w-48 h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
               <SelectValue placeholder={t('Select warehouse...')} />
             </SelectTrigger>
             <SelectContent>
@@ -164,44 +165,44 @@ export function ShopifyLocationMappingTable({ maps, onRefresh }: Props) {
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" variant="outline" className="h-8" onClick={handleAdd} disabled={adding || !selectedShopifyLoc || !selectedWhLoc}>
+          <Button size="sm" variant="outline" className="h-8 w-full sm:w-auto" onClick={handleAdd} disabled={adding || !selectedShopifyLoc || !selectedWhLoc}>
             {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </Button>
         </div>
       )}
 
       {maps.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
           {t('No location mappings')}
         </div>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{t('Shopify Location')}</TableHead>
                 <TableHead>{t('Warehouse Location')}</TableHead>
-                <TableHead className="text-center">{t('Sync Inventory')}</TableHead>
-                <TableHead className="text-center">{t('Sync Orders')}</TableHead>
-                <TableHead className="text-center">{t('Primary')}</TableHead>
+                <TableHead className="text-center hidden sm:table-cell">{t('Sync Inventory')}</TableHead>
+                <TableHead className="text-center hidden sm:table-cell">{t('Sync Orders')}</TableHead>
+                <TableHead className="text-center hidden md:table-cell">{t('Primary')}</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {maps.map(map => (
                 <TableRow key={map.id}>
-                  <TableCell className="font-medium">{map.shopifyLocationName || `#${map.shopifyLocationId}`}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-xs sm:text-sm">{map.shopifyLocationName || `#${map.shopifyLocationId}`}</TableCell>
+                  <TableCell className="text-xs sm:text-sm">
                     {map.locationName || map.locationId}
                     {map.locationCode && <span className="text-xs text-muted-foreground ml-1">({map.locationCode})</span>}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center hidden sm:table-cell">
                     <Switch checked={map.syncInventory} onCheckedChange={v => handleToggle(map.id, 'syncInventory', v)} />
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center hidden sm:table-cell">
                     <Switch checked={map.syncOrders} onCheckedChange={v => handleToggle(map.id, 'syncOrders', v)} />
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center hidden md:table-cell">
                     {map.isPrimary ? (
                       <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
                         <Star className="mr-1 h-3 w-3 fill-current" />{t('Primary')}

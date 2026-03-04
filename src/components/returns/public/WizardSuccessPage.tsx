@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Copy, Mail, Package, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useEmbedMode } from '@/hooks/useEmbedMode';
 
 interface WizardSuccessPageProps {
   returnNumber: string;
@@ -13,6 +14,7 @@ interface WizardSuccessPageProps {
 export function WizardSuccessPage({ returnNumber, tenantSlug }: WizardSuccessPageProps) {
   const { t } = useTranslation('returns');
   const navigate = useNavigate();
+  const { isEmbed } = useEmbedMode();
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
@@ -104,14 +106,14 @@ export function WizardSuccessPage({ returnNumber, tenantSlug }: WizardSuccessPag
           <div className="space-y-2">
             <Button
               className="w-full"
-              onClick={() => navigate(`/returns/track/${returnNumber}`)}
+              onClick={() => navigate(isEmbed ? `/embed/track/${tenantSlug}` : `/returns/track/${returnNumber}`)}
             >
               {t('Track This Return')}
             </Button>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => navigate(`/returns/portal/${tenantSlug}`)}
+              onClick={() => navigate(isEmbed ? `/embed/portal/${tenantSlug}` : `/returns/portal/${tenantSlug}`)}
             >
               {t('Back to Portal')}
             </Button>

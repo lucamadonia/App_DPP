@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { FURNITURE_CATALOG } from '@/components/warehouse/floor-map/furniture-catalog';
+import { FURNITURE_CATALOG, isStorageFurniture } from '@/components/warehouse/floor-map/furniture-catalog';
 import type { WhLocation } from '@/types/warehouse';
 
 export interface ShelfPickerValue {
@@ -49,7 +49,7 @@ export function ShelfPicker({
 
   const zones = location.zones.filter((z) => (z.furniture?.length ?? 0) > 0 || (z.binLocations?.length ?? 0) > 0);
   const currentZone = zones.find((z) => z.name === selectedZone);
-  const furniture = currentZone?.furniture ?? [];
+  const furniture = (currentZone?.furniture ?? []).filter((f) => isStorageFurniture(f.type));
   const currentFurniture = furniture.find((f) => f.id === selectedFurnitureId);
   const sections = currentFurniture?.sections ?? [];
 
