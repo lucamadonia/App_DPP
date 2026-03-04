@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, CheckCircle2, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, CheckCircle2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +14,10 @@ import { sendTicketCreatedEvent } from '@/lib/embed-messaging';
 
 export function PublicSupportPage() {
   const { t } = useTranslation('returns');
+  const navigate = useNavigate();
   const { tenantSlug, tenantName, primaryColor } = useReturnsPortal();
   const { isEmbed } = useEmbedMode();
+  const portalPath = isEmbed ? `/embed/portal/${tenantSlug}` : `/returns/portal/${tenantSlug}`;
 
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -74,6 +77,17 @@ export function PublicSupportPage() {
 
   return (
     <div className="animate-fade-in-up">
+      {/* Back to Portal */}
+      <div className="max-w-2xl mx-auto px-4 pt-4">
+        <button
+          onClick={() => navigate(portalPath)}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t('Back to Overview')}
+        </button>
+      </div>
+
       {/* Hero Section */}
       <section
         className="py-12 sm:py-16"

@@ -1,6 +1,7 @@
 import { useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useReturnsPortal } from '@/hooks/useReturnsPortal';
@@ -104,6 +105,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 
 export function PublicReturnRegisterPage() {
   const { t } = useTranslation('returns');
+  const navigate = useNavigate();
   const { tenantSlug, reasons } = useReturnsPortal();
   const { isEmbed } = useEmbedMode();
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -236,8 +238,19 @@ export function PublicReturnRegisterPage() {
     }
   };
 
+  const portalPath = isEmbed ? `/embed/portal/${tenantSlug}` : `/returns/portal/${tenantSlug}`;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+      {/* Back to Portal */}
+      <button
+        onClick={() => navigate(portalPath)}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t('Back to Overview')}
+      </button>
+
       {/* Step Indicator */}
       <div className="mb-6 sm:mb-8">
         <WizardStepIndicator
