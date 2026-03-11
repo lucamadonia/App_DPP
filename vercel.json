@@ -3,11 +3,12 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/v1/public/*.ts": {
+      "runtime": "@vercel/node@3"
+    }
+  },
   "rewrites": [
-    {
-      "source": "/api/v1/public/:path*",
-      "destination": "/api/v1/public/:path*"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
