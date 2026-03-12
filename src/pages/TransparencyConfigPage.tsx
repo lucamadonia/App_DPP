@@ -7,6 +7,9 @@ import {
   Package,
   Loader2,
   Globe,
+  Copy,
+  ExternalLink,
+  Code,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { getProducts, type ProductListItem } from '@/services/supabase/products';
 import { getTransparencyConfig, saveTransparencyConfig } from '@/services/supabase/transparency';
+import { getCurrentTenant } from '@/services/supabase/tenants';
 import type { TransparencyPageConfig, TransparencyProductEntry } from '@/types/transparency';
 
 interface MergedProduct {
@@ -40,15 +44,19 @@ export function TransparencyConfigPage() {
   const [pageDescription, setPageDescription] = useState('');
   const [heroImageUrl, setHeroImageUrl] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
     async function load() {
       try {
-        const [products, cfg] = await Promise.all([
+        const [products, cfg, tenant] = await Promise.all([
           getProducts(),
           getTransparencyConfig(),
+          getCurrentTenant(),
         ]);
+
+        if (tenant?.slug) setTenantSlug(tenant.slug);
 
         setAllProducts(products);
         setConfig(cfg);
@@ -337,6 +345,99 @@ export function TransparencyConfigPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Share & Embed */}
+      {tenantSlug && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              Share & Embed
+            </CardTitle>
+            <CardDescription>
+              Preview your transparency page or embed it on your website.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Public URL */}
+            <div className="space-y-2">
+              <Label>Public URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/transparency/${tenantSlug}`}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/transparency/${tenantSlug}`);
+                    toast.success('URL copied');
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  asChild
+                >
+                  <a href={`/transparency/${tenantSlug}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            {/* Embed Code */}
+            <div className="space-y-2">
+              <Label>Embed Code</Label>
+              <div className="relative">
+                <pre className="rounded-lg border bg-muted/30 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all text-muted-foreground">
+                  {`<iframe\n  src="${window.location.origin}/embed/transparency/${tenantSlug}?lang=de"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none; border-radius:12px;"\n></iframe>`}
+                </pre>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `<iframe src="${window.location.origin}/embed/transparency/${tenantSlug}?lang=de" width="100%" height="800" frameborder="0" style="border:none; border-radius:12px;"></iframe>`
+                    );
+                    toast.success('Embed code copied');
+                  }}
+                >
+                  <Copy className="mr-1 h-3 w-3" />
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            {/* API Endpoint */}
+            <div className="space-y-2">
+              <Label>API Endpoint (JSON)</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/api/v1/public/products?tenant=${tenantSlug}`}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/api/v1/public/products?tenant=${tenantSlug}`);
+                    toast.success('API URL copied');
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

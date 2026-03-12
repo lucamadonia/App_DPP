@@ -41,6 +41,7 @@ const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m 
 const PublicLayout = lazy(() => import('@/pages/public/PublicLayout').then(m => ({ default: m.PublicLayout })));
 const PublicCustomerPage = lazy(() => import('@/pages/public/PublicCustomerPage').then(m => ({ default: m.PublicCustomerPage })));
 const PublicCustomsPage = lazy(() => import('@/pages/public/PublicCustomsPage').then(m => ({ default: m.PublicCustomsPage })));
+const TransparencyPage = lazy(() => import('@/pages/public/TransparencyPage').then(m => ({ default: m.TransparencyPage })));
 
 // Returns Portal (public)
 const ReturnsPortalLayout = lazy(() => import('@/pages/returns/public/ReturnsPortalLayout').then(m => ({ default: m.ReturnsPortalLayout })));
@@ -302,6 +303,9 @@ function NormalAppRoutes() {
           <Route path="01/:gtin/21/:serial/customs" element={<PublicCustomsPage />} />
         </Route>
 
+        {/* Public Transparency Page (no auth, standalone) */}
+        <Route path="transparency/:tenantSlug" element={<TransparencyPage />} />
+
         {/* Public Returns Portal (no auth, shared layout) */}
         <Route element={<ReturnsPortalLayout />}>
           <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
@@ -318,6 +322,7 @@ function NormalAppRoutes() {
           <Route path="embed/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
           <Route path="embed/track/:tenantSlug" element={<PublicReturnTrackingPage />} />
           <Route path="embed/support/:tenantSlug" element={<PublicSupportPage />} />
+          <Route path="embed/transparency/:tenantSlug" element={<TransparencyPage />} />
         </Route>
 
         {/* Public Supplier Portal (no auth, invitation-based) */}

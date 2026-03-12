@@ -9,24 +9,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 /**
  * GET /api/v1/public/products?tenant=<slug>
  *
- * Returns products configured for the public transparency page.
- * Respects transparency_page_config for filtering and ordering.
- * Falls back to all published products if no config exists.
- *
- * Response:
- * {
- *   "page": { "title": null, "description": null, "heroImage": null },
- *   "products": [
- *     {
- *       "slug": "magnetuhr",
- *       "name": "Magnetuhr",
- *       "image": "https://...",
- *       "dppUrl": "https://dpp-app.fambliss.eu/p/<gtin>/<serial>",
- *       "dimensions": "Ø 30 cm",
- *       "categories": ["materials", "certificates"]
- *     }
- *   ]
- * }
+ * Returns products configured for the public transparency page,
+ * including full DPP consumer data and per-batch details with overrides.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -49,10 +33,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 1. Resolve tenant by slug
+    // 1. Resolve tenant by slug (include branding info)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('id')
+      .select('id, name, settings')
       .eq('slug', tenantSlug)
       .single();
 
@@ -80,17 +64,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
     const hasConfig = configProducts.length > 0;
 
-    // 3. Get products for this tenant
+    // 3. Get products for this tenant (full DPP consumer data)
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
         id,
         name,
+        description,
+        manufacturer,
         gtin,
         serial_number,
         category,
         image_url,
         status,
+        country_of_origin,
         materials,
         certifications,
         carbon_footprint,
@@ -98,7 +85,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         product_height_cm,
         product_width_cm,
         product_depth_cm,
-        packaging_type
+        packaging_type,
+        packaging_description,
+        recycled_content_percentage,
+        durability_years,
+        repairability_score,
+        energy_consumption_kwh,
+        ce_marking
       `)
       .eq('tenant_id', tenant.id)
       .order('name', { ascending: true });
@@ -143,55 +136,122 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // 7. Transform to public API format
+    // 7. Get batches for these products (only live batches)
+    let batchMap: Record<string, any[]> = {};
+    if (productIds.length > 0) {
+      const { data: batches } = await supabase
+        .from('product_batches')
+        .select(`
+          id,
+          product_id,
+          batch_number,
+          serial_number,
+          production_date,
+          expiration_date,
+          quantity,
+          net_weight,
+          gross_weight,
+          status,
+          materials_override,
+          certifications_override,
+          carbon_footprint_override,
+          recyclability_override,
+          description_override,
+          product_height_cm,
+          product_width_cm,
+          product_depth_cm
+        `)
+        .in('product_id', productIds)
+        .eq('status', 'live')
+        .order('production_date', { ascending: false });
+
+      if (batches) {
+        for (const b of batches) {
+          if (!batchMap[b.product_id]) batchMap[b.product_id] = [];
+          batchMap[b.product_id].push(b);
+        }
+      }
+    }
+
+    // 8. Transform to public API format with full DPP data
     const result = filtered.map((p: any) => {
       const dppUrl = p.gtin && p.serial_number
         ? `https://dpp-app.fambliss.eu/p/${p.gtin}/${p.serial_number}`
         : null;
 
-      const dims: string[] = [];
-      if (p.product_height_cm && p.product_width_cm) {
-        dims.push(`${p.product_width_cm} × ${p.product_height_cm}`);
-        if (p.product_depth_cm) dims[0] += ` × ${p.product_depth_cm}`;
-        dims[0] += ' cm';
-      }
+      const dims = formatDimensions(p.product_width_cm, p.product_height_cm, p.product_depth_cm);
 
-      const categories: string[] = [];
-      if (p.materials && Array.isArray(p.materials) && p.materials.length > 0) {
-        categories.push('materials');
-      }
-      if (p.certifications && Array.isArray(p.certifications) && p.certifications.length > 0) {
-        categories.push('certificates');
-      }
-      if (p.packaging_type) {
-        categories.push('packaging');
-      }
-      if (p.carbon_footprint) {
-        categories.push('sustainability');
-      }
-      if (p.recyclability?.recyclablePercentage > 0 || p.recyclability?.instructions) {
-        categories.push('recycling');
-      }
+      const slug = toSlug(p.name);
 
-      const slug = p.name
-        .toLowerCase()
-        .replace(/[äÄ]/g, 'ae')
-        .replace(/[öÖ]/g, 'oe')
-        .replace(/[üÜ]/g, 'ue')
-        .replace(/ß/g, 'ss')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+      // Transform batches with override indicators
+      const productBatches = (batchMap[p.id] || []).map((b: any) => {
+        const batchDppUrl = p.gtin && b.serial_number
+          ? `https://dpp-app.fambliss.eu/p/${p.gtin}/${b.serial_number}`
+          : null;
+
+        const overrides: Record<string, any> = {};
+        if (b.materials_override) overrides.materials = b.materials_override;
+        if (b.certifications_override) overrides.certifications = b.certifications_override;
+        if (b.carbon_footprint_override) overrides.carbonFootprint = b.carbon_footprint_override;
+        if (b.recyclability_override) overrides.recyclability = b.recyclability_override;
+        if (b.description_override) overrides.description = b.description_override;
+
+        const batchDims = formatDimensions(b.product_width_cm, b.product_height_cm, b.product_depth_cm);
+
+        return {
+          batchNumber: b.batch_number || null,
+          serialNumber: b.serial_number,
+          productionDate: b.production_date || null,
+          expirationDate: b.expiration_date || null,
+          quantity: b.quantity || null,
+          netWeight: b.net_weight || null,
+          grossWeight: b.gross_weight || null,
+          dimensions: batchDims,
+          dppUrl: batchDppUrl,
+          hasOverrides: Object.keys(overrides).length > 0,
+          overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
+        };
+      });
 
       return {
+        id: p.id,
         slug,
         name: p.name,
+        description: p.description || null,
+        manufacturer: p.manufacturer || null,
+        gtin: p.gtin || null,
         image: imageMap[p.id] || p.image_url || null,
         dppUrl,
-        dimensions: dims[0] || null,
-        categories,
         category: p.category || null,
+        countryOfOrigin: p.country_of_origin || null,
+        dimensions: dims,
+        materials: p.materials || [],
+        certifications: (p.certifications || []).map((c: any) => ({
+          name: c.name,
+          issuedBy: c.issuedBy,
+          validUntil: c.validUntil,
+        })),
+        carbonFootprint: p.carbon_footprint || null,
+        recyclability: p.recyclability || null,
+        sustainability: {
+          recycledContentPercentage: p.recycled_content_percentage ?? null,
+          durabilityYears: p.durability_years ?? null,
+          repairabilityScore: p.repairability_score ?? null,
+          energyConsumptionKwh: p.energy_consumption_kwh ?? null,
+        },
+        ceMarking: p.ce_marking ?? false,
+        packagingType: p.packaging_type || null,
+        batches: productBatches,
       };
     });
+
+    // Extract branding from tenant settings
+    const settings = tenant.settings as any;
+    const branding = {
+      name: tenant.name,
+      logo: settings?.branding?.logo || null,
+      primaryColor: settings?.branding?.primaryColor || '#3B82F6',
+    };
 
     return res.status(200).json({
       page: {
@@ -199,10 +259,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         description: tConfig?.page_description || null,
         heroImage: tConfig?.hero_image_url || null,
       },
+      branding,
       products: result,
     });
   } catch (err) {
     console.error('Unexpected error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+function formatDimensions(w?: number, h?: number, d?: number): string | null {
+  if (!w && !h) return null;
+  let s = `${w ?? '?'} × ${h ?? '?'}`;
+  if (d) s += ` × ${d}`;
+  return s + ' cm';
+}
+
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[äÄ]/g, 'ae')
+    .replace(/[öÖ]/g, 'oe')
+    .replace(/[üÜ]/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
