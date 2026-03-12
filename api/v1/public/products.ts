@@ -96,7 +96,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         durability_years,
         repairability_score,
         energy_consumption_kwh,
-        ce_marking
+        ce_marking,
+        support_resources,
+        user_manual_url,
+        safety_information
       `)
       .eq('tenant_id', tenant.id)
       .order('name', { ascending: true });
@@ -179,7 +182,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // 8. Transform to public API format with full DPP data
+    // 8. Get consumer-visible documents for these products
+    let docMap: Record<string, any[]> = {};
+    if (productIds.length > 0) {
+      const { data: docs } = await supabase
+        .from('documents')
+        .select('id, product_id, name, category, url, type, size, valid_until, visibility')
+        .in('product_id', productIds)
+        .in('visibility', ['consumer', 'customs'])
+        .order('name', { ascending: true });
+
+      if (docs) {
+        for (const d of docs) {
+          if (!docMap[d.product_id]) docMap[d.product_id] = [];
+          docMap[d.product_id].push(d);
+        }
+      }
+    }
+
+    // 9. Transform to public API format with full DPP data
     const result = filtered.map((p: any) => {
       const dppUrl = p.gtin && p.serial_number
         ? `https://dpp-app.fambliss.eu/p/${p.gtin}/${p.serial_number}`
@@ -236,6 +257,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: c.name,
           issuedBy: c.issuedBy,
           validUntil: c.validUntil,
+          certificateUrl: c.certificateUrl || c.url || null,
         })),
         carbonFootprint: p.carbon_footprint || null,
         recyclability: p.recyclability || null,
@@ -247,6 +269,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
         ceMarking: p.ce_marking ?? false,
         packagingType: p.packaging_type || null,
+        documents: (docMap[p.id] || []).map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          category: d.category,
+          url: d.url,
+          type: d.type,
+          size: d.size,
+          validUntil: d.valid_until || null,
+        })),
+        supportResources: p.support_resources || null,
+        userManualUrl: p.user_manual_url || null,
+        safetyInformation: p.safety_information || null,
         batches: productBatches,
       };
     });
@@ -270,14 +304,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error('Unexpected error:', err);
-    return res.status(500).json({
-      error: 'Internal server error',
-      debug: {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseServiceKey,
-        message: err instanceof Error ? err.message : String(err),
-      },
-    });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 

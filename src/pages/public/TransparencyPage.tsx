@@ -22,6 +22,12 @@ import {
   Scale,
   Hash,
   AlertTriangle,
+  FileText,
+  Download,
+  BookOpen,
+  Video,
+  HelpCircle,
+  ShieldCheck,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -62,6 +68,17 @@ const T: Record<string, Record<string, string>> = {
     overrides: 'Changed',
     noOverrides: 'Same as base',
     poweredBy: 'Powered by Trackbliss',
+    documents: 'Documents & Certificates',
+    support: 'Support & Resources',
+    manual: 'User Manual',
+    safetyInfo: 'Safety Information',
+    warranty: 'Warranty',
+    faq: 'FAQ',
+    videos: 'Videos',
+    repair: 'Repair Information',
+    spareParts: 'Spare Parts',
+    downloadCertificate: 'Download',
+    validUntilLabel: 'Valid until',
   },
   de: {
     loading: 'Produkte werden geladen\u2026',
@@ -97,6 +114,17 @@ const T: Record<string, Record<string, string>> = {
     overrides: 'Ge\u00e4ndert',
     noOverrides: 'Wie Basisprodukt',
     poweredBy: 'Bereitgestellt von Trackbliss',
+    documents: 'Dokumente & Zertifikate',
+    support: 'Support & Ressourcen',
+    manual: 'Bedienungsanleitung',
+    safetyInfo: 'Sicherheitsinformationen',
+    warranty: 'Garantie',
+    faq: 'FAQ',
+    videos: 'Videos',
+    repair: 'Reparaturinformationen',
+    spareParts: 'Ersatzteile',
+    downloadCertificate: 'Herunterladen',
+    validUntilLabel: 'G\u00fcltig bis',
   },
 };
 
@@ -133,6 +161,10 @@ interface ApiProduct {
   };
   ceMarking: boolean;
   packagingType: string | null;
+  documents: ApiDocument[];
+  supportResources: ApiSupportResources | null;
+  userManualUrl: string | null;
+  safetyInformation: string | null;
   batches: ApiBatch[];
 }
 
@@ -147,6 +179,26 @@ interface ApiCertification {
   name: string;
   issuedBy: string;
   validUntil: string;
+  certificateUrl?: string | null;
+}
+
+interface ApiDocument {
+  id: string;
+  name: string;
+  category: string;
+  url: string;
+  type: string;
+  size: number;
+  validUntil: string | null;
+}
+
+interface ApiSupportResources {
+  warranty?: { duration?: string; description?: string; url?: string };
+  faq?: Array<{ question: string; answer: string }>;
+  videos?: Array<{ title: string; url: string }>;
+  repair?: { description?: string; url?: string };
+  spareParts?: { description?: string; url?: string };
+  [key: string]: unknown;
 }
 
 interface ApiBatch {
@@ -524,6 +576,11 @@ function ProductCard({
               <Layers className="h-3 w-3" /> {product.materials.length}
             </span>
           )}
+          {product.documents && product.documents.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">
+              <FileText className="h-3 w-3" /> {product.documents.length}
+            </span>
+          )}
           {product.batches.length > 0 && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700">
               <BarChart3 className="h-3 w-3" /> {product.batches.length}
@@ -810,6 +867,148 @@ function OverviewTab({
         </section>
       )}
 
+      {/* Documents & Certificates */}
+      {(product.documents.length > 0 || certifications.some(c => c.certificateUrl)) && (
+        <section>
+          <SectionTitle icon={<FileText className="h-4 w-4" />} label={t('documents')} primary={primary} />
+          <div className="mt-3 space-y-2">
+            {/* Certificate downloads from certifications */}
+            {certifications.filter(c => c.certificateUrl).map((cert, i) => (
+              <a
+                key={`cert-${i}`}
+                href={cert.certificateUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-stone-200 hover:bg-stone-100/50 transition-colors group"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-emerald-50">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-stone-800 truncate">{cert.name}</p>
+                  <p className="text-xs text-stone-500">{cert.issuedBy}{cert.validUntil ? ` · ${t('validUntilLabel')} ${formatDate(cert.validUntil, lang)}` : ''}</p>
+                </div>
+                <Download className="h-4 w-4 text-stone-400 group-hover:text-stone-600 shrink-0 transition-colors" />
+              </a>
+            ))}
+            {/* Other documents */}
+            {product.documents.map((doc) => (
+              <a
+                key={doc.id}
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-stone-200 hover:bg-stone-100/50 transition-colors group"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: primaryLight }}>
+                  <FileText className="h-4 w-4" style={{ color: primary }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-stone-800 truncate">{doc.name}</p>
+                  <p className="text-xs text-stone-500">
+                    {doc.category}{doc.size ? ` · ${formatFileSize(doc.size)}` : ''}
+                    {doc.validUntil ? ` · ${t('validUntilLabel')} ${formatDate(doc.validUntil, lang)}` : ''}
+                  </p>
+                </div>
+                <Download className="h-4 w-4 text-stone-400 group-hover:text-stone-600 shrink-0 transition-colors" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Support & Resources */}
+      {(product.userManualUrl || product.safetyInformation || product.supportResources) && (
+        <section>
+          <SectionTitle icon={<BookOpen className="h-4 w-4" />} label={t('support')} primary={primary} />
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {product.userManualUrl && (
+              <a
+                href={product.userManualUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-stone-200 hover:bg-stone-100/50 transition-colors"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-blue-50">
+                  <BookOpen className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-stone-800">{t('manual')}</span>
+                <ExternalLink className="h-3.5 w-3.5 text-stone-400 ml-auto shrink-0" />
+              </a>
+            )}
+            {product.safetyInformation && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-amber-50">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                </div>
+                <span className="text-sm text-stone-700">{product.safetyInformation}</span>
+              </div>
+            )}
+            {product.supportResources?.warranty?.url && (
+              <a
+                href={product.supportResources.warranty.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-stone-200 hover:bg-stone-100/50 transition-colors"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-violet-50">
+                  <Shield className="h-4 w-4 text-violet-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-stone-800">{t('warranty')}</p>
+                  {product.supportResources.warranty.duration && (
+                    <p className="text-xs text-stone-500">{product.supportResources.warranty.duration}</p>
+                  )}
+                </div>
+                <ExternalLink className="h-3.5 w-3.5 text-stone-400 ml-auto shrink-0" />
+              </a>
+            )}
+            {product.supportResources?.repair?.url && (
+              <a
+                href={product.supportResources.repair.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-stone-200 hover:bg-stone-100/50 transition-colors"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-orange-50">
+                  <Wrench className="h-4 w-4 text-orange-600" />
+                </div>
+                <span className="text-sm font-medium text-stone-800">{t('repair')}</span>
+                <ExternalLink className="h-3.5 w-3.5 text-stone-400 ml-auto shrink-0" />
+              </a>
+            )}
+            {product.supportResources?.videos && product.supportResources.videos.length > 0 && (
+              <a
+                href={product.supportResources.videos[0].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-stone-200 hover:bg-stone-100/50 transition-colors"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-red-50">
+                  <Video className="h-4 w-4 text-red-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-stone-800">{t('videos')}</p>
+                  <p className="text-xs text-stone-500">{product.supportResources.videos.length} {product.supportResources.videos.length === 1 ? 'video' : 'videos'}</p>
+                </div>
+                <ExternalLink className="h-3.5 w-3.5 text-stone-400 ml-auto shrink-0" />
+              </a>
+            )}
+            {product.supportResources?.faq && product.supportResources.faq.length > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-cyan-50">
+                  <HelpCircle className="h-4 w-4 text-cyan-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-stone-800">{t('faq')}</p>
+                  <p className="text-xs text-stone-500">{product.supportResources.faq.length} Q&A</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Description */}
       {product.description && (
         <section>
@@ -1062,6 +1261,12 @@ function OverrideRow({ label, base, override, primary }: { label: string; base: 
 // ===========================================================================
 // Helpers
 // ===========================================================================
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
 function formatDate(d: string, lang: string): string {
   try {
     return new Date(d).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-US', {
