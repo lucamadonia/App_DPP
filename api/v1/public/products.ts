@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 2. Load transparency page config (if exists)
     const { data: tConfig } = await supabase
       .from('transparency_page_config')
-      .select('page_title, page_description, hero_image_url, products, design')
+      .select('page_title, page_description, hero_image_url, products, design, access_control')
       .eq('tenant_id', tenant.id)
       .single();
 
@@ -301,6 +301,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       branding,
       design: tConfig?.design || {},
+      accessControl: tConfig?.access_control || { enabled: false },
       products: result,
     });
   } catch (err) {

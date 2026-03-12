@@ -1,6 +1,6 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings } from '@/types/transparency';
-import { DEFAULT_TRANSPARENCY_DESIGN } from '@/types/transparency';
+import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings, TransparencyAccessControl } from '@/types/transparency';
+import { DEFAULT_TRANSPARENCY_DESIGN, DEFAULT_TRANSPARENCY_ACCESS_CONTROL } from '@/types/transparency';
 
 const defaultConfig: Omit<TransparencyPageConfig, 'tenantId'> = {
   pageTitle: null,
@@ -8,6 +8,7 @@ const defaultConfig: Omit<TransparencyPageConfig, 'tenantId'> = {
   heroImageUrl: null,
   products: [],
   design: { ...DEFAULT_TRANSPARENCY_DESIGN },
+  accessControl: { ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,6 +23,9 @@ function transformRow(row: any): TransparencyPageConfig {
     design: row.design
       ? { ...DEFAULT_TRANSPARENCY_DESIGN, ...(row.design as TransparencyDesignSettings) }
       : { ...DEFAULT_TRANSPARENCY_DESIGN },
+    accessControl: row.access_control
+      ? { ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL, ...(row.access_control as TransparencyAccessControl) }
+      : { ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL },
     updatedAt: row.updated_at,
   };
 }
@@ -56,6 +60,7 @@ export async function saveTransparencyConfig(
     hero_image_url: config.heroImageUrl,
     products: config.products,
     design: config.design,
+    access_control: config.accessControl,
     updated_at: new Date().toISOString(),
   };
 

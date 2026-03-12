@@ -15,6 +15,8 @@ import {
   Sun,
   Moon,
   Monitor,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,8 +29,8 @@ import { Slider } from '@/components/ui/slider';
 import { getProducts, type ProductListItem } from '@/services/supabase/products';
 import { getTransparencyConfig, saveTransparencyConfig } from '@/services/supabase/transparency';
 import { getCurrentTenant } from '@/services/supabase/tenants';
-import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings, TransparencyThemePreset, TransparencyFontFamily, TransparencyHeroStyle, TransparencyCardStyle, TransparencyColorScheme } from '@/types/transparency';
-import { DEFAULT_TRANSPARENCY_DESIGN, TRANSPARENCY_THEME_PRESETS } from '@/types/transparency';
+import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings, TransparencyThemePreset, TransparencyFontFamily, TransparencyHeroStyle, TransparencyCardStyle, TransparencyColorScheme, TransparencyAccessControl } from '@/types/transparency';
+import { DEFAULT_TRANSPARENCY_DESIGN, TRANSPARENCY_THEME_PRESETS, DEFAULT_TRANSPARENCY_ACCESS_CONTROL } from '@/types/transparency';
 
 interface MergedProduct {
   product: ProductListItem;
@@ -51,6 +53,7 @@ export function TransparencyConfigPage() {
   const [pageDescription, setPageDescription] = useState('');
   const [heroImageUrl, setHeroImageUrl] = useState('');
   const [design, setDesign] = useState<TransparencyDesignSettings>({ ...DEFAULT_TRANSPARENCY_DESIGN });
+  const [accessControl, setAccessControl] = useState<TransparencyAccessControl>({ ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL });
   const [hasChanges, setHasChanges] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
 
@@ -74,6 +77,7 @@ export function TransparencyConfigPage() {
           setPageDescription(cfg.pageDescription ?? '');
           setHeroImageUrl(cfg.heroImageUrl ?? '');
           if (cfg.design) setDesign({ ...DEFAULT_TRANSPARENCY_DESIGN, ...cfg.design });
+          if (cfg.accessControl) setAccessControl({ ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL, ...cfg.accessControl });
         }
 
         // Merge products with config
@@ -166,6 +170,7 @@ export function TransparencyConfigPage() {
       heroImageUrl: heroImageUrl.trim() || null,
       products: enabledProducts,
       design,
+      accessControl,
     };
 
     const result = await saveTransparencyConfig(updatedConfig);
@@ -257,6 +262,72 @@ export function TransparencyConfigPage() {
               placeholder="https://..."
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Access Control */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            {accessControl.enabled ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            Access Control
+          </CardTitle>
+          <CardDescription>
+            Restrict access to the transparency page by requiring a valid order number.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Require Order Number</Label>
+              <p className="text-xs text-muted-foreground">
+                {accessControl.enabled
+                  ? 'Visitors must enter a valid order number to view products'
+                  : 'Anyone with the link can view the transparency page'}
+              </p>
+            </div>
+            <Switch
+              checked={accessControl.enabled}
+              onCheckedChange={(checked) => {
+                setAccessControl((prev) => ({ ...prev, enabled: checked }));
+                markChanged();
+              }}
+            />
+          </div>
+          {accessControl.enabled && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="order-prefix">Order Number Prefix</Label>
+                <Input
+                  id="order-prefix"
+                  value={accessControl.orderPrefix}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                    setAccessControl((prev) => ({ ...prev, orderPrefix: val }));
+                    markChanged();
+                  }}
+                  placeholder="e.g. 1234 or FB"
+                  maxLength={10}
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The visitor's order number must start with this prefix. E.g. if you set &quot;FB&quot;,
+                  order numbers like &quot;FB-20240301-001&quot; or &quot;FB12345&quot; will be accepted.
+                </p>
+              </div>
+              {accessControl.orderPrefix && (
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Preview</p>
+                  <p className="text-sm">
+                    Accepted: <code className="bg-emerald-500/10 text-emerald-700 px-1.5 py-0.5 rounded text-xs font-mono">{accessControl.orderPrefix}20240301-001</code>
+                  </p>
+                  <p className="text-sm mt-1">
+                    Rejected: <code className="bg-red-500/10 text-red-700 px-1.5 py-0.5 rounded text-xs font-mono">XX9999</code>
+                  </p>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

@@ -49,6 +49,16 @@ export const TRANSPARENCY_THEME_PRESETS: Record<TransparencyThemePreset, { label
   minimal: { label: 'Minimal', primaryColor: '#6B7280', accentColor: '#9CA3AF', pageBackground: '#ffffff', cardBackground: '#ffffff', colorScheme: 'light' },
 };
 
+export interface TransparencyAccessControl {
+  enabled: boolean;
+  orderPrefix: string; // e.g. "1234" — first N digits of order number
+}
+
+export const DEFAULT_TRANSPARENCY_ACCESS_CONTROL: TransparencyAccessControl = {
+  enabled: false,
+  orderPrefix: '',
+};
+
 export interface TransparencyPageConfig {
   id?: string;
   tenantId: string;
@@ -57,5 +67,6 @@ export interface TransparencyPageConfig {
   heroImageUrl: string | null;
   products: TransparencyProductEntry[];
   design: TransparencyDesignSettings;
+  accessControl: TransparencyAccessControl;
   updatedAt?: string;
 }

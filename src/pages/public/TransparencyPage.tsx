@@ -28,6 +28,8 @@ import {
   Video,
   HelpCircle,
   ShieldCheck,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,12 @@ const T: Record<string, Record<string, string>> = {
     spareParts: 'Spare Parts',
     downloadCertificate: 'Download',
     validUntilLabel: 'Valid until',
+    accessTitle: 'Customer Access',
+    accessSubtitle: 'Enter your order number to view product transparency data.',
+    orderNumber: 'Order Number',
+    orderNumberPlaceholder: 'e.g. FB20240301-001',
+    accessButton: 'View Products',
+    accessError: 'Invalid order number. Please check and try again.',
   },
   de: {
     loading: 'Produkte werden geladen\u2026',
@@ -125,6 +133,12 @@ const T: Record<string, Record<string, string>> = {
     spareParts: 'Ersatzteile',
     downloadCertificate: 'Herunterladen',
     validUntilLabel: 'G\u00fcltig bis',
+    accessTitle: 'Kundenzugang',
+    accessSubtitle: 'Geben Sie Ihre Bestellnummer ein, um die Produkttransparenzdaten einzusehen.',
+    orderNumber: 'Bestellnummer',
+    orderNumberPlaceholder: 'z.B. FB20240301-001',
+    accessButton: 'Produkte anzeigen',
+    accessError: 'Ung\u00fcltige Bestellnummer. Bitte pr\u00fcfen und erneut versuchen.',
   },
 };
 
@@ -150,6 +164,7 @@ interface PageData {
   page: { title: string | null; description: string | null; heroImage: string | null };
   branding: { name: string; logo: string | null; primaryColor: string };
   design?: TransparencyDesign;
+  accessControl?: { enabled: boolean; orderPrefix?: string };
   products: ApiProduct[];
 }
 
@@ -336,6 +351,14 @@ export function TransparencyPage() {
 
   const detailRef = useRef<HTMLDivElement>(null);
 
+  // Access gate state
+  const [gateUnlocked, setGateUnlocked] = useState(() => {
+    if (!tenantSlug) return false;
+    return sessionStorage.getItem(`tp-access-${tenantSlug}`) === '1';
+  });
+  const [orderInput, setOrderInput] = useState('');
+  const [gateError, setGateError] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!tenantSlug) return;
     setLoading(true);
@@ -429,6 +452,106 @@ export function TransparencyPage() {
   }
 
   const { page, branding, products } = data;
+
+  // ---- Access Gate ----
+  const ac = data.accessControl;
+  const needsGate = ac?.enabled && ac.orderPrefix && !gateUnlocked;
+
+  const handleGateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const prefix = (ac?.orderPrefix || '').toUpperCase();
+    const input = orderInput.trim().toUpperCase();
+    if (input.length >= prefix.length && input.startsWith(prefix)) {
+      setGateUnlocked(true);
+      setGateError(false);
+      if (tenantSlug) sessionStorage.setItem(`tp-access-${tenantSlug}`, '1');
+    } else {
+      setGateError(true);
+    }
+  };
+
+  if (needsGate) {
+    return (
+      <div className="min-h-screen tp-body flex items-center justify-center px-4" style={{ backgroundColor: pageBg, color: textColor }}>
+        {fontConfig.url && <link href={fontConfig.url} rel="stylesheet" />}
+        <style>{`.tp-heading { font-family: ${fontConfig.heading}; } .tp-body { font-family: ${fontConfig.body}; }`}</style>
+
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            {branding.logo ? (
+              <img src={branding.logo} alt={branding.name} className="h-12 w-12 rounded-xl object-contain mx-auto mb-4" />
+            ) : (
+              <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white text-lg font-bold mx-auto mb-4" style={{ backgroundColor: primary }}>
+                {branding.name.charAt(0)}
+              </div>
+            )}
+            <h1 className="tp-heading text-2xl sm:text-3xl mb-2" style={{ color: textColor }}>
+              {t('accessTitle')}
+            </h1>
+            <p className="text-sm" style={{ color: textMuted }}>
+              {t('accessSubtitle')}
+            </p>
+          </div>
+
+          <form onSubmit={handleGateSubmit} className="rounded-2xl p-6 space-y-4" style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, boxShadow: CARD_SHADOW.medium }}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: primaryLight }}>
+                <KeyRound className="h-5 w-5" style={{ color: primary }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: textColor }}>{t('orderNumber')}</p>
+                <p className="text-xs" style={{ color: textMuted }}>{branding.name}</p>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              value={orderInput}
+              onChange={(e) => { setOrderInput(e.target.value); setGateError(false); }}
+              placeholder={t('orderNumberPlaceholder')}
+              className="w-full px-4 py-3 rounded-xl text-sm font-mono outline-none transition-shadow focus:ring-2"
+              style={{
+                backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#fafaf9',
+                border: `1px solid ${gateError ? '#ef4444' : borderColor}`,
+                color: textColor,
+                '--tw-ring-color': primary,
+              } as CSSProperties}
+              autoFocus
+            />
+
+            {gateError && (
+              <p className="text-xs text-red-500 flex items-center gap-1.5">
+                <AlertTriangle className="h-3 w-3" />
+                {t('accessError')}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={!orderInput.trim()}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100 flex items-center justify-center gap-2"
+              style={{ backgroundColor: primary }}
+            >
+              <Lock className="h-4 w-4" />
+              {t('accessButton')}
+            </button>
+          </form>
+
+          {/* Language toggle */}
+          <div className="text-center mt-6">
+            <button
+              onClick={toggleLang}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+              style={{ color: textMuted, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}
+            >
+              <Languages className="h-3.5 w-3.5" />
+              {lang.toUpperCase()}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: pageBg, color: textColor, '--tp-primary': primary, '--tp-primary-light': primaryLight, '--tp-primary-mid': primaryMid, '--tp-primary-dark': primaryDark, '--tp-card-bg': cardBg, '--tp-card-radius': cardRadius, '--tp-card-shadow': cardShadow, '--tp-border': borderColor, '--tp-text-muted': textMuted } as CSSProperties}>
