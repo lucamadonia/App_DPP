@@ -268,7 +268,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error('Unexpected error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({
+      error: 'Internal server error',
+      debug: {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseServiceKey,
+        message: err instanceof Error ? err.message : String(err),
+      },
+    });
   }
 }
 
