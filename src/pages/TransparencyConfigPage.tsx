@@ -10,6 +10,11 @@ import {
   Copy,
   ExternalLink,
   Code,
+  Palette,
+  Check,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,10 +23,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { getProducts, type ProductListItem } from '@/services/supabase/products';
 import { getTransparencyConfig, saveTransparencyConfig } from '@/services/supabase/transparency';
 import { getCurrentTenant } from '@/services/supabase/tenants';
-import type { TransparencyPageConfig, TransparencyProductEntry } from '@/types/transparency';
+import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings, TransparencyThemePreset, TransparencyFontFamily, TransparencyHeroStyle, TransparencyCardStyle, TransparencyColorScheme } from '@/types/transparency';
+import { DEFAULT_TRANSPARENCY_DESIGN, TRANSPARENCY_THEME_PRESETS } from '@/types/transparency';
 
 interface MergedProduct {
   product: ProductListItem;
@@ -43,6 +50,7 @@ export function TransparencyConfigPage() {
   const [pageTitle, setPageTitle] = useState('');
   const [pageDescription, setPageDescription] = useState('');
   const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [design, setDesign] = useState<TransparencyDesignSettings>({ ...DEFAULT_TRANSPARENCY_DESIGN });
   const [hasChanges, setHasChanges] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
 
@@ -65,6 +73,7 @@ export function TransparencyConfigPage() {
           setPageTitle(cfg.pageTitle ?? '');
           setPageDescription(cfg.pageDescription ?? '');
           setHeroImageUrl(cfg.heroImageUrl ?? '');
+          if (cfg.design) setDesign({ ...DEFAULT_TRANSPARENCY_DESIGN, ...cfg.design });
         }
 
         // Merge products with config
@@ -156,6 +165,7 @@ export function TransparencyConfigPage() {
       pageDescription: pageDescription.trim() || null,
       heroImageUrl: heroImageUrl.trim() || null,
       products: enabledProducts,
+      design,
     };
 
     const result = await saveTransparencyConfig(updatedConfig);
@@ -343,6 +353,284 @@ export function TransparencyConfigPage() {
               })}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Design */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Design
+          </CardTitle>
+          <CardDescription>
+            Customize the look and feel of your transparency page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Theme Presets */}
+          <div className="space-y-2">
+            <Label>Theme Preset</Label>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {(Object.entries(TRANSPARENCY_THEME_PRESETS) as [TransparencyThemePreset, typeof TRANSPARENCY_THEME_PRESETS[TransparencyThemePreset]][]).map(([key, preset]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    const d: TransparencyDesignSettings = {
+                      ...design,
+                      preset: key,
+                      ...(key !== 'default' ? {
+                        primaryColor: preset.primaryColor,
+                        accentColor: preset.accentColor,
+                        pageBackground: preset.pageBackground,
+                        cardBackground: preset.cardBackground,
+                        colorScheme: preset.colorScheme,
+                      } : {
+                        primaryColor: null,
+                        accentColor: null,
+                        pageBackground: null,
+                        cardBackground: null,
+                        colorScheme: 'light',
+                      }),
+                    };
+                    setDesign(d);
+                    markChanged();
+                  }}
+                  className={`relative flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs transition-colors ${
+                    design.preset === key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-muted-foreground/30'
+                  }`}
+                >
+                  <div className="flex gap-0.5">
+                    <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: preset.primaryColor || '#3B82F6' }} />
+                    <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: preset.pageBackground }} />
+                  </div>
+                  <span className="text-[10px] font-medium">{preset.label}</span>
+                  {design.preset === key && (
+                    <Check className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Scheme */}
+          <div className="space-y-2">
+            <Label>Color Scheme</Label>
+            <div className="flex gap-2">
+              {([
+                { value: 'light' as TransparencyColorScheme, icon: Sun, label: 'Light' },
+                { value: 'dark' as TransparencyColorScheme, icon: Moon, label: 'Dark' },
+                { value: 'auto' as TransparencyColorScheme, icon: Monitor, label: 'Auto' },
+              ]).map(({ value, icon: Icon, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setDesign((d) => ({ ...d, colorScheme: value })); markChanged(); }}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                    design.colorScheme === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Colors */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="design-primary">Primary Color</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={design.primaryColor || '#3B82F6'}
+                  onChange={(e) => { setDesign((d) => ({ ...d, primaryColor: e.target.value, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  className="h-9 w-9 cursor-pointer rounded border p-0.5"
+                />
+                <Input
+                  id="design-primary"
+                  value={design.primaryColor || ''}
+                  onChange={(e) => { setDesign((d) => ({ ...d, primaryColor: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  placeholder="Tenant default"
+                  className="font-mono text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="design-accent">Accent Color</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={design.accentColor || '#06B6D4'}
+                  onChange={(e) => { setDesign((d) => ({ ...d, accentColor: e.target.value, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  className="h-9 w-9 cursor-pointer rounded border p-0.5"
+                />
+                <Input
+                  id="design-accent"
+                  value={design.accentColor || ''}
+                  onChange={(e) => { setDesign((d) => ({ ...d, accentColor: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  placeholder="Auto"
+                  className="font-mono text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="design-bg">Page Background</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={design.pageBackground || '#fafaf9'}
+                  onChange={(e) => { setDesign((d) => ({ ...d, pageBackground: e.target.value, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  className="h-9 w-9 cursor-pointer rounded border p-0.5"
+                />
+                <Input
+                  id="design-bg"
+                  value={design.pageBackground || ''}
+                  onChange={(e) => { setDesign((d) => ({ ...d, pageBackground: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  placeholder="Default"
+                  className="font-mono text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="design-card-bg">Card Background</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={design.cardBackground || '#ffffff'}
+                  onChange={(e) => { setDesign((d) => ({ ...d, cardBackground: e.target.value, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  className="h-9 w-9 cursor-pointer rounded border p-0.5"
+                />
+                <Input
+                  id="design-card-bg"
+                  value={design.cardBackground || ''}
+                  onChange={(e) => { setDesign((d) => ({ ...d, cardBackground: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
+                  placeholder="Default"
+                  className="font-mono text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Font Family */}
+          <div className="space-y-2">
+            <Label>Font Family</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {([
+                { value: 'dm-serif' as TransparencyFontFamily, label: 'DM Serif', preview: 'font-serif' },
+                { value: 'system' as TransparencyFontFamily, label: 'System', preview: 'font-sans' },
+                { value: 'inter' as TransparencyFontFamily, label: 'Inter', preview: 'font-sans' },
+                { value: 'poppins' as TransparencyFontFamily, label: 'Poppins', preview: 'font-sans' },
+                { value: 'playfair' as TransparencyFontFamily, label: 'Playfair', preview: 'font-serif' },
+                { value: 'merriweather' as TransparencyFontFamily, label: 'Merriw.', preview: 'font-serif' },
+              ]).map(({ value, label, preview }) => (
+                <button
+                  key={value}
+                  onClick={() => { setDesign((d) => ({ ...d, fontFamily: value })); markChanged(); }}
+                  className={`rounded-lg border px-2 py-2 text-center transition-colors ${
+                    design.fontFamily === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
+                  }`}
+                >
+                  <span className={`text-lg ${preview}`}>Aa</span>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero Style */}
+          <div className="space-y-2">
+            <Label>Hero Style</Label>
+            <div className="flex gap-2">
+              {([
+                { value: 'gradient' as TransparencyHeroStyle, label: 'Gradient' },
+                { value: 'solid' as TransparencyHeroStyle, label: 'Solid' },
+                { value: 'image' as TransparencyHeroStyle, label: 'Image' },
+                { value: 'minimal' as TransparencyHeroStyle, label: 'Minimal' },
+              ]).map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => { setDesign((d) => ({ ...d, heroStyle: value })); markChanged(); }}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    design.heroStyle === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero Overlay Opacity */}
+          {(design.heroStyle === 'gradient' || design.heroStyle === 'image') && (
+            <div className="space-y-2">
+              <Label>Hero Overlay Opacity: {design.heroOverlayOpacity}%</Label>
+              <Slider
+                value={[design.heroOverlayOpacity]}
+                onValueChange={([v]) => { setDesign((d) => ({ ...d, heroOverlayOpacity: v })); markChanged(); }}
+                min={0}
+                max={80}
+                step={5}
+              />
+            </div>
+          )}
+
+          {/* Card Style */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Card Corners</Label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'sharp' as TransparencyCardStyle, label: 'Sharp' },
+                  { value: 'rounded' as TransparencyCardStyle, label: 'Rounded' },
+                  { value: 'soft' as TransparencyCardStyle, label: 'Soft' },
+                ]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => { setDesign((d) => ({ ...d, cardStyle: value })); markChanged(); }}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                      design.cardStyle === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Card Shadow</Label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'none' as const, label: 'None' },
+                  { value: 'subtle' as const, label: 'Subtle' },
+                  { value: 'medium' as const, label: 'Medium' },
+                  { value: 'strong' as const, label: 'Strong' },
+                ]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => { setDesign((d) => ({ ...d, cardShadow: value })); markChanged(); }}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                      design.cardShadow === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Show Powered By */}
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Show &quot;Powered by Trackbliss&quot;</Label>
+              <p className="text-xs text-muted-foreground">Display branding in the footer</p>
+            </div>
+            <Switch
+              checked={design.showPoweredBy}
+              onCheckedChange={(checked) => { setDesign((d) => ({ ...d, showPoweredBy: checked })); markChanged(); }}
+            />
+          </div>
         </CardContent>
       </Card>
 

@@ -1,11 +1,13 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { TransparencyPageConfig, TransparencyProductEntry } from '@/types/transparency';
+import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings } from '@/types/transparency';
+import { DEFAULT_TRANSPARENCY_DESIGN } from '@/types/transparency';
 
 const defaultConfig: Omit<TransparencyPageConfig, 'tenantId'> = {
   pageTitle: null,
   pageDescription: null,
   heroImageUrl: null,
   products: [],
+  design: { ...DEFAULT_TRANSPARENCY_DESIGN },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,6 +19,9 @@ function transformRow(row: any): TransparencyPageConfig {
     pageDescription: row.page_description ?? null,
     heroImageUrl: row.hero_image_url ?? null,
     products: (row.products as TransparencyProductEntry[]) ?? [],
+    design: row.design
+      ? { ...DEFAULT_TRANSPARENCY_DESIGN, ...(row.design as TransparencyDesignSettings) }
+      : { ...DEFAULT_TRANSPARENCY_DESIGN },
     updatedAt: row.updated_at,
   };
 }
@@ -50,6 +55,7 @@ export async function saveTransparencyConfig(
     page_description: config.pageDescription,
     hero_image_url: config.heroImageUrl,
     products: config.products,
+    design: config.design,
     updated_at: new Date().toISOString(),
   };
 

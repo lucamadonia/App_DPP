@@ -131,9 +131,25 @@ const T: Record<string, Record<string, string>> = {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+interface TransparencyDesign {
+  preset?: string;
+  primaryColor?: string | null;
+  colorScheme?: 'light' | 'dark' | 'auto';
+  fontFamily?: string;
+  heroStyle?: 'gradient' | 'solid' | 'image' | 'minimal';
+  heroOverlayOpacity?: number;
+  cardStyle?: 'rounded' | 'sharp' | 'soft';
+  cardShadow?: 'none' | 'subtle' | 'medium' | 'strong';
+  showPoweredBy?: boolean;
+  accentColor?: string | null;
+  pageBackground?: string | null;
+  cardBackground?: string | null;
+}
+
 interface PageData {
   page: { title: string | null; description: string | null; heroImage: string | null };
   branding: { name: string; logo: string | null; primaryColor: string };
+  design?: TransparencyDesign;
   products: ApiProduct[];
 }
 
@@ -231,6 +247,53 @@ const CARBON_RATING_COLORS: Record<string, { bg: string; text: string; ring: str
   E: { bg: '#fecaca', text: '#dc2626', ring: '#f87171' },
 };
 
+const FONT_MAP: Record<string, { url: string; heading: string; body: string; cssClass: string }> = {
+  'dm-serif': {
+    url: 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap',
+    heading: "'DM Serif Display', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    cssClass: 'tp-heading',
+  },
+  system: {
+    url: '',
+    heading: "system-ui, -apple-system, sans-serif",
+    body: "system-ui, -apple-system, sans-serif",
+    cssClass: 'tp-system',
+  },
+  inter: {
+    url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+    heading: "'Inter', system-ui, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    cssClass: 'tp-inter',
+  },
+  poppins: {
+    url: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+    heading: "'Poppins', system-ui, sans-serif",
+    body: "'Poppins', system-ui, sans-serif",
+    cssClass: 'tp-poppins',
+  },
+  playfair: {
+    url: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap',
+    heading: "'Playfair Display', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    cssClass: 'tp-playfair',
+  },
+  merriweather: {
+    url: 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap',
+    heading: "'Merriweather', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    cssClass: 'tp-merriweather',
+  },
+};
+
+const CARD_RADIUS: Record<string, string> = { sharp: '0.5rem', rounded: '1rem', soft: '1.5rem' };
+const CARD_SHADOW: Record<string, string> = {
+  none: 'none',
+  subtle: '0 1px 3px rgba(0,0,0,0.06)',
+  medium: '0 4px 12px rgba(0,0,0,0.08)',
+  strong: '0 10px 40px rgba(0,0,0,0.12)',
+};
+
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
   let r = 0, g = 0, b = 0;
   if (hex.length === 4) {
@@ -308,12 +371,27 @@ export function TransparencyPage() {
     document.body.style.overflow = '';
   };
 
-  // Derive colours from branding
-  const primary = data?.branding.primaryColor || '#3B82F6';
+  // Derive colours from design + branding
+  const ds = data?.design || {};
+  const primary = ds.primaryColor || data?.branding.primaryColor || '#3B82F6';
   const hsl = hexToHSL(primary);
   const primaryLight = `hsl(${hsl.h}, ${hsl.s}%, 95%)`;
   const primaryMid = `hsl(${hsl.h}, ${hsl.s}%, 45%)`;
   const primaryDark = `hsl(${hsl.h}, ${Math.min(hsl.s, 60)}%, 25%)`;
+
+  // Design tokens
+  const isDark = ds.colorScheme === 'dark' || (ds.colorScheme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const pageBg = ds.pageBackground || (isDark ? '#0f172a' : '#fafaf9');
+  const cardBg = ds.cardBackground || (isDark ? '#1e293b' : '#ffffff');
+  const textColor = isDark ? '#e2e8f0' : '#1c1917';
+  const textMuted = isDark ? '#94a3b8' : '#78716c';
+  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+  const fontConfig = FONT_MAP[ds.fontFamily || 'dm-serif'] || FONT_MAP['dm-serif'];
+  const cardRadius = CARD_RADIUS[ds.cardStyle || 'rounded'] || CARD_RADIUS.rounded;
+  const cardShadow = CARD_SHADOW[ds.cardShadow || 'subtle'] || CARD_SHADOW.subtle;
+  const heroStyle = ds.heroStyle || 'gradient';
+  const heroOverlay = (ds.heroOverlayOpacity ?? 30) / 100;
+  const showPoweredBy = ds.showPoweredBy !== false;
 
   // -----------------------------------------------------------------------
   // Render helpers
@@ -353,15 +431,15 @@ export function TransparencyPage() {
   const { page, branding, products } = data;
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900" style={{ '--tp-primary': primary, '--tp-primary-light': primaryLight, '--tp-primary-mid': primaryMid, '--tp-primary-dark': primaryDark } as CSSProperties}>
-      {/* ---- Load editorial fonts ---- */}
+    <div className="min-h-screen" style={{ backgroundColor: pageBg, color: textColor, '--tp-primary': primary, '--tp-primary-light': primaryLight, '--tp-primary-mid': primaryMid, '--tp-primary-dark': primaryDark, '--tp-card-bg': cardBg, '--tp-card-radius': cardRadius, '--tp-card-shadow': cardShadow, '--tp-border': borderColor, '--tp-text-muted': textMuted } as CSSProperties}>
+      {/* ---- Load fonts ---- */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+      {fontConfig.url && <link href={fontConfig.url} rel="stylesheet" />}
 
       <style>{`
-        .tp-serif { font-family: 'DM Serif Display', Georgia, serif; }
-        .tp-sans { font-family: 'DM Sans', system-ui, sans-serif; }
+        .tp-heading { font-family: ${fontConfig.heading}; }
+        .tp-body { font-family: ${fontConfig.body}; }
         .tp-card { transition: transform 0.35s cubic-bezier(.4,0,.2,1), box-shadow 0.35s cubic-bezier(.4,0,.2,1); }
         .tp-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px -12px rgba(0,0,0,0.12); }
         .tp-fade-in { animation: tpFadeIn 0.5s ease both; }
@@ -387,7 +465,7 @@ export function TransparencyPage() {
       {/* HEADER (hidden in embed) */}
       {/* ================================================================== */}
       {!isEmbed && (
-        <header className="tp-sans sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-stone-200/60">
+        <header className="tp-body sticky top-0 z-40 backdrop-blur-xl border-b" style={{ backgroundColor: isDark ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.8)', borderColor: borderColor }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {branding.logo ? (
@@ -397,11 +475,12 @@ export function TransparencyPage() {
                   {branding.name.charAt(0)}
                 </div>
               )}
-              <span className="font-semibold text-stone-800 text-sm tracking-tight">{branding.name}</span>
+              <span className="font-semibold text-sm tracking-tight" style={{ color: textColor }}>{branding.name}</span>
             </div>
             <button
               onClick={toggleLang}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+              style={{ color: textMuted, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}
             >
               <Languages className="h-3.5 w-3.5" />
               {lang.toUpperCase()}
@@ -413,22 +492,25 @@ export function TransparencyPage() {
       {/* ================================================================== */}
       {/* HERO */}
       {/* ================================================================== */}
+      {heroStyle !== 'minimal' && (
       <section
-        className="tp-sans relative overflow-hidden"
+        className="tp-body relative overflow-hidden"
         style={{
-          background: page.heroImage
+          background: heroStyle === 'image' && page.heroImage
             ? `url(${page.heroImage}) center/cover no-repeat`
-            : `linear-gradient(135deg, ${primaryDark} 0%, ${primary} 50%, ${primaryMid} 100%)`,
+            : heroStyle === 'solid'
+              ? primary
+              : `linear-gradient(135deg, ${primaryDark} 0%, ${primary} 50%, ${primaryMid} 100%)`,
           minHeight: isEmbed ? '120px' : '220px',
         }}
       >
         {/* overlay for readability */}
-        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${heroOverlay})` }} />
         {/* subtle grain texture */}
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")' }} />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex flex-col items-center text-center">
-          <h1 className="tp-serif text-3xl sm:text-4xl lg:text-5xl text-white tp-fade-in leading-tight">
+          <h1 className="tp-heading text-3xl sm:text-4xl lg:text-5xl text-white tp-fade-in leading-tight">
             {page.title || t('productTransparency')}
           </h1>
           {(page.description || !page.title) && (
@@ -438,15 +520,30 @@ export function TransparencyPage() {
           )}
         </div>
       </section>
+      )}
+
+      {/* Minimal hero — just title inline */}
+      {heroStyle === 'minimal' && (
+        <section className="tp-body max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-2 text-center">
+          <h1 className="tp-heading text-3xl sm:text-4xl leading-tight" style={{ color: textColor }}>
+            {page.title || t('productTransparency')}
+          </h1>
+          {(page.description || !page.title) && (
+            <p className="mt-2 text-sm sm:text-base max-w-xl mx-auto" style={{ color: textMuted }}>
+              {page.description || t('subtitle')}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* ================================================================== */}
       {/* PRODUCT GRID */}
       {/* ================================================================== */}
-      <section className="tp-sans max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <section className="tp-body max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         {products.length === 0 ? (
           <div className="text-center py-20">
-            <Package className="h-12 w-12 mx-auto text-stone-300 mb-4" />
-            <p className="text-stone-500">{t('noProducts')}</p>
+            <Package className="h-12 w-12 mx-auto mb-4" style={{ color: textMuted }} />
+            <p style={{ color: textMuted }}>{t('noProducts')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -457,6 +554,13 @@ export function TransparencyPage() {
                 primary={primary}
                 stagger={idx}
                 onClick={() => openDetail(product)}
+                cardBg={cardBg}
+                cardRadius={cardRadius}
+                cardShadow={cardShadow}
+                borderColor={borderColor}
+                textColor={textColor}
+                textMuted={textMuted}
+                isDark={isDark}
               />
             ))}
           </div>
@@ -466,9 +570,9 @@ export function TransparencyPage() {
       {/* ================================================================== */}
       {/* FOOTER (hidden in embed) */}
       {/* ================================================================== */}
-      {!isEmbed && (
-        <footer className="tp-sans border-t border-stone-200/60 bg-white/50 py-6 text-center">
-          <p className="text-xs text-stone-400 tracking-wide">{t('poweredBy')}</p>
+      {!isEmbed && showPoweredBy && (
+        <footer className="tp-body border-t py-6 text-center" style={{ borderColor, backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.5)' }}>
+          <p className="text-xs tracking-wide" style={{ color: textMuted }}>{t('poweredBy')}</p>
         </footer>
       )}
 
@@ -500,11 +604,25 @@ function ProductCard({
   primary,
   stagger,
   onClick,
+  cardBg,
+  cardRadius,
+  cardShadow,
+  borderColor,
+  textColor,
+  textMuted,
+  isDark,
 }: {
   product: ApiProduct;
   primary: string;
   stagger: number;
   onClick: () => void;
+  cardBg: string;
+  cardRadius: string;
+  cardShadow: string;
+  borderColor: string;
+  textColor: string;
+  textMuted: string;
+  isDark: boolean;
 }) {
   const rating = product.carbonFootprint?.rating;
   const ratingStyle = rating ? CARBON_RATING_COLORS[rating] : null;
@@ -513,11 +631,11 @@ function ProductCard({
   return (
     <button
       onClick={onClick}
-      className={`tp-card tp-slide-up ${staggerClass} tp-sans group text-left w-full rounded-2xl bg-white border border-stone-200/60 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`}
-      style={{ '--tw-ring-color': primary } as CSSProperties}
+      className={`tp-card tp-slide-up ${staggerClass} tp-body group text-left w-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`}
+      style={{ '--tw-ring-color': primary, backgroundColor: cardBg, borderRadius: cardRadius, boxShadow: cardShadow, border: `1px solid ${borderColor}` } as CSSProperties}
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] bg-stone-100 overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f4' }}>
         {product.image ? (
           <img
             src={product.image}
@@ -527,28 +645,28 @@ function ProductCard({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-12 w-12 text-stone-300" />
+            <Package className="h-12 w-12" style={{ color: textMuted }} />
           </div>
         )}
 
         {/* Category chip */}
         {product.category && (
-          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/90 backdrop-blur-sm text-stone-700 border border-stone-200/50 shadow-sm">
+          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-medium backdrop-blur-sm shadow-sm" style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.9)', color: isDark ? '#e2e8f0' : '#44403c', border: `1px solid ${borderColor}` }}>
             {product.category}
           </span>
         )}
 
         {/* Hover arrow */}
-        <div className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm">
-          <ArrowUpRight className="h-4 w-4 text-stone-700" />
+        <div className="absolute bottom-3 right-3 h-8 w-8 rounded-full backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm" style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.9)' }}>
+          <ArrowUpRight className="h-4 w-4" style={{ color: textColor }} />
         </div>
       </div>
 
       {/* Content */}
       <div className="p-5">
-        <h3 className="tp-serif text-lg leading-snug text-stone-900">{product.name}</h3>
+        <h3 className="tp-heading text-lg leading-snug" style={{ color: textColor }}>{product.name}</h3>
         {product.manufacturer && (
-          <p className="text-xs text-stone-500 mt-0.5">{product.manufacturer}</p>
+          <p className="text-xs mt-0.5" style={{ color: textMuted }}>{product.manufacturer}</p>
         )}
 
         {/* Quick badges */}
@@ -572,7 +690,7 @@ function ProductCard({
             </span>
           )}
           {product.materials.length > 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f5f5f4', color: textMuted }}>
               <Layers className="h-3 w-3" /> {product.materials.length}
             </span>
           )}
@@ -636,7 +754,7 @@ function ProductDetail({
       <div className="relative h-full flex items-start justify-center overflow-y-auto pt-8 pb-8 px-4" onClick={(e) => e.stopPropagation()}>
         <div
           ref={detailRef}
-          className="tp-modal tp-sans relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+          className="tp-modal tp-body relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close */}
@@ -658,7 +776,7 @@ function ProductDetail({
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
             <div className="absolute bottom-4 left-5 right-14">
-              <h2 className="tp-serif text-2xl sm:text-3xl text-white leading-tight">{product.name}</h2>
+              <h2 className="tp-heading text-2xl sm:text-3xl text-white leading-tight">{product.name}</h2>
               {product.manufacturer && (
                 <p className="text-white/70 text-sm mt-1">{product.manufacturer}</p>
               )}
