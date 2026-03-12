@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing env vars: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
 
 /**
  * GET /api/v1/public/products?tenant=<slug>
@@ -104,9 +108,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 4. Filter products: if config exists, only enabled + published; otherwise all published
     let filtered = (products || []).filter((p: any) => {
       if (hasConfig) {
-        return enabledIds.has(p.id) && p.status === 'published';
+        return enabledIds.has(p.id) && p.status === 'live';
       }
-      return p.status === 'published';
+      return p.status === 'live';
     });
 
     // 5. Sort by config order if available
