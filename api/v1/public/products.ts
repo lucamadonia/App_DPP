@@ -12,6 +12,7 @@ const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
 
 /**
  * GET /api/v1/public/products?tenant=<slug>
+ * Returns transparency page data with products, batches, and branding.
  *
  * Returns products configured for the public transparency page,
  * including full DPP consumer data and per-batch details with overrides.
