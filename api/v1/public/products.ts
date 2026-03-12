@@ -105,10 +105,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to load products' });
     }
 
-    // 4. Filter products: if config exists, only enabled + published; otherwise all published
+    // 4. Filter products: if config exists, show enabled products (any status);
+    //    without config, only show live products
     let filtered = (products || []).filter((p: any) => {
       if (hasConfig) {
-        return enabledIds.has(p.id) && p.status === 'live';
+        return enabledIds.has(p.id) && p.status !== 'archived';
       }
       return p.status === 'live';
     });
