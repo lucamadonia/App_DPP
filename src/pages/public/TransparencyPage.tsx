@@ -352,10 +352,7 @@ export function TransparencyPage() {
   const detailRef = useRef<HTMLDivElement>(null);
 
   // Access gate state
-  const [gateUnlocked, setGateUnlocked] = useState(() => {
-    if (!tenantSlug) return false;
-    return sessionStorage.getItem(`tp-access-${tenantSlug}`) === '1';
-  });
+  const [gateUnlocked, setGateUnlocked] = useState(false);
   const [orderInput, setOrderInput] = useState('');
   const [gateError, setGateError] = useState(false);
 
@@ -455,7 +452,11 @@ export function TransparencyPage() {
 
   // ---- Access Gate ----
   const ac = data.accessControl;
-  const needsGate = ac?.enabled && ac.orderPrefix && !gateUnlocked;
+  // Check sessionStorage only after we know the actual prefix from API
+  const gateKey = tenantSlug ? `tp-access-${tenantSlug}` : '';
+  const storedPrefix = gateKey ? sessionStorage.getItem(gateKey) : null;
+  const isStoredValid = storedPrefix && ac?.orderPrefix && storedPrefix === ac.orderPrefix;
+  const needsGate = ac?.enabled && ac.orderPrefix && !gateUnlocked && !isStoredValid;
 
   const handleGateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -464,7 +465,7 @@ export function TransparencyPage() {
     if (input.length >= prefix.length && input.startsWith(prefix)) {
       setGateUnlocked(true);
       setGateError(false);
-      if (tenantSlug) sessionStorage.setItem(`tp-access-${tenantSlug}`, '1');
+      if (gateKey) sessionStorage.setItem(gateKey, prefix);
     } else {
       setGateError(true);
     }
