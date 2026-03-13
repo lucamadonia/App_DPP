@@ -8,6 +8,7 @@ import type {
   DHLSettingsPublic,
   DHLLabelResponse,
   DHLTrackingEvent,
+  DHLReturnLabelResponse,
 } from '@/types/dhl';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -103,6 +104,37 @@ export async function cancelDHLLabel(shipmentId: string): Promise<void> {
  * Get DHL tracking events for a tracking number.
  */
 export async function getDHLTracking(trackingNumber: string): Promise<DHLTrackingEvent[]> {
+  const data = await callDHL('get_tracking', { trackingNumber });
+  return data?.events || [];
+}
+
+/**
+ * Create a DHL return label for a return.
+ * Calls Edge Function which handles DHL API, stores label, updates return record.
+ */
+export async function createReturnLabel(
+  returnId: string,
+  senderAddress?: Record<string, unknown>
+): Promise<DHLReturnLabelResponse> {
+  // Client-side billing gate: requires any Returns Hub module
+  const { hasAnyReturnsHubModule } = await import('./billing');
+  const hasRH = await hasAnyReturnsHubModule();
+  if (!hasRH) throw new Error('Returns Hub module required');
+
+  return await callDHL('create_return_label', { returnId, senderAddress });
+}
+
+/**
+ * Cancel a DHL return label.
+ */
+export async function cancelReturnLabel(returnId: string): Promise<void> {
+  await callDHL('cancel_return_label', { returnId });
+}
+
+/**
+ * Get DHL tracking events (authenticated, for admin pages).
+ */
+export async function getReturnDHLTracking(trackingNumber: string): Promise<DHLTrackingEvent[]> {
   const data = await callDHL('get_tracking', { trackingNumber });
   return data?.events || [];
 }

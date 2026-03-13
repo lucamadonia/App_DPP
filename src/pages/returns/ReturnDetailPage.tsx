@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { ReturnItemsTable } from '@/components/returns/ReturnItemsTable';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ReturnShippingCard } from '@/components/returns/ReturnShippingCard';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, staggerContainer, cardEntrance, useReducedMotion } from '@/lib/motion';
 import {
@@ -210,6 +211,10 @@ export function ReturnDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
           <TabsTrigger value="items">{t('Items')} ({items.length})</TabsTrigger>
+          <TabsTrigger value="shipping" className="gap-1.5">
+            <Truck className="h-3.5 w-3.5" />
+            {t('Shipping')}
+          </TabsTrigger>
           <TabsTrigger value="timeline">{t('Timeline')}</TabsTrigger>
           <TabsTrigger value="customs">{t('Customs')}</TabsTrigger>
         </TabsList>
@@ -314,6 +319,18 @@ export function ReturnDetailPage() {
               <ReturnItemsTable items={items} readonly />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="shipping" className="mt-4">
+          <ReturnShippingCard
+            returnData={returnData}
+            onUpdate={async () => {
+              if (!id) return;
+              const [ret, tl] = await Promise.all([getReturn(id), getReturnTimeline(id)]);
+              setReturnData(ret);
+              setTimeline(tl);
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">

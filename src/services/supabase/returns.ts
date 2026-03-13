@@ -35,6 +35,7 @@ function transformReturn(row: any): RhReturn {
     assignedTo: row.assigned_to || undefined,
     internalNotes: row.internal_notes || undefined,
     customsData: row.customs_data || undefined,
+    carrierLabelData: row.carrier_label_data || undefined,
     metadata: row.metadata || {},
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -213,6 +214,7 @@ export async function updateReturn(
   if (updates.assignedTo !== undefined) updateData.assigned_to = updates.assignedTo || null;
   if (updates.internalNotes !== undefined) updateData.internal_notes = updates.internalNotes || null;
   if (updates.customsData !== undefined) updateData.customs_data = updates.customsData || null;
+  if (updates.carrierLabelData !== undefined) updateData.carrier_label_data = updates.carrierLabelData || null;
   if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
 
   const { error } = await supabase
@@ -280,6 +282,27 @@ export async function updateReturnStatus(
         }).catch((err) => console.error('Notification trigger failed:', err));
       }
     }
+  }
+
+  // Auto-generate DHL return label on approval (fire-and-forget)
+  if (status === 'APPROVED' && tenantId) {
+    (async () => {
+      try {
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('settings')
+          .eq('id', tenantId)
+          .single();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rhSettings = (tenant?.settings as any)?.returnsHub;
+        if (rhSettings?.autoGenerateLabel) {
+          const { createReturnLabel } = await import('./dhl-carrier');
+          await createReturnLabel(id);
+        }
+      } catch (err) {
+        console.error('Auto-generate return label failed:', err);
+      }
+    })();
   }
 
   // Fire workflow event for status change (fire-and-forget)

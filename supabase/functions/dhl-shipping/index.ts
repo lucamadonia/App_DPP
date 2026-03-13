@@ -12,6 +12,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '
 
 const DHL_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/shipping/v2';
 const DHL_PROD_URL = 'https://api-eu.dhl.com/parcel/de/shipping/v2';
+const DHL_RETURNS_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/returns/v1';
+const DHL_RETURNS_PROD_URL = 'https://api-eu.dhl.com/parcel/de/returns/v1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -87,9 +89,22 @@ Deno.serve(async (req) => {
       .eq('tenant_id', tenantId)
       .eq('status', 'active');
     const moduleIds = (activeMods || []).map((m: { module_id: string }) => m.module_id);
-    const hasWarehousePro = moduleIds.includes('warehouse_professional') || moduleIds.includes('warehouse_business');
-    if (!hasWarehousePro) {
-      return json({ error: 'Warehouse Professional or Business module required (modules: ' + moduleIds.join(',') + ')' });
+
+    // Returns Hub actions require any Returns Hub module
+    const isReturnsAction = action === 'create_return_label' || action === 'cancel_return_label';
+    if (isReturnsAction) {
+      const hasReturnsHub = moduleIds.some((m: string) =>
+        m.startsWith('returns_hub_') || m === 'returns_hub_starter' || m === 'returns_hub_professional' || m === 'returns_hub_business'
+      );
+      if (!hasReturnsHub) {
+        return json({ error: 'Returns Hub module required' });
+      }
+    } else {
+      // Warehouse actions require Warehouse Pro/Business
+      const hasWarehousePro = moduleIds.includes('warehouse_professional') || moduleIds.includes('warehouse_business');
+      if (!hasWarehousePro) {
+        return json({ error: 'Warehouse Professional or Business module required (modules: ' + moduleIds.join(',') + ')' });
+      }
     }
 
     // --- Dispatch ---
@@ -104,6 +119,10 @@ Deno.serve(async (req) => {
         return await handleCancelLabel(supabase, tenantId, params);
       case 'get_tracking':
         return await handleGetTracking(supabase, tenantId, params);
+      case 'create_return_label':
+        return await handleCreateReturnLabel(supabase, tenantId, params);
+      case 'cancel_return_label':
+        return await handleCancelReturnLabel(supabase, tenantId, params);
       default:
         return json({ error: `Unknown action: ${action}` }, 400);
     }
@@ -590,6 +609,408 @@ async function handlePublicTracking(params?: Record<string, unknown>) {
     console.error('Public DHL tracking error:', err);
     return json({ events: [], error: err instanceof Error ? err.message : 'Tracking failed', carrier: 'DHL' });
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Action: create_return_label                                                */
+/* -------------------------------------------------------------------------- */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getDHLReturnsBaseUrl(settings: any): string {
+  return settings.sandbox ? DHL_RETURNS_SANDBOX_URL : DHL_RETURNS_PROD_URL;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleCreateReturnLabel(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  if (!params?.returnId) return json({ error: 'Missing returnId' }, 400);
+  const returnId = params.returnId as string;
+
+  // 1. Load DHL settings
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.apiKey) return json({ error: 'DHL not configured. Please set up DHL credentials in Warehouse > DHL Integration.' }, 400);
+
+  // 2. Load return (tenant check via RLS)
+  const { data: ret, error: retErr } = await supabase
+    .from('rh_returns')
+    .select('*')
+    .eq('id', returnId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (retErr || !ret) return json({ error: 'Return not found' }, 404);
+
+  // Prevent duplicate labels
+  if (ret.tracking_number && ret.carrier_label_data?.dhlShipmentNumber) {
+    return json({ error: 'Label already exists. Cancel the existing label first.' }, 400);
+  }
+
+  // 3. Resolve sender (customer) address
+  let senderAddress = params.senderAddress as Record<string, unknown> | undefined;
+
+  if (!senderAddress) {
+    // Try to get address from customer record
+    if (ret.customer_id) {
+      const { data: customer } = await supabase
+        .from('rh_customers')
+        .select('email, first_name, last_name, company, addresses')
+        .eq('id', ret.customer_id)
+        .single();
+
+      if (customer) {
+        const addresses = customer.addresses || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const shippingAddr = addresses.find((a: any) => a.type === 'shipping')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          || addresses.find((a: any) => a.isDefault)
+          || addresses[0];
+
+        if (shippingAddr) {
+          const customerName = [customer.first_name, customer.last_name].filter(Boolean).join(' ');
+          senderAddress = {
+            name1: customer.company || customerName || customer.email,
+            name2: customer.company ? customerName : undefined,
+            addressStreet: shippingAddr.street,
+            postalCode: shippingAddr.postalCode,
+            city: shippingAddr.city,
+            country: shippingAddr.country || 'DE',
+            email: customer.email,
+          };
+        }
+      }
+    }
+
+    // Fallback: check return metadata for address
+    if (!senderAddress && ret.metadata) {
+      const meta = ret.metadata;
+      if (meta.shippingStreet || meta.street) {
+        senderAddress = {
+          name1: meta.customerName || meta.name || meta.email || 'Customer',
+          addressStreet: meta.shippingStreet || meta.street,
+          postalCode: meta.shippingPostalCode || meta.postalCode,
+          city: meta.shippingCity || meta.city,
+          country: meta.shippingCountry || meta.country || 'DE',
+          email: meta.email,
+        };
+      }
+    }
+  }
+
+  if (!senderAddress || !senderAddress.addressStreet || !senderAddress.postalCode || !senderAddress.city) {
+    return json({ error: 'No shipping address available for this customer. Please provide an address.' }, 400);
+  }
+
+  // 4. Get returns API settings
+  const { data: tenantData } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .single();
+
+  const returnsApiSettings = tenantData?.settings?.warehouse?.dhl?.returnsApi;
+  const useReturnsApi = returnsApiSettings?.enabled && returnsApiSettings?.receiverId;
+
+  let trackingNumber: string;
+  let labelUrl: string;
+
+  if (useReturnsApi) {
+    // ---- DHL Parcel DE Returns API ----
+    const returnsBaseUrl = getDHLReturnsBaseUrl(settings);
+    const headers = getDHLHeaders(settings);
+
+    const returnPayload = {
+      receiverId: returnsApiSettings.receiverId,
+      customerReference: ret.return_number,
+      shipmentReference: ret.order_id || ret.return_number,
+      shipper: {
+        name1: senderAddress.name1 as string,
+        name2: (senderAddress.name2 as string) || undefined,
+        addressStreet: senderAddress.addressStreet as string,
+        postalCode: senderAddress.postalCode as string,
+        city: senderAddress.city as string,
+        country: { countryISOCode: mapCountryToISO3((senderAddress.country as string) || 'DE') },
+        email: (senderAddress.email as string) || undefined,
+      },
+      itemWeight: { uom: 'kg', value: 1.0 },
+      returnDocumentType: 'SHIPMENT_LABEL',
+    };
+
+    const resp = await fetch(`${returnsBaseUrl}/returns`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(returnPayload),
+    });
+
+    const respBody = await resp.json();
+
+    if (!resp.ok) {
+      const errMsg = respBody?.detail || respBody?.title || respBody?.statusText || `DHL Returns API error ${resp.status}`;
+      return json({ error: errMsg }, resp.status >= 500 ? 502 : 400);
+    }
+
+    trackingNumber = respBody.shipmentNo || respBody.shipmentNumber || '';
+    const labelDataBase64 = respBody.labelData || '';
+    labelUrl = respBody.labelUrl || '';
+
+    // Store base64 label PDF
+    if (labelDataBase64) {
+      try {
+        const binaryStr = atob(labelDataBase64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const storagePath = `${tenantId}/return-labels/${returnId}.pdf`;
+
+        await supabase.storage
+          .from('documents')
+          .upload(storagePath, bytes, { contentType: 'application/pdf', upsert: true });
+
+        const { data: signedData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+        labelUrl = signedData?.signedUrl || labelUrl;
+
+        // Store the carrier label data
+        const carrierLabelData = {
+          carrier: 'DHL',
+          dhlShipmentNumber: trackingNumber,
+          dhlProduct: 'RETOURE',
+          labelFormat: 'PDF',
+          labelStoragePath: storagePath,
+          createdAt: new Date().toISOString(),
+          apiType: 'returns',
+        };
+
+        await supabase
+          .from('rh_returns')
+          .update({
+            tracking_number: trackingNumber,
+            label_url: labelUrl,
+            label_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            carrier_label_data: carrierLabelData,
+            status: 'LABEL_GENERATED',
+          })
+          .eq('id', returnId)
+          .eq('tenant_id', tenantId);
+      } catch (storageErr) {
+        console.error('Failed to store return label PDF:', storageErr);
+      }
+    }
+  } else {
+    // ---- DHL Parcel DE Shipping v2 (inverted sender/receiver for returns) ----
+    const product = settings.defaultProduct || 'V01PAK';
+    const labelFormat = settings.labelFormat || 'PDF_A4';
+
+    const dhlOrder = {
+      profile: 'STANDARD_GRUPPENPROFIL',
+      shipments: [
+        {
+          product,
+          billingNumber: settings.billingNumber,
+          refNo: ret.return_number,
+          // For returns: customer is the shipper, warehouse is the consignee
+          shipper: {
+            name1: senderAddress.name1 as string,
+            name2: (senderAddress.name2 as string) || undefined,
+            addressStreet: senderAddress.addressStreet as string,
+            postalCode: senderAddress.postalCode as string,
+            city: senderAddress.city as string,
+            country: { countryISOCode: mapCountryToISO3((senderAddress.country as string) || 'DE') },
+            email: (senderAddress.email as string) || undefined,
+          },
+          consignee: {
+            name1: settings.shipper.name1,
+            name2: settings.shipper.name2 || undefined,
+            addressStreet: settings.shipper.addressStreet,
+            postalCode: settings.shipper.postalCode,
+            city: settings.shipper.city,
+            country: { countryISOCode: settings.shipper.country || 'DEU' },
+            email: settings.shipper.email || undefined,
+            phone: settings.shipper.phone || undefined,
+          },
+          details: {
+            dim: { uom: 'mm', height: 100, length: 300, width: 200 },
+            weight: { uom: 'kg', value: 1.0 },
+          },
+        },
+      ],
+    };
+
+    const baseUrl = getDHLBaseUrl(settings);
+    const headers = getDHLHeaders(settings);
+
+    const resp = await fetch(`${baseUrl}/orders?includeDocs=URL&docFormat=${labelFormat}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(dhlOrder),
+    });
+
+    const respBody = await resp.json();
+
+    if (!resp.ok) {
+      const errMsg = respBody?.items?.[0]?.validationMessages?.[0]?.validationMessage
+        || respBody?.detail
+        || respBody?.title
+        || `DHL API error ${resp.status}`;
+      return json({ error: errMsg }, resp.status >= 500 ? 502 : 400);
+    }
+
+    const item = respBody?.items?.[0];
+    if (!item || item.sstatus?.statusCode !== 200) {
+      const errMsg = item?.validationMessages?.[0]?.validationMessage || 'Failed to create return label';
+      return json({ error: errMsg }, 400);
+    }
+
+    trackingNumber = item.shipmentNo;
+    labelUrl = item.label?.url || '';
+
+    // Download and store label PDF
+    let storagePath = '';
+    if (labelUrl) {
+      try {
+        const labelResp = await fetch(labelUrl);
+        const labelBlob = await labelResp.blob();
+        const labelBuffer = await labelBlob.arrayBuffer();
+        storagePath = `${tenantId}/return-labels/${returnId}.pdf`;
+
+        await supabase.storage
+          .from('documents')
+          .upload(storagePath, new Uint8Array(labelBuffer), { contentType: 'application/pdf', upsert: true });
+
+        const { data: signedData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+        labelUrl = signedData?.signedUrl || labelUrl;
+      } catch (storageErr) {
+        console.error('Failed to store return label PDF:', storageErr);
+      }
+    }
+
+    // Update return record
+    const carrierLabelData = {
+      carrier: 'DHL',
+      dhlShipmentNumber: trackingNumber,
+      dhlProduct: product,
+      labelFormat,
+      labelStoragePath: storagePath,
+      createdAt: new Date().toISOString(),
+      apiType: 'shipping_v2',
+    };
+
+    await supabase
+      .from('rh_returns')
+      .update({
+        tracking_number: trackingNumber,
+        label_url: labelUrl,
+        label_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        carrier_label_data: carrierLabelData,
+        status: 'LABEL_GENERATED',
+      })
+      .eq('id', returnId)
+      .eq('tenant_id', tenantId);
+  }
+
+  // Add timeline entry
+  await supabase.from('rh_return_timeline').insert({
+    return_id: returnId,
+    tenant_id: tenantId,
+    status: 'LABEL_GENERATED',
+    comment: `DHL return label created (${trackingNumber})`,
+    actor_type: 'system',
+  });
+
+  return json({
+    success: true,
+    trackingNumber,
+    shipmentNumber: trackingNumber,
+    labelUrl,
+    labelStoragePath: `${tenantId}/return-labels/${returnId}.pdf`,
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Action: cancel_return_label                                                */
+/* -------------------------------------------------------------------------- */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleCancelReturnLabel(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  if (!params?.returnId) return json({ error: 'Missing returnId' }, 400);
+  const returnId = params.returnId as string;
+
+  // 1. Load return
+  const { data: ret, error: retErr } = await supabase
+    .from('rh_returns')
+    .select('*, carrier_label_data')
+    .eq('id', returnId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (retErr || !ret) return json({ error: 'Return not found' }, 404);
+
+  const dhlShipmentNumber = ret.carrier_label_data?.dhlShipmentNumber;
+  if (!dhlShipmentNumber) return json({ error: 'No DHL shipment number found' }, 400);
+
+  // 2. Load DHL settings
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.apiKey) return json({ error: 'DHL not configured' }, 400);
+
+  // 3. Cancel at DHL (only for shipping_v2 labels; returns API labels can't be cancelled easily)
+  const apiType = ret.carrier_label_data?.apiType || 'shipping_v2';
+  if (apiType === 'shipping_v2') {
+    const baseUrl = getDHLBaseUrl(settings);
+    const headers = getDHLHeaders(settings);
+
+    const resp = await fetch(`${baseUrl}/orders/${dhlShipmentNumber}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    if (!resp.ok && resp.status !== 200 && resp.status !== 404 && resp.status !== 400) {
+      const respBody = await resp.text();
+      return json({ error: `DHL cancellation failed: ${respBody.slice(0, 200)}` }, 502);
+    }
+  }
+
+  // 4. Delete label from storage
+  const storagePath = ret.carrier_label_data?.labelStoragePath;
+  if (storagePath) {
+    await supabase.storage.from('documents').remove([storagePath]);
+  }
+
+  // 5. Update return — clear tracking, revert status
+  const updatedLabelData = {
+    ...ret.carrier_label_data,
+    cancelledAt: new Date().toISOString(),
+  };
+
+  const newStatus = ret.status === 'LABEL_GENERATED' ? 'APPROVED' : ret.status;
+
+  const { error: updateErr } = await supabase
+    .from('rh_returns')
+    .update({
+      tracking_number: null,
+      label_url: null,
+      label_expires_at: null,
+      carrier_label_data: updatedLabelData,
+      status: newStatus,
+    })
+    .eq('id', returnId)
+    .eq('tenant_id', tenantId);
+
+  if (updateErr) {
+    console.error('Failed to update return after label cancel:', updateErr);
+  }
+
+  // 6. Add timeline entry
+  await supabase.from('rh_return_timeline').insert({
+    return_id: returnId,
+    tenant_id: tenantId,
+    status: newStatus,
+    comment: `DHL return label cancelled (${dhlShipmentNumber})`,
+    actor_type: 'system',
+  });
+
+  return json({ success: true });
 }
 
 /* -------------------------------------------------------------------------- */

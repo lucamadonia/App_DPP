@@ -121,6 +121,7 @@ export interface RhReturn {
   assignedTo?: string;
   internalNotes?: string;
   customsData?: RhCustomsData;
+  carrierLabelData?: import('@/types/dhl').CarrierLabelData;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;

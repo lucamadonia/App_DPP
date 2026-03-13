@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, Save, Plus, Trash2, Mail, Pencil, MessageSquareText, ArrowRight, Settings2 } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, Mail, Pencil, MessageSquareText, ArrowRight, Settings2, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/returns/EmptyState';
 import { PortalDesignTab } from '@/components/returns/PortalDesignTab';
 import { PortalSetupTab } from '@/components/returns/PortalSetupTab';
 import { EmbedSnippetCard } from '@/components/returns/EmbedSnippetCard';
+import { ShippingSettingsTab } from '@/components/returns/ShippingSettingsTab';
 import { pageVariants, pageTransition, useReducedMotion } from '@/lib/motion';
 import {
   getReturnsHubSettings, updateReturnsHubSettings,
@@ -51,6 +52,9 @@ export function ReturnsSettingsPage() {
   const [slaFirstResponseHours, setSlaFirstResponseHours] = useState('4');
   const [slaResolutionHours, setSlaResolutionHours] = useState('24');
 
+  // Shipping / DHL
+  const [autoGenerateLabel, setAutoGenerateLabel] = useState(false);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -73,6 +77,7 @@ export function ReturnsSettingsPage() {
           setSlaFirstResponseHours(String(slaSettings.firstResponseHours || 4));
           setSlaResolutionHours(String(slaSettings.resolutionHours || 24));
         }
+        setAutoGenerateLabel((s as any).autoGenerateLabel ?? false);
       }
       setLoading(false);
     }
@@ -218,6 +223,10 @@ export function ReturnsSettingsPage() {
             <TabsTrigger value="reasons" className="text-xs sm:text-sm">{t('Return Reasons')}</TabsTrigger>
             <TabsTrigger value="tickets" className="text-xs sm:text-sm">{t('Tickets & SLA')}</TabsTrigger>
             <TabsTrigger value="notifications" className="text-xs sm:text-sm">{t('Notifications')}</TabsTrigger>
+            <TabsTrigger value="shipping" className="text-xs sm:text-sm gap-1">
+              <Truck className="h-3.5 w-3.5" />
+              {t('Shipping')}
+            </TabsTrigger>
             <TabsTrigger value="appearance" className="text-xs sm:text-sm">{t('Portal Design')}</TabsTrigger>
             <TabsTrigger value="portal" className="text-xs sm:text-sm">{t('Portal Setup')}</TabsTrigger>
           </TabsList>
@@ -325,6 +334,23 @@ export function ReturnsSettingsPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="shipping" className="mt-4">
+          <ShippingSettingsTab
+            autoGenerateLabel={autoGenerateLabel}
+            onAutoGenerateLabelChange={setAutoGenerateLabel}
+            saving={saving}
+            onSave={async () => {
+              if (!settings) return;
+              setSaving(true);
+              await updateReturnsHubSettings({
+                ...settings,
+                autoGenerateLabel,
+              } as any);
+              setSaving(false);
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="appearance" className="mt-4 space-y-4">

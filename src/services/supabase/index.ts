@@ -559,6 +559,9 @@ export {
   cancelDHLLabel,
   getDHLTracking,
   getPublicDHLTracking,
+  createReturnLabel,
+  cancelReturnLabel,
+  getReturnDHLTracking,
 } from './dhl-carrier';
 
 // Customer Portal

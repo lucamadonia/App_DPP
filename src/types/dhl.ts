@@ -78,3 +78,19 @@ export const DHL_PRODUCT_LABELS: Record<DHLParcelProduct, string> = {
 export const DHL_PRODUCTS: DHLParcelProduct[] = [
   'V01PAK', 'V53WPAK', 'V54EPAK', 'V62WP', 'V66WPI',
 ];
+
+/** DHL Parcel DE Returns API settings */
+export interface DHLReturnsSettings {
+  enabled: boolean;
+  receiverId: string; // DHL Retoure receiver ID (from DHL business portal)
+  billingNumber?: string; // Separate billing number for returns (optional, falls back to main)
+}
+
+/** Response from return label creation */
+export interface DHLReturnLabelResponse {
+  success: boolean;
+  trackingNumber: string;
+  shipmentNumber: string;
+  labelUrl: string; // signed storage URL
+  labelStoragePath: string;
+}

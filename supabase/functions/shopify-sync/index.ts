@@ -28,6 +28,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // ============================================
@@ -36,7 +37,7 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return json(null, 204);
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -469,6 +470,28 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
         }));
         await supabase.from('wh_shipment_items').insert(shipmentItems);
 
+        // Reserve stock for each item with a batch
+        const reservationWarnings: string[] = [];
+        for (const item of items) {
+          if (!item.batch_id) continue;
+
+          await reserveStockForItem(
+            supabase,
+            tenantId,
+            item.location_id,
+            item.product_id,
+            item.batch_id,
+            item.quantity,
+            shipment.id,
+            orderRef,
+            reservationWarnings,
+          );
+        }
+
+        if (reservationWarnings.length > 0) {
+          console.warn(`Stock reservation warnings for ${orderRef}:`, reservationWarnings);
+        }
+
         counts.created++;
         counts.processed++;
       } catch (orderErr) {
@@ -740,5 +763,100 @@ async function handleCreateFulfillment(supabase: any, tenantId: string, userId: 
       fulfillmentId: result?.fulfillment?.id,
       status: result?.fulfillment?.status,
     },
+  });
+}
+
+// ============================================
+// STOCK RESERVATION HELPERS
+// ============================================
+
+function generateTransactionNumber(): string {
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `TXN-${dateStr}-${rand}`;
+}
+
+async function reserveStockForItem(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  tenantId: string,
+  locationId: string,
+  productId: string,
+  batchId: string,
+  quantity: number,
+  shipmentId: string,
+  orderRef: string,
+  warnings: string[],
+) {
+  // Find stock level row
+  const { data: stock } = await supabase
+    .from('wh_stock_levels')
+    .select('id, quantity_available, quantity_reserved')
+    .eq('tenant_id', tenantId)
+    .eq('location_id', locationId)
+    .eq('batch_id', batchId)
+    .maybeSingle();
+
+  if (!stock) {
+    warnings.push(`No stock record for batch ${batchId} at location ${locationId}`);
+    return;
+  }
+
+  if (stock.quantity_available < quantity) {
+    warnings.push(
+      `Insufficient stock for batch ${batchId}: available=${stock.quantity_available}, requested=${quantity}`,
+    );
+    // Reserve what we can (partial reservation)
+    const reserveQty = Math.min(stock.quantity_available, quantity);
+    if (reserveQty <= 0) return;
+
+    await supabase
+      .from('wh_stock_levels')
+      .update({
+        quantity_available: stock.quantity_available - reserveQty,
+        quantity_reserved: stock.quantity_reserved + reserveQty,
+      })
+      .eq('id', stock.id);
+
+    await supabase.from('wh_stock_transactions').insert({
+      tenant_id: tenantId,
+      transaction_number: generateTransactionNumber(),
+      type: 'reservation',
+      location_id: locationId,
+      product_id: productId,
+      batch_id: batchId,
+      quantity: reserveQty,
+      quantity_before: stock.quantity_available,
+      quantity_after: stock.quantity_available - reserveQty,
+      shipment_id: shipmentId,
+      reference_number: orderRef,
+      notes: `Partial reservation (${reserveQty}/${quantity}) — insufficient stock`,
+    });
+    return;
+  }
+
+  // Full reservation
+  await supabase
+    .from('wh_stock_levels')
+    .update({
+      quantity_available: stock.quantity_available - quantity,
+      quantity_reserved: stock.quantity_reserved + quantity,
+    })
+    .eq('id', stock.id);
+
+  await supabase.from('wh_stock_transactions').insert({
+    tenant_id: tenantId,
+    transaction_number: generateTransactionNumber(),
+    type: 'reservation',
+    location_id: locationId,
+    product_id: productId,
+    batch_id: batchId,
+    quantity: quantity,
+    quantity_before: stock.quantity_available,
+    quantity_after: stock.quantity_available - quantity,
+    shipment_id: shipmentId,
+    reference_number: orderRef,
+    notes: `Auto-reserved via Shopify manual sync`,
   });
 }
