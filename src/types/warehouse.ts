@@ -609,6 +609,7 @@ export interface WhShipmentInput {
   priority?: ShipmentPriority;
   notes?: string;
   internalNotes?: string;
+  totalWeightGrams?: number;
   sampleMeta?: SampleShipmentMeta;
   items: WhShipmentItemInput[];
 }

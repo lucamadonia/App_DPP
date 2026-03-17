@@ -238,6 +238,7 @@ export function CreateShipmentPage() {
         serviceLevel: serviceLevel || undefined,
         estimatedDelivery: estimatedDelivery || undefined,
         shippingCost: shippingCost ? Number(shippingCost) : undefined,
+        totalWeightGrams: weightGrams ? Number(weightGrams) : undefined,
         orderReference: orderReference || undefined,
         notes: notes || undefined,
         internalNotes: internalNotes || undefined,

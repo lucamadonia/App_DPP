@@ -335,6 +335,7 @@ export function ShipmentDetailPage() {
   const prevStatus = currentIdx > 0 ? SHIPMENT_STATUS_ORDER[currentIdx - 1] : null;
 
   const isDraft = shipment.status === 'draft';
+  const canEditShipping = ['draft', 'picking', 'packed'].includes(shipment.status);
   const isTerminal = shipment.status === 'delivered' || shipment.status === 'cancelled';
   const trackingUrl = getTrackingUrl(shipment.carrier, shipment.trackingNumber || '');
 
@@ -539,7 +540,7 @@ export function ShipmentDetailPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <Truck className="h-4 w-4" /> {t('Shipping')}
               </CardTitle>
-              {isDraft && !editingShipping && (
+              {canEditShipping && !editingShipping && (
                 <Button variant="ghost" size="sm" onClick={() => startEditing('shipping')}>
                   <Pencil className="h-3.5 w-3.5 mr-1" /> {t('Edit', { ns: 'common' })}
                 </Button>

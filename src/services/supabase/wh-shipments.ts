@@ -217,6 +217,7 @@ export async function createShipment(input: WhShipmentInput): Promise<WhShipment
       shipping_cost: input.shippingCost || null,
       currency: input.currency || 'EUR',
       total_items: totalItems,
+      total_weight_grams: input.totalWeightGrams || null,
       source_location_id: input.sourceLocationId || null,
       order_reference: input.orderReference || null,
       customer_id: input.customerId || null,

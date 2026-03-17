@@ -82,28 +82,32 @@ Deno.serve(async (req) => {
     if (!profile?.tenant_id) return json({ error: 'No tenant' }, 403);
     const tenantId = profile.tenant_id;
 
-    // --- Billing Gate ---
-    const { data: activeMods } = await supabase
-      .from('billing_module_subscriptions')
-      .select('module_id')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active');
-    const moduleIds = (activeMods || []).map((m: { module_id: string }) => m.module_id);
+    // --- Billing Gate (skip for config actions — tenants need to set up DHL before subscribing) ---
+    const isConfigAction = action === 'save_credentials' || action === 'test_connection';
 
-    // Returns Hub actions require any Returns Hub module
-    const isReturnsAction = action === 'create_return_label' || action === 'cancel_return_label';
-    if (isReturnsAction) {
-      const hasReturnsHub = moduleIds.some((m: string) =>
-        m.startsWith('returns_hub_') || m === 'returns_hub_starter' || m === 'returns_hub_professional' || m === 'returns_hub_business'
-      );
-      if (!hasReturnsHub) {
-        return json({ error: 'Returns Hub module required' });
-      }
-    } else {
-      // Warehouse actions require Warehouse Pro/Business
-      const hasWarehousePro = moduleIds.includes('warehouse_professional') || moduleIds.includes('warehouse_business');
-      if (!hasWarehousePro) {
-        return json({ error: 'Warehouse Professional or Business module required (modules: ' + moduleIds.join(',') + ')' });
+    if (!isConfigAction) {
+      const { data: activeMods } = await supabase
+        .from('billing_module_subscriptions')
+        .select('module_id')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active');
+      const moduleIds = (activeMods || []).map((m: { module_id: string }) => m.module_id);
+
+      const isReturnsAction = action === 'create_return_label' || action === 'cancel_return_label';
+
+      if (isReturnsAction) {
+        const hasReturnsHub = moduleIds.some((m: string) =>
+          m.startsWith('returns_hub_') || m === 'returns_hub_starter' || m === 'returns_hub_professional' || m === 'returns_hub_business'
+        );
+        if (!hasReturnsHub) {
+          return json({ error: 'Returns Hub module required' });
+        }
+      } else {
+        // Warehouse actions require Warehouse Pro/Business
+        const hasWarehousePro = moduleIds.includes('warehouse_professional') || moduleIds.includes('warehouse_business');
+        if (!hasWarehousePro) {
+          return json({ error: 'Warehouse Professional or Business module required (modules: ' + moduleIds.join(',') + ')' });
+        }
       }
     }
 
