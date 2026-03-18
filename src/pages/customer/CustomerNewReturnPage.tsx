@@ -18,6 +18,7 @@ import { ReturnReasonStep } from '@/components/returns/public/steps/ReturnReason
 import { PhotoUploadStep } from '@/components/returns/public/steps/PhotoUploadStep';
 import { SolutionStep } from '@/components/returns/public/steps/SolutionStep';
 import { ShippingStep } from '@/components/returns/public/steps/ShippingStep';
+import type { ShippingAddress } from '@/components/returns/public/steps/ShippingStep';
 import { ConfirmationStep } from '@/components/returns/public/steps/ConfirmationStep';
 
 // 6 steps (no identification step - customer is logged in)
@@ -35,6 +36,7 @@ interface WizardState {
   photos: File[];
   solution: DesiredSolution;
   shippingMethod: string;
+  shippingAddress: ShippingAddress;
 }
 
 type WizardAction =
@@ -49,7 +51,8 @@ type WizardAction =
   | { type: 'SET_FOLLOW_UP'; questionId: string; value: string }
   | { type: 'SET_PHOTOS'; photos: File[] }
   | { type: 'SET_SOLUTION'; value: DesiredSolution }
-  | { type: 'SET_SHIPPING'; value: string };
+  | { type: 'SET_SHIPPING'; value: string }
+  | { type: 'SET_SHIPPING_ADDRESS'; address: ShippingAddress };
 
 const initialState: WizardState = {
   step: 0,
@@ -63,6 +66,7 @@ const initialState: WizardState = {
   photos: [],
   solution: 'refund',
   shippingMethod: 'print_label',
+  shippingAddress: { name: '', company: '', street: '', postalCode: '', city: '', country: 'DE' },
 };
 
 function reducer(state: WizardState, action: WizardAction): WizardState {
@@ -91,6 +95,8 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, solution: action.value };
     case 'SET_SHIPPING':
       return { ...state, shippingMethod: action.value };
+    case 'SET_SHIPPING_ADDRESS':
+      return { ...state, shippingAddress: action.address };
     default:
       return state;
   }
@@ -220,6 +226,8 @@ export function CustomerNewReturnPage() {
           <ShippingStep
             selected={state.shippingMethod}
             onSelect={(v) => dispatch({ type: 'SET_SHIPPING', value: v })}
+            address={state.shippingAddress}
+            onAddressChange={(address) => dispatch({ type: 'SET_SHIPPING_ADDRESS', address })}
           />
         );
       case 5:
@@ -233,6 +241,7 @@ export function CustomerNewReturnPage() {
             reasonText={state.reasonText}
             solution={state.solution}
             shippingMethod={state.shippingMethod}
+            shippingAddress={state.shippingAddress}
             photoCount={state.photos.length}
             onGoToStep={(step) => dispatch({ type: 'GO_TO_STEP', step })}
           />
