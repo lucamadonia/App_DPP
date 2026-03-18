@@ -4,6 +4,7 @@
  */
 
 import { supabase, getCurrentTenantId, supabaseAnon } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import type {
   DHLSettingsPublic,
   DHLLabelResponse,
@@ -13,41 +14,15 @@ import type {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function callDHL(action: string, params?: Record<string, unknown>): Promise<any> {
-  const { data, error } = await supabase.functions.invoke('dhl-shipping', {
-    body: { action, params },
-  });
+  const { data, error } = await invokeEdgeFunction<Record<string, unknown>>('dhl-shipping', { action, params });
   if (error) {
-    // Extract real error from response context (FunctionsHttpError)
-    let detail = error.message;
-    if (typeof data === 'object' && data?.error) {
-      detail = data.error;
-    } else if ('context' in error) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ctx = (error as any).context;
-        if (ctx?.status === 401) {
-          detail = 'DHL service not available — the edge function may not be deployed. Contact support.';
-        } else if (ctx?.json) {
-          const body = await ctx.json();
-          detail = body?.error || body?.message || JSON.stringify(body);
-        } else if (ctx?.text) {
-          detail = await ctx.text();
-        }
-      } catch {
-        // fallback to original message
-      }
-    }
-    // Detect 401 from error message as fallback
-    if (detail.includes('401') || detail.includes('Unauthorized')) {
-      detail = 'DHL service not available — the edge function may not be deployed. Contact support.';
-    }
-    console.error(`[DHL] ${action} error:`, detail, { data, error });
-    throw new Error(detail);
+    console.error(`[DHL] ${action} error:`, error.message);
+    throw error;
   }
   if (data?.error) {
     if (data.dhlRequest) console.error(`[DHL] Request payload:`, JSON.stringify(data.dhlRequest, null, 2));
     if (data.dhlResponse) console.error(`[DHL] DHL response:`, JSON.stringify(data.dhlResponse, null, 2));
-    throw new Error(data.error);
+    throw new Error(data.error as string);
   }
   return data;
 }

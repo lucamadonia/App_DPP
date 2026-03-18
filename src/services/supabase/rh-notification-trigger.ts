@@ -5,6 +5,7 @@
  * The actual email sending is handled by the Supabase Edge Function via DB webhook.
  */
 import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import type { RhNotificationEventType } from '@/types/returns-hub';
 import type { EmailDesignConfig } from '@/components/returns/email-editor/emailEditorTypes';
 import { renderEmailHtml } from '@/components/returns/email-editor/emailHtmlRenderer';
@@ -33,12 +34,18 @@ export interface NotificationContext {
  */
 async function sendNotificationEmail(
   notificationRecord: Record<string, unknown>,
-  client: typeof supabase = supabase
+  client?: typeof supabase
 ) {
   try {
-    await client.functions.invoke('send-email', {
-      body: { record: notificationRecord },
-    });
+    if (client && client !== supabase) {
+      // Public (anon) context — use direct invoke (no session refresh needed)
+      await client.functions.invoke('send-email', {
+        body: { record: notificationRecord },
+      });
+    } else {
+      // Authenticated context — use wrapper with session refresh
+      await invokeEdgeFunction('send-email', { record: notificationRecord });
+    }
   } catch (err) {
     console.warn('Direct send-email invocation failed:', err);
   }

@@ -81,6 +81,11 @@ export interface RhInspectionResult {
   notes?: string;
   photos?: string[];
   approved?: boolean;
+  rejectedAfterInspection?: boolean;
+  rejectionReason?: string;
+  deductionAmount?: number;
+  deductionReason?: string;
+  returnToCustomer?: boolean;
 }
 
 export interface RhCustomsData {

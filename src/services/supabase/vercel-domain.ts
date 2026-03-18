@@ -3,7 +3,7 @@
  *
  * Client-side service to add/remove custom domains via Supabase Edge Function.
  */
-import { supabase } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 
 interface VercelDomainResponse {
   success: boolean;
@@ -23,18 +23,16 @@ export async function addDomainToVercel(
     return { success: false, error: 'Custom Domain module not active. Please activate it in Billing settings.' };
   }
 
-  const { data, error } = await supabase.functions.invoke(
+  const { data, error } = await invokeEdgeFunction<VercelDomainResponse>(
     'manage-vercel-domain',
-    {
-      body: { action: 'add', domain },
-    }
+    { action: 'add', domain },
   );
 
   if (error) {
     return { success: false, error: error.message };
   }
 
-  return data as VercelDomainResponse;
+  return data;
 }
 
 /**
@@ -43,16 +41,14 @@ export async function addDomainToVercel(
 export async function removeDomainFromVercel(
   domain: string
 ): Promise<VercelDomainResponse> {
-  const { data, error } = await supabase.functions.invoke(
+  const { data, error } = await invokeEdgeFunction<VercelDomainResponse>(
     'manage-vercel-domain',
-    {
-      body: { action: 'remove', domain },
-    }
+    { action: 'remove', domain },
   );
 
   if (error) {
     return { success: false, error: error.message };
   }
 
-  return data as VercelDomainResponse;
+  return data;
 }

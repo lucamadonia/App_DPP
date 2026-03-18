@@ -9,6 +9,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import type {
   ShopifyIntegrationSettings,
   ShopifySyncConfig,
@@ -92,12 +93,10 @@ function transformSyncLog(row: any): ShopifySyncLog {
 }
 
 async function callEdgeFunction(action: string, params?: Record<string, unknown>): Promise<ShopifySyncResponse> {
-  const { data, error } = await supabase.functions.invoke('shopify-sync', {
-    body: { action, params },
-  });
+  const { data, error } = await invokeEdgeFunction<ShopifySyncResponse>('shopify-sync', { action, params });
   if (error) throw new Error(`Shopify sync failed: ${error.message}`);
   if (data?.error) throw new Error(data.error);
-  return data as ShopifySyncResponse;
+  return data;
 }
 
 // ============================================

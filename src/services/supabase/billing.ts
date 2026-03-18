@@ -8,6 +8,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import {
   PLAN_CONFIGS,
   MODULE_CONFIGS,
@@ -560,15 +561,14 @@ export async function createCheckoutSession(params: {
   metadata?: Record<string, string>;
   locale?: string;
 }): Promise<{ url: string; error?: never } | { url?: never; error: string }> {
-  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-    body: params,
-  });
+  const { data, error } = await invokeEdgeFunction<{ url?: string; error?: string }>(
+    'create-checkout-session',
+    params,
+  );
 
   if (error) {
     console.error('Checkout session error:', error);
-    // Extract real error from edge function response body
-    const detail = extractEdgeFunctionError(error);
-    return { error: detail };
+    return { error: error.message };
   }
 
   if (!data?.url) {
@@ -586,14 +586,14 @@ export async function createCheckoutSession(params: {
 export async function createPortalSession(
   returnUrl: string,
 ): Promise<{ url: string; error?: never } | { url?: never; error: string }> {
-  const { data, error } = await supabase.functions.invoke('create-portal-session', {
-    body: { returnUrl },
-  });
+  const { data, error } = await invokeEdgeFunction<{ url?: string; error?: string }>(
+    'create-portal-session',
+    { returnUrl },
+  );
 
   if (error) {
     console.error('Portal session error:', error);
-    const detail = extractEdgeFunctionError(error);
-    return { error: detail };
+    return { error: error.message };
   }
 
   if (!data?.url) {
@@ -601,44 +601,6 @@ export async function createPortalSession(
   }
 
   return { url: data.url };
-}
-
-// ============================================
-// EDGE FUNCTION ERROR EXTRACTION
-// ============================================
-
-/**
- * Extract the real error message from a Supabase Edge Function error.
- * When an edge function returns non-2xx, supabase-js wraps the response
- * in error.context (which contains the JSON body with the real error).
- */
-function extractEdgeFunctionError(error: { message?: string; context?: unknown }): string {
-  try {
-    // error.context may be the parsed JSON body or a string
-    const ctx = error.context;
-    if (ctx && typeof ctx === 'object') {
-      // Direct object — e.g. { error: "Stripe Tax not enabled..." }
-      const obj = ctx as Record<string, unknown>;
-      if (typeof obj.error === 'string') return obj.error;
-      // Sometimes nested in body
-      if (obj.body && typeof obj.body === 'object') {
-        const body = obj.body as Record<string, unknown>;
-        if (typeof body.error === 'string') return body.error;
-      }
-    }
-    if (typeof ctx === 'string') {
-      try {
-        const parsed = JSON.parse(ctx);
-        if (typeof parsed.error === 'string') return parsed.error;
-      } catch {
-        // ctx is a plain string error
-        if (ctx.length > 0 && ctx.length < 500) return ctx;
-      }
-    }
-  } catch {
-    // fallthrough
-  }
-  return error.message || 'Unknown error';
 }
 
 // ============================================

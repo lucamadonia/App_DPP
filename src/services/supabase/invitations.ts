@@ -5,6 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import type { Invitation } from '@/types/database';
 
 type WriteResult = { success: boolean; error?: string };
@@ -73,13 +74,14 @@ export async function createInvitation(invitation: {
   }
 
   // Call Edge Function to create auth user + send invitation email
-  const { data: fnData, error: fnError } = await supabase.functions.invoke('invite-user', {
-    body: {
+  const { data: fnData, error: fnError } = await invokeEdgeFunction<{ emailSent?: boolean; userAlreadyExists?: boolean }>(
+    'invite-user',
+    {
       email: invitation.email,
       role: invitation.role,
       name: invitation.name || undefined,
     },
-  });
+  );
 
   if (fnError) {
     // Invitation record exists but email failed — still return success with warning
@@ -127,13 +129,14 @@ export async function resendInvitation(id: string): Promise<InviteResult> {
   if (error) return { success: false, error: error.message };
 
   // Re-send via Edge Function
-  const { data: fnData, error: fnError } = await supabase.functions.invoke('invite-user', {
-    body: {
+  const { data: fnData, error: fnError } = await invokeEdgeFunction<{ emailSent?: boolean; userAlreadyExists?: boolean }>(
+    'invite-user',
+    {
       email: inv.email,
       role: inv.role,
       name: inv.name || undefined,
     },
-  });
+  );
 
   if (fnError) {
     console.error('invite-user edge function error (resend):', fnError);

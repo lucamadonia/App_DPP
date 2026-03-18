@@ -5,7 +5,7 @@
  * This service provides typed wrappers for each admin operation.
  */
 
-import { supabase } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import type {
   PlatformStats,
   AdminTenant,
@@ -23,25 +23,20 @@ import type { BillingPlan, ModuleId } from '@/types/billing';
 // ============================================
 
 async function callAdminApi<T>(request: AdminApiRequest): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error('Not authenticated');
-  }
-
-  const { data, error } = await supabase.functions.invoke('admin-api', {
-    body: request,
-  });
+  const { data, error } = await invokeEdgeFunction<AdminApiResponse<T>>(
+    'admin-api',
+    request as unknown as Record<string, unknown>,
+  );
 
   if (error) {
     throw new Error(error.message || 'Admin API call failed');
   }
 
-  const response = data as AdminApiResponse<T>;
-  if (!response.success) {
-    throw new Error(response.error || 'Admin operation failed');
+  if (!data.success) {
+    throw new Error(data.error || 'Admin operation failed');
   }
 
-  return response.data as T;
+  return data.data as T;
 }
 
 // ============================================
