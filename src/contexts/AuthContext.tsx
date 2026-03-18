@@ -96,8 +96,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     });
 
+    // Listen for session-expired events from edge function wrapper
+    const handleSessionExpired = () => {
+      console.warn('[AuthContext] Session expired — signing out and redirecting to login');
+      clearTenantIdCache();
+      setUser(null);
+      setTenantId(null);
+      setIsSuperAdmin(false);
+    };
+    window.addEventListener('session-expired', handleSessionExpired);
+
     return () => {
       unsubscribe();
+      window.removeEventListener('session-expired', handleSessionExpired);
     };
   }, []);
 

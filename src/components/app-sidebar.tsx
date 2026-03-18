@@ -456,12 +456,12 @@ export function AppSidebar() {
             <LanguageSwitcher />
             <Button
               variant="ghost"
-              size="icon"
               onClick={handleSignOut}
-              className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+              className="h-8 gap-1.5 px-2 text-sidebar-foreground/60 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/30"
               title={t('Sign Out')}
             >
               <LogOut className="h-4 w-4" />
+              <span className="text-xs">{t('Sign Out')}</span>
             </Button>
           </div>
         </div>

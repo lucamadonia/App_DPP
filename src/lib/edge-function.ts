@@ -33,6 +33,9 @@ export async function invokeEdgeFunction<T = unknown>(
       console.warn(`[edge-function] 401 from ${functionName}, retrying after session refresh...`);
       const refreshed = await forceRefreshSession();
       if (!refreshed) {
+        // Session is irrecoverably expired — notify the app to redirect to login
+        window.dispatchEvent(new CustomEvent('session-expired'));
+        supabase.auth.signOut().catch(() => {});
         return { data: null, error: new Error('Sitzung abgelaufen. Bitte neu einloggen.') };
       }
 
