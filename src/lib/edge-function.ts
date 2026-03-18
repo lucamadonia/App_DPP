@@ -7,11 +7,15 @@
 
 import { supabase } from './supabase';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
 /**
  * Invoke a Supabase Edge Function with automatic session refresh.
  * 1. Check current session — if expired or about to expire, refresh first
  * 2. Invoke the edge function
- * 3. On 401, retry once after forced refresh
+ * 3. On 401, retry once after forced refresh using raw fetch()
+ *    (supabase.functions.invoke ignores custom Authorization headers)
  */
 export async function invokeEdgeFunction<T = unknown>(
   functionName: string,
@@ -28,7 +32,7 @@ export async function invokeEdgeFunction<T = unknown>(
   if (error) {
     const is401 = isUnauthorizedError(error);
 
-    // Step 3: On 401, retry once after forced refresh
+    // Step 3: On 401, retry once after forced refresh using raw fetch
     if (is401) {
       console.warn(`[edge-function] 401 from ${functionName}, retrying after session refresh...`);
       const freshToken = await forceRefreshSession();
@@ -39,19 +43,42 @@ export async function invokeEdgeFunction<T = unknown>(
         return { data: null, error: new Error('Sitzung abgelaufen. Bitte neu einloggen.') };
       }
 
-      // Retry with explicit Authorization header to bypass stale token cache
-      console.log(`[edge-function] Retrying ${functionName} with fresh token`);
-      const { data: retryData, error: retryError } = await supabase.functions.invoke(functionName, {
-        body,
-        headers: { Authorization: `Bearer ${freshToken}` },
-      });
+      // Retry with raw fetch() — supabase.functions.invoke() ignores custom Auth headers
+      console.log(`[edge-function] Retrying ${functionName} with raw fetch + fresh token`);
+      try {
+        const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${freshToken}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify(body),
+        });
 
-      if (retryError) {
-        const detail = extractEdgeFunctionError(retryError, retryData);
-        return { data: null, error: new Error(detail) };
+        if (!resp.ok) {
+          if (resp.status === 401) {
+            window.dispatchEvent(new CustomEvent('session-expired'));
+            supabase.auth.signOut().catch(() => {});
+            return { data: null, error: new Error('Sitzung abgelaufen. Bitte neu einloggen.') };
+          }
+          const text = await resp.text();
+          let errMsg: string;
+          try {
+            const parsed = JSON.parse(text);
+            errMsg = parsed.error || `Edge function error ${resp.status}`;
+          } catch {
+            errMsg = text || `Edge function error ${resp.status}`;
+          }
+          return { data: null, error: new Error(errMsg) };
+        }
+
+        const retryData = await resp.json();
+        return { data: retryData as T, error: null };
+      } catch (fetchErr) {
+        return { data: null, error: fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr)) };
       }
-
-      return { data: retryData as T, error: null };
     }
 
     // Non-401 error
@@ -64,20 +91,26 @@ export async function invokeEdgeFunction<T = unknown>(
 
 /**
  * Ensure we have a valid (non-expired) session.
- * Proactively refreshes if token expires within 2 minutes.
+ * Proactively refreshes if token expires within 5 minutes.
+ * Uses getUser() instead of getSession() to validate the token server-side,
+ * since getSession() only reads from local cache and may return stale data.
  */
 async function ensureValidSession(): Promise<void> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return; // No session — let the invoke fail naturally
 
-    // Check if token expires within the next 2 minutes
+    // Check if token expires within the next 5 minutes
     const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-    const twoMinutes = 2 * 60 * 1000;
+    const fiveMinutes = 5 * 60 * 1000;
+    const timeUntilExpiry = expiresAt > 0 ? expiresAt - Date.now() : Infinity;
 
-    if (expiresAt > 0 && expiresAt - Date.now() < twoMinutes) {
-      console.log('[edge-function] Token expiring soon, proactively refreshing...');
-      await supabase.auth.refreshSession();
+    if (timeUntilExpiry < fiveMinutes) {
+      console.log(`[edge-function] Token expires in ${Math.round(timeUntilExpiry / 1000)}s, proactively refreshing...`);
+      const { error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.warn('[edge-function] Proactive refresh failed:', error.message);
+      }
     }
   } catch (err) {
     console.warn('[edge-function] ensureValidSession error:', err);
