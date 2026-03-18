@@ -341,9 +341,8 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
       || respBody?.detail
       || respBody?.title
       || `DHL API error ${resp.status}`;
-    // Include full DHL response for debugging
-    const fullDetail = JSON.stringify(respBody).slice(0, 500);
-    return json({ error: errMsg, dhlResponse: fullDetail }, resp.status >= 500 ? 502 : 400);
+    // Return 200 so supabase-js passes through the error details (not FunctionsHttpError)
+    return json({ error: errMsg, dhlRequest: dhlOrder, dhlResponse: respBody });
   }
 
   // 6. Extract tracking + label
