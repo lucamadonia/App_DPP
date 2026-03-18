@@ -335,11 +335,15 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
   const respBody = await resp.json();
 
   if (!resp.ok) {
+    console.error('DHL API error response:', JSON.stringify(respBody, null, 2));
+    console.error('DHL API request payload:', JSON.stringify(dhlOrder, null, 2));
     const errMsg = respBody?.items?.[0]?.validationMessages?.[0]?.validationMessage
       || respBody?.detail
       || respBody?.title
       || `DHL API error ${resp.status}`;
-    return json({ error: errMsg }, resp.status >= 500 ? 502 : 400);
+    // Include full DHL response for debugging
+    const fullDetail = JSON.stringify(respBody).slice(0, 500);
+    return json({ error: errMsg, dhlResponse: fullDetail }, resp.status >= 500 ? 502 : 400);
   }
 
   // 6. Extract tracking + label

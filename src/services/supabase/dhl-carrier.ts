@@ -44,7 +44,10 @@ async function callDHL(action: string, params?: Record<string, unknown>): Promis
     console.error(`[DHL] ${action} error:`, detail, { data, error });
     throw new Error(detail);
   }
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) {
+    if (data.dhlResponse) console.error(`[DHL] Full DHL response:`, data.dhlResponse);
+    throw new Error(data.error);
+  }
   return data;
 }
 
