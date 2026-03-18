@@ -31,17 +31,19 @@ export async function invokeEdgeFunction<T = unknown>(
     // Step 3: On 401, retry once after forced refresh
     if (is401) {
       console.warn(`[edge-function] 401 from ${functionName}, retrying after session refresh...`);
-      const refreshed = await forceRefreshSession();
-      if (!refreshed) {
+      const freshToken = await forceRefreshSession();
+      if (!freshToken) {
         // Session is irrecoverably expired — notify the app to redirect to login
         window.dispatchEvent(new CustomEvent('session-expired'));
         supabase.auth.signOut().catch(() => {});
         return { data: null, error: new Error('Sitzung abgelaufen. Bitte neu einloggen.') };
       }
 
-      // Retry the call
+      // Retry with explicit Authorization header to bypass stale token cache
+      console.log(`[edge-function] Retrying ${functionName} with fresh token`);
       const { data: retryData, error: retryError } = await supabase.functions.invoke(functionName, {
         body,
+        headers: { Authorization: `Bearer ${freshToken}` },
       });
 
       if (retryError) {
@@ -83,19 +85,22 @@ async function ensureValidSession(): Promise<void> {
 }
 
 /**
- * Force a session refresh. Returns true if successful.
+ * Force a session refresh. Returns the fresh access token, or null on failure.
+ * Returning the token directly avoids the race condition where
+ * supabase.functions.invoke() reads a stale token from its internal cache.
  */
-async function forceRefreshSession(): Promise<boolean> {
+async function forceRefreshSession(): Promise<string | null> {
   try {
     const { data, error } = await supabase.auth.refreshSession();
     if (error || !data.session) {
       console.error('[edge-function] Force refresh failed:', error?.message);
-      return false;
+      return null;
     }
-    return true;
+    console.log('[edge-function] Session refreshed, new token expires at', new Date(data.session.expires_at! * 1000).toISOString());
+    return data.session.access_token;
   } catch (err) {
     console.error('[edge-function] Force refresh exception:', err);
-    return false;
+    return null;
   }
 }
 
