@@ -1128,6 +1128,12 @@
   "Street": "Straße",
   "Postal Code": "Postleitzahl",
   "City": "Stadt",
+  "Country": "Land",
+  "Full Name": "Vollständiger Name",
+  "Company (optional)": "Firma (optional)",
+  "Your Address": "Ihre Adresse",
+  "We need your address to create a return shipping label": "Wir benötigen Ihre Adresse, um ein Retourenlabel zu erstellen",
+  "Shipping Method": "Versandmethode",
 
   "DHL Integration Status": "DHL Integrationsstatus",
   "DHL Parcel DE connection for return shipping labels and tracking": "DHL Paket DE Verbindung für Retourenlabels und Sendungsverfolgung",
@@ -1153,5 +1159,13 @@
   "Automation": "Automatisierung",
   "Automatic actions for return processing": "Automatische Aktionen für Retourenbearbeitung",
   "Auto-generate return label on approval": "Retourenlabel automatisch bei Genehmigung erstellen",
-  "Automatically create a DHL return label when a return is approved. Requires a customer address on file.": "Automatisch ein DHL Retourenlabel erstellen, wenn eine Retoure genehmigt wird. Erfordert eine gespeicherte Kundenadresse."
+  "Automatically create a DHL return label when a return is approved. Requires a customer address on file.": "Automatisch ein DHL Retourenlabel erstellen, wenn eine Retoure genehmigt wird. Erfordert eine gespeicherte Kundenadresse.",
+
+  "Customer Information": "Kundeninformationen",
+  "Mark as Shipped": "Als versendet markieren",
+  "Parcel shipped by customer": "Paket vom Kunden versendet",
+  "Mark as Delivered": "Als zugestellt markieren",
+  "Parcel delivered to warehouse": "Paket im Lager zugestellt",
+  "Complete Return": "Retoure abschließen",
+  "Return completed": "Retoure abgeschlossen"
 }

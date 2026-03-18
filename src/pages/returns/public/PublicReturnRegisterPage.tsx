@@ -20,6 +20,7 @@ import { ReturnReasonStep } from '@/components/returns/public/steps/ReturnReason
 import { PhotoUploadStep } from '@/components/returns/public/steps/PhotoUploadStep';
 import { SolutionStep } from '@/components/returns/public/steps/SolutionStep';
 import { ShippingStep } from '@/components/returns/public/steps/ShippingStep';
+import type { ShippingAddress } from '@/components/returns/public/steps/ShippingStep';
 import { ConfirmationStep } from '@/components/returns/public/steps/ConfirmationStep';
 
 const STEP_LABELS = ['Identification', 'Select Items', 'Return Reason', 'Photos', 'Preferred Solution', 'Shipping', 'Confirmation'];
@@ -38,6 +39,7 @@ interface WizardState {
   photos: File[];
   solution: DesiredSolution;
   shippingMethod: string;
+  shippingAddress: ShippingAddress;
 }
 
 type WizardAction =
@@ -53,7 +55,8 @@ type WizardAction =
   | { type: 'SET_FOLLOW_UP'; questionId: string; value: string }
   | { type: 'SET_PHOTOS'; photos: File[] }
   | { type: 'SET_SOLUTION'; value: DesiredSolution }
-  | { type: 'SET_SHIPPING'; value: string };
+  | { type: 'SET_SHIPPING'; value: string }
+  | { type: 'SET_SHIPPING_ADDRESS'; address: ShippingAddress };
 
 const initialState: WizardState = {
   step: 0,
@@ -68,6 +71,7 @@ const initialState: WizardState = {
   photos: [],
   solution: 'refund',
   shippingMethod: 'print_label',
+  shippingAddress: { name: '', company: '', street: '', postalCode: '', city: '', country: 'DE' },
 };
 
 function reducer(state: WizardState, action: WizardAction): WizardState {
@@ -98,6 +102,8 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, solution: action.value };
     case 'SET_SHIPPING':
       return { ...state, shippingMethod: action.value };
+    case 'SET_SHIPPING_ADDRESS':
+      return { ...state, shippingAddress: action.address };
     default:
       return state;
   }
@@ -120,7 +126,10 @@ export function PublicReturnRegisterPage() {
       case 2: return true;
       case 3: return true;
       case 4: return true;
-      case 5: return true;
+      case 5: {
+        const a = state.shippingAddress;
+        return !!(a.name.trim() && a.street.trim() && a.postalCode.trim() && a.city.trim() && a.country.trim());
+      }
       case 6: return true;
       default: return false;
     }
@@ -137,6 +146,7 @@ export function PublicReturnRegisterPage() {
       reasonText: state.reasonText || undefined,
       desiredSolution: state.solution,
       shippingMethod: state.shippingMethod,
+      shippingAddress: state.shippingAddress,
       items: state.items.filter(i => i.name.trim()).map(i => ({
         name: i.name,
         quantity: i.quantity,
@@ -216,6 +226,8 @@ export function PublicReturnRegisterPage() {
           <ShippingStep
             selected={state.shippingMethod}
             onSelect={(v) => dispatch({ type: 'SET_SHIPPING', value: v })}
+            address={state.shippingAddress}
+            onAddressChange={(address) => dispatch({ type: 'SET_SHIPPING_ADDRESS', address })}
           />
         );
       case 6:
@@ -229,6 +241,7 @@ export function PublicReturnRegisterPage() {
             reasonText={state.reasonText}
             solution={state.solution}
             shippingMethod={state.shippingMethod}
+            shippingAddress={state.shippingAddress}
             photoCount={state.photos.length}
             onGoToStep={(step) => dispatch({ type: 'GO_TO_STEP', step })}
           />

@@ -19,7 +19,7 @@ export function DHLIntegrationPage() {
   const { t } = useTranslation('warehouse');
   const billing = useBillingOptional();
   const hasModule = billing
-    ? (billing.hasModule('warehouse_professional') || billing.hasModule('warehouse_business'))
+    ? (billing.hasModule('warehouse_professional') || billing.hasModule('warehouse_business') || billing.hasAnyReturnsHubModule())
     : true;
 
   const [loading, setLoading] = useState(true);

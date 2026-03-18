@@ -1128,6 +1128,12 @@
   "Street": "Street",
   "Postal Code": "Postal Code",
   "City": "City",
+  "Country": "Country",
+  "Full Name": "Full Name",
+  "Company (optional)": "Company (optional)",
+  "Your Address": "Your Address",
+  "We need your address to create a return shipping label": "We need your address to create a return shipping label",
+  "Shipping Method": "Shipping Method",
 
   "DHL Integration Status": "DHL Integration Status",
   "DHL Parcel DE connection for return shipping labels and tracking": "DHL Parcel DE connection for return shipping labels and tracking",
@@ -1153,5 +1159,13 @@
   "Automation": "Automation",
   "Automatic actions for return processing": "Automatic actions for return processing",
   "Auto-generate return label on approval": "Auto-generate return label on approval",
-  "Automatically create a DHL return label when a return is approved. Requires a customer address on file.": "Automatically create a DHL return label when a return is approved. Requires a customer address on file."
+  "Automatically create a DHL return label when a return is approved. Requires a customer address on file.": "Automatically create a DHL return label when a return is approved. Requires a customer address on file.",
+
+  "Customer Information": "Customer Information",
+  "Mark as Shipped": "Mark as Shipped",
+  "Parcel shipped by customer": "Parcel shipped by customer",
+  "Mark as Delivered": "Mark as Delivered",
+  "Parcel delivered to warehouse": "Parcel delivered to warehouse",
+  "Complete Return": "Complete Return",
+  "Return completed": "Return completed"
 }

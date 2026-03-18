@@ -3,6 +3,7 @@ import { Pencil, Package, MessageSquare, Camera, Lightbulb, Truck } from 'lucide
 import { Button } from '@/components/ui/button';
 import type { DesiredSolution } from '@/types/returns-hub';
 import type { WizardItem } from './SelectItemsStep';
+import type { ShippingAddress } from './ShippingStep';
 
 interface ConfirmationStepProps {
   orderNumber: string;
@@ -13,6 +14,7 @@ interface ConfirmationStepProps {
   reasonText: string;
   solution: DesiredSolution;
   shippingMethod: string;
+  shippingAddress: ShippingAddress;
   photoCount: number;
   onGoToStep: (step: number) => void;
 }
@@ -75,6 +77,7 @@ export function ConfirmationStep({
   reasonText,
   solution,
   shippingMethod,
+  shippingAddress,
   photoCount,
   onGoToStep,
 }: ConfirmationStepProps) {
@@ -133,7 +136,16 @@ export function ConfirmationStep({
 
         {/* Shipping */}
         <SectionCard title={t('Shipping')} icon={Truck} step={5} onGoToStep={onGoToStep}>
-          <p className="text-sm font-medium">{t(shippingLabels[shippingMethod] || shippingMethod)}</p>
+          <div className="text-sm space-y-2">
+            <div className="text-muted-foreground">
+              <p className="text-foreground font-medium">{shippingAddress.name}</p>
+              {shippingAddress.company && <p>{shippingAddress.company}</p>}
+              <p>{shippingAddress.street}</p>
+              <p>{shippingAddress.postalCode} {shippingAddress.city}</p>
+              <p>{shippingAddress.country}</p>
+            </div>
+            <p className="font-medium">{t(shippingLabels[shippingMethod] || shippingMethod)}</p>
+          </div>
         </SectionCard>
       </div>
     </div>

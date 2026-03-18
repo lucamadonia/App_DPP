@@ -435,6 +435,7 @@ export async function publicCreateReturn(
     reasonText?: string;
     desiredSolution: string;
     shippingMethod: string;
+    shippingAddress?: { name: string; company: string; street: string; postalCode: string; city: string; country: string };
     items: Array<{ name: string; quantity: number; condition?: string; productId?: string }>;
   }
 ): Promise<{ success: boolean; returnNumber?: string; error?: string }> {
@@ -462,7 +463,18 @@ export async function publicCreateReturn(
       desired_solution: data.desiredSolution,
       shipping_method: data.shippingMethod,
       priority: 'normal',
-      metadata: { source: 'public_portal', email: data.email },
+      metadata: {
+        source: 'public_portal',
+        email: data.email,
+        ...(data.shippingAddress && {
+          customerName: data.shippingAddress.name,
+          shippingCompany: data.shippingAddress.company || undefined,
+          shippingStreet: data.shippingAddress.street,
+          shippingCity: data.shippingAddress.city,
+          shippingPostalCode: data.shippingAddress.postalCode,
+          shippingCountry: data.shippingAddress.country,
+        }),
+      },
     })
     .select('id')
     .single();
@@ -493,19 +505,53 @@ export async function publicCreateReturn(
     actor_type: 'customer',
   });
 
-  // Create or find customer
+  // Create or find customer, store address
+  const addressEntry = data.shippingAddress ? {
+    type: 'shipping',
+    name: data.shippingAddress.name,
+    company: data.shippingAddress.company || undefined,
+    street: data.shippingAddress.street,
+    postalCode: data.shippingAddress.postalCode,
+    city: data.shippingAddress.city,
+    country: data.shippingAddress.country,
+  } : null;
+
   const { data: existingCustomer } = await supabase
     .from('rh_customers')
-    .select('id')
+    .select('id, addresses')
     .eq('tenant_id', tenant.id)
     .eq('email', data.email)
     .single();
 
-  if (!existingCustomer) {
-    await supabase.from('rh_customers').insert({
+  let customerId: string | null = null;
+
+  if (existingCustomer) {
+    customerId = existingCustomer.id;
+    if (addressEntry) {
+      const existingAddresses = Array.isArray(existingCustomer.addresses) ? existingCustomer.addresses : [];
+      await supabase
+        .from('rh_customers')
+        .update({
+          name: data.shippingAddress!.name,
+          addresses: [...existingAddresses, addressEntry],
+        })
+        .eq('id', existingCustomer.id);
+    }
+  } else {
+    const newCustomerId = crypto.randomUUID();
+    const { error: custErr } = await supabase.from('rh_customers').insert({
+      id: newCustomerId,
       tenant_id: tenant.id,
       email: data.email,
+      name: data.shippingAddress?.name || null,
+      addresses: addressEntry ? [addressEntry] : [],
     });
+    if (!custErr) customerId = newCustomerId;
+  }
+
+  // Link customer to return
+  if (customerId) {
+    await supabase.from('rh_returns').update({ customer_id: customerId }).eq('id', ret.id);
   }
 
   // Trigger confirmation email via public notification

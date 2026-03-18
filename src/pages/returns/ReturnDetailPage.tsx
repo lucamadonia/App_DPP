@@ -23,6 +23,7 @@ import {
   updateReturnStatus, updateReturn, cancelReturn,
 } from '@/services/supabase';
 import type { RhReturn, RhReturnItem, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
+import { User, Mail, MapPin as MapPinIcon, Building2 } from 'lucide-react';
 
 export function ReturnDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -135,8 +136,11 @@ export function ReturnDetailPage() {
   const canApprove = ['CREATED', 'PENDING_APPROVAL'].includes(returnData.status);
   const canReject = ['CREATED', 'PENDING_APPROVAL'].includes(returnData.status);
   const canCancel = ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'].includes(returnData.status);
+  const canMarkShipped = ['LABEL_GENERATED', 'APPROVED'].includes(returnData.status);
+  const canMarkDelivered = ['SHIPPED'].includes(returnData.status);
   const canInspect = ['DELIVERED'].includes(returnData.status);
   const canRefund = ['INSPECTION_IN_PROGRESS', 'APPROVED'].includes(returnData.status);
+  const canComplete = ['REFUND_COMPLETED', 'INSPECTION_IN_PROGRESS'].includes(returnData.status);
 
   const handleCancel = async () => {
     if (!id) return;
@@ -187,6 +191,16 @@ export function ReturnDetailPage() {
               <XCircle className="h-4 w-4 mr-1" /> {t('Reject')}
             </Button>
           )}
+          {canMarkShipped && (
+            <Button size="sm" variant="secondary" onClick={() => handleStatusChange('SHIPPED', t('Parcel shipped by customer'))} disabled={actionLoading}>
+              <Truck className="h-4 w-4 mr-1" /> {t('Mark as Shipped')}
+            </Button>
+          )}
+          {canMarkDelivered && (
+            <Button size="sm" variant="secondary" onClick={() => handleStatusChange('DELIVERED', t('Parcel delivered to warehouse'))} disabled={actionLoading}>
+              <Package className="h-4 w-4 mr-1" /> {t('Mark as Delivered')}
+            </Button>
+          )}
           {canCancel && (
             <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setCancelDialogOpen(true)} disabled={actionLoading}>
               <Ban className="h-4 w-4 mr-1" /> {t('Cancel Return')}
@@ -195,6 +209,11 @@ export function ReturnDetailPage() {
           {canInspect && (
             <Button size="sm" variant="secondary" onClick={() => handleStatusChange('INSPECTION_IN_PROGRESS', t('Inspection started'))} disabled={actionLoading}>
               <Search className="h-4 w-4 mr-1" /> {t('Start Inspection')}
+            </Button>
+          )}
+          {canComplete && (
+            <Button size="sm" onClick={() => handleStatusChange('COMPLETED', t('Return completed'))} disabled={actionLoading}>
+              <CheckCircle2 className="h-4 w-4 mr-1" /> {t('Complete Return')}
             </Button>
           )}
         </div>
@@ -220,6 +239,64 @@ export function ReturnDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
+          {/* Customer Info Card — extracted from metadata for portal returns */}
+          {(() => {
+            const meta = returnData.metadata as Record<string, unknown> | null;
+            const customerName = meta?.customerName as string | undefined;
+            const customerEmail = meta?.email as string | undefined;
+            const street = meta?.shippingStreet as string | undefined;
+            const city = meta?.shippingCity as string | undefined;
+            const postalCode = meta?.shippingPostalCode as string | undefined;
+            const country = meta?.shippingCountry as string | undefined;
+            const company = meta?.shippingCompany as string | undefined;
+            const hasAddress = street || city;
+            if (!customerName && !customerEmail) return null;
+            return (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {t('Customer Information')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                      {customerName && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium">{customerName}</span>
+                        </div>
+                      )}
+                      {customerEmail && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                          <a href={`mailto:${customerEmail}`} className="text-primary hover:underline">{customerEmail}</a>
+                        </div>
+                      )}
+                      {company && (
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{company}</span>
+                        </div>
+                      )}
+                    </div>
+                    {hasAddress && (
+                      <div className="flex items-start gap-2">
+                        <MapPinIcon className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                        <div className="text-muted-foreground">
+                          <p>{street}</p>
+                          <p>{postalCode} {city}</p>
+                          {country && <p>{country}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {prefersReduced ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>

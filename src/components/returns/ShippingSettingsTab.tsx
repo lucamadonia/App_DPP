@@ -140,7 +140,7 @@ export function ShippingSettingsTab({
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/warehouse/dhl-integration')} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={() => navigate('/warehouse/integrations/dhl')} className="gap-1.5">
                 <Settings2 className="h-3.5 w-3.5" />
                 {t('Manage DHL Settings')}
               </Button>
@@ -154,7 +154,7 @@ export function ShippingSettingsTab({
                   <p className="text-xs text-muted-foreground">{t('Set up DHL API credentials to enable return label generation')}</p>
                 </div>
               </div>
-              <Button size="sm" onClick={() => navigate('/warehouse/dhl-integration')} className="gap-1.5">
+              <Button size="sm" onClick={() => navigate('/warehouse/integrations/dhl')} className="gap-1.5">
                 <ArrowRight className="h-3.5 w-3.5" />
                 {t('Set Up DHL')}
               </Button>
