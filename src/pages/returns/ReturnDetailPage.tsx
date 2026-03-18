@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban, Truck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban, Truck, Pencil, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
@@ -21,8 +24,11 @@ import { pageVariants, pageTransition, staggerContainer, cardEntrance, useReduce
 import {
   getReturn, getReturnItems, getReturnTimeline,
   updateReturnStatus, updateReturn, cancelReturn,
+  addTimelineEntry, getProfiles,
 } from '@/services/supabase';
-import type { RhReturn, RhReturnItem, RhReturnTimeline as TimelineType } from '@/types/returns-hub';
+import type { RhReturn, RhReturnItem, RhReturnTimeline as TimelineType, ItemCondition, ReturnPriority } from '@/types/returns-hub';
+import type { Profile } from '@/services/supabase/profiles';
+import { supabase } from '@/lib/supabase';
 import { User, Mail, MapPin as MapPinIcon, Building2 } from 'lucide-react';
 
 export function ReturnDetailPage() {
@@ -40,21 +46,45 @@ export function ReturnDetailPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [refundMethod, setRefundMethod] = useState('original_payment');
+  // Inspection state
+  const [inspCondition, setInspCondition] = useState<ItemCondition | ''>('');
+  const [inspNotes, setInspNotes] = useState('');
+  const [inspApproved, setInspApproved] = useState(false);
+  const [inspSaving, setInspSaving] = useState(false);
+  // Internal notes editing
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  // Quick actions
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  // Timeline comment
+  const [timelineComment, setTimelineComment] = useState('');
+  const [commentSaving, setCommentSaving] = useState(false);
   const prefersReduced = useReducedMotion();
 
   useEffect(() => {
     if (!id) return;
     async function load() {
       setLoading(true);
-      const [ret, itms, tl] = await Promise.all([
+      const [ret, itms, tl, profs] = await Promise.all([
         getReturn(id!),
         getReturnItems(id!),
         getReturnTimeline(id!),
+        getProfiles(),
       ]);
       setReturnData(ret);
       setItems(itms);
       setTimeline(tl);
+      setProfiles(profs);
       if (ret?.refundAmount) setRefundAmount(ret.refundAmount.toString());
+      if (ret?.refundMethod) setRefundMethod(ret.refundMethod);
+      // Init inspection from existing data
+      if (ret?.inspectionResult) {
+        setInspCondition(ret.inspectionResult.condition || '');
+        setInspNotes(ret.inspectionResult.notes || '');
+        setInspApproved(ret.inspectionResult.approved || false);
+      }
       setLoading(false);
     }
     load();
@@ -75,11 +105,98 @@ export function ReturnDetailPage() {
     setActionLoading(true);
     await updateReturn(id, {
       refundAmount: Number(refundAmount),
-      refundMethod: 'original_payment',
+      refundMethod: refundMethod,
       refundedAt: new Date().toISOString(),
     });
     await handleStatusChange('REFUND_COMPLETED', `${t('Refund processed')}: €${refundAmount}`);
     setActionLoading(false);
+  };
+
+  const handleSaveInspection = async (proceed?: boolean) => {
+    if (!id || !inspCondition) return;
+    setInspSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const result = {
+      condition: inspCondition as ItemCondition,
+      notes: inspNotes || undefined,
+      approved: inspApproved,
+      inspectedBy: user?.id,
+      inspectedAt: new Date().toISOString(),
+    };
+    await updateReturn(id, { inspectionResult: result });
+    if (proceed) {
+      await handleStatusChange('REFUND_PROCESSING', t('Inspection completed, proceeding to refund'));
+    } else {
+      const [ret, tl] = await Promise.all([getReturn(id), getReturnTimeline(id)]);
+      setReturnData(ret);
+      setTimeline(tl);
+    }
+    setInspSaving(false);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!id) return;
+    setNotesSaving(true);
+    await updateReturn(id, { internalNotes: notesValue || undefined });
+    const ret = await getReturn(id);
+    setReturnData(ret);
+    setEditingNotes(false);
+    setNotesSaving(false);
+  };
+
+  const handlePriorityChange = async (priority: ReturnPriority) => {
+    if (!id || !returnData || priority === returnData.priority) return;
+    setActionLoading(true);
+    await updateReturn(id, { priority });
+    await addTimelineEntry({
+      returnId: id,
+      status: returnData.status,
+      comment: `${t('Priority changed to')} ${t(priority.charAt(0).toUpperCase() + priority.slice(1))}`,
+      actorType: 'agent',
+      metadata: { type: 'priority_change', from: returnData.priority, to: priority },
+    });
+    const [ret, tl] = await Promise.all([getReturn(id), getReturnTimeline(id)]);
+    setReturnData(ret);
+    setTimeline(tl);
+    setActionLoading(false);
+  };
+
+  const handleAssigneeChange = async (assignedTo: string) => {
+    if (!id || !returnData) return;
+    const value = assignedTo === '__unassigned' ? undefined : assignedTo;
+    if (value === (returnData.assignedTo || undefined)) return;
+    setActionLoading(true);
+    await updateReturn(id, { assignedTo: value || '' as any });
+    const assigneeName = value ? profiles.find(p => p.id === value)?.name || value : t('Unassigned');
+    await addTimelineEntry({
+      returnId: id,
+      status: returnData.status,
+      comment: `${t('Assigned to')} ${assigneeName}`,
+      actorType: 'agent',
+      metadata: { type: 'assignee_change', to: value || null },
+    });
+    const [ret, tl] = await Promise.all([getReturn(id), getReturnTimeline(id)]);
+    setReturnData(ret);
+    setTimeline(tl);
+    setActionLoading(false);
+  };
+
+  const handleAddComment = async () => {
+    if (!id || !returnData || !timelineComment.trim()) return;
+    setCommentSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    await addTimelineEntry({
+      returnId: id,
+      status: returnData.status,
+      comment: timelineComment.trim(),
+      actorId: user?.id,
+      actorType: 'agent',
+      metadata: { type: 'manual_comment' },
+    });
+    const tl = await getReturnTimeline(id);
+    setTimeline(tl);
+    setTimelineComment('');
+    setCommentSaving(false);
   };
 
   const Wrapper = prefersReduced ? 'div' : motion.div;
@@ -226,6 +343,37 @@ export function ReturnDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Quick Actions */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm text-muted-foreground whitespace-nowrap">{t('Priority')}:</Label>
+          <Select value={returnData.priority} onValueChange={(v) => handlePriorityChange(v as ReturnPriority)} disabled={actionLoading}>
+            <SelectTrigger className="w-[130px] h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['low', 'normal', 'high', 'urgent'] as ReturnPriority[]).map(p => (
+                <SelectItem key={p} value={p}>{t(p.charAt(0).toUpperCase() + p.slice(1))}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm text-muted-foreground whitespace-nowrap">{t('Assigned to')}:</Label>
+          <Select value={returnData.assignedTo || '__unassigned'} onValueChange={handleAssigneeChange} disabled={actionLoading}>
+            <SelectTrigger className="w-[180px] h-8 text-sm">
+              <SelectValue placeholder={t('Unassigned')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__unassigned">{t('Unassigned')}</SelectItem>
+              {profiles.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name || p.email}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
@@ -353,41 +501,132 @@ export function ReturnDetailPage() {
             </motion.div>
           )}
 
+          {/* Inspection Card */}
+          {returnData.status === 'INSPECTION_IN_PROGRESS' && (
+            <Card className="border-blue-200 bg-blue-50/30 dark:border-blue-900 dark:bg-blue-950/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  {t('Inspection')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t('Condition')}</Label>
+                    <Select value={inspCondition} onValueChange={(v) => setInspCondition(v as ItemCondition)}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={t('Select condition')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(['new', 'like_new', 'used', 'damaged', 'defective'] as ItemCondition[]).map(c => (
+                          <SelectItem key={c} value={c}>{t(c === 'like_new' ? 'Like New' : c.charAt(0).toUpperCase() + c.slice(1))}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t('Inspection Notes')}</Label>
+                    <Textarea
+                      className="min-h-[70px] text-sm"
+                      value={inspNotes}
+                      onChange={(e) => setInspNotes(e.target.value)}
+                      placeholder={t('Enter inspection notes...')}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="insp-approved" checked={inspApproved} onCheckedChange={(v) => setInspApproved(!!v)} />
+                  <Label htmlFor="insp-approved" className="text-sm cursor-pointer">{t('Item approved for refund')}</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => handleSaveInspection(false)} disabled={inspSaving || !inspCondition}>
+                    {t('Save Inspection')}
+                  </Button>
+                  <Button size="sm" onClick={() => handleSaveInspection(true)} disabled={inspSaving || !inspCondition}>
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    {t('Complete & Proceed to Refund')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Refund Card */}
           {canRefund && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('Process Refund')}</CardTitle>
               </CardHeader>
-              <CardContent className="flex items-end gap-3">
-                <div className="space-y-1 flex-1 max-w-xs">
-                  <label className="text-xs text-muted-foreground">{t('Refund Amount')} (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                    value={refundAmount}
-                    onChange={(e) => setRefundAmount(e.target.value)}
-                    placeholder="0.00"
-                  />
+              <CardContent className="space-y-3">
+                <div className="flex items-end gap-3 flex-wrap">
+                  <div className="space-y-1 flex-1 max-w-xs">
+                    <label className="text-xs text-muted-foreground">{t('Refund Amount')} (€)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-1 w-[200px]">
+                    <label className="text-xs text-muted-foreground">{t('Refund Method')}</label>
+                    <Select value={refundMethod} onValueChange={setRefundMethod}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="original_payment">{t('Original Payment')}</SelectItem>
+                        <SelectItem value="store_credit">{t('Store Credit')}</SelectItem>
+                        <SelectItem value="bank_transfer">{t('Bank Transfer')}</SelectItem>
+                        <SelectItem value="voucher">{t('Voucher')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button size="sm" onClick={handleProcessRefund} disabled={actionLoading || !refundAmount}>
+                    <CreditCard className="h-4 w-4 mr-1" />
+                    {t('Process Refund')}
+                  </Button>
                 </div>
-                <Button size="sm" onClick={handleProcessRefund} disabled={actionLoading || !refundAmount}>
-                  <CreditCard className="h-4 w-4 mr-1" />
-                  {t('Process Refund')}
-                </Button>
               </CardContent>
             </Card>
           )}
 
-          {returnData.internalNotes && (
-            <Card className="">
-              <CardHeader className="pb-2">
+          {/* Internal Notes */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">{t('Internal Notes')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{returnData.internalNotes}</p>
-              </CardContent>
-            </Card>
-          )}
+                {!editingNotes && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => { setNotesValue(returnData.internalNotes || ''); setEditingNotes(true); }}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> {t('Edit')}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {editingNotes ? (
+                <div className="space-y-2">
+                  <Textarea
+                    className="min-h-[80px] text-sm"
+                    value={notesValue}
+                    onChange={(e) => setNotesValue(e.target.value)}
+                    placeholder={t('Add internal notes...')}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveNotes} disabled={notesSaving}>{t('Save', { ns: 'common' })}</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingNotes(false)}>{t('Cancel', { ns: 'common' })}</Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                  {returnData.internalNotes || t('No internal notes yet')}
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="items" className="mt-4">
@@ -410,10 +649,29 @@ export function ReturnDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="timeline" className="mt-4">
+        <TabsContent value="timeline" className="mt-4 space-y-4">
           <Card>
             <CardContent className="pt-4">
               <AnimatedTimeline entries={timeline} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MessageSquarePlus className="h-4 w-4" />
+                {t('Add Comment')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Textarea
+                className="min-h-[70px] text-sm"
+                value={timelineComment}
+                onChange={(e) => setTimelineComment(e.target.value)}
+                placeholder={t('Enter a comment...')}
+              />
+              <Button size="sm" onClick={handleAddComment} disabled={commentSaving || !timelineComment.trim()}>
+                {t('Add Comment')}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

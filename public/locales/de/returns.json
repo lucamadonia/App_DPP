@@ -1167,5 +1167,25 @@
   "Mark as Delivered": "Als zugestellt markieren",
   "Parcel delivered to warehouse": "Paket im Lager zugestellt",
   "Complete Return": "Retoure abschließen",
-  "Return completed": "Retoure abgeschlossen"
+  "Return completed": "Retoure abgeschlossen",
+
+  "Inspection": "Prüfung",
+  "Select condition": "Zustand auswählen",
+  "Inspection Notes": "Prüfnotizen",
+  "Enter inspection notes...": "Prüfnotizen eingeben...",
+  "Item approved for refund": "Artikel für Erstattung genehmigt",
+  "Save Inspection": "Prüfung speichern",
+  "Complete & Proceed to Refund": "Abschließen & zur Erstattung",
+  "Inspection completed, proceeding to refund": "Prüfung abgeschlossen, weiter zur Erstattung",
+  "Refund Method": "Erstattungsmethode",
+  "Original Payment": "Ursprüngliche Zahlung",
+  "Store Credit": "Gutschrift",
+  "Bank Transfer": "Überweisung",
+  "No internal notes yet": "Noch keine internen Notizen",
+  "Add internal notes...": "Interne Notizen hinzufügen...",
+  "Add Comment": "Kommentar hinzufügen",
+  "Enter a comment...": "Kommentar eingeben...",
+  "Assigned to": "Zuständig",
+  "Unassigned": "Nicht zugewiesen",
+  "Priority changed to": "Priorität geändert auf"
 }

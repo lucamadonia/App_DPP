@@ -1167,5 +1167,25 @@
   "Mark as Delivered": "Mark as Delivered",
   "Parcel delivered to warehouse": "Parcel delivered to warehouse",
   "Complete Return": "Complete Return",
-  "Return completed": "Return completed"
+  "Return completed": "Return completed",
+
+  "Inspection": "Inspection",
+  "Select condition": "Select condition",
+  "Inspection Notes": "Inspection Notes",
+  "Enter inspection notes...": "Enter inspection notes...",
+  "Item approved for refund": "Item approved for refund",
+  "Save Inspection": "Save Inspection",
+  "Complete & Proceed to Refund": "Complete & Proceed to Refund",
+  "Inspection completed, proceeding to refund": "Inspection completed, proceeding to refund",
+  "Refund Method": "Refund Method",
+  "Original Payment": "Original Payment",
+  "Store Credit": "Store Credit",
+  "Bank Transfer": "Bank Transfer",
+  "No internal notes yet": "No internal notes yet",
+  "Add internal notes...": "Add internal notes...",
+  "Add Comment": "Add Comment",
+  "Enter a comment...": "Enter a comment...",
+  "Assigned to": "Assigned to",
+  "Unassigned": "Unassigned",
+  "Priority changed to": "Priority changed to"
 }
