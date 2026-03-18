@@ -659,7 +659,7 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
     if (ret.customer_id) {
       const { data: customer } = await supabase
         .from('rh_customers')
-        .select('email, first_name, last_name, company, addresses')
+        .select('email, name, first_name, last_name, company, addresses')
         .eq('id', ret.customer_id)
         .single();
 
@@ -672,10 +672,11 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
           || addresses[0];
 
         if (shippingAddr) {
-          const customerName = [customer.first_name, customer.last_name].filter(Boolean).join(' ');
+          const customerName = customer.name || [customer.first_name, customer.last_name].filter(Boolean).join(' ');
+          const addrName = shippingAddr.name || customerName;
           senderAddress = {
-            name1: customer.company || customerName || customer.email,
-            name2: customer.company ? customerName : undefined,
+            name1: shippingAddr.company || customer.company || addrName || customer.email,
+            name2: (shippingAddr.company || customer.company) ? addrName : undefined,
             addressStreet: shippingAddr.street,
             postalCode: shippingAddr.postalCode,
             city: shippingAddr.city,

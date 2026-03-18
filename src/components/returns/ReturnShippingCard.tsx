@@ -169,8 +169,9 @@ export function ReturnShippingCard({ returnData, onUpdate }: ReturnShippingCardP
   };
 
   const hasLabel = !!returnData.trackingNumber && !!returnData.labelUrl;
-  const canGenerateLabel = ['APPROVED'].includes(returnData.status) && !hasLabel;
-  const canCancelLabel = returnData.status === 'LABEL_GENERATED' && hasLabel;
+  const hasTrackingData = !!returnData.trackingNumber || !!returnData.carrierLabelData;
+  const canGenerateLabel = ['APPROVED'].includes(returnData.status) && !hasTrackingData;
+  const canCancelLabel = ['LABEL_GENERATED', 'APPROVED'].includes(returnData.status) && hasTrackingData;
   const showTracking = !!returnData.trackingNumber && ['LABEL_GENERATED', 'SHIPPED', 'DELIVERED', 'INSPECTION_IN_PROGRESS', 'REFUND_PROCESSING', 'REFUND_COMPLETED', 'COMPLETED'].includes(returnData.status);
   const dhlConfigured = dhlSettings?.hasCredentials && dhlSettings?.enabled;
 
