@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { WorkflowRuleEditor } from '@/components/returns/WorkflowRuleEditor';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import { getRhWorkflowRules, createRhWorkflowRule, updateRhWorkflowRule, deleteRhWorkflowRule } from '@/services/supabase';
 import type { RhWorkflowRule } from '@/types/returns-hub';
@@ -22,15 +23,22 @@ export function WorkflowRulesPage() {
   const navigate = useNavigate();
   const [rules, setRules] = useState<RhWorkflowRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [editing, setEditing] = useState<RhWorkflowRule | null>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
+    setError(false);
     setLoading(true);
-    const data = await getRhWorkflowRules();
-    setRules(data);
-    setLoading(false);
+    try {
+      const data = await getRhWorkflowRules();
+      setRules(data);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -81,6 +89,10 @@ export function WorkflowRulesPage() {
   const prefersReduced = useReducedMotion();
   const Wrapper = prefersReduced ? 'div' : motion.div;
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
+  if (error) {
+    return <ErrorState onRetry={load} />;
+  }
 
   if (loading) {
     return (

@@ -60,6 +60,7 @@ import { useBranding } from '@/contexts/BrandingContext';
 import type { Tenant, BrandingSettings } from '@/types/database';
 import { validateDomain, validatePathPrefix, normalizeDomain, buildDomainUrl } from '@/lib/domain-utils';
 import { CustomDomainWizard } from '@/components/settings/CustomDomainWizard';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 
 const apiKeys = [
   { id: '1', name: 'ERP Integration', key: 'dpp_live_sk_...7x9a', created: '2024-06-15', lastUsed: '2026-01-27' },
@@ -399,8 +400,22 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <ShimmerSkeleton className="h-8 w-32" />
+          <ShimmerSkeleton className="h-4 w-64" />
+        </div>
+        <ShimmerSkeleton className="h-10 w-full max-w-lg rounded-lg" />
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="grid gap-4 md:grid-cols-2">
+                <ShimmerSkeleton className="h-10 rounded" />
+                <ShimmerSkeleton className="h-10 rounded" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -443,7 +458,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         </TabsList>
 
         {/* Company Profile */}
-        <TabsContent value="company" className="space-y-6">
+        <TabsContent value="company" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
           <Card>
             <CardHeader>
               <CardTitle>{t('Company Data')}</CardTitle>
@@ -634,7 +649,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         </TabsContent>
 
         {/* Branding */}
-        <TabsContent value="branding" className="space-y-6">
+        <TabsContent value="branding" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
           {/* Card 1: Brand Identity */}
           <Card>
             <CardHeader>
@@ -1155,7 +1170,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         </TabsContent>
 
         {/* Domain */}
-        <TabsContent value="domain" className="space-y-6">
+        <TabsContent value="domain" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
           <Card>
             <CardHeader>
               <CardTitle>{t('URL Resolver')}</CardTitle>
@@ -1430,12 +1445,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         </TabsContent>
 
         {/* Users */}
-        <TabsContent value="users" className="space-y-6">
+        <TabsContent value="users" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
           <UsersTab />
         </TabsContent>
 
         {/* API-Keys */}
-        <TabsContent value="api" className="space-y-6">
+        <TabsContent value="api" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

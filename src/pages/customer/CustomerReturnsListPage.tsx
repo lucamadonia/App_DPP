@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Loader2, Plus, Search, Package } from 'lucide-react';
+import { Plus, Search, Package } from 'lucide-react';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -95,8 +96,18 @@ export function CustomerReturnsListPage() {
 
       {/* Returns List */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <div className="space-y-4">
+          <ShimmerSkeleton className="h-10 w-full rounded" />
+          {Array.from({ length: 5 }, (_, i) => (
+            <Card key={i}><CardContent className="pt-4 flex items-center gap-3">
+              <ShimmerSkeleton className="h-10 w-10 rounded" />
+              <div className="flex-1 space-y-2">
+                <ShimmerSkeleton className="h-4 w-32" />
+                <ShimmerSkeleton className="h-3 w-48" />
+              </div>
+              <ShimmerSkeleton className="h-6 w-16 rounded-full" />
+            </CardContent></Card>
+          ))}
         </div>
       ) : returns.length === 0 ? (
         <Card>

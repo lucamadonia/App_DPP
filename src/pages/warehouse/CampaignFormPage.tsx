@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Loader2, X, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -138,8 +139,19 @@ export function CampaignFormPage() {
 
   if (loading) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <ShimmerSkeleton className="h-9 w-9 rounded-md" />
+          <ShimmerSkeleton className="h-8 w-48" />
+        </div>
+        <Card><CardContent className="pt-6 space-y-4">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="space-y-2">
+              <ShimmerSkeleton className="h-4 w-24" />
+              <ShimmerSkeleton className="h-10 rounded" />
+            </div>
+          ))}
+        </CardContent></Card>
       </div>
     );
   }

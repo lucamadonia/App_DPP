@@ -6,7 +6,7 @@ import {
   DollarSign, Eye, AlertTriangle, Plus, UserPlus, Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { getInfluencerHubStats } from '@/services/supabase/wh-influencer-hub';
 import { InfluencerKPICard } from '@/components/warehouse/influencer/InfluencerKPICard';
@@ -57,15 +57,15 @@ export function InfluencerHubPage() {
   if (loading) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <Skeleton className="h-28 w-full rounded-xl" />
+        <ShimmerSkeleton className="h-28 w-full rounded-xl" />
         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
+            <ShimmerSkeleton key={i} className="h-24 rounded-lg" />
           ))}
         </div>
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-          <Skeleton className="lg:col-span-2 h-64 rounded-lg" />
-          <Skeleton className="h-64 rounded-lg" />
+          <ShimmerSkeleton className="lg:col-span-2 h-64 rounded-lg" />
+          <ShimmerSkeleton className="h-64 rounded-lg" />
         </div>
       </div>
     );

@@ -10,6 +10,7 @@ import { ReturnKPICards } from '@/components/returns/ReturnKPICards';
 import { ReturnCharts } from '@/components/returns/ReturnCharts';
 import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { pageVariants, pageTransition, gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
 import { getReturnStats, getReturns } from '@/services/supabase';
@@ -20,19 +21,27 @@ export function ReturnsReportsPage() {
   const [stats, setStats] = useState<ReturnsHubStats | null>(null);
   const [returns, setReturns] = useState<RhReturn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [dateRange, setDateRange] = useState('30');
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
+  const load = async () => {
+    setError(false);
+    setLoading(true);
+    try {
       const [s, r] = await Promise.all([
         getReturnStats(),
         getReturns(undefined, 1, 100),
       ]);
       setStats(s);
       setReturns(r.data);
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
     load();
   }, [dateRange]);
 
@@ -73,6 +82,10 @@ export function ReturnsReportsPage() {
 
   const Wrapper = prefersReduced ? 'div' : motion.div;
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
+  if (error) {
+    return <ErrorState onRetry={load} />;
+  }
 
   return (
     <Wrapper className="space-y-6" {...wrapperProps as any}>

@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -303,16 +303,16 @@ export function ShipmentDetailPage() {
     return (
       <div className="space-y-4 sm:space-y-6">
         <div className="flex items-center gap-3 sm:gap-4">
-          <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded" />
+          <ShimmerSkeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded" />
           <div className="flex-1">
-            <Skeleton className="h-6 sm:h-7 w-40 sm:w-48 mb-2" />
-            <Skeleton className="h-4 w-28 sm:w-32" />
+            <ShimmerSkeleton className="h-6 sm:h-7 w-40 sm:w-48 mb-2" />
+            <ShimmerSkeleton className="h-4 w-28 sm:w-32" />
           </div>
         </div>
-        <Skeleton className="h-16 sm:h-20 w-full rounded-lg" />
+        <ShimmerSkeleton className="h-16 sm:h-20 w-full rounded-lg" />
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-          <Skeleton className="h-40 sm:h-48 rounded-lg" />
-          <Skeleton className="h-40 sm:h-48 rounded-lg" />
+          <ShimmerSkeleton className="h-40 sm:h-48 rounded-lg" />
+          <ShimmerSkeleton className="h-40 sm:h-48 rounded-lg" />
         </div>
       </div>
     );

@@ -14,6 +14,7 @@ import {
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { PaginationBar } from '@/components/returns/PaginationBar';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, scaleIn, useReducedMotion } from '@/lib/motion';
@@ -34,19 +35,26 @@ export function ReturnsListPage() {
     data: [], total: 0, page: 1, pageSize: 20, totalPages: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
 
   const loadReturns = useCallback(async () => {
     setLoading(true);
-    const filter: ReturnsFilter = {};
-    if (statusFilter !== 'all') filter.status = [statusFilter as ReturnStatus];
-    if (search) filter.search = search;
+    setError(false);
+    try {
+      const filter: ReturnsFilter = {};
+      if (statusFilter !== 'all') filter.status = [statusFilter as ReturnStatus];
+      if (search) filter.search = search;
 
-    const data = await getReturns(filter, page, 20);
-    setResult(data);
-    setLoading(false);
+      const data = await getReturns(filter, page, 20);
+      setResult(data);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [page, statusFilter, search]);
 
   useEffect(() => { loadReturns(); }, [loadReturns]);
@@ -57,6 +65,10 @@ export function ReturnsListPage() {
   };
 
   const prefersReduced = useReducedMotion();
+
+  if (error) {
+    return <ErrorState onRetry={loadReturns} />;
+  }
 
   const activeFilters: string[] = [];
   if (statusFilter !== 'all') activeFilters.push(statusFilter.replace(/_/g, ' '));

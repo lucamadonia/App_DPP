@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Plus,
-  Loader2,
   LayoutGrid,
   Table as TableIcon,
   Clock,
@@ -40,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 
 type ViewMode = 'cards' | 'table' | 'timeline';
 
@@ -279,8 +279,20 @@ export function SupplyChainPage() {
           />
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-4">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <ShimmerSkeleton className="h-5 w-32" />
+                    <ShimmerSkeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {Array.from({ length: 3 }, (_, j) => (
+                      <ShimmerSkeleton key={j} className="h-20 rounded" />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : isEmpty ? (
             <SupplyChainEmptyState onCreateFirst={openCreateDialog} />

@@ -1074,6 +1074,13 @@
   "Tracking data unavailable": "Tracking-Daten nicht verfügbar",
   "Auto-refreshes every minute": "Aktualisiert sich automatisch jede Minute",
 
+  "Your shipping label is ready!": "Dein Versandlabel ist bereit!",
+  "Download Shipping Label (PDF)": "Versandlabel herunterladen (PDF)",
+  "Label expires on {{date}}": "Label gültig bis {{date}}",
+  "Download step": "Herunterladen",
+  "Print step": "Ausdrucken",
+  "Drop off step": "Abgeben",
+
   "Embed Widget": "Einbettungs-Widget",
   "Embed your returns portal on any website": "Betten Sie Ihr Retouren-Portal auf jeder Website ein",
   "Widget Type": "Widget-Typ",

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Loader2, Save, Plus, Trash2, MapPin } from 'lucide-react';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -144,8 +145,17 @@ export function CustomerProfilePage() {
 
   if (!customerProfile) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <ShimmerSkeleton className="h-16 w-16 rounded-full" />
+          <div className="space-y-2">
+            <ShimmerSkeleton className="h-6 w-40" />
+            <ShimmerSkeleton className="h-4 w-56" />
+          </div>
+        </div>
+        <Card><CardContent className="pt-6 space-y-4">
+          {Array.from({ length: 4 }, (_, i) => <ShimmerSkeleton key={i} className="h-10 rounded" />)}
+        </CardContent></Card>
       </div>
     );
   }

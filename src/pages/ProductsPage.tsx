@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { blurIn, scaleIn, useReducedMotion } from '@/lib/motion';
+import { blurIn, useReducedMotion } from '@/lib/motion';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -62,6 +62,8 @@ import { ImportProductsDialog } from '@/components/product/ImportProductsDialog'
 import { useBilling } from '@/hooks/use-billing';
 import { UpgradePrompt } from '@/components/billing';
 import { ProductsSkeleton } from '@/components/skeletons/ProductsSkeleton';
+import { ErrorState, EmptyState } from '@/components/ui/state-feedback';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const statusConfig = {
   live: {
@@ -95,7 +97,8 @@ export function ProductsPage() {
   const { t: tBilling } = useTranslation('billing');
   const locale = useLocale();
   const { entitlements } = useBilling();
-  const { data: products = [], isLoading, refetch: refetchProducts } = useProducts();
+  const { data: products = [], isLoading, isError, refetch: refetchProducts } = useProducts();
+  const isMobile = useIsMobile();
   const deleteProductMutation = useDeleteProduct();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -213,6 +216,10 @@ export function ProductsPage() {
     return <ProductsSkeleton />;
   }
 
+  if (isError) {
+    return <ErrorState onRetry={() => refetchProducts()} />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -320,22 +327,90 @@ export function ProductsPage() {
       <Card>
         <CardContent className="p-0">
           {products.length === 0 ? (
-            <MotionDiv
-              className="py-16 text-center"
-              {...(!prefersReduced && { variants: scaleIn, initial: 'initial', animate: 'animate' })}
-            >
-              <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">{t('No products available')}</h3>
-              <p className="mt-2 text-muted-foreground">
-                {t('Create your first product to get started with Trackbliss.')}
-              </p>
-              <Button className="mt-6" asChild>
-                <Link to="/products/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('Create First Product')}
-                </Link>
-              </Button>
-            </MotionDiv>
+            <EmptyState
+              icon={Package}
+              title={t('No products available')}
+              description={t('Create your first product to get started with Trackbliss.')}
+              actionLabel={t('Create First Product')}
+              onAction={() => window.location.href = '/products/new'}
+            />
+          ) : isMobile ? (
+            /* Mobile Card Layout */
+            <div className="divide-y">
+              {filteredProducts.map((product, index) => {
+                const status = statusConfig[(product.status as keyof typeof statusConfig) || 'draft'];
+                return (
+                  <div
+                    key={product.id}
+                    className="p-4 transition-colors hover:bg-muted/50"
+                    style={!prefersReduced ? {
+                      animation: `fadeSlideIn 0.3s ease-out ${index * 0.04}s both`,
+                    } : undefined}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <Link
+                        to={`/products/${product.id}`}
+                        className="flex-1 min-w-0"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium truncate">{product.name}</span>
+                          {product.productType === 'set' && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                              {t('Set')}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <code className="font-mono">{product.gtin}</code>
+                          <span>·</span>
+                          <span>{product.category}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-2">
+                          {status && (
+                            <Badge variant={status.variant} className={status.className}>
+                              <status.icon className="mr-1 h-3 w-3" />
+                              {status.label}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {product.batchCount} {product.batchCount === 1 ? t('Batch') : t('Batches')}
+                          </span>
+                        </div>
+                      </Link>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/products/${product.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              {t('View')}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to={`/products/${product.id}/edit`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              {t('Edit')}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteTarget({ id: product.id, name: product.name })}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('Delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <Table>
               <TableHeader>

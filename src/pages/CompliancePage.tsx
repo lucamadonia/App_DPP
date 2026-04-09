@@ -10,7 +10,6 @@ import {
   FileText,
   Filter,
   Search,
-  Loader2,
   AlertTriangle,
 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
@@ -25,6 +24,8 @@ import {
   useReducedMotion,
 } from '@/lib/motion';
 import { GlassCard } from '@/components/ui/glass-card';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,13 +66,15 @@ export function CompliancePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('checklist');
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [overview, setOverview] = useState<ComplianceOverview | null>(null);
   const [scores, setScores] = useState<ComplianceScore[]>([]);
   const [auditLog, setAuditLog] = useState<ActivityLogEntry[]>([]);
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
+  const loadData = async () => {
+    setIsLoading(true);
+    setIsError(false);
+    try {
       const [overviewData, scoresData, logData] = await Promise.all([
         getComplianceOverview(),
         getComplianceScores(),
@@ -80,10 +83,14 @@ export function CompliancePage() {
       setOverview(overviewData);
       setScores(scoresData);
       setAuditLog(logData);
+    } catch {
+      setIsError(true);
+    } finally {
       setIsLoading(false);
     }
-    loadData();
-  }, []);
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   const filteredScores = scores.filter(s =>
     s.productName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -91,10 +98,23 @@ export function CompliancePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <ShimmerSkeleton className="h-8 w-40" />
+          <ShimmerSkeleton className="h-4 w-64" />
+        </div>
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Card key={i}><CardContent className="pt-4"><ShimmerSkeleton className="h-16 rounded" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6"><ShimmerSkeleton className="h-48 rounded" /></CardContent></Card>
       </div>
     );
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={loadData} />;
   }
 
   const complianceRate = overview?.overallRate ?? 0;

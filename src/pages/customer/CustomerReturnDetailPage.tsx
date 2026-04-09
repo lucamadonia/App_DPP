@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Package, Download, MessageSquare, Ban } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Download, MessageSquare, Ban, Tag, Printer, MapPin } from 'lucide-react';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -97,8 +98,20 @@ export function CustomerReturnDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <ShimmerSkeleton className="h-9 w-9 rounded-md" />
+          <div className="flex-1 space-y-2">
+            <ShimmerSkeleton className="h-7 w-40" />
+            <ShimmerSkeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <Card><CardContent className="pt-4"><ShimmerSkeleton className="h-16 rounded" /></CardContent></Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card><CardContent className="pt-6 space-y-3">{Array.from({ length: 4 }, (_, i) => <ShimmerSkeleton key={i} className="h-4 rounded" />)}</CardContent></Card>
+          <Card><CardContent className="pt-6 space-y-3">{Array.from({ length: 3 }, (_, i) => <ShimmerSkeleton key={i} className="h-10 rounded" />)}</CardContent></Card>
+        </div>
+        <Card><CardContent className="pt-6 space-y-3">{Array.from({ length: 4 }, (_, i) => <ShimmerSkeleton key={i} className="h-4 rounded" />)}</CardContent></Card>
       </div>
     );
   }
@@ -152,6 +165,73 @@ export function CustomerReturnDetailPage() {
           <StatusPipeline status={returnData.status as ReturnStatus} />
         </CardContent>
       </Card>
+
+      {/* Label Ready Banner */}
+      {returnData.status === 'LABEL_GENERATED' && returnData.labelUrl && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                <Tag className="h-6 w-6" />
+              </div>
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-900">{t('Your shipping label is ready!')}</h3>
+                </div>
+
+                {/* 3-Step Instructions */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex items-center gap-2 text-sm text-indigo-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-xs font-bold text-indigo-800">1</span>
+                    <Download className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('Download')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-indigo-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-xs font-bold text-indigo-800">2</span>
+                    <Printer className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('Print')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-indigo-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-xs font-bold text-indigo-800">3</span>
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('Drop off')}</span>
+                  </div>
+                </div>
+
+                {/* Download Button */}
+                <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2" asChild>
+                  <a href={returnData.labelUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-5 w-5" />
+                    {t('Download Shipping Label (PDF)')}
+                  </a>
+                </Button>
+
+                {/* Tracking Number + Expiry */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-indigo-700/80">
+                  {returnData.trackingNumber && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-indigo-600 font-medium">{t('Tracking')}:</span>
+                      <a
+                        href={`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${returnData.trackingNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-xs text-indigo-600 hover:underline"
+                      >
+                        {returnData.trackingNumber}
+                      </a>
+                    </div>
+                  )}
+                  {returnData.labelExpiresAt && (
+                    <div className="text-indigo-600/70 text-xs">
+                      {t('Label expires on {{date}}', { date: new Date(returnData.labelExpiresAt).toLocaleDateString() })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Shipment Tracking */}
       {returnData.trackingNumber && (

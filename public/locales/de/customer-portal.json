@@ -184,5 +184,14 @@
   "Delivered": "Zugestellt",
   "Out for Delivery": "In Zustellung",
   "Tracking data unavailable": "Tracking-Daten nicht verfügbar",
-  "Auto-refreshes every minute": "Aktualisiert sich automatisch jede Minute"
+  "Auto-refreshes every minute": "Aktualisiert sich automatisch jede Minute",
+
+  "Your shipping label is ready!": "Dein Versandlabel ist bereit!",
+  "Download Shipping Label (PDF)": "Versandlabel herunterladen (PDF)",
+  "Label expires on {{date}}": "Label gültig bis {{date}}",
+  "Next steps": "Nächste Schritte",
+  "Download": "Herunterladen",
+  "Print": "Ausdrucken",
+  "Drop off": "Abgeben",
+  "Label Ready": "Label bereit"
 }

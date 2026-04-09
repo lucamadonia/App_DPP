@@ -9,11 +9,11 @@ import {
   Zap,
   Globe,
   Tag,
-  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Input } from '@/components/ui/input';
 import {
   Accordion,
@@ -525,8 +525,14 @@ export function ProductCategoriesPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="space-y-3 py-4">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-lg border">
+              <ShimmerSkeleton className="h-8 w-8 rounded" />
+              <ShimmerSkeleton className="h-4 flex-1 rounded" />
+              <ShimmerSkeleton className="h-6 w-12 rounded-full" />
+            </div>
+          ))}
         </div>
       )}
 

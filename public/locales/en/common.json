@@ -98,5 +98,10 @@
   "Customers": "Customers",
   "Tickets": "Tickets",
   "Reports": "Reports",
-  "Workflows": "Workflows"
+  "Workflows": "Workflows",
+  "Something went wrong": "Something went wrong",
+  "An unexpected error occurred. Please try again.": "An unexpected error occurred. Please try again.",
+  "Try again": "Try again",
+  "Go to homepage": "Go to homepage",
+  "Retry": "Retry"
 }

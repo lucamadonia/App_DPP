@@ -14,7 +14,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { blurIn, gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
 import { GlassCard } from '@/components/ui/glass-card';
-import { CreditCard, Loader2, ExternalLink } from 'lucide-react';
+import { CreditCard, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useBilling } from '@/hooks/use-billing';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
   PlanCard,
   ModuleCard,
@@ -165,8 +166,43 @@ export function BillingPage() {
 
   if (billingLoading || !entitlements) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <ShimmerSkeleton className="h-8 w-40" />
+            <ShimmerSkeleton className="h-4 w-64" />
+          </div>
+          <ShimmerSkeleton className="h-10 w-36" />
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <ShimmerSkeleton className="h-6 w-16" />
+            <ShimmerSkeleton className="h-9 w-48 rounded" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-6 space-y-4">
+                  <ShimmerSkeleton className="h-6 w-24" />
+                  <ShimmerSkeleton className="h-8 w-20" />
+                  <div className="space-y-2">
+                    {Array.from({ length: 5 }, (_, j) => (
+                      <ShimmerSkeleton key={j} className="h-4 rounded" />
+                    ))}
+                  </div>
+                  <ShimmerSkeleton className="h-10 rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <ShimmerSkeleton key={i} className="h-6 rounded" />
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }

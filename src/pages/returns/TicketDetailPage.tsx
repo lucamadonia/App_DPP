@@ -20,6 +20,7 @@ import { TicketTagsEditor } from '@/components/returns/TicketTagsEditor';
 import { TicketActivityLog } from '@/components/returns/TicketActivityLog';
 import { SLAProgressBar } from '@/components/returns/SLAProgressBar';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import {
   getRhTicket, getRhTickets, getRhTicketMessages, addRhTicketMessage, updateRhTicket, getRhCustomer,
@@ -44,6 +45,7 @@ export function TicketDetailPage() {
   const [messages, setMessages] = useState<RhTicketMessage[]>([]);
   const [customer, setCustomer] = useState<RhCustomer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [sending, setSending] = useState(false);
   const [activityKey, setActivityKey] = useState(0);
 
@@ -54,10 +56,11 @@ export function TicketDetailPage() {
   const [mergeTicketNumber, setMergeTicketNumber] = useState('');
   const [merging, setMerging] = useState(false);
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!id) return;
-    async function load() {
-      setLoading(true);
+    setError(false);
+    setLoading(true);
+    try {
       const [tkt, msgs] = await Promise.all([
         getRhTicket(id!),
         getRhTicketMessages(id!),
@@ -68,9 +71,15 @@ export function TicketDetailPage() {
         const cust = await getRhCustomer(tkt.customerId);
         setCustomer(cust);
       }
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadData();
   }, [id]);
 
   const refreshTicket = async () => {
@@ -205,6 +214,10 @@ export function TicketDetailPage() {
   const prefersReduced = useReducedMotion();
   const Wrapper = prefersReduced ? 'div' : motion.div;
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
+  if (error) {
+    return <ErrorState onRetry={loadData} />;
+  }
 
   if (loading) {
     return (

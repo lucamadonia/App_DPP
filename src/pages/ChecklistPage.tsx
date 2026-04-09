@@ -37,7 +37,6 @@ import {
   XCircle,
   Minus,
   Factory,
-  Loader2,
 } from 'lucide-react';
 import {
   getChecklistTemplates,
@@ -61,6 +60,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 
 interface ChecklistItem {
   id: string;
@@ -290,10 +290,60 @@ export function ChecklistPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{t('Loading checklist data...')}</p>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <ShimmerSkeleton className="h-8 w-48" />
+            <ShimmerSkeleton className="h-4 w-72" />
+          </div>
+          <div className="flex gap-2">
+            <ShimmerSkeleton className="h-10 w-24" />
+            <ShimmerSkeleton className="h-10 w-28" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardContent className="pt-6 space-y-2">
+              <ShimmerSkeleton className="h-4 w-28" />
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <ShimmerSkeleton key={i} className="h-9 w-24 rounded" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 space-y-2">
+              <ShimmerSkeleton className="h-4 w-32" />
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <ShimmerSkeleton key={i} className="h-9 w-28 rounded" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <Card>
+          <CardContent className="pt-6 space-y-2">
+            <ShimmerSkeleton className="h-4 w-36" />
+            <ShimmerSkeleton className="h-3 rounded-full" />
+          </CardContent>
+        </Card>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShimmerSkeleton className="h-5 w-5 rounded" />
+                  <ShimmerSkeleton className="h-5 w-40" />
+                  <ShimmerSkeleton className="h-5 w-10 rounded-full" />
+                </div>
+                {Array.from({ length: 3 }, (_, j) => (
+                  <ShimmerSkeleton key={j} className="h-14 rounded" />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );

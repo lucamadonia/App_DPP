@@ -6,6 +6,7 @@ import {
   Package,
   FileWarning,
   AlertTriangle,
+  FileX,
   TrendingUp,
   CheckCircle2,
   Clock,
@@ -23,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/animated-list';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProducts, useDocumentStats } from '@/hooks/queries';
 import { formatDate } from '@/lib/format';
@@ -50,9 +52,10 @@ export function DashboardPage() {
   const { t } = useTranslation('dashboard');
   const locale = useLocale();
   const { user } = useAuth();
-  const { data: products = [], isLoading: productsLoading } = useProducts();
-  const { data: docStats = { total: 0, valid: 0, expiring: 0, expired: 0 }, isLoading: docsLoading } = useDocumentStats();
+  const { data: products = [], isLoading: productsLoading, isError: productsError, refetch: refetchProducts } = useProducts();
+  const { data: docStats = { total: 0, valid: 0, expiring: 0, expired: 0 }, isLoading: docsLoading, isError: docsError, refetch: refetchDocs } = useDocumentStats();
   const isLoading = productsLoading || docsLoading;
+  const isError = productsError || docsError;
   const prefersReduced = useReducedMotion();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -68,7 +71,7 @@ export function DashboardPage() {
       value: products.length,
       subtitle: products.length === 0
         ? t('No products yet')
-        : `${totalBatches} ${totalBatches === 1 ? 'Batch' : 'Batches'}`,
+        : t('{{count}} Batches', { count: totalBatches }),
       icon: Package,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
@@ -96,7 +99,7 @@ export function DashboardPage() {
       title: t('Expired Documents'),
       value: docStats.expired,
       subtitle: docStats.expired > 0 ? t('Action required') : t('All up to date'),
-      icon: TrendingUp,
+      icon: FileX,
       color: docStats.expired > 0 ? 'text-destructive' : 'text-success',
       bgColor: docStats.expired > 0 ? 'bg-destructive/10' : 'bg-success/10',
       href: '/documents',
@@ -107,6 +110,14 @@ export function DashboardPage() {
 
   if (isLoading) {
     return <DashboardSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <ErrorState
+        onRetry={() => { refetchProducts(); refetchDocs(); }}
+      />
+    );
   }
 
   return (
@@ -162,10 +173,10 @@ export function DashboardPage() {
             variants={prefersReduced ? undefined : gridItem}
             className={index === 0 ? 'col-span-2 lg:col-span-1' : ''}
           >
-            <Link to={stat.href} className="block h-full">
+            <Link to={stat.href} className="block h-full group">
               <GlassCard
                 enableTilt={!prefersReduced}
-                className={`h-full transition-colors hover:bg-muted/30 ${index === 0 ? 'gradient-border-animated' : ''}`}
+                className={`h-full transition-all duration-200 hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-md ${index === 0 ? 'gradient-border-animated' : ''}`}
               >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -291,7 +302,7 @@ export function DashboardPage() {
                               </Badge>
                             </div>
                             <p className="font-mono text-xs text-muted-foreground">
-                              GTIN: {product.gtin} · {product.batchCount || 0} {(product.batchCount || 0) === 1 ? 'Batch' : 'Batches'}
+                              GTIN: {product.gtin} · {t('{{count}} Batches', { count: product.batchCount || 0 })}
                             </p>
                           </div>
                           <span className="text-xs text-muted-foreground">

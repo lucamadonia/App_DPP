@@ -44,6 +44,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -156,8 +157,23 @@ export function ProductPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <ShimmerSkeleton className="h-9 w-9 rounded-md" />
+          <div className="flex-1 space-y-2">
+            <ShimmerSkeleton className="h-7 w-48" />
+            <ShimmerSkeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <ShimmerSkeleton className="h-10 w-full max-w-md rounded-lg" />
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Card key={i}><CardContent className="pt-4"><ShimmerSkeleton className="h-16 rounded" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6 space-y-3">
+          {Array.from({ length: 6 }, (_, i) => <ShimmerSkeleton key={i} className="h-4 rounded" />)}
+        </CardContent></Card>
       </div>
     );
   }

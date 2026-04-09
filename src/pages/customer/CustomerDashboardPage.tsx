@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Loader2, Package, MessageSquare, Plus, ArrowRight, Sparkles } from 'lucide-react';
+import { Package, MessageSquare, Plus, ArrowRight, Sparkles } from 'lucide-react';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +37,17 @@ export function CustomerDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <ShimmerSkeleton className="h-32 rounded-xl" />
+        <div className="grid grid-cols-2 gap-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Card key={i}><CardContent className="pt-4"><ShimmerSkeleton className="h-16 rounded" /></CardContent></Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card><CardContent className="pt-6 space-y-3">{Array.from({ length: 3 }, (_, i) => <ShimmerSkeleton key={i} className="h-12 rounded" />)}</CardContent></Card>
+          <Card><CardContent className="pt-6 space-y-3">{Array.from({ length: 3 }, (_, i) => <ShimmerSkeleton key={i} className="h-12 rounded" />)}</CardContent></Card>
+        </div>
       </div>
     );
   }

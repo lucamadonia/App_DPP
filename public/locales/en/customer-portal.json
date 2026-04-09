@@ -184,5 +184,14 @@
   "Delivered": "Delivered",
   "Out for Delivery": "Out for Delivery",
   "Tracking data unavailable": "Tracking data unavailable",
-  "Auto-refreshes every minute": "Auto-refreshes every minute"
+  "Auto-refreshes every minute": "Auto-refreshes every minute",
+
+  "Your shipping label is ready!": "Your shipping label is ready!",
+  "Download Shipping Label (PDF)": "Download Shipping Label (PDF)",
+  "Label expires on {{date}}": "Label expires on {{date}}",
+  "Next steps": "Next steps",
+  "Download": "Download",
+  "Print": "Print",
+  "Drop off": "Drop off",
+  "Label Ready": "Label Ready"
 }

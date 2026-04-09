@@ -49,5 +49,6 @@
   "compliant": "compliant",
   "pending": "pending",
   "more warnings": "more warnings",
-  "Get Started": "Get Started"
+  "Get Started": "Get Started",
+  "{{count}} Batches": "{{count}} Batches"
 }

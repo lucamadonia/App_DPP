@@ -28,6 +28,7 @@ export const timing = {
 // ---------------------------------------------------------------------------
 export const spring = {
   snappy: { type: 'spring' as const, stiffness: 400, damping: 30 },
+  default: { type: 'spring' as const, stiffness: 300, damping: 25 },
   gentle: { type: 'spring' as const, stiffness: 200, damping: 20 },
   bouncy: { type: 'spring' as const, stiffness: 300, damping: 15 },
 } as const;
@@ -190,6 +191,39 @@ export function use3DTilt(intensity = 6) {
     onMouseMove: handleMouseMove,
     onMouseLeave: handleMouseLeave,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Micro-interaction variants
+// ---------------------------------------------------------------------------
+export const microInteraction = {
+  buttonPress: {
+    whileTap: { scale: 0.97 },
+    transition: { duration: timing.micro },
+  },
+  hoverLift: {
+    whileHover: { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' },
+    transition: spring.default,
+  },
+  successPulse: {
+    initial: { scale: 0.8, opacity: 0 },
+    animate: { scale: [0.8, 1.15, 1], opacity: 1 },
+    transition: { duration: timing.emphasis, ease: 'easeOut' },
+  } as Variants,
+  errorShake: {
+    initial: { x: 0 },
+    animate: { x: [0, -6, 6, -4, 4, 0] },
+    transition: { duration: 0.4, ease: 'easeInOut' },
+  } as Variants,
+};
+
+// ---------------------------------------------------------------------------
+// Reduced motion helper — returns variants or empty object based on preference
+// ---------------------------------------------------------------------------
+export function useMotionVariants<T extends Variants>(variants: T): T | Record<string, never> {
+  const prefersReduced = useReducedMotion();
+  if (prefersReduced) return {} as Record<string, never>;
+  return variants;
 }
 
 // ---------------------------------------------------------------------------

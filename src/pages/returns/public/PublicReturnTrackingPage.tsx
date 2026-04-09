@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Search, SearchX, Download, MessageSquare, Package, Ban } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, SearchX, Download, MessageSquare, Package, Ban, Tag, Printer, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -342,6 +342,71 @@ export function PublicReturnTrackingPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Label Ready Banner */}
+      {returnData.status === 'LABEL_GENERATED' && returnData.labelUrl && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200 overflow-hidden">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                <Tag className="h-6 w-6" />
+              </div>
+              <div className="flex-1 space-y-4">
+                <h3 className="text-lg font-semibold text-indigo-900">{t('Your shipping label is ready!')}</h3>
+
+                {/* 3-Step Instructions */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex items-center gap-2 text-sm text-indigo-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-xs font-bold text-indigo-800">1</span>
+                    <Download className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('Download step')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-indigo-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-xs font-bold text-indigo-800">2</span>
+                    <Printer className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('Print step')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-indigo-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-xs font-bold text-indigo-800">3</span>
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('Drop off step')}</span>
+                  </div>
+                </div>
+
+                {/* Download Button */}
+                <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2" asChild>
+                  <a href={returnData.labelUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-5 w-5" />
+                    {t('Download Shipping Label (PDF)')}
+                  </a>
+                </Button>
+
+                {/* Tracking Number + Expiry */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-indigo-700/80">
+                  {returnData.trackingNumber && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-indigo-600 font-medium">{t('Tracking Number')}:</span>
+                      <a
+                        href={`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${returnData.trackingNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-xs text-indigo-600 hover:underline"
+                      >
+                        {returnData.trackingNumber}
+                      </a>
+                    </div>
+                  )}
+                  {returnData.labelExpiresAt && (
+                    <div className="text-indigo-600/70 text-xs">
+                      {t('Label expires on {{date}}', { date: new Date(returnData.labelExpiresAt).toLocaleDateString() })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Shipment Tracking */}
       {returnData.trackingNumber && (

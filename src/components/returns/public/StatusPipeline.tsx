@@ -1,16 +1,18 @@
 import { useTranslation } from 'react-i18next';
-import { Check, X } from 'lucide-react';
+import { Check, X, Tag } from 'lucide-react';
 import type { ReturnStatus } from '@/types/returns-hub';
 
 // Map 12 internal statuses to 6 customer-visible stages
 interface PipelineStage {
   labelKey: string;
+  /** Optional override label when a specific sub-status is active */
+  subStatusLabels?: Partial<Record<ReturnStatus, string>>;
   statuses: ReturnStatus[];
 }
 
 const STAGES: PipelineStage[] = [
   { labelKey: 'Registered', statuses: ['CREATED', 'PENDING_APPROVAL'] },
-  { labelKey: 'Approved', statuses: ['APPROVED', 'LABEL_GENERATED'] },
+  { labelKey: 'Approved', subStatusLabels: { LABEL_GENERATED: 'Label Ready' }, statuses: ['APPROVED', 'LABEL_GENERATED'] },
   { labelKey: 'Shipped Back', statuses: ['SHIPPED', 'DELIVERED'] },
   { labelKey: 'Inspection', statuses: ['INSPECTION_IN_PROGRESS'] },
   { labelKey: 'Processing', statuses: ['REFUND_PROCESSING'] },
@@ -81,11 +83,14 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
                   )}
                 </div>
                 <span
-                  className={`mt-2 text-[11px] text-center whitespace-nowrap ${
+                  className={`mt-2 text-[11px] text-center whitespace-nowrap flex items-center gap-0.5 ${
                     isCurrent ? 'font-semibold text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
-                  {t(stage.labelKey)}
+                  {isCurrent && stage.subStatusLabels?.[status] && (
+                    <Tag className="h-3 w-3" />
+                  )}
+                  {t(isCurrent && stage.subStatusLabels?.[status] ? stage.subStatusLabels[status]! : stage.labelKey)}
                 </span>
               </div>
 

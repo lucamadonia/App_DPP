@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Dialog,
@@ -77,15 +77,15 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 8 }).map((_, i) => (
         <TableRow key={i}>
-          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-          <TableCell><Skeleton className="h-2 w-20 rounded-full" /></TableCell>
-          <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
-          <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
-          <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
-          <TableCell><Skeleton className="h-6 w-6 rounded" /></TableCell>
+          <TableCell><ShimmerSkeleton className="h-4 w-28" /></TableCell>
+          <TableCell><ShimmerSkeleton className="h-4 w-20" /></TableCell>
+          <TableCell><ShimmerSkeleton className="h-4 w-24" /></TableCell>
+          <TableCell><ShimmerSkeleton className="h-4 w-16" /></TableCell>
+          <TableCell><ShimmerSkeleton className="h-2 w-20 rounded-full" /></TableCell>
+          <TableCell className="text-right"><ShimmerSkeleton className="h-4 w-10 ml-auto" /></TableCell>
+          <TableCell className="text-right"><ShimmerSkeleton className="h-4 w-10 ml-auto" /></TableCell>
+          <TableCell className="text-right"><ShimmerSkeleton className="h-4 w-10 ml-auto" /></TableCell>
+          <TableCell><ShimmerSkeleton className="h-6 w-6 rounded" /></TableCell>
         </TableRow>
       ))}
     </>
@@ -101,19 +101,19 @@ function SkeletonCards() {
           <CardContent className="pt-4 pb-3 px-4 space-y-3">
             <div className="flex items-start justify-between">
               <div className="space-y-1.5">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-20" />
+                <ShimmerSkeleton className="h-4 w-32" />
+                <ShimmerSkeleton className="h-3 w-20" />
               </div>
-              <Skeleton className="h-7 w-7 rounded" />
+              <ShimmerSkeleton className="h-7 w-7 rounded" />
             </div>
             <div className="flex gap-1.5">
-              <Skeleton className="h-4 w-20 rounded-full" />
-              <Skeleton className="h-4 w-14 rounded-full" />
+              <ShimmerSkeleton className="h-4 w-20 rounded-full" />
+              <ShimmerSkeleton className="h-4 w-14 rounded-full" />
             </div>
-            <Skeleton className="h-2 w-full rounded-full" />
+            <ShimmerSkeleton className="h-2 w-full rounded-full" />
             <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-12" />
-              <Skeleton className="h-3 w-16" />
+              <ShimmerSkeleton className="h-6 w-12" />
+              <ShimmerSkeleton className="h-3 w-16" />
             </div>
           </CardContent>
         </Card>

@@ -18,7 +18,6 @@ import {
   Calendar,
   Download,
   Printer,
-  Loader2,
 } from 'lucide-react';
 import {
   gridStagger,
@@ -68,6 +67,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 
 const categoryIcons: Record<string, React.ElementType> = {
   environment: Leaf,
@@ -167,11 +167,44 @@ export function RegulationsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{t('Loading regulation data...')}</p>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <ShimmerSkeleton className="h-8 w-52" />
+            <ShimmerSkeleton className="h-4 w-80" />
+          </div>
+          <div className="flex gap-2">
+            <ShimmerSkeleton className="h-10 w-24" />
+            <ShimmerSkeleton className="h-10 w-24" />
+          </div>
         </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <ShimmerSkeleton className="h-12 w-12 rounded-lg" />
+                  <div className="space-y-2">
+                    <ShimmerSkeleton className="h-7 w-10" />
+                    <ShimmerSkeleton className="h-4 w-28" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <ShimmerSkeleton key={i} className="h-10 flex-1 rounded" />
+          ))}
+        </div>
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            {Array.from({ length: 4 }, (_, i) => (
+              <ShimmerSkeleton key={i} className="h-16 rounded" />
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getInfluencerContacts } from '@/services/supabase/wh-influencer-hub';
 import { InfluencerProfileCard } from '@/components/warehouse/influencer/InfluencerProfileCard';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
@@ -123,14 +123,14 @@ export function InfluencerDirectoryPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-lg border bg-card overflow-hidden">
-              <Skeleton className="h-16 w-full" />
+              <ShimmerSkeleton className="h-16 w-full" />
               <div className="p-4 space-y-3">
-                <Skeleton className="h-16 w-16 rounded-full mx-auto -mt-12" />
-                <Skeleton className="h-4 w-24 mx-auto" />
-                <Skeleton className="h-3 w-16 mx-auto" />
+                <ShimmerSkeleton className="h-16 w-16 rounded-full mx-auto -mt-12" />
+                <ShimmerSkeleton className="h-4 w-24 mx-auto" />
+                <ShimmerSkeleton className="h-3 w-16 mx-auto" />
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Skeleton className="h-14 rounded-md" />
-                  <Skeleton className="h-14 rounded-md" />
+                  <ShimmerSkeleton className="h-14 rounded-md" />
+                  <ShimmerSkeleton className="h-14 rounded-md" />
                 </div>
               </div>
             </div>

@@ -8,7 +8,9 @@ import { ReturnCharts } from '@/components/returns/ReturnCharts';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, scrollRevealVariants, useReducedMotion } from '@/lib/motion';
 import { getReturnStats, getReturns } from '@/services/supabase';
@@ -21,20 +23,26 @@ export function ReturnsHubDashboardPage() {
   const [stats, setStats] = useState<ReturnsHubStats | null>(null);
   const [recentReturns, setRecentReturns] = useState<RhReturn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
+  const load = async () => {
+    setLoading(true);
+    setError(false);
+    try {
       const [statsData, returnsData] = await Promise.all([
         getReturnStats(),
         getReturns(undefined, 1, 10),
       ]);
       setStats(statsData);
       setRecentReturns(returnsData.data);
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
     }
-    load();
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const prefersReduced = useReducedMotion();
 
@@ -56,14 +64,16 @@ export function ReturnsHubDashboardPage() {
         <p className="text-muted-foreground">{t('Overview of your return operations')}</p>
       </div>
 
-      {loading ? (
+      {error ? (
+        <ErrorState onRetry={load} />
+      ) : loading ? (
         <>
           <SkeletonKPICards />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
               <Card key={i}>
-                <CardContent className="pt-6 animate-pulse">
-                  <div className="h-32 bg-muted rounded" />
+                <CardContent className="pt-6">
+                  <ShimmerSkeleton className="h-32 rounded" />
                 </CardContent>
               </Card>
             ))}

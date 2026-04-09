@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, gridStagger, gridItem, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
@@ -27,6 +28,7 @@ export function CustomerDetailPage() {
   const [customer, setCustomer] = useState<RhCustomer | null>(null);
   const [returns, setReturns] = useState<RhReturn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -48,37 +50,42 @@ export function CustomerDetailPage() {
 
   const loadData = async () => {
     if (!id) return;
+    setError(false);
     setLoading(true);
-    const [cust, rets] = await Promise.all([
-      getRhCustomer(id),
-      getRhCustomerReturns(id),
-    ]);
-    setCustomer(cust);
-    setReturns(rets);
+    try {
+      const [cust, rets] = await Promise.all([
+        getRhCustomer(id),
+        getRhCustomerReturns(id),
+      ]);
+      setCustomer(cust);
+      setReturns(rets);
 
-    // Load portal profile status
-    if (cust) {
-      const { data: portalData } = await supabase
-        .from('rh_customer_profiles')
-        .select('last_login_at, email_verified')
-        .eq('customer_id', id)
-        .single();
-      setPortalProfile(portalData ? { lastLoginAt: portalData.last_login_at, emailVerified: portalData.email_verified } : null);
+      // Load portal profile status
+      if (cust) {
+        const { data: portalData } = await supabase
+          .from('rh_customer_profiles')
+          .select('last_login_at, email_verified')
+          .eq('customer_id', id)
+          .single();
+        setPortalProfile(portalData ? { lastLoginAt: portalData.last_login_at, emailVerified: portalData.email_verified } : null);
 
-      // Load CRM fields
-      const { data: crmData } = await supabase
-        .from('rh_customers')
-        .select('lifecycle_stage, satisfaction_score, communication_preferences')
-        .eq('id', id)
-        .single();
-      if (crmData) {
-        setLifecycleStage(crmData.lifecycle_stage || 'active');
-        setSatisfactionScore(crmData.satisfaction_score != null ? Number(crmData.satisfaction_score) : null);
-        setCommPrefs(crmData.communication_preferences || { email: true, sms: false, marketing: false });
+        // Load CRM fields
+        const { data: crmData } = await supabase
+          .from('rh_customers')
+          .select('lifecycle_stage, satisfaction_score, communication_preferences')
+          .eq('id', id)
+          .single();
+        if (crmData) {
+          setLifecycleStage(crmData.lifecycle_stage || 'active');
+          setSatisfactionScore(crmData.satisfaction_score != null ? Number(crmData.satisfaction_score) : null);
+          setCommPrefs(crmData.communication_preferences || { email: true, sms: false, marketing: false });
+        }
       }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => { loadData(); }, [id]);
@@ -124,6 +131,10 @@ export function CustomerDetailPage() {
   const prefersReduced = useReducedMotion();
   const Wrapper = prefersReduced ? 'div' : motion.div;
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
+  if (error) {
+    return <ErrorState onRetry={loadData} />;
+  }
 
   if (loading) {
     return (

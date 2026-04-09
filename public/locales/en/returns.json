@@ -1074,6 +1074,13 @@
   "Tracking data unavailable": "Tracking data unavailable",
   "Auto-refreshes every minute": "Auto-refreshes every minute",
 
+  "Your shipping label is ready!": "Your shipping label is ready!",
+  "Download Shipping Label (PDF)": "Download Shipping Label (PDF)",
+  "Label expires on {{date}}": "Label expires on {{date}}",
+  "Download step": "Download",
+  "Print step": "Print",
+  "Drop off step": "Drop off",
+
   "Embed Widget": "Embed Widget",
   "Embed your returns portal on any website": "Embed your returns portal on any website",
   "Widget Type": "Widget Type",

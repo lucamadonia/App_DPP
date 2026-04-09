@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { PortalDesignTab } from '@/components/returns/PortalDesignTab';
 import { PortalSetupTab } from '@/components/returns/PortalSetupTab';
 import { EmbedSnippetCard } from '@/components/returns/EmbedSnippetCard';
@@ -34,6 +35,7 @@ export function ReturnsSettingsPage() {
   const [settings, setSettings] = useState<ReturnsHubSettings | null>(null);
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [tenantSlug, setTenantSlug] = useState('');
@@ -55,9 +57,10 @@ export function ReturnsSettingsPage() {
   // Shipping / DHL
   const [autoGenerateLabel, setAutoGenerateLabel] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
+  const load = async () => {
+    setError(false);
+    setLoading(true);
+    try {
       const [s, r, tenant, cr] = await Promise.all([
         getReturnsHubSettings(),
         getReturnReasons(),
@@ -79,8 +82,14 @@ export function ReturnsSettingsPage() {
         }
         setAutoGenerateLabel((s as any).autoGenerateLabel ?? false);
       }
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
     load();
   }, []);
 
@@ -183,6 +192,10 @@ export function ReturnsSettingsPage() {
   };
 
   const prefersReduced = useReducedMotion();
+
+  if (error) {
+    return <ErrorState onRetry={load} />;
+  }
 
   if (loading) {
     return (

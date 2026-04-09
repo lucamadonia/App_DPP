@@ -3,7 +3,7 @@
  * Client-side wrapper for the dhl-shipping Edge Function
  */
 
-import { supabase, getCurrentTenantId, supabaseAnon } from '@/lib/supabase';
+import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { invokeEdgeFunction } from '@/lib/edge-function';
 import type {
   DHLSettingsPublic,
@@ -149,16 +149,22 @@ export async function getPublicDHLTracking(
   trackingNumber: string,
   returnNumber: string
 ): Promise<DHLTrackingEvent[]> {
-  const { data, error } = await supabaseAnon.functions.invoke('dhl-shipping', {
-    body: { action: 'get_public_tracking', params: { trackingNumber, returnNumber } },
-  });
-  if (error) {
-    console.warn('Public DHL tracking error:', error.message);
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dhl-shipping`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ action: 'get_public_tracking', params: { trackingNumber, returnNumber } }),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    if (data?.error) return [];
+    return data?.events || [];
+  } catch {
     return [];
   }
-  if (data?.error) {
-    console.warn('Public DHL tracking:', data.error);
-    return [];
-  }
-  return data?.events || [];
 }

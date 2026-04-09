@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { PaginationBar } from '@/components/returns/PaginationBar';
 import { CustomerGridCard } from '@/components/returns/CustomerGridCard';
 import { pageVariants, pageTransition, gridStagger, gridItem, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
@@ -25,6 +26,7 @@ export function CustomersListPage() {
     data: [], total: 0, page: 1, pageSize: 20, totalPages: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -42,12 +44,22 @@ export function CustomersListPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getRhCustomers(search || undefined, page, 20);
-    setResult(data);
-    setLoading(false);
+    setError(false);
+    try {
+      const data = await getRhCustomers(search || undefined, page, 20);
+      setResult(data);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [page, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  if (error) {
+    return <ErrorState onRetry={load} />;
+  }
 
   const riskColor = (score: number) =>
     score >= 70 ? 'bg-red-100 text-red-800' : score >= 40 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';

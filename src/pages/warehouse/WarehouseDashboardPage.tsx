@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
 import { StockMovementChart, StockByLocationChart } from '@/components/warehouse/WarehouseCharts';
 import { getWarehouseStats, getRecentTransactions, getPendingActions, getStockMovementTrend } from '@/services/supabase/wh-stock';
@@ -233,8 +233,8 @@ export function WarehouseDashboardPage() {
               <div className="space-y-4">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-full" />
+                    <ShimmerSkeleton className="h-4 w-32" />
+                    <ShimmerSkeleton className="h-3 w-full" />
                   </div>
                 ))}
               </div>
@@ -351,10 +351,10 @@ export function WarehouseDashboardPage() {
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <Skeleton className="h-2.5 w-2.5 rounded-full mt-1.5 shrink-0" />
+                    <ShimmerSkeleton className="h-2.5 w-2.5 rounded-full mt-1.5 shrink-0" />
                     <div className="space-y-1 flex-1">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
+                      <ShimmerSkeleton className="h-4 w-3/4" />
+                      <ShimmerSkeleton className="h-3 w-1/2" />
                     </div>
                   </div>
                 ))}
@@ -409,12 +409,12 @@ export function WarehouseDashboardPage() {
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                    <ShimmerSkeleton className="h-8 w-8 rounded-md shrink-0" />
                     <div className="space-y-1 flex-1">
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-3 w-1/3" />
+                      <ShimmerSkeleton className="h-4 w-2/3" />
+                      <ShimmerSkeleton className="h-3 w-1/3" />
                     </div>
-                    <Skeleton className="h-4 w-12 shrink-0" />
+                    <ShimmerSkeleton className="h-4 w-12 shrink-0" />
                   </div>
                 ))}
               </div>

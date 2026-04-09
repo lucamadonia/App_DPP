@@ -98,5 +98,10 @@
   "Customers": "Kunden",
   "Tickets": "Tickets",
   "Reports": "Berichte",
-  "Workflows": "Workflows"
+  "Workflows": "Workflows",
+  "Something went wrong": "Etwas ist schiefgelaufen",
+  "An unexpected error occurred. Please try again.": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.",
+  "Try again": "Erneut versuchen",
+  "Go to homepage": "Zur Startseite",
+  "Retry": "Erneut versuchen"
 }

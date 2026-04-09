@@ -29,6 +29,7 @@ import { TicketKanbanBoard } from '@/components/returns/TicketKanbanBoard';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { PaginationBar } from '@/components/returns/PaginationBar';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, fadeIn, useReducedMotion } from '@/lib/motion';
@@ -49,6 +50,7 @@ export function TicketsListPage() {
   const [result, setResult] = useState<PaginatedResult<RhTicket>>({ data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
   const [stats, setStats] = useState<TicketStats>({ open: 0, inProgress: 0, waiting: 0, resolved: 0, closed: 0, overdue: 0, avgFirstResponseMinutes: 0, avgResolutionMinutes: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   // View & Filters
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -86,21 +88,27 @@ export function TicketsListPage() {
   }, [search]);
 
   const load = useCallback(async () => {
+    setError(false);
     setLoading(true);
-    const queryFilter: TicketsFilter = {
-      ...filter,
-      sortBy,
-      sortOrder,
-    };
-    if (debouncedSearch) queryFilter.search = debouncedSearch;
+    try {
+      const queryFilter: TicketsFilter = {
+        ...filter,
+        sortBy,
+        sortOrder,
+      };
+      if (debouncedSearch) queryFilter.search = debouncedSearch;
 
-    const [data, statsData] = await Promise.all([
-      getRhTickets(queryFilter, page, viewMode === 'kanban' ? 200 : 20),
-      getTicketStats(),
-    ]);
-    setResult(data);
-    setStats(statsData);
-    setLoading(false);
+      const [data, statsData] = await Promise.all([
+        getRhTickets(queryFilter, page, viewMode === 'kanban' ? 200 : 20),
+        getTicketStats(),
+      ]);
+      setResult(data);
+      setStats(statsData);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [page, filter, sortBy, sortOrder, debouncedSearch, viewMode]);
 
   useEffect(() => { load(); }, [load]);
@@ -234,6 +242,10 @@ export function TicketsListPage() {
   const prefersReduced = useReducedMotion();
   const Wrapper = prefersReduced ? 'div' : motion.div;
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
+  if (error) {
+    return <ErrorState onRetry={load} />;
+  }
 
   return (
     <Wrapper className="space-y-6" {...wrapperProps as any}>

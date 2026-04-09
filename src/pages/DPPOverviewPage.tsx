@@ -15,7 +15,6 @@ import {
   Clock,
   Archive,
   Download,
-  Loader2,
   Package,
   Layers,
 } from 'lucide-react';
@@ -46,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getAllBatches } from '@/services/supabase/batches';
 import type { BatchListItem } from '@/types/product';
 
@@ -112,8 +112,33 @@ export function DPPOverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <ShimmerSkeleton className="h-8 w-56" />
+            <ShimmerSkeleton className="h-4 w-48" />
+          </div>
+          <div className="flex gap-2">
+            <ShimmerSkeleton className="h-10 w-32" />
+            <ShimmerSkeleton className="h-10 w-36" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2"><ShimmerSkeleton className="h-4 w-20" /></CardHeader>
+              <CardContent><ShimmerSkeleton className="h-7 w-12" /></CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <ShimmerSkeleton className="h-10 rounded" />
+            {Array.from({ length: 5 }, (_, i) => (
+              <ShimmerSkeleton key={i} className="h-12 rounded" />
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }

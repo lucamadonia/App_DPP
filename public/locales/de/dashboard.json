@@ -49,5 +49,6 @@
   "compliant": "konform",
   "pending": "ausstehend",
   "more warnings": "weitere Warnungen",
-  "Get Started": "Loslegen"
+  "Get Started": "Loslegen",
+  "{{count}} Batches": "{{count}} Chargen"
 }

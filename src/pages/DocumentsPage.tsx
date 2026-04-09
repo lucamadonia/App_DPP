@@ -85,6 +85,7 @@ import type { DocumentFolder } from '@/types/database';
 
 import { motion } from 'framer-motion';
 import { blurIn, useReducedMotion } from '@/lib/motion';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import type { VisibilityLevel } from '@/types/visibility';
 
@@ -564,8 +565,25 @@ export function DocumentsPage() {
 
           {/* Loading State */}
           {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="space-y-4">
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <Card key={i}>
+                    <CardContent className="pt-6 space-y-2">
+                      <ShimmerSkeleton className="h-4 w-20" />
+                      <ShimmerSkeleton className="h-7 w-12" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Card>
+                <CardContent className="pt-6 space-y-3">
+                  <ShimmerSkeleton className="h-10 rounded" />
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <ShimmerSkeleton key={i} className="h-12 rounded" />
+                  ))}
+                </CardContent>
+              </Card>
             </div>
           )}
 

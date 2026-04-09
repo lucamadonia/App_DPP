@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { EngagementTrendChart } from '@/components/warehouse/influencer/EngagementTrendChart';
 import { PlatformDonutChart } from '@/components/warehouse/influencer/PlatformDonutChart';
 import { CampaignComparisonChart } from '@/components/warehouse/influencer/CampaignComparisonChart';
@@ -35,13 +35,13 @@ export function InfluencerAnalyticsPage() {
     return (
       <div className="space-y-4 sm:space-y-6">
         <div>
-          <Skeleton className="h-7 sm:h-8 w-48 sm:w-64 mb-2" />
-          <Skeleton className="h-4 w-64 sm:w-96" />
+          <ShimmerSkeleton className="h-7 sm:h-8 w-48 sm:w-64 mb-2" />
+          <ShimmerSkeleton className="h-4 w-64 sm:w-96" />
         </div>
-        <Skeleton className="h-[200px] sm:h-[240px] w-full rounded-lg" />
+        <ShimmerSkeleton className="h-[200px] sm:h-[240px] w-full rounded-lg" />
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-          <Skeleton className="h-[250px] sm:h-[300px] rounded-lg" />
-          <Skeleton className="h-[250px] sm:h-[300px] rounded-lg" />
+          <ShimmerSkeleton className="h-[250px] sm:h-[300px] rounded-lg" />
+          <ShimmerSkeleton className="h-[250px] sm:h-[300px] rounded-lg" />
         </div>
       </div>
     );

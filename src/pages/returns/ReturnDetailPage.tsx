@@ -21,6 +21,7 @@ import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ReturnItemsTable } from '@/components/returns/ReturnItemsTable';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
+import { ErrorState } from '@/components/ui/state-feedback';
 import { ReturnShippingCard } from '@/components/returns/ReturnShippingCard';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, useReducedMotion } from '@/lib/motion';
@@ -75,6 +76,7 @@ export function ReturnDetailPage() {
   const [items, setItems] = useState<RhReturnItem[]>([]);
   const [timeline, setTimeline] = useState<TimelineType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   // UI state
@@ -120,10 +122,11 @@ export function ReturnDetailPage() {
   // DATA LOADING
   // ============================================
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!id) return;
-    async function load() {
-      setLoading(true);
+    setError(false);
+    setLoading(true);
+    try {
       const [ret, itms, tl, profs] = await Promise.all([
         getReturn(id!),
         getReturnItems(id!),
@@ -145,9 +148,15 @@ export function ReturnDetailPage() {
         const idx = getStageIndex(ret.status);
         if (idx >= 0) setActiveTab(WORKFLOW_STAGES[idx].id);
       }
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadData();
   }, [id]);
 
   const reload = async () => {
@@ -368,6 +377,10 @@ export function ReturnDetailPage() {
 
   const Wrapper = prefersReduced ? 'div' : motion.div;
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
+
+  if (error) {
+    return <ErrorState onRetry={loadData} />;
+  }
 
   if (loading) {
     return (

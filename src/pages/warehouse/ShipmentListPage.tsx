@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getShipments, getShipmentStatusCounts } from '@/services/supabase/wh-shipments';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
@@ -41,7 +41,7 @@ function KPICard({ label, value, icon: Icon, color, bgColor, loading }: {
           </div>
           <div className="min-w-0">
             {loading ? (
-              <Skeleton className="h-6 sm:h-7 w-12 mb-1" />
+              <ShimmerSkeleton className="h-6 sm:h-7 w-12 mb-1" />
             ) : (
               <p className="text-xl sm:text-2xl font-bold tabular-nums leading-none">{animated}</p>
             )}
@@ -331,7 +331,7 @@ export function ShipmentListPage() {
                     <TableRow key={i}>
                       {Array.from({ length: 9 }).map((_, j) => (
                         <TableCell key={j} className={j === 4 || j === 8 ? 'hidden sm:table-cell' : j === 3 ? 'hidden md:table-cell' : j === 6 ? 'hidden lg:table-cell' : j === 7 ? 'hidden xl:table-cell' : ''}>
-                          <Skeleton className="h-5 w-full" />
+                          <ShimmerSkeleton className="h-5 w-full" />
                         </TableCell>
                       ))}
                     </TableRow>

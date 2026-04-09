@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -95,18 +95,18 @@ export function CampaignDetailPage() {
     return (
       <div className="space-y-4 sm:space-y-6">
         <div className="rounded-xl bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5 px-4 py-4 sm:px-6 sm:py-5">
-          <Skeleton className="h-7 sm:h-8 w-48 sm:w-64 mb-2" />
-          <Skeleton className="h-4 w-64 sm:w-96" />
+          <ShimmerSkeleton className="h-7 sm:h-8 w-48 sm:w-64 mb-2" />
+          <ShimmerSkeleton className="h-4 w-64 sm:w-96" />
           <div className="mt-4">
-            <Skeleton className="h-10 w-full max-w-lg" />
+            <ShimmerSkeleton className="h-10 w-full max-w-lg" />
           </div>
         </div>
         <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 sm:h-24 rounded-lg" />
+            <ShimmerSkeleton key={i} className="h-20 sm:h-24 rounded-lg" />
           ))}
         </div>
-        <Skeleton className="h-64 sm:h-96 rounded-lg" />
+        <ShimmerSkeleton className="h-64 sm:h-96 rounded-lg" />
       </div>
     );
   }
