@@ -1,13 +1,13 @@
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { LandingHero } from '@/components/landing/LandingHero';
-import { LandingTrustBar } from '@/components/landing/LandingTrustBar';
-import { LandingFeaturesBento } from '@/components/landing/LandingFeaturesBento';
+import { LandingOldVsNew } from '@/components/landing/LandingOldVsNew';
+import { LandingOutcomes } from '@/components/landing/LandingOutcomes';
 import { LandingDPPShowcase } from '@/components/landing/LandingDPPShowcase';
 import { LandingSupplyChain } from '@/components/landing/LandingSupplyChain';
 import { LandingAISection } from '@/components/landing/LandingAISection';
+import { LandingVsCompetitors } from '@/components/landing/LandingVsCompetitors';
 import { LandingReturnFlow } from '@/components/landing/LandingReturnFlow';
 import { LandingReturnsHub } from '@/components/landing/LandingReturnsHub';
-import { LandingCustomerPortal } from '@/components/landing/LandingCustomerPortal';
 import { LandingWorkflowShowcase } from '@/components/landing/LandingWorkflowShowcase';
 import { LandingEmailEditor } from '@/components/landing/LandingEmailEditor';
 import { LandingQRSection } from '@/components/landing/LandingQRSection';
@@ -29,20 +29,19 @@ function GlowDivider() {
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen scroll-smooth bg-white">
+    <div className="min-h-screen scroll-smooth bg-white dark:bg-slate-950">
       <LandingNavbar />
       <LandingHero />
-      <LandingTrustBar />
-      <GlowDivider />
-      <LandingFeaturesBento />
+      <LandingOldVsNew />
+      <LandingOutcomes />
       <LandingDPPShowcase />
       <LandingSupplyChain />
       <GlowDivider />
       <LandingAISection />
+      <LandingVsCompetitors />
       <LandingTestimonials />
       <LandingReturnFlow />
       <LandingReturnsHub />
-      <LandingCustomerPortal />
       <GlowDivider />
       <LandingWorkflowShowcase />
       <LandingEmailEditor />
