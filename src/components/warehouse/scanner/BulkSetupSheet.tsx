@@ -135,7 +135,7 @@ export function BulkSetupSheet({ open, mode, onConfirm, onClose }: BulkSetupShee
         <div className="mb-6">
           <label className="text-sm font-medium text-slate-400 mb-2 block">{t('Default Quantity')}</label>
           <div className="[&_input]:!bg-white/5 [&_input]:!text-white [&_input]:!border-white/10">
-            <QuantityStepper value={quantity} onChange={setQuantity} min={1} variant={mode === 'in' ? 'green' : 'blue'} />
+            <QuantityStepper value={quantity} onChange={setQuantity} min={1} variant={mode === 'in' ? 'green' : 'default'} />
           </div>
         </div>
 
