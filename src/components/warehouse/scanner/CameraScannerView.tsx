@@ -151,7 +151,7 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
     if (!scannerRef.current || !torchSupported) return;
     try {
       await scannerRef.current.applyVideoConstraints({
-        advanced: [{ torch: !torchOn }] as MediaTrackConstraintSet[],
+        advanced: [{ torch: !torchOn }] as unknown as MediaTrackConstraintSet[],
       });
       setTorchOn((prev) => !prev);
     } catch {
