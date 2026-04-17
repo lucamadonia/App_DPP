@@ -91,6 +91,17 @@ export function useWarehouseAIChat(locale: 'en' | 'de'): UseWarehouseAIChatRetur
     );
 
     let fullText = '';
+    // Throttle state updates to rAF (~60fps) to prevent O(n²) re-parsing in AIStreamingText.
+    // Without this, every token triggers a full markdown re-parse of the entire buffer.
+    let rafHandle: number | null = null;
+    const scheduleFlush = () => {
+      if (rafHandle !== null) return;
+      rafHandle = requestAnimationFrame(() => {
+        rafHandle = null;
+        setStreamingText(fullText);
+      });
+    };
+
     try {
       for await (const chunk of streamCompletion(apiMessages, {
         maxTokens: 2000,
@@ -99,10 +110,12 @@ export function useWarehouseAIChat(locale: 'en' | 'de'): UseWarehouseAIChatRetur
         operationLabel: 'Warehouse AI Chat',
       })) {
         fullText += chunk;
-        setStreamingText(fullText);
+        scheduleFlush();
       }
+      if (rafHandle !== null) cancelAnimationFrame(rafHandle);
       setMessages(prev => [...prev, { role: 'assistant', content: fullText }]);
     } catch (err) {
+      if (rafHandle !== null) cancelAnimationFrame(rafHandle);
       const errorMsg = err instanceof Error ? err.message : 'Error during AI request';
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMsg}` }]);
     } finally {

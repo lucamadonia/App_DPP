@@ -80,9 +80,27 @@ export function useComplianceCheck(): UseComplianceCheckReturn {
     phaseIndex: 0 | 1 | 2,
   ): Promise<string> => {
     let fullText = '';
-    for await (const chunk of streamCompletion(messages, { maxTokens: 4000, temperature: 0.2, operationLabel: PHASE_LABELS[phaseIndex] })) {
-      if (abortRef.current) throw new Error('Aborted');
-      fullText += chunk;
+    // Coalesce token updates via rAF to prevent UI freeze from O(n²) markdown re-parse.
+    let rafHandle: number | null = null;
+    const flush = () => {
+      if (rafHandle !== null) return;
+      rafHandle = requestAnimationFrame(() => {
+        rafHandle = null;
+        setPhaseTexts(prev => {
+          const next = [...prev] as [string, string, string];
+          next[phaseIndex] = fullText;
+          return next;
+        });
+      });
+    };
+    try {
+      for await (const chunk of streamCompletion(messages, { maxTokens: 4000, temperature: 0.2, operationLabel: PHASE_LABELS[phaseIndex] })) {
+        if (abortRef.current) throw new Error('Aborted');
+        fullText += chunk;
+        flush();
+      }
+    } finally {
+      if (rafHandle !== null) cancelAnimationFrame(rafHandle);
       setPhaseTexts(prev => {
         const next = [...prev] as [string, string, string];
         next[phaseIndex] = fullText;

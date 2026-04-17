@@ -33,14 +33,26 @@ export function useAIStream(): UseAIStreamReturn {
     abortRef.current = false;
 
     let fullText = '';
+    // Coalesce token updates to requestAnimationFrame to prevent O(n²) re-parse cost.
+    let rafHandle: number | null = null;
+    const flush = () => {
+      if (rafHandle !== null) return;
+      rafHandle = requestAnimationFrame(() => {
+        rafHandle = null;
+        setText(fullText);
+      });
+    };
 
     try {
       for await (const chunk of streamCompletion(messages, options)) {
         if (abortRef.current) break;
         fullText += chunk;
-        setText(fullText);
+        flush();
       }
+      if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+      setText(fullText);
     } catch (err) {
+      if (rafHandle !== null) cancelAnimationFrame(rafHandle);
       const message = err instanceof Error ? err.message : 'Unbekannter Fehler';
       setError(message);
     } finally {
