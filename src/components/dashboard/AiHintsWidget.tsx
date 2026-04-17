@@ -9,7 +9,6 @@ import {
   FileText,
   Eye,
   ExternalLink,
-  Download,
   Copy,
   Check,
 } from 'lucide-react';

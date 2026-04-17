@@ -7,8 +7,11 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 
 export interface DocumentAIHint {
+  id?: string;
   type: string;
   message: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
 }
 
 export interface Document {
