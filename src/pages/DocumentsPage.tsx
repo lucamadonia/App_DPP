@@ -93,6 +93,7 @@ import { DocumentSidebar, type SelectedContext } from '@/components/documents/Do
 import { DocumentRowActions } from '@/components/documents/DocumentRowActions';
 import { DocumentPreviewSheet } from '@/components/documents/DocumentPreviewSheet';
 import { DocumentDetailDialog } from '@/components/documents/DocumentDetailDialog';
+import { UploadNewVersionDialog } from '@/components/documents/UploadNewVersionDialog';
 import type { DocumentFolder } from '@/types/database';
 
 import { motion } from 'framer-motion';
@@ -149,6 +150,8 @@ export function DocumentsPage() {
   const [editDoc, setEditDoc] = useState<Document | null>(null);
   const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [newVersionDoc, setNewVersionDoc] = useState<Document | null>(null);
+  const [versionRefreshKey, setVersionRefreshKey] = useState(0);
 
   // Sidebar state
   const [selectedContext, setSelectedContext] = useState<SelectedContext>({ type: 'all' });
@@ -511,6 +514,7 @@ export function DocumentsPage() {
     onDownload: handleDownload,
     onEdit: (doc: Document) => setEditDoc(doc),
     onDelete: (doc: Document) => setDeleteDocId(doc.id),
+    onUploadNewVersion: (doc: Document) => setNewVersionDoc(doc),
   };
 
   // Sidebar content (shared between desktop inline and mobile sheet)
@@ -723,6 +727,7 @@ export function DocumentsPage() {
                           onDownload={rowActions.onDownload}
                           onEdit={rowActions.onEdit}
                           onDelete={rowActions.onDelete}
+                          onUploadNewVersion={rowActions.onUploadNewVersion}
                           onChanged={refreshData}
                         >
                           <TableRow
@@ -814,6 +819,7 @@ export function DocumentsPage() {
                     onDownload={rowActions.onDownload}
                     onEdit={rowActions.onEdit}
                     onDelete={rowActions.onDelete}
+                    onUploadNewVersion={rowActions.onUploadNewVersion}
                     onChanged={refreshData}
                   >
                     <Card className="p-3">
@@ -1175,6 +1181,19 @@ export function DocumentsPage() {
         folders={folders}
         onSaved={refreshData}
         onDelete={(doc) => setDeleteDocId(doc.id)}
+        onUploadNewVersion={(doc) => setNewVersionDoc(doc)}
+        versionRefreshKey={versionRefreshKey}
+      />
+
+      {/* Upload New Version Dialog */}
+      <UploadNewVersionDialog
+        doc={newVersionDoc}
+        open={!!newVersionDoc}
+        onOpenChange={(open) => { if (!open) setNewVersionDoc(null); }}
+        onUploaded={() => {
+          setVersionRefreshKey((k) => k + 1);
+          refreshData();
+        }}
       />
 
       {/* Delete Confirmation AlertDialog */}

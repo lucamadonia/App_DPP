@@ -48,8 +48,13 @@ export {
   uploadProductImage,
   getDocumentsWithHints,
   acknowledgeDocumentHint,
+  getDocumentVersions,
+  uploadDocumentVersion,
+  restoreDocumentVersion,
+  deleteDocumentVersion,
   type Document,
   type DocumentAIHint,
+  type DocumentVersion,
 } from './documents';
 
 // Document Folders

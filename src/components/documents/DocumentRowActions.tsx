@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Eye, Download, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { Eye, Download, Pencil, Trash2, MoreHorizontal, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,9 +16,17 @@ interface DocumentRowActionsProps {
   onDownload: (doc: Document) => void;
   onEdit: (doc: Document) => void;
   onDelete: (doc: Document) => void;
+  onUploadNewVersion?: (doc: Document) => void;
 }
 
-export function DocumentRowActions({ doc, onPreview, onDownload, onEdit, onDelete }: DocumentRowActionsProps) {
+export function DocumentRowActions({
+  doc,
+  onPreview,
+  onDownload,
+  onEdit,
+  onDelete,
+  onUploadNewVersion,
+}: DocumentRowActionsProps) {
   const { t } = useTranslation('documents');
 
   return (
@@ -41,6 +49,12 @@ export function DocumentRowActions({ doc, onPreview, onDownload, onEdit, onDelet
           <Pencil className="mr-2 h-4 w-4" />
           {t('Edit Details')}
         </DropdownMenuItem>
+        {onUploadNewVersion && (
+          <DropdownMenuItem onClick={() => onUploadNewVersion(doc)}>
+            <UploadCloud className="mr-2 h-4 w-4" />
+            {t('Upload New Version')}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive" onClick={() => onDelete(doc)}>
           <Trash2 className="mr-2 h-4 w-4" />

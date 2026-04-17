@@ -39,6 +39,41 @@ export interface Document {
   aiModel?: string;
 }
 
+export interface DocumentVersion {
+  id: string;
+  documentId: string;
+  versionNumber: number;
+  fileName: string;
+  storagePath?: string;
+  size?: string;
+  type: 'pdf' | 'image' | 'other';
+  validUntil?: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+  changeNote?: string;
+  aiConfidence?: number;
+  aiModel?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformVersion(row: any): DocumentVersion {
+  return {
+    id: row.id,
+    documentId: row.document_id,
+    versionNumber: row.version_number,
+    fileName: row.file_name,
+    storagePath: row.storage_path || undefined,
+    size: row.size || undefined,
+    type: row.type,
+    validUntil: row.valid_until || undefined,
+    uploadedAt: row.uploaded_at,
+    uploadedBy: row.uploaded_by || undefined,
+    changeNote: row.change_note || undefined,
+    aiConfidence: row.ai_confidence == null ? undefined : Number(row.ai_confidence),
+    aiModel: row.ai_model || undefined,
+  };
+}
+
 // Transform database row to Document type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformDocument(row: any): Document {
@@ -239,6 +274,23 @@ export async function uploadDocument(
     return { success: false, error: error.message };
   }
 
+  // Seed v1 in document_versions
+  const { data: userData } = await supabase.auth.getUser();
+  await supabase.from('document_versions').insert({
+    tenant_id: tenantId,
+    document_id: data.id,
+    version_number: 1,
+    file_name: file.name,
+    storage_path: fileName,
+    size: insertData.size as string,
+    type: fileType,
+    valid_until: metadata.validUntil || null,
+    uploaded_by: userData?.user?.id ?? null,
+    ai_classification: metadata.aiClassification || null,
+    ai_confidence: metadata.aiConfidence ?? null,
+    ai_model: metadata.aiModel || null,
+  });
+
   return { success: true, document: transformDocument(data) };
 }
 
@@ -318,19 +370,23 @@ export async function updateDocument(
  * Delete a document (and its file from storage)
  */
 export async function deleteDocument(id: string): Promise<{ success: boolean; error?: string }> {
-  // First get the document to find the storage path
-  const { data: doc } = await supabase
-    .from('documents')
-    .select('storage_path')
-    .eq('id', id)
-    .single();
+  // Collect all storage paths from versions + current doc, so we can clean storage
+  // (DB CASCADE will delete version rows, but not storage blobs).
+  const [{ data: doc }, { data: versions }] = await Promise.all([
+    supabase.from('documents').select('storage_path').eq('id', id).single(),
+    supabase.from('document_versions').select('storage_path').eq('document_id', id),
+  ]);
 
-  // Delete from storage if there's a file
-  if (doc?.storage_path) {
-    await supabase.storage.from('documents').remove([doc.storage_path]);
+  const paths = new Set<string>();
+  if (doc?.storage_path) paths.add(doc.storage_path);
+  for (const v of versions || []) {
+    if (v.storage_path) paths.add(v.storage_path);
+  }
+  if (paths.size > 0) {
+    await supabase.storage.from('documents').remove(Array.from(paths));
   }
 
-  // Delete the record
+  // Delete the record — ON DELETE CASCADE removes document_versions rows
   const { error } = await supabase
     .from('documents')
     .delete()
@@ -585,6 +641,291 @@ export async function acknowledgeDocumentHint(
 
   if (updateError) {
     return { success: false, error: updateError.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Get all versions for a document (newest first).
+ */
+export async function getDocumentVersions(documentId: string): Promise<DocumentVersion[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data, error } = await supabase
+    .from('document_versions')
+    .select('*')
+    .eq('document_id', documentId)
+    .eq('tenant_id', tenantId)
+    .order('version_number', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load document versions:', error);
+    return [];
+  }
+
+  return (data || []).map(transformVersion);
+}
+
+/**
+ * Upload a new version of an existing document.
+ * Archives the old current state as a version row and updates the documents
+ * row to point at the newly uploaded file.
+ */
+export async function uploadDocumentVersion(
+  documentId: string,
+  file: File,
+  opts: { changeNote?: string } = {}
+): Promise<{ success: boolean; version?: DocumentVersion; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  // Load current document (tenant-scoped)
+  const { data: doc, error: docError } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('id', documentId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (docError || !doc) {
+    return { success: false, error: docError?.message || 'Document not found' };
+  }
+
+  // Determine new file type
+  let fileType: 'pdf' | 'image' | 'other' = 'other';
+  if (file.type === 'application/pdf') fileType = 'pdf';
+  else if (file.type.startsWith('image/')) fileType = 'image';
+
+  // Upload to storage with unique path (same convention as uploadDocument)
+  const fileExt = file.name.split('.').pop();
+  const storagePath = `${tenantId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('documents')
+    .upload(storagePath, file);
+
+  if (uploadError) {
+    console.error('Failed to upload new version:', uploadError);
+    return { success: false, error: uploadError.message };
+  }
+
+  const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
+
+  // Determine next version number
+  const { data: maxRow } = await supabase
+    .from('document_versions')
+    .select('version_number')
+    .eq('document_id', documentId)
+    .eq('tenant_id', tenantId)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextVersion = (maxRow?.version_number ?? 0) + 1;
+
+  const sizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+
+  // Insert the new version row
+  const { data: userData } = await supabase.auth.getUser();
+  const { data: versionRow, error: versionError } = await supabase
+    .from('document_versions')
+    .insert({
+      tenant_id: tenantId,
+      document_id: documentId,
+      version_number: nextVersion,
+      file_name: file.name,
+      storage_path: storagePath,
+      size: sizeStr,
+      type: fileType,
+      valid_until: doc.valid_until,
+      uploaded_by: userData?.user?.id ?? null,
+      change_note: opts.changeNote || null,
+    })
+    .select()
+    .single();
+
+  if (versionError) {
+    await supabase.storage.from('documents').remove([storagePath]);
+    return { success: false, error: versionError.message };
+  }
+
+  // Update documents row to point at the new file
+  const { error: updateError } = await supabase
+    .from('documents')
+    .update({
+      storage_path: storagePath,
+      url: urlData.publicUrl,
+      size: sizeStr,
+      type: fileType,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: userData?.user?.id ?? null,
+    })
+    .eq('id', documentId)
+    .eq('tenant_id', tenantId);
+
+  if (updateError) {
+    // Best-effort rollback: delete version row + storage blob
+    await supabase.from('document_versions').delete().eq('id', versionRow.id);
+    await supabase.storage.from('documents').remove([storagePath]);
+    return { success: false, error: updateError.message };
+  }
+
+  return { success: true, version: transformVersion(versionRow) };
+}
+
+/**
+ * Restore an older version as a new current version.
+ * Creates a new version row (with the old version's storage_path reused) and
+ * updates the documents row to point at it. Change note marks the restore.
+ */
+export async function restoreDocumentVersion(
+  documentId: string,
+  versionId: string
+): Promise<{ success: boolean; version?: DocumentVersion; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  // Load the version to restore
+  const { data: src, error: srcError } = await supabase
+    .from('document_versions')
+    .select('*')
+    .eq('id', versionId)
+    .eq('document_id', documentId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (srcError || !src) {
+    return { success: false, error: srcError?.message || 'Version not found' };
+  }
+
+  // Next version number
+  const { data: maxRow } = await supabase
+    .from('document_versions')
+    .select('version_number')
+    .eq('document_id', documentId)
+    .eq('tenant_id', tenantId)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextVersion = (maxRow?.version_number ?? 0) + 1;
+
+  const { data: userData } = await supabase.auth.getUser();
+
+  // Insert restored version row (reusing same storage_path — blob is shared)
+  const { data: versionRow, error: versionError } = await supabase
+    .from('document_versions')
+    .insert({
+      tenant_id: tenantId,
+      document_id: documentId,
+      version_number: nextVersion,
+      file_name: src.file_name,
+      storage_path: src.storage_path,
+      size: src.size,
+      type: src.type,
+      valid_until: src.valid_until,
+      uploaded_by: userData?.user?.id ?? null,
+      change_note: `Restored from v${src.version_number}`,
+      ai_classification: src.ai_classification,
+      ai_confidence: src.ai_confidence,
+      ai_model: src.ai_model,
+    })
+    .select()
+    .single();
+
+  if (versionError) {
+    return { success: false, error: versionError.message };
+  }
+
+  // Update documents row to point at restored file
+  let publicUrl: string | undefined;
+  if (src.storage_path) {
+    const { data: urlData } = supabase.storage
+      .from('documents')
+      .getPublicUrl(src.storage_path);
+    publicUrl = urlData?.publicUrl;
+  }
+
+  const { error: updateError } = await supabase
+    .from('documents')
+    .update({
+      storage_path: src.storage_path,
+      url: publicUrl ?? null,
+      size: src.size,
+      type: src.type,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: userData?.user?.id ?? null,
+    })
+    .eq('id', documentId)
+    .eq('tenant_id', tenantId);
+
+  if (updateError) {
+    await supabase.from('document_versions').delete().eq('id', versionRow.id);
+    return { success: false, error: updateError.message };
+  }
+
+  return { success: true, version: transformVersion(versionRow) };
+}
+
+/**
+ * Delete a non-current version. Fails if the version is the current one
+ * (highest version_number). Removes the storage blob only if no other
+ * version references the same path.
+ */
+export async function deleteDocumentVersion(
+  versionId: string
+): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  const { data: version, error: fetchError } = await supabase
+    .from('document_versions')
+    .select('*')
+    .eq('id', versionId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (fetchError || !version) {
+    return { success: false, error: fetchError?.message || 'Version not found' };
+  }
+
+  // Guard: can't delete current version (highest version_number)
+  const { data: maxRow } = await supabase
+    .from('document_versions')
+    .select('version_number')
+    .eq('document_id', version.document_id)
+    .eq('tenant_id', tenantId)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (maxRow && maxRow.version_number === version.version_number) {
+    return { success: false, error: 'Cannot delete current version' };
+  }
+
+  // Check if any other version still references this storage_path (shared by restore)
+  let canRemoveBlob = false;
+  if (version.storage_path) {
+    const { count } = await supabase
+      .from('document_versions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('storage_path', version.storage_path)
+      .neq('id', versionId);
+    canRemoveBlob = (count ?? 0) === 0;
+  }
+
+  const { error: deleteError } = await supabase
+    .from('document_versions')
+    .delete()
+    .eq('id', versionId)
+    .eq('tenant_id', tenantId);
+
+  if (deleteError) {
+    return { success: false, error: deleteError.message };
+  }
+
+  if (canRemoveBlob && version.storage_path) {
+    await supabase.storage.from('documents').remove([version.storage_path]);
   }
 
   return { success: true };

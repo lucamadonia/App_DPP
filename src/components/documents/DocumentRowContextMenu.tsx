@@ -10,6 +10,7 @@ import {
   CheckCheck,
   Sparkles,
   Info,
+  UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -36,6 +37,7 @@ interface DocumentRowContextMenuProps {
   onDownload?: (doc: Document) => void;
   onEdit?: (doc: Document) => void;
   onDelete?: (doc: Document) => void;
+  onUploadNewVersion?: (doc: Document) => void;
   onChanged?: () => void;
 }
 
@@ -50,6 +52,7 @@ export function DocumentRowContextMenu({
   onDownload,
   onEdit,
   onDelete,
+  onUploadNewVersion,
   onChanged,
 }: DocumentRowContextMenuProps) {
   const { t } = useTranslation('documents');
@@ -150,6 +153,12 @@ export function DocumentRowContextMenu({
           <ContextMenuItem onClick={() => onEdit(doc)}>
             <Pencil className="size-4" />
             {t('Edit Details')}
+          </ContextMenuItem>
+        )}
+        {onUploadNewVersion && (
+          <ContextMenuItem onClick={() => onUploadNewVersion(doc)}>
+            <UploadCloud className="size-4" />
+            {t('Upload New Version')}
           </ContextMenuItem>
         )}
 

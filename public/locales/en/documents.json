@@ -158,5 +158,22 @@
   "Document info copied": "Document info copied",
   "Title": "Title",
   "Product": "Product",
-  "None": "None"
+  "None": "None",
+  "Version History": "Version History",
+  "Upload New Version": "Upload New Version",
+  "Current Version": "Current",
+  "Change Note (optional)": "Change Note (optional)",
+  "What changed in this version?": "What changed in this version?",
+  "File": "File",
+  "Restore This Version": "Restore this version",
+  "Delete Version": "Delete version",
+  "Confirm delete version": "This version will be removed permanently. The current version is not affected.",
+  "No version history available": "No version history available.",
+  "Version uploaded successfully": "New version uploaded.",
+  "Failed to upload new version": "Failed to upload new version.",
+  "Failed to restore version": "Failed to restore version.",
+  "Failed to delete version": "Failed to delete version.",
+  "Version restored": "Version restored.",
+  "Version deleted": "Version deleted.",
+  "v{{n}}": "v{{n}}"
 }

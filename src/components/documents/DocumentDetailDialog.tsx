@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Trash2, Lock, ShieldCheck, Users, Sparkles } from 'lucide-react';
+import { Loader2, Trash2, Lock, ShieldCheck, Users, Sparkles, History, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { AiHintsList } from '@/components/documents/AiHintsList';
+import { DocumentVersionHistory } from '@/components/documents/DocumentVersionHistory';
 import type { DocumentHint } from '@/services/openrouter/document-classification-prompts';
 import {
   Dialog,
@@ -52,6 +53,9 @@ interface DocumentDetailDialogProps {
   folders: DocumentFolder[];
   onSaved: () => void;
   onDelete: (doc: Document) => void;
+  onUploadNewVersion?: (doc: Document) => void;
+  /** Bump this value to force version history refresh (after new upload/restore). */
+  versionRefreshKey?: number;
 }
 
 export function DocumentDetailDialog({
@@ -61,6 +65,8 @@ export function DocumentDetailDialog({
   folders,
   onSaved,
   onDelete,
+  onUploadNewVersion,
+  versionRefreshKey,
 }: DocumentDetailDialogProps) {
   const { t } = useTranslation('documents');
 
@@ -348,6 +354,30 @@ export function DocumentDetailDialog({
                   </Select>
                 </div>
               )}
+            </div>
+
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-muted-foreground" />
+                  <Label>{t('Version History')}</Label>
+                </div>
+                {onUploadNewVersion && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onUploadNewVersion(doc)}
+                  >
+                    <UploadCloud className="mr-2 h-3.5 w-3.5" />
+                    {t('Upload New Version')}
+                  </Button>
+                )}
+              </div>
+              <DocumentVersionHistory
+                key={`${doc.id}-${versionRefreshKey ?? 0}`}
+                documentId={doc.id}
+                onCurrentChanged={onSaved}
+              />
             </div>
           </div>
 
