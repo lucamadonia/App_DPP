@@ -570,7 +570,7 @@ export function DocumentsPage() {
           </Sheet>
         ) : (
           !sidebarCollapsed && (
-            <div className="w-[240px] shrink-0">
+            <div className="w-[280px] xl:w-[320px] shrink-0">
               {sidebarContent}
             </div>
           )
@@ -699,7 +699,7 @@ export function DocumentsPage() {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="[&>th:first-child]:w-[40%] [&>th:first-child]:max-w-0">
                       <TableHead>{t('Document')}</TableHead>
                       <TableHead>{t('Category')}</TableHead>
                       <TableHead className="hidden md:table-cell">{t('Visibility')}</TableHead>
@@ -756,7 +756,10 @@ export function DocumentsPage() {
                                 )}
                               </div>
                               {doc.description && (
-                                <p className="text-xs text-muted-foreground mt-1 ml-[52px] line-clamp-1" title={doc.description}>
+                                <p
+                                  className="text-xs text-muted-foreground mt-1 ml-[52px] truncate max-w-full"
+                                  title={doc.description}
+                                >
                                   {doc.description}
                                 </p>
                               )}
