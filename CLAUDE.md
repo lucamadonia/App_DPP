@@ -1136,7 +1136,7 @@ Full-featured returns management system with ticket support, customer portal, em
 
 ### Email Notification System
 
-**Flow**: `triggerEmailNotification(eventType, context)` → renders template with variable substitution → creates `rh_notifications` record → Edge Function `send-email` sends via Resend API.
+**Flow**: `triggerEmailNotification(eventType, context)` → renders template with variable substitution → creates `rh_notifications` record → Edge Function `send-email` sends via SMTP (all-inkl mailbox) using `denomailer`.
 
 **Two modes:**
 - `triggerEmailNotification()` — authenticated (admin context)
@@ -1472,7 +1472,7 @@ supabase/
 ├── seed.sql      # Master data (categories, 38 countries, regulations, recycling codes)
 ├── storage.sql   # Storage buckets + RLS policies
 ├── functions/
-│   ├── send-email/index.ts                    # Email delivery via Resend API
+│   ├── send-email/index.ts                    # Email delivery via SMTP (denomailer + all-inkl)
 │   ├── manage-vercel-domain/index.ts          # Custom domain management via Vercel API
 │   ├── create-checkout-session/index.ts       # Stripe Checkout Session creation
 │   ├── create-portal-session/index.ts         # Stripe Billing Portal Session
@@ -1546,7 +1546,7 @@ Products store complex data as JSON columns: `materials` (array), `certification
 
 | Function | Purpose | Trigger | Required Secrets |
 |----------|---------|---------|-----------------|
-| `send-email` | Sends emails via Resend API | INSERT on `rh_notifications` (channel=email, status=pending) | `RESEND_API_KEY` |
+| `send-email` | Sends emails via SMTP (all-inkl + denomailer) | INSERT on `rh_notifications` (channel=email, status=pending) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` |
 | `manage-vercel-domain` | Add/remove custom domains from Vercel project | HTTP call from client | `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` |
 | `create-checkout-session` | Creates Stripe Checkout Session (subscription or payment) | HTTP call from client (JWT) | `STRIPE_SECRET_KEY` |
 | `create-portal-session` | Creates Stripe Billing Portal Session | HTTP call from client (JWT) | `STRIPE_SECRET_KEY` |
@@ -1770,7 +1770,11 @@ VITE_OPENROUTER_API_KEY=sk-or-...    # OpenRouter API key for AI compliance anal
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 # Edge Function secrets (Supabase dashboard)
-RESEND_API_KEY=re_...                 # Resend email API (for send-email function)
+SMTP_HOST=w0208d95.kasserver.com       # SMTP server (send-email function)
+SMTP_PORT=465                          # 465 = implicit TLS, 587 = STARTTLS
+SMTP_USER=m07cc7ff                     # SMTP username
+SMTP_PASS=...                          # SMTP password
+SMTP_FROM=noreply@trackbliss.eu        # Default sender address
 VERCEL_TOKEN=...                      # Vercel API token (for manage-vercel-domain function)
 VERCEL_PROJECT_ID=prj_...            # Vercel project ID
 VERCEL_TEAM_ID=team_...              # Vercel team ID (optional, for team accounts)
