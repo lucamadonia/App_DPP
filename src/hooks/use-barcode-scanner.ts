@@ -13,6 +13,14 @@ interface UseBarcodeScannerOptions {
   maxIntervalMs?: number;
 }
 
+// Mobile browsers open the virtual keyboard whenever a text input gains focus.
+// This hook re-focuses a hidden input every second to keep hardware scanner
+// input captured — on touch devices that would lock the UI behind the keyboard.
+function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
 export function useBarcodeScanner({
   onScan,
   enabled = true,
@@ -23,6 +31,7 @@ export function useBarcodeScanner({
   const bufferRef = useRef('');
   const lastKeystrokeRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const touchDevice = isTouchDevice();
 
   const resetBuffer = useCallback(() => {
     bufferRef.current = '';
@@ -74,14 +83,14 @@ export function useBarcodeScanner({
     }, 2000);
   }, [enabled, maxIntervalMs, minLength, onScan]);
 
-  // Auto-focus the hidden input periodically
+  // Auto-focus the hidden input periodically — but not on touch devices,
+  // since focusing any input there pops the virtual keyboard and blocks the UI.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || touchDevice) return;
 
     focusInput();
 
     const interval = setInterval(() => {
-      // Only refocus if no other input/dialog has focus
       const active = document.activeElement;
       const isOtherInput = active && active !== inputRef.current &&
         (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
@@ -91,7 +100,7 @@ export function useBarcodeScanner({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [enabled, focusInput]);
+  }, [enabled, focusInput, touchDevice]);
 
   // Cleanup timer
   useEffect(() => {
@@ -106,7 +115,9 @@ export function useBarcodeScanner({
       ref: inputRef,
       onChange: handleInput,
       onKeyDown: handleKeyDown,
-      autoFocus: true,
+      autoFocus: !touchDevice,
+      readOnly: touchDevice,
+      inputMode: 'none' as const,
       tabIndex: -1,
       'aria-hidden': true as const,
       style: {
@@ -120,5 +131,6 @@ export function useBarcodeScanner({
     },
     focusInput,
     resetBuffer,
+    isTouchDevice: touchDevice,
   };
 }
