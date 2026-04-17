@@ -70,6 +70,7 @@ export async function customerSignUp(params: {
   //   return { success: false, error: 'Customer Portal module not active for this tenant.' };
   // }
 
+  const locale = (typeof navigator !== 'undefined' ? navigator.language : 'en').slice(0, 2).toLowerCase();
   const { error } = await supabase.auth.signUp({
     email: params.email,
     password: params.password,
@@ -77,6 +78,7 @@ export async function customerSignUp(params: {
       data: {
         user_type: 'customer',
         tenant_id: params.tenantId,
+        locale,
         first_name: params.firstName,
         last_name: params.lastName,
       },
@@ -92,9 +94,13 @@ export async function customerSendMagicLink(
   tenantSlug: string,
 ): Promise<{ success: boolean; error?: string }> {
   const redirectUrl = `${window.location.origin}/customer/${tenantSlug}/auth/callback`;
+  const locale = (typeof navigator !== 'undefined' ? navigator.language : 'en').slice(0, 2).toLowerCase();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: redirectUrl },
+    options: {
+      emailRedirectTo: redirectUrl,
+      data: { locale },
+    },
   });
 
   if (error) return { success: false, error: error.message };

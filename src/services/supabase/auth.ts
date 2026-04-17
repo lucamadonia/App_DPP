@@ -8,7 +8,13 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import i18n from '@/i18n';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
+
+// Short locale code ('de' | 'en' | 'el') for auth-email-hook template selection.
+function currentLocale(): string {
+  return (i18n.language || 'en').slice(0, 2).toLowerCase();
+}
 
 export interface AuthUser {
   id: string;
@@ -88,6 +94,7 @@ export async function signUpWithEmail(
       data: {
         name,
         full_name: name,
+        locale: currentLocale(),
       },
     },
   });
@@ -121,6 +128,9 @@ export async function sendMagicLink(email: string): Promise<{ error: AuthError |
     email,
     options: {
       emailRedirectTo: `${window.location.origin}/auth/callback`,
+      data: {
+        locale: currentLocale(),
+      },
     },
   });
 
@@ -190,6 +200,23 @@ export async function updateProfile(data: {
   });
 
   return { error };
+}
+
+/**
+ * Persist the current UI language to user_metadata.locale so server-side
+ * auth emails (confirmation, reset, magic link, ...) pick up the right
+ * template via the auth-email-hook Edge Function.
+ */
+export async function syncLocaleToMetadata(): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const current = currentLocale();
+    if (user.user_metadata?.locale === current) return;
+    await supabase.auth.updateUser({ data: { locale: current } });
+  } catch {
+    // Non-critical — silent fail keeps the app responsive.
+  }
 }
 
 /**
