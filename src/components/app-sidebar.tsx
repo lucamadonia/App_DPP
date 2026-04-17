@@ -147,6 +147,8 @@ export function AppSidebar() {
       locked: billing ? !billing.hasAnyWarehouseModule() : false,
       items: [
         { title: t('Dashboard'), url: '/warehouse' },
+        { title: t('Scanner', { ns: 'warehouse' }), url: '/warehouse/scanner' },
+        { title: t('Stocktake', { ns: 'warehouse' }), url: '/warehouse/stocktake' },
         { title: t('Inventory', { ns: 'warehouse' }), url: '/warehouse/inventory' },
         { title: t('Goods Receipt', { ns: 'warehouse' }), url: '/warehouse/goods-receipt' },
         { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
