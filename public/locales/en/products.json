@@ -619,6 +619,11 @@
   "ml.check.minFontSize": "Minimum Font Size (3.4pt)",
   "ml.check.minFontSizeDesc": "EU regulations require a minimum font size of 3.4pt (1.2mm).",
 
+  "Total Products": "Total Products",
+  "{{count}} of {{total}} products": "{{count}} of {{total}} products",
+  "{{count}} products": "{{count}} products",
+  "Try adjusting your search or filters.": "Try adjusting your search or filters.",
+
   "Duplicate Product": "Duplicate Product",
   "Select what to include in the copy": "Select what to include in the copy",
   "{{count}} entries": "{{count}} entries",

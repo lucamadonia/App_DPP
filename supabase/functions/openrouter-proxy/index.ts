@@ -61,12 +61,61 @@ function cleanRateLimitMap() {
   }
 }
 
+// Multimodal content parts (Claude Vision / document attachments)
+type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+  | { type: 'file'; file: { filename: string; file_data: string } };
+
+type MessageContent = string | ContentPart[];
+
 interface ProxyRequestBody {
-  messages: Array<{ role: string; content: string }>;
+  messages: Array<{ role: string; content: MessageContent }>;
   maxTokens?: number;
   temperature?: number;
   creditCost?: number;
   operationLabel?: string;
+  /** If 'json', response is non-streaming JSON. Default: streaming SSE. */
+  responseFormat?: 'stream' | 'json';
+  /** Optional model override (must be in allowed list). */
+  model?: string;
+}
+
+// Maximum total size (bytes) of all message content (approx) — guards against huge base64 uploads
+const MAX_TOTAL_CONTENT_BYTES = 15 * 1024 * 1024; // 15 MB
+
+// Allowed models (if client overrides)
+const ALLOWED_MODELS = new Set([
+  'anthropic/claude-sonnet-4',
+  'anthropic/claude-opus-4',
+]);
+
+// Decode a JWT payload WITHOUT signature verification.
+// We trust this because Supabase Gateway (verify_jwt=true) already
+// verified the signature before forwarding to this function.
+// This avoids algorithm-compatibility issues (HS256 vs ES256) in the
+// supabase-js client across Supabase JWT-key migrations.
+interface JwtPayload {
+  sub?: string;
+  email?: string;
+  aud?: string | string[];
+  exp?: number;
+  role?: string;
+}
+
+function decodeJwtPayload(token: string): JwtPayload | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    // Base64-url decode
+    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    // Pad
+    while (payload.length % 4) payload += '=';
+    const decoded = atob(payload);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -79,19 +128,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Verify JWT auth
+    // 1. Verify JWT auth (manual decode; Gateway already validated signature)
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Missing authorization header' }, 401);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const token = authHeader.replace('Bearer ', '').trim();
+    const payload = decodeJwtPayload(token);
 
-    if (authError || !user) {
-      return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!payload?.sub) {
+      return jsonResponse({ error: 'Invalid token (no sub claim)' }, 401);
     }
+
+    // Reject anon/service tokens that don't represent a real user
+    if (payload.role !== 'authenticated') {
+      return jsonResponse({ error: 'Unauthorized (not an authenticated user token)' }, 401);
+    }
+
+    // Optional: explicit expiry check (Gateway does this but extra safety)
+    if (payload.exp && Date.now() / 1000 > payload.exp) {
+      return jsonResponse({ error: 'Token expired' }, 401);
+    }
+
+    const user = { id: payload.sub, email: payload.email };
 
     // 2. Rate limiting
     if (!checkRateLimit(user.id)) {
@@ -118,21 +179,81 @@ Deno.serve(async (req) => {
 
     // 4. Parse request
     const body: ProxyRequestBody = await req.json();
-    const { messages, maxTokens = 2000, temperature = 0.3, creditCost = 1, operationLabel = 'AI analysis' } = body;
+    const {
+      messages,
+      maxTokens = 2000,
+      temperature = 0.3,
+      creditCost = 1,
+      operationLabel = 'AI analysis',
+      responseFormat = 'stream',
+      model: modelOverride,
+    } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return jsonResponse({ error: 'messages array is required and must not be empty' }, 400);
     }
 
-    // Validate message structure
+    // Validate message structure (supports both string content and multimodal array content)
+    let totalContentSize = 0;
     for (const msg of messages) {
-      if (!msg.role || !msg.content || typeof msg.role !== 'string' || typeof msg.content !== 'string') {
-        return jsonResponse({ error: 'Each message must have a string role and content' }, 400);
+      if (!msg.role || typeof msg.role !== 'string') {
+        return jsonResponse({ error: 'Each message must have a string role' }, 400);
       }
       if (!['system', 'user', 'assistant'].includes(msg.role)) {
         return jsonResponse({ error: `Invalid role: ${msg.role}. Must be system, user, or assistant.` }, 400);
       }
+      if (msg.content === undefined || msg.content === null) {
+        return jsonResponse({ error: 'Each message must have content' }, 400);
+      }
+      if (typeof msg.content === 'string') {
+        totalContentSize += msg.content.length;
+      } else if (Array.isArray(msg.content)) {
+        // Validate multimodal parts
+        for (const part of msg.content) {
+          if (!part || typeof part !== 'object' || typeof part.type !== 'string') {
+            return jsonResponse({ error: 'Invalid multimodal content part' }, 400);
+          }
+          if (part.type === 'text') {
+            if (typeof part.text !== 'string') {
+              return jsonResponse({ error: 'Text part must have string text' }, 400);
+            }
+            totalContentSize += part.text.length;
+          } else if (part.type === 'image_url') {
+            if (!part.image_url || typeof part.image_url.url !== 'string') {
+              return jsonResponse({ error: 'image_url part must have image_url.url' }, 400);
+            }
+            totalContentSize += part.image_url.url.length;
+          } else if (part.type === 'file') {
+            if (!part.file || typeof part.file.file_data !== 'string' || typeof part.file.filename !== 'string') {
+              return jsonResponse({ error: 'file part must have file.file_data and file.filename' }, 400);
+            }
+            totalContentSize += part.file.file_data.length;
+          } else {
+            return jsonResponse({ error: `Unsupported content part type: ${(part as { type: string }).type}` }, 400);
+          }
+        }
+      } else {
+        return jsonResponse({ error: 'content must be string or array of parts' }, 400);
+      }
     }
+
+    if (totalContentSize > MAX_TOTAL_CONTENT_BYTES) {
+      return jsonResponse(
+        { error: `Total content size (${totalContentSize} bytes) exceeds limit (${MAX_TOTAL_CONTENT_BYTES} bytes).` },
+        413
+      );
+    }
+
+    // Validate model override
+    let chosenModel = MODEL;
+    if (modelOverride) {
+      if (!ALLOWED_MODELS.has(modelOverride)) {
+        return jsonResponse({ error: `Model not allowed: ${modelOverride}` }, 400);
+      }
+      chosenModel = modelOverride;
+    }
+
+    const isJsonMode = responseFormat === 'json';
 
     // 5. Credit check and consumption
     if (creditCost > 0) {
@@ -200,7 +321,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Forward to OpenRouter with streaming
+    // 6. Forward to OpenRouter
+    const openRouterBody: Record<string, unknown> = {
+      model: chosenModel,
+      messages,
+      max_tokens: Math.min(maxTokens, 8000),
+      temperature: Math.max(0, Math.min(temperature, 2)),
+      stream: !isJsonMode,
+    };
+    if (isJsonMode) {
+      openRouterBody.response_format = { type: 'json_object' };
+    }
+
     const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -209,13 +341,7 @@ Deno.serve(async (req) => {
         'HTTP-Referer': SUPABASE_URL,
         'X-Title': 'Trackbliss',
       },
-      body: JSON.stringify({
-        model: MODEL,
-        messages,
-        max_tokens: Math.min(maxTokens, 8000), // Cap to prevent abuse
-        temperature: Math.max(0, Math.min(temperature, 2)), // Clamp 0-2
-        stream: true,
-      }),
+      body: JSON.stringify(openRouterBody),
     });
 
     if (!openRouterResponse.ok) {
@@ -224,7 +350,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: `AI service error: ${openRouterResponse.status}` }, 502);
     }
 
-    // 7. Stream the response back to the client
+    // 7a. JSON mode: return parsed response body
+    if (isJsonMode) {
+      const json = await openRouterResponse.json();
+      return jsonResponse(json, 200);
+    }
+
+    // 7b. Streaming mode: pipe SSE back to client
     return new Response(openRouterResponse.body, {
       status: 200,
       headers: {

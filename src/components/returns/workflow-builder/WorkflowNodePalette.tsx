@@ -7,7 +7,8 @@ import {
   CheckCircle, XCircle, UserPlus, StickyNote,
   AlertTriangle, Bell, ListPlus, Edit, Tag,
 } from 'lucide-react';
-import type { WorkflowNodeType, WorkflowActionType, TriggerEventType } from '@/types/workflow-builder';
+import type { WorkflowNodeType, WorkflowActionType, TriggerEventType, WorkflowNode } from '@/types/workflow-builder';
+import { createNode } from './workflowUtils';
 
 interface PaletteItem {
   type: WorkflowNodeType;
@@ -115,9 +116,11 @@ const CATEGORIES: PaletteCategory[] = [
 
 interface PaletteDraggableItemProps {
   item: PaletteItem;
+  mobileMode?: boolean;
+  onSelect?: (node: WorkflowNode) => void;
 }
 
-function PaletteDraggableItem({ item }: PaletteDraggableItemProps) {
+function PaletteDraggableItem({ item, mobileMode, onSelect }: PaletteDraggableItemProps) {
   const { t } = useTranslation('returns');
   const Icon = item.icon;
 
@@ -134,6 +137,40 @@ function PaletteDraggableItem({ item }: PaletteDraggableItemProps) {
     },
     [item]
   );
+
+  const handleSelect = useCallback(() => {
+    if (!onSelect) return;
+    const node = createNode(
+      item.type,
+      { x: 80, y: 120 },
+      item.defaultLabel || item.label,
+      {
+        type: item.type,
+        label: item.defaultLabel || item.label,
+        ...(item.actionType && { actionType: item.actionType }),
+        ...(item.eventType && { eventType: item.eventType }),
+      }
+    );
+    onSelect(node);
+  }, [onSelect, item]);
+
+  if (mobileMode) {
+    return (
+      <button
+        type="button"
+        onClick={handleSelect}
+        className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border bg-card hover:bg-accent active:bg-accent/70 transition-colors text-left touch-target"
+      >
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{ backgroundColor: `${item.color}18` }}
+        >
+          <Icon size={18} color={item.color} />
+        </div>
+        <span className="text-sm font-medium">{t(item.label)}</span>
+      </button>
+    );
+  }
 
   return (
     <div
@@ -152,10 +189,23 @@ function PaletteDraggableItem({ item }: PaletteDraggableItemProps) {
   );
 }
 
-export function WorkflowNodePalette() {
+interface WorkflowNodePaletteProps {
+  /** Mobile mode: tap-to-add items + categories as tabs, no draggable */
+  mobileMode?: boolean;
+  /** Callback when an item is tapped (mobile mode only) */
+  onSelect?: (node: WorkflowNode) => void;
+  /** Filter categories — useful for mobile where the user needs to add (e.g.) only non-trigger nodes */
+  excludeCategories?: string[];
+}
+
+export function WorkflowNodePalette({
+  mobileMode,
+  onSelect,
+  excludeCategories = [],
+}: WorkflowNodePaletteProps = {}) {
   const { t } = useTranslation('returns');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    triggers: true,
+    triggers: !mobileMode,
     logic: true,
     return_actions: true,
   });
@@ -163,6 +213,38 @@ export function WorkflowNodePalette() {
   const toggleCategory = useCallback((key: string) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
+
+  const filteredCategories = CATEGORIES.filter(
+    (cat) => !excludeCategories.includes(cat.key)
+  );
+
+  if (mobileMode) {
+    return (
+      <div className="space-y-4">
+        {filteredCategories.map((cat) => {
+          const CatIcon = cat.icon;
+          return (
+            <div key={cat.key} className="space-y-2">
+              <div className="flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <CatIcon size={14} />
+                <span>{t(cat.label)}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {cat.items.map((item, i) => (
+                  <PaletteDraggableItem
+                    key={`${cat.key}-${i}`}
+                    item={item}
+                    mobileMode
+                    onSelect={onSelect}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="w-56 border-r bg-card overflow-y-auto flex flex-col">
@@ -172,7 +254,7 @@ export function WorkflowNodePalette() {
         </h3>
       </div>
       <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
-        {CATEGORIES.map((cat) => {
+        {filteredCategories.map((cat) => {
           const CatIcon = cat.icon;
           const isExpanded = expanded[cat.key] ?? false;
           return (

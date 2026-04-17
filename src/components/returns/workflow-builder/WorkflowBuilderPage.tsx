@@ -33,6 +33,8 @@ import { WorkflowNodePalette } from './WorkflowNodePalette';
 import { WorkflowNodeConfig } from './WorkflowNodeConfig';
 import { WorkflowToolbar } from './WorkflowToolbar';
 import { WorkflowMinimap } from './WorkflowMinimap';
+import { MobileRuleEditor } from './MobileRuleEditor';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   generateEdgeId,
   autoLayoutGraph,
@@ -75,6 +77,7 @@ export function WorkflowBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation('returns');
+  const isMobile = useIsMobile();
 
   const [rule, setRule] = useState<RhWorkflowRule | null>(null);
   const [graph, setGraph] = useState<WorkflowGraph>(createEmptyGraph());
@@ -85,6 +88,7 @@ export function WorkflowBuilderPage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [viewport, setViewport] = useState<CanvasViewport>(DEFAULT_VIEWPORT);
+  const [mobileShowGraph, setMobileShowGraph] = useState(false);
 
   // Validation & error state
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -454,38 +458,94 @@ export function WorkflowBuilderPage() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Node palette */}
-        <WorkflowNodePalette />
+        {isMobile ? (
+          // ============ MOBILE: Linear Rule Editor ============
+          mobileShowGraph ? (
+            <div className="flex-1 relative overflow-hidden flex flex-col" ref={containerRef}>
+              <div className="px-3 py-2 border-b bg-warning/5 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {t('Read-only view — edit on desktop or in linear view')}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMobileShowGraph(false)}
+                  className="h-7 text-xs"
+                >
+                  {t('Back to linear view')}
+                </Button>
+              </div>
+              <div className="flex-1 relative overflow-hidden pointer-events-auto">
+                <WorkflowCanvas
+                  graph={graph}
+                  selectedNodeId={null}
+                  selectedEdgeId={null}
+                  onSelectNode={() => { /* read-only */ }}
+                  onSelectEdge={() => { /* read-only */ }}
+                  onMoveNode={() => { /* read-only */ }}
+                  onAddNode={() => { /* read-only */ }}
+                  onAddEdge={() => { /* read-only */ }}
+                  viewport={viewport}
+                  onViewportChange={setViewport}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-3 py-2 border-b bg-muted/40">
+                <span className="text-xs text-muted-foreground">
+                  {t('Best edited on desktop')}
+                </span>
+              </div>
+              <MobileRuleEditor
+                graph={graph}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={handleSelectNode}
+                onUpdateNode={handleUpdateNode}
+                onDeleteNode={handleDeleteNode}
+                onAddNode={handleAddNode}
+                onAddEdge={handleAddEdge}
+                onViewGraph={() => setMobileShowGraph(true)}
+              />
+            </div>
+          )
+        ) : (
+          // ============ DESKTOP: Canvas + Palette + Config ============
+          <>
+            {/* Left: Node palette */}
+            <WorkflowNodePalette />
 
-        {/* Center: Canvas */}
-        <div className="flex-1 relative overflow-hidden" ref={containerRef}>
-          <WorkflowCanvas
-            graph={graph}
-            selectedNodeId={selectedNodeId}
-            selectedEdgeId={selectedEdgeId}
-            onSelectNode={handleSelectNode}
-            onSelectEdge={handleSelectEdge}
-            onMoveNode={handleMoveNode}
-            onAddNode={handleAddNode}
-            onAddEdge={handleAddEdge}
-            viewport={viewport}
-            onViewportChange={setViewport}
-          />
-          <WorkflowMinimap
-            graph={graph}
-            viewport={viewport}
-            canvasWidth={canvasSize.w}
-            canvasHeight={canvasSize.h}
-          />
-        </div>
+            {/* Center: Canvas */}
+            <div className="flex-1 relative overflow-hidden" ref={containerRef}>
+              <WorkflowCanvas
+                graph={graph}
+                selectedNodeId={selectedNodeId}
+                selectedEdgeId={selectedEdgeId}
+                onSelectNode={handleSelectNode}
+                onSelectEdge={handleSelectEdge}
+                onMoveNode={handleMoveNode}
+                onAddNode={handleAddNode}
+                onAddEdge={handleAddEdge}
+                viewport={viewport}
+                onViewportChange={setViewport}
+              />
+              <WorkflowMinimap
+                graph={graph}
+                viewport={viewport}
+                canvasWidth={canvasSize.w}
+                canvasHeight={canvasSize.h}
+              />
+            </div>
 
-        {/* Right: Config panel */}
-        {selectedNode && (
-          <WorkflowNodeConfig
-            node={selectedNode}
-            onUpdate={handleUpdateNode}
-            onDelete={handleDeleteNode}
-          />
+            {/* Right: Config panel */}
+            {selectedNode && (
+              <WorkflowNodeConfig
+                node={selectedNode}
+                onUpdate={handleUpdateNode}
+                onDelete={handleDeleteNode}
+              />
+            )}
+          </>
         )}
       </div>
 

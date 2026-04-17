@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -230,7 +231,7 @@ export function ReturnsSettingsPage() {
       </div>
 
       <Tabs defaultValue="general">
-        <div className="overflow-x-auto -mx-1 px-1">
+        <ScrollableTabs className="-mx-1 px-1">
           <TabsList className="w-full flex-nowrap">
             <TabsTrigger value="general" className="text-xs sm:text-sm">{t('General')}</TabsTrigger>
             <TabsTrigger value="reasons" className="text-xs sm:text-sm">{t('Return Reasons')}</TabsTrigger>
@@ -243,7 +244,7 @@ export function ReturnsSettingsPage() {
             <TabsTrigger value="appearance" className="text-xs sm:text-sm">{t('Portal Design')}</TabsTrigger>
             <TabsTrigger value="portal" className="text-xs sm:text-sm">{t('Portal Setup')}</TabsTrigger>
           </TabsList>
-        </div>
+        </ScrollableTabs>
 
         <TabsContent value="general" className="mt-4 space-y-4">
           <Card>

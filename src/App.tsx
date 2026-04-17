@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Toaster } from 'sonner';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
+import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -201,27 +202,34 @@ function AnimatedOutlet() {
 
 function AppLayout() {
   const { branding } = useBranding();
+  const { t } = useTranslation('common');
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
         <header className="relative flex h-14 shrink-0 items-center gap-2 bg-background px-4">
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger
+            className="-ml-1 size-10 touch-target md:size-8"
+            aria-label={t('Open menu')}
+          />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbPage>{branding.appName}</BreadcrumbPage>
+                <BreadcrumbPage className="truncate max-w-[60vw] sm:max-w-none">
+                  {branding.appName}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           {/* Gradient border-bottom line */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent" />
         </header>
-        <main className="flex-1 overflow-auto p-4 sm:p-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] md:pb-6">
           <AnimatedOutlet />
         </main>
+        <MobileBottomNav />
       </SidebarInset>
     </SidebarProvider>
   );

@@ -76,7 +76,7 @@ export function useComplianceCheck(): UseComplianceCheckReturn {
   const PHASE_LABELS = ['AI Compliance: Score & Risk', 'AI Compliance: Findings', 'AI Compliance: Action Plan'];
 
   const streamPhase = useCallback(async (
-    messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
+    messages: import('@/services/openrouter/types').OpenRouterMessage[],
     phaseIndex: 0 | 1 | 2,
   ): Promise<string> => {
     let fullText = '';

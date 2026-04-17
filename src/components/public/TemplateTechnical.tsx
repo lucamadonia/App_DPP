@@ -458,7 +458,7 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-5xl mx-auto px-3 py-4 sm:px-4 sm:py-6 space-y-4">
       {/* Dark Header Bar */}
       <div className="bg-gray-900 text-white p-4 sm:p-6 rounded-t-lg">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -527,7 +527,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, design } = data;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-5xl mx-auto px-3 py-4 sm:px-4 sm:py-6 space-y-4">
       {/* Dark Header Bar */}
       <div className="bg-gray-900 text-white p-4 sm:p-6 rounded-t-lg">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

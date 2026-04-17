@@ -196,7 +196,7 @@ function CompactConsumerView({ data, tenantId }: ViewProps) {
                 {product.carbonFootprint.rating}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
               <div className="p-3 bg-muted/30 rounded-lg text-center">
                 <p className="text-xl font-bold">{product.carbonFootprint.productionKgCO2} kg</p>
                 <p className="text-xs text-muted-foreground">{t('Production')}</p>

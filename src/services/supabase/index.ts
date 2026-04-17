@@ -46,7 +46,10 @@ export {
   getSupplierDocuments,
   getDocumentContextCounts,
   uploadProductImage,
+  getDocumentsWithHints,
+  acknowledgeDocumentHint,
   type Document,
+  type DocumentAIHint,
 } from './documents';
 
 // Document Folders

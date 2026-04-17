@@ -24,6 +24,7 @@ export default defineConfig({
           ],
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
           'vendor-react-pdf': ['@react-pdf/renderer'],
+          'vendor-pdfjs': ['pdfjs-dist'],
         },
       },
     },

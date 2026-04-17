@@ -41,7 +41,7 @@ function MiniSparkline({ data, color }: { data: number[]; color: string }) {
 
 function AnimatedKPIValue({ value, format, decimals = 0 }: { value: number; format: (v: number) => string; decimals?: number }) {
   const animated = useAnimatedNumber(value, { duration: 900, decimals });
-  return <span className="text-lg font-bold">{format(animated)}</span>;
+  return <span className="text-base sm:text-lg font-bold tabular-nums truncate block">{format(animated)}</span>;
 }
 
 export function ReturnKPICards({ stats }: ReturnKPICardsProps) {
@@ -115,22 +115,22 @@ export function ReturnKPICards({ stats }: ReturnKPICardsProps) {
   const visible = useStaggeredList(kpis.length, { interval: 50 });
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
       {kpis.map((kpi, i) => (
         <Card
           key={kpi.label}
-          className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${
+          className={`transition-all duration-200 hover-lift ${
             visible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
           }`}
           style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out, box-shadow 0.2s ease' }}
         >
-          <CardContent className="pt-4 pb-4 px-4">
-            <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${kpi.bg}`}>
-                <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+          <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg flex-shrink-0 ${kpi.bg}`}>
+                <kpi.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${kpi.color}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">{kpi.label}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{kpi.label}</p>
                 <AnimatedKPIValue value={kpi.rawValue} format={kpi.format} decimals={kpi.decimals} />
                 {kpi.trend != null && kpi.trend !== 0 && (
                   <div className={`flex items-center gap-0.5 text-[10px] ${kpi.trend > 0 ? 'text-green-600' : 'text-red-600'}`}>

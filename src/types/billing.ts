@@ -128,12 +128,14 @@ export interface CreditTransaction {
 
 // Credit costs per AI operation
 export const AI_CREDIT_COSTS = {
-  compliance_check: 3,       // Full 3-phase analysis
+  compliance_check: 3,              // Full 3-phase analysis
   overall_assessment: 1,
   action_plan: 1,
   additional_requirements: 1,
   chat_message: 1,
-  pdf_report: 0,             // Client-side, no cost
+  pdf_report: 0,                    // Client-side, no cost
+  document_classify_text: 2,        // Text-only document classification (extracted PDF text, etc.)
+  document_classify_vision: 4,      // Document classification with Vision (scanned PDFs, images)
 } as const;
 
 export type AICreditOperation = keyof typeof AI_CREDIT_COSTS;

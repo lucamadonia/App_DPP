@@ -99,6 +99,7 @@ export function PhotoUploadStep({ photos, onPhotosChange }: PhotoUploadStepProps
         <input
           type="file"
           accept="image/*"
+          capture="environment"
           multiple
           className="hidden"
           ref={fileInputRef}

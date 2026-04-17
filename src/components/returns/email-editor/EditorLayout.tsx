@@ -25,7 +25,7 @@ export function EditorLayout({ sidebar, canvas, rightPane }: EditorLayoutProps) 
           backgroundSize: '20px 20px',
         }}
       >
-        <div className="py-4 sm:py-6 px-2 sm:px-4 lg:pl-14 lg:pr-4 flex justify-center min-h-full">
+        <div className="py-4 sm:py-6 px-3 sm:px-6 lg:pl-14 lg:pr-4 flex justify-center min-h-full">
           {canvas}
         </div>
       </div>

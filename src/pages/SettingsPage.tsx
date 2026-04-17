@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -434,28 +435,30 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
       {/* Tabs */}
       <Tabs defaultValue={tab}>
-        <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="company" className="flex items-center gap-2 flex-shrink-0">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('Company Profile')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="branding" className="flex items-center gap-2 flex-shrink-0">
-            <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('App Branding')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="domain" className="flex items-center gap-2 flex-shrink-0">
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('Domain')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2 flex-shrink-0">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('Users')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="api" className="flex items-center gap-2 flex-shrink-0">
-            <Key className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('API Keys')}</span>
-          </TabsTrigger>
-        </TabsList>
+        <ScrollableTabs>
+          <TabsList className="flex w-full">
+            <TabsTrigger value="company" className="flex items-center gap-2 flex-shrink-0">
+              <Building2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('Company Profile')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="branding" className="flex items-center gap-2 flex-shrink-0">
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('App Branding')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="domain" className="flex items-center gap-2 flex-shrink-0">
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('Domain')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2 flex-shrink-0">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('Users')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="api" className="flex items-center gap-2 flex-shrink-0">
+              <Key className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('API Keys')}</span>
+            </TabsTrigger>
+          </TabsList>
+        </ScrollableTabs>
 
         {/* Company Profile */}
         <TabsContent value="company" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">

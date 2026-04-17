@@ -27,20 +27,24 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4 overflow-hidden relative">
-      {/* Morphing background blobs */}
+      {/* Morphing background blobs — responsive sizing prevents mobile overflow */}
       {!prefersReduced && (
         <>
           <div
-            className="pointer-events-none absolute top-1/4 -left-24 z-0 h-[28rem] w-[28rem] bg-primary/8 blur-3xl animate-landing-morph"
+            className="pointer-events-none absolute top-1/4 -left-8 z-0 h-[18rem] w-[18rem] bg-primary/8 blur-3xl animate-landing-morph sm:-left-24 sm:h-[28rem] sm:w-[28rem]"
             style={{ animationDuration: '8s' }}
+            aria-hidden="true"
           />
           <div
-            className="pointer-events-none absolute -bottom-12 right-[-6rem] z-0 h-[24rem] w-[24rem] bg-blue-400/6 blur-3xl animate-landing-morph"
+            className="pointer-events-none absolute -bottom-8 -right-8 z-0 h-[16rem] w-[16rem] bg-blue-400/6 blur-3xl animate-landing-morph sm:-bottom-12 sm:right-[-6rem] sm:h-[24rem] sm:w-[24rem]"
             style={{ animationDuration: '10s', animationDelay: '2s' }}
+            aria-hidden="true"
           />
+          {/* Third blob: tablet+ only (too crowded on mobile) */}
           <div
-            className="pointer-events-none absolute top-[10%] right-[15%] z-0 h-[18rem] w-[18rem] bg-violet-400/5 blur-3xl animate-landing-morph"
+            className="pointer-events-none absolute top-[10%] right-[15%] z-0 h-[18rem] w-[18rem] bg-violet-400/5 blur-3xl animate-landing-morph hidden sm:block"
             style={{ animationDuration: '12s', animationDelay: '4s' }}
+            aria-hidden="true"
           />
         </>
       )}
@@ -57,7 +61,7 @@ export function LoginPage() {
             <img
               src="/trackbliss-logo.png"
               alt="Trackbliss"
-              className="h-16 object-contain"
+              className="h-14 sm:h-16 object-contain"
             />
           </div>
           <motion.p

@@ -461,7 +461,7 @@ function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) 
   const totalSections = (hasDescription ? 1 : 0) + consumerSections.length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-3 py-6 sm:px-4 sm:py-8 space-y-6 sm:space-y-8">
       {/* Title Block */}
       <header className="border-b-2 border-gray-300 pb-6 space-y-4">
         <div className="flex flex-col md:flex-row gap-6">
@@ -568,7 +568,7 @@ function ScientificCustomsView({ data }: ViewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-3 py-6 sm:px-4 sm:py-8 space-y-6 sm:space-y-8">
       {/* Title Block */}
       <header className="border-b-2 border-gray-300 pb-6 space-y-4">
         <div className="flex flex-col md:flex-row gap-6">

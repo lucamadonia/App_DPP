@@ -178,7 +178,7 @@ export function LandingNavbar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="absolute top-16 right-0 w-72 max-h-[calc(100vh-4rem)] overflow-y-auto bg-white/95 backdrop-blur-xl border-l border-slate-200 shadow-xl rounded-bl-2xl animate-landing-reveal">
+          <div className="absolute top-16 right-0 w-[min(288px,90vw)] max-h-[calc(100vh-4rem)] overflow-y-auto bg-white/95 backdrop-blur-xl border-l border-slate-200 shadow-xl rounded-bl-2xl animate-landing-reveal pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             <div className="p-4 space-y-1">
               {navIds.map((link) => (
                 <button

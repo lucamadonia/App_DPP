@@ -439,7 +439,7 @@ export function AppSidebar() {
               <span className="text-sm font-medium text-sidebar-foreground">
                 {userName}
               </span>
-              <span className="text-xs text-sidebar-foreground/60 max-w-[140px] truncate">
+              <span className="text-xs text-sidebar-foreground/60 max-w-[min(60vw,200px)] truncate">
                 {userEmail}
               </span>
             </div>

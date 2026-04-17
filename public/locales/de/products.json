@@ -619,6 +619,11 @@
   "ml.check.minFontSize": "Mindestschriftgröße (3,4pt)",
   "ml.check.minFontSizeDesc": "EU-Verordnungen erfordern eine Mindestschriftgröße von 3,4pt (1,2mm).",
 
+  "Total Products": "Alle Produkte",
+  "{{count}} of {{total}} products": "{{count}} von {{total}} Produkten",
+  "{{count}} products": "{{count}} Produkte",
+  "Try adjusting your search or filters.": "Passen Sie Ihre Suche oder Filter an.",
+
   "Duplicate Product": "Produkt duplizieren",
   "Select what to include in the copy": "Wählen Sie, was kopiert werden soll",
   "{{count}} entries": "{{count}} Einträge",

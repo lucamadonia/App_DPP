@@ -60,6 +60,22 @@ code, .font-mono {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Custom mobile breakpoint between 0 and sm:640px */
+  --breakpoint-xs: 480px;
+}
+
+/* Safe-area inset variables (require viewport-fit=cover in meta viewport) */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Prevent horizontal overflow globally (safety net against off-screen particles, fixed widths) */
+html, body {
+  overflow-x: clip;
 }
 
 /* Glass card RGB values for alpha compositing */
@@ -830,6 +846,41 @@ code, .font-mono {
 .hub-holo-border[data-active="true"]::before {
   opacity: 1;
   animation: holo-spin 4s linear infinite;
+}
+
+/* Mobile-first utility classes for touch targets, safe-area, hover-guards */
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-inset {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  /* WCAG 2.5.5 minimum 44x44 touch target */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Hover effects only on devices that actually support hover */
+  @media (hover: hover) {
+    .hover-lift:hover {
+      transform: translateY(-2px);
+      transition: transform 0.2s ease-out;
+    }
+  }
 }
 
 /* Accessibility: Respect reduced-motion preference */

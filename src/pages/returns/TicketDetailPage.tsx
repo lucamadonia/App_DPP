@@ -327,7 +327,7 @@ export function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Thread */}
         <div className="lg:col-span-2">
-          <Card className="h-[600px] flex flex-col">
+          <Card className="h-[min(75vh,600px)] md:h-[600px] flex flex-col">
             <CardHeader className="pb-2 flex-shrink-0">
               <CardTitle className="text-sm">{t('Communication')}</CardTitle>
             </CardHeader>

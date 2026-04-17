@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, MoreHorizontal, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, X, ChevronRight } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,6 +30,7 @@ const ALL_STATUSES: ReturnStatus[] = [
 ];
 
 export function ReturnsListPage() {
+  const isMobile = useIsMobile();
   const { t, i18n } = useTranslation('returns');
   const navigate = useNavigate();
   const [result, setResult] = useState<PaginatedResult<RhReturn>>({
@@ -164,6 +166,61 @@ export function ReturnsListPage() {
               title={t('No returns found')}
               description={t('No results match your filters')}
             />
+          ) : isMobile ? (
+            <>
+              <div className="space-y-2">
+                {result.data.map((ret) => (
+                  <button
+                    type="button"
+                    key={ret.id}
+                    onClick={() => navigate(`/returns/${ret.id}`)}
+                    className="w-full text-left"
+                  >
+                    <Card className="gap-2 py-3 px-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-primary font-semibold text-sm">{ret.returnNumber}</span>
+                            <ReturnStatusBadge status={ret.status} />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground pt-1">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="opacity-70">{t('Priority')}:</span>
+                              <span className="text-foreground/80 capitalize">
+                                {t(ret.priority.charAt(0).toUpperCase() + ret.priority.slice(1))}
+                              </span>
+                            </span>
+                            {ret.desiredSolution && (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="opacity-70">{t('Desired Solution')}:</span>
+                                <span className="text-foreground/80 capitalize">
+                                  {t(ret.desiredSolution.charAt(0).toUpperCase() + ret.desiredSolution.slice(1))}
+                                </span>
+                              </span>
+                            )}
+                            {ret.refundAmount != null && (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="opacity-70">{t('Refund Amount')}:</span>
+                                <span className="text-foreground/80 font-medium tabular-nums">
+                                  {`\u20AC${ret.refundAmount.toFixed(2)}`}
+                                </span>
+                              </span>
+                            )}
+                            <span className="ml-auto">{relativeTime(ret.createdAt, i18n.language)}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      </div>
+                    </Card>
+                  </button>
+                ))}
+              </div>
+              <PaginationBar
+                page={page}
+                totalPages={result.totalPages}
+                onPageChange={setPage}
+              />
+            </>
           ) : (
             <>
               <div className="overflow-x-auto">

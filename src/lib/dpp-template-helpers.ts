@@ -6,6 +6,18 @@ import type { SupportResources } from '@/types/database';
 import type { Material, Product } from '@/types/product';
 
 // ============================================
+// CONTAINER / LAYOUT
+// ============================================
+
+/**
+ * Canonical container class for all DPP Templates.
+ * Responsive padding (tighter on mobile, roomy on desktop) + vertical rhythm.
+ * Templates should use this on their top-level wrapper for consistency.
+ */
+export const DPP_CONTAINER_CLASS =
+  'max-w-4xl mx-auto px-3 py-6 sm:px-4 sm:py-8 space-y-6 sm:space-y-8';
+
+// ============================================
 // RATING COLOR MAPS
 // ============================================
 

@@ -34,6 +34,7 @@ import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { ComplianceWidget } from '@/components/dashboard/ComplianceWidget';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { AiHintsWidget } from '@/components/dashboard/AiHintsWidget';
 
 function getGreetingKey(hour: number): string {
   if (hour < 12) return 'Good morning';
@@ -323,6 +324,11 @@ export function DashboardPage() {
         {/* Activity Feed - right column */}
         <motion.div variants={prefersReduced ? undefined : gridItem}>
           <ActivityFeed className="h-full" />
+        </motion.div>
+
+        {/* AI Hints Widget - spans 2 cols, above compliance */}
+        <motion.div variants={prefersReduced ? undefined : gridItem} className="lg:col-span-2">
+          <AiHintsWidget className="h-full" />
         </motion.div>
 
         {/* Compliance Widget - spans 2 cols */}

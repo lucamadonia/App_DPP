@@ -56,8 +56,8 @@ export function LandingWorkflowShowcase() {
               ))}
             </div>
 
-            {/* Canvas */}
-            <div className="relative p-6 bg-[radial-gradient(circle,#e2e8f0_1px,transparent_1px)] bg-[size:20px_20px]">
+            {/* Canvas — horizontally scrollable on mobile to preserve node layout */}
+            <div className="relative p-4 sm:p-6 bg-[radial-gradient(circle,#e2e8f0_1px,transparent_1px)] bg-[size:20px_20px] overflow-x-auto scrollbar-hide">
               {/* SVG Connections */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
                 {/* Trigger → Condition1 */}

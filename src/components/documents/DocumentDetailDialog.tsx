@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Trash2, Lock, ShieldCheck, Users } from 'lucide-react';
+import { Loader2, Trash2, Lock, ShieldCheck, Users, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { AiHintsList } from '@/components/documents/AiHintsList';
+import type { DocumentHint } from '@/services/openrouter/document-classification-prompts';
 import {
   Dialog,
   DialogContent,
@@ -64,6 +68,7 @@ export function DocumentDetailDialog({
   const [category, setCategory] = useState('');
   const [visibility, setVisibility] = useState<VisibilityLevel>('internal');
   const [validUntil, setValidUntil] = useState('');
+  const [description, setDescription] = useState('');
   const [assignmentType, setAssignmentType] = useState<AssignmentType>('none');
   const [assignmentId, setAssignmentId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -77,6 +82,7 @@ export function DocumentDetailDialog({
     setCategory(d.category);
     setVisibility(d.visibility || 'internal');
     setValidUntil(d.validUntil || '');
+    setDescription(d.description || '');
 
     if (d.product_id) {
       setAssignmentType('product');
@@ -133,6 +139,7 @@ export function DocumentDetailDialog({
       category,
       visibility,
       validUntil: validUntil || undefined,
+      description: description || undefined,
       status,
       product_id: assignmentType === 'product' ? assignmentId : undefined,
       supplier_id: assignmentType === 'supplier' ? assignmentId : undefined,
@@ -171,12 +178,54 @@ export function DocumentDetailDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* AI Classification Info (read-only, prominent) */}
+            {doc.aiClassifiedAt && (
+              <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-950/40 dark:to-violet-950/40 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium">{t('AI classification')}</span>
+                    {typeof doc.aiConfidence === 'number' && (
+                      <Badge
+                        className={
+                          doc.aiConfidence >= 0.7
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : doc.aiConfidence >= 0.5
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-red-100 text-red-800 border-red-200'
+                        }
+                      >
+                        {Math.round(doc.aiConfidence * 100)}%
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(doc.aiClassifiedAt).toLocaleDateString()}
+                  </span>
+                </div>
+                {doc.hints && doc.hints.length > 0 && (
+                  <AiHintsList hints={doc.hints as DocumentHint[]} />
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="detail-name">{t('Name')}</Label>
               <Input
                 id="detail-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="detail-description">{t('Description')}</Label>
+              <Textarea
+                id="detail-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t('Short summary of the document content (optional)')}
+                rows={2}
               />
             </div>
 

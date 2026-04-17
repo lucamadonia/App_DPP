@@ -137,11 +137,11 @@ export function PublicLayout() {
                   <FileText className="h-5 w-5" />
                 </div>
               )}
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-semibold text-foreground truncate max-w-[50vw] sm:max-w-none">
                   {resolvedBranding.appName}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground truncate max-w-[50vw] sm:max-w-none">
                   {t('Digital Product Passport')}
                 </span>
               </div>

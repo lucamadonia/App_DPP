@@ -1,6 +1,30 @@
+// Multimodal content parts (Claude Vision / document attachments via OpenRouter)
+export interface OpenRouterTextPart {
+  type: 'text';
+  text: string;
+}
+
+export interface OpenRouterImagePart {
+  type: 'image_url';
+  image_url: { url: string };
+}
+
+export interface OpenRouterFilePart {
+  type: 'file';
+  file: { filename: string; file_data: string };
+}
+
+export type OpenRouterContentPart =
+  | OpenRouterTextPart
+  | OpenRouterImagePart
+  | OpenRouterFilePart;
+
+export type OpenRouterMessageContent = string | OpenRouterContentPart[];
+
 export interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  /** String for plain text (backward compatible). Array for multimodal (vision/docs). */
+  content: OpenRouterMessageContent;
 }
 
 export interface OpenRouterRequest {

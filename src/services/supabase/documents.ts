@@ -6,6 +6,11 @@
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 
+export interface DocumentAIHint {
+  type: string;
+  message: string;
+}
+
 export interface Document {
   id: string;
   tenant_id: string;
@@ -23,6 +28,12 @@ export interface Document {
   uploadedBy?: string;
   status: 'valid' | 'expiring' | 'expired';
   visibility: 'internal' | 'customs' | 'consumer';
+  description?: string;
+  hints?: DocumentAIHint[];
+  aiClassification?: Record<string, unknown>;
+  aiConfidence?: number;
+  aiClassifiedAt?: string;
+  aiModel?: string;
 }
 
 // Transform database row to Document type
@@ -45,6 +56,12 @@ function transformDocument(row: any): Document {
     uploadedBy: row.uploaded_by || undefined,
     status: row.status,
     visibility: row.visibility || 'internal',
+    description: row.description || undefined,
+    hints: Array.isArray(row.hints) ? row.hints : undefined,
+    aiClassification: row.ai_classification || undefined,
+    aiConfidence: row.ai_confidence == null ? undefined : Number(row.ai_confidence),
+    aiClassifiedAt: row.ai_classified_at || undefined,
+    aiModel: row.ai_model || undefined,
   };
 }
 
@@ -123,6 +140,11 @@ export async function uploadDocument(
     folderId?: string;
     validUntil?: string;
     visibility?: 'internal' | 'customs' | 'consumer';
+    description?: string;
+    hints?: DocumentAIHint[];
+    aiClassification?: Record<string, unknown>;
+    aiConfidence?: number;
+    aiModel?: string;
   }
 ): Promise<{ success: boolean; document?: Document; error?: string }> {
   const tenantId = await getCurrentTenantId();
@@ -179,7 +201,7 @@ export async function uploadDocument(
   }
 
   // Create document record
-  const insertData = {
+  const insertData: Record<string, unknown> = {
     tenant_id: tenantId,
     product_id: metadata.productId || null,
     supplier_id: metadata.supplierId || null,
@@ -193,6 +215,12 @@ export async function uploadDocument(
     valid_until: metadata.validUntil || null,
     status,
     visibility: metadata.visibility || 'internal',
+    description: metadata.description || null,
+    hints: metadata.hints && metadata.hints.length > 0 ? metadata.hints : null,
+    ai_classification: metadata.aiClassification || null,
+    ai_confidence: metadata.aiConfidence ?? null,
+    ai_classified_at: metadata.aiClassification ? new Date().toISOString() : null,
+    ai_model: metadata.aiModel || null,
   };
 
   const { data, error } = await supabase
@@ -267,6 +295,8 @@ export async function updateDocument(
   if (doc.product_id !== undefined) updateData.product_id = doc.product_id || null;
   if (doc.supplier_id !== undefined) updateData.supplier_id = doc.supplier_id || null;
   if (doc.folder_id !== undefined) updateData.folder_id = doc.folder_id || null;
+  if (doc.description !== undefined) updateData.description = doc.description || null;
+  if (doc.hints !== undefined) updateData.hints = doc.hints && doc.hints.length > 0 ? doc.hints : null;
 
   const { error } = await supabase
     .from('documents')
@@ -473,6 +503,88 @@ export async function getDocumentContextCounts(): Promise<{
       .sort((a, b) => a.name.localeCompare(b.name)),
     unassigned: unassignedDocs.count ?? 0,
   };
+}
+
+/**
+ * Get all documents with AI hints (any state).
+ * Use `onlyOpen=true` to filter out hints that have been acknowledged.
+ */
+export async function getDocumentsWithHints(
+  onlyOpen: boolean = true
+): Promise<Document[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .not('hints', 'is', null)
+    .order('ai_classified_at', { ascending: false })
+    .limit(200);
+
+  if (error || !data) {
+    console.error('Failed to load docs with hints', error);
+    return [];
+  }
+
+  const docs = data.map(transformDocument);
+  if (!onlyOpen) return docs.filter((d) => d.hints && d.hints.length > 0);
+
+  return docs
+    .map((d) => ({
+      ...d,
+      hints: (d.hints || []).filter((h) => !h.acknowledgedAt),
+    }))
+    .filter((d) => d.hints && d.hints.length > 0);
+}
+
+/**
+ * Acknowledge a specific hint of a document.
+ * Merges acknowledgment state into the existing hints JSON array.
+ * Pass hintId=null to acknowledge ALL open hints on the document at once.
+ */
+export async function acknowledgeDocumentHint(
+  docId: string,
+  hintId: string | null,
+  userId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+
+  // Fetch current hints
+  const { data: current, error: fetchError } = await supabase
+    .from('documents')
+    .select('hints')
+    .eq('id', docId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (fetchError || !current) {
+    return { success: false, error: fetchError?.message || 'Document not found' };
+  }
+
+  const currentHints = Array.isArray(current.hints) ? current.hints : [];
+  const nowIso = new Date().toISOString();
+  const updated = currentHints.map((h: DocumentAIHint & { id?: string; acknowledgedAt?: string; acknowledgedBy?: string }) => {
+    if (h.acknowledgedAt) return h; // already acknowledged
+    if (hintId === null || h.id === hintId) {
+      return { ...h, acknowledgedAt: nowIso, acknowledgedBy: userId ?? undefined };
+    }
+    return h;
+  });
+
+  const { error: updateError } = await supabase
+    .from('documents')
+    .update({ hints: updated })
+    .eq('id', docId)
+    .eq('tenant_id', tenantId);
+
+  if (updateError) {
+    return { success: false, error: updateError.message };
+  }
+
+  return { success: true };
 }
 
 /**

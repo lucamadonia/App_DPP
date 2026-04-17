@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Filter, Loader2,
-  LayoutList, LayoutGrid, Download, ArrowUpDown, ArrowUp, ArrowDown, X, MessageSquareText,
+  LayoutList, LayoutGrid, Download, ArrowUpDown, ArrowUp, ArrowDown, X, MessageSquareText, ChevronRight,
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,6 +46,7 @@ const statusLabels: Record<TicketStatus, string> = {
 export function TicketsListPage() {
   const { t, i18n } = useTranslation('returns');
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Data
   const [result, setResult] = useState<PaginatedResult<RhTicket>>({ data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
@@ -52,8 +54,11 @@ export function TicketsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // View & Filters
+  // View & Filters — auto-revert to table on mobile (kanban has no horizontal runway)
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  useEffect(() => {
+    if (isMobile && viewMode === 'kanban') setViewMode('table');
+  }, [isMobile, viewMode]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<TicketsFilter>({});
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -303,12 +308,14 @@ export function TicketsListPage() {
                   {t('Reset Filters')}
                 </Button>
               )}
-              <div className="flex border rounded-md">
+              {/* View toggle hidden on mobile — kanban needs horizontal space */}
+              <div className="hidden sm:flex border rounded-md">
                 <Button
                   variant={viewMode === 'table' ? 'default' : 'ghost'}
                   size="sm"
                   className="rounded-r-none"
                   onClick={() => setViewMode('table')}
+                  aria-label={t('Table view')}
                 >
                   <LayoutList className="h-4 w-4" />
                 </Button>
@@ -317,6 +324,7 @@ export function TicketsListPage() {
                   size="sm"
                   className="rounded-l-none"
                   onClick={() => setViewMode('kanban')}
+                  aria-label={t('Kanban view')}
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>
@@ -325,28 +333,30 @@ export function TicketsListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Bulk Actions Bar */}
+          {/* Bulk Actions Bar — responsive wrap on mobile */}
           {selectedIds.size > 0 && viewMode === 'table' && (
-            <div className="flex items-center gap-3 mb-4 p-2 bg-muted rounded-md">
-              <span className="text-sm font-medium">{t('{{count}} selected', { count: selectedIds.size })}</span>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 p-2 bg-muted rounded-md">
+              <span className="text-sm font-medium mr-auto sm:mr-0">
+                {t('{{count}} selected', { count: selectedIds.size })}
+              </span>
               <Select onValueChange={(v) => handleBulkStatus(v as TicketStatus)}>
-                <SelectTrigger className="w-36 h-8"><SelectValue placeholder={t('Change Status')} /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36 h-8"><SelectValue placeholder={t('Change Status')} /></SelectTrigger>
                 <SelectContent>
                   {(Object.keys(statusLabels) as TicketStatus[]).map(s => (
                     <SelectItem key={s} value={s}>{t(statusLabels[s])}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <div className="w-40">
+              <div className="w-full sm:w-40">
                 <TicketAssigneeSelect
                   onValueChange={handleBulkAssign}
                   compact={false}
                 />
               </div>
-              <Button variant="outline" size="sm" onClick={() => handleBulkStatus('closed')}>
+              <Button variant="outline" size="sm" onClick={() => handleBulkStatus('closed')} className="flex-1 sm:flex-none">
                 {t('Close Selected')}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="touch-target">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -389,6 +399,60 @@ export function TicketsListPage() {
                   actionLabel={t('New Ticket')}
                   onAction={openDialog}
                 />
+              </motion.div>
+            ) : isMobile ? (
+              <motion.div key="mobile-cards" variants={fadeIn} initial={prefersReduced ? false : 'initial'} animate="animate" exit="exit">
+                <div className="space-y-2">
+                  {result.data.map((ticket) => (
+                    <button
+                      type="button"
+                      key={ticket.id}
+                      onClick={() => navigate(`/returns/tickets/${ticket.id}`)}
+                      className="w-full text-left"
+                    >
+                      <Card className="gap-2 py-3 px-4 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                            }}
+                            className="pt-0.5"
+                          >
+                            <Checkbox
+                              checked={selectedIds.has(ticket.id)}
+                              onCheckedChange={() => toggleSelect(ticket.id)}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-primary font-semibold text-sm">{ticket.ticketNumber}</span>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <TicketPriorityBadge priority={ticket.priority} />
+                              </div>
+                            </div>
+                            <div className="text-sm font-medium line-clamp-2">{ticket.subject}</div>
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <Badge variant="outline" className={`text-[10px] ${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>{t(statusLabels[ticket.status])}</Badge>
+                              <TicketSLABadge ticket={ticket} className="text-[10px]" />
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {relativeTime(ticket.createdAt, i18n.language)}
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronRight className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        </div>
+                      </Card>
+                    </button>
+                  ))}
+                </div>
+                <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
               </motion.div>
             ) : (
               <motion.div key="table" variants={fadeIn} initial={prefersReduced ? false : 'initial'} animate="animate" exit="exit">

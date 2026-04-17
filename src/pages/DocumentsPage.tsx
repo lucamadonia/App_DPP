@@ -18,7 +18,19 @@ import {
   Users,
   PanelLeftClose,
   PanelLeftOpen,
+  Sparkles,
+  UploadCloud,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { classifyDocument } from '@/services/ai/classify-document';
+import { AiSuggestionBadge } from '@/components/documents/AiSuggestionBadge';
+import { AiHintsList } from '@/components/documents/AiHintsList';
+import { BulkDocumentUploadDialog } from '@/components/documents/BulkDocumentUploadDialog';
+import { DocumentHintsPopover } from '@/components/documents/DocumentHintsPopover';
+import { DocumentRowContextMenu } from '@/components/documents/DocumentRowContextMenu';
+import type { DocumentClassificationResult, DocumentHint } from '@/services/openrouter/document-classification-prompts';
+import type { PrematchProduct } from '@/lib/product-prematch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -162,7 +174,14 @@ export function DocumentsPage() {
     category: 'Conformity' as Document['category'],
     visibility: 'internal' as VisibilityLevel,
     validUntil: '',
+    description: '',
   });
+
+  // AI classification state (single upload)
+  const [aiResult, setAiResult] = useState<DocumentClassificationResult | null>(null);
+  const [isClassifying, setIsClassifying] = useState(false);
+  const [aiProducts, setAiProducts] = useState<PrematchProduct[]>([]);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
 
   // Load all data
   useEffect(() => {
@@ -194,15 +213,26 @@ export function DocumentsPage() {
 
   // Load product/supplier options when upload dialog opens
   useEffect(() => {
-    if (isUploadDialogOpen && productOptions.length === 0) {
-      getProducts().then((prods) =>
-        setProductOptions(prods.map((p) => ({ id: p.id, name: p.name })))
-      );
+    if ((isUploadDialogOpen || isBulkDialogOpen) && productOptions.length === 0) {
+      getProducts().then((prods) => {
+        setProductOptions(prods.map((p) => ({ id: p.id, name: p.name })));
+        // Keep richer list for AI pre-match (includes gtin, manufacturer, etc.)
+        setAiProducts(
+          prods.map((p) => ({
+            id: p.id,
+            name: p.name,
+            manufacturer: p.manufacturer ?? undefined,
+            gtin: p.gtin ?? undefined,
+            serialNumber: p.serialNumber ?? undefined,
+            category: p.category ?? undefined,
+          }))
+        );
+      });
       getSuppliers().then((supps) =>
         setSupplierOptions(supps.map((s) => ({ id: s.id, name: s.name })))
       );
     }
-  }, [isUploadDialogOpen, productOptions.length]);
+  }, [isUploadDialogOpen, isBulkDialogOpen, productOptions.length]);
 
   // Pre-fill assignment from sidebar context when opening upload dialog
   function openUploadDialog() {
@@ -265,10 +295,67 @@ export function DocumentsPage() {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setAiResult(null); // reset previous AI result for fresh file
       if (!newDoc.name) {
         setNewDoc((prev) => ({ ...prev, name: file.name }));
       }
     }
+  }
+
+  // Trigger AI classification — applies result to form fields
+  async function handleClassifyWithAI() {
+    if (!selectedFile) return;
+    setIsClassifying(true);
+    setAiResult(null);
+
+    const outcome = await classifyDocument({
+      file: selectedFile,
+      products: aiProducts,
+    });
+
+    setIsClassifying(false);
+
+    if (!outcome.ok) {
+      toast.error(outcome.error);
+      return;
+    }
+
+    const { result } = outcome;
+    setAiResult(result);
+
+    if (result.unclear) {
+      toast.warning(
+        result.unclearReason
+          ? t('AI could not classify: {{reason}}', { reason: result.unclearReason })
+          : t('AI could not classify this document — please fill in manually.')
+      );
+      return;
+    }
+
+    // Apply AI suggestions to form fields
+    setNewDoc((prev) => ({
+      ...prev,
+      name: result.name || prev.name,
+      category: (result.category as Document['category']) || prev.category,
+      visibility: (result.visibility as VisibilityLevel) || prev.visibility,
+      validUntil: result.validUntil || prev.validUntil,
+      description: result.description || prev.description,
+    }));
+
+    // Apply product suggestion (only if it's in the user's product list)
+    if (
+      result.suggestedProductId &&
+      productOptions.some((p) => p.id === result.suggestedProductId)
+    ) {
+      setAssignmentType('product');
+      setAssignmentId(result.suggestedProductId);
+    }
+
+    toast.success(
+      t('AI classified this document ({{credits}} credits used)', {
+        credits: outcome.creditsCosted,
+      })
+    );
   }
 
   // Create / upload document
@@ -283,12 +370,23 @@ export function DocumentsPage() {
     if (assignmentType === 'folder' && assignmentId) assignMeta.folderId = assignmentId;
 
     if (selectedFile) {
+      const aiMeta = aiResult
+        ? {
+            description: newDoc.description || aiResult.description,
+            hints: aiResult.hints,
+            aiClassification: aiResult as unknown as Record<string, unknown>,
+            aiConfidence: aiResult.confidence.overall,
+            aiModel: 'anthropic/claude-sonnet-4',
+          }
+        : { description: newDoc.description || undefined };
+
       const result = await uploadDocument(selectedFile, {
         name: newDoc.name,
         category: newDoc.category,
         validUntil: newDoc.validUntil || undefined,
         visibility: newDoc.visibility,
         ...assignMeta,
+        ...aiMeta,
       });
 
       if (result.success) {
@@ -319,10 +417,12 @@ export function DocumentsPage() {
 
   function closeUploadDialog() {
     setIsUploadDialogOpen(false);
-    setNewDoc({ name: '', category: 'Conformity', visibility: 'internal', validUntil: '' });
+    setNewDoc({ name: '', category: 'Conformity', visibility: 'internal', validUntil: '', description: '' });
     setSelectedFile(null);
     setAssignmentType('none');
     setAssignmentId('');
+    setAiResult(null);
+    setIsClassifying(false);
   }
 
   // Download handler
@@ -442,10 +542,16 @@ export function DocumentsPage() {
             {t('Manage all documents for your products')}
           </p>
         </div>
-        <Button onClick={openUploadDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('Add Document')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsBulkDialogOpen(true)}>
+            <UploadCloud className="mr-2 h-4 w-4" />
+            {t('Bulk Upload')}
+          </Button>
+          <Button onClick={openUploadDialog}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('Add Document')}
+          </Button>
+        </div>
       </MotionDiv>
 
       {/* Main layout: Sidebar + Content */}
@@ -610,52 +716,80 @@ export function DocumentsPage() {
                       const vis = visibilityBadgeConfig[doc.visibility || 'internal'];
                       const VisIcon = vis.icon;
                       return (
-                        <TableRow
+                        <DocumentRowContextMenu
                           key={doc.id}
-                          style={!prefersReduced ? {
-                            animation: `fadeSlideIn 0.3s ease-out ${index * 0.04}s both`,
-                          } : undefined}
+                          doc={doc}
+                          onPreview={rowActions.onPreview}
+                          onDownload={rowActions.onDownload}
+                          onEdit={rowActions.onEdit}
+                          onDelete={rowActions.onDelete}
+                          onChanged={refreshData}
                         >
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded bg-muted shrink-0">
-                                {doc.type === 'pdf' ? (
-                                  <FileText className="h-5 w-5 text-red-500" />
-                                ) : (
-                                  <FileImage className="h-5 w-5 text-blue-500" />
+                          <TableRow
+                            style={!prefersReduced ? {
+                              animation: `fadeSlideIn 0.3s ease-out ${index * 0.04}s both`,
+                            } : undefined}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded bg-muted shrink-0">
+                                  {doc.type === 'pdf' ? (
+                                    <FileText className="h-5 w-5 text-red-500" />
+                                  ) : (
+                                    <FileImage className="h-5 w-5 text-blue-500" />
+                                  )}
+                                </div>
+                                <span
+                                  className="font-medium truncate max-w-[200px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-[500px] xl:max-w-[640px]"
+                                  title={doc.name}
+                                >
+                                  {doc.name}
+                                </span>
+                                {doc.hints && doc.hints.length > 0 && (
+                                  <DocumentHintsPopover
+                                    documentId={doc.id}
+                                    hints={doc.hints as DocumentHint[]}
+                                    confidence={doc.aiConfidence}
+                                    className="flex-shrink-0"
+                                    onChanged={refreshData}
+                                  />
                                 )}
                               </div>
-                              <span className="font-medium truncate max-w-[200px]">{doc.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{doc.category}</Badge>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <Badge variant="outline" className={vis.className}>
-                              <VisIcon className="mr-1 h-3 w-3" />
-                              {t(vis.label)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-muted-foreground">
-                            {doc.uploadedAt ? formatDate(doc.uploadedAt, locale) : '-'}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-muted-foreground">
-                            {doc.validUntil
-                              ? formatDate(doc.validUntil, locale)
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={status.className}>
-                              <status.icon className="mr-1 h-3 w-3" />
-                              {status.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-muted-foreground">{doc.size || '-'}</TableCell>
-                          <TableCell>
-                            <DocumentRowActions doc={doc} {...rowActions} />
-                          </TableCell>
-                        </TableRow>
+                              {doc.description && (
+                                <p className="text-xs text-muted-foreground mt-1 ml-[52px] line-clamp-1" title={doc.description}>
+                                  {doc.description}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{doc.category}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Badge variant="outline" className={vis.className}>
+                                <VisIcon className="mr-1 h-3 w-3" />
+                                {t(vis.label)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-muted-foreground">
+                              {doc.uploadedAt ? formatDate(doc.uploadedAt, locale) : '-'}
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-muted-foreground">
+                              {doc.validUntil
+                                ? formatDate(doc.validUntil, locale)
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={status.className}>
+                                <status.icon className="mr-1 h-3 w-3" />
+                                {status.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-muted-foreground">{doc.size || '-'}</TableCell>
+                            <TableCell>
+                              <DocumentRowActions doc={doc} {...rowActions} />
+                            </TableCell>
+                          </TableRow>
+                        </DocumentRowContextMenu>
                       );
                     })}
                   </TableBody>
@@ -670,28 +804,55 @@ export function DocumentsPage() {
               {filteredDocs.map((doc) => {
                 const status = statusConfig[doc.status as keyof typeof statusConfig] || statusConfig.valid;
                 return (
-                  <Card key={doc.id} className="p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded bg-muted shrink-0">
-                        {doc.type === 'pdf' ? (
-                          <FileText className="h-4 w-4 text-red-500" />
-                        ) : (
-                          <FileImage className="h-4 w-4 text-blue-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{doc.name}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <Badge variant="outline" className="text-[10px] h-5">{doc.category}</Badge>
-                          <Badge variant="outline" className={`text-[10px] h-5 ${status.className}`}>
-                            <status.icon className="mr-0.5 h-2.5 w-2.5" />
-                            {status.label}
-                          </Badge>
+                  <DocumentRowContextMenu
+                    key={doc.id}
+                    doc={doc}
+                    onPreview={rowActions.onPreview}
+                    onDownload={rowActions.onDownload}
+                    onEdit={rowActions.onEdit}
+                    onDelete={rowActions.onDelete}
+                    onChanged={refreshData}
+                  >
+                    <Card className="p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded bg-muted shrink-0">
+                          {doc.type === 'pdf' ? (
+                            <FileText className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <FileImage className="h-4 w-4 text-blue-500" />
+                          )}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-sm truncate flex-1" title={doc.name}>{doc.name}</p>
+                            {doc.hints && doc.hints.length > 0 && (
+                              <DocumentHintsPopover
+                                documentId={doc.id}
+                                hints={doc.hints as DocumentHint[]}
+                                confidence={doc.aiConfidence}
+                                compact
+                                className="flex-shrink-0"
+                                onChanged={refreshData}
+                              />
+                            )}
+                          </div>
+                          {doc.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5" title={doc.description}>
+                              {doc.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <Badge variant="outline" className="text-[10px] h-5">{doc.category}</Badge>
+                            <Badge variant="outline" className={`text-[10px] h-5 ${status.className}`}>
+                              <status.icon className="mr-0.5 h-2.5 w-2.5" />
+                              {status.label}
+                            </Badge>
+                          </div>
+                        </div>
+                        <DocumentRowActions doc={doc} {...rowActions} />
                       </div>
-                      <DocumentRowActions doc={doc} {...rowActions} />
-                    </div>
-                  </Card>
+                    </Card>
+                  </DocumentRowContextMenu>
                 );
               })}
             </div>
@@ -744,8 +905,63 @@ export function DocumentsPage() {
               )}
             </div>
 
+            {/* AI Classification Button */}
+            {selectedFile && (
+              <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-950/40 dark:to-violet-950/40 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <Sparkles className="size-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {t('AI Auto-Classification')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedFile.type.startsWith('image/') || selectedFile.type === 'application/pdf'
+                          ? t('Uses Vision AI (4 credits)')
+                          : t('Uses Text AI (2 credits)')}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={aiResult ? 'outline' : 'default'}
+                    onClick={handleClassifyWithAI}
+                    disabled={isClassifying}
+                  >
+                    {isClassifying ? (
+                      <>
+                        <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                        {t('Analyzing...')}
+                      </>
+                    ) : aiResult ? (
+                      <>
+                        <Sparkles className="size-3.5 mr-1.5" />
+                        {t('Re-classify')}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5 mr-1.5" />
+                        {t('Classify with AI')}
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {aiResult && aiResult.hints.length > 0 && (
+                  <div className="mt-3">
+                    <AiHintsList hints={aiResult.hints} />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="doc-name">{t('Document Name')}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="doc-name">{t('Document Name')}</Label>
+                {aiResult && aiResult.confidence.name > 0 && (
+                  <AiSuggestionBadge confidence={aiResult.confidence.name} />
+                )}
+              </div>
               <Input
                 id="doc-name"
                 placeholder="e.g. CE_Declaration_of_Conformity.pdf"
@@ -755,7 +971,28 @@ export function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="doc-category">{t('Category')}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="doc-description">{t('Description')}</Label>
+                {aiResult && aiResult.description && (
+                  <AiSuggestionBadge confidence={aiResult.confidence.overall} />
+                )}
+              </div>
+              <Textarea
+                id="doc-description"
+                placeholder={t('Short summary of the document content (optional)')}
+                value={newDoc.description}
+                onChange={(e) => setNewDoc({ ...newDoc, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="doc-category">{t('Category')}</Label>
+                {aiResult && aiResult.confidence.category > 0 && (
+                  <AiSuggestionBadge confidence={aiResult.confidence.category} />
+                )}
+              </div>
               <Select
                 value={newDoc.category}
                 onValueChange={(value) => setNewDoc({ ...newDoc, category: value as Document['category'] })}
@@ -771,10 +1008,24 @@ export function DocumentsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {aiResult && aiResult.certificationHints.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {aiResult.certificationHints.map((cert) => (
+                    <Badge key={cert} variant="secondary" className="text-[10px]">
+                      {cert}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label>{t('Visibility')}</Label>
+              <div className="flex items-center justify-between">
+                <Label>{t('Visibility')}</Label>
+                {aiResult && aiResult.confidence.visibility > 0 && (
+                  <AiSuggestionBadge confidence={aiResult.confidence.visibility} />
+                )}
+              </div>
               <Select
                 value={newDoc.visibility}
                 onValueChange={(value) => setNewDoc({ ...newDoc, visibility: value as VisibilityLevel })}
@@ -874,7 +1125,12 @@ export function DocumentsPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="doc-valid">{t('Valid Until (optional)')}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="doc-valid">{t('Valid Until (optional)')}</Label>
+                {aiResult && aiResult.validUntil && aiResult.confidence.validUntil > 0 && (
+                  <AiSuggestionBadge confidence={aiResult.confidence.validUntil} />
+                )}
+              </div>
               <Input
                 id="doc-valid"
                 type="date"
@@ -940,6 +1196,17 @@ export function DocumentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Upload Dialog (AI-assisted) */}
+      <BulkDocumentUploadDialog
+        open={isBulkDialogOpen}
+        onOpenChange={setIsBulkDialogOpen}
+        products={aiProducts}
+        productOptions={productOptions}
+        onFilesSaved={() => {
+          refreshData();
+        }}
+      />
     </div>
   );
 }

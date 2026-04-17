@@ -333,7 +333,7 @@ export function DPPVisibilitySettingsPageV3() {
         {/* Mobile: Left Sheet */}
         {isMobile && (
           <Sheet open={leftSheetOpen} onOpenChange={setLeftSheetOpen}>
-            <SheetContent side="left" className="w-[280px] p-0">
+            <SheetContent side="left" className="w-[min(88vw,320px)] p-0">
               <SheetHeader className="p-4 border-b">
                 <SheetTitle>{t('Quick Actions')}</SheetTitle>
               </SheetHeader>
@@ -373,16 +373,16 @@ export function DPPVisibilitySettingsPageV3() {
         {/* Mobile: Right Sheet */}
         {isMobile && (
           <Sheet open={rightSheetOpen} onOpenChange={setRightSheetOpen}>
-            <SheetContent side="right" className="w-[320px] p-0">
+            <SheetContent side="right" className="w-[min(88vw,360px)] p-0">
               <RightPanel stats={stats} changes={changes} onRevertChange={handleRevertChange} />
             </SheetContent>
           </Sheet>
         )}
       </div>
 
-      {/* Mobile: Sticky Bottom Save Bar */}
+      {/* Mobile: Sticky Bottom Save Bar (safe-area aware) */}
       {isMobile && hasChanges && (
-        <div className="sticky bottom-0 z-50 border-t bg-background/95 backdrop-blur-sm p-3">
+        <div className="sticky bottom-0 z-50 border-t bg-background/95 backdrop-blur-sm p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
           <Button
             onClick={handleSave}
             disabled={isSaving}
