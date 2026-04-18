@@ -54,20 +54,22 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
     //      window of the preceding button click, which iOS Safari requires.
     //   2) We get a real DOMException name (NotAllowedError, NotFoundError,
     //      OverconstrainedError, NotReadableError) that we can classify.
-    // We stop the warm-up stream immediately and hand off to html5-qrcode.
-    const warmupAttempts: MediaStreamConstraints[] = [
-      { video: { facingMode: { ideal: facingMode } }, audio: false },
-      { video: { facingMode }, audio: false },
-      { video: true, audio: false },
+    // We also remember which constraint actually worked so we can pass the
+    // same one to html5-qrcode and skip its retry loop (which corrupts the
+    // internal state machine and throws "Cannot transition" on retry).
+    const warmupAttempts: Array<{ stream: MediaStreamConstraints; scanner: MediaTrackConstraints }> = [
+      { stream: { video: { facingMode: { ideal: facingMode } }, audio: false }, scanner: { facingMode: { ideal: facingMode } } },
+      { stream: { video: { facingMode }, audio: false }, scanner: { facingMode } },
+      { stream: { video: true, audio: false }, scanner: {} },
     ];
     let warmupErr: unknown = null;
-    let warmupOk = false;
-    for (const constraints of warmupAttempts) {
+    let workingConstraint: MediaTrackConstraints | null = null;
+    for (const { stream: streamConstraints, scanner: scannerConstraints } of warmupAttempts) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
         // Stop the preview stream — html5-qrcode will request its own.
         stream.getTracks().forEach((track) => track.stop());
-        warmupOk = true;
+        workingConstraint = scannerConstraints;
         break;
       } catch (err) {
         warmupErr = err;
@@ -76,7 +78,7 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       }
     }
 
-    if (!warmupOk) {
+    if (!workingConstraint) {
       scannerRef.current = null;
       setIsStarting(false);
       const name = warmupErr instanceof DOMException ? warmupErr.name : '';
@@ -98,9 +100,13 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       return;
     }
 
-    // Warm-up succeeded → permission is granted and a matching camera exists.
-    // Hand off to html5-qrcode for scanning.
-    let lastErr: unknown = null;
+    // Warm-up succeeded → permission is granted and `workingConstraint` is
+    // known to produce a usable stream. Hand off to html5-qrcode with the
+    // SAME constraint and NO retry loop. Retrying .start() on the same
+    // instance after a failed attempt throws "Cannot transition to a new
+    // state" because html5-qrcode's internal state machine is already mid-
+    // transition. If the single start fails, we surface the error rather
+    // than corrupting the scanner.
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
       const scanner = new Html5Qrcode('scanner-container', {
@@ -119,29 +125,12 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       });
       scannerRef.current = scanner;
 
-      const attempts: MediaTrackConstraints[] = [
-        { facingMode: { ideal: facingMode } },
-        { facingMode },
-        {},
-      ];
-
-      let started = false;
-      for (const cameraConstraint of attempts) {
-        try {
-          await scanner.start(
-            cameraConstraint,
-            { fps: 15, qrbox, disableFlip: false },
-            onDecoded,
-            () => { /* ignore scan failures */ },
-          );
-          started = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-        }
-      }
-
-      if (!started) throw lastErr ?? new Error('Failed to start camera');
+      await scanner.start(
+        workingConstraint,
+        { fps: 15, qrbox, disableFlip: false },
+        onDecoded,
+        () => { /* ignore scan failures */ },
+      );
 
       try {
         const caps = scanner.getRunningTrackCameraCapabilities();
@@ -152,6 +141,13 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       }
       setError(null);
     } catch (err) {
+      // Best-effort cleanup: if start() left the scanner mid-transition,
+      // swallow any clear() error so we can still show the root cause.
+      try {
+        if (scannerRef.current) await scannerRef.current.clear();
+      } catch {
+        /* ignore */
+      }
       scannerRef.current = null;
       const name = err instanceof DOMException ? err.name : '';
       const rawMsg = err instanceof Error ? err.message : String(err);
