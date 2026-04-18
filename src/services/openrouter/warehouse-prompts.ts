@@ -55,11 +55,21 @@ export async function loadWarehouseContext(): Promise<WarehouseAIContext> {
 
   if (stockResult.data.length > 0) {
     stockLines.push('## Stock Levels (Top 100)');
-    stockLines.push('| Product | Batch | Location | Zone | Available | Reserved | Reorder Point |');
-    stockLines.push('|---------|-------|----------|------|-----------|----------|---------------|');
+    stockLines.push('Dimensions shown as L×W×H cm (product) and weight in kg (gross/net). "—" means not set on product master.');
+    stockLines.push('| Product | Batch | Location | Zone | Avail | Reserved | L×W×H cm | Weight kg | Pkg L×W×H cm | Reorder |');
+    stockLines.push('|---------|-------|----------|------|-------|----------|----------|-----------|--------------|---------|');
     for (const s of stockResult.data) {
+      const dim = (l?: number, w?: number, h?: number) =>
+        l != null && w != null && h != null
+          ? `${l}×${w}×${h}`
+          : (l != null || w != null || h != null)
+            ? `${l ?? '?'}×${w ?? '?'}×${h ?? '?'}`
+            : '—';
+      const wt = s.productGrossWeightKg != null || s.productNetWeightKg != null
+        ? `${s.productGrossWeightKg ?? '?'} / ${s.productNetWeightKg ?? '?'}`
+        : '—';
       stockLines.push(
-        `| ${s.productName || '—'} | ${s.batchSerialNumber || '—'} | ${s.locationName || '—'} | ${s.zone || '—'} | ${s.quantityAvailable} | ${s.quantityReserved} | ${s.reorderPoint ?? '—'} |`
+        `| ${s.productName || '—'} | ${s.batchSerialNumber || '—'} | ${s.locationName || '—'} | ${s.zone || '—'} | ${s.quantityAvailable} | ${s.quantityReserved} | ${dim(s.productDepthCm, s.productWidthCm, s.productHeightCm)} | ${wt} | ${dim(s.packagingDepthCm, s.packagingWidthCm, s.packagingHeightCm)} | ${s.reorderPoint ?? '—'} |`
       );
     }
   }

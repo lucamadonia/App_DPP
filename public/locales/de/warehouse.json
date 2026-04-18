@@ -1125,6 +1125,8 @@
   "Scan Out": "Ausgang",
   "Scan a barcode": "Barcode scannen",
   "Use hardware scanner or tap camera icon": "Hardware-Scanner verwenden oder Kamera-Symbol antippen",
+  "Tap to open camera or use hardware scanner": "Tippen, um Kamera zu öffnen, oder Hardware-Scanner nutzen",
+  "Camera is already in use by another app.": "Die Kamera wird bereits von einer anderen App genutzt.",
   "EAN-13, QR Code, GS1 Digital Link": "EAN-13, QR-Code, GS1 Digital Link",
   "Looking up product": "Produkt wird gesucht",
   "Product not found": "Produkt nicht gefunden",

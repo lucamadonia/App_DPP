@@ -470,6 +470,16 @@ export interface WhStockLevel {
   batchSerialNumber?: string;
   locationName?: string;
   locationCode?: string;
+  // Joined product dimensions & weights — used by warehouse AI to reason about
+  // shipping, pallet loading, and carrier selection.
+  productNetWeightKg?: number;
+  productGrossWeightKg?: number;
+  productHeightCm?: number;
+  productWidthCm?: number;
+  productDepthCm?: number;
+  packagingHeightCm?: number;
+  packagingWidthCm?: number;
+  packagingDepthCm?: number;
 }
 
 // ============================================

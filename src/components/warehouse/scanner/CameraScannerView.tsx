@@ -26,11 +26,23 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
     setIsStarting(true);
     setError(null);
 
+    const qrbox = (w: number, h: number) => {
+      const min = Math.min(w, h);
+      const size = Math.floor(min * 0.7);
+      return { width: size, height: size };
+    };
+    const onDecoded = (decodedText: string) => {
+      if (cooldownRef.current) return;
+      cooldownRef.current = true;
+      onScan(decodedText);
+      setTimeout(() => { cooldownRef.current = false; }, 1500);
+    };
+
+    let lastErr: unknown = null;
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
       const scanner = new Html5Qrcode('scanner-container', {
         verbose: false,
-        // Explicit format list — improves 1D barcode (EAN-13) detection speed
         formatsToSupport: [
           Html5QrcodeSupportedFormats.QR_CODE,
           Html5QrcodeSupportedFormats.EAN_13,
@@ -45,29 +57,33 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       });
       scannerRef.current = scanner;
 
-      await scanner.start(
-        { facingMode: { exact: facingMode } },
-        {
-          fps: 15,
-          // Responsive viewfinder — sized to 70% of shortest edge
-          qrbox: (w, h) => {
-            const min = Math.min(w, h);
-            const size = Math.floor(min * 0.7);
-            return { width: size, height: size };
-          },
-          // Let html5-qrcode choose best aspect ratio for the device
-          disableFlip: false,
-        },
-        (decodedText) => {
-          if (cooldownRef.current) return;
-          cooldownRef.current = true;
-          onScan(decodedText);
-          setTimeout(() => { cooldownRef.current = false; }, 1500);
-        },
-        () => { /* ignore scan failures */ },
-      );
+      // iOS Safari rejects `{ exact: 'environment' }` on devices that don't
+      // advertise a labeled back camera. Try progressively softer constraints
+      // until one starts — this is the single biggest iOS reliability fix.
+      const attempts: MediaTrackConstraints[] = [
+        { facingMode: { ideal: facingMode } },
+        { facingMode },
+        {},
+      ];
 
-      // Detect torch capability (MediaTrackCapabilities.torch)
+      let started = false;
+      for (const cameraConstraint of attempts) {
+        try {
+          await scanner.start(
+            cameraConstraint,
+            { fps: 15, qrbox, disableFlip: false },
+            onDecoded,
+            () => { /* ignore scan failures */ },
+          );
+          started = true;
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+
+      if (!started) throw lastErr ?? new Error('Failed to start camera');
+
       try {
         const caps = scanner.getRunningTrackCameraCapabilities();
         const torch = (caps as unknown as { torch?: () => { isSupported?: () => boolean } }).torch?.();
@@ -77,43 +93,17 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       }
       setError(null);
     } catch (err) {
-      // Retry without `exact` — some browsers reject the exact constraint
-      try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        if (!scannerRef.current) {
-          const fallback = new Html5Qrcode('scanner-container');
-          scannerRef.current = fallback;
-          await fallback.start(
-            { facingMode },
-            {
-              fps: 15,
-              qrbox: (w, h) => {
-                const min = Math.min(w, h);
-                const size = Math.floor(min * 0.7);
-                return { width: size, height: size };
-              },
-            },
-            (decodedText) => {
-              if (cooldownRef.current) return;
-              cooldownRef.current = true;
-              onScan(decodedText);
-              setTimeout(() => { cooldownRef.current = false; }, 1500);
-            },
-            () => { /* ignore */ },
-          );
-          setError(null);
-          return;
-        }
-      } catch {
-        // Fall through to error display
-      }
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
+      // Scanner is in a broken state — reset the ref so retry can re-create it.
+      scannerRef.current = null;
+      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      if (msg.includes('permission') || msg.includes('denied') || msg.includes('notallowed')) {
         setError(t('Camera permission denied. Please allow camera access in your browser settings.'));
-      } else if (msg.toLowerCase().includes('notfound') || msg.toLowerCase().includes('not found')) {
+      } else if (msg.includes('notfound') || msg.includes('not found') || msg.includes('no camera')) {
         setError(t('No camera found on this device.'));
+      } else if (msg.includes('notreadable') || msg.includes('in use')) {
+        setError(t('Camera is already in use by another app.'));
       } else {
-        setError(msg || t('Camera not available'));
+        setError((err instanceof Error ? err.message : null) || t('Camera not available'));
       }
     } finally {
       setIsStarting(false);

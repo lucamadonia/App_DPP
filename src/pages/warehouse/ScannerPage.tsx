@@ -387,23 +387,29 @@ export function ScannerPage() {
             onClose={() => setCameraOpen(false)}
           />
 
-          {/* Scan area indicator */}
+          {/* Scan area indicator — tappable: opens camera on click */}
           {!cameraOpen && scanState === 'idle' && (
-            <div className={`
-              relative rounded-2xl border-2 border-dashed border-${accentColor}-500/30
-              bg-${accentColor}-500/5 p-12 text-center transition-all duration-500
-            `}>
-              <div className={`absolute inset-0 rounded-2xl animate-pulse-ring border-2 border-${accentColor}-500/10`} />
-              <ScanBarcode className={`h-16 w-16 mx-auto text-${accentColor}-500/40 mb-4`} />
-              <p className="text-lg font-semibold text-slate-300">{t('Scan a barcode')}</p>
-              <p className="text-sm text-slate-500 mt-1">
-                {t('Use hardware scanner or tap camera icon')}
+            <button
+              type="button"
+              onClick={() => setCameraOpen(true)}
+              className={`
+                w-full relative rounded-2xl border-2 border-dashed border-${accentColor}-500/30
+                bg-${accentColor}-500/5 p-12 text-center transition-all duration-500
+                hover:border-${accentColor}-500/60 hover:bg-${accentColor}-500/10
+                active:scale-[0.99] cursor-pointer
+              `}
+            >
+              <div className={`absolute inset-0 rounded-2xl animate-pulse-ring border-2 border-${accentColor}-500/10 pointer-events-none`} />
+              <ScanBarcode className={`h-16 w-16 mx-auto text-${accentColor}-500/60 mb-4`} />
+              <p className="text-lg font-semibold text-slate-200">{t('Scan a barcode')}</p>
+              <p className="text-sm text-slate-400 mt-1">
+                {t('Tap to open camera or use hardware scanner')}
               </p>
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-600">
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
                 <Zap className="h-3.5 w-3.5" />
                 {t('EAN-13, QR Code, GS1 Digital Link')}
               </div>
-            </div>
+            </button>
           )}
 
           {/* Looking up state */}

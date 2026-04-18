@@ -38,6 +38,31 @@ function transformStockLevel(row: any): WhStockLevel {
     batchSerialNumber: row.product_batches?.serial_number || row.batch_serial_number || undefined,
     locationName: row.wh_locations?.name || row.location_name || undefined,
     locationCode: row.wh_locations?.code || undefined,
+    // Product dimensions (batch overrides fall through to product master values)
+    productNetWeightKg: row.product_batches?.net_weight != null
+      ? Number(row.product_batches.net_weight)
+      : row.products?.net_weight != null ? Number(row.products.net_weight) : undefined,
+    productGrossWeightKg: row.product_batches?.gross_weight != null
+      ? Number(row.product_batches.gross_weight)
+      : row.products?.gross_weight != null ? Number(row.products.gross_weight) : undefined,
+    productHeightCm: row.product_batches?.product_height_cm != null
+      ? Number(row.product_batches.product_height_cm)
+      : row.products?.product_height_cm != null ? Number(row.products.product_height_cm) : undefined,
+    productWidthCm: row.product_batches?.product_width_cm != null
+      ? Number(row.product_batches.product_width_cm)
+      : row.products?.product_width_cm != null ? Number(row.products.product_width_cm) : undefined,
+    productDepthCm: row.product_batches?.product_depth_cm != null
+      ? Number(row.product_batches.product_depth_cm)
+      : row.products?.product_depth_cm != null ? Number(row.products.product_depth_cm) : undefined,
+    packagingHeightCm: row.product_batches?.packaging_height_cm != null
+      ? Number(row.product_batches.packaging_height_cm)
+      : row.products?.packaging_height_cm != null ? Number(row.products.packaging_height_cm) : undefined,
+    packagingWidthCm: row.product_batches?.packaging_width_cm != null
+      ? Number(row.product_batches.packaging_width_cm)
+      : row.products?.packaging_width_cm != null ? Number(row.products.packaging_width_cm) : undefined,
+    packagingDepthCm: row.product_batches?.packaging_depth_cm != null
+      ? Number(row.product_batches.packaging_depth_cm)
+      : row.products?.packaging_depth_cm != null ? Number(row.products.packaging_depth_cm) : undefined,
   };
 }
 
@@ -86,7 +111,7 @@ export async function getStockLevelsPaginated(filter?: StockFilter): Promise<Pag
 
   let query = supabase
     .from('wh_stock_levels')
-    .select('*, products(name), product_batches(serial_number), wh_locations(name, code)', { count: 'exact' })
+    .select('*, products(name,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), product_batches(serial_number,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), wh_locations(name, code)', { count: 'exact' })
     .eq('tenant_id', tenantId);
 
   if (filter?.locationId) query = query.eq('location_id', filter.locationId);
@@ -133,7 +158,7 @@ export async function getStockLevelsPaginated(filter?: StockFilter): Promise<Pag
 export async function getStockForBatch(batchId: string): Promise<WhStockLevel[]> {
   const { data, error } = await supabase
     .from('wh_stock_levels')
-    .select('*, products(name), product_batches(serial_number), wh_locations(name, code)')
+    .select('*, products(name,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), product_batches(serial_number,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), wh_locations(name, code)')
     .eq('batch_id', batchId);
 
   if (error) {
@@ -146,7 +171,7 @@ export async function getStockForBatch(batchId: string): Promise<WhStockLevel[]>
 export async function getStockForLocation(locationId: string): Promise<WhStockLevel[]> {
   const { data, error } = await supabase
     .from('wh_stock_levels')
-    .select('*, products(name), product_batches(serial_number), wh_locations(name, code)')
+    .select('*, products(name,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), product_batches(serial_number,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), wh_locations(name, code)')
     .eq('location_id', locationId);
 
   if (error) {
@@ -669,7 +694,7 @@ export async function getLowStockAlerts(): Promise<WhStockLevel[]> {
 
   const { data, error } = await supabase
     .from('wh_stock_levels')
-    .select('*, products(name), product_batches(serial_number), wh_locations(name, code)')
+    .select('*, products(name,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), product_batches(serial_number,net_weight,gross_weight,product_height_cm,product_width_cm,product_depth_cm,packaging_height_cm,packaging_width_cm,packaging_depth_cm), wh_locations(name, code)')
     .eq('tenant_id', tenantId)
     .not('reorder_point', 'is', null);
 
