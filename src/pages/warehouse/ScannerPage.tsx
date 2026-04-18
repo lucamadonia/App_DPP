@@ -15,6 +15,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
+  PackagePlus,
+  X as XIcon,
 } from 'lucide-react';
 import { parseBarcode } from '@/lib/barcode-parser';
 import { playSuccessBeep, playErrorBeep, triggerHaptic } from '@/lib/scan-audio';
@@ -50,6 +52,7 @@ export function ScannerPage() {
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [cameraOpen, setCameraOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [unknownGtin, setUnknownGtin] = useState<string | null>(null);
 
   // Lookup results
   const [product, setProduct] = useState<ScannerProduct | null>(null);
@@ -81,6 +84,7 @@ export function ScannerPage() {
     setStockLevels([]);
     setErrorMessage('');
     setSheetOpen(false);
+    setUnknownGtin(null);
   }, []);
 
   const showError = useCallback((msg: string) => {
@@ -209,6 +213,16 @@ export function ScannerPage() {
           }
           return;
         }
+      }
+
+      // GTIN was parsed but no product in DB → offer create-new dialog
+      if (parsed.gtin && (parsed.type === 'ean13' || parsed.type === 'ean8')) {
+        if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+        setUnknownGtin(parsed.gtin);
+        setScanState('idle');
+        playErrorBeep();
+        triggerHaptic([30, 60, 30]);
+        return;
       }
 
       if (parsed.type === 'serial_lookup' && parsed.serial) {
@@ -425,6 +439,55 @@ export function ScannerPage() {
             <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-center animate-scan-error">
               <AlertCircle className="h-12 w-12 mx-auto text-red-400 mb-3" />
               <p className="text-sm text-red-400 font-semibold">{errorMessage}</p>
+            </div>
+          )}
+
+          {/* Unknown GTIN — offer to create a new product */}
+          {unknownGtin && scanState === 'idle' && (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6 sm:p-8 animate-scan-error">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                    <PackagePlus className="h-5 w-5 text-amber-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-200">
+                      {t('Product not found for this barcode')}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                      GTIN {unknownGtin}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUnknownGtin(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label={t('Dismiss')}
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm text-slate-300 mb-4">
+                {t('Would you like to create a new product with this barcode?')}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/products/new?gtin=${encodeURIComponent(unknownGtin)}`)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  {t('Create product with this GTIN')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnknownGtin(null)}
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-sm text-slate-300 transition-colors"
+                >
+                  {t('Cancel')}
+                </button>
+              </div>
             </div>
           )}
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages, createSupplier, getCountries, createCategory, addSubcategoryToCategory } from '@/services/supabase';
 import { getCurrentTenant } from '@/services/supabase/tenants';
 import { getCurrentTenantId } from '@/lib/supabase';
@@ -94,6 +94,8 @@ export function ProductFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefilledGtin = !isEditMode ? searchParams.get('gtin') || '' : '';
   const { branding } = useBranding();
   const prefersReduced = useReducedMotion();
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
@@ -319,7 +321,7 @@ export function ProductFormPage() {
   const [formData, setFormData] = useState({
     name: '',
     manufacturer: '',
-    gtin: '',
+    gtin: prefilledGtin,
     category: '',
     description: '',
     hsCode: '',
