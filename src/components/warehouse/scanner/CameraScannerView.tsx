@@ -54,16 +54,21 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
     //      window of the preceding button click, which iOS Safari requires.
     //   2) We get a real DOMException name (NotAllowedError, NotFoundError,
     //      OverconstrainedError, NotReadableError) that we can classify.
-    // We also remember which constraint actually worked so we can pass the
-    // same one to html5-qrcode and skip its retry loop (which corrupts the
-    // internal state machine and throws "Cannot transition" on retry).
-    const warmupAttempts: Array<{ stream: MediaStreamConstraints; scanner: MediaTrackConstraints }> = [
-      { stream: { video: { facingMode: { ideal: facingMode } }, audio: false }, scanner: { facingMode: { ideal: facingMode } } },
+    // We also remember which scanner-compatible constraint produced a usable
+    // stream so we can pass the SAME one to html5-qrcode.
+    //
+    // Important: html5-qrcode's .start() only accepts facingMode as a string
+    // ('environment' | 'user') or `{ exact: ... }` — it rejects `{ ideal: ... }`.
+    // So we translate our soft-preference warm-up constraints to either the
+    // string form (soft) or `{}` (any camera) before handing off.
+    type ScannerConstraint = { facingMode?: string } | Record<string, never>;
+    const warmupAttempts: Array<{ stream: MediaStreamConstraints; scanner: ScannerConstraint }> = [
+      { stream: { video: { facingMode: { ideal: facingMode } }, audio: false }, scanner: { facingMode } },
       { stream: { video: { facingMode }, audio: false }, scanner: { facingMode } },
       { stream: { video: true, audio: false }, scanner: {} },
     ];
     let warmupErr: unknown = null;
-    let workingConstraint: MediaTrackConstraints | null = null;
+    let workingConstraint: ScannerConstraint | null = null;
     for (const { stream: streamConstraints, scanner: scannerConstraints } of warmupAttempts) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
