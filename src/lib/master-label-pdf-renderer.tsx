@@ -16,10 +16,40 @@ import {
   StyleSheet,
   pdf,
 } from '@react-pdf/renderer';
+import JsBarcode from 'jsbarcode';
 import type { LabelDesign, LabelElement, LabelSection, PackageCounterFormat, MultiLabelExportConfig } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
 import { resolveFieldValue } from './master-label-assembler';
 import { getBuiltinPictogram } from './master-label-builtin-pictograms';
+
+/**
+ * Synchronously generate a PNG data URL for a barcode using jsbarcode
+ * against an offscreen canvas. Returns null on invalid input.
+ */
+function generateBarcodeDataUrl(
+  value: string,
+  format: 'ean13' | 'code128' | 'code39',
+  height: number,
+  showText: boolean
+): string | null {
+  if (!value || typeof document === 'undefined') return null;
+  try {
+    const canvas = document.createElement('canvas');
+    const jsFormat = format === 'ean13' ? 'EAN13' : format === 'code39' ? 'CODE39' : 'CODE128';
+    JsBarcode(canvas, value, {
+      format: jsFormat,
+      height: Math.max(height * 2, 40),
+      displayValue: showText,
+      fontSize: 18,
+      margin: 4,
+      lineColor: '#000000',
+      background: '#ffffff',
+    });
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -282,20 +312,27 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
     }
 
     case 'barcode': {
-      // Barcode rendering — fallback to text representation in PDF
       const value = element.autoPopulate ? data.identity.modelSku : element.value;
       if (!value) return null;
 
-      return (
-        <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 2 }}>
-          <View style={{ borderWidth: 0.5, borderColor: '#1a1a1a', padding: 4 }}>
-            <Text style={{ fontSize: 8, fontFamily: 'Courier', letterSpacing: 2 }}>
-              {value}
+      const dataUrl = generateBarcodeDataUrl(value, element.format, element.height, element.showText);
+      if (!dataUrl) {
+        // Graceful fallback if jsbarcode rejects the value (e.g. non-numeric EAN-13)
+        return (
+          <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 2 }}>
+            <Text style={{ fontSize: 6, fontFamily: 'Courier', color: '#b91c1c' }}>
+              Invalid {element.format.toUpperCase()}: {value}
             </Text>
           </View>
-          {element.showText && (
-            <Text style={{ fontSize: 5, textAlign: 'center', marginTop: 1 }}>{value}</Text>
-          )}
+        );
+      }
+
+      // Width is computed so the barcode keeps a readable density.
+      // Code128 is wider per character; EAN13 has a fixed width ratio.
+      const approxWidth = element.format === 'ean13' ? 100 : Math.min(180, 6 + value.length * 7);
+      return (
+        <View style={{ alignItems: getAlignment(element.alignment), marginBottom: 2 }}>
+          <Image src={dataUrl} style={{ width: approxWidth, height: element.height + (element.showText ? 8 : 2) }} />
         </View>
       );
     }

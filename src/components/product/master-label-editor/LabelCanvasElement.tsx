@@ -1,11 +1,66 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import JsBarcode from 'jsbarcode';
 import type { LabelElement } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
 import { resolveFieldValue } from '@/lib/master-label-assembler';
 import { getBuiltinPictogram } from '@/lib/master-label-builtin-pictograms';
 import { PT_TO_PX } from '@/lib/master-label-defaults';
 import { LabelFloatingToolbar } from './LabelFloatingToolbar';
+
+/**
+ * Renders a real scannable barcode as SVG using jsbarcode.
+ * Falls back to a placeholder when the value is invalid for the chosen format
+ * (e.g., EAN-13 needs exactly 12/13 digits).
+ */
+function BarcodeSvg({
+  value,
+  format,
+  height,
+  showText,
+  color,
+}: {
+  value: string;
+  format: 'ean13' | 'code128' | 'code39';
+  height: number;
+  showText: boolean;
+  color: string;
+}) {
+  const ref = useRef<SVGSVGElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    if (!value) {
+      setError('empty');
+      return;
+    }
+    try {
+      const jsFormat = format === 'ean13' ? 'EAN13' : format === 'code39' ? 'CODE39' : 'CODE128';
+      JsBarcode(ref.current, value, {
+        format: jsFormat,
+        height,
+        displayValue: showText,
+        fontSize: 10,
+        margin: 2,
+        lineColor: color || '#000000',
+        background: 'transparent',
+      });
+      setError(null);
+    } catch {
+      setError('invalid');
+    }
+  }, [value, format, height, showText, color]);
+
+  if (error) {
+    return (
+      <div className="inline-block border border-dashed border-rose-300 bg-rose-50 px-2 py-1 text-[8px] italic text-rose-500">
+        {error === 'empty' ? 'BARCODE' : `invalid ${format.toUpperCase()}: ${value}`}
+      </div>
+    );
+  }
+  return <svg ref={ref} />;
+}
 
 interface LabelCanvasElementProps {
   element: LabelElement;
@@ -306,12 +361,13 @@ function ElementPreview({
       const value = element.autoPopulate && data ? data.identity.modelSku : element.value;
       return (
         <div style={{ textAlign: element.alignment }}>
-          <div className="inline-block border border-gray-300 px-2 py-1">
-            <div className="font-mono tracking-widest text-[10px]">{value || 'BARCODE'}</div>
-          </div>
-          {element.showText && value && (
-            <div className="text-[7px] text-center mt-0.5">{value}</div>
-          )}
+          <BarcodeSvg
+            value={value || ''}
+            format={element.format}
+            height={element.height}
+            showText={element.showText}
+            color="#000000"
+          />
         </div>
       );
     }
