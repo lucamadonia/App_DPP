@@ -38,6 +38,68 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       setTimeout(() => { cooldownRef.current = false; }, 1500);
     };
 
+    // Pre-flight: is the MediaDevices API even available?
+    // iOS Safari exposes `navigator.mediaDevices` only on secure origins (HTTPS
+    // or localhost). A PWA running from the Home Screen in iOS <14 lacks it
+    // entirely. Surface a clear message instead of a cryptic DOMException.
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      scannerRef.current = null;
+      setIsStarting(false);
+      setError(t('Camera API not available. Open this page in Safari (HTTPS) — not inside an app webview.'));
+      return;
+    }
+
+    // Warm-up: call getUserMedia ourselves first. This has two benefits on iOS:
+    //   1) The permission prompt appears within the synchronous user-gesture
+    //      window of the preceding button click, which iOS Safari requires.
+    //   2) We get a real DOMException name (NotAllowedError, NotFoundError,
+    //      OverconstrainedError, NotReadableError) that we can classify.
+    // We stop the warm-up stream immediately and hand off to html5-qrcode.
+    const warmupAttempts: MediaStreamConstraints[] = [
+      { video: { facingMode: { ideal: facingMode } }, audio: false },
+      { video: { facingMode }, audio: false },
+      { video: true, audio: false },
+    ];
+    let warmupErr: unknown = null;
+    let warmupOk = false;
+    for (const constraints of warmupAttempts) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        // Stop the preview stream — html5-qrcode will request its own.
+        stream.getTracks().forEach((track) => track.stop());
+        warmupOk = true;
+        break;
+      } catch (err) {
+        warmupErr = err;
+        // NotAllowedError is terminal — no point retrying with a different constraint.
+        if (err instanceof DOMException && err.name === 'NotAllowedError') break;
+      }
+    }
+
+    if (!warmupOk) {
+      scannerRef.current = null;
+      setIsStarting(false);
+      const name = warmupErr instanceof DOMException ? warmupErr.name : '';
+      const rawMsg = warmupErr instanceof Error ? warmupErr.message : String(warmupErr ?? '');
+      console.error('[CameraScanner] warmup failed', name, rawMsg, warmupErr);
+      if (name === 'NotAllowedError' || /permission|denied|notallowed/i.test(rawMsg)) {
+        setError(t('Camera permission denied. Open Safari Settings → Websites → Camera → Allow.'));
+      } else if (name === 'NotFoundError' || /notfound|no camera/i.test(rawMsg)) {
+        setError(t('No camera found on this device.'));
+      } else if (name === 'NotReadableError' || /notreadable|in use/i.test(rawMsg)) {
+        setError(t('Camera is already in use by another app.'));
+      } else if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
+        setError(t('This device does not have a back camera that matches the request.'));
+      } else if (name === 'SecurityError' || /secure context|https/i.test(rawMsg)) {
+        setError(t('Camera API not available. Open this page in Safari (HTTPS) — not inside an app webview.'));
+      } else {
+        setError(`${name || 'Error'}: ${rawMsg || t('Camera not available')}`);
+      }
+      return;
+    }
+
+    // Warm-up succeeded → permission is granted and a matching camera exists.
+    // Hand off to html5-qrcode for scanning.
     let lastErr: unknown = null;
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
@@ -57,9 +119,6 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       });
       scannerRef.current = scanner;
 
-      // iOS Safari rejects `{ exact: 'environment' }` on devices that don't
-      // advertise a labeled back camera. Try progressively softer constraints
-      // until one starts — this is the single biggest iOS reliability fix.
       const attempts: MediaTrackConstraints[] = [
         { facingMode: { ideal: facingMode } },
         { facingMode },
@@ -93,18 +152,11 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       }
       setError(null);
     } catch (err) {
-      // Scanner is in a broken state — reset the ref so retry can re-create it.
       scannerRef.current = null;
-      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-      if (msg.includes('permission') || msg.includes('denied') || msg.includes('notallowed')) {
-        setError(t('Camera permission denied. Please allow camera access in your browser settings.'));
-      } else if (msg.includes('notfound') || msg.includes('not found') || msg.includes('no camera')) {
-        setError(t('No camera found on this device.'));
-      } else if (msg.includes('notreadable') || msg.includes('in use')) {
-        setError(t('Camera is already in use by another app.'));
-      } else {
-        setError((err instanceof Error ? err.message : null) || t('Camera not available'));
-      }
+      const name = err instanceof DOMException ? err.name : '';
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      console.error('[CameraScanner] start failed', name, rawMsg, err);
+      setError(`${name || 'Error'}: ${rawMsg || t('Camera not available')}`);
     } finally {
       setIsStarting(false);
     }
