@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { WarehouseStepIndicator } from '@/components/warehouse/WarehouseStepIndi
 import { WarehouseStepTransition } from '@/components/warehouse/WarehouseStepTransition';
 import { WarehouseSuccessAnimation } from '@/components/warehouse/WarehouseSuccessAnimation';
 import { SmartPackingCard } from '@/components/warehouse/shipments/SmartPackingCard';
+import { estimatePrices, transitTimeEstimate } from '@/lib/smart-packing';
 import type { ContentItem } from '@/lib/smart-packing';
 import { getProducts } from '@/services/supabase/products';
 import { getBatches } from '@/services/supabase/batches';
@@ -120,6 +121,42 @@ export function CreateShipmentPage() {
     grossWeight?: number;
     netWeight?: number;
   }>>([]);
+
+  /**
+   * Resolve each item row to a {dims, weight} bundle. Falls back from product
+   * master → batch override when the product itself has no dimensions/weight set.
+   */
+  const resolvedItems: ContentItem[] = useMemo(() => {
+    return items.reduce<ContentItem[]>((acc, row) => {
+      if (!row.productId || row.quantity <= 0) return acc;
+      const prod = products.find((p) => p.id === row.productId);
+      const batch = row.batchOptions.find((b) => b.id === row.batchId);
+      const lengthCm = prod?.productDepthCm ?? batch?.productDepthCm;
+      const widthCm = prod?.productWidthCm ?? batch?.productWidthCm;
+      const heightCm = prod?.productHeightCm ?? batch?.productHeightCm;
+      const weightKg =
+        prod?.grossWeight ??
+        prod?.netWeight ??
+        batch?.grossWeight ??
+        batch?.netWeight ??
+        0;
+      if (!lengthCm || !widthCm || !heightCm) return acc;
+      acc.push({
+        lengthCm,
+        widthCm,
+        heightCm,
+        weightKg,
+        quantity: row.quantity,
+      });
+      return acc;
+    }, []);
+  }, [items, products]);
+
+  /** Total contents weight in kg, summing every (item × quantity). */
+  const computedTotalWeightKg = useMemo(
+    () => resolvedItems.reduce((sum, it) => sum + it.weightKg * (it.quantity ?? 1), 0),
+    [resolvedItems],
+  );
   const [locations, setLocations] = useState<WhLocation[]>([]);
 
   // Step 3: Shipping
@@ -150,6 +187,56 @@ export function CreateShipmentPage() {
       setCountries(c);
     })();
   }, []);
+
+  // ─── Auto-fill weight from item dimensions × weights ─────────
+  // Fills the weight field automatically when the user hasn't typed one.
+  // Adds 400 g packaging tare. Stays out of the way once the user edits.
+  useEffect(() => {
+    if (computedTotalWeightKg <= 0) return;
+    const current = Number(weightGrams);
+    if (!weightGrams || current === 0) {
+      const totalWithTare = computedTotalWeightKg + 0.4;
+      setWeightGrams(String(Math.round(totalWithTare * 1000)));
+    }
+  }, [computedTotalWeightKg, weightGrams]);
+
+  // ─── Auto-fill carrier + cost from price estimates ───────────
+  // When destination + weight are known, suggest the cheapest carrier and
+  // its price as defaults. Only fills empty fields.
+  useEffect(() => {
+    const wKg = weightGrams ? Number(weightGrams) / 1000 : 0;
+    if (!shippingCountry || wKg <= 0) return;
+    const estimates = estimatePrices('DE', shippingCountry, wKg);
+    if (estimates.length === 0) return;
+    const cheapest = estimates[0];
+    if (!carrier) {
+      // Map our compact carrier label (e.g., "DHL Paket") to CARRIER_OPTIONS list
+      const match = CARRIER_OPTIONS.find((opt) =>
+        opt.toLowerCase().includes(cheapest.carrier.split(' ')[0].toLowerCase()),
+      );
+      if (match) setCarrier(match);
+    }
+    if (!shippingCost) {
+      setShippingCost(cheapest.priceFrom.toFixed(2));
+    }
+  }, [shippingCountry, weightGrams, carrier, shippingCost]);
+
+  // ─── Auto-fill estimated delivery from transit times ─────────
+  useEffect(() => {
+    if (!shippingCountry || estimatedDelivery) return;
+    const transits = transitTimeEstimate('DE', shippingCountry);
+    if (transits.length === 0) return;
+    // Pick the chosen carrier's row, fall back to DHL.
+    const chosen = transits.find((t) =>
+      carrier && t.carrier.toLowerCase().includes(carrier.split(' ')[0].toLowerCase()),
+    ) ?? transits[0];
+    // Parse "2–3" → take the upper bound + today.
+    const upperDays = parseInt((chosen.days.split(/[–-]/).pop() ?? '0').trim(), 10);
+    if (!Number.isFinite(upperDays) || upperDays <= 0) return;
+    const date = new Date();
+    date.setDate(date.getDate() + upperDays);
+    setEstimatedDelivery(date.toISOString().slice(0, 10));
+  }, [shippingCountry, carrier, estimatedDelivery]);
 
   // Recipient search
   useEffect(() => {
@@ -479,20 +566,7 @@ export function CreateShipmentPage() {
           {/* Smart Packing Assistant — recommends carton + carriers based on items + weight */}
           <div className="mb-4">
             <SmartPackingCard
-              items={items.reduce<ContentItem[]>((acc, row) => {
-                const prod = products.find((p) => p.id === row.productId);
-                if (!prod || !prod.productHeightCm || !prod.productWidthCm || !prod.productDepthCm) {
-                  return acc;
-                }
-                acc.push({
-                  lengthCm: prod.productDepthCm,
-                  widthCm: prod.productWidthCm,
-                  heightCm: prod.productHeightCm,
-                  weightKg: prod.grossWeight ?? prod.netWeight ?? 0,
-                  quantity: row.quantity,
-                });
-                return acc;
-              }, [])}
+              items={resolvedItems}
               packageWeightKg={weightGrams ? Number(weightGrams) / 1000 : 0}
               destinationCountry={shippingCountry}
               originCountry="DE"

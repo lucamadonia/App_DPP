@@ -85,6 +85,11 @@ function transformBatchListItem(row: any): BatchListItem {
     status: row.status || 'draft',
     hasOverrides,
     createdAt: row.created_at,
+    productHeightCm: row.product_height_cm != null ? Number(row.product_height_cm) : undefined,
+    productWidthCm: row.product_width_cm != null ? Number(row.product_width_cm) : undefined,
+    productDepthCm: row.product_depth_cm != null ? Number(row.product_depth_cm) : undefined,
+    netWeight: row.net_weight != null ? Number(row.net_weight) : undefined,
+    grossWeight: row.gross_weight != null ? Number(row.gross_weight) : undefined,
   };
 }
 

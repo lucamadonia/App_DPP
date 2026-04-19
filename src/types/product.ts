@@ -181,6 +181,12 @@ export interface BatchListItem {
   status: 'draft' | 'live' | 'archived';
   hasOverrides: boolean;
   createdAt: string;
+  // Per-batch dimension/weight overrides (used when product master is missing them).
+  productHeightCm?: number;
+  productWidthCm?: number;
+  productDepthCm?: number;
+  netWeight?: number;   // kg
+  grossWeight?: number; // kg
 }
 
 export interface ProductWithBatches {
