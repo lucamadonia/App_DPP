@@ -138,7 +138,45 @@ export function SmartPackingCard({
   const warnMatches = carrierMatches.filter((m) => m.status === 'warning');
   const blockedMatches = carrierMatches.filter((m) => m.status === 'blocked');
 
-  const visibleMatches = showAllServices ? carrierMatches : carrierMatches.slice(0, 6);
+  /**
+   * Group carrier services by carrier label and find the cheapest fitting tier
+   * (the one the user should actually pick). The remaining tiers are shown as
+   * a "ladder" so the user sees both the bottom and the headroom.
+   */
+  const carrierGroups = useMemo(() => {
+    const groups: Record<string, CarrierMatch[]> = {};
+    for (const m of carrierMatches) {
+      const key = m.service.carrier;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(m);
+    }
+    // For each group: sort tiers by maxWeightKg ascending; pick cheapest of the
+    // ok/warning ones as "recommended".
+    return Object.entries(groups)
+      .map(([carrier, list]) => {
+        const sorted = [...list].sort((a, b) => a.service.maxWeightKg - b.service.maxWeightKg);
+        const fitting = sorted.filter((m) => m.status !== 'blocked');
+        const cheapest = [...fitting].sort((a, b) => {
+          const pa = a.service.priceFromEur ?? Infinity;
+          const pb = b.service.priceFromEur ?? Infinity;
+          return pa - pb;
+        })[0];
+        return {
+          carrier,
+          tiers: sorted,
+          recommended: cheapest ?? null,
+          anyFits: fitting.length > 0,
+        };
+      })
+      .sort((a, b) => {
+        // Carriers with at least one fit first; cheapest-recommended-price wins.
+        if (a.anyFits && !b.anyFits) return -1;
+        if (!a.anyFits && b.anyFits) return 1;
+        const pa = a.recommended?.service.priceFromEur ?? Infinity;
+        const pb = b.recommended?.service.priceFromEur ?? Infinity;
+        return pa - pb;
+      });
+  }, [carrierMatches]);
 
   const ppwr = upcomingPpwrDeadlines();
 
@@ -302,68 +340,144 @@ export function SmartPackingCard({
           </section>
         )}
 
-        {/* Carrier Services */}
-        {pkgInput && carrierMatches.length > 0 && (
+        {/* Per-carrier package recommendation with tier ladder */}
+        {pkgInput && carrierGroups.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-2">
               <Package className="h-3.5 w-3.5 text-blue-400" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('Carrier matches')}
+                {t('Recommended package per carrier')}
               </h3>
             </div>
-            <ul className="space-y-1.5">
-              {visibleMatches.map((match) => (
-                <li
-                  key={match.service.id}
-                  className={`rounded-xl border p-2.5 transition-colors ${
-                    match.status === 'ok'
-                      ? 'border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                      : match.status === 'warning'
-                      ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10'
-                      : 'border-rose-500/20 bg-rose-500/5 opacity-80'
-                  } ${onPickService ? 'cursor-pointer' : ''}`}
-                  onClick={() => onPickService?.(match.service.id)}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-semibold text-white truncate">
-                        {match.service.carrier}
-                      </span>
-                      <span className="text-xs text-slate-400 truncate">
-                        {match.service.service}
-                      </span>
-                      <span className="text-[10px] text-slate-500">· {match.service.region}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {match.service.priceFromEur != null && (
-                        <span className="text-[10px] font-mono text-slate-400">
-                          ab {match.service.priceFromEur.toFixed(2).replace('.', ',')} €
+            <ul className="space-y-2">
+              {(showAllServices ? carrierGroups : carrierGroups.slice(0, 6)).map((group) => {
+                const rec = group.recommended;
+                if (!rec) {
+                  return (
+                    <li
+                      key={group.carrier}
+                      className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-sm font-semibold text-white">{group.carrier}</span>
+                        <span className="rounded-full bg-rose-500/15 text-rose-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-rose-500/30">
+                          {t('No fitting tier')}
                         </span>
-                      )}
-                      {statusPill(match.status)}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        {t('Package exceeds max weight or dimensions for all of this carrier\u2019s services.')}
+                      </p>
+                    </li>
+                  );
+                }
+                return (
+                  <li
+                    key={group.carrier}
+                    className={`rounded-xl border p-3 transition-colors ${
+                      rec.status === 'ok'
+                        ? 'border-emerald-500/30 bg-emerald-500/5'
+                        : 'border-amber-500/30 bg-amber-500/5'
+                    }`}
+                  >
+                    {/* Recommendation headline */}
+                    <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-white">{group.carrier}</span>
+                          <span className="rounded-md bg-gradient-to-r from-blue-500 to-violet-500 text-white px-2 py-0.5 text-[10px] font-bold shadow">
+                            {rec.service.service}
+                          </span>
+                          <span className="text-[10px] text-slate-500">{rec.service.region}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 mt-1">
+                          {t('Up to {{kg}} kg', { kg: rec.service.maxWeightKg })}
+                          {rec.service.maxDim &&
+                            ` · ${rec.service.maxDim.l}×${rec.service.maxDim.w}×${rec.service.maxDim.h} cm`}
+                          {rec.service.maxLengthCm && !rec.service.maxDim &&
+                            ` · ${t('max length')} ${rec.service.maxLengthCm} cm`}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        {rec.service.priceFromEur != null && (
+                          <span className="text-sm font-mono font-bold text-white">
+                            ab {rec.service.priceFromEur.toFixed(2).replace('.', ',')} €
+                          </span>
+                        )}
+                        {statusPill(rec.status)}
+                      </div>
                     </div>
-                  </div>
-                  {match.violations.length > 0 && (
-                    <ul className="mt-1.5 space-y-0.5">
-                      {match.violations.slice(0, 3).map((v, idx) => (
-                        <li key={idx} className="flex items-start gap-1.5 text-[11px] text-slate-300">
-                          {violationIcon(v.level)}
-                          <span className="leading-snug">{v.message}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {match.girthCm != null && match.service.girth && (
-                    <div className="mt-1 text-[10px] text-slate-500 font-mono">
-                      {t('Girth')}: {match.girthCm} / {match.service.girth.maxCm} cm
-                      {match.volumetricWeightKg != null &&
-                        ` · ${t('Volumetric')}: ${match.volumetricWeightKg.toFixed(1)} kg`}
-                    </div>
-                  )}
-                </li>
-              ))}
+
+                    {/* Tier ladder — all services from this carrier */}
+                    {group.tiers.length > 1 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {group.tiers.map((tier) => {
+                          const isRec = tier.service.id === rec.service.id;
+                          const dot =
+                            tier.status === 'ok' ? '✓' : tier.status === 'warning' ? '!' : '✗';
+                          return (
+                            <button
+                              key={tier.service.id}
+                              type="button"
+                              onClick={() => onPickService?.(tier.service.id)}
+                              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                                tier.status === 'blocked'
+                                  ? 'bg-slate-800 text-slate-500 line-through cursor-not-allowed'
+                                  : isRec
+                                  ? 'bg-emerald-500/30 text-emerald-100 ring-1 ring-emerald-400'
+                                  : tier.status === 'warning'
+                                  ? 'bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/30 hover:bg-amber-500/25'
+                                  : 'bg-white/5 text-slate-300 ring-1 ring-white/10 hover:bg-white/10'
+                              }`}
+                              title={`${tier.service.service} — bis ${tier.service.maxWeightKg} kg${tier.service.priceFromEur ? `, ab ${tier.service.priceFromEur.toFixed(2)} €` : ''}`}
+                              disabled={tier.status === 'blocked'}
+                            >
+                              <span className="opacity-60">{dot}</span>
+                              {tier.service.service}
+                              <span className="opacity-60">≤{tier.service.maxWeightKg}kg</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* First violation hint, if warning */}
+                    {rec.violations.filter((v) => v.level !== 'info').slice(0, 2).map((v, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-1.5 text-[11px] text-slate-300 mt-1"
+                      >
+                        {violationIcon(v.level)}
+                        <span className="leading-snug">{v.message}</span>
+                      </div>
+                    ))}
+
+                    {/* Girth + volumetric footer */}
+                    {(rec.girthCm != null || rec.volumetricWeightKg != null) && (
+                      <div className="mt-1.5 text-[10px] text-slate-500 font-mono">
+                        {rec.girthCm != null &&
+                          rec.service.girth &&
+                          `${t('Girth')} ${rec.girthCm}/${rec.service.girth.maxCm} cm`}
+                        {rec.girthCm != null && rec.volumetricWeightKg != null && ' · '}
+                        {rec.volumetricWeightKg != null &&
+                          `${t('Volumetric')} ${rec.volumetricWeightKg.toFixed(1)} kg`}
+                      </div>
+                    )}
+
+                    {/* Pick action */}
+                    {onPickService && (
+                      <button
+                        type="button"
+                        onClick={() => onPickService(rec.service.id)}
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200 font-semibold transition-colors"
+                      >
+                        {t('Use this tier')} →
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
-            {carrierMatches.length > 6 && (
+            {carrierGroups.length > 6 && (
               <button
                 type="button"
                 onClick={() => setShowAllServices((v) => !v)}
@@ -375,7 +489,7 @@ export function SmartPackingCard({
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="h-3 w-3" /> {t('Show all {{n}} services', { n: carrierMatches.length })}
+                    <ChevronDown className="h-3 w-3" /> {t('Show all {{n}} carriers', { n: carrierGroups.length })}
                   </>
                 )}
               </button>
