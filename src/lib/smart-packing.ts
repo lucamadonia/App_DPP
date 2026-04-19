@@ -1,16 +1,34 @@
 /**
  * Smart Packing — Carrier & Package Rule Engine
  *
- * Encodes packaging rules from the Kurier_Verpackungsregeln_Europa.xlsx:
+ * Encodes packaging rules from the Kurier_Verpackungsregeln_Europa_v2.xlsx:
  *   - 23 carriers with multiple services each
  *   - Per-carrier girth formulas (L+2B+2H, longest+2(B+H), sum-of-3, etc.)
  *   - Minimum label dimensions, maximum weight/length, oversize (Sperrgut)
  *   - Volumetric weight divisors
  *   - Forbidden / restricted contents per carrier
  *   - EU PPWR 2026/2028 compliance timeline
+ *   - Country zones, VAT, Drittland detection, customs forms (CN22/CN23/EUR.1)
+ *   - Price matrices (2/5/10/20/30 kg across ~60 routes)
+ *   - Transit times, surcharges, Incoterm recommendations
  *
  * Pure functions — no API calls, no React imports.
  */
+
+import {
+  COUNTRY_ZONES,
+  ROUTE_PRICES,
+  SURCHARGES,
+  TRANSIT_TIMES_FROM_DE,
+  INCOTERMS,
+  type CountryZone,
+  type SurchargeRule,
+  type Incoterm,
+  type CarrierPriceKey,
+} from './smart-packing-data';
+
+export { COUNTRY_ZONES, SURCHARGES, INCOTERMS };
+export type { CountryZone, SurchargeRule, Incoterm };
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -882,3 +900,258 @@ export function recommendCarton(items: ContentItem[]): CartonRecommendation[] {
 
   return recs;
 }
+
+// ─── Country Zone Lookup ───────────────────────────────────────
+
+export function getCountryZone(iso2?: string | null): CountryZone | null {
+  if (!iso2) return null;
+  return COUNTRY_ZONES[iso2.toUpperCase()] ?? null;
+}
+
+// ─── Price Estimation ──────────────────────────────────────────
+
+export interface PriceEstimate {
+  carrier: string;
+  currency: 'EUR' | 'CHF' | 'GBP';
+  priceFrom: number;
+  priceTo?: number;
+  weightTierUsed: string;
+  note?: string;
+}
+
+/** Linearly interpolate between the 2/5/10/20/30 kg price tiers. */
+function interpolateTier(
+  tiers: { '2'?: number; '5'?: number; '10'?: number; '20'?: number; '30'?: number },
+  weightKg: number,
+): { value: number; tierLabel: string } | null {
+  const points: Array<{ w: number; p: number }> = [];
+  for (const k of ['2', '5', '10', '20', '30'] as const) {
+    const v = tiers[k];
+    if (v != null) points.push({ w: Number(k), p: v });
+  }
+  if (points.length === 0) return null;
+  if (weightKg <= points[0].w) return { value: points[0].p, tierLabel: `bis ${points[0].w} kg` };
+  if (weightKg >= points[points.length - 1].w) {
+    return { value: points[points.length - 1].p, tierLabel: `${points[points.length - 1].w} kg+` };
+  }
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (weightKg >= a.w && weightKg <= b.w) {
+      const ratio = (weightKg - a.w) / (b.w - a.w);
+      return { value: a.p + ratio * (b.p - a.p), tierLabel: `~${weightKg.toFixed(1)} kg` };
+    }
+  }
+  return { value: points[points.length - 1].p, tierLabel: `${points[points.length - 1].w} kg` };
+}
+
+export function estimatePrices(
+  originIso2: string | null | undefined,
+  destIso2: string | null | undefined,
+  weightKg: number,
+): PriceEstimate[] {
+  if (!originIso2 || !destIso2 || weightKg <= 0) return [];
+  const key = `${originIso2.toUpperCase()}-${destIso2.toUpperCase()}`;
+  const route = ROUTE_PRICES[key];
+  if (!route) return [];
+
+  const results: PriceEstimate[] = [];
+  for (const [carrier, tiers] of Object.entries(route.prices)) {
+    if (!tiers) continue;
+    const est = interpolateTier(tiers, weightKg);
+    if (!est) continue;
+    results.push({
+      carrier: carrier as CarrierPriceKey,
+      currency: route.currency,
+      priceFrom: Math.round(est.value * 100) / 100,
+      weightTierUsed: est.tierLabel,
+      note: route.note,
+    });
+  }
+  return results.sort((a, b) => a.priceFrom - b.priceFrom);
+}
+
+// ─── Customs Form Recommendation ───────────────────────────────
+
+export type CustomsForm = 'CN22' | 'CN23' | 'EUR.1' | 'Commercial Invoice' | 'Proforma Invoice';
+
+export interface CustomsRequirement {
+  needed: boolean;
+  forms: CustomsForm[];
+  reason: string;
+  hints: string[];
+}
+
+export function requiredCustomsForms(
+  originIso2: string | null | undefined,
+  destIso2: string | null | undefined,
+  valueEur: number,
+  weightKg: number,
+  isCommercial: boolean = true,
+): CustomsRequirement {
+  const origin = getCountryZone(originIso2);
+  const dest = getCountryZone(destIso2);
+
+  // If destination is inside EU and origin is inside EU → no customs forms needed
+  if (origin?.zone === 'eu' && dest?.zone === 'eu') {
+    return {
+      needed: false,
+      forms: [],
+      reason: 'Intra-EU: freier Warenverkehr, keine Zollformulare.',
+      hints: [
+        'Bei B2C > 10.000 € EU-Fernverkauf: OSS-Registrierung (One Stop Shop).',
+        'Bei B2B: USt-IdNr. des Empfängers prüfen → Reverse Charge, keine MwSt. berechnen.',
+      ],
+    };
+  }
+
+  // Third-country destination → forms required
+  if (dest?.zone === 'third_country' || dest?.zone === 'special_zone') {
+    const forms: CustomsForm[] = [];
+    if (weightKg <= 2 && valueEur < 368) {
+      forms.push('CN22');
+    } else {
+      forms.push('CN23');
+    }
+    forms.push(isCommercial ? 'Commercial Invoice' : 'Proforma Invoice');
+
+    // EU → CH or EU → UK with EU origin: EUR.1 / origin declaration for preferential tariff
+    const eurPreferential = ['CH', 'LI', 'GB', 'NO'];
+    if (origin?.zone === 'eu' && eurPreferential.includes(dest.iso2)) {
+      if (valueEur > 10300) {
+        forms.push('EUR.1');
+      }
+    }
+
+    const hints = [
+      `Empfänger-Land ${dest.nameDe} ist Drittland — volle Zollabwicklung nötig.`,
+      dest.iso2 === 'CH' && valueEur < 62
+        ? 'Warenwert < CHF 62 → ggf. MwSt.-frei (Kleinsendung).'
+        : '',
+      dest.iso2 === 'GB' && valueEur < 135
+        ? 'Warenwert < £135 → Verkäufer führt UK-VAT an HMRC ab.'
+        : '',
+      dest.iso2 === 'NO' && valueEur < 30
+        ? 'Warenwert < NOK 350 → vereinfachter Versand ohne VOEC.'
+        : '',
+      valueEur > 10300
+        ? 'Über €10.300: Offizielle EUR.1 Warenverkehrsbescheinigung statt Ursprungserklärung.'
+        : '',
+      'Drittland: Versender braucht EORI-Nummer.',
+    ].filter(Boolean);
+
+    return {
+      needed: true,
+      forms,
+      reason: `Versand ${origin?.iso2 ?? '?'} → ${dest.iso2}: ${dest.nameDe} ist Drittland.`,
+      hints,
+    };
+  }
+
+  return {
+    needed: false,
+    forms: [],
+    reason: 'Zielland unbekannt oder Sonderfall — manuell prüfen.',
+    hints: [],
+  };
+}
+
+// ─── Incoterm Recommendation ───────────────────────────────────
+
+export function recommendedIncoterms(
+  destIso2: string | null | undefined,
+  customerType: 'b2c' | 'b2b',
+  valueEur: number,
+): Incoterm[] {
+  const dest = getCountryZone(destIso2);
+  const tags: Array<'b2c' | 'b2b' | 'third_country' | 'high_value'> = [customerType];
+  if (dest?.zone === 'third_country') tags.push('third_country');
+  if (valueEur > 1000) tags.push('high_value');
+
+  return INCOTERMS.filter((inc) => inc.recommended?.some((t) => tags.includes(t))).slice(0, 3);
+}
+
+// ─── Transit Time Lookup ───────────────────────────────────────
+
+export interface TransitEstimate {
+  carrier: string;
+  days: string;
+  note: string;
+}
+
+export function transitTimeEstimate(
+  originIso2: string | null | undefined,
+  destIso2: string | null | undefined,
+): TransitEstimate[] {
+  if ((originIso2 ?? 'DE').toUpperCase() !== 'DE') return []; // only DE origin data
+  if (!destIso2) return [];
+  const row = TRANSIT_TIMES_FROM_DE.find((r) => r.destIso2 === destIso2.toUpperCase());
+  if (!row) return [];
+  return [
+    { carrier: 'DHL Paket', days: row.dhlDays, note: row.note },
+    { carrier: 'DPD', days: row.dpdDays, note: row.note },
+    { carrier: 'GLS', days: row.glsDays, note: row.note },
+    { carrier: 'UPS Standard', days: row.upsDays, note: row.note },
+  ];
+}
+
+// ─── Surcharge Calculator ──────────────────────────────────────
+
+export interface SurchargeTrigger {
+  oversize: boolean;
+  heavyOver25kg: boolean;
+  thirdCountry: boolean;
+  peakSeason: boolean;
+  islandPostcode: boolean;
+  ageCheck: boolean;
+  saturdayDelivery: boolean;
+  codRequested: boolean;
+}
+
+export interface TriggeredSurcharge {
+  rule: SurchargeRule;
+  applies: boolean;
+}
+
+export function applicableSurcharges(triggers: Partial<SurchargeTrigger>): TriggeredSurcharge[] {
+  const results: TriggeredSurcharge[] = [];
+  for (const rule of SURCHARGES) {
+    let applies = false;
+    switch (rule.condition) {
+      case 'dims_exceed_standard':
+        applies = triggers.oversize === true;
+        break;
+      case 'weight_over_25':
+        applies = triggers.heavyOver25kg === true;
+        break;
+      case 'third_country':
+        applies = triggers.thirdCountry === true;
+        break;
+      case 'nov_to_jan':
+        applies = triggers.peakSeason === true;
+        break;
+      case 'island_postcode':
+        applies = triggers.islandPostcode === true;
+        break;
+      case 'always_percent':
+        applies = true; // fuel always applies
+        break;
+      default:
+        // Optional services — only show if explicitly requested
+        if (rule.id === 'age_check') applies = triggers.ageCheck === true;
+        else if (rule.id === 'saturday') applies = triggers.saturdayDelivery === true;
+        else if (rule.id === 'cod') applies = triggers.codRequested === true;
+        break;
+    }
+    if (applies) results.push({ rule, applies });
+  }
+  return results;
+}
+
+// ─── Country Hints ─────────────────────────────────────────────
+
+export function countryHints(destIso2?: string | null): string[] {
+  const zone = getCountryZone(destIso2);
+  return zone?.hints ?? [];
+}
+

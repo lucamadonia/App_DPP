@@ -18,12 +18,20 @@ import {
   matchCarrierServices,
   recommendCarton,
   upcomingPpwrDeadlines,
+  getCountryZone,
+  estimatePrices,
+  requiredCustomsForms,
+  recommendedIncoterms,
+  transitTimeEstimate,
+  applicableSurcharges,
+  countryHints,
   type PackageInput,
   type CarrierMatch,
   type ContentItem,
   type CartonRecommendation,
   type ContentCategory,
 } from '@/lib/smart-packing';
+import { FileText, Globe, Coins, Clock, Flag, Percent } from 'lucide-react';
 
 interface SmartPackingCardProps {
   /** Items to be packed together. */
@@ -32,10 +40,16 @@ interface SmartPackingCardProps {
   selectedCarton?: { lengthCm: number; widthCm: number; heightCm: number };
   /** Total package weight in kg (including carton & padding). */
   packageWeightKg: number;
-  /** Optional ISO-2 destination country — filters carriers. */
+  /** Optional ISO-2 origin country (defaults to 'DE'). */
+  originCountry?: string;
+  /** Optional ISO-2 destination country — drives zones, prices, customs, hints. */
   destinationCountry?: string;
   /** Optional content category flags (Li-Ion, fragrance, etc.). */
   contents?: ContentCategory[];
+  /** Optional declared goods value for customs-form thresholds. */
+  declaredValueEur?: number;
+  /** Whether shipment is B2C or B2B (drives Incoterm recommendation). */
+  customerType?: 'b2c' | 'b2b';
   /** Optional user-selected carton ID to highlight. */
   onPickCarton?: (cartonId: string) => void;
   /** Optional user-selected carrier service ID. */
@@ -74,8 +88,11 @@ export function SmartPackingCard({
   items,
   selectedCarton,
   packageWeightKg,
+  originCountry = 'DE',
   destinationCountry,
   contents = [],
+  declaredValueEur = 0,
+  customerType = 'b2c',
   onPickCarton,
   onPickService,
 }: SmartPackingCardProps) {
@@ -124,6 +141,38 @@ export function SmartPackingCard({
   const visibleMatches = showAllServices ? carrierMatches : carrierMatches.slice(0, 6);
 
   const ppwr = upcomingPpwrDeadlines();
+
+  // Zone + price + customs + transit + hints — only when destination is known
+  const destZone = getCountryZone(destinationCountry);
+  const priceEstimates = useMemo(
+    () => (packageWeightKg > 0 ? estimatePrices(originCountry, destinationCountry, packageWeightKg) : []),
+    [originCountry, destinationCountry, packageWeightKg],
+  );
+  const customs = useMemo(
+    () => requiredCustomsForms(originCountry, destinationCountry, declaredValueEur, packageWeightKg, customerType === 'b2b'),
+    [originCountry, destinationCountry, declaredValueEur, packageWeightKg, customerType],
+  );
+  const incoterms = useMemo(
+    () => recommendedIncoterms(destinationCountry, customerType, declaredValueEur),
+    [destinationCountry, customerType, declaredValueEur],
+  );
+  const transits = useMemo(
+    () => transitTimeEstimate(originCountry, destinationCountry),
+    [originCountry, destinationCountry],
+  );
+  const hints = useMemo(() => countryHints(destinationCountry), [destinationCountry]);
+  const surcharges = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    return applicableSurcharges({
+      oversize: pkgInput
+        ? pkgInput.lengthCm > 120 || pkgInput.widthCm > 60 || pkgInput.heightCm > 60
+        : false,
+      heavyOver25kg: packageWeightKg > 25,
+      thirdCountry: destZone?.zone === 'third_country',
+      peakSeason: month >= 11 || month === 1,
+    });
+  }, [pkgInput, packageWeightKg, destZone]);
 
   if (items.length === 0) {
     return (
@@ -331,6 +380,208 @@ export function SmartPackingCard({
                 )}
               </button>
             )}
+          </section>
+        )}
+
+        {/* Destination zone banner */}
+        {destZone && (
+          <section
+            className={`rounded-xl border p-3 ${
+              destZone.zone === 'third_country'
+                ? 'border-amber-500/30 bg-amber-500/10'
+                : destZone.zone === 'special_zone'
+                ? 'border-orange-500/30 bg-orange-500/10'
+                : 'border-emerald-500/20 bg-emerald-500/5'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <Globe className={`h-3.5 w-3.5 ${destZone.zone === 'third_country' ? 'text-amber-400' : 'text-emerald-400'}`} />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-white">
+                {destZone.nameDe} ({destZone.iso2})
+              </h3>
+              <span className={`ml-auto text-[10px] font-bold uppercase ${destZone.zone === 'third_country' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                {destZone.zone === 'third_country'
+                  ? t('Third country')
+                  : destZone.zone === 'eea_non_eu'
+                  ? 'EEA'
+                  : 'EU'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              {t('VAT')}: {destZone.vatStandardPct}%
+              {destZone.vatReducedPct != null ? ` / ${destZone.vatReducedPct}%` : ''} ·{' '}
+              {t('Currency')}: {destZone.currency}
+              {destZone.dutiesRequired ? ` · ${t('Duties required')}` : ''}
+            </p>
+            {hints.length > 0 && (
+              <ul className="mt-2 space-y-0.5">
+                {hints.map((h, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-snug">
+                    <span className="flex-shrink-0 mt-0.5 text-amber-400">•</span>
+                    <span>{h}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* Price estimates */}
+        {priceEstimates.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Coins className="h-3.5 w-3.5 text-emerald-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t('Price estimate')}
+              </h3>
+              <span className="ml-auto text-[10px] text-slate-500 italic">
+                ~{packageWeightKg.toFixed(1)} kg {originCountry} → {destinationCountry}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {priceEstimates.slice(0, 6).map((p, i) => (
+                <div
+                  key={p.carrier}
+                  className={`rounded-lg border p-2 ${
+                    i === 0
+                      ? 'border-emerald-500/40 bg-emerald-500/10'
+                      : 'border-white/10 bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-semibold text-white truncate">{p.carrier}</span>
+                    {i === 0 && (
+                      <span className="text-[8px] font-bold text-emerald-300">★</span>
+                    )}
+                  </div>
+                  <div className="text-sm font-mono font-semibold text-white mt-0.5">
+                    {p.currency === 'CHF' ? 'CHF ' : p.currency === 'GBP' ? '£' : '€'}
+                    {p.priceFrom.toFixed(2).replace('.', ',')}
+                  </div>
+                  <div className="text-[9px] text-slate-500">{p.weightTierUsed}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500 italic mt-2">
+              {t('Prices exclude customs, duties, fuel surcharge, island/peak. ±15–25% accuracy.')}
+            </p>
+          </section>
+        )}
+
+        {/* Customs forms */}
+        {customs.needed && (
+          <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <FileText className="h-3.5 w-3.5 text-amber-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                {t('Customs forms required')}
+              </h3>
+            </div>
+            <p className="text-[11px] text-slate-300 mb-2">{customs.reason}</p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {customs.forms.map((f) => (
+                <span
+                  key={f}
+                  className="inline-flex items-center gap-1 rounded-md bg-amber-500/20 text-amber-200 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-500/40"
+                >
+                  <FileText className="h-3 w-3" />
+                  {f}
+                </span>
+              ))}
+            </div>
+            {customs.hints.length > 0 && (
+              <ul className="space-y-0.5 mt-2">
+                {customs.hints.map((h, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-snug">
+                    <span className="flex-shrink-0 mt-0.5 text-amber-400">•</span>
+                    <span>{h}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* Incoterms recommendation */}
+        {incoterms.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Flag className="h-3.5 w-3.5 text-violet-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t('Recommended Incoterms')}
+              </h3>
+            </div>
+            <div className="space-y-1.5">
+              {incoterms.map((inc) => (
+                <div
+                  key={inc.code}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="rounded bg-violet-500/20 text-violet-200 px-2 py-0.5 text-[10px] font-bold ring-1 ring-violet-500/40">
+                      {inc.code}
+                    </span>
+                    <span className="text-xs font-semibold text-white">{inc.labelDe}</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-400 leading-snug">{inc.typicalUse}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Transit time */}
+        {transits.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-3.5 w-3.5 text-cyan-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t('Transit time estimate')}
+              </h3>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {transits.map((t2) => (
+                <div
+                  key={t2.carrier}
+                  className="rounded-lg border border-white/10 bg-white/5 p-2"
+                >
+                  <div className="text-[10px] text-slate-400 truncate">{t2.carrier}</div>
+                  <div className="text-sm font-semibold text-white">{t2.days} {t('days')}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Surcharges */}
+        {surcharges.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Percent className="h-3.5 w-3.5 text-rose-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {t('Applicable surcharges')}
+              </h3>
+            </div>
+            <ul className="space-y-1">
+              {surcharges.map(({ rule }) => (
+                <li
+                  key={rule.id}
+                  className="flex items-start gap-2 rounded-lg border border-rose-500/20 bg-rose-500/5 px-2 py-1.5"
+                >
+                  <AlertTriangle className="h-3 w-3 text-rose-400 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold text-white">{rule.labelDe}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{rule.note}</div>
+                  </div>
+                  <div className="text-[10px] text-rose-300 font-mono text-right flex-shrink-0">
+                    {Object.entries(rule.amounts)
+                      .slice(0, 3)
+                      .map(([c, v]) => `${c}: ${typeof v === 'number' ? `€${v}` : v}`)
+                      .join(' · ')}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

@@ -495,6 +495,9 @@ export function CreateShipmentPage() {
               }, [])}
               packageWeightKg={weightGrams ? Number(weightGrams) / 1000 : 0}
               destinationCountry={shippingCountry}
+              originCountry="DE"
+              customerType={recipientType === 'customer' ? 'b2c' : 'b2b'}
+              declaredValueEur={shippingCost ? Number(shippingCost) : 0}
               onPickService={(id) => {
                 const match = id.split('_')[0];
                 const opt = CARRIER_OPTIONS.find((o) => o.toLowerCase().includes(match));
