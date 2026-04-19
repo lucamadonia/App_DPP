@@ -149,6 +149,12 @@ export interface ProductListItem {
   createdAt?: string;
   productType?: 'single' | 'set';
   componentCount?: number;
+  // Physical dimensions — needed by SmartPackingCard / warehouse flows.
+  productHeightCm?: number;
+  productWidthCm?: number;
+  productDepthCm?: number;
+  grossWeight?: number; // kg
+  netWeight?: number;   // kg
 }
 
 /**
@@ -194,6 +200,11 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
     createdAt: p.created_at,
     productType: p.product_type || 'single',
     componentCount: Array.isArray(p.product_components) ? p.product_components.length : 0,
+    productHeightCm: p.product_height_cm != null ? Number(p.product_height_cm) : undefined,
+    productWidthCm: p.product_width_cm != null ? Number(p.product_width_cm) : undefined,
+    productDepthCm: p.product_depth_cm != null ? Number(p.product_depth_cm) : undefined,
+    grossWeight: p.gross_weight != null ? Number(p.gross_weight) : undefined,
+    netWeight: p.net_weight != null ? Number(p.net_weight) : undefined,
   }));
 }
 

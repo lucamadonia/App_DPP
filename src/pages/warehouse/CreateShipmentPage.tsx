@@ -18,6 +18,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { WarehouseStepIndicator } from '@/components/warehouse/WarehouseStepIndicator';
 import { WarehouseStepTransition } from '@/components/warehouse/WarehouseStepTransition';
 import { WarehouseSuccessAnimation } from '@/components/warehouse/WarehouseSuccessAnimation';
+import { SmartPackingCard } from '@/components/warehouse/shipments/SmartPackingCard';
+import type { ContentItem } from '@/lib/smart-packing';
 import { getProducts } from '@/services/supabase/products';
 import { getBatches } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
@@ -109,7 +111,15 @@ export function CreateShipmentPage() {
 
   // Step 2: Items
   const [items, setItems] = useState<ItemRow[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [products, setProducts] = useState<Array<{
+    id: string;
+    name: string;
+    productHeightCm?: number;
+    productWidthCm?: number;
+    productDepthCm?: number;
+    grossWeight?: number;
+    netWeight?: number;
+  }>>([]);
   const [locations, setLocations] = useState<WhLocation[]>([]);
 
   // Step 3: Shipping
@@ -127,7 +137,15 @@ export function CreateShipmentPage() {
   useEffect(() => {
     (async () => {
       const [p, l, c] = await Promise.all([getProducts(), getActiveLocations(), getCountries()]);
-      setProducts(p.map((pr: { id: string; name: string }) => ({ id: pr.id, name: pr.name })));
+      setProducts(p.map((pr) => ({
+        id: pr.id,
+        name: pr.name,
+        productHeightCm: pr.productHeightCm,
+        productWidthCm: pr.productWidthCm,
+        productDepthCm: pr.productDepthCm,
+        grossWeight: pr.grossWeight,
+        netWeight: pr.netWeight,
+      })));
       setLocations(l);
       setCountries(c);
     })();
@@ -458,6 +476,32 @@ export function CreateShipmentPage() {
       {/* Step 2: Shipping — Collapsible Sections */}
       {step === 2 && (
         <WarehouseStepTransition direction={direction} stepKey={step}>
+          {/* Smart Packing Assistant — recommends carton + carriers based on items + weight */}
+          <div className="mb-4">
+            <SmartPackingCard
+              items={items.reduce<ContentItem[]>((acc, row) => {
+                const prod = products.find((p) => p.id === row.productId);
+                if (!prod || !prod.productHeightCm || !prod.productWidthCm || !prod.productDepthCm) {
+                  return acc;
+                }
+                acc.push({
+                  lengthCm: prod.productDepthCm,
+                  widthCm: prod.productWidthCm,
+                  heightCm: prod.productHeightCm,
+                  weightKg: prod.grossWeight ?? prod.netWeight ?? 0,
+                  quantity: row.quantity,
+                });
+                return acc;
+              }, [])}
+              packageWeightKg={weightGrams ? Number(weightGrams) / 1000 : 0}
+              destinationCountry={shippingCountry}
+              onPickService={(id) => {
+                const match = id.split('_')[0];
+                const opt = CARRIER_OPTIONS.find((o) => o.toLowerCase().includes(match));
+                if (opt) setCarrier(opt);
+              }}
+            />
+          </div>
           <Card>
             <CardHeader className="px-4 sm:px-6"><CardTitle className="text-base sm:text-lg flex items-center gap-2"><Truck className="h-4 w-4 sm:h-5 sm:w-5" /> {t('Shipping')}</CardTitle></CardHeader>
             <CardContent className="space-y-3 px-4 sm:px-6">
