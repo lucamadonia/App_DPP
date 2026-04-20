@@ -79,6 +79,51 @@ const PRIORITY_PILLS: { value: 'low' | 'normal' | 'high' | 'urgent'; label: stri
   { value: 'urgent', label: 'urgent', ringColor: 'ring-rose-400/60', textColor: 'text-rose-300' },
 ];
 
+/**
+ * Reusable section card — defined at module scope so React doesn't remount
+ * the subtree on every parent render. Nesting it inside the parent used to
+ * cause inputs (e.g. the recipient search) to lose focus after each keystroke.
+ */
+function Section({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+  gradient = 'from-blue-500 to-violet-500',
+}: {
+  icon: typeof User;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  gradient?: string;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      initial={reduced ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' as const }}
+      className="relative"
+    >
+      <div className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${gradient} opacity-30 blur-sm pointer-events-none`} />
+      <Card className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-900/5">
+        <div className="flex items-center gap-3 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-lg shadow-blue-500/20 flex-shrink-0`}>
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{title}</h2>
+            {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
+          </div>
+        </div>
+        <CardContent className="px-4 sm:px-6 py-4 sm:py-5 space-y-4">
+          {children}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Page Component                                                             */
 /* -------------------------------------------------------------------------- */
@@ -415,34 +460,6 @@ export function CreateShipmentPage() {
       />
     );
   }
-
-  /* ---- Reusable motion helpers ---- */
-  const fadeInUp = reducedMotion
-    ? {}
-    : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.4, ease: 'easeOut' as const } };
-
-  /* ---- Reusable section wrapper ---- */
-  const Section = ({ icon: Icon, title, subtitle, children, gradient }: {
-    icon: typeof User; title: string; subtitle?: string; children: React.ReactNode; gradient?: string;
-  }) => (
-    <motion.div {...fadeInUp} className="relative">
-      <div className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${gradient || 'from-blue-500/30 via-violet-500/20 to-fuchsia-500/30'} opacity-40 blur-sm pointer-events-none`} />
-      <Card className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-900/5">
-        <div className="flex items-center gap-3 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient || 'from-blue-500 to-violet-500'} shadow-lg shadow-blue-500/20 flex-shrink-0`}>
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{title}</h2>
-            {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
-          </div>
-        </div>
-        <CardContent className="px-4 sm:px-6 py-4 sm:py-5 space-y-4">
-          {children}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
 
   return (
     <div className="relative mx-auto max-w-4xl pb-28 sm:pb-12">
@@ -1149,7 +1166,9 @@ export function CreateShipmentPage() {
         <>
           {/* Hero card: all green, this is the moment of truth */}
           <motion.div
-            {...fadeInUp}
+            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' as const }}
             className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-blue-500 to-violet-500 p-6 sm:p-8 text-white shadow-2xl shadow-blue-500/20"
           >
             <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
