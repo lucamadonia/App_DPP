@@ -1027,17 +1027,65 @@ async function handleCancelReturnLabel(supabase: any, tenantId: string, params?:
 
 function mapCountryToISO3(country: string): string {
   if (!country) return 'DEU';
-  // Already ISO-3
-  if (country.length === 3) return country.toUpperCase();
-  // Common ISO-2 to ISO-3 mappings
-  const map: Record<string, string> = {
+  const trimmed = country.trim();
+  const upper = trimmed.toUpperCase();
+
+  // Already ISO-3 (3 alpha chars)
+  if (/^[A-Z]{3}$/.test(upper)) return upper;
+
+  // ISO-2 → ISO-3 (most common input: 'DE', 'AT', ...)
+  const iso2: Record<string, string> = {
     DE: 'DEU', AT: 'AUT', CH: 'CHE', FR: 'FRA', IT: 'ITA',
     ES: 'ESP', NL: 'NLD', BE: 'BEL', PL: 'POL', CZ: 'CZE',
-    GB: 'GBR', US: 'USA', SE: 'SWE', DK: 'DNK', NO: 'NOR',
-    FI: 'FIN', PT: 'PRT', IE: 'IRL', LU: 'LUX', HU: 'HUN',
-    RO: 'ROU', BG: 'BGR', HR: 'HRV', SK: 'SVK', SI: 'SVN',
-    LT: 'LTU', LV: 'LVA', EE: 'EST', GR: 'GRC', MT: 'MLT',
-    CY: 'CYP',
+    GB: 'GBR', UK: 'GBR', US: 'USA', SE: 'SWE', DK: 'DNK',
+    NO: 'NOR', FI: 'FIN', PT: 'PRT', IE: 'IRL', LU: 'LUX',
+    HU: 'HUN', RO: 'ROU', BG: 'BGR', HR: 'HRV', SK: 'SVK',
+    SI: 'SVN', LT: 'LTU', LV: 'LVA', EE: 'EST', GR: 'GRC',
+    MT: 'MLT', CY: 'CYP', LI: 'LIE', IS: 'ISL', CA: 'CAN',
+    AU: 'AUS', NZ: 'NZL', JP: 'JPN',
   };
-  return map[country.toUpperCase()] || country.toUpperCase();
+  if (iso2[upper]) return iso2[upper];
+
+  // Country NAMES (German + English) → ISO-3. Guards against poorly
+  // entered recipient data like "DEUTSCHLAND" or "Germany".
+  const names: Record<string, string> = {
+    DEUTSCHLAND: 'DEU', GERMANY: 'DEU',
+    ÖSTERREICH: 'AUT', OESTERREICH: 'AUT', AUSTRIA: 'AUT',
+    SCHWEIZ: 'CHE', SWITZERLAND: 'CHE', SUISSE: 'CHE',
+    FRANKREICH: 'FRA', FRANCE: 'FRA',
+    ITALIEN: 'ITA', ITALY: 'ITA', ITALIA: 'ITA',
+    SPANIEN: 'ESP', SPAIN: 'ESP', ESPAÑA: 'ESP',
+    NIEDERLANDE: 'NLD', NETHERLANDS: 'NLD',
+    BELGIEN: 'BEL', BELGIUM: 'BEL',
+    POLEN: 'POL', POLAND: 'POL',
+    TSCHECHIEN: 'CZE', 'CZECH REPUBLIC': 'CZE', CZECHIA: 'CZE',
+    GROSSBRITANNIEN: 'GBR', 'GROßBRITANNIEN': 'GBR',
+    'UNITED KINGDOM': 'GBR', 'VEREINIGTES KÖNIGREICH': 'GBR',
+    'VEREINIGTE STAATEN': 'USA', 'UNITED STATES': 'USA', USA: 'USA',
+    SCHWEDEN: 'SWE', SWEDEN: 'SWE',
+    DÄNEMARK: 'DNK', DAENEMARK: 'DNK', DENMARK: 'DNK',
+    NORWEGEN: 'NOR', NORWAY: 'NOR',
+    FINNLAND: 'FIN', FINLAND: 'FIN',
+    PORTUGAL: 'PRT',
+    IRLAND: 'IRL', IRELAND: 'IRL',
+    LUXEMBURG: 'LUX', LUXEMBOURG: 'LUX',
+    UNGARN: 'HUN', HUNGARY: 'HUN',
+    RUMÄNIEN: 'ROU', RUMAENIEN: 'ROU', ROMANIA: 'ROU',
+    BULGARIEN: 'BGR', BULGARIA: 'BGR',
+    KROATIEN: 'HRV', CROATIA: 'HRV',
+    SLOWAKEI: 'SVK', SLOVAKIA: 'SVK',
+    SLOWENIEN: 'SVN', SLOVENIA: 'SVN',
+    GRIECHENLAND: 'GRC', GREECE: 'GRC',
+    LIECHTENSTEIN: 'LIE',
+    ISLAND: 'ISL', ICELAND: 'ISL',
+    KANADA: 'CAN', CANADA: 'CAN',
+    AUSTRALIEN: 'AUS', AUSTRALIA: 'AUS',
+    NEUSEELAND: 'NZL', 'NEW ZEALAND': 'NZL',
+    JAPAN: 'JPN',
+  };
+  if (names[upper]) return names[upper];
+
+  // Last resort: log and default to DEU so the shipment doesn't fail silently.
+  console.warn('[dhl-shipping] mapCountryToISO3: unknown country "%s" — defaulting to DEU', country);
+  return 'DEU';
 }
