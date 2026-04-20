@@ -274,18 +274,37 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
 
   if (shipErr || !shipment) return json({ error: 'Shipment not found' }, 404);
 
-  // 3. Validate
-  if (!shipment.total_weight_grams || shipment.total_weight_grams <= 0) {
+  // 3. Validate. Accept a per-request weight override so the user can tweak
+  //    it right before printing without having to re-open step 3 of the wizard.
+  const weightOverrideRaw = params.weightGramsOverride;
+  const weightOverride =
+    typeof weightOverrideRaw === 'number' && weightOverrideRaw > 0
+      ? weightOverrideRaw
+      : typeof weightOverrideRaw === 'string' && weightOverrideRaw.trim() !== '' && !isNaN(Number(weightOverrideRaw))
+        ? Number(weightOverrideRaw)
+        : null;
+  const effectiveWeightGrams = weightOverride ?? shipment.total_weight_grams;
+  if (!effectiveWeightGrams || effectiveWeightGrams <= 0) {
     return json({ error: 'Weight is required for DHL label creation' }, 400);
   }
   if (!shipment.shipping_street || !shipment.shipping_postal_code || !shipment.shipping_city) {
     return json({ error: 'Complete shipping address is required' }, 400);
   }
 
+  // If the caller passed an override, persist it so the shipment record stays
+  // in sync with the weight the label was actually printed with.
+  if (weightOverride && weightOverride !== shipment.total_weight_grams) {
+    await supabase
+      .from('wh_shipments')
+      .update({ total_weight_grams: weightOverride })
+      .eq('id', shipmentId)
+      .eq('tenant_id', tenantId);
+  }
+
   // 4. Build DHL order request
   const product = (params.product as string) || settings.defaultProduct || 'V01PAK';
   const labelFormat = settings.labelFormat || 'PDF_A4';
-  const weightKg = shipment.total_weight_grams / 1000;
+  const weightKg = effectiveWeightGrams / 1000;
 
   const dhlOrder = {
     profile: 'STANDARD_GRUPPENPROFIL',

@@ -85,14 +85,22 @@ export async function testDHLConnection(): Promise<{ success: boolean; error?: s
 /**
  * Create a DHL shipping label for a shipment.
  * Includes billing gate (Warehouse Professional required).
+ *
+ * @param weightGramsOverride Optional. When set, DHL is billed for this weight
+ *   and the shipment's `total_weight_grams` is updated to match. Use to tweak
+ *   the weight right before printing (e.g. after weighing the packed box).
  */
-export async function createDHLLabel(shipmentId: string, product?: string): Promise<DHLLabelResponse> {
+export async function createDHLLabel(
+  shipmentId: string,
+  product?: string,
+  weightGramsOverride?: number,
+): Promise<DHLLabelResponse> {
   // Client-side billing gate
   const { hasModule } = await import('./billing');
   const hasPro = await hasModule('warehouse_professional') || await hasModule('warehouse_business');
   if (!hasPro) throw new Error('Warehouse Professional or Business module required');
 
-  return await callDHL('create_label', { shipmentId, product });
+  return await callDHL('create_label', { shipmentId, product, weightGramsOverride });
 }
 
 /**
