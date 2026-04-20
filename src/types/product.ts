@@ -185,8 +185,8 @@ export interface BatchListItem {
   productHeightCm?: number;
   productWidthCm?: number;
   productDepthCm?: number;
-  netWeight?: number;   // kg
-  grossWeight?: number; // kg
+  netWeight?: number;   // in Gramm (DB raw)
+  grossWeight?: number; // in Gramm (DB raw)
 }
 
 export interface ProductWithBatches {

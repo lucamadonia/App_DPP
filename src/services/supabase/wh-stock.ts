@@ -39,12 +39,14 @@ function transformStockLevel(row: any): WhStockLevel {
     locationName: row.wh_locations?.name || row.location_name || undefined,
     locationCode: row.wh_locations?.code || undefined,
     // Product dimensions (batch overrides fall through to product master values)
+    // Weights stored in DB as GRAMS — convert to kg here so consumers (AI
+    // prompts, packing assistant) can treat the field name's unit literally.
     productNetWeightKg: row.product_batches?.net_weight != null
-      ? Number(row.product_batches.net_weight)
-      : row.products?.net_weight != null ? Number(row.products.net_weight) : undefined,
+      ? Number(row.product_batches.net_weight) / 1000
+      : row.products?.net_weight != null ? Number(row.products.net_weight) / 1000 : undefined,
     productGrossWeightKg: row.product_batches?.gross_weight != null
-      ? Number(row.product_batches.gross_weight)
-      : row.products?.gross_weight != null ? Number(row.products.gross_weight) : undefined,
+      ? Number(row.product_batches.gross_weight) / 1000
+      : row.products?.gross_weight != null ? Number(row.products.gross_weight) / 1000 : undefined,
     productHeightCm: row.product_batches?.product_height_cm != null
       ? Number(row.product_batches.product_height_cm)
       : row.products?.product_height_cm != null ? Number(row.products.product_height_cm) : undefined,

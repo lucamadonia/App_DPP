@@ -124,7 +124,10 @@ export function CreateShipmentPage() {
 
   /**
    * Resolve each item row to a {dims, weight} bundle. Falls back from product
-   * master → batch override when the product itself has no dimensions/weight set.
+   * master → batch override when the product itself has no dimensions/weight
+   * set. NOTE: products and batches store weight in **GRAMS** (see Product
+   * type comments). We divide by 1000 to convert to kg before handing off to
+   * smart-packing, which works in kg throughout.
    */
   const resolvedItems: ContentItem[] = useMemo(() => {
     return items.reduce<ContentItem[]>((acc, row) => {
@@ -134,12 +137,13 @@ export function CreateShipmentPage() {
       const lengthCm = prod?.productDepthCm ?? batch?.productDepthCm;
       const widthCm = prod?.productWidthCm ?? batch?.productWidthCm;
       const heightCm = prod?.productHeightCm ?? batch?.productHeightCm;
-      const weightKg =
+      const weightGrams =
         prod?.grossWeight ??
         prod?.netWeight ??
         batch?.grossWeight ??
         batch?.netWeight ??
         0;
+      const weightKg = weightGrams / 1000;
       if (!lengthCm || !widthCm || !heightCm) return acc;
       acc.push({
         lengthCm,
