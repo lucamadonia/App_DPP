@@ -463,19 +463,23 @@ async function handleCancelLabel(supabase: any, tenantId: string, params?: Recor
   const settings = await getDHLSettings(supabase, tenantId);
   if (!settings?.apiKey) return json({ error: 'DHL not configured' }, 400);
 
-  // 3. Cancel at DHL
+  // 3. Cancel at DHL.
+  //    DHL Parcel DE v2 uses `DELETE /orders?shipment={num}` — the shipment
+  //    number goes in the QUERY STRING, not the URL path. Pointing at a path
+  //    segment produces a 401 "RF-UndefinedResource" fault.
   const baseUrl = getDHLBaseUrl(settings);
   const headers = getDHLHeaders(settings);
 
-  const resp = await fetch(`${baseUrl}/orders/${dhlShipmentNumber}`, {
+  const resp = await fetch(`${baseUrl}/orders?shipment=${encodeURIComponent(dhlShipmentNumber)}`, {
     method: 'DELETE',
     headers,
   });
 
-  // DHL returns 200 on success, 400 if already cancelled/shipped
+  // DHL returns 200 on success, 400 if already cancelled/shipped.
   if (!resp.ok && resp.status !== 200) {
     const respBody = await resp.text();
     // If already cancelled or shipment not found, we still clean up locally
+    // so the UI doesn't get stuck on a zombie label record.
     if (resp.status !== 404 && resp.status !== 400) {
       return json({ error: `DHL cancellation failed: ${respBody.slice(0, 200)}` }, 502);
     }
@@ -987,7 +991,8 @@ async function handleCancelReturnLabel(supabase: any, tenantId: string, params?:
     const baseUrl = getDHLBaseUrl(settings);
     const headers = getDHLHeaders(settings);
 
-    const resp = await fetch(`${baseUrl}/orders/${dhlShipmentNumber}`, {
+    // Same fix as handleCancelLabel: shipment number goes in the query string.
+    const resp = await fetch(`${baseUrl}/orders?shipment=${encodeURIComponent(dhlShipmentNumber)}`, {
       method: 'DELETE',
       headers,
     });
