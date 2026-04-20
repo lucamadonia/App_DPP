@@ -1171,6 +1171,8 @@
   "Final review": "Finale Prüfung",
   "Ready to ship": "Versandbereit",
   "Creating...": "Wird erstellt …",
+  "{{n}} items without dimensions": "{{n}} Artikel ohne Maße",
+  "Carton and carrier fit calculations use only items with L×W×H set. Their weight still counts. Add dimensions on the product or batch to include them.": "Karton- und Kurier-Berechnungen nutzen nur Artikel mit gesetzten L×B×H-Maßen. Das Gewicht zählt trotzdem. Maße am Produkt oder der Charge ergänzen, um sie einzubeziehen.",
   "No fitting tier": "Kein passender Tarif",
   "Package exceeds max weight or dimensions for all of this carrier’s services.": "Paket übersteigt Max-Gewicht oder -Maße aller Tarife dieses Kuriers.",
   "Up to {{kg}} kg": "bis {{kg}} kg",

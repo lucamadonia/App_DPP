@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
@@ -78,6 +79,95 @@ const PRIORITY_PILLS: { value: 'low' | 'normal' | 'high' | 'urgent'; label: stri
   { value: 'high', label: 'high', ringColor: 'ring-amber-400/60', textColor: 'text-amber-300' },
   { value: 'urgent', label: 'urgent', ringColor: 'ring-rose-400/60', textColor: 'text-rose-300' },
 ];
+
+/**
+ * Recipient search field with portal-rendered dropdown. Rendering the results
+ * list into `document.body` bypasses the parent Card's `overflow-hidden`
+ * (needed there for the gradient border) so the dropdown isn't clipped.
+ */
+function RecipientSearchField({
+  value,
+  onChange,
+  results,
+  onSelect,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  results: RecipientSearchResult[];
+  onSelect: (r: RecipientSearchResult) => void;
+  placeholder: string;
+}) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Re-measure whenever the input box position changes (scroll, resize).
+  useLayoutEffect(() => {
+    if (results.length === 0) {
+      setRect(null);
+      return;
+    }
+    const update = () => {
+      const el = wrapperRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setRect({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [results.length]);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pl-10 h-11 rounded-xl border-slate-200 dark:border-slate-700 focus-visible:ring-blue-500/50"
+      />
+      {rect && results.length > 0 && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed z-[1000] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-900/20 max-h-72 overflow-y-auto p-1.5"
+            style={{ top: rect.top, left: rect.left, width: rect.width }}
+          >
+            {results.map((r) => (
+              <button
+                key={`${r.type}-${r.id}`}
+                type="button"
+                onMouseDown={(e) => {
+                  // Use mouseDown so the blur on the input doesn't close the popover
+                  // before the click registers.
+                  e.preventDefault();
+                  onSelect(r);
+                }}
+                className="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+              >
+                <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-bold text-white ${
+                  r.type === 'customer' ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-violet-500 to-fuchsia-500'
+                }`}>
+                  {r.type === 'customer' ? 'B2C' : 'B2B'}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold truncate text-slate-900 dark:text-white">{r.name}</span>
+                  {r.company && <span className="block text-xs text-slate-500 truncate">{r.company}</span>}
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      }
+    </div>
+  );
+}
 
 /**
  * Reusable section card — defined at module scope so React doesn't remount
@@ -188,15 +278,19 @@ export function CreateShipmentPage() {
    * set. NOTE: products and batches store weight in **GRAMS** (see Product
    * type comments). We divide by 1000 to convert to kg before handing off to
    * smart-packing, which works in kg throughout.
+   *
+   * Every selected item is included — items missing dimensions get 0 cm on
+   * the L/W/H axes. SmartPackingCard filters those out of carton calculations
+   * but keeps their weight in the total and surfaces a warning.
    */
   const resolvedItems: ContentItem[] = useMemo(() => {
     return items.reduce<ContentItem[]>((acc, row) => {
       if (!row.productId || row.quantity <= 0) return acc;
       const prod = products.find((p) => p.id === row.productId);
       const batch = row.batchOptions.find((b) => b.id === row.batchId);
-      const lengthCm = prod?.productDepthCm ?? batch?.productDepthCm;
-      const widthCm = prod?.productWidthCm ?? batch?.productWidthCm;
-      const heightCm = prod?.productHeightCm ?? batch?.productHeightCm;
+      const lengthCm = prod?.productDepthCm ?? batch?.productDepthCm ?? 0;
+      const widthCm = prod?.productWidthCm ?? batch?.productWidthCm ?? 0;
+      const heightCm = prod?.productHeightCm ?? batch?.productHeightCm ?? 0;
       const weightGrams =
         prod?.grossWeight ??
         prod?.netWeight ??
@@ -204,7 +298,6 @@ export function CreateShipmentPage() {
         batch?.netWeight ??
         0;
       const weightKg = weightGrams / 1000;
-      if (!lengthCm || !widthCm || !heightCm) return acc;
       acc.push({
         lengthCm,
         widthCm,
@@ -253,13 +346,17 @@ export function CreateShipmentPage() {
   }, []);
 
   // ─── Auto-fill weight from item dimensions × weights ─────────
-  // Fills the weight field automatically when the user hasn't typed one.
-  // Adds 400 g packaging tare. Stays out of the way once the user edits.
+  // Fills the weight field when empty, OR when the field value has become
+  // stale because items were added (current form weight < 80% of computed
+  // total — indicates the old auto-fill is outdated, not a manual override
+  // set deliberately below the content weight).
   useEffect(() => {
     if (computedTotalWeightKg <= 0) return;
-    const current = Number(weightGrams);
-    if (!weightGrams || current === 0) {
-      const totalWithTare = computedTotalWeightKg + 0.4;
+    const currentKg = weightGrams ? Number(weightGrams) / 1000 : 0;
+    const totalWithTare = computedTotalWeightKg + 0.4;
+    const isEmpty = !weightGrams || currentKg === 0;
+    const isClearlyStale = currentKg > 0 && currentKg < totalWithTare * 0.8;
+    if (isEmpty || isClearlyStale) {
       setWeightGrams(String(Math.round(totalWithTare * 1000)));
     }
   }, [computedTotalWeightKg, weightGrams]);
@@ -579,45 +676,13 @@ export function CreateShipmentPage() {
             subtitle={t('Search by name, company, or email')}
             gradient="from-blue-500 to-violet-500"
           >
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <Input
-                placeholder={t('Search recipients...')}
-                value={recipientSearch}
-                onChange={(e) => setRecipientSearch(e.target.value)}
-                className="pl-10 h-11 rounded-xl border-slate-200 dark:border-slate-700 focus-visible:ring-blue-500/50"
-              />
-              <AnimatePresence>
-                {recipientResults.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    className="absolute z-20 mt-1.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-900/10 max-h-60 overflow-y-auto p-1.5"
-                  >
-                    {recipientResults.map((r) => (
-                      <button
-                        key={`${r.type}-${r.id}`}
-                        type="button"
-                        onClick={() => selectRecipient(r)}
-                        className="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
-                      >
-                        <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-bold text-white ${
-                          r.type === 'customer' ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-violet-500 to-fuchsia-500'
-                        }`}>
-                          {r.type === 'customer' ? 'B2C' : 'B2B'}
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block font-semibold truncate">{r.name}</span>
-                          {r.company && <span className="block text-xs text-slate-500 truncate">{r.company}</span>}
-                        </span>
-                        <ArrowRight className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <RecipientSearchField
+              value={recipientSearch}
+              onChange={setRecipientSearch}
+              results={recipientResults}
+              onSelect={selectRecipient}
+              placeholder={t('Search recipients...')}
+            />
           </Section>
 
           <Section

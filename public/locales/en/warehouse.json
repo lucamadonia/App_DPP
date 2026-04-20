@@ -1171,6 +1171,8 @@
   "Final review": "Final review",
   "Ready to ship": "Ready to ship",
   "Creating...": "Creating…",
+  "{{n}} items without dimensions": "{{n}} item(s) missing dimensions",
+  "Carton and carrier fit calculations use only items with L×W×H set. Their weight still counts. Add dimensions on the product or batch to include them.": "Carton and carrier fit calculations use only items with L×W×H set. Their weight still counts. Add dimensions on the product or batch to include them.",
   "No fitting tier": "No fitting tier",
   "Package exceeds max weight or dimensions for all of this carrier’s services.": "Package exceeds max weight or dimensions for all of this carrier’s services.",
   "Up to {{kg}} kg": "Up to {{kg}} kg",

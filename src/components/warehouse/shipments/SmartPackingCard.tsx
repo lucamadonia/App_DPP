@@ -99,10 +99,18 @@ export function SmartPackingCard({
   const { t } = useTranslation('warehouse');
   const [showAllServices, setShowAllServices] = useState(false);
 
-  // Carton recommendations — items-driven
-  const cartonRecs: CartonRecommendation[] = useMemo(
-    () => (items.length > 0 ? recommendCarton(items) : []),
+  // Split items by whether dimensions are set. Only dim'd items are used for
+  // the carton/carrier calculations; weight is summed across ALL items.
+  const itemsWithDims = useMemo(
+    () => items.filter((it) => it.lengthCm > 0 && it.widthCm > 0 && it.heightCm > 0),
     [items],
+  );
+  const itemsMissingDims = items.length - itemsWithDims.length;
+
+  // Carton recommendations — only items with dimensions contribute.
+  const cartonRecs: CartonRecommendation[] = useMemo(
+    () => (itemsWithDims.length > 0 ? recommendCarton(itemsWithDims) : []),
+    [itemsWithDims],
   );
 
   const bestCarton = cartonRecs.find((c) => c.fits) ?? cartonRecs[0] ?? null;
@@ -240,16 +248,16 @@ export function SmartPackingCard({
   const hasWeight = effectiveWeightKg > 0;
 
   return (
-    <div className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/5 via-blue-500/5 to-slate-900/40 shadow-lg shadow-violet-500/5">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-900">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-white/10">
+      <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-violet-500/20">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{t('Smart Packing Assistant')}</p>
-            <p className="text-[11px] text-slate-400 truncate">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t('Smart Packing Assistant')}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
               {t('{{n}} items · {{kg}} kg contents', {
                 n: items.length,
                 kg: totalContentsWeight.toFixed(1),
@@ -258,11 +266,11 @@ export function SmartPackingCard({
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-emerald-500/30">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
             {okMatches.length} OK
           </span>
           {warnMatches.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-500/30">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30">
               {warnMatches.length} ⚠
             </span>
           )}
@@ -300,6 +308,17 @@ export function SmartPackingCard({
                 ⚠ {t('Suspicious weight detected')}
               </strong>
               {t('An item is over 50 kg per unit. Check the batch form: the field expects grams (g), not kilograms. A 1.27 kg product should be entered as 1270.')}
+            </div>
+          )}
+
+          {/* Missing-dimensions warning: some items lack L/W/H and are
+              excluded from the carton suggestion. Weight still counts. */}
+          {itemsMissingDims > 0 && (
+            <div className="mb-2 rounded-md bg-amber-50 border border-amber-300 p-2 text-[11px] text-amber-800 leading-snug dark:bg-amber-500/10 dark:border-amber-500/40 dark:text-amber-200">
+              <strong className="block font-semibold mb-0.5">
+                ⚠ {t('{{n}} items without dimensions', { n: itemsMissingDims })}
+              </strong>
+              {t('Carton and carrier fit calculations use only items with L×W×H set. Their weight still counts. Add dimensions on the product or batch to include them.')}
             </div>
           )}
           <div className="space-y-1 text-[11px] font-mono text-slate-300">
