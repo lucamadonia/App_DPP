@@ -1149,6 +1149,8 @@
   "Calculated gross": "Berechnetes Brutto",
   "Form override": "Formular (manuell)",
   "Carton": "Karton",
+  "Suspicious weight detected": "Verdächtiges Gewicht entdeckt",
+  "An item is over 50 kg per unit. Check the batch form: the field expects grams (g), not kilograms. A 1.27 kg product should be entered as 1270.": "Ein Artikel wiegt über 50 kg pro Einheit. Prüfe das Chargen-Formular: das Feld erwartet Gramm (g), nicht Kilogramm. Ein 1,27-kg-Produkt muss als 1270 eingetragen werden.",
   "No fitting tier": "Kein passender Tarif",
   "Package exceeds max weight or dimensions for all of this carrier’s services.": "Paket übersteigt Max-Gewicht oder -Maße aller Tarife dieses Kuriers.",
   "Up to {{kg}} kg": "bis {{kg}} kg",

@@ -1149,6 +1149,8 @@
   "Calculated gross": "Calculated gross",
   "Form override": "Form override (manual)",
   "Carton": "Carton",
+  "Suspicious weight detected": "Suspicious weight detected",
+  "An item is over 50 kg per unit. Check the batch form: the field expects grams (g), not kilograms. A 1.27 kg product should be entered as 1270.": "An item is over 50 kg per unit. Check the batch form: the field expects grams (g), not kilograms. A 1.27 kg product should be entered as 1270.",
   "No fitting tier": "No fitting tier",
   "Package exceeds max weight or dimensions for all of this carrier’s services.": "Package exceeds max weight or dimensions for all of this carrier’s services.",
   "Up to {{kg}} kg": "Up to {{kg}} kg",

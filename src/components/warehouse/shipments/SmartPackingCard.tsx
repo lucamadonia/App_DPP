@@ -292,16 +292,31 @@ export function SmartPackingCard({
               </span>
             )}
           </div>
+          {/* Sanity warning: a single item over 50 kg almost always means a
+              unit mismatch in the underlying product/batch master data. */}
+          {items.some((it) => it.weightKg > 50) && (
+            <div className="mb-2 rounded-md bg-rose-500/15 border border-rose-500/40 p-2 text-[11px] text-rose-200 leading-snug">
+              <strong className="block font-semibold mb-0.5">
+                ⚠ {t('Suspicious weight detected')}
+              </strong>
+              {t('An item is over 50 kg per unit. Check the batch form: the field expects grams (g), not kilograms. A 1.27 kg product should be entered as 1270.')}
+            </div>
+          )}
           <div className="space-y-1 text-[11px] font-mono text-slate-300">
             {items.map((it, i) => {
               const q = it.quantity ?? 1;
               const lineKg = it.weightKg * q;
+              const flag = it.weightKg > 50;
               return (
-                <div key={i} className="flex items-center justify-between">
+                <div
+                  key={i}
+                  className={`flex items-center justify-between ${flag ? 'text-rose-300' : ''}`}
+                >
                   <span className="truncate">
                     #{i + 1}: {q}× {it.lengthCm}×{it.widthCm}×{it.heightCm} cm @ {it.weightKg.toFixed(2)} kg
+                    {flag && ' ⚠'}
                   </span>
-                  <span className="text-white">{lineKg.toFixed(2)} kg</span>
+                  <span className={flag ? 'text-rose-300' : 'text-white'}>{lineKg.toFixed(2)} kg</span>
                 </div>
               );
             })}
