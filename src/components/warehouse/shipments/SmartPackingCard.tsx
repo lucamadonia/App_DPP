@@ -99,7 +99,7 @@ export function SmartPackingCard({
   const { t } = useTranslation('warehouse');
   const [showAllServices, setShowAllServices] = useState(false);
 
-  // Carton recommendations
+  // Carton recommendations — items-driven
   const cartonRecs: CartonRecommendation[] = useMemo(
     () => (items.length > 0 ? recommendCarton(items) : []),
     [items],
@@ -107,7 +107,19 @@ export function SmartPackingCard({
 
   const bestCarton = cartonRecs.find((c) => c.fits) ?? cartonRecs[0] ?? null;
 
-  // Effective package dims: prefer user-selected carton, else bestCarton, else bounding box
+  // Compute total weight from items (with 400 g packaging tare). This is the
+  // authoritative weight we use IF the user hasn't typed an explicit override.
+  const itemsTotalWeightKg = useMemo(
+    () => items.reduce((sum, it) => sum + it.weightKg * (it.quantity ?? 1), 0),
+    [items],
+  );
+  const computedGrossKg = itemsTotalWeightKg > 0 ? itemsTotalWeightKg + 0.4 : 0;
+
+  /** Final weight: user-supplied (manual override) wins; else computed from items. */
+  const effectiveWeightKg = packageWeightKg > 0 ? packageWeightKg : computedGrossKg;
+  const usingComputedWeight = packageWeightKg <= 0 && computedGrossKg > 0;
+
+  // Effective package dims: prefer user-selected carton, else recommended carton.
   const pkgInput: PackageInput | null = useMemo(() => {
     const dim =
       selectedCarton ??
@@ -118,16 +130,16 @@ export function SmartPackingCard({
             heightCm: bestCarton.carton.heightCm,
           }
         : null);
-    if (!dim || packageWeightKg <= 0) return null;
+    if (!dim || effectiveWeightKg <= 0) return null;
     return {
       lengthCm: dim.lengthCm,
       widthCm: dim.widthCm,
       heightCm: dim.heightCm,
-      weightKg: packageWeightKg,
+      weightKg: effectiveWeightKg,
       destinationCountry,
       contents,
     };
-  }, [selectedCarton, bestCarton, packageWeightKg, destinationCountry, contents]);
+  }, [selectedCarton, bestCarton, effectiveWeightKg, destinationCountry, contents]);
 
   const carrierMatches: CarrierMatch[] = useMemo(
     () => (pkgInput ? matchCarrierServices(pkgInput) : []),
@@ -183,12 +195,12 @@ export function SmartPackingCard({
   // Zone + price + customs + transit + hints — only when destination is known
   const destZone = getCountryZone(destinationCountry);
   const priceEstimates = useMemo(
-    () => (packageWeightKg > 0 ? estimatePrices(originCountry, destinationCountry, packageWeightKg) : []),
-    [originCountry, destinationCountry, packageWeightKg],
+    () => (effectiveWeightKg > 0 ? estimatePrices(originCountry, destinationCountry, effectiveWeightKg) : []),
+    [originCountry, destinationCountry, effectiveWeightKg],
   );
   const customs = useMemo(
-    () => requiredCustomsForms(originCountry, destinationCountry, declaredValueEur, packageWeightKg, customerType === 'b2b'),
-    [originCountry, destinationCountry, declaredValueEur, packageWeightKg, customerType],
+    () => requiredCustomsForms(originCountry, destinationCountry, declaredValueEur, effectiveWeightKg, customerType === 'b2b'),
+    [originCountry, destinationCountry, declaredValueEur, effectiveWeightKg, customerType],
   );
   const incoterms = useMemo(
     () => recommendedIncoterms(destinationCountry, customerType, declaredValueEur),
@@ -206,11 +218,11 @@ export function SmartPackingCard({
       oversize: pkgInput
         ? pkgInput.lengthCm > 120 || pkgInput.widthCm > 60 || pkgInput.heightCm > 60
         : false,
-      heavyOver25kg: packageWeightKg > 25,
+      heavyOver25kg: effectiveWeightKg > 25,
       thirdCountry: destZone?.zone === 'third_country',
       peakSeason: month >= 11 || month === 1,
     });
-  }, [pkgInput, packageWeightKg, destZone]);
+  }, [pkgInput, effectiveWeightKg, destZone]);
 
   if (items.length === 0) {
     return (
@@ -224,8 +236,8 @@ export function SmartPackingCard({
     );
   }
 
-  const totalContentsWeight = items.reduce((sum, it) => sum + it.weightKg * (it.quantity ?? 1), 0);
-  const hasWeight = packageWeightKg > 0;
+  const totalContentsWeight = itemsTotalWeightKg;
+  const hasWeight = effectiveWeightKg > 0;
 
   return (
     <div className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/5 via-blue-500/5 to-slate-900/40 shadow-lg shadow-violet-500/5">
@@ -263,6 +275,59 @@ export function SmartPackingCard({
       </div>
 
       <div className="p-4 sm:p-5 space-y-5">
+        {/* Calculation breakdown — explains exactly where the weight comes from */}
+        <section className={`rounded-xl border p-3 ${
+          usingComputedWeight
+            ? 'border-blue-500/25 bg-blue-500/5'
+            : 'border-white/10 bg-white/5'
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Scale className="h-3.5 w-3.5 text-blue-400" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              {t('Calculation')}
+            </h3>
+            {usingComputedWeight && (
+              <span className="ml-auto rounded-full bg-blue-500/20 text-blue-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                {t('Auto')}
+              </span>
+            )}
+          </div>
+          <div className="space-y-1 text-[11px] font-mono text-slate-300">
+            {items.map((it, i) => {
+              const q = it.quantity ?? 1;
+              const lineKg = it.weightKg * q;
+              return (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="truncate">
+                    #{i + 1}: {q}× {it.lengthCm}×{it.widthCm}×{it.heightCm} cm @ {it.weightKg.toFixed(2)} kg
+                  </span>
+                  <span className="text-white">{lineKg.toFixed(2)} kg</span>
+                </div>
+              );
+            })}
+            <div className="flex items-center justify-between border-t border-white/10 pt-1 mt-1">
+              <span>{t('Items subtotal')}</span>
+              <span className="text-white font-semibold">{itemsTotalWeightKg.toFixed(2)} kg</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-400">
+              <span>+ {t('Packaging tare')}</span>
+              <span>0,40 kg</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-white/10 pt-1">
+              <span className="font-semibold text-white">
+                {usingComputedWeight ? t('Calculated gross') : t('Form override')}
+              </span>
+              <span className="text-white font-bold">{effectiveWeightKg.toFixed(2)} kg</span>
+            </div>
+            {bestCarton && (
+              <div className="flex items-center justify-between text-slate-400 mt-1">
+                <span>{t('Carton')}: {bestCarton.carton.label}</span>
+                <span>{(bestCarton.fillPct).toFixed(0)}% {t('Fill')}</span>
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Carton Recommendations */}
         <section>
           <div className="flex items-center gap-2 mb-2">
