@@ -551,11 +551,11 @@ export interface BackfillParams {
 }
 
 export async function syncShopifyOrdersBackfill(params: BackfillParams): Promise<ShopifySyncResponse> {
-  return callEdgeFunction('sync_orders', { ...params, backfill: true });
+  return callEdgeFunction('sync_orders', { ...params, backfill: true } as Record<string, unknown>);
 }
 
 export async function countShopifyOrders(params: BackfillParams): Promise<{ count: number }> {
-  const res = await callEdgeFunction('count_orders', params);
+  const res = await callEdgeFunction('count_orders', params as Record<string, unknown>);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { count: ((res.data as any)?.count) ?? 0 };
 }

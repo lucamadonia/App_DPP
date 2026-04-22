@@ -161,7 +161,7 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
         {step === 'confirm' && (
           <div className="space-y-3">
             <div className="text-sm">
-              {t('Importing {{count}} orders. Type IMPORTIEREN to confirm.', { count: estimatedCount ?? '?' })}
+              {t('Importing {{count}} orders. Type IMPORTIEREN to confirm.', { count: estimatedCount ?? 0 })}
             </div>
             <Input
               value={confirmText}
