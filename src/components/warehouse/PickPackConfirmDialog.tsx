@@ -1,0 +1,190 @@
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ScanBarcode, Check, X, Package } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { confirmItemPick, confirmItemPack } from '@/services/supabase/wh-shipments';
+import type { WhShipmentItem } from '@/types/warehouse';
+import { toast } from 'sonner';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: 'pick' | 'pack';
+  items: WhShipmentItem[];
+  productBarcodeMap?: Record<string, string>;
+  onConfirmed: () => void;
+}
+
+/**
+ * Verifiziert vor Status-Transition Kommissionierung/Verpackt.
+ * Jede Position muss bestätigt werden (Checkbox oder Barcode-Scan im
+ * Eingabefeld). Erst wenn alle Positionen vollständig sind, wird
+ * onConfirmed() ausgelöst — typischerweise ruft dann die parent
+ * updateShipmentStatus().
+ */
+export function PickPackConfirmDialog({ open, onOpenChange, mode, items, productBarcodeMap, onConfirmed }: Props) {
+  const { t } = useTranslation('warehouse');
+  // Map item.id → confirmed quantity
+  const [confirmed, setConfirmed] = useState<Record<string, number>>({});
+  const [scanValue, setScanValue] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  // Reset when dialog opens
+  useEffect(() => {
+    if (open) {
+      const initial: Record<string, number> = {};
+      for (const it of items) {
+        initial[it.id] = mode === 'pick' ? (it.quantityPicked || 0) : (it.quantityPacked || 0);
+      }
+      setConfirmed(initial);
+      setScanValue('');
+    }
+  }, [open, items, mode]);
+
+  const allConfirmed = items.every(it => (confirmed[it.id] || 0) >= it.quantity);
+  const totalConfirmedQty = Object.values(confirmed).reduce((a, b) => a + b, 0);
+  const totalRequiredQty = items.reduce((a, b) => a + b.quantity, 0);
+
+  function toggleFullItem(item: WhShipmentItem) {
+    setConfirmed(c => ({
+      ...c,
+      [item.id]: (c[item.id] || 0) >= item.quantity ? 0 : item.quantity,
+    }));
+  }
+
+  function incrementItem(item: WhShipmentItem) {
+    setConfirmed(c => ({
+      ...c,
+      [item.id]: Math.min(item.quantity, (c[item.id] || 0) + 1),
+    }));
+  }
+
+  function handleScan(e: React.FormEvent) {
+    e.preventDefault();
+    const code = scanValue.trim();
+    if (!code) return;
+    // Find item whose product barcode matches
+    const match = items.find(it => {
+      const bc = productBarcodeMap?.[it.productId];
+      return bc && bc === code;
+    });
+    if (!match) {
+      toast.error(t('Kein Produkt mit GTIN {{gtin}} in dieser Sendung', { gtin: code }));
+    } else {
+      if ((confirmed[match.id] || 0) >= match.quantity) {
+        toast.info(t('{{name}} bereits vollständig bestätigt', { name: match.productName || '?' }));
+      } else {
+        incrementItem(match);
+        toast.success(t('{{name}}: {{count}} von {{total}}', {
+          name: match.productName || '?',
+          count: (confirmed[match.id] || 0) + 1,
+          total: match.quantity,
+        }));
+      }
+    }
+    setScanValue('');
+  }
+
+  async function handleConfirm() {
+    setBusy(true);
+    try {
+      for (const it of items) {
+        const qty = confirmed[it.id] || 0;
+        if (mode === 'pick') await confirmItemPick(it.id, qty);
+        else await confirmItemPack(it.id, qty);
+      }
+      onConfirmed();
+      onOpenChange(false);
+      toast.success(mode === 'pick' ? t('Kommissionierung bestätigt') : t('Verpackt bestätigt'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            {mode === 'pick' ? t('Kommissionierung bestätigen') : t('Verpackung bestätigen')}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === 'pick'
+              ? t('Haken Sie jede Position ab, wenn sie aus dem Lager entnommen wurde. Oder scannen Sie die GTIN.')
+              : t('Kontrolle vor Versand: Haken Sie jede Position ab, wenn sie im Karton liegt.')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleScan} className="flex gap-2">
+          <ScanBarcode className="h-5 w-5 text-muted-foreground self-center" />
+          <Input
+            value={scanValue}
+            onChange={e => setScanValue(e.target.value)}
+            placeholder={t('GTIN/Barcode scannen oder eintippen...')}
+            autoFocus
+            className="font-mono"
+          />
+          <Button type="submit" variant="outline" disabled={!scanValue.trim()}>
+            {t('Scan')}
+          </Button>
+        </form>
+
+        <div className="rounded-lg border divide-y">
+          {items.map(item => {
+            const qty = confirmed[item.id] || 0;
+            const full = qty >= item.quantity;
+            return (
+              <div key={item.id} className={`flex items-center gap-3 p-3 ${full ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                <Checkbox
+                  checked={full}
+                  onCheckedChange={() => toggleFullItem(item)}
+                  aria-label={t('Vollständig bestätigen')}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{item.productName || item.productId.slice(0, 8)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {item.batchSerialNumber || t('Keine Charge')} · {item.locationName || t('Unbekannter Standort')}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-sm tabular-nums">
+                  <span className={full ? 'font-semibold text-green-700' : 'text-muted-foreground'}>{qty}</span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="font-semibold">{item.quantity}</span>
+                </div>
+                {!full && qty < item.quantity && (
+                  <Button size="sm" variant="ghost" onClick={() => incrementItem(item)}>+1</Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between text-sm pt-2">
+          <span className="text-muted-foreground">
+            {t('Gesamt')}: <span className="font-semibold tabular-nums">{totalConfirmedQty} / {totalRequiredQty}</span>
+          </span>
+          {allConfirmed && (
+            <span className="flex items-center gap-1 text-green-700 font-medium">
+              <Check className="h-4 w-4" /> {t('Alle Positionen vollständig')}
+            </span>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+            <X className="mr-1 h-4 w-4" /> {t('Abbrechen')}
+          </Button>
+          <Button onClick={handleConfirm} disabled={!allConfirmed || busy}>
+            {busy ? t('Speichert...') : (mode === 'pick' ? t('Kommissionierung abschließen') : t('Verpackt abschließen'))}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

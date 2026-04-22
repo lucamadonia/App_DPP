@@ -441,6 +441,27 @@ export async function suggestPackaging(shipmentId: string): Promise<{ packagingI
   };
 }
 
+/**
+ * Setzt quantity_picked auf ein bestimmtes Item. Wird vom Pick-Dialog genutzt
+ * um einzelne Positionen abzuhaken. Aufruf mit quantity === full bedeutet
+ * komplett gepickt.
+ */
+export async function confirmItemPick(itemId: string, quantity: number): Promise<void> {
+  const { error } = await supabase
+    .from('wh_shipment_items')
+    .update({ quantity_picked: quantity })
+    .eq('id', itemId);
+  if (error) throw new Error(`Failed to confirm pick: ${error.message}`);
+}
+
+export async function confirmItemPack(itemId: string, quantity: number): Promise<void> {
+  const { error } = await supabase
+    .from('wh_shipment_items')
+    .update({ quantity_packed: quantity })
+    .eq('id', itemId);
+  if (error) throw new Error(`Failed to confirm pack: ${error.message}`);
+}
+
 export async function updateShipment(id: string, updates: Partial<{
   carrier: string;
   serviceLevel: string;

@@ -34,6 +34,8 @@ import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
 import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
 import { ShopifyShipmentSyncCard } from '@/components/warehouse/shopify/ShopifyShipmentSyncCard';
+import { PickPackConfirmDialog } from '@/components/warehouse/PickPackConfirmDialog';
+import { supabase as sb } from '@/lib/supabase';
 
 /* -------------------------------------------------------------------------- */
 /*  STATUS TRANSITION LABELS                                                   */
@@ -206,18 +208,51 @@ export function ShipmentDetailPage() {
     }
   };
 
-  const handleStatusChange = async (newStatus: ShipmentStatus) => {
-    if (!id || statusUpdating) return;
+  // Pick/Pack verification dialog
+  const [pickDialogOpen, setPickDialogOpen] = useState(false);
+  const [packDialogOpen, setPackDialogOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<ShipmentStatus | null>(null);
+  const [barcodeMap, setBarcodeMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    const productIds = items.map(i => i.productId);
+    sb.from('products').select('id, gtin').in('id', productIds).then((r: { data: Array<{id:string; gtin?:string}> | null }) => {
+      const map: Record<string, string> = {};
+      (r.data || []).forEach((p) => { if (p.gtin) map[p.id] = p.gtin; });
+      setBarcodeMap(map);
+    });
+  }, [items]);
+
+  const applyStatusChange = async (newStatus: ShipmentStatus) => {
+    if (!id) return;
     setStatusUpdating(true);
     try {
       const updated = await updateShipmentStatus(id, newStatus);
       setShipment(updated);
+      await reloadShipment();
       toast.success(t('Status updated successfully'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
     } finally {
       setStatusUpdating(false);
     }
+  };
+
+  const handleStatusChange = async (newStatus: ShipmentStatus) => {
+    if (!id || statusUpdating) return;
+    // For picking and packed, require item-by-item confirmation first
+    if (newStatus === 'picking' && items.length > 0) {
+      setPendingStatus(newStatus);
+      setPickDialogOpen(true);
+      return;
+    }
+    if (newStatus === 'packed' && items.length > 0) {
+      setPendingStatus(newStatus);
+      setPackDialogOpen(true);
+      return;
+    }
+    await applyStatusChange(newStatus);
   };
 
   const startEditing = (section: 'recipient' | 'shipping' | 'notes') => {
@@ -934,6 +969,29 @@ export function ShipmentDetailPage() {
           </div>
         </div>
       )}
+
+      <PickPackConfirmDialog
+        open={pickDialogOpen}
+        onOpenChange={setPickDialogOpen}
+        mode="pick"
+        items={items}
+        productBarcodeMap={barcodeMap}
+        onConfirmed={() => {
+          if (pendingStatus) applyStatusChange(pendingStatus);
+          setPendingStatus(null);
+        }}
+      />
+      <PickPackConfirmDialog
+        open={packDialogOpen}
+        onOpenChange={setPackDialogOpen}
+        mode="pack"
+        items={items}
+        productBarcodeMap={barcodeMap}
+        onConfirmed={() => {
+          if (pendingStatus) applyStatusChange(pendingStatus);
+          setPendingStatus(null);
+        }}
+      />
     </div>
   );
 }
