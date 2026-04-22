@@ -589,6 +589,12 @@ export interface WhShipment {
   shopifyExportAttempts?: number;
   shopifyExportError?: string;
   lastFulfillmentAt?: string;
+  // DHL tracking snapshot (filled by 8h pg_cron poll)
+  trackingLastStatus?: string;
+  trackingLastDescription?: string;
+  trackingLastEventAt?: string;
+  trackingLastLocation?: string;
+  trackingPolledAt?: string;
   priority: ShipmentPriority;
   notes?: string;
   internalNotes?: string;

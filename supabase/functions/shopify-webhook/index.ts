@@ -230,11 +230,38 @@ async function resolveAutoBatch(supabase: any, tenantId: string, productId: stri
     .select('id')
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
-    .eq('status', 'active')
+    .eq('status', 'live')
     .order('expiry_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true })
     .limit(1);
   return data?.[0]?.id || null;
+}
+
+/**
+ * Sum gross_weight (preferring batch over product) × quantity across all items
+ * and persist on wh_shipments.total_weight_grams.
+ */
+// deno-lint-ignore no-explicit-any
+async function updateShipmentWeight(supabase: any, tenantId: string, shipmentId: string) {
+  const { data: items } = await supabase
+    .from('wh_shipment_items')
+    .select('product_id, batch_id, quantity')
+    .eq('shipment_id', shipmentId);
+  if (!items?.length) return;
+  let total = 0;
+  for (const it of items) {
+    let w: number | null = null;
+    if (it.batch_id) {
+      const { data: b } = await supabase.from('product_batches').select('gross_weight, net_weight').eq('id', it.batch_id).maybeSingle();
+      w = b?.gross_weight ?? b?.net_weight ?? null;
+    }
+    if (w === null) {
+      const { data: p } = await supabase.from('products').select('gross_weight, net_weight').eq('tenant_id', tenantId).eq('id', it.product_id).maybeSingle();
+      w = p?.gross_weight ?? p?.net_weight ?? null;
+    }
+    if (w !== null) total += w * (it.quantity || 0);
+  }
+  if (total > 0) await supabase.from('wh_shipments').update({ total_weight_grams: total }).eq('id', shipmentId);
 }
 
 // deno-lint-ignore no-explicit-any
@@ -391,6 +418,8 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
     throw new Error(`wh_shipment_items insert failed: ${itemsErr.message}`);
   }
 
+  await updateShipmentWeight(supabase, tenantId, shipment.id);
+
   const reservationWarnings: string[] = [];
   for (const item of items) {
     if (!item.batch_id) continue;
@@ -491,7 +520,7 @@ async function handleFulfillmentUpsert(supabase: any, tenantId: string, fulfillm
 
   const { data: shipment } = await supabase
     .from('wh_shipments')
-    .select('id, tracking_number, shopify_fulfillment_id')
+    .select('id, status, tracking_number, shopify_fulfillment_id')
     .eq('tenant_id', tenantId)
     .eq('shopify_order_id', orderId)
     .maybeSingle();
@@ -505,6 +534,20 @@ async function handleFulfillmentUpsert(supabase: any, tenantId: string, fulfillm
   if (!shipment.tracking_number && fulfillment.tracking_number) patch.tracking_number = fulfillment.tracking_number;
   if (fulfillment.tracking_company) patch.carrier = fulfillment.tracking_company;
   if (fulfillment.tracking_url) patch.label_url = fulfillment.tracking_url;
+
+  // Shopify's Carrier integration updates fulfillment.shipment_status as the
+  // parcel moves: label_printed → in_transit → out_for_delivery → delivered
+  const ss = fulfillment.shipment_status;
+  const now = new Date().toISOString();
+  if (ss === 'delivered' && shipment.status !== 'delivered') {
+    patch.status = 'delivered';
+    patch.delivered_at = now;
+  } else if ((ss === 'in_transit' || ss === 'out_for_delivery') && ['shipped', 'label_created'].includes(shipment.status)) {
+    patch.status = 'in_transit';
+  } else if (ss === 'confirmed' && ['draft', 'picking', 'packed', 'label_created'].includes(shipment.status)) {
+    patch.status = 'shipped';
+    patch.shipped_at = now;
+  }
 
   await supabase.from('wh_shipments').update(patch).eq('id', shipment.id);
 }

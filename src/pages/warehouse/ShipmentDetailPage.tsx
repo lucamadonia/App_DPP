@@ -600,6 +600,25 @@ export function ShipmentDetailPage() {
                   <Button size="sm" variant="outline" onClick={() => cancelEdit('shipping')}><X className="h-3.5 w-3.5 mr-1" />{t('Cancel', { ns: 'common' })}</Button>
                 </div>
               )}
+
+              {/* Latest DHL tracking event — populated by 8h cron poll */}
+              {(shipment.trackingLastDescription || shipment.trackingLastStatus) && (
+                <div className="border-t pt-3 mt-3 space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('Latest Tracking Event')}
+                  </div>
+                  <div className="text-sm">{shipment.trackingLastDescription || shipment.trackingLastStatus}</div>
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                    {shipment.trackingLastLocation && <span>{shipment.trackingLastLocation}</span>}
+                    {shipment.trackingLastEventAt && (
+                      <span>{new Date(shipment.trackingLastEventAt).toLocaleString()}</span>
+                    )}
+                    {shipment.trackingPolledAt && (
+                      <span className="italic">{t('Last check')}: {new Date(shipment.trackingPolledAt).toLocaleString()}</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

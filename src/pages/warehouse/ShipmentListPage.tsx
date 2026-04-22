@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getShipments, getShipmentStatusCounts } from '@/services/supabase/wh-shipments';
+import { invokeEdgeFunction } from '@/lib/edge-function';
+import { toast } from 'sonner';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
@@ -201,6 +203,30 @@ export function ShipmentListPage() {
     );
   }, []);
 
+  // Manual tracking refresh (triggers the same poll as the 8h cron)
+  const [refreshing, setRefreshing] = useState(false);
+  async function handleTrackingRefresh() {
+    setRefreshing(true);
+    try {
+      const { data, error } = await invokeEdgeFunction<{
+        success: boolean;
+        tenantsScanned?: number;
+        perTenant?: Array<{ result?: { total: number; delivered: number; inTransit: number; noChange: number; errors: number } }>;
+      }>('dhl-shipping', { action: 'poll_all_tenants_cron' });
+      if (error) throw new Error(error.message);
+      const my = (data?.perTenant || []).find((_, i) => i === (data?.perTenant?.length ?? 0) - 1)?.result;
+      const summary = my
+        ? `${my.total} shipments, ${my.delivered} delivered, ${my.inTransit} in transit, ${my.noChange} unchanged`
+        : t('Tracking refreshed');
+      toast.success(summary);
+      loadShipments();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -215,12 +241,18 @@ export function ShipmentListPage() {
             </h1>
           </div>
         </div>
-        <Button asChild>
-          <Link to="/warehouse/shipments/new">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('Create Shipment')}
-          </Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={handleTrackingRefresh} disabled={refreshing}>
+            <ArrowUpDown className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? t('Refreshing...') : t('Refresh tracking')}
+          </Button>
+          <Button asChild>
+            <Link to="/warehouse/shipments/new">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('Create Shipment')}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -390,7 +422,22 @@ export function ShipmentListPage() {
                         <Badge variant="secondary" className={PRIORITY_COLORS[s.priority] || ''}>{t(s.priority)}</Badge>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.totalItems}</TableCell>
-                      <TableCell className="hidden lg:table-cell font-mono text-xs">{s.trackingNumber || '—'}</TableCell>
+                      <TableCell className="hidden lg:table-cell font-mono text-xs">
+                        <div>{s.trackingNumber || '—'}</div>
+                        {s.trackingLastDescription && (
+                          <div className="text-[11px] font-sans text-muted-foreground mt-0.5 max-w-[220px] truncate" title={s.trackingLastDescription}>
+                            {s.trackingLastStatus === 'delivered' && <span className="text-green-600">● </span>}
+                            {(s.trackingLastStatus === 'transit' || s.trackingLastStatus === 'in_transit') && <span className="text-blue-600">● </span>}
+                            {s.trackingLastDescription}
+                            {s.trackingLastLocation && ` · ${s.trackingLastLocation}`}
+                          </div>
+                        )}
+                        {s.trackingPolledAt && (
+                          <div className="text-[10px] font-sans text-muted-foreground/70 mt-0.5">
+                            {t('Last check')}: {new Date(s.trackingPolledAt).toLocaleString()}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="hidden xl:table-cell">
                         {s.sampleMeta ? (
                           <SampleStatusBadge status={s.sampleMeta.sampleStatus} />

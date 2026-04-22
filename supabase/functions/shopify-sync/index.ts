@@ -644,6 +644,9 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
             console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
           }
 
+          // Compute total_weight_grams from batch.gross_weight (fallback products.gross_weight)
+          await updateShipmentWeight(supabase, tenantId, shipment.id);
+
           // Reserve stock only for not-yet-shipped shipments
           if (!isHistoricallyFulfilled) {
             const reservationWarnings: string[] = [];
@@ -711,11 +714,50 @@ async function resolveAutoBatch(supabase: any, tenantId: string, productId: stri
     .select('id, expiry_date, created_at')
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
-    .eq('status', 'active')
+    .eq('status', 'live')
     .order('expiry_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true })
     .limit(1);
   return data?.[0]?.id || null;
+}
+
+/**
+ * Sum gross_weight (preferring batch over product) × quantity across all items
+ * and persist on wh_shipments.total_weight_grams.
+ */
+// deno-lint-ignore no-explicit-any
+async function updateShipmentWeight(supabase: any, tenantId: string, shipmentId: string) {
+  const { data: items } = await supabase
+    .from('wh_shipment_items')
+    .select('product_id, batch_id, quantity')
+    .eq('shipment_id', shipmentId);
+  if (!items?.length) return;
+
+  let total = 0;
+  for (const it of items) {
+    let w: number | null = null;
+    if (it.batch_id) {
+      const { data: b } = await supabase
+        .from('product_batches')
+        .select('gross_weight, net_weight')
+        .eq('id', it.batch_id)
+        .maybeSingle();
+      w = b?.gross_weight ?? b?.net_weight ?? null;
+    }
+    if (w === null) {
+      const { data: p } = await supabase
+        .from('products')
+        .select('gross_weight, net_weight')
+        .eq('tenant_id', tenantId)
+        .eq('id', it.product_id)
+        .maybeSingle();
+      w = p?.gross_weight ?? p?.net_weight ?? null;
+    }
+    if (w !== null) total += w * (it.quantity || 0);
+  }
+  if (total > 0) {
+    await supabase.from('wh_shipments').update({ total_weight_grams: total }).eq('id', shipmentId);
+  }
 }
 
 // ============================================
