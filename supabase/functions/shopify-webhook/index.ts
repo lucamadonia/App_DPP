@@ -385,7 +385,11 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
   }
 
   const shipmentItems = items.map((i: Record<string, unknown>) => ({ ...i, shipment_id: shipment.id }));
-  await supabase.from('wh_shipment_items').insert(shipmentItems);
+  const { error: itemsErr } = await supabase.from('wh_shipment_items').insert(shipmentItems);
+  if (itemsErr) {
+    console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
+    throw new Error(`wh_shipment_items insert failed: ${itemsErr.message}`);
+  }
 
   const reservationWarnings: string[] = [];
   for (const item of items) {

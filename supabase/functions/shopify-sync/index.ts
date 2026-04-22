@@ -638,7 +638,11 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
           }
 
           const shipmentItems = items.map((i: Record<string, unknown>) => ({ ...i, shipment_id: shipment.id }));
-          await supabase.from('wh_shipment_items').insert(shipmentItems);
+          const { error: itemsErr } = await supabase.from('wh_shipment_items').insert(shipmentItems);
+          if (itemsErr) {
+            errors.push({ entity: orderRef, type: 'shipment_items_insert_failed', message: itemsErr.message });
+            console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
+          }
 
           // Reserve stock only for not-yet-shipped shipments
           if (!isHistoricallyFulfilled) {

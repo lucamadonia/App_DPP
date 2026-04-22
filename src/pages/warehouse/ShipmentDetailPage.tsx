@@ -710,9 +710,13 @@ export function ShipmentDetailPage() {
                             </Link>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <Link to={`/products/${item.productId}/batches/${item.batchId}`} className="hover:underline">
-                              {item.batchSerialNumber || item.batchId.slice(0, 8)}
-                            </Link>
+                            {item.batchId ? (
+                              <Link to={`/products/${item.productId}/batches/${item.batchId}`} className="hover:underline">
+                                {item.batchSerialNumber || item.batchId.slice(0, 8)}
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">{t('No batch assigned')}</span>
+                            )}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             {item.locationName ? (
