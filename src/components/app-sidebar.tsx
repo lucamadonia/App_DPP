@@ -152,6 +152,7 @@ export function AppSidebar() {
         { title: t('Inventory', { ns: 'warehouse' }), url: '/warehouse/inventory' },
         { title: t('Goods Receipt', { ns: 'warehouse' }), url: '/warehouse/goods-receipt' },
         { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
+        { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
         { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
         { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
         { title: t('Influencer Hub', { ns: 'warehouse' }), url: '/warehouse/influencer-hub' },

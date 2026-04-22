@@ -118,6 +118,7 @@ const WarehouseDashboardPage = lazy(() => import('@/pages/warehouse/WarehouseDas
 const InventoryListPage = lazy(() => import('@/pages/warehouse/InventoryListPage').then(m => ({ default: m.InventoryListPage })));
 const GoodsReceiptPage = lazy(() => import('@/pages/warehouse/GoodsReceiptPage').then(m => ({ default: m.GoodsReceiptPage })));
 const ShipmentListPage = lazy(() => import('@/pages/warehouse/ShipmentListPage').then(m => ({ default: m.ShipmentListPage })));
+const PackagingTypesPage = lazy(() => import('@/pages/warehouse/PackagingTypesPage').then(m => ({ default: m.PackagingTypesPage })));
 const ShipmentDetailPage = lazy(() => import('@/pages/warehouse/ShipmentDetailPage').then(m => ({ default: m.ShipmentDetailPage })));
 const CreateShipmentPage = lazy(() => import('@/pages/warehouse/CreateShipmentPage').then(m => ({ default: m.CreateShipmentPage })));
 const ScannerPage = lazy(() => import('@/pages/warehouse/ScannerPage').then(m => ({ default: m.ScannerPage })));
@@ -438,6 +439,7 @@ function NormalAppRoutes() {
           <Route path="warehouse/shipments" element={<ShipmentListPage />} />
           <Route path="warehouse/shipments/new" element={<CreateShipmentPage />} />
           <Route path="warehouse/shipments/:id" element={<ShipmentDetailPage />} />
+          <Route path="warehouse/packaging-types" element={<PackagingTypesPage />} />
           <Route path="warehouse/transfers" element={<TransferListPage />} />
           <Route path="warehouse/locations" element={<LocationsPage />} />
           <Route path="warehouse/locations/:id" element={<LocationDetailPage />} />
