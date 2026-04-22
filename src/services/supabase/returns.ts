@@ -318,6 +318,31 @@ export async function updateReturnStatus(
     }).catch(console.error);
   }
 
+  // Auto-push refund to Shopify when a Shopify-linked return transitions to REFUND_COMPLETED
+  if (status === 'REFUND_COMPLETED' && previousStatus !== 'REFUND_COMPLETED' && tenantId) {
+    (async () => {
+      try {
+        const current = await getReturn(id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const shopifyOrderId = (current as any)?.shopifyOrderId ?? (current as any)?.shopify_order_id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const shopifyRefundId = (current as any)?.shopifyRefundId ?? (current as any)?.shopify_refund_id;
+        if (!shopifyOrderId || shopifyRefundId) return;
+        if (!current?.refundAmount || current.refundAmount <= 0) return;
+
+        const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const auto = (tenant?.settings as any)?.shopifyIntegration?.syncConfig?.autoPushRefunds;
+        if (auto === false) return;
+
+        const { createShopifyRefund } = await import('./shopify-integration');
+        await createShopifyRefund(id);
+      } catch (err) {
+        console.error('Shopify refund auto-push failed:', err);
+      }
+    })();
+  }
+
   return { success: true };
 }
 

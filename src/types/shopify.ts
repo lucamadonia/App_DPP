@@ -20,6 +20,10 @@ export interface ShopifySyncConfig {
   exportFulfillments: boolean;
   autoCreateShipments: boolean;
   autoExportFulfillment: boolean;
+  /** Push DPP refunds (rh_returns → REFUND_COMPLETED) to Shopify automatically */
+  autoPushRefunds: boolean;
+  /** Accept Shopify as source-of-truth for inventory (dangerous — default off) */
+  importInventory: boolean;
   /** Only import orders matching these financial statuses */
   orderStatusFilter: ShopifyOrderFinancialStatus[];
 }
@@ -52,6 +56,8 @@ export const DEFAULT_SHOPIFY_SYNC_CONFIG: ShopifySyncConfig = {
   exportFulfillments: true,
   autoCreateShipments: true,
   autoExportFulfillment: true,
+  autoPushRefunds: true,
+  importInventory: false,
   orderStatusFilter: ['paid'],
 };
 
@@ -80,6 +86,8 @@ export interface ShopifyProductMap {
   shopifyBarcode?: string;
   productId: string;
   batchId?: string;
+  /** When true, backend resolves batch via FEFO at order-import time. */
+  autoBatch?: boolean;
   syncDirection: ShopifySyncDirection;
   isActive: boolean;
   lastSyncedAt?: string;
@@ -274,7 +282,19 @@ export type ShopifySyncAction =
   | 'sync_inventory_import'
   | 'sync_inventory_export'
   | 'create_fulfillment'
-  | 'save_token';
+  | 'save_token'
+  // Phase 1+2 additions
+  | 'retry_fulfillment'
+  | 'update_fulfillment_tracking'
+  | 'sync_customers'
+  | 'create_refund'
+  | 'count_orders'
+  | 'fetch_unmapped_variants'
+  // Phase 3 (webhook lifecycle)
+  | 'register_webhooks'
+  | 'list_webhooks'
+  | 'delete_webhooks'
+  | 'test_webhook';
 
 export interface ShopifySyncRequest {
   action: ShopifySyncAction;
@@ -286,6 +306,60 @@ export interface ShopifySyncResponse {
   data?: unknown;
   syncLog?: ShopifySyncLog;
   error?: string;
+}
+
+// ============================================
+// REFUNDS
+// ============================================
+
+export interface ShopifyTransaction {
+  id: number;
+  order_id: number;
+  kind: 'authorization' | 'capture' | 'sale' | 'void' | 'refund' | 'change';
+  status: 'pending' | 'failure' | 'success' | 'error';
+  gateway: string;
+  amount: string;
+  parent_id?: number;
+}
+
+export interface ShopifyRefund {
+  id: number;
+  order_id: number;
+  created_at: string;
+  note?: string;
+  total_duties_set?: unknown;
+  refund_line_items?: Array<{
+    id: number;
+    line_item_id: number;
+    quantity: number;
+    restock_type?: string;
+  }>;
+  transactions: ShopifyTransaction[];
+}
+
+// ============================================
+// WEBHOOKS
+// ============================================
+
+export interface ShopifyWebhookSubscription {
+  id: number;
+  topic: string;
+  address: string;
+  format: 'json' | 'xml';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UnmappedShopifyVariant {
+  shopifyVariantId: number;
+  shopifyProductId?: number;
+  shopifyProductTitle?: string;
+  shopifyVariantTitle?: string;
+  sku?: string | null;
+  barcode?: string | null;
+  lastOrderName?: string;
+  lastSeenAt: string;
+  occurrences: number;
 }
 
 // ============================================

@@ -32,6 +32,7 @@ import { SampleStatusPipeline } from '@/components/warehouse/SampleStatusPipelin
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
 import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
+import { ShopifyShipmentSyncCard } from '@/components/warehouse/shopify/ShopifyShipmentSyncCard';
 
 /* -------------------------------------------------------------------------- */
 /*  STATUS TRANSITION LABELS                                                   */
@@ -670,6 +671,9 @@ export function ShipmentDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Shopify Sync Card — only shown for Shopify-sourced shipments */}
+          <ShopifyShipmentSyncCard shipment={shipment} onRefresh={reloadShipment} />
         </div>
       )}
 

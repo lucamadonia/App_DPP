@@ -21,6 +21,7 @@ import { ShopifyProductMappingTable } from '@/components/warehouse/shopify/Shopi
 import { ShopifyLocationMappingTable } from '@/components/warehouse/shopify/ShopifyLocationMappingTable';
 import { ShopifySyncConfigCard } from '@/components/warehouse/shopify/ShopifySyncConfigCard';
 import { ShopifySyncDashboard } from '@/components/warehouse/shopify/ShopifySyncDashboard';
+import { ShopifyWebhookSetup } from '@/components/warehouse/shopify/ShopifyWebhookSetup';
 
 export function ShopifyIntegrationPage() {
   const { t } = useTranslation('warehouse');
@@ -107,6 +108,7 @@ export function ShopifyIntegrationPage() {
             <TabsTrigger value="connection" className="text-xs sm:text-sm">{t('Connection')}</TabsTrigger>
             <TabsTrigger value="products" disabled={!isConnected} className="text-xs sm:text-sm">{t('Product Mapping')}</TabsTrigger>
             <TabsTrigger value="locations" disabled={!isConnected} className="text-xs sm:text-sm">{t('Location Mapping')}</TabsTrigger>
+            <TabsTrigger value="webhooks" disabled={!isConnected} className="text-xs sm:text-sm">{t('Webhook Setup')}</TabsTrigger>
             <TabsTrigger value="config" disabled={!isConnected} className="text-xs sm:text-sm">{t('Sync Configuration')}</TabsTrigger>
             <TabsTrigger value="sync" disabled={!isConnected} className="text-xs sm:text-sm">{t('Sync Dashboard')}</TabsTrigger>
           </TabsList>
@@ -122,6 +124,10 @@ export function ShopifyIntegrationPage() {
 
         <TabsContent value="locations">
           <ShopifyLocationMappingTable maps={locationMaps} onRefresh={loadAll} />
+        </TabsContent>
+
+        <TabsContent value="webhooks">
+          <ShopifyWebhookSetup />
         </TabsContent>
 
         <TabsContent value="config">

@@ -45,6 +45,13 @@ function transformShipment(row: any): WhShipment {
     sourceLocationId: row.source_location_id || undefined,
     orderReference: row.order_reference || undefined,
     customerId: row.customer_id || undefined,
+    shopifyOrderId: row.shopify_order_id ?? undefined,
+    shopifyFulfillmentId: row.shopify_fulfillment_id ?? undefined,
+    shopifyFulfillmentStatus: row.shopify_fulfillment_status ?? undefined,
+    shopifyExportPending: row.shopify_export_pending ?? false,
+    shopifyExportAttempts: row.shopify_export_attempts ?? 0,
+    shopifyExportError: row.shopify_export_error ?? undefined,
+    lastFulfillmentAt: row.last_fulfillment_at ?? undefined,
     priority: row.priority || 'normal',
     notes: row.notes || undefined,
     internalNotes: row.internal_notes || undefined,
@@ -342,6 +349,20 @@ export async function updateShipment(id: string, updates: Partial<{
     .single();
 
   if (error) throw new Error(`Failed to update shipment: ${error.message}`);
+
+  // Push tracking update to Shopify if fulfillment already exists and tracking changed
+  const trackingChanged =
+    updates.trackingNumber !== undefined ||
+    updates.carrier !== undefined ||
+    updates.labelUrl !== undefined;
+  if (trackingChanged && data.shopify_fulfillment_id && data.tracking_number) {
+    import('./shopify-integration').then(({ updateShopifyFulfillmentTracking }) => {
+      updateShopifyFulfillmentTracking(id).catch(err =>
+        console.error('Shopify tracking update failed:', err)
+      );
+    });
+  }
+
   return transformShipment(data);
 }
 
@@ -433,13 +454,35 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
 
   if (error) throw new Error(`Failed to update status: ${error.message}`);
 
-  // Auto-export fulfillment to Shopify when shipped
-  if (status === 'shipped' && data.order_reference?.startsWith('Shopify ')) {
-    import('./shopify-integration').then(({ createShopifyFulfillment }) => {
-      createShopifyFulfillment(id).catch(err =>
-        console.error('Shopify fulfillment export failed:', err)
-      );
-    });
+  // Auto-export fulfillment to Shopify when shipped (respects autoExportFulfillment flag)
+  if (status === 'shipped' && (data.shopify_order_id || data.order_reference?.startsWith('Shopify '))) {
+    const tenantId = data.tenant_id;
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .single();
+    const autoExport = tenant?.settings?.shopifyIntegration?.syncConfig?.autoExportFulfillment;
+    if (autoExport === false) {
+      // Mark as pending, don't push
+      await supabase
+        .from('wh_shipments')
+        .update({ shopify_export_pending: true })
+        .eq('id', id);
+    } else {
+      import('./shopify-integration').then(({ createShopifyFulfillment }) => {
+        createShopifyFulfillment(id).catch(err => {
+          console.error('Shopify fulfillment export failed:', err);
+          supabase
+            .from('wh_shipments')
+            .update({
+              shopify_export_pending: true,
+              shopify_export_error: err?.message || String(err),
+            })
+            .eq('id', id);
+        });
+      });
+    }
   }
 
   return transformShipment(data);

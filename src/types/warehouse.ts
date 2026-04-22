@@ -581,6 +581,14 @@ export interface WhShipment {
   orderReference?: string;
   customerId?: string;
   contactId?: string;
+  // Shopify bidirectional linkage
+  shopifyOrderId?: number;
+  shopifyFulfillmentId?: number;
+  shopifyFulfillmentStatus?: string;
+  shopifyExportPending?: boolean;
+  shopifyExportAttempts?: number;
+  shopifyExportError?: string;
+  lastFulfillmentAt?: string;
   priority: ShipmentPriority;
   notes?: string;
   internalNotes?: string;

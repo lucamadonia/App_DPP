@@ -21,6 +21,8 @@ import type {
   ShopifyLocation,
   ShopifySyncDirection,
   AutoMapResult,
+  ShopifyWebhookSubscription,
+  UnmappedShopifyVariant,
 } from '@/types/shopify';
 
 // ============================================
@@ -41,6 +43,7 @@ function transformProductMap(row: any): ShopifyProductMap {
     shopifyBarcode: row.shopify_barcode || undefined,
     productId: row.product_id,
     batchId: row.batch_id || undefined,
+    autoBatch: row.auto_batch ?? false,
     syncDirection: row.sync_direction,
     isActive: row.is_active,
     lastSyncedAt: row.last_synced_at || undefined,
@@ -266,6 +269,7 @@ export async function updateShopifyProductMap(
   updates: Partial<{
     productId: string;
     batchId: string | null;
+    autoBatch: boolean;
     syncDirection: ShopifySyncDirection;
     isActive: boolean;
   }>,
@@ -274,6 +278,7 @@ export async function updateShopifyProductMap(
   const update: Record<string, any> = {};
   if (updates.productId !== undefined) update.product_id = updates.productId;
   if (updates.batchId !== undefined) update.batch_id = updates.batchId || null;
+  if (updates.autoBatch !== undefined) update.auto_batch = updates.autoBatch;
   if (updates.syncDirection !== undefined) update.sync_direction = updates.syncDirection;
   if (updates.isActive !== undefined) update.is_active = updates.isActive;
 
@@ -535,6 +540,26 @@ export async function syncShopifyOrders(sinceId?: number): Promise<ShopifySyncRe
   return callEdgeFunction('sync_orders', { sinceId });
 }
 
+export interface BackfillParams {
+  backfill?: boolean;
+  createdAtMin?: string;
+  createdAtMax?: string;
+  status?: 'open' | 'closed' | 'cancelled' | 'any';
+  financialStatus?: string;
+  fulfillmentStatus?: 'unfulfilled' | 'partial' | 'shipped' | 'any';
+  maxPages?: number;
+}
+
+export async function syncShopifyOrdersBackfill(params: BackfillParams): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('sync_orders', { ...params, backfill: true });
+}
+
+export async function countShopifyOrders(params: BackfillParams): Promise<{ count: number }> {
+  const res = await callEdgeFunction('count_orders', params);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { count: ((res.data as any)?.count) ?? 0 };
+}
+
 export async function syncInventoryImport(): Promise<ShopifySyncResponse> {
   return callEdgeFunction('sync_inventory_import');
 }
@@ -545,6 +570,55 @@ export async function syncInventoryExport(): Promise<ShopifySyncResponse> {
 
 export async function createShopifyFulfillment(shipmentId: string): Promise<ShopifySyncResponse> {
   return callEdgeFunction('create_fulfillment', { shipmentId });
+}
+
+export async function retryShopifyFulfillment(shipmentId?: string): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('retry_fulfillment', shipmentId ? { shipmentId } : undefined);
+}
+
+export async function updateShopifyFulfillmentTracking(shipmentId: string): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('update_fulfillment_tracking', { shipmentId });
+}
+
+export async function syncShopifyCustomers(): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('sync_customers');
+}
+
+export async function createShopifyRefund(returnId: string): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('create_refund', { returnId });
+}
+
+export async function fetchUnmappedVariants(): Promise<UnmappedShopifyVariant[]> {
+  const res = await callEdgeFunction('fetch_unmapped_variants');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((res.data as any)?.variants || []) as UnmappedShopifyVariant[];
+}
+
+export async function registerShopifyWebhooks(): Promise<{
+  registered: number; skipped: number; failed: number; expectedAddress: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  details: any;
+}> {
+  const res = await callEdgeFunction('register_webhooks');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return res.data as any;
+}
+
+export async function listShopifyWebhooks(): Promise<{ webhooks: ShopifyWebhookSubscription[]; expectedAddress: string }> {
+  const res = await callEdgeFunction('list_webhooks');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = res.data as any;
+  return { webhooks: d?.webhooks || [], expectedAddress: d?.expectedAddress || '' };
+}
+
+export async function deleteShopifyWebhooks(): Promise<{ deleted: number }> {
+  const res = await callEdgeFunction('delete_webhooks');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { deleted: ((res.data as any)?.deleted) ?? 0 };
+}
+
+export async function testShopifyWebhook(topic = 'orders/create'): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('test_webhook', { topic });
 }
 
 export async function runFullSync(): Promise<{

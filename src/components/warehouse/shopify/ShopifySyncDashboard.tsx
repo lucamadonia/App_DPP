@@ -13,6 +13,7 @@ import {
 import type { ShopifySyncLog } from '@/types/shopify';
 import { useToast } from '@/hooks/use-toast';
 import { ShopifySyncLogTable } from './ShopifySyncLogTable';
+import { ShopifyBackfillDialog } from './ShopifyBackfillDialog';
 
 interface Props {
   logs: ShopifySyncLog[];
@@ -115,6 +116,10 @@ export function ShopifySyncDashboard({ logs, onRefresh }: Props) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Backfill trigger */}
+      <div className="flex justify-end">
+        <ShopifyBackfillDialog onCompleted={onRefresh} />
+      </div>
       {/* Sync actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <SyncButton action="orders" label={t('Sync Orders')} icon={ArrowDownToLine} />

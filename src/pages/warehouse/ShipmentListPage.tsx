@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Plus, Truck, Search, Package, FileText, CheckCircle2,
   Rocket, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
+  ShoppingBag,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -357,12 +358,25 @@ export function ShipmentListPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  shipments.map((s) => (
+                  shipments.map((s) => {
+                    const isShopify = s.shopifyOrderId != null || s.orderReference?.startsWith('Shopify ');
+                    const orderName = s.orderReference?.replace('Shopify ', '');
+                    const hasExportIssue = s.shopifyExportPending || s.shopifyFulfillmentStatus === 'dead_letter';
+                    return (
                     <TableRow key={s.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell>
-                        <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
-                          {s.shipmentNumber}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          {hasExportIssue && <span title={t('Shopify sync pending or failed')} className="h-2 w-2 rounded-full bg-red-500 inline-block" />}
+                          <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
+                            {s.shipmentNumber}
+                          </Link>
+                        </div>
+                        {isShopify && (
+                          <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-green-700">
+                            <ShoppingBag className="h-3 w-3" />
+                            <span className="font-mono">{orderName || 'Shopify'}</span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={SHIPMENT_STATUS_COLORS[s.status]}>{t(s.status)}</Badge>
@@ -386,7 +400,8 @@ export function ShipmentListPage() {
                         {new Date(s.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
