@@ -57,6 +57,9 @@ function transformShipment(row: any): WhShipment {
     trackingLastEventAt: row.tracking_last_event_at ?? undefined,
     trackingLastLocation: row.tracking_last_location ?? undefined,
     trackingPolledAt: row.tracking_polled_at ?? undefined,
+    packagingTypeId: row.packaging_type_id ?? undefined,
+    packagingTypeName: row.wh_packaging_types?.name ?? undefined,
+    packagingTareGrams: row.wh_packaging_types?.tare_weight_grams ?? undefined,
     priority: row.priority || 'normal',
     notes: row.notes || undefined,
     internalNotes: row.internal_notes || undefined,
@@ -106,7 +109,7 @@ export async function getShipments(filter?: ShipmentFilter): Promise<{ data: WhS
 
   let query = supabase
     .from('wh_shipments')
-    .select('*, wh_locations(name)', { count: 'exact' })
+    .select('*, wh_locations(name), wh_packaging_types(name, tare_weight_grams)', { count: 'exact' })
     .eq('tenant_id', tenantId);
 
   if (filter?.status?.length) query = query.in('status', filter.status);
@@ -183,7 +186,7 @@ export async function getShipmentStatusCounts(): Promise<Record<ShipmentStatus |
 export async function getShipment(id: string): Promise<WhShipment | null> {
   const { data, error } = await supabase
     .from('wh_shipments')
-    .select('*, wh_locations(name)')
+    .select('*, wh_locations(name), wh_packaging_types(name, tare_weight_grams)')
     .eq('id', id)
     .single();
 
@@ -300,6 +303,144 @@ export async function createShipment(input: WhShipmentInput): Promise<WhShipment
   return transformShipment(data);
 }
 
+// ============================================
+// PACKAGING TYPES (Umverpackung)
+// ============================================
+
+export interface PackagingType {
+  id: string;
+  name: string;
+  description?: string;
+  tareWeightGrams: number;
+  innerLengthCm?: number;
+  innerWidthCm?: number;
+  innerHeightCm?: number;
+  maxLoadGrams?: number;
+  isDefault: boolean;
+  sortOrder: number;
+}
+
+export async function getPackagingTypes(): Promise<PackagingType[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+  const { data } = await supabase
+    .from('wh_packaging_types')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  return (data || []).map(r => ({
+    id: r.id,
+    name: r.name,
+    description: r.description || undefined,
+    tareWeightGrams: r.tare_weight_grams || 0,
+    innerLengthCm: r.inner_length_cm != null ? Number(r.inner_length_cm) : undefined,
+    innerWidthCm: r.inner_width_cm != null ? Number(r.inner_width_cm) : undefined,
+    innerHeightCm: r.inner_height_cm != null ? Number(r.inner_height_cm) : undefined,
+    maxLoadGrams: r.max_load_grams != null ? Number(r.max_load_grams) : undefined,
+    isDefault: !!r.is_default,
+    sortOrder: r.sort_order || 0,
+  }));
+}
+
+/**
+ * Assigns a packaging type to a shipment and recomputes total_weight_grams
+ * = sum(items.gross_weight × qty) + packaging.tare_weight_grams.
+ */
+export async function setShipmentPackaging(shipmentId: string, packagingTypeId: string | null): Promise<WhShipment> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  let tare = 0;
+  if (packagingTypeId) {
+    const { data: pkg } = await supabase.from('wh_packaging_types').select('tare_weight_grams').eq('id', packagingTypeId).maybeSingle();
+    tare = pkg?.tare_weight_grams || 0;
+  }
+  const { data: items } = await supabase
+    .from('wh_shipment_items')
+    .select('product_id, batch_id, quantity')
+    .eq('shipment_id', shipmentId);
+  let itemsWeight = 0;
+  for (const it of (items || [])) {
+    let w: number | null = null;
+    if (it.batch_id) {
+      const { data: b } = await supabase.from('product_batches').select('gross_weight, net_weight').eq('id', it.batch_id).maybeSingle();
+      w = (b?.gross_weight ?? b?.net_weight) as number | null;
+    }
+    if (w === null) {
+      const { data: p } = await supabase.from('products').select('gross_weight, net_weight').eq('tenant_id', tenantId).eq('id', it.product_id).maybeSingle();
+      w = (p?.gross_weight ?? p?.net_weight) as number | null;
+    }
+    if (w !== null) itemsWeight += w * (it.quantity || 0);
+  }
+  const total = itemsWeight + tare;
+
+  const { data, error } = await supabase
+    .from('wh_shipments')
+    .update({ packaging_type_id: packagingTypeId, total_weight_grams: total > 0 ? total : null })
+    .eq('id', shipmentId)
+    .select('*, wh_locations(name), wh_packaging_types(name, tare_weight_grams)')
+    .single();
+  if (error) throw new Error(`Failed to set packaging: ${error.message}`);
+  return transformShipment(data);
+}
+
+/**
+ * Smart suggestion: smallest packaging whose inner volume covers items' volume × 1.2
+ * and whose max_load_grams is >= items weight. Returns packaging ID or null if none fits.
+ */
+export async function suggestPackaging(shipmentId: string): Promise<{ packagingId: string | null; reason: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { packagingId: null, reason: 'no tenant' };
+  const { data: items } = await supabase
+    .from('wh_shipment_items')
+    .select('product_id, quantity')
+    .eq('shipment_id', shipmentId);
+  if (!items?.length) return { packagingId: null, reason: 'no items' };
+
+  let itemsWeight = 0;
+  let itemsVolume = 0;
+  for (const it of items) {
+    const { data: p } = await supabase
+      .from('products')
+      .select('gross_weight, net_weight, product_height_cm, product_width_cm, product_depth_cm, packaging_height_cm, packaging_width_cm, packaging_depth_cm')
+      .eq('tenant_id', tenantId)
+      .eq('id', it.product_id)
+      .maybeSingle();
+    const w = p?.gross_weight ?? p?.net_weight;
+    if (w) itemsWeight += Number(w) * (it.quantity || 0);
+    const h = p?.packaging_height_cm ?? p?.product_height_cm ?? 0;
+    const w2 = p?.packaging_width_cm ?? p?.product_width_cm ?? 0;
+    const d = p?.packaging_depth_cm ?? p?.product_depth_cm ?? 0;
+    if (h && w2 && d) itemsVolume += Number(h) * Number(w2) * Number(d) * (it.quantity || 0);
+  }
+
+  const { data: packs } = await supabase
+    .from('wh_packaging_types')
+    .select('id, name, tare_weight_grams, inner_length_cm, inner_width_cm, inner_height_cm, max_load_grams, is_default')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  if (!packs?.length) return { packagingId: null, reason: 'no packaging types' };
+  const required = itemsVolume * 1.2;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fits = (packs as any[]).filter((p) => {
+    const vol = Number(p.inner_length_cm || 0) * Number(p.inner_width_cm || 0) * Number(p.inner_height_cm || 0);
+    const okVol = required === 0 || vol >= required;
+    const okWeight = !p.max_load_grams || itemsWeight <= p.max_load_grams;
+    return okVol && okWeight;
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chosen = fits[0] || (packs as any[]).find((p) => p.is_default) || packs[0];
+  return {
+    packagingId: chosen?.id || null,
+    reason: itemsVolume > 0
+      ? `${chosen?.name} — deckt ${Math.round(itemsVolume)} cm³ Produkt-Volumen (+20% Packpuffer)`
+      : `${chosen?.name} — Default (keine Produkt-Maße hinterlegt)`,
+  };
+}
+
 export async function updateShipment(id: string, updates: Partial<{
   carrier: string;
   serviceLevel: string;
@@ -350,7 +491,7 @@ export async function updateShipment(id: string, updates: Partial<{
     .from('wh_shipments')
     .update(update)
     .eq('id', id)
-    .select('*, wh_locations(name)')
+    .select('*, wh_locations(name), wh_packaging_types(name, tare_weight_grams)')
     .single();
 
   if (error) throw new Error(`Failed to update shipment: ${error.message}`);
@@ -454,7 +595,7 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
     .from('wh_shipments')
     .update(update)
     .eq('id', id)
-    .select('*, wh_locations(name)')
+    .select('*, wh_locations(name), wh_packaging_types(name, tare_weight_grams)')
     .single();
 
   if (error) throw new Error(`Failed to update status: ${error.message}`);

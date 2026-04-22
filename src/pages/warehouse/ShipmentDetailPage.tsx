@@ -20,7 +20,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment } from '@/services/supabase/wh-shipments';
+import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, type PackagingType } from '@/services/supabase/wh-shipments';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContentPosts } from '@/services/supabase/wh-content';
 import { updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
 import { SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS, getTrackingUrl } from '@/lib/warehouse-constants';
@@ -162,6 +163,9 @@ export function ShipmentDetailPage() {
   const { t } = useTranslation('warehouse');
   const [shipment, setShipment] = useState<WhShipment | null>(null);
   const [items, setItems] = useState<WhShipmentItem[]>([]);
+  const [packagingTypes, setPackagingTypes] = useState<PackagingType[]>([]);
+  const [suggestingPackaging, setSuggestingPackaging] = useState(false);
+  useEffect(() => { getPackagingTypes().then(setPackagingTypes); }, []);
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'content' | 'activity'>('overview');
@@ -600,6 +604,65 @@ export function ShipmentDetailPage() {
                   <Button size="sm" variant="outline" onClick={() => cancelEdit('shipping')}><X className="h-3.5 w-3.5 mr-1" />{t('Cancel', { ns: 'common' })}</Button>
                 </div>
               )}
+
+              {/* Umverpackung (Karton) */}
+              <div className="border-t pt-3 mt-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-sm shrink-0">{t('Umverpackung')}</span>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={shipment.packagingTypeId || 'none'}
+                      onValueChange={async (v) => {
+                        try {
+                          const updated = await setShipmentPackaging(shipment.id, v === 'none' ? null : v);
+                          setShipment(updated);
+                          toast.success(t('Umverpackung aktualisiert'));
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : String(e));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[200px] h-8 text-sm">
+                        <SelectValue placeholder={t('Kein Karton')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t('Kein Karton')}</SelectItem>
+                        {packagingTypes.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} ({p.tareWeightGrams}g)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={suggestingPackaging}
+                      onClick={async () => {
+                        setSuggestingPackaging(true);
+                        try {
+                          const res = await suggestPackaging(shipment.id);
+                          if (!res.packagingId) { toast.error(res.reason); return; }
+                          const updated = await setShipmentPackaging(shipment.id, res.packagingId);
+                          setShipment(updated);
+                          toast.success(res.reason);
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : String(e));
+                        } finally {
+                          setSuggestingPackaging(false);
+                        }
+                      }}
+                    >
+                      {suggestingPackaging ? '…' : t('Vorschlag')}
+                    </Button>
+                  </div>
+                </div>
+                {shipment.packagingTareGrams != null && (
+                  <div className="text-xs text-muted-foreground">
+                    {t('Tara')}: {shipment.packagingTareGrams}g · {t('Gesamt inkl. Umverpackung')}: {shipment.totalWeightGrams}g
+                  </div>
+                )}
+              </div>
 
               {/* Latest DHL tracking event — populated by 8h cron poll */}
               {(shipment.trackingLastDescription || shipment.trackingLastStatus) && (

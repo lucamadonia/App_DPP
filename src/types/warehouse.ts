@@ -595,6 +595,9 @@ export interface WhShipment {
   trackingLastEventAt?: string;
   trackingLastLocation?: string;
   trackingPolledAt?: string;
+  packagingTypeId?: string;
+  packagingTypeName?: string;
+  packagingTareGrams?: number;
   priority: ShipmentPriority;
   notes?: string;
   internalNotes?: string;

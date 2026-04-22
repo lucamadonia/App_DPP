@@ -722,18 +722,27 @@ async function resolveAutoBatch(supabase: any, tenantId: string, productId: stri
 }
 
 /**
- * Sum gross_weight (preferring batch over product) × quantity across all items
- * and persist on wh_shipments.total_weight_grams.
+ * Sum gross_weight × quantity + smart packaging suggestion.
+ * Writes total_weight_grams (items + packaging tare) + packaging_type_id if
+ * the shipment had none yet.
  */
 // deno-lint-ignore no-explicit-any
 async function updateShipmentWeight(supabase: any, tenantId: string, shipmentId: string) {
+  const { data: ship } = await supabase
+    .from('wh_shipments')
+    .select('id, packaging_type_id')
+    .eq('id', shipmentId)
+    .maybeSingle();
+  if (!ship) return;
+
   const { data: items } = await supabase
     .from('wh_shipment_items')
     .select('product_id, batch_id, quantity')
     .eq('shipment_id', shipmentId);
   if (!items?.length) return;
 
-  let total = 0;
+  let itemsWeight = 0;
+  let itemsVolume = 0;
   for (const it of items) {
     let w: number | null = null;
     if (it.batch_id) {
@@ -744,19 +753,62 @@ async function updateShipmentWeight(supabase: any, tenantId: string, shipmentId:
         .maybeSingle();
       w = b?.gross_weight ?? b?.net_weight ?? null;
     }
-    if (w === null) {
-      const { data: p } = await supabase
-        .from('products')
-        .select('gross_weight, net_weight')
-        .eq('tenant_id', tenantId)
-        .eq('id', it.product_id)
-        .maybeSingle();
-      w = p?.gross_weight ?? p?.net_weight ?? null;
-    }
-    if (w !== null) total += w * (it.quantity || 0);
+    const { data: p } = await supabase
+      .from('products')
+      .select('gross_weight, net_weight, product_height_cm, product_width_cm, product_depth_cm, packaging_height_cm, packaging_width_cm, packaging_depth_cm')
+      .eq('tenant_id', tenantId)
+      .eq('id', it.product_id)
+      .maybeSingle();
+    if (w === null) w = p?.gross_weight ?? p?.net_weight ?? null;
+    if (w !== null) itemsWeight += w * (it.quantity || 0);
+
+    const h = p?.packaging_height_cm ?? p?.product_height_cm ?? 0;
+    const w2 = p?.packaging_width_cm ?? p?.product_width_cm ?? 0;
+    const d = p?.packaging_depth_cm ?? p?.product_depth_cm ?? 0;
+    if (h && w2 && d) itemsVolume += Number(h) * Number(w2) * Number(d) * (it.quantity || 0);
   }
-  if (total > 0) {
-    await supabase.from('wh_shipments').update({ total_weight_grams: total }).eq('id', shipmentId);
+
+  // Auto-suggest packaging: smallest packaging whose inner volume covers items' volume * 1.2
+  let packagingTypeId = ship.packaging_type_id;
+  let packagingTare = 0;
+  if (!packagingTypeId) {
+    const { data: packs } = await supabase
+      .from('wh_packaging_types')
+      .select('id, tare_weight_grams, inner_length_cm, inner_width_cm, inner_height_cm, max_load_grams, is_default, sort_order')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    if (packs?.length) {
+      const required = itemsVolume * 1.2;
+      // deno-lint-ignore no-explicit-any
+      const fits = packs.filter((p: any) => {
+        const vol = Number(p.inner_length_cm || 0) * Number(p.inner_width_cm || 0) * Number(p.inner_height_cm || 0);
+        const okVol = required === 0 || vol >= required;
+        const okWeight = !p.max_load_grams || itemsWeight <= p.max_load_grams;
+        return okVol && okWeight;
+      });
+      // deno-lint-ignore no-explicit-any
+      const chosen = fits[0] || packs.find((p: any) => p.is_default) || packs[0];
+      if (chosen) {
+        packagingTypeId = chosen.id;
+        packagingTare = chosen.tare_weight_grams || 0;
+      }
+    }
+  } else {
+    const { data: pkg } = await supabase
+      .from('wh_packaging_types')
+      .select('tare_weight_grams')
+      .eq('id', packagingTypeId)
+      .maybeSingle();
+    packagingTare = pkg?.tare_weight_grams || 0;
+  }
+
+  const total = itemsWeight + packagingTare;
+  const patch: Record<string, unknown> = {};
+  if (total > 0) patch.total_weight_grams = total;
+  if (packagingTypeId && packagingTypeId !== ship.packaging_type_id) patch.packaging_type_id = packagingTypeId;
+  if (Object.keys(patch).length > 0) {
+    await supabase.from('wh_shipments').update(patch).eq('id', shipmentId);
   }
 }
 
