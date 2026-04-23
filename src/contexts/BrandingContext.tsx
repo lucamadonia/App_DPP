@@ -23,6 +23,7 @@ import {
   updateQRCodeSettings as saveQRCodeSettings,
   updateDPPDesignSettings as saveDPPDesignSettings,
 } from '@/services/supabase';
+import { supabase } from '@/lib/supabase';
 import type { BrandingSettings, QRCodeDomainSettings, DPPDesignSettings, DPPTemplateName } from '@/types/database';
 import {
   applyPrimaryColor,
@@ -100,19 +101,44 @@ interface BrandingProviderProps {
   children: ReactNode;
 }
 
+interface HostWhitelabel {
+  tenantId: string;
+  tenantName: string;
+  appName?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  supportEmail?: string;
+}
+
+// Detects whether the current host is a whitelabel domain (not the default
+// trackbliss.eu / dpp-app.fambliss.eu / localhost).
+function isWhitelabelCandidateHost(host: string): boolean {
+  const h = host.toLowerCase();
+  if (h === 'localhost' || h.startsWith('localhost:')) return false;
+  if (h === 'dpp-app.fambliss.eu') return false;
+  if (h === 'trackbliss.eu') return false;
+  if (h === 'www.trackbliss.eu') return false;
+  // Everything else *could* be a whitelabel match — either a subdomain of
+  // trackbliss.eu (e.g. fambliss.trackbliss.eu) or a custom domain
+  return true;
+}
+
 export function BrandingProvider({ children }: BrandingProviderProps) {
   const { isAuthenticated, tenantId, isInitializing } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [rawBranding, setRawBranding] = useState<BrandingSettings | null>(null);
   const [rawQRCodeSettings, setRawQRCodeSettings] = useState<QRCodeDomainSettings | null>(null);
   const [rawDPPDesign, setRawDPPDesign] = useState<DPPDesignSettings | null>(null);
+  const [hostWhitelabel, setHostWhitelabel] = useState<HostWhitelabel | null>(null);
 
-  // Resolve branding with fallback values
+  // Resolve branding — host whitelabel overrides tenant-branding overrides defaults
   const branding: ResolvedBranding = {
-    appName: rawBranding?.appName || defaultBranding.appName,
-    primaryColor: rawBranding?.primaryColor || defaultBranding.primaryColor,
-    logo: rawBranding?.logo || null,
-    favicon: rawBranding?.favicon || defaultBranding.favicon,
+    appName: hostWhitelabel?.appName || rawBranding?.appName || defaultBranding.appName,
+    primaryColor: hostWhitelabel?.primaryColor || rawBranding?.primaryColor || defaultBranding.primaryColor,
+    logo: hostWhitelabel?.logoUrl || rawBranding?.logo || null,
+    favicon: hostWhitelabel?.faviconUrl || rawBranding?.favicon || defaultBranding.favicon,
     poweredByText: rawBranding?.poweredByText || defaultBranding.poweredByText,
   };
 
@@ -172,6 +198,39 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
       setIsLoading(false);
     }
   }, [isAuthenticated, tenantId, isInitializing, loadBranding]);
+
+  // Host-based whitelabel resolution — runs once on mount, pre-auth.
+  // Maps the current hostname (custom domain or {slug}.trackbliss.eu) to a
+  // tenant and applies its whitelabel_config so branding sticks even before
+  // the user is logged in and across public pages.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const host = window.location.host;
+    if (!isWhitelabelCandidateHost(host)) return;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('resolve_tenant_by_host', { p_host: host });
+        if (error) { console.warn('resolve_tenant_by_host failed:', error); return; }
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cfg = (row.whitelabel_config || {}) as any;
+        setHostWhitelabel({
+          tenantId: row.tenant_id,
+          tenantName: row.tenant_name,
+          appName: cfg.appName || undefined,
+          primaryColor: cfg.primaryColor || undefined,
+          accentColor: cfg.accentColor || undefined,
+          logoUrl: cfg.logoUrl || undefined,
+          faviconUrl: cfg.faviconUrl || undefined,
+          supportEmail: cfg.supportEmail || undefined,
+        });
+      } catch (e) {
+        console.warn('host whitelabel resolution error:', e);
+      }
+    })();
+  }, []);
 
   // Apply branding changes to DOM
   useEffect(() => {
