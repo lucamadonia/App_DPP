@@ -184,7 +184,34 @@ export type AdminOperation =
   | 'list_coupons'
   | 'create_coupon'
   | 'update_coupon'
-  | 'delete_coupon';
+  | 'delete_coupon'
+  // v2 operations
+  | 'suspend_tenant'
+  | 'reactivate_tenant'
+  | 'refresh_tenant_health'
+  | 'list_audit_log'
+  | 'impersonate_start'
+  | 'impersonate_end'
+  | 'upsert_feature_flag'
+  | 'delete_feature_flag'
+  | 'list_failed_webhooks'
+  | 'retry_webhook'
+  | 'reset_user_password'
+  | 'toggle_super_admin'
+  | 'issue_refund'
+  | 'get_tenant_usage_trend'
+  | 'get_cohort_retention'
+  | 'get_mrr_waterfall'
+  | 'get_feature_adoption'
+  | 'list_all_tickets'
+  // Phase 6 (whitelabeling)
+  | 'set_tenant_subdomain'
+  | 'set_custom_domain'
+  | 'verify_custom_domain'
+  | 'update_whitelabel_config'
+  | 'set_tenant_smtp'
+  | 'test_tenant_smtp'
+  | 'disable_tenant_smtp';
 
 export interface AdminApiRequest {
   operation: AdminOperation;

@@ -53,6 +53,14 @@ Deno.serve(async (req) => {
     const body: AdminApiRequest = await req.json();
     const { operation, params = {} } = body;
 
+    // Audit context (used by write operations)
+    const auditCtx: AuditContext = {
+      adminId: user.id,
+      adminEmail: user.email || '',
+      ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || null,
+      userAgent: req.headers.get('user-agent') || null,
+    };
+
     // Route operations
     switch (operation) {
       case 'get_platform_stats':
@@ -104,6 +112,71 @@ Deno.serve(async (req) => {
       case 'delete_coupon':
         await deleteCoupon(params.couponId as string);
         return jsonResponse({ success: true });
+
+      // ============================================
+      // v2 OPERATIONS
+      // ============================================
+
+      case 'suspend_tenant':
+        await suspendTenant(admin, auditCtx, params.tenantId as string, params.reason as string);
+        return jsonResponse({ success: true });
+
+      case 'reactivate_tenant':
+        await reactivateTenant(admin, auditCtx, params.tenantId as string, params.reason as string | null);
+        return jsonResponse({ success: true });
+
+      case 'refresh_tenant_health':
+        return jsonResponse({ success: true, data: await refreshTenantHealth(admin, params.tenantId as string) });
+
+      case 'list_audit_log':
+        return jsonResponse({ success: true, data: await listAuditLog(admin, params) });
+
+      case 'impersonate_start':
+        return jsonResponse({ success: true, data: await impersonateStart(admin, auditCtx, params.tenantId as string, params.reason as string) });
+
+      case 'impersonate_end':
+        await impersonateEnd(admin, auditCtx, params.sessionId as string);
+        return jsonResponse({ success: true });
+
+      case 'upsert_feature_flag':
+        return jsonResponse({ success: true, data: await upsertFeatureFlag(admin, auditCtx, params) });
+
+      case 'delete_feature_flag':
+        await deleteFeatureFlag(admin, auditCtx, params.key as string);
+        return jsonResponse({ success: true });
+
+      case 'list_failed_webhooks':
+        return jsonResponse({ success: true, data: await listFailedWebhooks(admin, params) });
+
+      case 'retry_webhook':
+        await retryWebhook(admin, auditCtx, params.webhookId as string);
+        return jsonResponse({ success: true });
+
+      case 'reset_user_password':
+        return jsonResponse({ success: true, data: await resetUserPassword(admin, auditCtx, params.userId as string) });
+
+      case 'toggle_super_admin':
+        await toggleSuperAdmin(admin, auditCtx, params.userId as string, params.isSuperAdmin as boolean);
+        return jsonResponse({ success: true });
+
+      case 'issue_refund':
+        await issueRefund(admin, auditCtx, params);
+        return jsonResponse({ success: true });
+
+      case 'get_tenant_usage_trend':
+        return jsonResponse({ success: true, data: await getTenantUsageTrend(admin, params.tenantId as string, (params.months as number) || 12) });
+
+      case 'get_cohort_retention':
+        return jsonResponse({ success: true, data: await getCohortRetention(admin, (params.monthsBack as number) || 12) });
+
+      case 'get_mrr_waterfall':
+        return jsonResponse({ success: true, data: await getMrrWaterfall(admin, (params.monthsBack as number) || 12) });
+
+      case 'get_feature_adoption':
+        return jsonResponse({ success: true, data: await getFeatureAdoption(admin) });
+
+      case 'list_all_tickets':
+        return jsonResponse({ success: true, data: await listAllTickets(admin, params) });
 
       default:
         return jsonResponse({ success: false, error: `Unknown operation: ${operation}` }, 400);
@@ -714,4 +787,594 @@ async function updateCouponStatus(couponId: string, active: boolean) {
 
 async function deleteCoupon(couponId: string) {
   await stripeFetch(`/coupons/${couponId}`, { method: 'DELETE' });
+}
+
+// ============================================
+// v2: AUDIT LOG HELPER
+// ============================================
+
+interface AuditContext {
+  adminId: string;
+  adminEmail: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+}
+
+async function audit(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  params: {
+    action: string;
+    targetType: string;
+    targetId?: string | null;
+    targetLabel?: string | null;
+    changes?: Record<string, unknown> | null;
+    reason?: string | null;
+  },
+) {
+  try {
+    await admin.rpc('log_admin_action', {
+      p_admin_id: ctx.adminId,
+      p_admin_email: ctx.adminEmail,
+      p_action: params.action,
+      p_target_type: params.targetType,
+      p_target_id: params.targetId ?? null,
+      p_target_label: params.targetLabel ?? null,
+      p_changes: params.changes ?? null,
+      p_reason: params.reason ?? null,
+      p_ip_address: ctx.ipAddress,
+      p_user_agent: ctx.userAgent,
+    });
+  } catch (err) {
+    console.error('audit log failed:', err);
+  }
+}
+
+// ============================================
+// v2: SUSPEND / REACTIVATE
+// ============================================
+
+async function suspendTenant(admin: SupabaseAdmin, ctx: AuditContext, tenantId: string, reason: string) {
+  const { data: before } = await admin.from('tenants').select('status, name').eq('id', tenantId).single();
+  await admin
+    .from('tenants')
+    .update({
+      status: 'suspended',
+      suspended_at: new Date().toISOString(),
+      suspended_reason: reason,
+    })
+    .eq('id', tenantId);
+  await audit(admin, ctx, {
+    action: 'suspend_tenant',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: before?.name,
+    changes: { status: { before: before?.status, after: 'suspended' } },
+    reason,
+  });
+}
+
+async function reactivateTenant(admin: SupabaseAdmin, ctx: AuditContext, tenantId: string, reason: string | null) {
+  const { data: before } = await admin.from('tenants').select('status, name').eq('id', tenantId).single();
+  await admin
+    .from('tenants')
+    .update({
+      status: 'active',
+      suspended_at: null,
+      suspended_reason: null,
+    })
+    .eq('id', tenantId);
+  await audit(admin, ctx, {
+    action: 'reactivate_tenant',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: before?.name,
+    changes: { status: { before: before?.status, after: 'active' } },
+    reason,
+  });
+}
+
+async function refreshTenantHealth(admin: SupabaseAdmin, tenantId: string) {
+  await admin.rpc('compute_tenant_health', { p_tenant_id: tenantId });
+  const { data } = await admin
+    .from('tenants')
+    .select('health_score, health_factors, health_updated_at')
+    .eq('id', tenantId)
+    .single();
+  return {
+    score: data?.health_score ?? 0,
+    factors: data?.health_factors ?? {},
+    updatedAt: data?.health_updated_at,
+  };
+}
+
+// ============================================
+// v2: AUDIT LOG LISTING
+// ============================================
+
+async function listAuditLog(admin: SupabaseAdmin, params: Record<string, unknown>) {
+  const limit = (params.limit as number) || 50;
+  const offset = (params.offset as number) || 0;
+  let q = admin.from('admin_audit_log').select('*', { count: 'exact' });
+  if (params.adminId) q = q.eq('admin_id', params.adminId as string);
+  if (params.action) q = q.eq('action', params.action as string);
+  if (params.targetType) q = q.eq('target_type', params.targetType as string);
+  if (params.targetId) q = q.eq('target_id', params.targetId as string);
+  if (params.fromDate) q = q.gte('created_at', params.fromDate as string);
+  if (params.toDate) q = q.lte('created_at', params.toDate as string);
+  const { data, count } = await q.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+  // deno-lint-ignore no-explicit-any
+  const entries = (data || []).map((r: any) => ({
+    id: r.id,
+    adminId: r.admin_id,
+    adminEmail: r.admin_email,
+    action: r.action,
+    targetType: r.target_type,
+    targetId: r.target_id,
+    targetLabel: r.target_label,
+    changes: r.changes,
+    reason: r.reason,
+    ipAddress: r.ip_address,
+    userAgent: r.user_agent,
+    createdAt: r.created_at,
+  }));
+  return { entries, total: count || 0 };
+}
+
+// ============================================
+// v2: IMPERSONATION
+// ============================================
+
+async function impersonateStart(admin: SupabaseAdmin, ctx: AuditContext, tenantId: string, reason: string) {
+  const { data: tenant } = await admin.from('tenants').select('id, name').eq('id', tenantId).single();
+  if (!tenant) throw new Error('Tenant not found');
+  const sessionId = crypto.randomUUID();
+  const startedAt = new Date();
+  const expiresAt = new Date(startedAt.getTime() + 30 * 60 * 1000); // 30 min
+  // Simple token = base64 JSON with session metadata. Real impersonation at
+  // the RLS level would need a signed JWT + custom auth hook. For phase 1 we
+  // rely on client-side Tenant-ID override in requests and server-side checks
+  // in downstream code paths (future work). The token is primarily an audit
+  // marker and UI banner trigger.
+  const payload = {
+    adminId: ctx.adminId,
+    adminEmail: ctx.adminEmail,
+    tenantId,
+    sessionId,
+    startedAt: startedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+  };
+  const token = btoa(JSON.stringify(payload));
+  await audit(admin, ctx, {
+    action: 'impersonate_start',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: tenant.name,
+    changes: { sessionId, expiresAt: expiresAt.toISOString() },
+    reason,
+  });
+  return {
+    token,
+    tenantId,
+    tenantName: tenant.name,
+    sessionId,
+    expiresAt: expiresAt.toISOString(),
+    startedAt: startedAt.toISOString(),
+  };
+}
+
+async function impersonateEnd(admin: SupabaseAdmin, ctx: AuditContext, sessionId: string) {
+  await audit(admin, ctx, {
+    action: 'impersonate_end',
+    targetType: 'impersonation',
+    targetId: sessionId,
+    changes: null,
+  });
+}
+
+// ============================================
+// v2: FEATURE FLAGS
+// ============================================
+
+async function upsertFeatureFlag(admin: SupabaseAdmin, ctx: AuditContext, params: Record<string, unknown>) {
+  const key = params.key as string;
+  if (!key) throw new Error('Feature flag key is required');
+
+  const { data: before } = await admin.from('admin_feature_flags').select('*').eq('key', key).maybeSingle();
+
+  const payload: Record<string, unknown> = {
+    key,
+    updated_at: new Date().toISOString(),
+  };
+  if (params.description !== undefined) payload.description = params.description;
+  if (params.enabledGlobally !== undefined) payload.enabled_globally = params.enabledGlobally;
+  if (params.rolloutPercentage !== undefined) payload.rollout_percentage = params.rolloutPercentage;
+  if (params.enabledForTenants !== undefined) payload.enabled_for_tenants = params.enabledForTenants;
+  if (params.disabledForTenants !== undefined) payload.disabled_for_tenants = params.disabledForTenants;
+
+  const { data, error } = await admin
+    .from('admin_feature_flags')
+    .upsert(payload, { onConflict: 'key' })
+    .select()
+    .single();
+  if (error) throw error;
+
+  await audit(admin, ctx, {
+    action: before ? 'update_feature_flag' : 'create_feature_flag',
+    targetType: 'feature_flag',
+    targetId: data.id,
+    targetLabel: key,
+    changes: before
+      ? {
+          enabledGlobally: { before: before.enabled_globally, after: data.enabled_globally },
+          rolloutPercentage: { before: before.rollout_percentage, after: data.rollout_percentage },
+        }
+      : (payload as Record<string, unknown>),
+    reason: (params.reason as string) || null,
+  });
+
+  return {
+    id: data.id,
+    key: data.key,
+    description: data.description,
+    enabledGlobally: !!data.enabled_globally,
+    rolloutPercentage: Number(data.rollout_percentage) || 0,
+    enabledForTenants: data.enabled_for_tenants || [],
+    disabledForTenants: data.disabled_for_tenants || [],
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+async function deleteFeatureFlag(admin: SupabaseAdmin, ctx: AuditContext, key: string) {
+  const { data: before } = await admin.from('admin_feature_flags').select('id').eq('key', key).maybeSingle();
+  await admin.from('admin_feature_flags').delete().eq('key', key);
+  await audit(admin, ctx, {
+    action: 'delete_feature_flag',
+    targetType: 'feature_flag',
+    targetId: before?.id,
+    targetLabel: key,
+    changes: null,
+  });
+}
+
+// ============================================
+// v2: WEBHOOK DLQ
+// ============================================
+
+async function listFailedWebhooks(admin: SupabaseAdmin, params: Record<string, unknown>) {
+  const limit = (params.limit as number) || 100;
+  let q = admin
+    .from('shopify_webhook_events')
+    .select('id, tenant_id, shop_domain, topic, status, attempts, last_error, received_at, processed_at')
+    .in('status', ['failed', 'dead_letter']);
+  if (params.tenantId) q = q.eq('tenant_id', params.tenantId as string);
+  const { data } = await q.order('received_at', { ascending: false }).limit(limit);
+  // deno-lint-ignore no-explicit-any
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    tenantId: r.tenant_id,
+    shopDomain: r.shop_domain,
+    topic: r.topic,
+    status: r.status,
+    attempts: r.attempts,
+    lastError: r.last_error,
+    receivedAt: r.received_at,
+    processedAt: r.processed_at,
+  }));
+}
+
+async function retryWebhook(admin: SupabaseAdmin, ctx: AuditContext, webhookId: string) {
+  // Reset status to pending; external processor (or future cron) will pick it up.
+  await admin
+    .from('shopify_webhook_events')
+    .update({ status: 'pending', last_error: null })
+    .eq('id', webhookId);
+  await audit(admin, ctx, {
+    action: 'retry_webhook',
+    targetType: 'webhook',
+    targetId: webhookId,
+    changes: { status: { before: 'failed', after: 'pending' } },
+  });
+}
+
+// ============================================
+// v2: USER MANAGEMENT EXTENDED
+// ============================================
+
+async function resetUserPassword(admin: SupabaseAdmin, ctx: AuditContext, userId: string) {
+  const { data: u } = await admin.auth.admin.getUserById(userId);
+  if (!u?.user?.email) throw new Error('User not found or no email');
+  // generateLink returns a magic link / reset link that can be sent to the user
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: 'recovery',
+    email: u.user.email,
+  });
+  if (error) throw error;
+  await audit(admin, ctx, {
+    action: 'reset_user_password',
+    targetType: 'user',
+    targetId: userId,
+    targetLabel: u.user.email,
+  });
+  return { resetLink: data.properties?.action_link || '' };
+}
+
+async function toggleSuperAdmin(admin: SupabaseAdmin, ctx: AuditContext, userId: string, isSuperAdmin: boolean) {
+  const { data: before } = await admin.from('profiles').select('email, is_super_admin').eq('id', userId).single();
+  await admin.from('profiles').update({ is_super_admin: isSuperAdmin }).eq('id', userId);
+  await audit(admin, ctx, {
+    action: 'toggle_super_admin',
+    targetType: 'user',
+    targetId: userId,
+    targetLabel: before?.email,
+    changes: { isSuperAdmin: { before: before?.is_super_admin, after: isSuperAdmin } },
+  });
+}
+
+// ============================================
+// v2: REFUNDS
+// ============================================
+
+async function issueRefund(admin: SupabaseAdmin, ctx: AuditContext, params: Record<string, unknown>) {
+  const tenantId = params.tenantId as string;
+  const amountCents = params.amountCents as number;
+  const reason = params.reason as string;
+  const invoiceId = params.invoiceId as string | undefined;
+
+  // Log as a credit transaction for audit completeness
+  const { data: credits } = await admin.from('billing_credits').select('id, purchased_balance').eq('tenant_id', tenantId).maybeSingle();
+  const newBalance = (credits?.purchased_balance || 0) + Math.floor(amountCents / 100);
+  await admin.from('billing_credit_transactions').insert({
+    tenant_id: tenantId,
+    type: 'refund',
+    amount: Math.floor(amountCents / 100),
+    balance_after: newBalance,
+    source: 'purchased',
+    description: reason,
+    metadata: { invoiceId, amountCents, issuedBy: ctx.adminId },
+  });
+  if (credits) {
+    await admin.from('billing_credits').update({ purchased_balance: newBalance }).eq('id', credits.id);
+  }
+  await audit(admin, ctx, {
+    action: 'issue_refund',
+    targetType: 'credit',
+    targetId: tenantId,
+    changes: { amountCents, invoiceId },
+    reason,
+  });
+}
+
+// ============================================
+// v2: ANALYTICS (lightweight implementations)
+// ============================================
+
+async function getTenantUsageTrend(admin: SupabaseAdmin, tenantId: string, months: number) {
+  // SQL window: last N months. We aggregate billing_usage_logs + wh_shipments.
+  const since = new Date();
+  since.setMonth(since.getMonth() - months);
+  const { data: logs } = await admin
+    .from('billing_usage_logs')
+    .select('resource_type, action, quantity, created_at')
+    .eq('tenant_id', tenantId)
+    .gte('created_at', since.toISOString())
+    .limit(50000);
+
+  const byMonth = new Map<string, Record<string, number>>();
+  // deno-lint-ignore no-explicit-any
+  (logs || []).forEach((r: any) => {
+    const m = (r.created_at as string).slice(0, 7);
+    if (!byMonth.has(m)) byMonth.set(m, { products: 0, batches: 0, shipments: 0, returns: 0, documents: 0, aiCreditsUsed: 0 });
+    const row = byMonth.get(m)!;
+    if (r.resource_type === 'product' && r.action === 'create') row.products += r.quantity || 1;
+    if (r.resource_type === 'batch' && r.action === 'create') row.batches += r.quantity || 1;
+    if (r.resource_type === 'document' && r.action === 'create') row.documents += r.quantity || 1;
+    if (r.resource_type === 'return' && r.action === 'create') row.returns += r.quantity || 1;
+    if (r.resource_type === 'ai_credit' && r.action === 'consume') row.aiCreditsUsed += r.quantity || 1;
+  });
+
+  const { data: ships } = await admin
+    .from('wh_shipments')
+    .select('created_at')
+    .eq('tenant_id', tenantId)
+    .gte('created_at', since.toISOString())
+    .limit(10000);
+  // deno-lint-ignore no-explicit-any
+  (ships || []).forEach((r: any) => {
+    const m = (r.created_at as string).slice(0, 7);
+    if (!byMonth.has(m)) byMonth.set(m, { products: 0, batches: 0, shipments: 0, returns: 0, documents: 0, aiCreditsUsed: 0 });
+    byMonth.get(m)!.shipments += 1;
+  });
+
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, v]) => ({ month, ...v }));
+}
+
+async function getCohortRetention(admin: SupabaseAdmin, monthsBack: number) {
+  // Cohort = signup month of tenant. Retention = tenant had activity in month N.
+  // Activity = at least one billing_usage_log OR wh_shipments OR returns in that month.
+  const since = new Date();
+  since.setMonth(since.getMonth() - monthsBack);
+  const { data: tenants } = await admin
+    .from('tenants')
+    .select('id, created_at')
+    .gte('created_at', since.toISOString());
+
+  const cohorts: Record<string, string[]> = {};
+  // deno-lint-ignore no-explicit-any
+  (tenants || []).forEach((t: any) => {
+    const m = (t.created_at as string).slice(0, 7);
+    if (!cohorts[m]) cohorts[m] = [];
+    cohorts[m].push(t.id);
+  });
+
+  const now = new Date();
+  const result = [];
+  for (const cohortMonth of Object.keys(cohorts).sort()) {
+    const tenantIds = cohorts[cohortMonth];
+    const cohortDate = new Date(cohortMonth + '-01');
+    const monthsElapsed = Math.min(
+      11,
+      (now.getFullYear() - cohortDate.getFullYear()) * 12 + (now.getMonth() - cohortDate.getMonth()),
+    );
+    for (let offset = 0; offset <= monthsElapsed; offset++) {
+      const windowStart = new Date(cohortDate);
+      windowStart.setMonth(windowStart.getMonth() + offset);
+      const windowEnd = new Date(windowStart);
+      windowEnd.setMonth(windowEnd.getMonth() + 1);
+      // Count tenants from this cohort that had any activity in this window
+      const { data: active } = await admin
+        .from('billing_usage_logs')
+        .select('tenant_id', { count: 'exact' })
+        .in('tenant_id', tenantIds)
+        .gte('created_at', windowStart.toISOString())
+        .lt('created_at', windowEnd.toISOString())
+        .limit(10000);
+      // deno-lint-ignore no-explicit-any
+      const uniqueActive = new Set((active || []).map((r: any) => r.tenant_id));
+      result.push({
+        cohortMonth,
+        monthOffset: offset,
+        tenantCount: tenantIds.length,
+        activeCount: uniqueActive.size,
+        retentionPct: tenantIds.length > 0 ? Math.round((uniqueActive.size / tenantIds.length) * 100) : 0,
+      });
+    }
+  }
+  return result;
+}
+
+async function getMrrWaterfall(admin: SupabaseAdmin, monthsBack: number) {
+  const since = new Date();
+  since.setMonth(since.getMonth() - monthsBack);
+  const { data: subs } = await admin
+    .from('billing_subscriptions')
+    .select('tenant_id, plan, status, current_period_start, current_period_end, created_at');
+  const planMrr: Record<string, number> = { free: 0, pro: 39, enterprise: 199 };
+
+  const months: string[] = [];
+  for (let i = monthsBack; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    months.push(d.toISOString().slice(0, 7));
+  }
+
+  const result: MrrMonth[] = months.map((m) => ({
+    month: m,
+    startMrr: 0,
+    newMrr: 0,
+    expansionMrr: 0,
+    contractionMrr: 0,
+    churnMrr: 0,
+    endMrr: 0,
+  }));
+
+  // Simple: compute MRR per month as sum of active subscriptions in that month.
+  // deno-lint-ignore no-explicit-any
+  for (const s of (subs || []) as any[]) {
+    const mrr = planMrr[s.plan] || 0;
+    months.forEach((monthKey, idx) => {
+      const monthStart = new Date(monthKey + '-01');
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      const subStart = s.current_period_start ? new Date(s.current_period_start) : new Date(s.created_at);
+      const subEnd = s.status === 'canceled' && s.current_period_end ? new Date(s.current_period_end) : monthEnd;
+      if (subStart < monthEnd && subEnd > monthStart) {
+        result[idx].endMrr += mrr;
+      }
+    });
+  }
+  // Derive deltas
+  for (let i = 1; i < result.length; i++) {
+    result[i].startMrr = result[i - 1].endMrr;
+    const delta = result[i].endMrr - result[i].startMrr;
+    if (delta > 0) result[i].newMrr = delta;
+    else if (delta < 0) result[i].churnMrr = -delta;
+  }
+  return result;
+}
+
+interface MrrMonth {
+  month: string;
+  startMrr: number;
+  newMrr: number;
+  expansionMrr: number;
+  contractionMrr: number;
+  churnMrr: number;
+  endMrr: number;
+}
+
+async function getFeatureAdoption(admin: SupabaseAdmin) {
+  const { count: totalTenants } = await admin.from('tenants').select('*', { count: 'exact', head: true });
+  const { data: modules } = await admin
+    .from('billing_module_subscriptions')
+    .select('tenant_id, module_id, status')
+    .eq('status', 'active');
+
+  const byModule: Record<string, Set<string>> = {};
+  // deno-lint-ignore no-explicit-any
+  (modules || []).forEach((m: any) => {
+    if (!byModule[m.module_id]) byModule[m.module_id] = new Set();
+    byModule[m.module_id].add(m.tenant_id);
+  });
+
+  const labels: Record<string, string> = {
+    returns_hub_starter: 'Returns Hub Starter',
+    returns_hub_professional: 'Returns Hub Professional',
+    returns_hub_business: 'Returns Hub Business',
+    supplier_portal: 'Supplier Portal',
+    customer_portal: 'Customer Portal',
+    custom_domain: 'Custom Domain',
+  };
+
+  return Object.entries(byModule).map(([feature, tenantSet]) => ({
+    feature,
+    label: labels[feature] || feature,
+    activeTenants: tenantSet.size,
+    totalTenants: totalTenants || 0,
+    adoptionPct: (totalTenants || 0) > 0 ? Math.round((tenantSet.size / (totalTenants || 1)) * 100) : 0,
+  }));
+}
+
+// ============================================
+// v2: CROSS-TENANT TICKETS
+// ============================================
+
+async function listAllTickets(admin: SupabaseAdmin, params: Record<string, unknown>) {
+  const limit = (params.limit as number) || 100;
+  let q = admin
+    .from('rh_tickets')
+    .select('id, tenant_id, subject, status, priority, customer_id, assigned_to, created_at, updated_at');
+  if (params.status && Array.isArray(params.status)) q = q.in('status', params.status as string[]);
+  if (params.priority && Array.isArray(params.priority)) q = q.in('priority', params.priority as string[]);
+  if (params.tenantId) q = q.eq('tenant_id', params.tenantId as string);
+  const { data: tickets } = await q.order('created_at', { ascending: false }).limit(limit);
+
+  // Resolve tenant names + customer emails in batch
+  // deno-lint-ignore no-explicit-any
+  const tenantIds = Array.from(new Set((tickets || []).map((t: any) => t.tenant_id).filter(Boolean)));
+  // deno-lint-ignore no-explicit-any
+  const customerIds = Array.from(new Set((tickets || []).map((t: any) => t.customer_id).filter(Boolean)));
+  const [tenantsRes, customersRes] = await Promise.all([
+    tenantIds.length ? admin.from('tenants').select('id, name').in('id', tenantIds) : Promise.resolve({ data: [] }),
+    customerIds.length ? admin.from('rh_customers').select('id, email').in('id', customerIds) : Promise.resolve({ data: [] }),
+  ]);
+  const tenantMap = new Map((tenantsRes.data || []).map((t: { id: string; name: string }) => [t.id, t.name]));
+  const customerMap = new Map((customersRes.data || []).map((c: { id: string; email?: string }) => [c.id, c.email]));
+
+  // deno-lint-ignore no-explicit-any
+  return (tickets || []).map((t: any) => ({
+    id: t.id,
+    tenantId: t.tenant_id,
+    tenantName: tenantMap.get(t.tenant_id) || 'Unknown',
+    subject: t.subject,
+    status: t.status,
+    priority: t.priority,
+    customerEmail: customerMap.get(t.customer_id),
+    assignedTo: t.assigned_to,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at,
+  }));
 }

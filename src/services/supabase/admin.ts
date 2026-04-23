@@ -6,6 +6,7 @@
  */
 
 import { invokeEdgeFunction } from '@/lib/edge-function';
+import { supabase } from '@/lib/supabase';
 import type {
   PlatformStats,
   AdminTenant,
@@ -17,6 +18,19 @@ import type {
   AdminApiResponse,
 } from '@/types/admin';
 import type { BillingPlan, ModuleId } from '@/types/billing';
+import type {
+  AdminAuditEntry,
+  AdminAuditFilter,
+  TenantNote,
+  FeatureFlag,
+  TenantHealth,
+  ImpersonationSession,
+  ShopifyWebhookEntry,
+  CohortCell,
+  MrrWaterfallEntry,
+  FeatureAdoption,
+  TenantUsageTrend,
+} from '@/types/admin-extended';
 
 // ============================================
 // EDGE FUNCTION CALLER
@@ -173,5 +187,286 @@ export async function deleteCoupon(couponId: string): Promise<void> {
   await callAdminApi({
     operation: 'delete_coupon',
     params: { couponId },
+  });
+}
+
+// ============================================
+// v2: TENANT STATUS (SUSPEND / REACTIVATE)
+// ============================================
+
+export async function suspendTenant(tenantId: string, reason: string): Promise<void> {
+  await callAdminApi({
+    operation: 'suspend_tenant',
+    params: { tenantId, reason },
+  });
+}
+
+export async function reactivateTenant(tenantId: string, reason?: string): Promise<void> {
+  await callAdminApi({
+    operation: 'reactivate_tenant',
+    params: { tenantId, reason: reason || null },
+  });
+}
+
+export async function refreshTenantHealth(tenantId: string): Promise<TenantHealth> {
+  return callAdminApi<TenantHealth>({
+    operation: 'refresh_tenant_health',
+    params: { tenantId },
+  });
+}
+
+// ============================================
+// v2: AUDIT LOG
+// ============================================
+
+export async function listAuditLog(filter: AdminAuditFilter = {}): Promise<{ entries: AdminAuditEntry[]; total: number }> {
+  return callAdminApi<{ entries: AdminAuditEntry[]; total: number }>({
+    operation: 'list_audit_log',
+    params: filter as unknown as Record<string, unknown>,
+  });
+}
+
+// ============================================
+// v2: TENANT NOTES (admin-only, direct DB — RLS enforces super-admin)
+// ============================================
+
+export async function listTenantNotes(tenantId: string): Promise<TenantNote[]> {
+  const { data, error } = await supabase
+    .from('admin_tenant_notes')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('pinned', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    tenantId: r.tenant_id,
+    authorId: r.author_id || undefined,
+    authorEmail: r.author_email || undefined,
+    content: r.content,
+    pinned: !!r.pinned,
+    tags: r.tags || [],
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+export async function addTenantNote(
+  tenantId: string,
+  content: string,
+  opts: { pinned?: boolean; tags?: string[] } = {},
+): Promise<TenantNote | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('admin_tenant_notes')
+    .insert({
+      tenant_id: tenantId,
+      author_id: auth?.user?.id || null,
+      author_email: auth?.user?.email || null,
+      content: content.trim(),
+      pinned: opts.pinned ?? false,
+      tags: opts.tags || [],
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id,
+    tenantId: data.tenant_id,
+    authorId: data.author_id || undefined,
+    authorEmail: data.author_email || undefined,
+    content: data.content,
+    pinned: !!data.pinned,
+    tags: data.tags || [],
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+export async function updateTenantNote(
+  noteId: string,
+  patch: { content?: string; pinned?: boolean; tags?: string[] },
+): Promise<void> {
+  const upd: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.content != null) upd.content = patch.content.trim();
+  if (patch.pinned != null) upd.pinned = patch.pinned;
+  if (patch.tags != null) upd.tags = patch.tags;
+  const { error } = await supabase.from('admin_tenant_notes').update(upd).eq('id', noteId);
+  if (error) throw error;
+}
+
+export async function deleteTenantNote(noteId: string): Promise<void> {
+  const { error } = await supabase.from('admin_tenant_notes').delete().eq('id', noteId);
+  if (error) throw error;
+}
+
+// ============================================
+// v2: FEATURE FLAGS
+// ============================================
+
+export async function listFeatureFlags(): Promise<FeatureFlag[]> {
+  const { data, error } = await supabase.from('admin_feature_flags').select('*').order('key');
+  if (error) throw error;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    key: r.key,
+    description: r.description || undefined,
+    enabledGlobally: !!r.enabled_globally,
+    rolloutPercentage: Number(r.rollout_percentage) || 0,
+    enabledForTenants: r.enabled_for_tenants || [],
+    disabledForTenants: r.disabled_for_tenants || [],
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+export async function upsertFeatureFlag(input: {
+  key: string;
+  description?: string;
+  enabledGlobally?: boolean;
+  rolloutPercentage?: number;
+  enabledForTenants?: string[];
+  disabledForTenants?: string[];
+}): Promise<FeatureFlag> {
+  return callAdminApi<FeatureFlag>({
+    operation: 'upsert_feature_flag',
+    params: input as unknown as Record<string, unknown>,
+  });
+}
+
+export async function deleteFeatureFlag(key: string): Promise<void> {
+  await callAdminApi({ operation: 'delete_feature_flag', params: { key } });
+}
+
+// ============================================
+// v2: IMPERSONATION
+// ============================================
+
+export async function startImpersonation(tenantId: string, reason: string): Promise<ImpersonationSession> {
+  return callAdminApi<ImpersonationSession>({
+    operation: 'impersonate_start',
+    params: { tenantId, reason },
+  });
+}
+
+export async function endImpersonation(sessionId: string): Promise<void> {
+  await callAdminApi({
+    operation: 'impersonate_end',
+    params: { sessionId },
+  });
+}
+
+// ============================================
+// v2: WEBHOOK DLQ
+// ============================================
+
+export async function listFailedWebhooks(opts: { tenantId?: string; limit?: number } = {}): Promise<ShopifyWebhookEntry[]> {
+  return callAdminApi<ShopifyWebhookEntry[]>({
+    operation: 'list_failed_webhooks',
+    params: opts as unknown as Record<string, unknown>,
+  });
+}
+
+export async function retryWebhook(webhookId: string): Promise<void> {
+  await callAdminApi({
+    operation: 'retry_webhook',
+    params: { webhookId },
+  });
+}
+
+// ============================================
+// v2: USER MANAGEMENT EXTENDED
+// ============================================
+
+export async function resetUserPassword(userId: string): Promise<{ resetLink: string }> {
+  return callAdminApi<{ resetLink: string }>({
+    operation: 'reset_user_password',
+    params: { userId },
+  });
+}
+
+export async function toggleSuperAdmin(userId: string, isSuperAdmin: boolean): Promise<void> {
+  await callAdminApi({
+    operation: 'toggle_super_admin',
+    params: { userId, isSuperAdmin },
+  });
+}
+
+// ============================================
+// v2: REFUNDS
+// ============================================
+
+export async function issueRefund(
+  tenantId: string,
+  amountCents: number,
+  reason: string,
+  invoiceId?: string,
+): Promise<void> {
+  await callAdminApi({
+    operation: 'issue_refund',
+    params: { tenantId, amountCents, reason, invoiceId },
+  });
+}
+
+// ============================================
+// v2: ANALYTICS
+// ============================================
+
+export async function getTenantUsageTrend(tenantId: string, months = 12): Promise<TenantUsageTrend[]> {
+  return callAdminApi<TenantUsageTrend[]>({
+    operation: 'get_tenant_usage_trend',
+    params: { tenantId, months },
+  });
+}
+
+export async function getCohortRetention(monthsBack = 12): Promise<CohortCell[]> {
+  return callAdminApi<CohortCell[]>({
+    operation: 'get_cohort_retention',
+    params: { monthsBack },
+  });
+}
+
+export async function getMrrWaterfall(monthsBack = 12): Promise<MrrWaterfallEntry[]> {
+  return callAdminApi<MrrWaterfallEntry[]>({
+    operation: 'get_mrr_waterfall',
+    params: { monthsBack },
+  });
+}
+
+export async function getFeatureAdoption(): Promise<FeatureAdoption[]> {
+  return callAdminApi<FeatureAdoption[]>({
+    operation: 'get_feature_adoption',
+  });
+}
+
+// ============================================
+// v2: CROSS-TENANT TICKETS (SUPPORT)
+// ============================================
+
+export interface AdminTicketSummary {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  subject: string;
+  status: string;
+  priority: string;
+  customerEmail?: string;
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listAllTickets(opts: {
+  status?: string[];
+  priority?: string[];
+  tenantId?: string;
+  limit?: number;
+} = {}): Promise<AdminTicketSummary[]> {
+  return callAdminApi<AdminTicketSummary[]>({
+    operation: 'list_all_tickets',
+    params: opts as unknown as Record<string, unknown>,
   });
 }
