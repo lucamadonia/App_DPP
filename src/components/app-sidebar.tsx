@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   FolderArchive,
-  Link2,
   ShieldCheck,
   Settings,
   HelpCircle,
@@ -18,11 +17,8 @@ import {
   Building2,
   ChevronDown,
   Globe,
-  ClipboardCheck,
-  Calculator,
   Shield,
   LogOut,
-  Newspaper,
   RotateCcw,
   CreditCard,
   Sparkles,
@@ -31,9 +27,11 @@ import {
   Sun,
   Moon,
   Lock,
-  ImageIcon,
   Warehouse,
   Heart,
+  Megaphone,
+  BookOpen,
+  Handshake,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -75,140 +73,162 @@ export function AppSidebar() {
   const { t } = useTranslation('common');
   const prefersReduced = useReducedMotion();
 
-  const mainNavItems = useMemo(() => [
+  type NavItem = {
+    title: string;
+    icon: React.ComponentType<{ className?: string }>;
+    url?: string;
+    badge?: string;
+    locked?: boolean;
+    items?: { title: string; url: string }[];
+  };
+  type NavGroup = { label: string; items: NavItem[] };
+
+  const navGroups = useMemo<NavGroup[]>(() => [
     {
-      title: t('Dashboard'),
-      url: '/',
-      icon: LayoutDashboard,
-    },
-    {
-      title: t('Products'),
-      icon: Package,
+      label: t('Start'),
       items: [
-        { title: t('All Products'), url: '/products' },
-        { title: t('Create New'), url: '/products/new' },
-        { title: t('Categories'), url: '/products/categories' },
+        { title: t('Dashboard'), url: '/', icon: LayoutDashboard },
       ],
     },
     {
-      title: t('DPP / Passports'),
-      icon: QrCode,
+      label: t('Tagesgeschäft'),
       items: [
-        { title: t('Overview'), url: '/dpp' },
-        { title: t('QR Generator'), url: '/dpp/qr-generator' },
-        { title: t('Visibility'), url: '/dpp/visibility' },
-        { title: t('Design'), url: '/dpp/design' },
-        { title: t('Transparency Page'), url: '/dpp/transparency' },
-        { title: t('Batch Upload'), url: '/dpp/batch-upload' },
+        {
+          title: t('Lager & Versand'),
+          icon: Warehouse,
+          locked: billing ? !billing.hasAnyWarehouseModule() : false,
+          items: [
+            { title: t('Dashboard'), url: '/warehouse' },
+            { title: t('Scanner', { ns: 'warehouse' }), url: '/warehouse/scanner' },
+            { title: t('Inventory', { ns: 'warehouse' }), url: '/warehouse/inventory' },
+            { title: t('Goods Receipt', { ns: 'warehouse' }), url: '/warehouse/goods-receipt' },
+            { title: t('Stocktake', { ns: 'warehouse' }), url: '/warehouse/stocktake' },
+            { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
+            { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
+            { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
+            { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
+            { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
+            { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
+            { title: t('DHL', { ns: 'warehouse' }), url: '/warehouse/integrations/dhl' },
+            { title: t('AI Logistics Hub', { ns: 'warehouse' }), url: '/warehouse/ai' },
+            { title: t('Settings'), url: '/warehouse/settings' },
+          ],
+        },
+        {
+          title: t('CRM'),
+          icon: Heart,
+          items: [
+            { title: t('Dashboard'), url: '/crm' },
+            { title: t('Kundenliste', { ns: 'warehouse' }), url: '/crm/customers' },
+          ],
+        },
+        {
+          title: t('Retouren & Support'),
+          icon: RotateCcw,
+          locked: billing ? !billing.hasAnyReturnsHubModule() : false,
+          items: [
+            { title: t('Dashboard'), url: '/returns' },
+            { title: t('Returns'), url: '/returns/list' },
+            { title: t('Tickets'), url: '/returns/tickets' },
+            { title: t('Reports'), url: '/returns/reports' },
+            { title: t('Workflows'), url: '/returns/workflows' },
+            { title: t('Settings'), url: '/returns/settings' },
+          ],
+        },
       ],
     },
     {
-      title: t('Documents'),
-      icon: FolderArchive,
+      label: t('Sortiment'),
       items: [
-        { title: t('All Documents'), url: '/documents' },
-        { title: t('Upload'), url: '/documents/upload' },
-        { title: t('Validity Tracker'), url: '/documents/tracker' },
+        {
+          title: t('Products'),
+          icon: Package,
+          items: [
+            { title: t('All Products'), url: '/products' },
+            { title: t('Create New'), url: '/products/new' },
+            { title: t('Categories'), url: '/products/categories' },
+          ],
+        },
+        {
+          title: t('DPP / Passports'),
+          icon: QrCode,
+          items: [
+            { title: t('Overview'), url: '/dpp' },
+            { title: t('QR Generator'), url: '/dpp/qr-generator' },
+            { title: t('Visibility'), url: '/dpp/visibility' },
+            { title: t('Design'), url: '/dpp/design' },
+            { title: t('Transparency Page'), url: '/dpp/transparency' },
+            { title: t('Batch Upload'), url: '/dpp/batch-upload' },
+          ],
+        },
+        {
+          title: t('Documents'),
+          icon: FolderArchive,
+          items: [
+            { title: t('All Documents'), url: '/documents' },
+            { title: t('Upload'), url: '/documents/upload' },
+            { title: t('Validity Tracker'), url: '/documents/tracker' },
+          ],
+        },
       ],
     },
     {
-      title: t('Pictograms'),
-      url: '/pictograms',
-      icon: ImageIcon,
-    },
-    {
-      title: t('Supply Chain'),
-      url: '/supply-chain',
-      icon: Link2,
-      badge: t('Phase 2'),
-    },
-    {
-      title: t('Suppliers'),
-      url: '/suppliers',
-      icon: Users,
-      locked: billing ? !billing.hasModule('supplier_portal') && billing.entitlements?.plan === 'free' : false,
-    },
-    {
-      title: t('Returns Hub'),
-      icon: RotateCcw,
-      locked: billing ? !billing.hasAnyReturnsHubModule() : false,
+      label: t('Partner'),
       items: [
-        { title: t('Dashboard'), url: '/returns' },
-        { title: t('Returns'), url: '/returns/list' },
-        { title: t('Tickets'), url: '/returns/tickets' },
-        { title: t('Reports'), url: '/returns/reports' },
-        { title: t('Workflows'), url: '/returns/workflows' },
-        { title: t('Settings'), url: '/returns/settings' },
+        {
+          title: t('Influencer Hub', { ns: 'warehouse' }),
+          icon: Megaphone,
+          items: [
+            { title: t('Dashboard'), url: '/warehouse/influencer-hub' },
+            { title: t('Influencer Directory', { ns: 'warehouse' }), url: '/warehouse/influencer-directory' },
+            { title: t('Campaigns', { ns: 'warehouse' }), url: '/warehouse/campaigns' },
+            { title: t('Content Gallery', { ns: 'warehouse' }), url: '/warehouse/content-gallery' },
+            { title: t('Sample Tracking', { ns: 'warehouse' }), url: '/warehouse/samples' },
+            { title: t('Analytics', { ns: 'warehouse' }), url: '/warehouse/influencer-analytics' },
+          ],
+        },
+        {
+          title: t('Lieferanten'),
+          icon: Handshake,
+          locked: billing ? !billing.hasModule('supplier_portal') && billing.entitlements?.plan === 'free' : false,
+          items: [
+            { title: t('Alle Lieferanten'), url: '/suppliers' },
+            { title: t('Lieferkette'), url: '/supply-chain' },
+          ],
+        },
       ],
     },
     {
-      title: t('CRM'),
-      icon: Heart,
+      label: t('Compliance & Ressourcen'),
       items: [
-        { title: t('Dashboard'), url: '/crm' },
-        { title: t('Kundenliste', { ns: 'warehouse' }), url: '/crm/customers' },
+        {
+          title: t('Compliance'),
+          icon: ShieldCheck,
+          items: [
+            { title: t('Audit Report'), url: '/compliance' },
+            { title: t('Export'), url: '/compliance/export' },
+            { title: t('Audit Log'), url: '/compliance/audit-log' },
+          ],
+        },
+        {
+          title: t('Regulations'),
+          icon: Globe,
+          items: [
+            { title: t('Countries'), url: '/regulations/countries' },
+            { title: t('EU Regulations'), url: '/regulations/eu' },
+            { title: t('Pictograms'), url: '/pictograms' },
+          ],
+        },
+        {
+          title: t('Wissen'),
+          icon: BookOpen,
+          items: [
+            { title: t('Checklists'), url: '/checklists' },
+            { title: t('Requirements Calculator'), url: '/requirements-calculator' },
+            { title: t('News'), url: '/news' },
+          ],
+        },
       ],
-    },
-    {
-      title: t('Warehouse', { ns: 'warehouse' }),
-      icon: Warehouse,
-      locked: billing ? !billing.hasAnyWarehouseModule() : false,
-      items: [
-        { title: t('Dashboard'), url: '/warehouse' },
-        { title: t('Scanner', { ns: 'warehouse' }), url: '/warehouse/scanner' },
-        { title: t('Stocktake', { ns: 'warehouse' }), url: '/warehouse/stocktake' },
-        { title: t('Inventory', { ns: 'warehouse' }), url: '/warehouse/inventory' },
-        { title: t('Goods Receipt', { ns: 'warehouse' }), url: '/warehouse/goods-receipt' },
-        { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
-        { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
-        { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
-        { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
-        { title: t('Influencer Hub', { ns: 'warehouse' }), url: '/warehouse/influencer-hub' },
-        { title: t('Campaigns', { ns: 'warehouse' }), url: '/warehouse/campaigns' },
-        { title: t('Influencer Directory', { ns: 'warehouse' }), url: '/warehouse/influencer-directory' },
-        { title: t('Content Gallery', { ns: 'warehouse' }), url: '/warehouse/content-gallery' },
-        { title: t('Sample Tracking', { ns: 'warehouse' }), url: '/warehouse/samples' },
-        { title: t('Analytics', { ns: 'warehouse' }), url: '/warehouse/influencer-analytics' },
-        { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
-        { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
-        { title: t('DHL', { ns: 'warehouse' }), url: '/warehouse/integrations/dhl' },
-        { title: t('AI Logistics Hub', { ns: 'warehouse' }), url: '/warehouse/ai' },
-        { title: t('Settings'), url: '/warehouse/settings' },
-      ],
-    },
-    {
-      title: t('Compliance'),
-      icon: ShieldCheck,
-      items: [
-        { title: t('Audit Report'), url: '/compliance' },
-        { title: t('Export'), url: '/compliance/export' },
-        { title: t('Audit Log'), url: '/compliance/audit-log' },
-      ],
-    },
-    {
-      title: t('Regulations'),
-      icon: Globe,
-      items: [
-        { title: t('Countries'), url: '/regulations/countries' },
-        { title: t('EU Regulations'), url: '/regulations/eu' },
-        { title: t('Pictograms'), url: '/regulations/pictograms' },
-      ],
-    },
-    {
-      title: t('News'),
-      url: '/news',
-      icon: Newspaper,
-    },
-    {
-      title: t('Checklists'),
-      url: '/checklists',
-      icon: ClipboardCheck,
-    },
-    {
-      title: t('Requirements Calculator'),
-      url: '/requirements-calculator',
-      icon: Calculator,
-      badge: t('New'),
     },
   ], [t, billing]);
 
@@ -280,11 +300,12 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{t('Main Menu')}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNavItems.map((item) =>
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+              {group.items.map((item) =>
                 item.items ? (
                   <Collapsible key={item.title} defaultOpen={hasActiveChild(item.items)} className="group/collapsible">
                     <SidebarMenuItem>
@@ -341,9 +362,10 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 )
               )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
 
         <SidebarGroup>
           <SidebarGroupLabel>{t('System')}</SidebarGroupLabel>
