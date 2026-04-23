@@ -161,6 +161,11 @@ const WorkflowRulesPage = lazy(() => import('@/pages/returns/WorkflowRulesPage')
 const WorkflowBuilderPage = lazy(() => import('@/components/returns/workflow-builder/WorkflowBuilderPage').then(m => ({ default: m.WorkflowBuilderPage })));
 const EmailTemplateEditorPage = lazy(() => import('@/components/returns/email-editor/EmailTemplateEditorPage').then(m => ({ default: m.EmailTemplateEditorPage })));
 
+// CRM (Customer-360 + CLV + RFM)
+const CrmDashboardPage = lazy(() => import('@/pages/crm/CrmDashboardPage').then(m => ({ default: m.CrmDashboardPage })));
+const CrmCustomerListPage = lazy(() => import('@/pages/crm/CustomerListPage').then(m => ({ default: m.CustomerListPage })));
+const CrmCustomerDetailPage = lazy(() => import('@/pages/crm/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage })));
+
 // Protected Route - redirects to login if not authenticated
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -404,8 +409,14 @@ function NormalAppRoutes() {
           <Route path="returns/list" element={<ReturnsListPage />} />
           <Route path="returns/new" element={<CreateReturnPage />} />
           <Route path="returns/:id" element={<ReturnDetailPage />} />
-          <Route path="returns/customers" element={<CustomersListPage />} />
+          {/* Legacy: /returns/customers redirects to new CRM */}
+          <Route path="returns/customers" element={<Navigate to="/crm/customers" replace />} />
           <Route path="returns/customers/:id" element={<CustomerDetailPage />} />
+
+          {/* CRM: Customer-360 + CLV + RFM */}
+          <Route path="crm" element={<CrmDashboardPage />} />
+          <Route path="crm/customers" element={<CrmCustomerListPage />} />
+          <Route path="crm/customers/:id" element={<CrmCustomerDetailPage />} />
           <Route path="returns/tickets" element={<TicketsListPage />} />
           <Route path="returns/tickets/:id" element={<TicketDetailPage />} />
           <Route path="returns/reports" element={<ReturnsReportsPage />} />

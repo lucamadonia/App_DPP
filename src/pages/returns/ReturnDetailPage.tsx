@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, CheckCircle2, XCircle, Search, CreditCard, Package, Ban, Truck,
   Pencil, MessageSquarePlus, MinusCircle, Undo2, User, Mail, MapPin as MapPinIcon,
   Building2, ClipboardList, FileCheck, ChevronDown, ChevronUp, Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -796,11 +797,17 @@ function CustomerInfoCard({ returnData, t }: { returnData: RhReturn; t: (k: stri
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2">
           <User className="h-4 w-4" />
           {t('Customer Information')}
         </CardTitle>
+        {returnData.customerId && (
+          <Link to={`/crm/customers/${returnData.customerId}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+            {t('Kundenprofil öffnen')}
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        )}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

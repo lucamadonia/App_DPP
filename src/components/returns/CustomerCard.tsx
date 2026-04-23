@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, Building2, AlertTriangle } from 'lucide-react';
+import { Mail, Phone, Building2, AlertTriangle, ExternalLink } from 'lucide-react';
 import type { RhCustomer } from '@/types/returns-hub';
 
 interface CustomerCardProps {
@@ -38,8 +39,13 @@ export function CustomerCard({ customer, compact }: CustomerCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{fullName}</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">
+            <Link to={`/crm/customers/${customer.id}`} className="hover:underline inline-flex items-center gap-1.5">
+              {fullName}
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </Link>
+          </CardTitle>
           {customer.riskScore > 0 && (
             <div className={`flex items-center gap-1 ${riskColor}`}>
               <AlertTriangle className="h-4 w-4" />

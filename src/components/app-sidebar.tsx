@@ -33,6 +33,7 @@ import {
   Lock,
   ImageIcon,
   Warehouse,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -134,11 +135,18 @@ export function AppSidebar() {
       items: [
         { title: t('Dashboard'), url: '/returns' },
         { title: t('Returns'), url: '/returns/list' },
-        { title: t('Customers'), url: '/returns/customers' },
         { title: t('Tickets'), url: '/returns/tickets' },
         { title: t('Reports'), url: '/returns/reports' },
         { title: t('Workflows'), url: '/returns/workflows' },
         { title: t('Settings'), url: '/returns/settings' },
+      ],
+    },
+    {
+      title: t('CRM'),
+      icon: Heart,
+      items: [
+        { title: t('Dashboard'), url: '/crm' },
+        { title: t('Kundenliste', { ns: 'warehouse' }), url: '/crm/customers' },
       ],
     },
     {
