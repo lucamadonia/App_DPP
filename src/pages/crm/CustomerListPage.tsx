@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Search, TrendingUp, RefreshCw, ExternalLink, Download, Tag as TagIcon, X } from 'lucide-react';
+import { Users, Search, TrendingUp, RefreshCw, ExternalLink, Download, Tag as TagIcon, X, UserPlus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from '@/components/ui/label';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { HealthGauge } from '@/components/crm/HealthGauge';
+import { CreateCustomerDialog } from '@/components/crm/CreateCustomerDialog';
 import {
   getCustomerList, refreshTenantHealthScores, bulkAddTag, customersToCSV,
   type CrmCustomer, type RfmSegment, type CustomerListFilter,
@@ -67,6 +68,7 @@ export function CustomerListPage() {
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [tagDraft, setTagDraft] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,8 +175,18 @@ export function CustomerListPage() {
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             {t('Neu berechnen')}
           </Button>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            {t('Neuer Kunde')}
+          </Button>
         </div>
       </div>
+
+      <CreateCustomerDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => { setPage(1); load(); }}
+      />
 
       {/* Bulk Selection Toolbar */}
       {selected.size > 0 && (
