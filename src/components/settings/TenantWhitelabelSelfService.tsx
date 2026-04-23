@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import {
   Globe, Save, CheckCircle2, Copy, Mail, Palette, TestTube, Send, AlertCircle, Link2,
+  RefreshCw, ShieldCheck,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ import {
   updateOwnWhitelabelConfig,
   setOwnSmtp,
   testOwnSmtp,
+  setOwnCustomDomain,
+  verifyOwnCustomDomain,
   type TenantWhitelabel,
 } from '@/services/supabase/tenant-whitelabel';
 import { toast } from 'sonner';
@@ -186,35 +189,11 @@ export function TenantWhitelabelSelfService() {
         </CardContent>
       </Card>
 
-      {/* Custom Domain — Info only */}
-      <Card className="border-dashed">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-muted-foreground" />
-            Eigene Domain
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {whitelabel.customDomain ? (
-            <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
-              <div className="min-w-0 flex-1">
-                <div className="font-mono text-sm truncate">{whitelabel.customDomain}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {whitelabel.customDomainVerified
-                    ? <span className="text-emerald-700 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Verifiziert und aktiv</span>
-                    : <span className="text-amber-700 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Verifikation steht aus — Kontaktiere Support</span>}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">
-              Du möchtest deine eigene Domain (z.B. <code>app.deine-firma.de</code>) für diese App nutzen?{' '}
-              Schreib uns an <a href="mailto:support@trackbliss.eu" className="text-primary hover:underline">support@trackbliss.eu</a>,
-              wir helfen beim DNS-Setup.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Custom Domain — Self-Service */}
+      <CustomDomainSection
+        whitelabel={whitelabel}
+        onChanged={load}
+      />
 
       {/* Branding Config */}
       <Card>
@@ -434,5 +413,159 @@ export function TenantWhitelabelSelfService() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* -------- Custom Domain Self-Service Sub-Component ---------- */
+
+function CustomDomainSection({
+  whitelabel,
+  onChanged,
+}: {
+  whitelabel: TenantWhitelabel;
+  onChanged: () => Promise<void>;
+}) {
+  const [domain, setDomain] = useState(whitelabel.customDomain || '');
+  const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [result, setResult] = useState<{
+    token: string | null;
+    instructions: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vercelVerification?: any;
+  } | null>(null);
+
+  const storedToken = whitelabel.customDomain ? (result?.token || null) : null;
+  const instructions = result?.instructions || (whitelabel.customDomain && storedToken ? [
+    `CNAME    ${whitelabel.customDomain} → cname.vercel-dns.com`,
+    `TXT      _trackbliss-verification.${whitelabel.customDomain} → ${storedToken}`,
+  ] : []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await setOwnCustomDomain(domain.trim() || null);
+      setResult({
+        token: res.verificationToken,
+        instructions: res.instructions,
+        vercelVerification: res.vercelVerification,
+      });
+      toast.success(res.customDomain ? 'Custom Domain hinterlegt — jetzt DNS einrichten' : 'Custom Domain entfernt');
+      await onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function verify() {
+    setVerifying(true);
+    try {
+      const res = await verifyOwnCustomDomain();
+      if (res.verified) toast.success('Custom Domain erfolgreich verifiziert!');
+      else toast.error(res.error || 'Verifikation fehlgeschlagen');
+      await onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  function copy(s: string) {
+    navigator.clipboard.writeText(s);
+    toast.success('Kopiert');
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Link2 className="h-4 w-4 text-primary" />
+          Eigene Domain
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Verbinde deine eigene Domain (z.B. <code>app.deine-firma.de</code>) mit der App. Zwei DNS-Records setzen, einmal „Prüfen" klicken — fertig.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-stretch gap-2">
+          <Input
+            value={domain}
+            onChange={e => setDomain(e.target.value.toLowerCase())}
+            placeholder="app.deine-firma.de"
+            className="flex-1"
+          />
+          <Button onClick={save} disabled={saving} size="sm" variant={domain ? 'default' : 'outline'}>
+            <Save className="h-3.5 w-3.5 mr-1" />
+            Speichern
+          </Button>
+        </div>
+
+        {whitelabel.customDomain && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="font-mono text-sm truncate">{whitelabel.customDomain}</div>
+                {whitelabel.customDomainVerified ? (
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 mt-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    Verifiziert und aktiv
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Verifikation steht aus
+                  </Badge>
+                )}
+              </div>
+              {!whitelabel.customDomainVerified && (
+                <Button size="sm" variant="outline" onClick={verify} disabled={verifying}>
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${verifying ? 'animate-spin' : ''}`} />
+                  DNS prüfen
+                </Button>
+              )}
+            </div>
+
+            {!whitelabel.customDomainVerified && instructions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Setze folgende DNS-Records bei deinem Provider, dann „DNS prüfen":
+                </p>
+                <div className="space-y-1.5">
+                  {instructions.map((line, i) => {
+                    // Format: "TYPE   NAME → VALUE"
+                    const match = line.match(/^(\S+)\s+(\S+)\s+→\s+(.+)$/);
+                    if (!match) return <div key={i} className="text-xs font-mono">{line}</div>;
+                    const [, type, name, value] = match;
+                    return (
+                      <div key={i} className="rounded-md bg-background border p-2 flex items-center gap-2 font-mono text-xs">
+                        <Badge variant="outline" className="h-5 font-mono text-[10px] shrink-0">{type}</Badge>
+                        <div className="min-w-0 flex-1 grid sm:grid-cols-2 gap-x-3">
+                          <div className="truncate text-muted-foreground">{name}</div>
+                          <div className="truncate font-semibold">{value}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copy(`${name}\t${type}\t${value}`)}
+                          className="p-1 rounded hover:bg-muted cursor-pointer shrink-0"
+                          title="Kopieren"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground italic">
+                  DNS-Propagation kann bis zu 24 Stunden dauern, meistens innerhalb weniger Minuten.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -128,3 +128,43 @@ export async function testOwnSmtp(testTo: string): Promise<{ ok: boolean; result
   if (!payload?.success) throw new Error(payload?.error || 'Test fehlgeschlagen');
   return payload.data as { ok: boolean; result: string };
 }
+
+// ============================================
+// CUSTOM DOMAIN — Self-Service
+// ============================================
+
+export interface OwnCustomDomainResult {
+  customDomain: string | null;
+  verificationToken: string | null;
+  verificationHost: string | null;
+  instructions: string[];
+  vercelStatus?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  vercelVerification?: any;
+}
+
+export async function setOwnCustomDomain(domain: string | null): Promise<OwnCustomDomainResult> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+  const { data, error } = await supabase.functions.invoke('admin-api', {
+    body: { operation: 'set_custom_domain', params: { tenantId, domain } },
+  });
+  if (error) throw new Error(error.message);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload = data as any;
+  if (!payload?.success) throw new Error(payload?.error || 'Anlegen fehlgeschlagen');
+  return payload.data as OwnCustomDomainResult;
+}
+
+export async function verifyOwnCustomDomain(): Promise<{ verified: boolean; domain: string; error: string | null }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+  const { data, error } = await supabase.functions.invoke('admin-api', {
+    body: { operation: 'verify_custom_domain', params: { tenantId } },
+  });
+  if (error) throw new Error(error.message);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload = data as any;
+  if (!payload?.success) throw new Error(payload?.error || 'Verifikation fehlgeschlagen');
+  return payload.data;
+}

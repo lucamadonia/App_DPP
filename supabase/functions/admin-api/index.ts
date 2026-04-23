@@ -50,7 +50,11 @@ Deno.serve(async (req) => {
     const { operation, params = {} } = body;
 
     // Self-service operations that tenant admins can call for their own tenant
-    const SELF_SERVICE_OPS = new Set(['test_tenant_smtp']);
+    const SELF_SERVICE_OPS = new Set([
+      'test_tenant_smtp',
+      'set_custom_domain',
+      'verify_custom_domain',
+    ]);
     const isSuperAdmin = !!profile?.is_super_admin || profile?.admin_role === 'super_admin';
     const isSelfServiceOp = SELF_SERVICE_OPS.has(operation);
     const selfServiceAllowed = isSelfServiceOp
