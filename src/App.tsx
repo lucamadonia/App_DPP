@@ -6,6 +6,7 @@ import { Toaster } from 'sonner';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
+import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -214,6 +215,7 @@ function AppLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
+        <ImpersonationBanner />
         <header className="relative flex h-14 shrink-0 items-center gap-2 bg-background px-4">
           <SidebarTrigger
             className="-ml-1 size-10 touch-target md:size-8"

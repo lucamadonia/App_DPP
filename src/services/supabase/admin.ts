@@ -470,3 +470,138 @@ export async function listAllTickets(opts: {
     params: opts as unknown as Record<string, unknown>,
   });
 }
+
+// ============================================
+// PHASE 6: WHITELABELING
+// ============================================
+
+export interface SubdomainResult {
+  subdomain: string | null;
+  fullHost: string | null;
+}
+
+export interface CustomDomainResult {
+  customDomain: string | null;
+  verificationToken: string | null;
+  verificationHost: string | null;
+  instructions: string[];
+}
+
+export interface CustomDomainVerifyResult {
+  verified: boolean;
+  domain: string;
+  error: string | null;
+}
+
+export interface TenantSmtpConfig {
+  id?: string;
+  tenantId: string;
+  enabled: boolean;
+  host?: string;
+  port?: number;
+  username?: string;
+  fromAddress?: string;
+  fromName?: string;
+  useTls?: boolean;
+  lastTestedAt?: string;
+  lastTestResult?: string;
+}
+
+export async function setTenantSubdomain(tenantId: string, subdomain: string | null): Promise<SubdomainResult> {
+  return callAdminApi<SubdomainResult>({
+    operation: 'set_tenant_subdomain',
+    params: { tenantId, subdomain },
+  });
+}
+
+export async function setCustomDomain(tenantId: string, domain: string | null): Promise<CustomDomainResult> {
+  return callAdminApi<CustomDomainResult>({
+    operation: 'set_custom_domain',
+    params: { tenantId, domain },
+  });
+}
+
+export async function verifyCustomDomain(tenantId: string): Promise<CustomDomainVerifyResult> {
+  return callAdminApi<CustomDomainVerifyResult>({
+    operation: 'verify_custom_domain',
+    params: { tenantId },
+  });
+}
+
+export async function updateWhitelabelConfig(
+  tenantId: string,
+  config: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  return callAdminApi<Record<string, unknown>>({
+    operation: 'update_whitelabel_config',
+    params: { tenantId, config },
+  });
+}
+
+export async function setTenantSmtp(input: {
+  tenantId: string;
+  enabled?: boolean;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  fromAddress?: string;
+  fromName?: string;
+  useTls?: boolean;
+}): Promise<TenantSmtpConfig> {
+  return callAdminApi<TenantSmtpConfig>({
+    operation: 'set_tenant_smtp',
+    params: input as unknown as Record<string, unknown>,
+  });
+}
+
+export async function testTenantSmtp(tenantId: string, testTo: string): Promise<{ ok: boolean; result: string }> {
+  return callAdminApi<{ ok: boolean; result: string }>({
+    operation: 'test_tenant_smtp',
+    params: { tenantId, testTo },
+  });
+}
+
+export async function disableTenantSmtp(tenantId: string): Promise<void> {
+  await callAdminApi({ operation: 'disable_tenant_smtp', params: { tenantId } });
+}
+
+export async function getTenantWhitelabel(tenantId: string): Promise<{
+  subdomain: string | null;
+  customDomain: string | null;
+  customDomainVerified: boolean;
+  customDomainVerifiedAt: string | null;
+  dnsVerificationToken: string | null;
+  whitelabelConfig: Record<string, unknown>;
+  smtp: TenantSmtpConfig | null;
+}> {
+  const [tenantRes, smtpRes] = await Promise.all([
+    supabase.from('tenants').select('subdomain, custom_domain, custom_domain_verified, custom_domain_verified_at, dns_verification_token, whitelabel_config').eq('id', tenantId).single(),
+    supabase.from('tenant_smtp_config').select('*').eq('tenant_id', tenantId).maybeSingle(),
+  ]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t: any = tenantRes.data || {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s: any = smtpRes.data;
+  return {
+    subdomain: t.subdomain || null,
+    customDomain: t.custom_domain || null,
+    customDomainVerified: !!t.custom_domain_verified,
+    customDomainVerifiedAt: t.custom_domain_verified_at || null,
+    dnsVerificationToken: t.dns_verification_token || null,
+    whitelabelConfig: t.whitelabel_config || {},
+    smtp: s ? {
+      id: s.id,
+      tenantId: s.tenant_id,
+      enabled: !!s.enabled,
+      host: s.host || undefined,
+      port: s.port || undefined,
+      username: s.username || undefined,
+      fromAddress: s.from_address || undefined,
+      fromName: s.from_name || undefined,
+      useTls: s.use_tls ?? true,
+      lastTestedAt: s.last_tested_at || undefined,
+      lastTestResult: s.last_test_result || undefined,
+    } : null,
+  };
+}

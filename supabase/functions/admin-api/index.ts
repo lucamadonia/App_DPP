@@ -178,6 +178,32 @@ Deno.serve(async (req) => {
       case 'list_all_tickets':
         return jsonResponse({ success: true, data: await listAllTickets(admin, params) });
 
+      // ============================================
+      // PHASE 6: WHITELABELING
+      // ============================================
+
+      case 'set_tenant_subdomain':
+        return jsonResponse({ success: true, data: await setTenantSubdomain(admin, auditCtx, params.tenantId as string, params.subdomain as string | null) });
+
+      case 'set_custom_domain':
+        return jsonResponse({ success: true, data: await setCustomDomain(admin, auditCtx, params.tenantId as string, params.domain as string | null) });
+
+      case 'verify_custom_domain':
+        return jsonResponse({ success: true, data: await verifyCustomDomain(admin, auditCtx, params.tenantId as string) });
+
+      case 'update_whitelabel_config':
+        return jsonResponse({ success: true, data: await updateWhitelabelConfig(admin, auditCtx, params.tenantId as string, params.config as Record<string, unknown>) });
+
+      case 'set_tenant_smtp':
+        return jsonResponse({ success: true, data: await setTenantSmtp(admin, auditCtx, params) });
+
+      case 'test_tenant_smtp':
+        return jsonResponse({ success: true, data: await testTenantSmtp(admin, auditCtx, params.tenantId as string, params.testTo as string) });
+
+      case 'disable_tenant_smtp':
+        await disableTenantSmtp(admin, auditCtx, params.tenantId as string);
+        return jsonResponse({ success: true });
+
       default:
         return jsonResponse({ success: false, error: `Unknown operation: ${operation}` }, 400);
     }
@@ -1377,4 +1403,291 @@ async function listAllTickets(admin: SupabaseAdmin, params: Record<string, unkno
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   }));
+}
+
+// ============================================
+// PHASE 6: WHITELABELING IMPLEMENTATIONS
+// ============================================
+
+function sanitizeSubdomain(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+}
+
+async function setTenantSubdomain(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  tenantId: string,
+  subdomain: string | null,
+) {
+  const { data: before } = await admin.from('tenants').select('name, subdomain').eq('id', tenantId).single();
+  let clean: string | null = null;
+  if (subdomain && subdomain.trim()) {
+    clean = sanitizeSubdomain(subdomain);
+    if (clean.length < 3) throw new Error('Subdomain zu kurz (min 3 Zeichen)');
+    // check uniqueness
+    const { data: existing } = await admin
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', clean)
+      .neq('id', tenantId)
+      .maybeSingle();
+    if (existing) throw new Error(`Subdomain "${clean}" ist bereits vergeben`);
+  }
+  await admin.from('tenants').update({ subdomain: clean }).eq('id', tenantId);
+  await audit(admin, ctx, {
+    action: 'set_tenant_subdomain',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: before?.name,
+    changes: { subdomain: { before: before?.subdomain, after: clean } },
+  });
+  return { subdomain: clean, fullHost: clean ? `${clean}.trackbliss.eu` : null };
+}
+
+async function setCustomDomain(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  tenantId: string,
+  domain: string | null,
+) {
+  const { data: before } = await admin.from('tenants').select('name, custom_domain').eq('id', tenantId).single();
+  let clean: string | null = null;
+  let token: string | null = null;
+  if (domain && domain.trim()) {
+    clean = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(clean)) throw new Error('Ungültiges Domain-Format');
+    // Check uniqueness
+    const { data: existing } = await admin
+      .from('tenants')
+      .select('id')
+      .eq('custom_domain', clean)
+      .neq('id', tenantId)
+      .maybeSingle();
+    if (existing) throw new Error(`Domain "${clean}" wird bereits verwendet`);
+    // Generate verification token (32 random chars)
+    token = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+  }
+  await admin
+    .from('tenants')
+    .update({
+      custom_domain: clean,
+      custom_domain_verified: false,
+      custom_domain_verified_at: null,
+      dns_verification_token: token,
+    })
+    .eq('id', tenantId);
+  await audit(admin, ctx, {
+    action: 'set_custom_domain',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: before?.name,
+    changes: { customDomain: { before: before?.custom_domain, after: clean } },
+  });
+  return {
+    customDomain: clean,
+    verificationToken: token,
+    verificationHost: clean ? `_trackbliss-verification.${clean}` : null,
+    instructions: clean ? [
+      `CNAME    app.${clean} → cname.vercel-dns.com`,
+      `TXT      _trackbliss-verification.${clean} → ${token}`,
+    ] : [],
+  };
+}
+
+async function verifyCustomDomain(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  tenantId: string,
+) {
+  const { data: t } = await admin
+    .from('tenants')
+    .select('name, custom_domain, dns_verification_token')
+    .eq('id', tenantId)
+    .single();
+  if (!t?.custom_domain) throw new Error('Keine Custom Domain konfiguriert');
+  if (!t?.dns_verification_token) throw new Error('Kein Verification Token vorhanden');
+
+  // DNS-over-HTTPS lookup at Cloudflare
+  const lookupHost = `_trackbliss-verification.${t.custom_domain}`;
+  let verified = false;
+  let error: string | null = null;
+  try {
+    const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(lookupHost)}&type=TXT`, {
+      headers: { Accept: 'application/dns-json' },
+    });
+    const json = await res.json();
+    // deno-lint-ignore no-explicit-any
+    const records = (json?.Answer || []) as any[];
+    const values = records
+      .filter((r) => r.type === 16)
+      .map((r) => (typeof r.data === 'string' ? r.data.replace(/^"|"$/g, '') : ''));
+    verified = values.some((v) => v === t.dns_verification_token);
+    if (!verified) error = `Kein TXT-Record mit dem erwarteten Token gefunden. Gefunden: ${values.join(', ') || 'nichts'}`;
+  } catch (e) {
+    error = `DNS-Lookup fehlgeschlagen: ${(e as Error).message}`;
+  }
+
+  await admin
+    .from('tenants')
+    .update({
+      custom_domain_verified: verified,
+      custom_domain_verified_at: verified ? new Date().toISOString() : null,
+    })
+    .eq('id', tenantId);
+
+  await audit(admin, ctx, {
+    action: 'verify_custom_domain',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: t.name,
+    changes: { verified, error },
+  });
+
+  return { verified, domain: t.custom_domain, error };
+}
+
+async function updateWhitelabelConfig(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  tenantId: string,
+  config: Record<string, unknown>,
+) {
+  const { data: before } = await admin
+    .from('tenants')
+    .select('name, whitelabel_config')
+    .eq('id', tenantId)
+    .single();
+  const merged = { ...(before?.whitelabel_config || {}), ...(config || {}) };
+  await admin.from('tenants').update({ whitelabel_config: merged }).eq('id', tenantId);
+  await audit(admin, ctx, {
+    action: 'update_whitelabel_config',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: before?.name,
+    changes: { config },
+  });
+  return merged;
+}
+
+async function setTenantSmtp(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  params: Record<string, unknown>,
+) {
+  const tenantId = params.tenantId as string;
+  // deno-lint-ignore no-explicit-any
+  const payload: any = {
+    tenant_id: tenantId,
+    enabled: params.enabled ?? true,
+    host: params.host,
+    port: params.port ?? 465,
+    username: params.username,
+    from_address: params.fromAddress,
+    from_name: params.fromName,
+    use_tls: params.useTls ?? true,
+    updated_at: new Date().toISOString(),
+  };
+  // only update password if provided (avoid clobbering with empty)
+  if (params.password && String(params.password).length > 0) {
+    // TODO: encrypt via pgsodium once extension is enabled. For now store as-is.
+    // Risk acknowledged: pgsodium integration deferred until vault configured.
+    payload.password_encrypted = params.password as string;
+  }
+  const { data, error } = await admin
+    .from('tenant_smtp_config')
+    .upsert(payload, { onConflict: 'tenant_id' })
+    .select()
+    .single();
+  if (error) throw error;
+  await audit(admin, ctx, {
+    action: 'set_tenant_smtp',
+    targetType: 'tenant',
+    targetId: tenantId,
+    changes: {
+      host: params.host,
+      port: params.port,
+      fromAddress: params.fromAddress,
+      enabled: params.enabled ?? true,
+    },
+  });
+  return {
+    id: data.id,
+    tenantId: data.tenant_id,
+    enabled: data.enabled,
+    host: data.host,
+    port: data.port,
+    username: data.username,
+    fromAddress: data.from_address,
+    fromName: data.from_name,
+    useTls: data.use_tls,
+    lastTestedAt: data.last_tested_at,
+    lastTestResult: data.last_test_result,
+  };
+}
+
+async function testTenantSmtp(
+  admin: SupabaseAdmin,
+  ctx: AuditContext,
+  tenantId: string,
+  testTo: string,
+) {
+  if (!testTo || !testTo.includes('@')) throw new Error('Ungültige Test-Adresse');
+  const { data: cfg } = await admin
+    .from('tenant_smtp_config')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  if (!cfg) throw new Error('Keine SMTP-Config gefunden');
+  let result = 'ok';
+  try {
+    // Dynamic import within Deno context
+    const { SMTPClient } = await import('https://deno.land/x/denomailer@1.6.0/mod.ts');
+    const client = new SMTPClient({
+      connection: {
+        hostname: cfg.host,
+        port: cfg.port || 465,
+        tls: cfg.use_tls !== false,
+        auth: {
+          username: cfg.username,
+          password: cfg.password_encrypted || '',
+        },
+      },
+    });
+    await client.send({
+      from: cfg.from_name ? `${cfg.from_name} <${cfg.from_address}>` : cfg.from_address,
+      to: testTo,
+      subject: `SMTP-Test von Trackbliss (${new Date().toLocaleString('de-DE')})`,
+      content: `Dies ist eine Test-E-Mail, um deine SMTP-Config zu verifizieren.\n\nWenn du diese E-Mail siehst, funktioniert deine Konfiguration.\n\n— Trackbliss Admin`,
+    });
+    await client.close();
+  } catch (e) {
+    result = `error: ${(e as Error).message}`;
+  }
+  await admin
+    .from('tenant_smtp_config')
+    .update({
+      last_tested_at: new Date().toISOString(),
+      last_test_result: result,
+    })
+    .eq('tenant_id', tenantId);
+  await audit(admin, ctx, {
+    action: 'test_tenant_smtp',
+    targetType: 'tenant',
+    targetId: tenantId,
+    changes: { result, testTo },
+  });
+  return { ok: result === 'ok', result };
+}
+
+async function disableTenantSmtp(admin: SupabaseAdmin, ctx: AuditContext, tenantId: string) {
+  await admin.from('tenant_smtp_config').update({ enabled: false }).eq('tenant_id', tenantId);
+  await audit(admin, ctx, {
+    action: 'disable_tenant_smtp',
+    targetType: 'tenant',
+    targetId: tenantId,
+  });
 }

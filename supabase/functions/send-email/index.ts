@@ -88,26 +88,67 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'No recipient email' }), { status: 200 });
     }
 
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-      await markFailed(record.id, record.metadata, 'SMTP credentials not configured');
-      return new Response(JSON.stringify({ error: 'SMTP credentials not configured' }), { status: 200 });
-    }
+    // We defer the "is SMTP configured" check until after potential per-tenant
+    // override resolution, so tenants with their own SMTP can still send even
+    // if platform SMTP secrets are not set.
 
     const senderName = (record.metadata?.senderName as string | undefined) || DEFAULT_FROM_NAME;
     const isHtml = record.metadata?.isHtml === true;
-    const fromAddress = senderName ? `${senderName} <${SMTP_FROM}>` : SMTP_FROM;
-    const htmlBody = isHtml ? record.content : wrapPlainTextAsHtml(record.content || '', senderName);
 
-    // One short-lived SMTP connection per message. The Edge Function is
-    // invocation-scoped so keeping a pool across invocations is not useful.
+    // Phase 6: Per-tenant SMTP override
+    // If the notification's tenant has a custom SMTP config with enabled=true,
+    // use those credentials. Otherwise fall back to the platform SMTP.
+    let tenantSmtp: {
+      host: string; port: number; username: string; password: string;
+      from_address: string; from_name: string | null; use_tls: boolean;
+    } | null = null;
+    if (record.tenant_id) {
+      const { data: cfg } = await supabase
+        .from('tenant_smtp_config')
+        .select('enabled, host, port, username, password_encrypted, from_address, from_name, use_tls')
+        .eq('tenant_id', record.tenant_id)
+        .eq('enabled', true)
+        .maybeSingle();
+      if (cfg && cfg.host && cfg.username && cfg.password_encrypted && cfg.from_address) {
+        tenantSmtp = {
+          host: cfg.host,
+          port: cfg.port || 465,
+          username: cfg.username,
+          password: cfg.password_encrypted,
+          from_address: cfg.from_address,
+          from_name: cfg.from_name,
+          use_tls: cfg.use_tls !== false,
+        };
+      }
+    }
+
+    const effectiveHost = tenantSmtp?.host || SMTP_HOST;
+    const effectivePort = tenantSmtp?.port ?? SMTP_PORT;
+    const effectiveUser = tenantSmtp?.username || SMTP_USER;
+    const effectivePass = tenantSmtp?.password || SMTP_PASS;
+    const effectiveFromAddress = tenantSmtp?.from_address || SMTP_FROM;
+    const effectiveFromName = tenantSmtp?.from_name || senderName;
+    const effectiveUseTls = tenantSmtp?.use_tls ?? useTls;
+
+    if (!effectiveHost || !effectiveUser || !effectivePass) {
+      await markFailed(record.id, record.metadata, 'SMTP credentials not configured (platform default is empty and tenant has no custom config)');
+      return new Response(JSON.stringify({ error: 'SMTP credentials not configured' }), { status: 200 });
+    }
+
+    const fromAddress = effectiveFromName
+      ? `${effectiveFromName} <${effectiveFromAddress}>`
+      : effectiveFromAddress;
+    const htmlBody = isHtml ? record.content : wrapPlainTextAsHtml(record.content || '', effectiveFromName);
+
+    // One short-lived SMTP connection per message.
     const client = new SMTPClient({
       connection: {
-        hostname: SMTP_HOST,
-        port: SMTP_PORT,
-        tls: useTls,
+        hostname: effectiveHost,
+        port: effectivePort,
+        tls: effectiveUseTls,
         auth: {
-          username: SMTP_USER,
-          password: SMTP_PASS,
+          username: effectiveUser,
+          password: effectivePass,
         },
       },
     });

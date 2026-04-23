@@ -3,8 +3,15 @@ import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Building2, CreditCard, Users, Sparkles, BarChart3, Settings,
-  Shield, ExternalLink,
+  Shield, ExternalLink, Palette, Eye,
 } from 'lucide-react';
+import { WhitelabelPanel } from '@/components/admin/WhitelabelPanel';
+import { TenantHealthGauge } from '@/components/admin/TenantHealthGauge';
+import { ConfirmWithReasonDialog } from '@/components/admin/ConfirmWithReasonDialog';
+import { startImpersonation } from '@/services/supabase/admin';
+import { saveImpersonation } from '@/services/supabase/admin-impersonation';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +32,7 @@ import {
   getAdminTenant, updateTenantPlan, toggleModule,
   adjustCredits, setMonthlyAllowance, updateUserRole,
 } from '@/services/supabase/admin';
+import { supabase } from '@/lib/supabase';
 import type { AdminTenantDetail } from '@/types/admin';
 import type { BillingPlan, ModuleId } from '@/types/billing';
 import { formatDate } from '@/lib/format';
@@ -45,9 +53,12 @@ export function AdminTenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const { t } = useTranslation('admin');
   const locale = useLocale();
+  const navigate = useNavigate();
   const [tenant, setTenant] = useState<AdminTenantDetail | null>(null);
+  const [tenantHealth, setTenantHealth] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [impersonateOpen, setImpersonateOpen] = useState(false);
 
   // Dialog states
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -64,7 +75,12 @@ export function AdminTenantDetailPage() {
     if (!tenantId) return;
     setIsLoading(true);
     try {
-      setTenant(await getAdminTenant(tenantId));
+      const [t, healthRow] = await Promise.all([
+        getAdminTenant(tenantId),
+        supabase.from('tenants').select('health_score').eq('id', tenantId).maybeSingle(),
+      ]);
+      setTenant(t);
+      setTenantHealth(healthRow.data?.health_score ?? null);
     } catch (err) {
       console.error('Failed to load tenant:', err);
     } finally {
@@ -73,6 +89,19 @@ export function AdminTenantDetailPage() {
   };
 
   useEffect(() => { load(); }, [tenantId]);
+
+  async function handleImpersonate(reason: string) {
+    if (!tenant) return;
+    try {
+      const session = await startImpersonation(tenant.id, reason);
+      saveImpersonation(session);
+      toast.success(`Impersonation gestartet: ${session.tenantName}`);
+      setImpersonateOpen(false);
+      navigate('/');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   const handlePlanChange = async () => {
     if (!tenantId) return;
@@ -148,29 +177,48 @@ export function AdminTenantDetailPage() {
   const totalCredits = (tenant.monthlyAllowance - tenant.monthlyUsed) + tenant.purchasedBalance;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+    <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
+      {/* Hero Header */}
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/admin/tenants"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold truncate">{tenant.name}</h1>
-          <p className="text-muted-foreground">{tenant.slug}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold truncate">{tenant.name}</h1>
+            <Badge className={PLAN_COLORS[tenant.plan] || ''} variant="secondary">
+              {tenant.plan}
+            </Badge>
+            {tenantHealth != null && (
+              <div className="hidden sm:inline-flex">
+                <TenantHealthGauge score={tenantHealth} size={36} strokeWidth={4} showLabel={false} />
+              </div>
+            )}
+          </div>
+          <p className="text-muted-foreground text-sm font-mono">{tenant.slug}</p>
         </div>
-        <Badge className={PLAN_COLORS[tenant.plan] || ''} variant="secondary">
-          {tenant.plan}
-        </Badge>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="default"
+            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={() => setImpersonateOpen(true)}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1.5" />
+            Impersonate
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value="overview" className="gap-1"><Building2 className="h-3 w-3 hidden sm:block" />{t('Overview')}</TabsTrigger>
           <TabsTrigger value="billing" className="gap-1"><CreditCard className="h-3 w-3 hidden sm:block" />{t('Billing')}</TabsTrigger>
           <TabsTrigger value="users" className="gap-1"><Users className="h-3 w-3 hidden sm:block" />{t('Users')}</TabsTrigger>
           <TabsTrigger value="credits" className="gap-1"><Sparkles className="h-3 w-3 hidden sm:block" />{t('Credits')}</TabsTrigger>
           <TabsTrigger value="usage" className="gap-1"><BarChart3 className="h-3 w-3 hidden sm:block" />{t('Usage')}</TabsTrigger>
+          <TabsTrigger value="whitelabel" className="gap-1"><Palette className="h-3 w-3 hidden sm:block" />Whitelabel</TabsTrigger>
           <TabsTrigger value="settings" className="gap-1"><Settings className="h-3 w-3 hidden sm:block" />{t('Settings')}</TabsTrigger>
         </TabsList>
 
@@ -404,6 +452,11 @@ export function AdminTenantDetailPage() {
           </Card>
         </TabsContent>
 
+        {/* Whitelabel Tab */}
+        <TabsContent value="whitelabel">
+          <WhitelabelPanel tenantId={tenant.id} tenantName={tenant.name} />
+        </TabsContent>
+
         {/* Settings Tab */}
         <TabsContent value="settings">
           <Card>
@@ -496,6 +549,16 @@ export function AdminTenantDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmWithReasonDialog
+        open={impersonateOpen}
+        onOpenChange={setImpersonateOpen}
+        title={`Impersonation starten: ${tenant.name}`}
+        description="Du siehst die App aus Sicht dieses Tenants. Alle Aktionen werden protokolliert. Session läuft automatisch nach 30 Minuten ab."
+        confirmLabel="Impersonation starten"
+        reasonPlaceholder='z.B. "Support-Ticket #42", "Bug reproduzieren"'
+        onConfirm={handleImpersonate}
+      />
     </div>
   );
 }
