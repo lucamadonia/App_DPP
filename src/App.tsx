@@ -151,7 +151,6 @@ const ReturnsHubDashboardPage = lazy(() => import('@/pages/returns/ReturnsHubDas
 const ReturnsListPage = lazy(() => import('@/pages/returns/ReturnsListPage').then(m => ({ default: m.ReturnsListPage })));
 const CreateReturnPage = lazy(() => import('@/pages/returns/CreateReturnPage').then(m => ({ default: m.CreateReturnPage })));
 const ReturnDetailPage = lazy(() => import('@/pages/returns/ReturnDetailPage').then(m => ({ default: m.ReturnDetailPage })));
-const CustomersListPage = lazy(() => import('@/pages/returns/CustomersListPage').then(m => ({ default: m.CustomersListPage })));
 const CustomerDetailPage = lazy(() => import('@/pages/returns/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage })));
 const TicketsListPage = lazy(() => import('@/pages/returns/TicketsListPage').then(m => ({ default: m.TicketsListPage })));
 const TicketDetailPage = lazy(() => import('@/pages/returns/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })));

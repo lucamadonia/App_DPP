@@ -176,7 +176,7 @@ export function CrmDashboardPage() {
                     {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip
-                    formatter={(val: number) => `${val} ${t('Kunden')}`}
+                    formatter={(val) => `${val ?? 0} ${t('Kunden')}`}
                     contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }}
                   />
                   <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12 }} />
@@ -200,7 +200,7 @@ export function CrmDashboardPage() {
                   <XAxis dataKey="range" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip
-                    formatter={(val: number) => `${val} ${t('Kunden')}`}
+                    formatter={(val) => `${val ?? 0} ${t('Kunden')}`}
                     contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }}
                   />
                   <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />

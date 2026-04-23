@@ -194,7 +194,7 @@ export function CustomerDetailPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmtEuro(v)} />
-                <Tooltip formatter={(v: number) => fmtEuro(v)} labelClassName="font-semibold" />
+                <Tooltip formatter={(v) => fmtEuro(Number(v) || 0)} labelClassName="font-semibold" />
                 <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
