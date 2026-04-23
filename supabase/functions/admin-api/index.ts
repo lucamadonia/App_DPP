@@ -1458,15 +1458,46 @@ async function setTenantSubdomain(
       .maybeSingle();
     if (existing) throw new Error(`Subdomain "${clean}" ist bereits vergeben`);
   }
+
+  // Auto-provision / deprovision in Vercel (best effort)
+  const vercelMessages: string[] = [];
+  if (isVercelConfigured()) {
+    // Remove previous subdomain if it existed and is changing
+    if (before?.subdomain && before.subdomain !== clean) {
+      const del = await vercelRemoveDomain(`${before.subdomain}.trackbliss.eu`);
+      if (del.ok || del.status === 404) vercelMessages.push(`Alte Subdomain aus Vercel entfernt: ${before.subdomain}.trackbliss.eu`);
+      else vercelMessages.push(`Warnung: Alte Vercel-Domain konnte nicht entfernt werden (${del.status})`);
+    }
+    if (clean) {
+      const add = await vercelAddDomain(`${clean}.trackbliss.eu`);
+      if (add.ok) {
+        vercelMessages.push(`In Vercel registriert: ${clean}.trackbliss.eu`);
+      } else if (add.status === 409) {
+        vercelMessages.push(`In Vercel bereits vorhanden: ${clean}.trackbliss.eu`);
+      } else {
+        // eslint-disable-next-line no-explicit-any
+        const errMsg = ((add.data as any)?.error?.message) || add.error || `Status ${add.status}`;
+        throw new Error(`Vercel-API-Fehler: ${errMsg}`);
+      }
+    }
+  } else {
+    vercelMessages.push('Vercel-API nicht konfiguriert — manuelle Anlage in Vercel-Dashboard erforderlich');
+  }
+
   await admin.from('tenants').update({ subdomain: clean }).eq('id', tenantId);
   await audit(admin, ctx, {
     action: 'set_tenant_subdomain',
     targetType: 'tenant',
     targetId: tenantId,
     targetLabel: before?.name,
-    changes: { subdomain: { before: before?.subdomain, after: clean } },
+    changes: { subdomain: { before: before?.subdomain, after: clean }, vercel: vercelMessages },
   });
-  return { subdomain: clean, fullHost: clean ? `${clean}.trackbliss.eu` : null };
+  return {
+    subdomain: clean,
+    fullHost: clean ? `${clean}.trackbliss.eu` : null,
+    vercelStatus: vercelMessages.join(' · '),
+    vercelConfigured: isVercelConfigured(),
+  };
 }
 
 async function setCustomDomain(
@@ -1481,7 +1512,6 @@ async function setCustomDomain(
   if (domain && domain.trim()) {
     clean = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(clean)) throw new Error('Ungültiges Domain-Format');
-    // Check uniqueness
     const { data: existing } = await admin
       .from('tenants')
       .select('id')
@@ -1489,9 +1519,33 @@ async function setCustomDomain(
       .neq('id', tenantId)
       .maybeSingle();
     if (existing) throw new Error(`Domain "${clean}" wird bereits verwendet`);
-    // Generate verification token (32 random chars)
     token = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
   }
+
+  // Auto-provision / deprovision in Vercel
+  const vercelMessages: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let vercelDomainInfo: any = null;
+  if (isVercelConfigured()) {
+    if (before?.custom_domain && before.custom_domain !== clean) {
+      const del = await vercelRemoveDomain(before.custom_domain);
+      if (del.ok || del.status === 404) vercelMessages.push(`Alte Custom-Domain aus Vercel entfernt: ${before.custom_domain}`);
+    }
+    if (clean) {
+      const add = await vercelAddDomain(clean);
+      if (add.ok) {
+        vercelDomainInfo = add.data;
+        vercelMessages.push(`In Vercel registriert: ${clean}`);
+      } else if (add.status === 409) {
+        vercelMessages.push(`In Vercel bereits vorhanden`);
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const errMsg = ((add.data as any)?.error?.message) || add.error || `Status ${add.status}`;
+        throw new Error(`Vercel-API-Fehler: ${errMsg}`);
+      }
+    }
+  }
+
   await admin
     .from('tenants')
     .update({
@@ -1506,16 +1560,20 @@ async function setCustomDomain(
     targetType: 'tenant',
     targetId: tenantId,
     targetLabel: before?.name,
-    changes: { customDomain: { before: before?.custom_domain, after: clean } },
+    changes: { customDomain: { before: before?.custom_domain, after: clean }, vercel: vercelMessages },
   });
   return {
     customDomain: clean,
     verificationToken: token,
     verificationHost: clean ? `_trackbliss-verification.${clean}` : null,
     instructions: clean ? [
-      `CNAME    app.${clean} → cname.vercel-dns.com`,
+      `CNAME    ${clean} → cname.vercel-dns.com`,
       `TXT      _trackbliss-verification.${clean} → ${token}`,
     ] : [],
+    vercelStatus: vercelMessages.join(' · '),
+    vercelConfigured: isVercelConfigured(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vercelVerification: (vercelDomainInfo as any)?.verification || null,
   };
 }
 
@@ -1711,6 +1769,61 @@ async function disableTenantSmtp(admin: SupabaseAdmin, ctx: AuditContext, tenant
     targetType: 'tenant',
     targetId: tenantId,
   });
+}
+
+// ============================================
+// VERCEL API AUTO-PROVISION
+// ============================================
+
+const VERCEL_API_TOKEN = Deno.env.get('VERCEL_API_TOKEN');
+const VERCEL_PROJECT_ID = Deno.env.get('VERCEL_PROJECT_ID');
+const VERCEL_TEAM_ID = Deno.env.get('VERCEL_TEAM_ID'); // optional for team accounts
+
+interface VercelResult {
+  ok: boolean;
+  status: number;
+  data?: unknown;
+  error?: string;
+}
+
+async function vercelApi(
+  method: string,
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<VercelResult> {
+  if (!VERCEL_API_TOKEN || !VERCEL_PROJECT_ID) {
+    return { ok: false, status: 0, error: 'VERCEL_API_TOKEN or VERCEL_PROJECT_ID not configured' };
+  }
+  const url = new URL(`https://api.vercel.com${path}`);
+  if (VERCEL_TEAM_ID) url.searchParams.set('teamId', VERCEL_TEAM_ID);
+  try {
+    const res = await fetch(url.toString(), {
+      method,
+      headers: {
+        Authorization: `Bearer ${VERCEL_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await res.text();
+    let data: unknown = text;
+    try { data = JSON.parse(text); } catch { /* keep as text */ }
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, error: (e as Error).message };
+  }
+}
+
+async function vercelAddDomain(domain: string): Promise<VercelResult> {
+  return vercelApi('POST', `/v10/projects/${VERCEL_PROJECT_ID}/domains`, { name: domain });
+}
+
+async function vercelRemoveDomain(domain: string): Promise<VercelResult> {
+  return vercelApi('DELETE', `/v9/projects/${VERCEL_PROJECT_ID}/domains/${encodeURIComponent(domain)}`);
+}
+
+function isVercelConfigured(): boolean {
+  return !!(VERCEL_API_TOKEN && VERCEL_PROJECT_ID);
 }
 
 // ============================================
