@@ -108,13 +108,13 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            {mode === 'pick' ? t('Kommissionierung bestätigen') : t('Verpackung bestätigen')}
+            <Package className="h-5 w-5 shrink-0" />
+            <span className="truncate">{mode === 'pick' ? t('Kommissionierung bestätigen') : t('Verpackung bestätigen')}</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-words">
             {mode === 'pick'
               ? t('Haken Sie jede Position ab, wenn sie aus dem Lager entnommen wurde. Oder scannen Sie die GTIN.')
               : t('Kontrolle vor Versand: Haken Sie jede Position ab, wenn sie im Karton liegt.')}
@@ -122,7 +122,7 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
         </DialogHeader>
 
         <form onSubmit={handleScan} className="flex gap-2">
-          <ScanBarcode className="h-5 w-5 text-muted-foreground self-center" />
+          <ScanBarcode className="h-5 w-5 text-muted-foreground self-center shrink-0" />
           <Input
             value={scanValue}
             onChange={e => setScanValue(e.target.value)}
@@ -130,7 +130,7 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
             autoFocus
             className="font-mono"
           />
-          <Button type="submit" variant="outline" disabled={!scanValue.trim()}>
+          <Button type="submit" variant="outline" disabled={!scanValue.trim()} className="shrink-0">
             {t('Scan')}
           </Button>
         </form>
@@ -140,26 +140,33 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
             const qty = confirmed[item.id] || 0;
             const full = qty >= item.quantity;
             return (
-              <div key={item.id} className={`flex items-center gap-3 p-3 ${full ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
-                <Checkbox
-                  checked={full}
-                  onCheckedChange={() => toggleFullItem(item)}
-                  aria-label={t('Vollständig bestätigen')}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.productName || item.productId.slice(0, 8)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {item.batchSerialNumber || t('Keine Charge')} · {item.locationName || t('Unbekannter Standort')}
+              <div key={item.id} className={`p-3 ${full ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={full}
+                    onCheckedChange={() => toggleFullItem(item)}
+                    aria-label={t('Vollständig bestätigen')}
+                    className="mt-1 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="font-medium text-sm leading-tight break-words">
+                      {item.productName || item.productId.slice(0, 8)}
+                    </div>
+                    <div className="text-xs text-muted-foreground break-words">
+                      {item.batchSerialNumber || t('Keine Charge')} · {item.locationName || t('Unbekannter Standort')}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 text-sm tabular-nums">
+                      <span className={full ? 'font-semibold text-green-700' : 'text-muted-foreground'}>{qty}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="font-semibold">{item.quantity}</span>
+                    </div>
+                    {!full && qty < item.quantity && (
+                      <Button size="sm" variant="ghost" onClick={() => incrementItem(item)} className="h-7 px-2">+1</Button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-sm tabular-nums">
-                  <span className={full ? 'font-semibold text-green-700' : 'text-muted-foreground'}>{qty}</span>
-                  <span className="text-muted-foreground">/</span>
-                  <span className="font-semibold">{item.quantity}</span>
-                </div>
-                {!full && qty < item.quantity && (
-                  <Button size="sm" variant="ghost" onClick={() => incrementItem(item)}>+1</Button>
-                )}
               </div>
             );
           })}

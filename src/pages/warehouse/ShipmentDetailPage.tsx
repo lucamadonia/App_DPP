@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Package, Truck, User, MapPin, ExternalLink, Copy,
   Check, X, Pencil, FileText, Clock, Weight, DollarSign,
-  AlertTriangle, Camera, Gift, RotateCcw,
+  AlertTriangle, Camera, Gift, RotateCcw, Heart,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -543,11 +543,20 @@ export function ShipmentDetailPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <User className="h-4 w-4" /> {t('Recipient')}
               </CardTitle>
-              {isDraft && !editingRecipient && (
-                <Button variant="ghost" size="sm" onClick={() => startEditing('recipient')}>
-                  <Pencil className="h-3.5 w-3.5 mr-1" /> {t('Edit', { ns: 'common' })}
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {shipment.customerId && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={`/crm/customers/${shipment.customerId}`}>
+                      <Heart className="h-3.5 w-3.5 mr-1" /> {t('Kundenprofil')}
+                    </Link>
+                  </Button>
+                )}
+                {isDraft && !editingRecipient && (
+                  <Button variant="ghost" size="sm" onClick={() => startEditing('recipient')}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> {t('Edit', { ns: 'common' })}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               <EditableField label={t('Recipient Name')} value={shipment.recipientName} editing={editingRecipient} editValue={editFields.recipientName || ''} onChange={v => setEditFields(f => ({ ...f, recipientName: v }))} />
@@ -662,11 +671,36 @@ export function ShipmentDetailPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">{t('Kein Karton')}</SelectItem>
-                        {packagingTypes.map(p => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name} ({p.tareWeightGrams}g)
-                          </SelectItem>
-                        ))}
+                        {packagingTypes.map(p => {
+                          const tracked = p.stockTracked;
+                          const qty = p.stockOnHand ?? 0;
+                          const thr = p.stockThreshold ?? 10;
+                          const dotColor = !tracked
+                            ? 'bg-muted-foreground/30'
+                            : qty <= 0
+                              ? 'bg-red-500'
+                              : qty <= thr
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500';
+                          const suffix = !tracked
+                            ? ''
+                            : qty <= 0
+                              ? ` · ${t('ausverkauft')}`
+                              : ` · ${qty} ${t('verfügbar')}`;
+                          return (
+                            <SelectItem key={p.id} value={p.id}>
+                              <span className="flex items-center gap-2">
+                                <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
+                                <span>
+                                  {p.name} ({p.tareWeightGrams}g)
+                                  <span className={`${tracked && qty <= 0 ? 'text-red-600' : tracked && qty <= thr ? 'text-amber-600' : 'text-muted-foreground'} ml-1 text-xs`}>
+                                    {suffix}
+                                  </span>
+                                </span>
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <Button

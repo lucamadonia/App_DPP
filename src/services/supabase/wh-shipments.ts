@@ -300,6 +300,9 @@ export async function createShipment(input: WhShipmentInput): Promise<WhShipment
     }
   }
 
+  // Compute total_weight_grams from batch/product gross_weight + packaging tare
+  await recomputeShipmentWeight(data.id);
+
   return transformShipment(data);
 }
 
@@ -318,6 +321,10 @@ export interface PackagingType {
   maxLoadGrams?: number;
   isDefault: boolean;
   sortOrder: number;
+  stockTracked?: boolean;
+  stockOnHand?: number;
+  stockThreshold?: number;
+  lastRestockedAt?: string;
 }
 
 export async function getPackagingTypes(): Promise<PackagingType[]> {
@@ -340,7 +347,139 @@ export async function getPackagingTypes(): Promise<PackagingType[]> {
     maxLoadGrams: r.max_load_grams != null ? Number(r.max_load_grams) : undefined,
     isDefault: !!r.is_default,
     sortOrder: r.sort_order || 0,
+    stockTracked: r.stock_tracked ?? false,
+    stockOnHand: r.stock_on_hand ?? 0,
+    stockThreshold: r.stock_threshold ?? 10,
+    lastRestockedAt: r.last_restocked_at ?? undefined,
   }));
+}
+
+// ============================================
+// PACKAGING STOCK MANAGEMENT
+// ============================================
+
+export async function getPackagingLowStock(): Promise<PackagingType[]> {
+  const all = await getPackagingTypes();
+  return all.filter(p => p.stockTracked && (p.stockOnHand ?? 0) <= (p.stockThreshold ?? 10));
+}
+
+export async function recordPackagingReceipt(packagingTypeId: string, quantity: number, notes?: string): Promise<void> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+  if (quantity <= 0) throw new Error('Quantity must be positive');
+
+  const { data: pkg } = await supabase.from('wh_packaging_types').select('stock_on_hand').eq('id', packagingTypeId).maybeSingle();
+  const before = pkg?.stock_on_hand ?? 0;
+  const after = before + quantity;
+
+  const { error: txnErr } = await supabase.from('wh_packaging_transactions').insert({
+    tenant_id: tenantId,
+    packaging_type_id: packagingTypeId,
+    type: 'goods_receipt',
+    quantity_change: quantity,
+    quantity_before: before,
+    quantity_after: after,
+    notes: notes || null,
+  });
+  if (txnErr) throw new Error(txnErr.message);
+
+  const { error: updErr } = await supabase
+    .from('wh_packaging_types')
+    .update({ stock_on_hand: after, last_restocked_at: new Date().toISOString() })
+    .eq('id', packagingTypeId);
+  if (updErr) throw new Error(updErr.message);
+}
+
+export async function adjustPackagingStock(packagingTypeId: string, newQuantity: number, notes?: string): Promise<void> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+  if (newQuantity < 0) throw new Error('Quantity must be >= 0');
+
+  const { data: pkg } = await supabase.from('wh_packaging_types').select('stock_on_hand').eq('id', packagingTypeId).maybeSingle();
+  const before = pkg?.stock_on_hand ?? 0;
+  const change = newQuantity - before;
+
+  const { error: txnErr } = await supabase.from('wh_packaging_transactions').insert({
+    tenant_id: tenantId,
+    packaging_type_id: packagingTypeId,
+    type: 'adjustment',
+    quantity_change: change,
+    quantity_before: before,
+    quantity_after: newQuantity,
+    notes: notes || 'Manuelle Inventur',
+  });
+  if (txnErr) throw new Error(txnErr.message);
+
+  const { error: updErr } = await supabase
+    .from('wh_packaging_types')
+    .update({ stock_on_hand: newQuantity })
+    .eq('id', packagingTypeId);
+  if (updErr) throw new Error(updErr.message);
+}
+
+export async function updatePackagingTracking(packagingTypeId: string, stockTracked: boolean, stockThreshold?: number): Promise<void> {
+  const patch: Record<string, unknown> = { stock_tracked: stockTracked };
+  if (stockThreshold != null) patch.stock_threshold = stockThreshold;
+  const { error } = await supabase.from('wh_packaging_types').update(patch).eq('id', packagingTypeId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Re-berechnet total_weight_grams eines Shipments aus den items
+ * (Batch-Gewicht → Product-Gewicht als Fallback) plus Packaging-Tara.
+ * Wird aufgerufen nach jeder Mengen-/Item-/Packaging-Änderung.
+ * Läuft silent (keine Errors) — wenn nichts berechnet werden kann, bleibt
+ * total_weight_grams so wie es war.
+ */
+export async function recomputeShipmentWeight(shipmentId: string): Promise<void> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return;
+  const { data: ship } = await supabase
+    .from('wh_shipments')
+    .select('id, packaging_type_id, tenant_id')
+    .eq('id', shipmentId)
+    .maybeSingle();
+  if (!ship) return;
+  const { data: items } = await supabase
+    .from('wh_shipment_items')
+    .select('product_id, batch_id, quantity')
+    .eq('shipment_id', shipmentId);
+  if (!items?.length) return;
+  let itemsWeight = 0;
+  for (const it of items) {
+    let w: number | null = null;
+    if (it.batch_id) {
+      const { data: b } = await supabase
+        .from('product_batches')
+        .select('gross_weight, net_weight')
+        .eq('id', it.batch_id)
+        .maybeSingle();
+      w = (b?.gross_weight ?? b?.net_weight) as number | null;
+    }
+    if (w === null) {
+      const { data: p } = await supabase
+        .from('products')
+        .select('gross_weight, net_weight')
+        .eq('tenant_id', ship.tenant_id)
+        .eq('id', it.product_id)
+        .maybeSingle();
+      w = (p?.gross_weight ?? p?.net_weight) as number | null;
+    }
+    if (w !== null) itemsWeight += w * (it.quantity || 0);
+  }
+  let tare = 0;
+  if (ship.packaging_type_id) {
+    const { data: pkg } = await supabase
+      .from('wh_packaging_types')
+      .select('tare_weight_grams')
+      .eq('id', ship.packaging_type_id)
+      .maybeSingle();
+    tare = pkg?.tare_weight_grams || 0;
+  }
+  const total = itemsWeight + tare;
+  if (total > 0) {
+    await supabase.from('wh_shipments').update({ total_weight_grams: total }).eq('id', shipmentId);
+  }
 }
 
 /**
@@ -709,6 +848,9 @@ export async function addShipmentItem(shipmentId: string, item: {
   const total = items.reduce((sum, i) => sum + i.quantity, 0);
   await supabase.from('wh_shipments').update({ total_items: total }).eq('id', shipmentId);
 
+  // Recompute weight (Batch → Product fallback + Packaging-Tara)
+  await recomputeShipmentWeight(shipmentId);
+
   return transformShipmentItem(data);
 }
 
@@ -727,11 +869,12 @@ export async function removeShipmentItem(itemId: string): Promise<void> {
 
   if (error) throw new Error(`Failed to remove item: ${error.message}`);
 
-  // Update total items count
+  // Update total items count + recompute weight
   if (item) {
     const items = await getShipmentItems(item.shipment_id);
     const total = items.reduce((sum, i) => sum + i.quantity, 0);
     await supabase.from('wh_shipments').update({ total_items: total }).eq('id', item.shipment_id);
+    await recomputeShipmentWeight(item.shipment_id);
   }
 }
 
