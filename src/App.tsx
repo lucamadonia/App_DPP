@@ -101,6 +101,9 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ defa
 const BillingPage = lazy(() => import('@/pages/BillingPage').then(m => ({ default: m.BillingPage })));
 // Admin Portal
 const AdminGuard = lazy(() => import('@/components/admin/AdminGuard').then(m => ({ default: m.AdminGuard })));
+const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage').then(m => ({ default: m.AdminAuditLogPage })));
+const AdminFeatureFlagsPage = lazy(() => import('@/pages/admin/AdminFeatureFlagsPage').then(m => ({ default: m.AdminFeatureFlagsPage })));
+const AdminSystemPage = lazy(() => import('@/pages/admin/AdminSystemPage').then(m => ({ default: m.AdminSystemPage })));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const AdminTenantsPage = lazy(() => import('@/pages/admin/AdminTenantsPage').then(m => ({ default: m.AdminTenantsPage })));
 const AdminTenantDetailPage = lazy(() => import('@/pages/admin/AdminTenantDetailPage').then(m => ({ default: m.AdminTenantDetailPage })));
@@ -386,12 +389,12 @@ function NormalAppRoutes() {
           <Route path="credits" element={<AdminCreditsPage />} />
           <Route path="coupons" element={<AdminCouponsPage />} />
           <Route path="master-data" element={<AdminMasterDataPage />} />
-          {/* v2 placeholder routes — pages coming next */}
+          <Route path="audit-log" element={<AdminAuditLogPage />} />
+          <Route path="feature-flags" element={<AdminFeatureFlagsPage />} />
+          <Route path="system" element={<AdminSystemPage />} />
+          {/* v2 placeholder routes — pages still to build */}
           <Route path="support" element={<AdminDashboardPage />} />
           <Route path="analytics" element={<AdminDashboardPage />} />
-          <Route path="audit-log" element={<AdminDashboardPage />} />
-          <Route path="feature-flags" element={<AdminDashboardPage />} />
-          <Route path="system" element={<AdminDashboardPage />} />
         </Route>
 
         {/* Main app area with sidebar (protected) */}
