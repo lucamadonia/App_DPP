@@ -14,6 +14,7 @@ import { ChurnPredictionCard } from '@/components/crm/ChurnPredictionCard';
 import { ProductAffinityList } from '@/components/crm/ProductAffinityList';
 import { TagEditor } from '@/components/crm/TagEditor';
 import { NotesSection } from '@/components/crm/NotesSection';
+import { SendEmailDialog } from '@/components/crm/SendEmailDialog';
 import { toast } from 'sonner';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -49,6 +50,7 @@ export function CustomerDetailPage() {
   const [shopDomain, setShopDomain] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -110,6 +112,10 @@ export function CustomerDetailPage() {
           <h1 className="text-xl sm:text-2xl font-bold truncate">{fullName}</h1>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" onClick={() => setEmailDialogOpen(true)} disabled={!customer.email}>
+            <Send className="mr-1 h-4 w-4" />
+            {t('E-Mail senden')}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             {t('Aktualisieren')}
@@ -248,6 +254,13 @@ export function CustomerDetailPage() {
           </CardContent>
         </Tabs>
       </Card>
+
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        customer={customer}
+        onSent={() => load()}
+      />
     </div>
   );
 }
