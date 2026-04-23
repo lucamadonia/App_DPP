@@ -164,6 +164,7 @@ const EmailTemplateEditorPage = lazy(() => import('@/components/returns/email-ed
 const CrmDashboardPage = lazy(() => import('@/pages/crm/CrmDashboardPage').then(m => ({ default: m.CrmDashboardPage })));
 const CrmCustomerListPage = lazy(() => import('@/pages/crm/CustomerListPage').then(m => ({ default: m.CustomerListPage })));
 const CrmCustomerDetailPage = lazy(() => import('@/pages/crm/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage })));
+const CommandPalette = lazy(() => import('@/components/crm/CommandPalette').then(m => ({ default: m.CommandPalette })));
 
 // Protected Route - redirects to login if not authenticated
 function ProtectedRoute() {
@@ -235,6 +236,9 @@ function AppLayout() {
           <AnimatedOutlet />
         </main>
         <MobileBottomNav />
+        <Suspense fallback={null}>
+          <CommandPalette />
+        </Suspense>
       </SidebarInset>
     </SidebarProvider>
   );

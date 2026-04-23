@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, User, ExternalLink, Mail, Phone, Package, Tag, TrendingUp, AlertTriangle, RefreshCw, ShoppingBag, Undo2, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, User, ExternalLink, Mail, Phone, Package, TrendingUp, AlertTriangle, RefreshCw, ShoppingBag, Undo2, MessageSquare, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { getCustomerDetail, getCustomerTimeline, getCustomerCLVTrend, refreshCustomerStats, suggestNextAction, buildShopifyCustomerLink, type CrmCustomer, type TimelineEvent } from '@/services/supabase/crm-analytics';
+import { getCustomerDetail, getCustomerTimeline, getCustomerCLVTrend, refreshCustomerStats, refreshCustomerMetrics, suggestNextAction, buildShopifyCustomerLink, type CrmCustomer, type TimelineEvent } from '@/services/supabase/crm-analytics';
 import { getShopifySettings } from '@/services/supabase/shopify-integration';
+import { HealthGauge } from '@/components/crm/HealthGauge';
+import { ChurnPredictionCard } from '@/components/crm/ChurnPredictionCard';
+import { ProductAffinityList } from '@/components/crm/ProductAffinityList';
+import { TagEditor } from '@/components/crm/TagEditor';
+import { NotesSection } from '@/components/crm/NotesSection';
 import { toast } from 'sonner';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -68,6 +73,7 @@ export function CustomerDetailPage() {
     setRefreshing(true);
     try {
       await refreshCustomerStats(id);
+      await refreshCustomerMetrics(id);
       await load();
       toast.success(t('Kundendaten aktualisiert'));
     } catch (e) {
@@ -119,7 +125,7 @@ export function CustomerDetailPage() {
       </div>
 
       {/* Badges-Row */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {customer.rfmSegment && (
           <Badge variant="outline" className={SEGMENT_TONE[customer.rfmSegment]}>
             {SEGMENT_LABEL[customer.rfmSegment]}
@@ -131,18 +137,34 @@ export function CustomerDetailPage() {
         {customer.riskScore > 50 && (
           <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Risk {customer.riskScore}</Badge>
         )}
-        {(customer.tags || []).map(tag => (
-          <Badge key={tag} variant="outline" className="gap-1"><Tag className="h-3 w-3" />{tag}</Badge>
-        ))}
+        <div className="flex-1 min-w-0">
+          <TagEditor
+            customerId={customer.id}
+            initialTags={customer.tags || []}
+            onChange={(newTags) => setCustomer(prev => prev ? { ...prev, tags: newTags } : prev)}
+          />
+        </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      {/* KPI + Health Gauge Row */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 sm:gap-4 items-stretch">
         <KPI icon={<Package />} label={t('Bestellungen')} value={String(customer.totalOrders)} />
         <KPI icon={<TrendingUp />} label={t('CLV')} value={fmtEuro(customer.totalSpent)} highlight />
         <KPI icon={<ShoppingBag />} label={t('Ø Bestellwert')} value={fmtEuro(customer.avgOrderValue)} />
         <KPI icon={<AlertTriangle />} label={t('Seit letzter Bestellung')} value={daysInactive != null ? `${daysInactive} Tage` : '—'}
              tone={daysInactive != null && daysInactive > 90 ? 'amber' : undefined} />
+        <Card className="flex items-center justify-center p-3 min-w-[140px]">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('Health')}</span>
+            <HealthGauge score={customer.healthScore} size={80} strokeWidth={8} />
+          </div>
+        </Card>
+      </div>
+
+      {/* Churn + Product Affinity Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ChurnPredictionCard customer={customer} />
+        <ProductAffinityList customerId={customer.id} />
       </div>
 
       {/* Next-Best-Action + Contact-Card */}
@@ -201,6 +223,9 @@ export function CustomerDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Notes */}
+      <NotesSection customerId={customer.id} />
 
       {/* Timeline Tabs */}
       <Card>

@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
+  ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import {
-  Users, TrendingUp, AlertTriangle, Sparkles, Wallet, ArrowRight, RefreshCw, Heart,
+  Users, TrendingUp, AlertTriangle, Sparkles, Wallet, ArrowRight, RefreshCw, Heart, Activity,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,13 @@ import {
   getTenantCRMKPIs,
   getTopCustomers,
   getAtRiskCustomers,
-  refreshTenantRFMScores,
+  getHealthDistribution,
+  refreshTenantHealthScores,
   type CrmKPIs,
   type CrmCustomer,
+  type HealthDistribution,
 } from '@/services/supabase/crm-analytics';
+import { LifecycleFunnel } from '@/components/crm/LifecycleFunnel';
 import { toast } from 'sonner';
 
 const SEGMENT_META: Record<string, { label: string; color: string }> = {
@@ -52,20 +55,23 @@ export function CrmDashboardPage() {
   const [kpis, setKpis] = useState<CrmKPIs | null>(null);
   const [topCustomers, setTopCustomers] = useState<CrmCustomer[]>([]);
   const [atRisk, setAtRisk] = useState<CrmCustomer[]>([]);
+  const [healthDist, setHealthDist] = useState<HealthDistribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [k, tops, risks] = await Promise.all([
+      const [k, tops, risks, hd] = await Promise.all([
         getTenantCRMKPIs(),
         getTopCustomers(10),
         getAtRiskCustomers(10),
+        getHealthDistribution(),
       ]);
       setKpis(k);
       setTopCustomers(tops);
       setAtRisk(risks);
+      setHealthDist(hd);
     } finally {
       setLoading(false);
     }
@@ -76,8 +82,8 @@ export function CrmDashboardPage() {
   async function handleRecompute() {
     setRefreshing(true);
     try {
-      const n = await refreshTenantRFMScores();
-      toast.success(t('{{count}} Kunden neu segmentiert', { count: n }));
+      const n = await refreshTenantHealthScores();
+      toast.success(t('{{count}} Kunden neu segmentiert + Health berechnet', { count: n }));
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -86,11 +92,9 @@ export function CrmDashboardPage() {
     }
   }
 
-  const pieData = kpis ? Object.entries(kpis.segmentBreakdown).map(([key, value]) => ({
-    name: SEGMENT_META[key]?.label || key,
-    value,
-    color: SEGMENT_META[key]?.color || '#94a3b8',
-  })) : [];
+  const avgHealth = kpis && kpis.customersWithOrders > 0
+    ? Math.round(healthDist.reduce((s, b) => s + ((b.min + b.max) / 2) * b.count, 0) / Math.max(1, healthDist.reduce((s, b) => s + b.count, 0)))
+    : 0;
 
   const histogramData = [
     { range: '0-50 €', min: 0, max: 50, count: 0 },
@@ -123,7 +127,7 @@ export function CrmDashboardPage() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <KPICard
           icon={<Users className="h-4 w-4" />}
           label={t('Kunden gesamt')}
@@ -154,37 +158,17 @@ export function CrmDashboardPage() {
           value={loading ? '…' : String(kpis?.atRiskCount || 0)}
           hint={loading ? '' : `${kpis?.newLast30d || 0} ${t('Neu · 30 Tage')}`}
         />
+        <KPICard
+          icon={<Activity className="h-4 w-4 text-emerald-600" />}
+          label={t('Ø Health')}
+          value={loading ? '…' : `${avgHealth}`}
+          hint={t('Ø aller Kunden')}
+        />
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t('RFM-Segmente')}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {loading ? (
-              <ShimmerSkeleton className="h-[280px]" />
-            ) : pieData.length === 0 ? (
-              <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
-                {t('Noch keine Daten')}
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={2}>
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val) => `${val ?? 0} ${t('Kunden')}`}
-                    contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }}
-                  />
-                  <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <LifecycleFunnel />
 
         <Card>
           <CardHeader className="pb-2">

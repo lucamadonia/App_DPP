@@ -39,6 +39,9 @@ export interface CrmCustomer {
   rfmSegment?: RfmSegment;
   statsRefreshedAt?: string;
   createdAt: string;
+  healthScore?: number;
+  expectedNextOrderDays?: number;
+  avgDaysBetweenOrders?: number;
 }
 
 export interface CustomerListFilter {
@@ -81,6 +84,9 @@ function transformCustomer(row: any): CrmCustomer {
     rfmSegment: row.rfm_segment || undefined,
     statsRefreshedAt: row.stats_refreshed_at || undefined,
     createdAt: row.created_at,
+    healthScore: row.health_score != null ? Number(row.health_score) : undefined,
+    expectedNextOrderDays: row.expected_next_order_days ?? undefined,
+    avgDaysBetweenOrders: row.avg_days_between_orders != null ? Number(row.avg_days_between_orders) : undefined,
   };
 }
 
@@ -386,4 +392,279 @@ export function suggestNextAction(c: CrmCustomer): NextAction {
     default:
       return { label: 'Kontakt aufnehmen', description: 'Noch kein Segment berechnet — RFM-Score nach nächstem Cron-Lauf verfügbar', urgency: 'low' };
   }
+}
+
+// ============================================
+// v2: PRODUCT AFFINITY
+// ============================================
+
+export interface ProductAffinity {
+  productId: string;
+  productName: string;
+  totalQuantity: number;
+  totalRevenue: number;
+  orderCount: number;
+}
+
+export async function getCustomerProductAffinity(customerId: string, limit = 5): Promise<ProductAffinity[]> {
+  const { data, error } = await supabase.rpc('get_customer_product_affinity', { p_customer_id: customerId, p_limit: limit });
+  if (error) { console.error('getCustomerProductAffinity:', error); return []; }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((r: any) => ({
+    productId: r.product_id,
+    productName: r.product_name,
+    totalQuantity: Number(r.total_quantity),
+    totalRevenue: Number(r.total_revenue),
+    orderCount: Number(r.order_count),
+  }));
+}
+
+// ============================================
+// v2: LIFECYCLE FUNNEL
+// ============================================
+
+export interface LifecycleFunnelStage {
+  stage: string;
+  customerCount: number;
+  revenueSum: number;
+}
+
+export async function getLifecycleFunnel(): Promise<LifecycleFunnelStage[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+  const { data, error } = await supabase.rpc('get_lifecycle_funnel', { p_tenant_id: tenantId });
+  if (error) { console.error('getLifecycleFunnel:', error); return []; }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((r: any) => ({
+    stage: r.stage,
+    customerCount: Number(r.customer_count),
+    revenueSum: Number(r.revenue_sum),
+  }));
+}
+
+// ============================================
+// v2: CUSTOMER METRICS (health, expected next order)
+// ============================================
+
+export async function refreshCustomerMetrics(customerId: string): Promise<void> {
+  const { error } = await supabase.rpc('refresh_customer_metrics', { p_customer_id: customerId });
+  if (error) console.error('refreshCustomerMetrics:', error);
+}
+
+export async function refreshTenantHealthScores(): Promise<number> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return 0;
+  const { data, error } = await supabase.rpc('compute_rfm_and_health', { p_tenant_id: tenantId });
+  if (error) { console.error('compute_rfm_and_health:', error); return 0; }
+  return Number(data) || 0;
+}
+
+export interface ChurnPrediction {
+  /** Tage bis erwartete nächste Bestellung; negativ = überfällig */
+  daysUntilExpected: number | null;
+  /** Tage seit letzter Bestellung */
+  daysSinceLast: number | null;
+  /** Durchschnitt Tage zwischen Bestellungen */
+  avgGap: number | null;
+  /** true wenn überfällig */
+  isOverdue: boolean;
+  /** 'healthy' | 'due' | 'overdue' | 'unknown' */
+  state: 'healthy' | 'due' | 'overdue' | 'unknown';
+}
+
+export function deriveChurnPrediction(c: CrmCustomer): ChurnPrediction {
+  const avgGap = c.avgDaysBetweenOrders ?? null;
+  const daysSinceLast = c.lastOrderAt
+    ? Math.floor((Date.now() - new Date(c.lastOrderAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const daysUntilExpected = c.expectedNextOrderDays ?? null;
+
+  let state: ChurnPrediction['state'] = 'unknown';
+  let isOverdue = false;
+  if (avgGap == null || daysSinceLast == null) {
+    state = 'unknown';
+  } else {
+    // Overdue = past 120% of average gap
+    isOverdue = daysSinceLast > avgGap * 1.2;
+    if (isOverdue) state = 'overdue';
+    else if (daysSinceLast > avgGap * 0.8) state = 'due';
+    else state = 'healthy';
+  }
+  return { daysUntilExpected, daysSinceLast, avgGap, isOverdue, state };
+}
+
+// ============================================
+// v2: NOTES
+// ============================================
+
+export interface CustomerNote {
+  id: string;
+  customerId: string;
+  authorId?: string;
+  authorName?: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformNote(r: any): CustomerNote {
+  return {
+    id: r.id,
+    customerId: r.customer_id,
+    authorId: r.author_id || undefined,
+    authorName: r.author_name || undefined,
+    content: r.content,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+export async function getCustomerNotes(customerId: string): Promise<CustomerNote[]> {
+  const { data, error } = await supabase
+    .from('rh_customer_notes')
+    .select('*')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+  if (error) { console.error('getCustomerNotes:', error); return []; }
+  return (data || []).map(transformNote);
+}
+
+export async function addCustomerNote(customerId: string, content: string, authorName?: string): Promise<CustomerNote | null> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId || !content.trim()) return null;
+  const { data: auth } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('rh_customer_notes')
+    .insert({
+      tenant_id: tenantId,
+      customer_id: customerId,
+      author_id: auth?.user?.id || null,
+      author_name: authorName || auth?.user?.email || null,
+      content: content.trim(),
+    })
+    .select()
+    .single();
+  if (error) { console.error('addCustomerNote:', error); return null; }
+  return transformNote(data);
+}
+
+export async function updateCustomerNote(noteId: string, content: string): Promise<void> {
+  const { error } = await supabase
+    .from('rh_customer_notes')
+    .update({ content: content.trim(), updated_at: new Date().toISOString() })
+    .eq('id', noteId);
+  if (error) console.error('updateCustomerNote:', error);
+}
+
+export async function deleteCustomerNote(noteId: string): Promise<void> {
+  const { error } = await supabase.from('rh_customer_notes').delete().eq('id', noteId);
+  if (error) console.error('deleteCustomerNote:', error);
+}
+
+// ============================================
+// v2: TAGS
+// ============================================
+
+export async function updateCustomerTags(customerId: string, tags: string[]): Promise<void> {
+  const { error } = await supabase
+    .from('rh_customers')
+    .update({ tags: Array.from(new Set(tags.map(t => t.trim()).filter(Boolean))) })
+    .eq('id', customerId);
+  if (error) throw error;
+}
+
+export async function getTenantTagVocabulary(): Promise<string[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+  const { data } = await supabase.from('rh_customers').select('tags').eq('tenant_id', tenantId).limit(1000);
+  const set = new Set<string>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (data || []).forEach((r: any) => (r.tags || []).forEach((t: string) => set.add(t)));
+  return Array.from(set).sort();
+}
+
+export async function bulkAddTag(customerIds: string[], tag: string): Promise<number> {
+  const clean = tag.trim();
+  if (!clean || customerIds.length === 0) return 0;
+  let updated = 0;
+  for (const id of customerIds) {
+    const { data: row } = await supabase.from('rh_customers').select('tags').eq('id', id).maybeSingle();
+    const existing: string[] = row?.tags || [];
+    if (existing.includes(clean)) continue;
+    const { error } = await supabase.from('rh_customers').update({ tags: [...existing, clean] }).eq('id', id);
+    if (!error) updated++;
+  }
+  return updated;
+}
+
+// ============================================
+// v2: CSV EXPORT
+// ============================================
+
+export function customersToCSV(customers: CrmCustomer[]): string {
+  const rows: string[][] = [
+    ['ID', 'Email', 'Vorname', 'Nachname', 'Firma', 'Telefon', 'Bestellungen', 'CLV', 'Ø Bestellwert', 'RFM-Segment', 'Health-Score', 'Letzte Bestellung', 'Erste Bestellung', 'Tags', 'Shopify-ID', 'Angelegt'],
+  ];
+  for (const c of customers) {
+    rows.push([
+      c.id,
+      c.email || '',
+      c.firstName || '',
+      c.lastName || '',
+      c.company || '',
+      c.phone || '',
+      String(c.totalOrders),
+      c.totalSpent.toFixed(2),
+      c.avgOrderValue.toFixed(2),
+      c.rfmSegment || '',
+      c.healthScore != null ? String(c.healthScore) : '',
+      c.lastOrderAt || '',
+      c.firstOrderAt || '',
+      (c.tags || []).join('|'),
+      c.shopifyCustomerId ? String(c.shopifyCustomerId) : '',
+      c.createdAt,
+    ]);
+  }
+  return rows
+    .map(r => r.map(cell => {
+      const str = String(cell ?? '');
+      return /[",;\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    }).join(';'))
+    .join('\r\n');
+}
+
+// ============================================
+// v2: HEALTH SCORE DISTRIBUTION
+// ============================================
+
+export interface HealthDistribution {
+  range: string;
+  min: number;
+  max: number;
+  count: number;
+}
+
+export async function getHealthDistribution(): Promise<HealthDistribution[]> {
+  const tenantId = await getCurrentTenantId();
+  const buckets: HealthDistribution[] = [
+    { range: '0-20', min: 0, max: 20, count: 0 },
+    { range: '20-40', min: 20, max: 40, count: 0 },
+    { range: '40-60', min: 40, max: 60, count: 0 },
+    { range: '60-80', min: 60, max: 80, count: 0 },
+    { range: '80-100', min: 80, max: 101, count: 0 },
+  ];
+  if (!tenantId) return buckets;
+  const { data } = await supabase
+    .from('rh_customers')
+    .select('health_score')
+    .eq('tenant_id', tenantId)
+    .not('health_score', 'is', null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (data || []).forEach((r: any) => {
+    const score = Number(r.health_score);
+    const bucket = buckets.find(b => score >= b.min && score < b.max);
+    if (bucket) bucket.count++;
+  });
+  return buckets;
 }

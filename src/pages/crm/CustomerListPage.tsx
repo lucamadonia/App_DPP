@@ -1,15 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Search, TrendingUp, RefreshCw, ExternalLink } from 'lucide-react';
+import { Users, Search, TrendingUp, RefreshCw, ExternalLink, Download, Tag as TagIcon, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { getCustomerList, refreshTenantRFMScores, type CrmCustomer, type RfmSegment, type CustomerListFilter } from '@/services/supabase/crm-analytics';
+import { HealthGauge } from '@/components/crm/HealthGauge';
+import {
+  getCustomerList, refreshTenantHealthScores, bulkAddTag, customersToCSV,
+  type CrmCustomer, type RfmSegment, type CustomerListFilter,
+} from '@/services/supabase/crm-analytics';
 import { toast } from 'sonner';
 
 const SEGMENT_OPTIONS: { value: RfmSegment; label: string; tone: string }[] = [
@@ -56,6 +63,10 @@ export function CustomerListPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
+  const [tagDraft, setTagDraft] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,14 +89,65 @@ export function CustomerListPage() {
   async function handleRecomputeRFM() {
     setRefreshing(true);
     try {
-      const n = await refreshTenantRFMScores();
-      toast.success(t('{{count}} Kunden neu segmentiert', { count: n }));
+      const n = await refreshTenantHealthScores();
+      toast.success(t('{{count}} Kunden aktualisiert', { count: n }));
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setRefreshing(false);
     }
+  }
+
+  function toggleOne(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    setSelected(prev => {
+      if (prev.size === data.length) return new Set();
+      return new Set(data.map(c => c.id));
+    });
+  }
+  function clearSelection() { setSelected(new Set()); }
+
+  async function handleBulkAddTag() {
+    const tag = tagDraft.trim();
+    if (!tag || selected.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const n = await bulkAddTag(Array.from(selected), tag);
+      toast.success(t('Tag „{{tag}}" zu {{n}} Kunden hinzugefügt', { tag, n }));
+      setTagDraft('');
+      setTagDialogOpen(false);
+      clearSelection();
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function handleExportCSV() {
+    // Export selection if any, else current page
+    const ids = selected.size > 0 ? Array.from(selected) : null;
+    const rows = ids ? data.filter(c => ids.includes(c.id)) : data;
+    const csv = customersToCSV(rows);
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kunden_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(t('{{n}} Kunden als CSV exportiert', { n: rows.length }));
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -102,11 +164,37 @@ export function CustomerListPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleRecomputeRFM} disabled={refreshing}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {t('Segmente neu berechnen')}
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            {t('CSV Export')}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRecomputeRFM} disabled={refreshing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {t('Neu berechnen')}
+          </Button>
+        </div>
       </div>
+
+      {/* Bulk Selection Toolbar */}
+      {selected.size > 0 && (
+        <div className="sticky top-2 z-20 flex items-center gap-2 rounded-xl border bg-primary text-primary-foreground px-4 py-2.5 shadow-lg animate-in slide-in-from-top-2 duration-200">
+          <Badge variant="secondary" className="tabular-nums">{selected.size}</Badge>
+          <span className="text-sm font-medium">{t('ausgewählt')}</span>
+          <div className="flex-1" />
+          <Button size="sm" variant="secondary" onClick={() => setTagDialogOpen(true)}>
+            <TagIcon className="h-3.5 w-3.5 mr-1" />
+            {t('Tag hinzufügen')}
+          </Button>
+          <Button size="sm" variant="secondary" onClick={handleExportCSV}>
+            <Download className="h-3.5 w-3.5 mr-1" />
+            {t('Export Auswahl')}
+          </Button>
+          <Button size="sm" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={clearSelection} aria-label={t('Auswahl aufheben')}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardContent className="pt-4 pb-3 space-y-3">
@@ -156,8 +244,16 @@ export function CustomerListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={data.length > 0 && selected.size === data.length}
+                      onCheckedChange={toggleAll}
+                      aria-label={t('Alle auswählen')}
+                    />
+                  </TableHead>
                   <TableHead>{t('Kunde')}</TableHead>
                   <TableHead className="hidden md:table-cell">{t('Segment')}</TableHead>
+                  <TableHead className="text-center hidden md:table-cell">{t('Health')}</TableHead>
                   <TableHead className="text-right">{t('Bestellungen')}</TableHead>
                   <TableHead className="text-right">{t('CLV')}</TableHead>
                   <TableHead className="hidden sm:table-cell text-right">{t('Ø Bestellwert')}</TableHead>
@@ -169,18 +265,26 @@ export function CustomerListPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={7}><ShimmerSkeleton className="h-8" /></TableCell>
+                      <TableCell colSpan={9}><ShimmerSkeleton className="h-8" /></TableCell>
                     </TableRow>
                   ))
                 ) : data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       {t('Keine Kunden gefunden')}
                     </TableCell>
                   </TableRow>
                 ) : (
                   data.map(c => (
-                    <TableRow key={c.id} className="hover:bg-muted/50">
+                    <TableRow key={c.id} className={`hover:bg-muted/50 ${selected.has(c.id) ? 'bg-primary/5' : ''}`}>
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={selected.has(c.id)}
+                          onCheckedChange={() => toggleOne(c.id)}
+                          aria-label={t('Kunde auswählen')}
+                          onClick={e => e.stopPropagation()}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Link to={`/crm/customers/${c.id}`} className="block">
                           <div className="font-medium text-primary hover:underline">
@@ -196,6 +300,9 @@ export function CustomerListPage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        <HealthGauge score={c.healthScore} size={40} strokeWidth={5} showLabel={false} />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{c.totalOrders}</TableCell>
                       <TableCell className="text-right tabular-nums font-semibold">
@@ -238,6 +345,38 @@ export function CustomerListPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk Tag Dialog */}
+      <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TagIcon className="h-5 w-5 text-primary" />
+              {t('Tag zu {{n}} Kunden hinzufügen', { n: selected.size })}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="bulk-tag">{t('Tag-Name')}</Label>
+            <Input
+              id="bulk-tag"
+              autoFocus
+              value={tagDraft}
+              onChange={e => setTagDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && tagDraft.trim()) handleBulkAddTag(); }}
+              placeholder="z.B. VIP, Wiederkäufer, B2B"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('Kunden, die das Tag schon haben, werden übersprungen.')}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTagDialogOpen(false)}>{t('Abbrechen')}</Button>
+            <Button onClick={handleBulkAddTag} disabled={!tagDraft.trim() || bulkBusy}>
+              {bulkBusy ? '…' : t('Hinzufügen')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
