@@ -1082,40 +1082,83 @@ async function handleCreateFulfillment(supabase: any, tenantId: string, userId: 
     }
     if (!shopifyOrderId) throw new Error(`Shopify order not found for ${shipment.order_reference}`);
 
-    const { body: foBody } = await shopifyApi(
-      config.shopDomain, config.accessToken, config.apiVersion,
-      `orders/${shopifyOrderId}/fulfillment_orders.json`,
-    );
-    // deno-lint-ignore no-explicit-any
-    const fulfillmentOrders = ((foBody as any)?.fulfillment_orders || []);
-    // deno-lint-ignore no-explicit-any
-    const openFO = fulfillmentOrders.find((fo: any) => fo.status === 'open' || fo.status === 'in_progress');
-    if (!openFO) throw new Error('No open fulfillment order found');
+    // Try the modern fulfillment_orders endpoint first (needs
+    // read/write_merchant_managed_fulfillment_orders). If those scopes are
+    // missing, fall back to the legacy endpoint which only needs
+    // write_fulfillments.
+    let fulfillment: unknown = null;
 
-    const fulfillmentPayload = {
-      fulfillment: {
-        line_items_by_fulfillment_order: [{ fulfillment_order_id: openFO.id }],
-        tracking_info: shipment.tracking_number ? {
-          number: shipment.tracking_number,
-          company: shipment.carrier || undefined,
-          url: shipment.label_url || undefined,
-        } : undefined,
-        notify_customer: true,
-      },
-    };
+    try {
+      const { body: foBody } = await shopifyApi(
+        config.shopDomain, config.accessToken, config.apiVersion,
+        `orders/${shopifyOrderId}/fulfillment_orders.json`,
+      );
+      // deno-lint-ignore no-explicit-any
+      const fulfillmentOrders = ((foBody as any)?.fulfillment_orders || []);
+      // deno-lint-ignore no-explicit-any
+      const openFO = fulfillmentOrders.find((fo: any) => fo.status === 'open' || fo.status === 'in_progress');
+      if (openFO) {
+        const { body: result } = await shopifyApi(
+          config.shopDomain, config.accessToken, config.apiVersion,
+          'fulfillments.json', 'POST',
+          {
+            fulfillment: {
+              line_items_by_fulfillment_order: [{ fulfillment_order_id: openFO.id }],
+              tracking_info: shipment.tracking_number ? {
+                number: shipment.tracking_number,
+                company: shipment.carrier || undefined,
+                url: shipment.label_url || undefined,
+              } : undefined,
+              notify_customer: true,
+            },
+          },
+        );
+        // deno-lint-ignore no-explicit-any
+        fulfillment = (result as any)?.fulfillment;
+      }
+    } catch (modernErr) {
+      const msg = modernErr instanceof Error ? modernErr.message : String(modernErr);
+      if (!/403|permission/i.test(msg)) throw modernErr; // only fall back on scope errors
+      console.warn('Modern fulfillment_orders path rejected (scope issue) — falling back to legacy endpoint:', msg);
+    }
 
-    const { body: result } = await shopifyApi(
-      config.shopDomain, config.accessToken, config.apiVersion,
-      'fulfillments.json', 'POST', fulfillmentPayload,
-    );
+    // Legacy fallback (deprecated but still functional up to API 2026-04)
+    if (!fulfillment) {
+      const locationMap = await supabase
+        .from('shopify_location_map')
+        .select('shopify_location_id')
+        .eq('tenant_id', tenantId)
+        .eq('is_primary', true)
+        .maybeSingle();
+      const shopifyLocationId = locationMap?.data?.shopify_location_id;
+      if (!shopifyLocationId) throw new Error('No primary Shopify location mapped — set one in Location Mapping');
+
+      const { body: legacyResult } = await shopifyApi(
+        config.shopDomain, config.accessToken, config.apiVersion,
+        `orders/${shopifyOrderId}/fulfillments.json`, 'POST',
+        {
+          fulfillment: {
+            location_id: shopifyLocationId,
+            tracking_number: shipment.tracking_number || undefined,
+            tracking_company: shipment.carrier || undefined,
+            tracking_url: shipment.label_url || undefined,
+            notify_customer: true,
+          },
+        },
+      );
+      // deno-lint-ignore no-explicit-any
+      fulfillment = (legacyResult as any)?.fulfillment;
+    }
+
+    if (!fulfillment) throw new Error('Shopify accepted neither modern nor legacy fulfillment endpoint');
     // deno-lint-ignore no-explicit-any
-    const fulfillment = (result as any)?.fulfillment;
+    const ff = fulfillment as any;
 
     await supabase
       .from('wh_shipments')
       .update({
-        shopify_fulfillment_id: fulfillment?.id || null,
-        shopify_fulfillment_status: fulfillment?.status || 'success',
+        shopify_fulfillment_id: ff?.id || null,
+        shopify_fulfillment_status: ff?.status || 'success',
         last_fulfillment_at: new Date().toISOString(),
         shopify_export_pending: false,
         shopify_export_error: null,
@@ -1125,7 +1168,7 @@ async function handleCreateFulfillment(supabase: any, tenantId: string, userId: 
     const syncLog = await createSyncLog(supabase, tenantId, 'fulfillment', 'export', userId);
     await completeSyncLog(supabase, syncLog.id, 'completed', { total: 1, processed: 1, created: 1, updated: 0, skipped: 0, failed: 0 });
 
-    return json({ success: true, data: { fulfillmentId: fulfillment?.id, status: fulfillment?.status } });
+    return json({ success: true, data: { fulfillmentId: ff?.id, status: ff?.status } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await supabase
