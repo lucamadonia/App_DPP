@@ -374,7 +374,25 @@ function NormalAppRoutes() {
           </Route>
         </Route>
 
-        {/* Admin area with sidebar (protected) */}
+        {/* Admin Portal — own AdminShell (isSuperAdmin enforced in AdminGuard) */}
+        <Route path="admin" element={<AdminGuard />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="tenants" element={<AdminTenantsPage />} />
+          <Route path="tenants/:tenantId" element={<AdminTenantDetailPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="billing" element={<AdminBillingPage />} />
+          <Route path="credits" element={<AdminCreditsPage />} />
+          <Route path="coupons" element={<AdminCouponsPage />} />
+          <Route path="master-data" element={<AdminMasterDataPage />} />
+          {/* v2 placeholder routes — pages coming next */}
+          <Route path="support" element={<AdminDashboardPage />} />
+          <Route path="analytics" element={<AdminDashboardPage />} />
+          <Route path="audit-log" element={<AdminDashboardPage />} />
+          <Route path="feature-flags" element={<AdminDashboardPage />} />
+          <Route path="system" element={<AdminDashboardPage />} />
+        </Route>
+
+        {/* Main app area with sidebar (protected) */}
         <Route element={<ProtectedRoute />}>
           <Route index element={<DashboardPage />} />
 
@@ -485,18 +503,6 @@ function NormalAppRoutes() {
 
           {/* Help */}
           <Route path="help" element={<TrainingGuidePage />} />
-
-          {/* Admin Portal (Super Admin only) */}
-          <Route path="admin" element={<AdminGuard />}>
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="tenants" element={<AdminTenantsPage />} />
-            <Route path="tenants/:tenantId" element={<AdminTenantDetailPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="billing" element={<AdminBillingPage />} />
-            <Route path="credits" element={<AdminCreditsPage />} />
-            <Route path="coupons" element={<AdminCouponsPage />} />
-            <Route path="master-data" element={<AdminMasterDataPage />} />
-          </Route>
         </Route>
       </Routes>
       </Suspense>
