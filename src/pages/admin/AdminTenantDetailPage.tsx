@@ -3,9 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Building2, CreditCard, Users, Sparkles, BarChart3, Settings,
-  Shield, ExternalLink, Palette, Eye,
+  Shield, ExternalLink, Palette, Eye, Download,
 } from 'lucide-react';
+import { exportTenantData } from '@/services/supabase/admin';
 import { WhitelabelPanel } from '@/components/admin/WhitelabelPanel';
+import { TenantFeatureFlagsPanel } from '@/components/admin/TenantFeatureFlagsPanel';
 import { TenantHealthGauge } from '@/components/admin/TenantHealthGauge';
 import { ConfirmWithReasonDialog } from '@/components/admin/ConfirmWithReasonDialog';
 import { startImpersonation } from '@/services/supabase/admin';
@@ -100,6 +102,30 @@ export function AdminTenantDetailPage() {
       navigate('/');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  const [exporting, setExporting] = useState(false);
+  async function handleExport() {
+    if (!tenant) return;
+    setExporting(true);
+    try {
+      toast.info(`Export wird erstellt — kann einige Sekunden dauern...`);
+      const bundle = await exportTenantData(tenant.id);
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tenant-export_${tenant.slug}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const meta = (bundle as any)._meta;
+      toast.success(`Export fertig: ${meta?.totalRows || '?'} Zeilen aus ${Object.keys(meta?.perTable || {}).length} Tabellen`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -198,6 +224,15 @@ export function AdminTenantDetailPage() {
           <p className="text-muted-foreground text-sm font-mono">{tenant.slug}</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            <Download className={`h-3.5 w-3.5 mr-1.5 ${exporting ? 'animate-bounce' : ''}`} />
+            {exporting ? 'Exportiert...' : 'Daten exportieren'}
+          </Button>
           <Button
             size="sm"
             variant="default"
@@ -453,8 +488,9 @@ export function AdminTenantDetailPage() {
         </TabsContent>
 
         {/* Whitelabel Tab */}
-        <TabsContent value="whitelabel">
+        <TabsContent value="whitelabel" className="space-y-5">
           <WhitelabelPanel tenantId={tenant.id} tenantName={tenant.name} />
+          <TenantFeatureFlagsPanel tenantId={tenant.id} />
         </TabsContent>
 
         {/* Settings Tab */}

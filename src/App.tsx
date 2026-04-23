@@ -106,6 +106,7 @@ const AdminFeatureFlagsPage = lazy(() => import('@/pages/admin/AdminFeatureFlags
 const AdminSystemPage = lazy(() => import('@/pages/admin/AdminSystemPage').then(m => ({ default: m.AdminSystemPage })));
 const AdminSupportPage = lazy(() => import('@/pages/admin/AdminSupportPage').then(m => ({ default: m.AdminSupportPage })));
 const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage').then(m => ({ default: m.AdminAnalyticsPage })));
+const SecurityMfaPage = lazy(() => import('@/pages/SecurityMfaPage').then(m => ({ default: m.SecurityMfaPage })));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const AdminTenantsPage = lazy(() => import('@/pages/admin/AdminTenantsPage').then(m => ({ default: m.AdminTenantsPage })));
 const AdminTenantDetailPage = lazy(() => import('@/pages/admin/AdminTenantDetailPage').then(m => ({ default: m.AdminTenantDetailPage })));
@@ -509,6 +510,9 @@ function NormalAppRoutes() {
 
           {/* Help */}
           <Route path="help" element={<TrainingGuidePage />} />
+
+          {/* Security / MFA */}
+          <Route path="security/mfa" element={<SecurityMfaPage />} />
         </Route>
       </Routes>
       </Suspense>

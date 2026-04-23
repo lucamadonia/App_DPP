@@ -12,7 +12,7 @@ import { AdminShell } from '@/components/admin/AdminShell';
  * the app home.
  */
 export function AdminGuard() {
-  const { isAuthenticated, isSuperAdmin, isLoading } = useAuth();
+  const { isAuthenticated, hasAdminAccess, isLoading } = useAuth();
   const { t } = useTranslation('common');
 
   if (isLoading) {
@@ -30,7 +30,7 @@ export function AdminGuard() {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isSuperAdmin) {
+  if (!hasAdminAccess) {
     return <Navigate to="/" replace />;
   }
 

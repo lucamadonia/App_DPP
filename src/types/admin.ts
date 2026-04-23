@@ -211,7 +211,8 @@ export type AdminOperation =
   | 'update_whitelabel_config'
   | 'set_tenant_smtp'
   | 'test_tenant_smtp'
-  | 'disable_tenant_smtp';
+  | 'disable_tenant_smtp'
+  | 'export_tenant_data';
 
 export interface AdminApiRequest {
   operation: AdminOperation;

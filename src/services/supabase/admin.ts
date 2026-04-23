@@ -566,6 +566,15 @@ export async function disableTenantSmtp(tenantId: string): Promise<void> {
   await callAdminApi({ operation: 'disable_tenant_smtp', params: { tenantId } });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function exportTenantData(tenantId: string): Promise<Record<string, any>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return callAdminApi<Record<string, any>>({
+    operation: 'export_tenant_data',
+    params: { tenantId },
+  });
+}
+
 export async function getTenantWhitelabel(tenantId: string): Promise<{
   subdomain: string | null;
   customDomain: string | null;

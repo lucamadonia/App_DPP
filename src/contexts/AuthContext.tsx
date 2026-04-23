@@ -3,12 +3,16 @@ import { supabase, clearTenantIdCache } from '@/lib/supabase';
 import type { AuthUser } from '@/services/supabase/auth';
 import { getSession, signOut as authSignOut, onAuthStateChange } from '@/services/supabase/auth';
 
+export type AdminRole = 'super_admin' | 'support_admin' | 'billing_admin' | 'security_admin';
+
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   tenantId: string | null;
   isSuperAdmin: boolean;
+  adminRole: AdminRole | null;
+  hasAdminAccess: boolean;
   isInitializing: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -24,6 +28,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -32,13 +37,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('tenant_id, is_super_admin')
+          .select('tenant_id, is_super_admin, admin_role')
           .eq('id', userId)
           .single();
 
         if (profile?.tenant_id) {
           setTenantId(profile.tenant_id);
           setIsSuperAdmin(profile.is_super_admin === true);
+          setAdminRole((profile.admin_role as AdminRole | null) ?? null);
           return; // Success!
         }
 
@@ -118,6 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
     setTenantId(null);
     setIsSuperAdmin(false);
+    setAdminRole(null);
   };
 
   const value: AuthContextType = {
@@ -126,6 +133,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: !!user,
     tenantId,
     isSuperAdmin,
+    adminRole,
+    hasAdminAccess: isSuperAdmin || adminRole !== null,
     isInitializing,
     signOut,
     refreshSession,

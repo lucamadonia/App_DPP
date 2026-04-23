@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import { motion } from 'framer-motion';
+import { TenantWhitelabelSelfService } from '@/components/settings/TenantWhitelabelSelfService';
 import { blurIn, useReducedMotion } from '@/lib/motion';
 import { UsersTab } from '@/components/settings/UsersTab';
 import {
@@ -653,6 +654,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
         {/* Branding */}
         <TabsContent value="branding" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
+          {/* Self-Service Whitelabel (subdomain, custom domain info, brand, SMTP) */}
+          <TenantWhitelabelSelfService />
+
           {/* Card 1: Brand Identity */}
           <Card>
             <CardHeader>

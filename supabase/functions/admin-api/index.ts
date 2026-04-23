@@ -38,20 +38,38 @@ Deno.serve(async (req) => {
     // Admin client (service role, bypasses RLS)
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check is_super_admin
+    // Check is_super_admin + granular admin_role (with self-service bypass)
     const { data: profile } = await admin
       .from('profiles')
-      .select('is_super_admin')
+      .select('is_super_admin, admin_role, tenant_id, role')
       .eq('id', user.id)
       .single();
-
-    if (!profile?.is_super_admin) {
-      return jsonResponse({ success: false, error: 'Forbidden: Super admin required' }, 403);
-    }
 
     // Parse request
     const body: AdminApiRequest = await req.json();
     const { operation, params = {} } = body;
+
+    // Self-service operations that tenant admins can call for their own tenant
+    const SELF_SERVICE_OPS = new Set(['test_tenant_smtp']);
+    const isSuperAdmin = !!profile?.is_super_admin || profile?.admin_role === 'super_admin';
+    const isSelfServiceOp = SELF_SERVICE_OPS.has(operation);
+    const selfServiceAllowed = isSelfServiceOp
+      && profile?.role === 'admin'
+      && params.tenantId === profile?.tenant_id;
+
+    // Granular role check via SQL helper
+    let granularAllowed = false;
+    if (!isSuperAdmin && !selfServiceAllowed && profile?.admin_role) {
+      const { data: allowed } = await admin.rpc('admin_role_allows', {
+        p_role: profile.admin_role,
+        p_op: operation,
+      });
+      granularAllowed = !!allowed;
+    }
+
+    if (!isSuperAdmin && !selfServiceAllowed && !granularAllowed) {
+      return jsonResponse({ success: false, error: `Forbidden: operation ${operation} not permitted for role ${profile?.admin_role || 'none'}` }, 403);
+    }
 
     // Audit context (used by write operations)
     const auditCtx: AuditContext = {
@@ -203,6 +221,9 @@ Deno.serve(async (req) => {
       case 'disable_tenant_smtp':
         await disableTenantSmtp(admin, auditCtx, params.tenantId as string);
         return jsonResponse({ success: true });
+
+      case 'export_tenant_data':
+        return jsonResponse({ success: true, data: await exportTenantData(admin, auditCtx, params.tenantId as string) });
 
       default:
         return jsonResponse({ success: false, error: `Unknown operation: ${operation}` }, 400);
@@ -1690,4 +1711,70 @@ async function disableTenantSmtp(admin: SupabaseAdmin, ctx: AuditContext, tenant
     targetType: 'tenant',
     targetId: tenantId,
   });
+}
+
+// ============================================
+// DSGVO DATA EXPORT
+// ============================================
+
+const EXPORT_TABLES = [
+  'tenants', 'profiles', 'invitations', 'activity_log',
+  'billing_subscriptions', 'billing_module_subscriptions', 'billing_credits',
+  'billing_credit_transactions', 'billing_usage_logs', 'billing_invoices',
+  'products', 'product_batches', 'product_components', 'product_packaging',
+  'documents', 'document_folders', 'document_versions',
+  'supply_chain_entries', 'suppliers', 'supplier_products', 'supplier_invitations',
+  'rh_customers', 'rh_customer_profiles', 'rh_returns', 'rh_return_items',
+  'rh_return_timeline', 'rh_tickets', 'rh_ticket_messages', 'rh_notifications',
+  'rh_workflow_rules', 'rh_email_templates', 'rh_return_reasons',
+  'wh_locations', 'wh_stock_levels', 'wh_stock_transactions',
+  'wh_shipments', 'wh_shipment_items', 'wh_contacts', 'wh_packaging_types',
+  'wh_packaging_transactions',
+  'shopify_product_map', 'shopify_location_map', 'shopify_sync_log',
+  'admin_tenant_notes',
+];
+
+async function exportTenantData(admin: SupabaseAdmin, ctx: AuditContext, tenantId: string) {
+  const { data: tenant } = await admin.from('tenants').select('name, slug').eq('id', tenantId).single();
+  // deno-lint-ignore no-explicit-any
+  const bundle: Record<string, any> = {
+    _meta: {
+      exportedAt: new Date().toISOString(),
+      exportedBy: ctx.adminEmail,
+      tenantId,
+      tenantName: tenant?.name,
+      tenantSlug: tenant?.slug,
+      version: 1,
+    },
+  };
+
+  let totalRows = 0;
+  const perTable: Record<string, number> = {};
+  for (const table of EXPORT_TABLES) {
+    try {
+      const { data, error } = await admin.from(table).select('*').eq('tenant_id', tenantId).limit(100000);
+      if (error) {
+        // Tables without tenant_id (e.g. master data) or that don't exist yet → silently skip
+        bundle[table] = { _skipped: error.message };
+        continue;
+      }
+      bundle[table] = data || [];
+      perTable[table] = (data || []).length;
+      totalRows += (data || []).length;
+    } catch (e) {
+      bundle[table] = { _error: (e as Error).message };
+    }
+  }
+  bundle._meta.totalRows = totalRows;
+  bundle._meta.perTable = perTable;
+
+  await audit(admin, ctx, {
+    action: 'export_tenant_data',
+    targetType: 'tenant',
+    targetId: tenantId,
+    targetLabel: tenant?.name,
+    changes: { totalRows, tables: Object.keys(perTable).length },
+  });
+
+  return bundle;
 }
