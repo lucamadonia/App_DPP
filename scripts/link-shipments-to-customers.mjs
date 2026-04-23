@@ -30,15 +30,16 @@ const APPLY = process.argv.includes('--apply');
 const CREATE_MISSING = process.argv.includes('--create-missing');
 
 async function rest(path, opts = {}) {
+  const { headers: extraHeaders, ...rest } = opts;
   const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
+    ...rest,
     headers: {
       apikey: SERVICE_KEY,
       Authorization: `Bearer ${SERVICE_KEY}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
-      ...(opts.headers || {}),
+      ...(extraHeaders || {}),
     },
-    ...opts,
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`${res.status}: ${text.slice(0, 300)}`);
@@ -99,8 +100,9 @@ for (const [tenantId, ships] of byTenant) {
     let customer = byEmail.get(email);
 
     if (!customer && CREATE_MISSING && APPLY) {
-      const [firstName, ...rest] = (s.recipient_name || '').trim().split(/\s+/);
-      const lastName = rest.join(' ') || null;
+      const nameParts = (s.recipient_name || '').trim().split(/\s+/);
+      const firstName = nameParts[0] || null;
+      const lastName = nameParts.slice(1).join(' ') || null;
       const created = await rest(`/rh_customers`, {
         method: 'POST',
         body: JSON.stringify({
