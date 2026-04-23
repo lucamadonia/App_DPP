@@ -104,6 +104,8 @@ const AdminGuard = lazy(() => import('@/components/admin/AdminGuard').then(m => 
 const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage').then(m => ({ default: m.AdminAuditLogPage })));
 const AdminFeatureFlagsPage = lazy(() => import('@/pages/admin/AdminFeatureFlagsPage').then(m => ({ default: m.AdminFeatureFlagsPage })));
 const AdminSystemPage = lazy(() => import('@/pages/admin/AdminSystemPage').then(m => ({ default: m.AdminSystemPage })));
+const AdminSupportPage = lazy(() => import('@/pages/admin/AdminSupportPage').then(m => ({ default: m.AdminSupportPage })));
+const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage').then(m => ({ default: m.AdminAnalyticsPage })));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const AdminTenantsPage = lazy(() => import('@/pages/admin/AdminTenantsPage').then(m => ({ default: m.AdminTenantsPage })));
 const AdminTenantDetailPage = lazy(() => import('@/pages/admin/AdminTenantDetailPage').then(m => ({ default: m.AdminTenantDetailPage })));
@@ -392,9 +394,8 @@ function NormalAppRoutes() {
           <Route path="audit-log" element={<AdminAuditLogPage />} />
           <Route path="feature-flags" element={<AdminFeatureFlagsPage />} />
           <Route path="system" element={<AdminSystemPage />} />
-          {/* v2 placeholder routes — pages still to build */}
-          <Route path="support" element={<AdminDashboardPage />} />
-          <Route path="analytics" element={<AdminDashboardPage />} />
+          <Route path="support" element={<AdminSupportPage />} />
+          <Route path="analytics" element={<AdminAnalyticsPage />} />
         </Route>
 
         {/* Main app area with sidebar (protected) */}
