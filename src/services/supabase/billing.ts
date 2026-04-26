@@ -14,6 +14,7 @@ import {
   MODULE_CONFIGS,
   RETURNS_HUB_MODULES,
   WAREHOUSE_MODULES,
+  COMMERCE_HUB_MODULES,
   type BillingPlan,
   type ModuleId,
   type TenantEntitlements,
@@ -116,6 +117,15 @@ export async function getTenantEntitlements(
     const whModule = WAREHOUSE_MODULES[i];
     if (activeModules.has(whModule)) {
       moduleLimits = { ...moduleLimits, ...MODULE_CONFIGS[whModule].limits };
+      break;
+    }
+  }
+
+  // Merge commerce hub module limits (from highest active commerce tier)
+  for (let i = COMMERCE_HUB_MODULES.length - 1; i >= 0; i--) {
+    const chModule = COMMERCE_HUB_MODULES[i];
+    if (activeModules.has(chModule)) {
+      moduleLimits = { ...moduleLimits, ...MODULE_CONFIGS[chModule].limits };
       break;
     }
   }
@@ -316,6 +326,14 @@ export async function hasAnyReturnsHubModule(tenantId?: string): Promise<boolean
 export async function hasAnyWarehouseModule(tenantId?: string): Promise<boolean> {
   const entitlements = await getTenantEntitlements(tenantId);
   return WAREHOUSE_MODULES.some(m => entitlements.modules.has(m));
+}
+
+/**
+ * Check if any commerce hub module is active.
+ */
+export async function hasAnyCommerceHubModule(tenantId?: string): Promise<boolean> {
+  const entitlements = await getTenantEntitlements(tenantId);
+  return COMMERCE_HUB_MODULES.some(m => entitlements.modules.has(m));
 }
 
 /**

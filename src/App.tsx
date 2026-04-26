@@ -167,6 +167,12 @@ const WorkflowRulesPage = lazy(() => import('@/pages/returns/WorkflowRulesPage')
 const WorkflowBuilderPage = lazy(() => import('@/components/returns/workflow-builder/WorkflowBuilderPage').then(m => ({ default: m.WorkflowBuilderPage })));
 const EmailTemplateEditorPage = lazy(() => import('@/components/returns/email-editor/EmailTemplateEditorPage').then(m => ({ default: m.EmailTemplateEditorPage })));
 
+// Commerce Hub (Multi-Channel Sales Tracking + Mega Dashboard)
+const CommerceHubPage = lazy(() => import('@/pages/commerce/CommerceHubPage').then(m => ({ default: m.CommerceHubPage })));
+const MegaDashboardPage = lazy(() => import('@/pages/commerce/MegaDashboardPage').then(m => ({ default: m.MegaDashboardPage })));
+const ChannelDetailPage = lazy(() => import('@/pages/commerce/ChannelDetailPage').then(m => ({ default: m.ChannelDetailPage })));
+const CommerceOrdersPage = lazy(() => import('@/pages/commerce/CommerceOrdersPage').then(m => ({ default: m.CommerceOrdersPage })));
+
 // CRM (Customer-360 + CLV + RFM)
 const CrmDashboardPage = lazy(() => import('@/pages/crm/CrmDashboardPage').then(m => ({ default: m.CrmDashboardPage })));
 const CrmCustomerListPage = lazy(() => import('@/pages/crm/CustomerListPage').then(m => ({ default: m.CustomerListPage })));
@@ -440,6 +446,12 @@ function NormalAppRoutes() {
           {/* Legacy: /returns/customers redirects to new CRM */}
           <Route path="returns/customers" element={<Navigate to="/crm/customers" replace />} />
           <Route path="returns/customers/:id" element={<CustomerDetailPage />} />
+
+          {/* Commerce Hub — Multi-channel sales tracking */}
+          <Route path="commerce" element={<CommerceHubPage />} />
+          <Route path="commerce/mega" element={<MegaDashboardPage />} />
+          <Route path="commerce/orders" element={<CommerceOrdersPage />} />
+          <Route path="commerce/channels/:id" element={<ChannelDetailPage />} />
 
           {/* CRM: Customer-360 + CLV + RFM */}
           <Route path="crm" element={<CrmDashboardPage />} />

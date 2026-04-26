@@ -21,6 +21,9 @@ const moduleKeyMap: Record<ModuleId, string> = {
   warehouse_starter: 'warehouseStarter',
   warehouse_professional: 'warehouseProfessional',
   warehouse_business: 'warehouseBusiness',
+  commerce_hub_starter: 'commerceHubStarter',
+  commerce_hub_professional: 'commerceHubProfessional',
+  commerce_hub_business: 'commerceHubBusiness',
 };
 
 const FEATURE_ROWS = [

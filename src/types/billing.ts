@@ -28,7 +28,10 @@ export type ModuleId =
   | 'custom_domain'
   | 'warehouse_starter'
   | 'warehouse_professional'
-  | 'warehouse_business';
+  | 'warehouse_business'
+  | 'commerce_hub_starter'
+  | 'commerce_hub_professional'
+  | 'commerce_hub_business';
 
 export type SubscriptionStatus =
   | 'active'
@@ -75,6 +78,14 @@ export interface ModuleLimits {
   warehouseStockAlerts: 'none' | 'basic' | 'advanced';
   warehouseApiAccess: 'none' | 'read' | 'readwrite';
   warehouseWebhooksEnabled: boolean;
+  // Commerce Hub limits
+  maxCommerceConnections: number;
+  maxCommerceOrdersPerMonth: number;
+  commerceMegaDashboardEnabled: boolean;
+  commerceWebhooksEnabled: boolean;
+  commerceMultiAccountEnabled: boolean;
+  commerceWhitelabelEnabled: boolean;
+  commerceApiAccess: 'none' | 'read' | 'readwrite';
 }
 
 // ============================================
@@ -483,6 +494,48 @@ export const MODULE_CONFIGS: Record<ModuleId, {
       warehouseWebhooksEnabled: true,
     },
   },
+  commerce_hub_starter: {
+    name: 'Commerce Hub Starter',
+    priceMonthly: 29,
+    requiresPlan: 'pro',
+    limits: {
+      maxCommerceConnections: 1,
+      maxCommerceOrdersPerMonth: 500,
+      commerceMegaDashboardEnabled: true,
+      commerceWebhooksEnabled: false,
+      commerceMultiAccountEnabled: false,
+      commerceWhitelabelEnabled: false,
+      commerceApiAccess: 'none',
+    },
+  },
+  commerce_hub_professional: {
+    name: 'Commerce Hub Professional',
+    priceMonthly: 69,
+    requiresPlan: 'pro',
+    limits: {
+      maxCommerceConnections: 3,
+      maxCommerceOrdersPerMonth: 5000,
+      commerceMegaDashboardEnabled: true,
+      commerceWebhooksEnabled: true,
+      commerceMultiAccountEnabled: true,
+      commerceWhitelabelEnabled: false,
+      commerceApiAccess: 'read',
+    },
+  },
+  commerce_hub_business: {
+    name: 'Commerce Hub Business',
+    priceMonthly: 149,
+    requiresPlan: 'enterprise',
+    limits: {
+      maxCommerceConnections: Infinity,
+      maxCommerceOrdersPerMonth: Infinity,
+      commerceMegaDashboardEnabled: true,
+      commerceWebhooksEnabled: true,
+      commerceMultiAccountEnabled: true,
+      commerceWhitelabelEnabled: true,
+      commerceApiAccess: 'readwrite',
+    },
+  },
 };
 
 // ============================================
@@ -545,6 +598,35 @@ export function hasAnyWarehouse(modules: Set<ModuleId>): boolean {
 }
 
 // ============================================
+// COMMERCE HUB MODULE HELPERS
+// ============================================
+
+/** All commerce hub module IDs in tier order */
+export const COMMERCE_HUB_MODULES: ModuleId[] = [
+  'commerce_hub_starter',
+  'commerce_hub_professional',
+  'commerce_hub_business',
+];
+
+/** Check if a module is any commerce hub tier */
+export function isCommerceHubModule(moduleId: ModuleId): boolean {
+  return COMMERCE_HUB_MODULES.includes(moduleId);
+}
+
+/** Get the active commerce hub tier from a set of modules */
+export function getActiveCommerceHubTier(modules: Set<ModuleId>): ModuleId | null {
+  for (let i = COMMERCE_HUB_MODULES.length - 1; i >= 0; i--) {
+    if (modules.has(COMMERCE_HUB_MODULES[i])) return COMMERCE_HUB_MODULES[i];
+  }
+  return null;
+}
+
+/** Check if any commerce hub module is active */
+export function hasAnyCommerceHub(modules: Set<ModuleId>): boolean {
+  return getActiveCommerceHubTier(modules) !== null;
+}
+
+// ============================================
 // CHECKOUT TYPES
 // ============================================
 
@@ -583,6 +665,7 @@ export interface BillingContextState {
   hasModule: (moduleId: ModuleId) => boolean;
   hasAnyReturnsHubModule: () => boolean;
   hasAnyWarehouseModule: () => boolean;
+  hasAnyCommerceHubModule: () => boolean;
   canUseFeature: (feature: keyof BillingFeatures) => boolean;
   isTemplateAvailable: (template: DPPTemplateName) => boolean;
 }

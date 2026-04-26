@@ -32,6 +32,7 @@ import {
   Megaphone,
   BookOpen,
   Handshake,
+  Store,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -120,6 +121,17 @@ export function AppSidebar() {
           items: [
             { title: t('Dashboard'), url: '/crm' },
             { title: t('Kundenliste', { ns: 'warehouse' }), url: '/crm/customers' },
+          ],
+        },
+        {
+          title: t('Commerce Hub', { ns: 'commerce' }),
+          icon: Store,
+          locked: billing ? !billing.hasAnyCommerceHubModule() : false,
+          badge: 'NEU',
+          items: [
+            { title: t('Channels', { ns: 'commerce' }), url: '/commerce' },
+            { title: t('Mega Dashboard', { ns: 'commerce' }), url: '/commerce/mega' },
+            { title: t('All Orders', { ns: 'commerce' }), url: '/commerce/orders' },
           ],
         },
         {

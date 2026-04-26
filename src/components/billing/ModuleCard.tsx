@@ -120,6 +120,9 @@ function getModuleDescription(moduleId: ModuleId, t: (key: string, opts?: Record
     warehouse_starter: t('Basic warehouse management with 1 location and 100 shipments/month'),
     warehouse_professional: t('Multi-warehouse with transfers, labels and 500 shipments/month'),
     warehouse_business: t('Unlimited warehouses, shipments, API access and webhooks'),
+    commerce_hub_starter: t('Connect 1 sales channel and stream 500 orders/month into the Mega Dashboard'),
+    commerce_hub_professional: t('Up to 3 channels with webhooks and 5,000 orders/month + DPP auto-matching'),
+    commerce_hub_business: t('Unlimited channels, white-label Mega Dashboard, full API access'),
   };
   return descriptions[moduleId];
 }

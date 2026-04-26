@@ -221,6 +221,9 @@ function getModulePaywallDescription(
     warehouse_starter: t('Basic inventory management with 1 warehouse location'),
     warehouse_professional: t('Multi-location warehouse with transfers and shipping labels'),
     warehouse_business: t('Unlimited warehouse operations with API and webhooks'),
+    commerce_hub_starter: t('Connect 1 sales channel and stream 500 orders/month'),
+    commerce_hub_professional: t('3 channels with webhooks, real-time DPP matching and the Mega Dashboard'),
+    commerce_hub_business: t('Unlimited channels, white-label Mega Dashboard, full API'),
   };
   return map[moduleId];
 }
@@ -283,6 +286,24 @@ function getModuleHighlights(
       t('Full API access'),
       t('Webhooks for automation'),
       t('Advanced stock alerts'),
+    ],
+    commerce_hub_starter: [
+      t('1 sales channel connection'),
+      t('500 orders synced per month'),
+      t('Mega Dashboard wall display'),
+      t('Auto DPP matching by GTIN'),
+    ],
+    commerce_hub_professional: [
+      t('3 sales channel connections'),
+      t('5,000 orders synced per month'),
+      t('Real-time webhook ingestion'),
+      t('Multi-account per platform'),
+    ],
+    commerce_hub_business: [
+      t('Unlimited channel connections'),
+      t('Unlimited orders synced'),
+      t('White-label Mega Dashboard'),
+      t('Full Read/Write API access'),
     ],
   };
   return map[moduleId] || [];

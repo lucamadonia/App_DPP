@@ -79,6 +79,18 @@ export const MODULE_PRICES: Record<
     productId: 'prod_placeholder_wh_business',
     priceId: 'price_placeholder_wh_business',
   },
+  commerce_hub_starter: {
+    productId: 'prod_placeholder_ch_starter',
+    priceId: 'price_placeholder_ch_starter',
+  },
+  commerce_hub_professional: {
+    productId: 'prod_placeholder_ch_professional',
+    priceId: 'price_placeholder_ch_professional',
+  },
+  commerce_hub_business: {
+    productId: 'prod_placeholder_ch_business',
+    priceId: 'price_placeholder_ch_business',
+  },
 };
 
 // ============================================
