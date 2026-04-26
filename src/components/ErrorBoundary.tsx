@@ -3,6 +3,51 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+/**
+ * After a Vercel deploy, browser tabs that opened the old index.html still
+ * reference chunk file names that no longer exist on the CDN. The first
+ * lazy import they trigger throws "Failed to fetch dynamically imported module".
+ *
+ * Vite emits a `vite:preloadError` event for exactly this case. We intercept it
+ * once per session and do a soft reload — the user gets a fresh index.html with
+ * the new chunk hashes and never sees the broken-page flash.
+ */
+function isChunkLoadError(error: unknown): boolean {
+  if (!error) return false;
+  const msg = error instanceof Error ? error.message : String(error);
+  return (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('error loading dynamically imported module') ||
+    msg.includes('Loading chunk') && msg.includes('failed')
+  );
+}
+
+/** Idempotent: only ever reload once per page life. */
+let didReloadForChunkError = false;
+function reloadOnceForChunkError() {
+  if (didReloadForChunkError) return;
+  didReloadForChunkError = true;
+  // Use replace() so reload bypasses the back-stack
+  window.location.reload();
+}
+
+if (typeof window !== 'undefined') {
+  // Vite's purpose-built event
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    reloadOnceForChunkError();
+  });
+
+  // Catch-all for unhandled promise rejections that match
+  window.addEventListener('unhandledrejection', (event) => {
+    if (isChunkLoadError(event.reason)) {
+      event.preventDefault();
+      reloadOnceForChunkError();
+    }
+  });
+}
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -60,6 +105,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Stale-deploy chunk errors → soft reload instead of showing the fallback UI.
+    if (isChunkLoadError(error)) {
+      reloadOnceForChunkError();
+      return;
+    }
     console.error('[ErrorBoundary]', error, errorInfo);
   }
 
