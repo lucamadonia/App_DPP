@@ -136,5 +136,8 @@
   "Import existing Shopify orders": "Import existing Shopify orders",
   "Importing…": "Importing…",
   "Imported {{n}} Shopify orders ({{linked}} DPP-linked)": "Imported {{n}} Shopify orders ({{linked}} DPP-linked)",
-  "Already in sync — {{n}} Shopify orders mirrored": "Already in sync — {{n}} Shopify orders mirrored"
+  "Already in sync — {{n}} Shopify orders mirrored": "Already in sync — {{n}} Shopify orders mirrored",
+  "{{n}} Shopify orders ready to import": "{{n}} Shopify orders ready to import",
+  "You already have Shopify connected in the Warehouse module — pull those orders into the Commerce Hub now to populate the Mega Dashboard.": "You already have Shopify connected in the Warehouse module — pull those orders into the Commerce Hub now to populate the Mega Dashboard.",
+  "Import {{n}} orders now": "Import {{n}} orders now"
 }

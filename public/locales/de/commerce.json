@@ -136,5 +136,8 @@
   "Import existing Shopify orders": "Bestehende Shopify-Bestellungen importieren",
   "Importing…": "Importiere…",
   "Imported {{n}} Shopify orders ({{linked}} DPP-linked)": "{{n}} Shopify-Bestellungen importiert ({{linked}} mit DPP verknüpft)",
-  "Already in sync — {{n}} Shopify orders mirrored": "Bereits synchron — {{n}} Shopify-Bestellungen vorhanden"
+  "Already in sync — {{n}} Shopify orders mirrored": "Bereits synchron — {{n}} Shopify-Bestellungen vorhanden",
+  "{{n}} Shopify orders ready to import": "{{n}} Shopify-Bestellungen wartend auf Import",
+  "You already have Shopify connected in the Warehouse module — pull those orders into the Commerce Hub now to populate the Mega Dashboard.": "Shopify ist bereits im Warehouse-Modul verbunden — hol diese Bestellungen jetzt in den Commerce Hub, damit das Mega-Dashboard sie zeigt.",
+  "Import {{n}} orders now": "{{n}} Bestellungen jetzt importieren"
 }

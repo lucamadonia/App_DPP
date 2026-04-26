@@ -13,6 +13,61 @@ import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { createConnection, logSyncEvent } from './commerce-channels';
 import type { CommerceChannelConnection } from '@/types/commerce-channels';
 
+/**
+ * Count Shopify shipments that are not yet mirrored in commerce_orders.
+ * Lightweight — used by the Hub to show "X orders ready to import".
+ */
+export async function countUnbridgedShopifyOrders(): Promise<number> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return 0;
+
+  const [shipRes, mirroredRes] = await Promise.all([
+    supabase
+      .from('wh_shipments')
+      .select('shopify_order_id', { count: 'exact', head: false })
+      .eq('tenant_id', tenantId)
+      .not('shopify_order_id', 'is', null),
+    supabase
+      .from('commerce_orders')
+      .select('external_order_id', { count: 'exact', head: false })
+      .eq('tenant_id', tenantId)
+      .eq('platform', 'shopify'),
+  ]);
+
+  const shipmentIds = new Set((shipRes.data || []).map((r) => String(r.shopify_order_id)));
+  const mirroredIds = new Set((mirroredRes.data || []).map((r) => String(r.external_order_id)));
+
+  let unbridged = 0;
+  for (const id of shipmentIds) {
+    if (!mirroredIds.has(id)) unbridged++;
+  }
+  return unbridged;
+}
+
+/**
+ * Auto-link existing Warehouse-side integrations to Commerce Hub on first visit.
+ * Currently supports Shopify; safe to extend with other warehouse-side connectors.
+ * Returns true if any connection was created.
+ */
+export async function autoLinkWarehouseIntegrations(): Promise<{ shopifyLinked: boolean }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { shopifyLinked: false };
+
+  // Was a Shopify row already there?
+  const { data: existing } = await supabase
+    .from('commerce_channel_connections')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('platform', 'shopify')
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return { shopifyLinked: false };
+
+  const conn = await ensureShopifyConnection(tenantId);
+  return { shopifyLinked: Boolean(conn) };
+}
+
 interface BridgeResult {
   /** Whether a Shopify connection now exists in commerce_channel_connections */
   connection: CommerceChannelConnection | null;
@@ -33,8 +88,11 @@ interface BridgeResult {
 /**
  * Get the Shopify connection or create it on demand.
  * Pulls shop metadata from tenants.settings.shopifyIntegration.
+ *
+ * Exported so the Commerce Hub page can auto-link an already-configured
+ * Warehouse Shopify integration on first visit.
  */
-async function ensureShopifyConnection(tenantId: string): Promise<CommerceChannelConnection | null> {
+export async function ensureShopifyConnection(tenantId: string): Promise<CommerceChannelConnection | null> {
   // Existing?
   const { data: existing } = await supabase
     .from('commerce_channel_connections')

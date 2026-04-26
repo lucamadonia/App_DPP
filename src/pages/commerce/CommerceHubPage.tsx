@@ -33,7 +33,11 @@ import {
   seedSampleOrders,
   clearSampleOrders,
 } from '@/services/supabase/commerce-orders';
-import { bridgeShopifyToCommerceHub } from '@/services/supabase/commerce-shopify-bridge';
+import {
+  bridgeShopifyToCommerceHub,
+  autoLinkWarehouseIntegrations,
+  countUnbridgedShopifyOrders,
+} from '@/services/supabase/commerce-shopify-bridge';
 import { toast } from 'sonner';
 
 /**
@@ -52,6 +56,7 @@ export function CommerceHubPage() {
   const [wizardPlatform, setWizardPlatform] = useState<CommercePlatform | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [bridging, setBridging] = useState(false);
+  const [unbridgedShopify, setUnbridgedShopify] = useState(0);
 
   const hasModule = billing.hasAnyCommerceHubModule();
   const limits = billing.entitlements?.limits as Record<string, number> | undefined;
@@ -64,9 +69,20 @@ export function CommerceHubPage() {
     }
     setLoading(true);
     try {
-      const [conns, hs] = await Promise.all([listConnections(), getHealthSummary()]);
+      // Auto-detect Warehouse-side integrations (Shopify) so they appear as connected on first visit.
+      // No-op if a Commerce Hub connection already exists.
+      await autoLinkWarehouseIntegrations().catch((err) => {
+        console.warn('Auto-link warehouse integrations skipped:', err);
+      });
+
+      const [conns, hs, unbridged] = await Promise.all([
+        listConnections(),
+        getHealthSummary(),
+        countUnbridgedShopifyOrders().catch(() => 0),
+      ]);
       setConnections(conns);
       setHealth(hs);
+      setUnbridgedShopify(unbridged);
     } catch (err) {
       console.error('Commerce Hub load failed:', err);
     } finally {
@@ -177,6 +193,51 @@ export function CommerceHubPage() {
           tone="default"
         />
       </div>
+
+      {/* Unbridged Shopify banner — appears when warehouse Shopify has orders not yet mirrored */}
+      {unbridgedShopify > 0 && (
+        <Card className="overflow-hidden border-emerald-300/40 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-700/30">
+          <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-emerald-500/15 p-2.5 text-emerald-700 dark:text-emerald-300">
+                <Download className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-display text-base font-semibold">
+                  {t('{{n}} Shopify orders ready to import', { n: unbridgedShopify })}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('You already have Shopify connected in the Warehouse module — pull those orders into the Commerce Hub now to populate the Mega Dashboard.')}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              disabled={bridging}
+              className="self-start md:self-auto"
+              onClick={async () => {
+                setBridging(true);
+                try {
+                  const res = await bridgeShopifyToCommerceHub();
+                  toast.success(
+                    t('Imported {{n}} Shopify orders ({{linked}} DPP-linked)', {
+                      n: res.ordersInserted,
+                      linked: res.itemsLinkedToDpp,
+                    }),
+                  );
+                  await load();
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : 'Bridge failed');
+                } finally {
+                  setBridging(false);
+                }
+              }}
+            >
+              {bridging ? t('Importing…') : t('Import {{n}} orders now', { n: unbridgedShopify })}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Connected channels */}
       {connections.length > 0 && (
