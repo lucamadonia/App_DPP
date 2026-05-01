@@ -238,17 +238,24 @@ export async function createGoodsReceipt(params: {
 
   const goodQty = params.quantity - (params.quantityDamaged || 0) - (params.quantityQuarantine || 0);
 
-  // Check if stock row exists. The DB unique constraint is on
-  // (tenant_id, location_id, batch_id) — bin_location is metadata, not part
-  // of the key, so we must NOT filter by it here or the INSERT branch will
-  // hit a duplicate-key violation when an old row with a different bin exists.
-  const { data: existing } = await supabase
+  // Check if stock row exists for THIS bin. Constraint is now
+  // (tenant_id, location_id, batch_id, bin_location) NULLS NOT DISTINCT
+  // (see migration 20260502_wh_stock_per_bin.sql), so each shelf has its
+  // own row and the same batch can be split across multiple bins.
+  let existingQuery = supabase
     .from('wh_stock_levels')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('location_id', params.locationId)
-    .eq('batch_id', params.batchId)
-    .maybeSingle();
+    .eq('batch_id', params.batchId);
+
+  if (params.binLocation) {
+    existingQuery = existingQuery.eq('bin_location', params.binLocation);
+  } else {
+    existingQuery = existingQuery.is('bin_location', null);
+  }
+
+  const { data: existing } = await existingQuery.maybeSingle();
 
   let stockLevel: WhStockLevel;
   const quantityBefore = existing?.quantity_available || 0;
@@ -309,6 +316,94 @@ export async function createGoodsReceipt(params: {
   });
 
   return stockLevel;
+}
+
+// ============================================
+// MULTI-BIN GOODS RECEIPT
+// ============================================
+
+export interface BinDistribution {
+  binLocation: string;
+  quantity: number;
+  quantityDamaged?: number;
+  quantityQuarantine?: number;
+}
+
+/**
+ * Goods receipt that splits one delivery across multiple bins/shelves.
+ * Each distribution becomes its own wh_stock_levels row (or merges into
+ * an existing one for that bin).
+ *
+ * The total of distribution quantities must match the totals (quantity,
+ * damaged, quarantine) the caller provided as a sanity check.
+ */
+export async function createGoodsReceiptMultiBin(params: {
+  locationId: string;
+  productId: string;
+  batchId: string;
+  totalQuantity: number;
+  totalDamaged?: number;
+  totalQuarantine?: number;
+  zone?: string;
+  referenceNumber?: string;
+  notes?: string;
+  distributions: BinDistribution[];
+}): Promise<WhStockLevel[]> {
+  if (!params.distributions.length) {
+    throw new Error('At least one bin distribution is required');
+  }
+
+  // Validate that the per-bin sums match the declared totals
+  const sumQty = params.distributions.reduce((s, d) => s + d.quantity, 0);
+  const sumDmg = params.distributions.reduce((s, d) => s + (d.quantityDamaged || 0), 0);
+  const sumQua = params.distributions.reduce((s, d) => s + (d.quantityQuarantine || 0), 0);
+
+  if (sumQty !== params.totalQuantity) {
+    throw new Error(`Bin quantities sum to ${sumQty} but totalQuantity is ${params.totalQuantity}`);
+  }
+  if (sumDmg !== (params.totalDamaged || 0)) {
+    throw new Error(`Damaged sum mismatch: ${sumDmg} vs ${params.totalDamaged || 0}`);
+  }
+  if (sumQua !== (params.totalQuarantine || 0)) {
+    throw new Error(`Quarantine sum mismatch: ${sumQua} vs ${params.totalQuarantine || 0}`);
+  }
+
+  // Reject empty bin labels — would collide with the NULL-bin row
+  for (const d of params.distributions) {
+    if (!d.binLocation || !d.binLocation.trim()) {
+      throw new Error('Each distribution requires a non-empty bin location');
+    }
+    if (d.quantity <= 0 && (d.quantityDamaged || 0) <= 0 && (d.quantityQuarantine || 0) <= 0) {
+      throw new Error(`Bin "${d.binLocation}" has no quantity`);
+    }
+  }
+
+  // Reject duplicate bins inside the same call
+  const seen = new Set<string>();
+  for (const d of params.distributions) {
+    const key = d.binLocation.trim();
+    if (seen.has(key)) throw new Error(`Bin "${key}" is listed twice`);
+    seen.add(key);
+  }
+
+  const results: WhStockLevel[] = [];
+  for (const dist of params.distributions) {
+    const result = await createGoodsReceipt({
+      locationId: params.locationId,
+      productId: params.productId,
+      batchId: params.batchId,
+      quantity: dist.quantity,
+      quantityDamaged: dist.quantityDamaged,
+      quantityQuarantine: dist.quantityQuarantine,
+      binLocation: dist.binLocation.trim(),
+      zone: params.zone,
+      referenceNumber: params.referenceNumber,
+      notes: params.notes,
+    });
+    results.push(result);
+  }
+
+  return results;
 }
 
 // ============================================

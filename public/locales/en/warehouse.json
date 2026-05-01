@@ -1299,5 +1299,20 @@
   "Stocktake Reason": "Stocktake Reason",
   "Annual inventory count": "Annual inventory count",
   "No locations available": "No locations available",
-  "Multiple batches — scan serial": "Multiple batches — scan serial"
+  "Multiple batches — scan serial": "Multiple batches — scan serial",
+
+  "Add another shelf": "Add another shelf",
+  "Extra Shelf {{num}}": "Extra Shelf {{num}}",
+  "Quantity on this shelf": "Quantity on this shelf",
+  "Remove this shelf": "Remove this shelf",
+  "Pick the primary shelf first": "Pick the primary shelf first",
+  "Primary shelf — receives damaged + quarantine": "Primary shelf — receives damaged + quarantine",
+  "Primary shelf is required when distributing across multiple shelves": "Primary shelf is required when distributing across multiple shelves",
+  "Each extra shelf must have a storage location selected": "Each extra shelf must have a storage location selected",
+  "Each extra shelf must have a quantity greater than zero": "Each extra shelf must have a quantity greater than zero",
+  "Distributed total": "Distributed total",
+  "on primary": "on primary",
+  "on extra shelves": "on extra shelves",
+  "damaged/quarantine": "damaged/quarantine",
+  "Storage distribution": "Storage distribution"
 }

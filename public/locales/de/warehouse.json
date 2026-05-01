@@ -1299,5 +1299,20 @@
   "Stocktake Reason": "Inventur-Grund",
   "Annual inventory count": "Jahresinventur",
   "No locations available": "Keine Lagerorte verfügbar",
-  "Multiple batches — scan serial": "Mehrere Chargen — bitte Seriennummer scannen"
+  "Multiple batches — scan serial": "Mehrere Chargen — bitte Seriennummer scannen",
+
+  "Add another shelf": "Weiteres Regal hinzufügen",
+  "Extra Shelf {{num}}": "Zusätzliches Regal {{num}}",
+  "Quantity on this shelf": "Menge in diesem Regal",
+  "Remove this shelf": "Dieses Regal entfernen",
+  "Pick the primary shelf first": "Bitte erst das Hauptregal wählen",
+  "Primary shelf — receives damaged + quarantine": "Hauptregal — bekommt beschädigte + Quarantäne",
+  "Primary shelf is required when distributing across multiple shelves": "Hauptregal ist Pflicht beim Verteilen auf mehrere Regale",
+  "Each extra shelf must have a storage location selected": "Jedes zusätzliche Regal braucht einen Lagerplatz",
+  "Each extra shelf must have a quantity greater than zero": "Jedes zusätzliche Regal braucht eine Menge größer als 0",
+  "Distributed total": "Gesamt verteilt",
+  "on primary": "im Hauptregal",
+  "on extra shelves": "in weiteren Regalen",
+  "damaged/quarantine": "beschädigt/Quarantäne",
+  "Storage distribution": "Verteilung auf Regale"
 }
