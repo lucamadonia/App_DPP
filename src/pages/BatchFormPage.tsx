@@ -10,14 +10,17 @@ import {
   ChevronDown,
   ChevronUp,
   DollarSign,
+  ScanLine,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { getProductById, getProductSuppliersWithDetails } from '@/services/supabase';
 import { getBatchById, createBatch, updateBatch } from '@/services/supabase/batches';
+import { generateExpectedUnits } from '@/services/supabase/inventory-units';
 import { formatCurrency } from '@/lib/format';
 import type { Product, Material, PackagingType } from '@/types/product';
 import type { SupplierProduct } from '@/types/database';
@@ -44,6 +47,11 @@ export function BatchFormPage() {
   const [overrideDescription, setOverrideDescription] = useState(false);
   const [overrideCertifications, setOverrideCertifications] = useState(false);
   const [overrideDimensions, setOverrideDimensions] = useState(false);
+
+  // Per-unit tracking (only meaningful in create mode — edit mode just shows current state)
+  const [unitTrackingEnabled, setUnitTrackingEnabled] = useState(false);
+  const [unitSerialPrefix, setUnitSerialPrefix] = useState('');
+  const [unitSerialPadding, setUnitSerialPadding] = useState(3);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -132,6 +140,7 @@ export function BatchFormPage() {
               batch.packagingHeightCm != null || batch.packagingWidthCm != null || batch.packagingDepthCm != null) {
             setOverrideDimensions(true);
           }
+          if (batch.unitTrackingEnabled) setUnitTrackingEnabled(true);
         }
       } else if (duplicateFromId) {
         const batch = await getBatchById(duplicateFromId);
@@ -251,7 +260,12 @@ export function BatchFormPage() {
         packagingHeightCm: overrideDimensions && formData.packagingHeightCm ? Number(formData.packagingHeightCm) : undefined,
         packagingWidthCm: overrideDimensions && formData.packagingWidthCm ? Number(formData.packagingWidthCm) : undefined,
         packagingDepthCm: overrideDimensions && formData.packagingDepthCm ? Number(formData.packagingDepthCm) : undefined,
+        unitTrackingEnabled,
       };
+
+      const quantityNum = formData.quantity ? parseInt(formData.quantity) : 0;
+      const wantsUnitGeneration = !isEditMode && unitTrackingEnabled && quantityNum > 0;
+      const effectivePrefix = (unitSerialPrefix.trim() || `${formData.serialNumber}-`).trim();
 
       if (isEditMode && batchId) {
         const result = await updateBatch(batchId, batchData);
@@ -262,11 +276,30 @@ export function BatchFormPage() {
         }
       } else {
         const result = await createBatch(batchData);
-        if (result.success) {
-          navigate(`/products/${productId}?tab=batches`);
-        } else {
+        if (!result.success || !result.id) {
           setSubmitError(result.error || 'Batch could not be created.');
+          setIsSubmitting(false);
+          return;
         }
+
+        if (wantsUnitGeneration) {
+          const genResult = await generateExpectedUnits({
+            batchId: result.id,
+            count: quantityNum,
+            serialPrefix: effectivePrefix,
+            startNumber: 1,
+            padding: unitSerialPadding,
+          });
+          if (!genResult.success) {
+            setSubmitError(
+              `Batch created but unit generation failed: ${genResult.error || 'unknown error'}`
+            );
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        navigate(`/products/${productId}?tab=batches`);
       }
     } catch {
       setSubmitError('An unexpected error occurred.');
@@ -421,6 +454,77 @@ export function BatchFormPage() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Per-Unit Tracking */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScanLine className="h-5 w-5 text-primary" />
+            {t('Per-Unit Tracking')}
+          </CardTitle>
+          <CardDescription>
+            {t('Generate one trackable serial per physical unit so the scanner can mark each unit individually and tell you which serials are still missing.')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/30 p-4">
+            <div className="space-y-1">
+              <div className="font-medium">{t('Enable per-unit tracking for this batch')}</div>
+              <p className="text-xs text-muted-foreground">
+                {isEditMode
+                  ? t('Toggling this on edit only flips the flag. Generate units from the batch detail page.')
+                  : t('On save, {{count}} expected units will be created and ready to be scanned in.', { count: parseInt(formData.quantity) || 0 })}
+              </p>
+            </div>
+            <Switch checked={unitTrackingEnabled} onCheckedChange={setUnitTrackingEnabled} />
+          </div>
+
+          {unitTrackingEnabled && !isEditMode && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('Serial Prefix')}</label>
+                <Input
+                  placeholder={formData.serialNumber ? `${formData.serialNumber}-` : 'BATCH-'}
+                  value={unitSerialPrefix}
+                  onChange={(e) => setUnitSerialPrefix(e.target.value)}
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('Defaults to the batch serial + dash if left empty.')}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('Number Padding')}</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={unitSerialPadding}
+                  onChange={(e) => setUnitSerialPadding(Math.max(1, Math.min(6, parseInt(e.target.value) || 3)))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('e.g. 3 → 001, 002, 003')}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('Preview')}</label>
+                <div className="rounded-md border bg-background px-3 py-2 font-mono text-sm">
+                  {(() => {
+                    const prefix = unitSerialPrefix.trim() || (formData.serialNumber ? `${formData.serialNumber}-` : 'BATCH-');
+                    const last = parseInt(formData.quantity) || 0;
+                    const first = `${prefix}${'1'.padStart(unitSerialPadding, '0')}`;
+                    const lastStr = last > 0 ? `${prefix}${String(last).padStart(unitSerialPadding, '0')}` : '—';
+                    return last > 0 ? `${first} … ${lastStr}` : first;
+                  })()}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('First and last serial that will be generated.')}
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

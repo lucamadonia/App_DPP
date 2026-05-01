@@ -38,6 +38,7 @@ import { formatVolumeM3 } from '@/lib/warehouse-volume';
 import { calculateBatchSpace, CONTAINERS, EURO_PALLET, type ContainerType } from '@/lib/warehouse-logistics';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { BatchUnitsCard } from '@/components/product/BatchUnitsCard';
 import type { Product, ProductBatch } from '@/types/product';
 
 const statusConfig = {
@@ -662,6 +663,15 @@ export function BatchDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Per-Unit Tracking — only when enabled */}
+      {batch.unitTrackingEnabled && (
+        <BatchUnitsCard
+          batchId={batch.id}
+          productGtin={product.gtin}
+          batchSerial={batch.serialNumber}
+        />
+      )}
 
       {/* Description (merged) */}
       {displayDescription && (
