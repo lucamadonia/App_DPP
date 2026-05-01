@@ -238,21 +238,17 @@ export async function createGoodsReceipt(params: {
 
   const goodQty = params.quantity - (params.quantityDamaged || 0) - (params.quantityQuarantine || 0);
 
-  // Check if stock row exists (match bin_location when provided for section-level tracking)
-  let existingQuery = supabase
+  // Check if stock row exists. The DB unique constraint is on
+  // (tenant_id, location_id, batch_id) — bin_location is metadata, not part
+  // of the key, so we must NOT filter by it here or the INSERT branch will
+  // hit a duplicate-key violation when an old row with a different bin exists.
+  const { data: existing } = await supabase
     .from('wh_stock_levels')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('location_id', params.locationId)
-    .eq('batch_id', params.batchId);
-
-  if (params.binLocation) {
-    existingQuery = existingQuery.eq('bin_location', params.binLocation);
-  } else {
-    existingQuery = existingQuery.is('bin_location', null);
-  }
-
-  const { data: existing } = await existingQuery.maybeSingle();
+    .eq('batch_id', params.batchId)
+    .maybeSingle();
 
   let stockLevel: WhStockLevel;
   const quantityBefore = existing?.quantity_available || 0;
