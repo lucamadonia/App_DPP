@@ -1314,5 +1314,17 @@
   "on primary": "on primary",
   "on extra shelves": "on extra shelves",
   "damaged/quarantine": "damaged/quarantine",
-  "Storage distribution": "Storage distribution"
+  "Storage distribution": "Storage distribution",
+
+  "Move to Another Shelf": "Move to Another Shelf",
+  "Current Shelf": "Current Shelf",
+  "New Shelf": "New Shelf",
+  "Quantity to Move": "Quantity to Move",
+  "Leave empty to move everything": "Leave empty to move everything",
+  "Will move to": "Will move to",
+  "Move": "Move",
+  "Move quantity exceeds available stock": "Move quantity exceeds available stock",
+  "New shelf must differ from current shelf": "New shelf must differ from current shelf",
+  "Stock moved to new shelf": "Stock moved to new shelf",
+  "Unassigned": "Unassigned"
 }

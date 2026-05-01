@@ -1314,5 +1314,17 @@
   "on primary": "im Hauptregal",
   "on extra shelves": "in weiteren Regalen",
   "damaged/quarantine": "beschädigt/Quarantäne",
-  "Storage distribution": "Verteilung auf Regale"
+  "Storage distribution": "Verteilung auf Regale",
+
+  "Move to Another Shelf": "In anderes Regal verschieben",
+  "Current Shelf": "Aktuelles Regal",
+  "New Shelf": "Neues Regal",
+  "Quantity to Move": "Menge zum Verschieben",
+  "Leave empty to move everything": "Leer lassen, um alles zu verschieben",
+  "Will move to": "Wird verschoben nach",
+  "Move": "Verschieben",
+  "Move quantity exceeds available stock": "Verschiebe-Menge übersteigt verfügbaren Bestand",
+  "New shelf must differ from current shelf": "Neues Regal muss sich vom aktuellen unterscheiden",
+  "Stock moved to new shelf": "Bestand verschoben",
+  "Unassigned": "Nicht zugewiesen"
 }

@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   TableIcon,
   SlidersHorizontal,
+  Move,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,7 +56,8 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { getStockLevelsPaginated, createStockAdjustment, createStockTransfer } from '@/services/supabase/wh-stock';
+import { getStockLevelsPaginated, createStockAdjustment, createStockTransfer, moveStockBinLocation } from '@/services/supabase/wh-stock';
+import { ShelfPicker, type ShelfPickerValue } from '@/components/warehouse/ShelfPicker';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -185,6 +187,13 @@ export function InventoryListPage() {
   const [transferQty, setTransferQty] = useState('');
   const [transferReason, setTransferReason] = useState('');
   const [transferSaving, setTransferSaving] = useState(false);
+
+  // Move shelf (bin within same location) dialog
+  const [moveBinTarget, setMoveBinTarget] = useState<WhStockLevel | null>(null);
+  const [moveBinNewBin, setMoveBinNewBin] = useState('');
+  const [moveBinNewBinDisplay, setMoveBinNewBinDisplay] = useState('');
+  const [moveBinQty, setMoveBinQty] = useState('');
+  const [moveBinSaving, setMoveBinSaving] = useState(false);
 
   // Context menu (right-click)
   const [ctxMenu, setCtxMenu] = useState<{ row: WhStockLevel; x: number; y: number } | null>(null);
@@ -404,6 +413,39 @@ export function InventoryListPage() {
     }
   };
 
+  // Move bin (shelf) submit — moves stock to another shelf in the SAME location
+  const handleMoveBinSubmit = async () => {
+    if (!moveBinTarget || !moveBinNewBin) return;
+    const requestedQty = moveBinQty ? parseInt(moveBinQty, 10) : moveBinTarget.quantityAvailable;
+    if (isNaN(requestedQty) || requestedQty <= 0) return;
+    if (requestedQty > moveBinTarget.quantityAvailable) {
+      toast.error(t('Move quantity exceeds available stock'));
+      return;
+    }
+    if (moveBinNewBin === (moveBinTarget.binLocation || '')) {
+      toast.error(t('New shelf must differ from current shelf'));
+      return;
+    }
+    setMoveBinSaving(true);
+    try {
+      await moveStockBinLocation({
+        stockId: moveBinTarget.id,
+        newBinLocation: moveBinNewBin,
+        quantity: requestedQty,
+      });
+      toast.success(t('Stock moved to new shelf'));
+      setMoveBinTarget(null);
+      setMoveBinNewBin('');
+      setMoveBinNewBinDisplay('');
+      setMoveBinQty('');
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed');
+    } finally {
+      setMoveBinSaving(false);
+    }
+  };
+
   // Copy SKU
   const copySKU = (s: WhStockLevel) => {
     navigator.clipboard.writeText(s.batchSerialNumber ?? s.batchId);
@@ -433,6 +475,10 @@ export function InventoryListPage() {
       <DropdownMenuItem onClick={() => { setAdjustTarget(s); setAdjustDelta(''); setAdjustReason(''); }}>
         <Pencil className="mr-2 h-4 w-4" />
         {t('Adjust Stock')}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => { setMoveBinTarget(s); setMoveBinNewBin(''); setMoveBinNewBinDisplay(''); setMoveBinQty(''); }}>
+        <Move className="mr-2 h-4 w-4" />
+        {t('Move to Another Shelf')}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); }}>
         <ArrowRightLeft className="mr-2 h-4 w-4" />
@@ -1274,6 +1320,88 @@ export function InventoryListPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Move to another shelf within the same location */}
+      <Dialog open={!!moveBinTarget} onOpenChange={open => { if (!open) setMoveBinTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('Move to Another Shelf')}</DialogTitle>
+            <DialogDescription>
+              {moveBinTarget?.productName ?? ''} — {moveBinTarget?.batchSerialNumber ?? ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <Label className="text-xs text-muted-foreground">{t('Location')}</Label>
+                <div className="font-medium">{moveBinTarget?.locationName}</div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">{t('Current Shelf')}</Label>
+                <div className="font-medium font-mono">
+                  {moveBinTarget?.binLocation
+                    ? formatBinLocation(moveBinTarget.binLocation)
+                    : <span className="text-muted-foreground italic">{t('Unassigned')}</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t('New Shelf')}</Label>
+              {(() => {
+                const loc = locations.find(l => l.id === moveBinTarget?.locationId);
+                if (!loc) return <Input value={moveBinNewBin} onChange={e => setMoveBinNewBin(e.target.value)} placeholder="A-03-12" />;
+                return (
+                  <ShelfPicker
+                    location={loc}
+                    value={moveBinNewBin || undefined}
+                    onSelect={(val: ShelfPickerValue) => {
+                      setMoveBinNewBin(val.binLocation);
+                      setMoveBinNewBinDisplay(val.displayLabel);
+                    }}
+                    onClear={() => {
+                      setMoveBinNewBin('');
+                      setMoveBinNewBinDisplay('');
+                    }}
+                  />
+                );
+              })()}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t('Quantity to Move')}</Label>
+              <Input
+                type="number"
+                min={1}
+                max={moveBinTarget?.quantityAvailable ?? 9999}
+                placeholder={String(moveBinTarget?.quantityAvailable ?? '')}
+                value={moveBinQty}
+                onChange={e => setMoveBinQty(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('Available Quantity')}: {moveBinTarget?.quantityAvailable.toLocaleString()} —{' '}
+                {t('Leave empty to move everything')}
+              </p>
+            </div>
+
+            {moveBinNewBinDisplay && (
+              <div className="rounded-md bg-muted/40 p-2 text-xs">
+                {t('Will move to')}: <span className="font-mono font-medium">{moveBinNewBinDisplay}</span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveBinTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+            <Button
+              disabled={moveBinSaving || !moveBinNewBin || (moveBinNewBin === (moveBinTarget?.binLocation ?? ''))}
+              onClick={handleMoveBinSubmit}
+            >
+              <Move className="mr-2 h-4 w-4" />
+              {t('Move')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
