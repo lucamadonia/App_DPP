@@ -1299,5 +1299,19 @@
   "Stocktake Reason": "Stocktake Reason",
   "Annual inventory count": "Annual inventory count",
   "No locations available": "No locations available",
-  "Multiple batches — scan serial": "Multiple batches — scan serial"
+  "Multiple batches — scan serial": "Multiple batches — scan serial",
+
+  "Unit {{serial}} is already received — duplicate scan blocked": "Unit {{serial}} is already received — duplicate scan blocked",
+  "Unit {{serial}} is already shipped": "Unit {{serial}} is already shipped",
+  "Individual unit scanned": "Individual unit scanned",
+  "Quantity is locked to 1": "Quantity is locked to 1",
+
+  "Auto-Export Stock on Receipt": "Auto-Export Stock on Receipt",
+  "Auto-Export Stock on Receipt Help": "After every goods receipt, the new stock level is pushed to Shopify automatically (debounced ~3s for bulk scans). Off by default — most workflows require an explicit confirmation step.",
+
+  "Confirm goods receipt and push to Shopify": "Confirm goods receipt and push to Shopify",
+  "Confirm & push": "Confirm & push",
+  "Pushing…": "Pushing…",
+  "Pushed!": "Pushed!",
+  "Retry push": "Retry push"
 }
