@@ -394,6 +394,136 @@ export async function getAllBatches(): Promise<Array<BatchListItem & { productNa
   }));
 }
 
+// ============================================
+// OUTSTANDING GOODS RECEIPTS
+// ============================================
+
+export interface OutstandingBatch {
+  batchId: string;
+  productId: string;
+  productName: string;
+  productGtin: string;
+  batchSerial: string;
+  batchNumber?: string;
+  productionDate: string;
+  expirationDate?: string;
+  status: 'draft' | 'live' | 'archived';
+  supplierId?: string;
+  supplierName?: string;
+  ordered: number;
+  received: number;
+  outstanding: number;
+  receivedPercent: number;
+  lastReceiptAt?: string;
+  daysOutstanding: number;
+}
+
+/**
+ * Batches where the ordered quantity is greater than what has been
+ * received (sum across all wh_stock_levels rows).
+ *
+ * Sorted oldest-first so old supplier issues bubble up.
+ *
+ * Includes only batches with status='live' by default since draft/archived
+ * are not actionable.
+ */
+export async function getOutstandingBatches(opts?: {
+  includeAllStatuses?: boolean;
+}): Promise<OutstandingBatch[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  // 1. Pull batches with a non-null positive quantity (otherwise
+  //    "outstanding" can't be computed).
+  let batchQuery = supabase
+    .from('product_batches')
+    .select('id, product_id, batch_number, serial_number, production_date, expiration_date, quantity, status, supplier_id, products!inner(name, gtin), suppliers(name)')
+    .eq('tenant_id', tenantId)
+    .not('quantity', 'is', null)
+    .gt('quantity', 0);
+
+  if (!opts?.includeAllStatuses) {
+    batchQuery = batchQuery.eq('status', 'live');
+  }
+
+  const { data: batches, error: batchErr } = await batchQuery;
+  if (batchErr || !batches?.length) {
+    if (batchErr) console.error('Failed to load batches for outstanding:', batchErr);
+    return [];
+  }
+
+  const batchIds = batches.map(b => b.id);
+
+  // 2. Pull stock totals for those batches
+  const { data: stockRows } = await supabase
+    .from('wh_stock_levels')
+    .select('batch_id, quantity_available, quantity_reserved, quantity_damaged, quantity_quarantine')
+    .eq('tenant_id', tenantId)
+    .in('batch_id', batchIds);
+
+  // 3. Pull last goods_receipt transaction date per batch
+  const { data: txRows } = await supabase
+    .from('wh_stock_transactions')
+    .select('batch_id, created_at, type')
+    .eq('tenant_id', tenantId)
+    .eq('type', 'goods_receipt')
+    .in('batch_id', batchIds)
+    .order('created_at', { ascending: false });
+
+  const stockByBatch = new Map<string, number>();
+  for (const row of stockRows || []) {
+    const total =
+      (row.quantity_available || 0) +
+      (row.quantity_reserved || 0) +
+      (row.quantity_damaged || 0) +
+      (row.quantity_quarantine || 0);
+    stockByBatch.set(row.batch_id, (stockByBatch.get(row.batch_id) || 0) + total);
+  }
+
+  const lastReceiptByBatch = new Map<string, string>();
+  for (const row of txRows || []) {
+    if (!lastReceiptByBatch.has(row.batch_id)) {
+      lastReceiptByBatch.set(row.batch_id, row.created_at);
+    }
+  }
+
+  const now = Date.now();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: OutstandingBatch[] = (batches as any[])
+    .map(b => {
+      const ordered = Number(b.quantity);
+      const received = stockByBatch.get(b.id) || 0;
+      const outstanding = ordered - received;
+      const productionDate = b.production_date;
+      const daysOutstanding = productionDate
+        ? Math.max(0, Math.floor((now - new Date(productionDate).getTime()) / 86400000))
+        : 0;
+      return {
+        batchId: b.id,
+        productId: b.product_id,
+        productName: b.products?.name || '',
+        productGtin: b.products?.gtin || '',
+        batchSerial: b.serial_number,
+        batchNumber: b.batch_number || undefined,
+        productionDate,
+        expirationDate: b.expiration_date || undefined,
+        status: b.status as 'draft' | 'live' | 'archived',
+        supplierId: b.supplier_id || undefined,
+        supplierName: b.suppliers?.name || undefined,
+        ordered,
+        received,
+        outstanding,
+        receivedPercent: ordered > 0 ? Math.round((received / ordered) * 100) : 0,
+        lastReceiptAt: lastReceiptByBatch.get(b.id),
+        daysOutstanding,
+      };
+    })
+    .filter(b => b.outstanding > 0)
+    .sort((a, b) => new Date(a.productionDate).getTime() - new Date(b.productionDate).getTime());
+
+  return result;
+}
+
 export interface SupplierBatchCost {
   supplierId: string;
   supplierName: string;

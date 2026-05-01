@@ -31,7 +31,9 @@ export {
   getBatchCount,
   getBatchStats,
   getAllBatches,
+  getOutstandingBatches,
 } from './batches';
+export type { OutstandingBatch } from './batches';
 
 // Documents
 export {

@@ -124,6 +124,7 @@ const PictogramsPage = lazy(() => import('@/pages/PictogramsPage').then(m => ({ 
 const WarehouseDashboardPage = lazy(() => import('@/pages/warehouse/WarehouseDashboardPage').then(m => ({ default: m.WarehouseDashboardPage })));
 const InventoryListPage = lazy(() => import('@/pages/warehouse/InventoryListPage').then(m => ({ default: m.InventoryListPage })));
 const GoodsReceiptPage = lazy(() => import('@/pages/warehouse/GoodsReceiptPage').then(m => ({ default: m.GoodsReceiptPage })));
+const OutstandingReceiptsPage = lazy(() => import('@/pages/warehouse/OutstandingReceiptsPage').then(m => ({ default: m.OutstandingReceiptsPage })));
 const ShipmentListPage = lazy(() => import('@/pages/warehouse/ShipmentListPage').then(m => ({ default: m.ShipmentListPage })));
 const PackagingTypesPage = lazy(() => import('@/pages/warehouse/PackagingTypesPage').then(m => ({ default: m.PackagingTypesPage })));
 const ShipmentDetailPage = lazy(() => import('@/pages/warehouse/ShipmentDetailPage').then(m => ({ default: m.ShipmentDetailPage })));
@@ -487,6 +488,7 @@ function NormalAppRoutes() {
           <Route path="warehouse/scanner" element={<ScannerPage />} />
           <Route path="warehouse/stocktake" element={<StocktakePage />} />
           <Route path="warehouse/goods-receipt" element={<GoodsReceiptPage />} />
+          <Route path="warehouse/outstanding-receipts" element={<OutstandingReceiptsPage />} />
           <Route path="warehouse/shipments" element={<ShipmentListPage />} />
           <Route path="warehouse/shipments/new" element={<CreateShipmentPage />} />
           <Route path="warehouse/shipments/:id" element={<ShipmentDetailPage />} />
