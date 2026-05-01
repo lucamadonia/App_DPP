@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Box, CheckCircle2, ClipboardCheck, Info, Package, Plus, Ruler, Trash2, Warehouse, Zap } from 'lucide-react';
@@ -32,6 +32,10 @@ const WIZARD_STEPS = [
 export function GoodsReceiptPage() {
   const { t } = useTranslation('warehouse');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Prefilled from "Outstanding Goods Receipts" page (?productId=...&batchId=...)
+  const prefillProductId = searchParams.get('productId') || '';
+  const prefillBatchId = searchParams.get('batchId') || '';
 
   const [step, setStep] = useState(0);
   const prevStepRef = useRef(0);
@@ -55,8 +59,8 @@ export function GoodsReceiptPage() {
   const [volumeCoverage, setVolumeCoverage] = useState(1);
   const [loadingCapacity, setLoadingCapacity] = useState(false);
 
-  // Form state
-  const [productId, setProductId] = useState('');
+  // Form state — initial values may come from URL prefill
+  const [productId, setProductId] = useState(prefillProductId);
   const [batchId, setBatchId] = useState('');
   const [locationId, setLocationId] = useState('');
   const [quantity, setQuantity] = useState(0);
@@ -131,14 +135,22 @@ export function GoodsReceiptPage() {
 
   useEffect(() => {
     if (productId) {
-      getBatches(productId).then((b) =>
-        setBatches(b.map((batch) => ({ id: batch.id, serial_number: batch.serialNumber, quantity: batch.quantity ?? 0 })))
-      );
+      getBatches(productId).then((b) => {
+        const list = b.map((batch) => ({ id: batch.id, serial_number: batch.serialNumber, quantity: batch.quantity ?? 0 }));
+        setBatches(list);
+        // If prefill batchId is in the list and we're still on step 0, auto-select it.
+        // Don't auto-advance — let the user review the batch context first.
+        if (prefillBatchId && !batchId && list.some((row) => row.id === prefillBatchId)) {
+          setBatchId(prefillBatchId);
+        }
+      });
       getProductById(productId).then(setSelectedProduct);
     } else {
       setSelectedProduct(null);
     }
-  }, [productId]);
+    // batchId intentionally omitted — we only want this to fire on productId change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, prefillBatchId]);
 
   useEffect(() => {
     if (batchId) {

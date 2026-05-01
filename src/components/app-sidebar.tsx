@@ -103,6 +103,7 @@ export function AppSidebar() {
             { title: t('Scanner', { ns: 'warehouse' }), url: '/warehouse/scanner' },
             { title: t('Inventory', { ns: 'warehouse' }), url: '/warehouse/inventory' },
             { title: t('Goods Receipt', { ns: 'warehouse' }), url: '/warehouse/goods-receipt' },
+            { title: t('Outstanding Goods Receipts', { ns: 'warehouse' }), url: '/warehouse/outstanding-receipts' },
             { title: t('Stocktake', { ns: 'warehouse' }), url: '/warehouse/stocktake' },
             { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
             { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
