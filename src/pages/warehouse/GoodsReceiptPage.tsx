@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertTriangle, Box, CheckCircle2, ClipboardCheck, Info, Package, Ruler, Warehouse, Zap } from 'lucide-react';
+import { AlertTriangle, Box, CheckCircle2, ClipboardCheck, Info, Package, Plus, Ruler, Trash2, Warehouse, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { QuantityStepper } from '@/components/warehouse/QuantityStepper';
 import { getProducts, getProductById } from '@/services/supabase/products';
 import { getBatches, getBatchById } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
-import { createGoodsReceipt, getStockForBatch, getLocationUsedVolumeM3 } from '@/services/supabase/wh-stock';
+import { createGoodsReceipt, createGoodsReceiptMultiBin, getStockForBatch, getLocationUsedVolumeM3 } from '@/services/supabase/wh-stock';
 import { calculateVolume, analyzeCapacity, formatVolumeM3 } from '@/lib/warehouse-volume';
 import { ShelfPicker, type ShelfPickerValue } from '@/components/warehouse/ShelfPicker';
 import type { Product, ProductBatch } from '@/types/product';
@@ -65,6 +65,35 @@ export function GoodsReceiptPage() {
   const [binLocation, setBinLocation] = useState('');
   const [binDisplayLabel, setBinDisplayLabel] = useState('');
   const [zone, setZone] = useState('');
+
+  // Additional bins — each splits a chunk of the GOOD quantity to its own shelf.
+  // Damaged/Quarantine always stay on the primary (first) bin.
+  interface AdditionalBin {
+    id: string;
+    binLocation: string;
+    binDisplayLabel: string;
+    zone: string;
+    quantity: number;
+  }
+  const [additionalBins, setAdditionalBins] = useState<AdditionalBin[]>([]);
+
+  const addExtraBin = () => {
+    setAdditionalBins(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), binLocation: '', binDisplayLabel: '', zone: '', quantity: 0 },
+    ]);
+  };
+  const updateExtraBin = (id: string, patch: Partial<AdditionalBin>) => {
+    setAdditionalBins(prev => prev.map(b => (b.id === id ? { ...b, ...patch } : b)));
+  };
+  const removeExtraBin = (id: string) => {
+    setAdditionalBins(prev => prev.filter(b => b.id !== id));
+  };
+
+  // Sum of good quantities across primary + additional bins
+  const totalGoodAcrossBins = (quantity - quantityDamaged - quantityQuarantine)
+    + additionalBins.reduce((s, b) => s + (b.quantity || 0), 0);
+  const totalReceived = totalGoodAcrossBins + quantityDamaged + quantityQuarantine;
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -137,17 +166,64 @@ export function GoodsReceiptPage() {
 
   const handleSubmit = async () => {
     if (!productId || !batchId || !locationId || quantity <= 0) return;
+
+    // Validate that every extra bin row has a shelf and positive qty
+    const extras = additionalBins.filter(b => b.quantity > 0);
+    if (extras.some(b => !b.binLocation)) {
+      toast.error(t('Each extra shelf must have a storage location selected'));
+      return;
+    }
+    if (extras.some(b => b.quantity <= 0)) {
+      toast.error(t('Each extra shelf must have a quantity greater than zero'));
+      return;
+    }
+
     setLoading(true);
     try {
-      await createGoodsReceipt({
-        locationId, productId, batchId, quantity,
-        quantityDamaged: quantityDamaged || 0,
-        quantityQuarantine: quantityQuarantine || 0,
-        binLocation: binLocation || undefined,
-        zone: zone || undefined,
-        referenceNumber: referenceNumber || undefined,
-        notes: notes || undefined,
-      });
+      if (extras.length === 0) {
+        // Single-bin path — keep the existing behaviour exactly
+        await createGoodsReceipt({
+          locationId, productId, batchId, quantity,
+          quantityDamaged: quantityDamaged || 0,
+          quantityQuarantine: quantityQuarantine || 0,
+          binLocation: binLocation || undefined,
+          zone: zone || undefined,
+          referenceNumber: referenceNumber || undefined,
+          notes: notes || undefined,
+        });
+      } else {
+        // Multi-bin path — primary bin keeps damaged + quarantine
+        if (!binLocation) {
+          toast.error(t('Primary shelf is required when distributing across multiple shelves'));
+          setLoading(false);
+          return;
+        }
+        const primaryGoodQty = quantity - (quantityDamaged || 0) - (quantityQuarantine || 0);
+        const distributions = [
+          {
+            binLocation,
+            // Total includes damaged + quarantine on primary bin
+            quantity: primaryGoodQty + (quantityDamaged || 0) + (quantityQuarantine || 0),
+            quantityDamaged: quantityDamaged || 0,
+            quantityQuarantine: quantityQuarantine || 0,
+          },
+          ...extras.map(b => ({
+            binLocation: b.binLocation,
+            quantity: b.quantity,
+          })),
+        ];
+        const totalQty = distributions.reduce((s, d) => s + d.quantity, 0);
+        await createGoodsReceiptMultiBin({
+          locationId, productId, batchId,
+          totalQuantity: totalQty,
+          totalDamaged: quantityDamaged || 0,
+          totalQuarantine: quantityQuarantine || 0,
+          zone: zone || undefined,
+          referenceNumber: referenceNumber || undefined,
+          notes: notes || undefined,
+          distributions,
+        });
+      }
       setShowSuccess(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
@@ -514,7 +590,14 @@ export function GoodsReceiptPage() {
                 </>
               )}
               <div className="space-y-2">
-                <Label>{t('Storage Location')}</Label>
+                <Label>
+                  {t('Storage Location')}
+                  {additionalBins.length > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({t('Primary shelf — receives damaged + quarantine')})
+                    </span>
+                  )}
+                </Label>
                 {selectedLocation ? (
                   <ShelfPicker
                     location={selectedLocation}
@@ -535,6 +618,74 @@ export function GoodsReceiptPage() {
                   <Input value={binLocation} onChange={(e) => setBinLocation(e.target.value)} placeholder="z.B. A-03-12" />
                 )}
               </div>
+
+              {/* Additional bins for splitting the receipt across multiple shelves */}
+              {selectedLocation && (
+                <div className="space-y-2">
+                  {additionalBins.length > 0 && (
+                    <div className="rounded-md bg-muted/30 p-2 text-xs text-muted-foreground">
+                      {t('Distributed total')}: <span className="font-medium text-foreground">{totalReceived}</span>
+                      {' '}({(quantity - quantityDamaged - quantityQuarantine)} {t('on primary')} +{' '}
+                      {additionalBins.reduce((s, b) => s + (b.quantity || 0), 0)} {t('on extra shelves')}
+                      {(quantityDamaged + quantityQuarantine) > 0 && ` + ${quantityDamaged + quantityQuarantine} ${t('damaged/quarantine')}`})
+                    </div>
+                  )}
+
+                  {additionalBins.map((extra, idx) => (
+                    <div key={extra.id} className="rounded-lg border bg-card p-2 sm:p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium">
+                          {t('Extra Shelf {{num}}', { num: idx + 2 })}
+                        </Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeExtraBin(extra.id)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          title={t('Remove this shelf')}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <ShelfPicker
+                        location={selectedLocation}
+                        value={extra.binLocation || undefined}
+                        zone={extra.zone || undefined}
+                        onSelect={(val) => updateExtraBin(extra.id, {
+                          binLocation: val.binLocation,
+                          binDisplayLabel: val.displayLabel,
+                          zone: val.zone || '',
+                        })}
+                        onClear={() => updateExtraBin(extra.id, {
+                          binLocation: '',
+                          binDisplayLabel: '',
+                          zone: '',
+                        })}
+                      />
+                      <QuantityStepper
+                        label={t('Quantity on this shelf')}
+                        value={extra.quantity}
+                        onChange={(v) => updateExtraBin(extra.id, { quantity: v })}
+                        min={0}
+                        variant="green"
+                      />
+                    </div>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addExtraBin}
+                    className="gap-1.5 w-full"
+                    disabled={!binLocation}
+                    title={!binLocation ? t('Pick the primary shelf first') : undefined}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {t('Add another shelf')}
+                  </Button>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => goToStep(0)}>{t('Back', { ns: 'common' })}</Button>
                 <Button onClick={() => goToStep(2)} disabled={!locationId || quantity <= 0}>{t('Continue', { ns: 'common' })}</Button>
@@ -600,10 +751,31 @@ export function GoodsReceiptPage() {
                   {receiptVolume && (
                     <div className="flex justify-between"><span className="text-muted-foreground">{t('Space Requirements')}:</span><span className="font-medium">{formatVolumeM3(receiptVolume.totalVolumeM3)}</span></div>
                   )}
-                  {binLocation && (
+                  {binLocation && additionalBins.filter(b => b.quantity > 0).length === 0 && (
                     <div className="flex justify-between"><span className="text-muted-foreground">{t('Storage Location')}:</span><span className="font-medium">{binDisplayLabel || binLocation}</span></div>
                   )}
                 </div>
+
+                {/* Multi-bin breakdown */}
+                {additionalBins.filter(b => b.quantity > 0).length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">{t('Storage distribution')}</div>
+                    <div className="rounded-md bg-muted/40 p-2 text-sm flex justify-between">
+                      <span>{binDisplayLabel || binLocation}</span>
+                      <span className="font-mono font-medium">{quantity}</span>
+                    </div>
+                    {additionalBins.filter(b => b.quantity > 0).map(b => (
+                      <div key={b.id} className="rounded-md bg-muted/40 p-2 text-sm flex justify-between">
+                        <span>{b.binDisplayLabel || b.binLocation}</span>
+                        <span className="font-mono font-medium">{b.quantity}</span>
+                      </div>
+                    ))}
+                    <div className="rounded-md bg-primary/10 p-2 text-sm flex justify-between font-semibold">
+                      <span>{t('Total')}</span>
+                      <span className="font-mono">{totalReceived}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

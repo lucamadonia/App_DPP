@@ -479,6 +479,7 @@ export {
   getStockForBatch,
   getStockForLocation,
   createGoodsReceipt,
+  createGoodsReceiptMultiBin,
   createStockAdjustment,
   createStockTransfer,
   reserveStock,
@@ -487,6 +488,7 @@ export {
   getLowStockAlerts,
   getWarehouseStats,
 } from './wh-stock';
+export type { BinDistribution } from './wh-stock';
 
 // Warehouse - Shipments
 export {
