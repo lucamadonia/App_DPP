@@ -48,7 +48,6 @@ function transformBatch(row: any): ProductBatch {
     packagingHeightCm: row.packaging_height_cm != null ? Number(row.packaging_height_cm) : undefined,
     packagingWidthCm: row.packaging_width_cm != null ? Number(row.packaging_width_cm) : undefined,
     packagingDepthCm: row.packaging_depth_cm != null ? Number(row.packaging_depth_cm) : undefined,
-    unitTrackingEnabled: row.unit_tracking_enabled === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -91,7 +90,6 @@ function transformBatchListItem(row: any): BatchListItem {
     productDepthCm: row.product_depth_cm != null ? Number(row.product_depth_cm) : undefined,
     netWeight: row.net_weight != null ? Number(row.net_weight) : undefined,
     grossWeight: row.gross_weight != null ? Number(row.gross_weight) : undefined,
-    unitTrackingEnabled: row.unit_tracking_enabled === true,
   };
 }
 
@@ -198,7 +196,6 @@ export async function createBatch(
     packaging_height_cm: batch.packagingHeightCm ?? null,
     packaging_width_cm: batch.packagingWidthCm ?? null,
     packaging_depth_cm: batch.packagingDepthCm ?? null,
-    unit_tracking_enabled: batch.unitTrackingEnabled ?? false,
   };
 
   const { data, error } = await supabase
@@ -251,7 +248,6 @@ export async function updateBatch(
   if (batch.packagingHeightCm !== undefined) updateData.packaging_height_cm = batch.packagingHeightCm ?? null;
   if (batch.packagingWidthCm !== undefined) updateData.packaging_width_cm = batch.packagingWidthCm ?? null;
   if (batch.packagingDepthCm !== undefined) updateData.packaging_depth_cm = batch.packagingDepthCm ?? null;
-  if (batch.unitTrackingEnabled !== undefined) updateData.unit_tracking_enabled = batch.unitTrackingEnabled;
 
   const { error } = await supabase
     .from('product_batches')

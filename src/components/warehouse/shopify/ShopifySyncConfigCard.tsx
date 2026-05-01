@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { updateShopifySyncConfig } from '@/services/supabase/shopify-integration';
 import type { ShopifySyncConfig, ShopifyOrderFinancialStatus } from '@/types/shopify';
-import { DEFAULT_SHOPIFY_SYNC_CONFIG } from '@/types/shopify';
 import { useToast } from '@/hooks/use-toast';
 
 interface Props {
@@ -25,9 +24,7 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
   const { t } = useTranslation('warehouse');
   const { toast } = useToast();
 
-  // Merge with defaults so newly-added fields (e.g. autoExportStockOnReceipt)
-  // are populated for existing tenants whose stored config predates them.
-  const [local, setLocal] = useState<ShopifySyncConfig>({ ...DEFAULT_SHOPIFY_SYNC_CONFIG, ...config });
+  const [local, setLocal] = useState<ShopifySyncConfig>({ ...config });
   const [saving, setSaving] = useState(false);
 
   function toggle(key: keyof ShopifySyncConfig) {
@@ -122,13 +119,6 @@ export function ShopifySyncConfigCard({ config, onRefresh }: Props) {
                 <p className="text-xs text-muted-foreground">{t('Auto-Export Fulfillment Help')}</p>
               </div>
               <Switch className="shrink-0" checked={local.autoExportFulfillment} onCheckedChange={() => toggle('autoExportFulfillment')} />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <Label className="text-xs sm:text-sm">{t('Auto-Export Stock on Receipt')}</Label>
-                <p className="text-xs text-muted-foreground">{t('Auto-Export Stock on Receipt Help')}</p>
-              </div>
-              <Switch className="shrink-0" checked={local.autoExportStockOnReceipt} onCheckedChange={() => toggle('autoExportStockOnReceipt')} />
             </div>
           </div>
         </div>

@@ -1299,19 +1299,5 @@
   "Stocktake Reason": "Inventur-Grund",
   "Annual inventory count": "Jahresinventur",
   "No locations available": "Keine Lagerorte verfügbar",
-  "Multiple batches — scan serial": "Mehrere Chargen — bitte Seriennummer scannen",
-
-  "Unit {{serial}} is already received — duplicate scan blocked": "Einheit {{serial}} ist bereits eingebucht — Doppel-Scan blockiert",
-  "Unit {{serial}} is already shipped": "Einheit {{serial}} ist bereits versendet",
-  "Individual unit scanned": "Einzelne Einheit gescannt",
-  "Quantity is locked to 1": "Menge ist auf 1 fixiert",
-
-  "Auto-Export Stock on Receipt": "Bestand automatisch nach Wareneingang exportieren",
-  "Auto-Export Stock on Receipt Help": "Nach jedem Wareneingang wird der neue Bestand automatisch zu Shopify gepusht (entprellt ca. 3 s für Bulk-Scans). Standardmäßig aus — die meisten Workflows wollen einen expliziten Bestätigungsschritt.",
-
-  "Confirm goods receipt and push to Shopify": "Wareneingang bestätigen und zu Shopify pushen",
-  "Confirm & push": "Bestätigen & pushen",
-  "Pushing…": "Wird gesendet …",
-  "Pushed!": "Gesendet!",
-  "Retry push": "Push wiederholen"
+  "Multiple batches — scan serial": "Mehrere Chargen — bitte Seriennummer scannen"
 }
