@@ -163,9 +163,6 @@ export interface ProductBatch {
   packagingHeightCm?: number;
   packagingWidthCm?: number;
   packagingDepthCm?: number;
-  // Per-unit tracking (opt-in): when true, the batch is split into individual
-  // inventory_units rows so each physical unit can be scanned and reconciled.
-  unitTrackingEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -190,7 +187,6 @@ export interface BatchListItem {
   productDepthCm?: number;
   netWeight?: number;   // in Gramm (DB raw)
   grossWeight?: number; // in Gramm (DB raw)
-  unitTrackingEnabled?: boolean;
 }
 
 export interface ProductWithBatches {

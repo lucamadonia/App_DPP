@@ -23,20 +23,6 @@ export interface ScannerBatch {
   quantity?: number;
   productionDate: string;
   expirationDate?: string;
-  unitTrackingEnabled?: boolean;
-}
-
-/**
- * Per-unit metadata included in lookup results when the scanned code
- * matches an inventory_units row (rather than a batch-level serial).
- */
-export interface ScannerUnit {
-  id: string;
-  unitSerial: string;
-  status: string;       // expected | received | shipped | ...
-  locationId?: string;
-  locationName?: string;
-  binLocation?: string;
 }
 
 export interface GtinLookupResult {
@@ -48,16 +34,12 @@ export interface GtinSerialLookupResult {
   product: ScannerProduct;
   batch: ScannerBatch;
   stockLevels: WhStockLevel[];
-  /** Set when the scanned (gtin, serial) matches an inventory_units row. */
-  unit?: ScannerUnit;
 }
 
 export interface SerialLookupResult {
   product: ScannerProduct;
   batch: ScannerBatch;
   stockLevels: WhStockLevel[];
-  /** Set when the scanned serial matches an inventory_units row (per-unit tracking). */
-  unit?: ScannerUnit;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,19 +64,6 @@ function transformScannerBatch(row: any): ScannerBatch {
     quantity: row.quantity || undefined,
     productionDate: row.production_date,
     expirationDate: row.expiration_date || undefined,
-    unitTrackingEnabled: row.unit_tracking_enabled === true,
-  };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformScannerUnit(row: any): ScannerUnit {
-  return {
-    id: row.id,
-    unitSerial: row.unit_serial,
-    status: row.status,
-    locationId: row.location_id || undefined,
-    locationName: row.wh_locations?.name || undefined,
-    binLocation: row.bin_location || undefined,
   };
 }
 
@@ -142,7 +111,7 @@ export async function lookupByGtin(gtin: string): Promise<GtinLookupResult | nul
 
   const { data: batches } = await supabase
     .from('product_batches')
-    .select('id, serial_number, batch_number, status, quantity, production_date, expiration_date, unit_tracking_enabled')
+    .select('id, serial_number, batch_number, status, quantity, production_date, expiration_date')
     .eq('tenant_id', tenantId)
     .eq('product_id', product.id)
     .eq('status', 'live')
@@ -156,10 +125,7 @@ export async function lookupByGtin(gtin: string): Promise<GtinLookupResult | nul
 
 /**
  * Lookup product + specific batch by GTIN + serial number (QR code / GS1 Digital Link)
- * Returns product + batch + current stock levels.
- *
- * Resolution order: per-unit serial first (inventory_units.unit_serial),
- * then batch-level serial (product_batches.serial_number).
+ * Returns product + batch + current stock levels
  */
 export async function lookupByGtinSerial(gtin: string, serial: string): Promise<GtinSerialLookupResult | null> {
   const tenantId = await getCurrentTenantId();
@@ -174,39 +140,12 @@ export async function lookupByGtinSerial(gtin: string, serial: string): Promise<
 
   if (!product) return null;
 
-  // 1. Try per-unit lookup first (inventory_units)
-  const { data: unitRow } = await supabase
-    .from('inventory_units')
-    .select('id, unit_serial, status, location_id, bin_location, batch_id, product_id, wh_locations(name)')
-    .eq('tenant_id', tenantId)
-    .eq('product_id', product.id)
-    .eq('unit_serial', serial)
-    .maybeSingle();
-
-  let batchId: string | null = null;
-  let unit: ScannerUnit | undefined;
-
-  if (unitRow) {
-    batchId = unitRow.batch_id;
-    unit = transformScannerUnit(unitRow);
-  } else {
-    // 2. Fall back to batch-level serial
-    const { data: batchRow } = await supabase
-      .from('product_batches')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .eq('product_id', product.id)
-      .eq('serial_number', serial)
-      .maybeSingle();
-    if (batchRow) batchId = batchRow.id;
-  }
-
-  if (!batchId) return null;
-
   const { data: batch } = await supabase
     .from('product_batches')
-    .select('id, serial_number, batch_number, status, quantity, production_date, expiration_date, unit_tracking_enabled')
-    .eq('id', batchId)
+    .select('id, serial_number, batch_number, status, quantity, production_date, expiration_date')
+    .eq('tenant_id', tenantId)
+    .eq('product_id', product.id)
+    .eq('serial_number', serial)
     .maybeSingle();
 
   if (!batch) return null;
@@ -221,78 +160,43 @@ export async function lookupByGtinSerial(gtin: string, serial: string): Promise<
     product: transformScannerProduct(product),
     batch: transformScannerBatch(batch),
     stockLevels: (stockRows || []).map(transformStockLevel),
-    unit,
   };
 }
 
 /**
- * Lookup by serial number directly (fallback when no GTIN).
- *
- * Resolution order: per-unit serial first (inventory_units.unit_serial),
- * then batch-level serial (product_batches.serial_number).
+ * Lookup by serial number directly (fallback when no GTIN)
  */
 export async function lookupBySerial(serial: string): Promise<SerialLookupResult | null> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return null;
 
-  // 1. Try per-unit lookup first
-  const { data: unitRow } = await supabase
-    .from('inventory_units')
-    .select('id, unit_serial, status, location_id, bin_location, batch_id, product_id, wh_locations(name)')
+  const { data: batch } = await supabase
+    .from('product_batches')
+    .select('id, serial_number, batch_number, status, quantity, production_date, expiration_date, product_id')
     .eq('tenant_id', tenantId)
-    .eq('unit_serial', serial)
+    .eq('serial_number', serial)
     .maybeSingle();
 
-  let batchId: string | null = null;
-  let productId: string | null = null;
-  let unit: ScannerUnit | undefined;
+  if (!batch) return null;
 
-  if (unitRow) {
-    batchId = unitRow.batch_id;
-    productId = unitRow.product_id;
-    unit = transformScannerUnit(unitRow);
-  } else {
-    // 2. Fall back to batch-level serial
-    const { data: batchRow } = await supabase
-      .from('product_batches')
-      .select('id, product_id')
-      .eq('tenant_id', tenantId)
-      .eq('serial_number', serial)
-      .maybeSingle();
-    if (batchRow) {
-      batchId = batchRow.id;
-      productId = batchRow.product_id;
-    }
-  }
+  const { data: product } = await supabase
+    .from('products')
+    .select('id, name, gtin, image_url, manufacturer, category')
+    .eq('id', batch.product_id)
+    .single();
 
-  if (!batchId || !productId) return null;
-
-  const [batchRes, productRes] = await Promise.all([
-    supabase
-      .from('product_batches')
-      .select('id, serial_number, batch_number, status, quantity, production_date, expiration_date, unit_tracking_enabled')
-      .eq('id', batchId)
-      .single(),
-    supabase
-      .from('products')
-      .select('id, name, gtin, image_url, manufacturer, category')
-      .eq('id', productId)
-      .single(),
-  ]);
-
-  if (!batchRes.data || !productRes.data) return null;
+  if (!product) return null;
 
   const { data: stockRows } = await supabase
     .from('wh_stock_levels')
     .select('*, products(name), product_batches(serial_number), wh_locations(name, code)')
     .eq('tenant_id', tenantId)
-    .eq('batch_id', batchRes.data.id);
+    .eq('batch_id', batch.id);
 
   return {
-    product: transformScannerProduct(productRes.data),
-    batch: transformScannerBatch(batchRes.data),
+    product: transformScannerProduct(product),
+    batch: transformScannerBatch(batch),
     stockLevels: (stockRows || []).map(transformStockLevel),
-    unit,
   };
 }
 

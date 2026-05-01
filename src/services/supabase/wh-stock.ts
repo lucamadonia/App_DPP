@@ -15,44 +15,6 @@ import type {
   PendingAction,
 } from '@/types/warehouse';
 
-// ============================================
-// Auto-export to Shopify (debounced)
-// ============================================
-//
-// In bulk-scan mode, dozens of receipts can land in seconds. We coalesce
-// them into a single Shopify export ~3s after the last scan so we don't
-// hammer the Shopify API. The debounce is module-scoped because the
-// scanner page lives in a single browser tab.
-
-let shopifyExportTimer: ReturnType<typeof setTimeout> | null = null;
-const SHOPIFY_EXPORT_DEBOUNCE_MS = 3000;
-
-async function scheduleShopifyExportDebounced(): Promise<void> {
-  // Read tenant settings to check the toggle. Only fires if enabled.
-  try {
-    const { getCurrentTenant } = await import('./tenants');
-    const tenant = await getCurrentTenant();
-    const cfg = tenant?.settings?.shopifyIntegration;
-    if (!cfg?.enabled) return;
-    if (cfg.syncConfig?.autoExportStockOnReceipt === false) return;
-
-    // Reset the timer — bulk scans coalesce into one final export
-    if (shopifyExportTimer) clearTimeout(shopifyExportTimer);
-    shopifyExportTimer = setTimeout(async () => {
-      shopifyExportTimer = null;
-      try {
-        const { syncInventoryExport } = await import('./shopify-integration');
-        await syncInventoryExport();
-      } catch (err) {
-        // Fire-and-forget — never block the user on a failed export
-        console.warn('Auto Shopify stock export failed:', err);
-      }
-    }, SHOPIFY_EXPORT_DEBOUNCE_MS);
-  } catch (err) {
-    console.warn('Could not schedule Shopify auto-export:', err);
-  }
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformStockLevel(row: any): WhStockLevel {
   return {
@@ -267,14 +229,6 @@ export async function createGoodsReceipt(params: {
   zone?: string;
   referenceNumber?: string;
   notes?: string;
-  /**
-   * When provided, also marks the corresponding inventory_units row as
-   * 'received' (or 'damaged' / 'quarantine' if the corresponding qty fields
-   * are set) and validates that the unit isn't already received.
-   *
-   * Per-unit receipts must have quantity === 1.
-   */
-  unitId?: string;
 }): Promise<WhStockLevel> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) throw new Error('No tenant');
@@ -283,55 +237,6 @@ export async function createGoodsReceipt(params: {
   const userId = userData?.user?.id;
 
   const goodQty = params.quantity - (params.quantityDamaged || 0) - (params.quantityQuarantine || 0);
-
-  // ============================================
-  // PER-UNIT VALIDATION & UPDATE
-  // ============================================
-  if (params.unitId) {
-    if (params.quantity !== 1) {
-      throw new Error('Per-unit goods receipt requires quantity = 1');
-    }
-
-    // Read current unit state — reject duplicate scans BEFORE any wh_stock_levels write
-    const { data: unitRow, error: unitErr } = await supabase
-      .from('inventory_units')
-      .select('id, unit_serial, status, batch_id, product_id, tenant_id')
-      .eq('id', params.unitId)
-      .single();
-
-    if (unitErr || !unitRow) throw new Error('Inventory unit not found');
-    if (unitRow.tenant_id !== tenantId) throw new Error('Unit belongs to a different tenant');
-    if (unitRow.batch_id !== params.batchId || unitRow.product_id !== params.productId) {
-      throw new Error('Unit does not belong to the supplied batch/product');
-    }
-
-    if (unitRow.status === 'received') {
-      throw new Error(`UNIT_ALREADY_RECEIVED:${unitRow.unit_serial}`);
-    }
-    if (unitRow.status === 'shipped') {
-      throw new Error(`UNIT_ALREADY_SHIPPED:${unitRow.unit_serial}`);
-    }
-
-    // Decide target status: damaged > quarantine > received
-    let unitStatus: 'received' | 'damaged' | 'quarantine' = 'received';
-    if ((params.quantityDamaged || 0) > 0) unitStatus = 'damaged';
-    else if ((params.quantityQuarantine || 0) > 0) unitStatus = 'quarantine';
-
-    // Update the unit row first (transactional intent: if this fails, no stock writes happen)
-    const { error: updErr } = await supabase
-      .from('inventory_units')
-      .update({
-        status: unitStatus,
-        location_id: params.locationId,
-        bin_location: params.binLocation || null,
-        received_at: new Date().toISOString(),
-        received_by: userId || null,
-        notes: params.notes || null,
-      })
-      .eq('id', params.unitId);
-
-    if (updErr) throw new Error(`Failed to update unit status: ${updErr.message}`);
-  }
 
   // Check if stock row exists (match bin_location when provided for section-level tracking)
   let existingQuery = supabase
@@ -406,9 +311,6 @@ export async function createGoodsReceipt(params: {
     notes: params.notes || null,
     performed_by: userId,
   });
-
-  // Fire-and-forget: schedule a debounced Shopify stock export (no await)
-  void scheduleShopifyExportDebounced();
 
   return stockLevel;
 }

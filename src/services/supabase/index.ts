@@ -488,22 +488,6 @@ export {
   getWarehouseStats,
 } from './wh-stock';
 
-// Warehouse - Inventory Units (per-unit serial tracking)
-export {
-  getUnitsByBatch,
-  getUnitsPaginated,
-  getUnitBySerial,
-  getUnitById,
-  getBatchUnitStats,
-  generateExpectedUnits,
-  addExpectedUnits,
-  markUnitReceived,
-  markUnitShipped,
-  updateUnitStatus,
-  deleteUnit,
-  deleteExpectedUnitsOfBatch,
-} from './inventory-units';
-
 // Warehouse - Shipments
 export {
   getShipments,

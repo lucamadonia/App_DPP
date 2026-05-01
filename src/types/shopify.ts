@@ -24,13 +24,6 @@ export interface ShopifySyncConfig {
   autoPushRefunds: boolean;
   /** Accept Shopify as source-of-truth for inventory (dangerous — default off) */
   importInventory: boolean;
-  /**
-   * Auto-push stock to Shopify after every goods receipt (debounced ~3s for bulk scans).
-   * Default OFF — most warehouse workflows require an explicit confirmation step
-   * (review damages, count, etc.) before pushing live stock to the storefront.
-   * Use the manual "Push to Shopify" button on the scanner session panel instead.
-   */
-  autoExportStockOnReceipt: boolean;
   /** Only import orders matching these financial statuses */
   orderStatusFilter: ShopifyOrderFinancialStatus[];
 }
@@ -65,7 +58,6 @@ export const DEFAULT_SHOPIFY_SYNC_CONFIG: ShopifySyncConfig = {
   autoExportFulfillment: true,
   autoPushRefunds: true,
   importInventory: false,
-  autoExportStockOnReceipt: false,
   orderStatusFilter: ['paid'],
 };
 

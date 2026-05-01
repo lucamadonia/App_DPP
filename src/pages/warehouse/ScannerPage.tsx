@@ -4,7 +4,7 @@
  * Supports USB/Bluetooth hardware scanners + camera fallback
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -38,7 +38,7 @@ import { QuickPickSheet } from '@/components/warehouse/scanner/QuickPickSheet';
 import { ScanSessionPanel } from '@/components/warehouse/scanner/ScanSessionPanel';
 import { BulkSetupSheet } from '@/components/warehouse/scanner/BulkSetupSheet';
 import { BulkModeControls } from '@/components/warehouse/scanner/BulkModeControls';
-import type { ScannerProduct, ScannerBatch, ScannerUnit, GtinLookupResult, GtinSerialLookupResult } from '@/services/supabase/wh-scanner';
+import type { ScannerProduct, ScannerBatch, GtinLookupResult, GtinSerialLookupResult } from '@/services/supabase/wh-scanner';
 import type { WhStockLevel } from '@/types/warehouse';
 
 type ScanState = 'idle' | 'looking_up' | 'result' | 'action' | 'processing' | 'success' | 'error';
@@ -59,8 +59,6 @@ export function ScannerPage() {
   const [batch, setBatch] = useState<ScannerBatch | null>(null);
   const [batches, setBatches] = useState<ScannerBatch[]>([]);
   const [stockLevels, setStockLevels] = useState<WhStockLevel[]>([]);
-  // Set when the scanned code matched an inventory_units row (per-unit tracking)
-  const [scannedUnit, setScannedUnit] = useState<ScannerUnit | null>(null);
 
   // Action sheet
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -71,38 +69,6 @@ export function ScannerPage() {
   const [bulkLocationId, setBulkLocationId] = useState('');
   const [bulkLocationName, setBulkLocationName] = useState('');
   const [bulkQuantity, setBulkQuantity] = useState(1);
-
-  // Shopify connection — used to decide whether to show the "Confirm & push" button
-  const [shopifyConnected, setShopifyConnected] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { getShopifySettings } = await import('@/services/supabase/shopify-integration');
-        const settings = await getShopifySettings();
-        if (!cancelled) {
-          setShopifyConnected(Boolean(settings?.enabled && settings?.syncConfig?.exportStockLevels));
-        }
-      } catch {
-        // silent — Shopify just won't show the button
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const handlePushShopify = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const { syncInventoryExport } = await import('@/services/supabase/shopify-integration');
-      const res = await syncInventoryExport();
-      if (res?.success === false) {
-        return { success: false, error: res.error || 'Shopify reported an error' };
-      }
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Push failed' };
-    }
-  }, []);
 
   // Session
   const session = useScanSession();
@@ -116,7 +82,6 @@ export function ScannerPage() {
     setBatch(null);
     setBatches([]);
     setStockLevels([]);
-    setScannedUnit(null);
     setErrorMessage('');
     setSheetOpen(false);
     setUnknownGtin(null);
@@ -137,45 +102,27 @@ export function ScannerPage() {
     resetTimerRef.current = setTimeout(resetToIdle, 1500);
   }, [resetToIdle]);
 
-  // Translate machine-readable error markers from wh-stock to friendly user text
-  const formatGoodsReceiptError = useCallback((err: unknown): string => {
-    const msg = err instanceof Error ? err.message : String(err);
-    const alreadyReceived = msg.match(/^UNIT_ALREADY_RECEIVED:(.+)$/);
-    if (alreadyReceived) {
-      return t('Unit {{serial}} is already received — duplicate scan blocked', { serial: alreadyReceived[1] });
-    }
-    const alreadyShipped = msg.match(/^UNIT_ALREADY_SHIPPED:(.+)$/);
-    if (alreadyShipped) {
-      return t('Unit {{serial}} is already shipped', { serial: alreadyShipped[1] });
-    }
-    return msg || t('Receipt failed');
-  }, [t]);
-
-  // Bulk auto-commit — bypasses action sheet with preset location + quantity.
-  // When `unit` is set (per-unit scan), forces qty=1 and passes unitId.
+  // Bulk auto-commit — bypasses action sheet with preset location + quantity
   const bulkCommit = useCallback(async (
     prod: ScannerProduct,
     bat: ScannerBatch,
     levels: WhStockLevel[],
-    unit?: ScannerUnit,
   ) => {
     if (!bulkLocationId) return;
     setScanState('processing');
     try {
       if (mode === 'in') {
-        const qty = unit ? 1 : bulkQuantity;
         await createGoodsReceipt({
           locationId: bulkLocationId,
           productId: prod.id,
           batchId: bat.id,
-          quantity: qty,
-          unitId: unit?.id,
+          quantity: bulkQuantity,
         });
         session.addEntry({
           mode: 'in',
           productName: prod.name,
-          batchSerial: unit ? unit.unitSerial : bat.serialNumber,
-          quantity: qty,
+          batchSerial: bat.serialNumber,
+          quantity: bulkQuantity,
           locationName: bulkLocationName,
         });
       } else {
@@ -184,22 +131,21 @@ export function ScannerPage() {
           showError(t('No stock available for this batch'));
           return;
         }
-        const qty = unit ? 1 : bulkQuantity;
-        await quickStockPick({ stockLevelId: stockLevel.id, quantity: qty });
+        await quickStockPick({ stockLevelId: stockLevel.id, quantity: bulkQuantity });
         session.addEntry({
           mode: 'out',
           productName: prod.name,
-          batchSerial: unit ? unit.unitSerial : bat.serialNumber,
-          quantity: qty,
+          batchSerial: bat.serialNumber,
+          quantity: bulkQuantity,
           locationName: bulkLocationName,
           stockLevelId: stockLevel.id,
         });
       }
       showSuccess();
     } catch (err) {
-      showError(mode === 'in' ? formatGoodsReceiptError(err) : (err instanceof Error ? err.message : t('Pick failed')));
+      showError(err instanceof Error ? err.message : t(mode === 'in' ? 'Receipt failed' : 'Pick failed'));
     }
-  }, [mode, bulkLocationId, bulkLocationName, bulkQuantity, session, showSuccess, showError, t, formatGoodsReceiptError]);
+  }, [mode, bulkLocationId, bulkLocationName, bulkQuantity, session, showSuccess, showError, t]);
 
   // Main scan handler
   const handleScan = useCallback(async (rawValue: string) => {
@@ -218,25 +164,15 @@ export function ScannerPage() {
         // QR code / GS1 Digital Link — exact match
         result = await lookupByGtinSerial(parsed.gtin, parsed.serial);
         if (result && 'batch' in result) {
-          // Pre-flight check for per-unit duplicate scan (IN mode)
-          if (mode === 'in' && result.unit && result.unit.status === 'received') {
-            showError(t('Unit {{serial}} is already received — duplicate scan blocked', { serial: result.unit.unitSerial }));
-            return;
-          }
-          if (mode === 'in' && result.unit && result.unit.status === 'shipped') {
-            showError(t('Unit {{serial}} is already shipped', { serial: result.unit.unitSerial }));
-            return;
-          }
           setProduct(result.product);
           setBatch(result.batch);
           setStockLevels(result.stockLevels);
-          setScannedUnit(result.unit || null);
           setBatches([]);
           setScanState('result');
           playSuccessBeep();
           triggerHaptic(50);
           if (bulkMode && bulkLocationId) {
-            await bulkCommit(result.product, result.batch, result.stockLevels, result.unit);
+            await bulkCommit(result.product, result.batch, result.stockLevels);
           } else {
             setTimeout(() => setSheetOpen(true), 300);
           }
@@ -293,25 +229,15 @@ export function ScannerPage() {
         // Direct serial lookup
         const serialResult = await lookupBySerial(parsed.serial);
         if (serialResult) {
-          // Pre-flight check for per-unit duplicate scan (IN mode)
-          if (mode === 'in' && serialResult.unit && serialResult.unit.status === 'received') {
-            showError(t('Unit {{serial}} is already received — duplicate scan blocked', { serial: serialResult.unit.unitSerial }));
-            return;
-          }
-          if (mode === 'in' && serialResult.unit && serialResult.unit.status === 'shipped') {
-            showError(t('Unit {{serial}} is already shipped', { serial: serialResult.unit.unitSerial }));
-            return;
-          }
           setProduct(serialResult.product);
           setBatch(serialResult.batch);
           setStockLevels(serialResult.stockLevels);
-          setScannedUnit(serialResult.unit || null);
           setBatches([]);
           setScanState('result');
           playSuccessBeep();
           triggerHaptic(50);
           if (bulkMode && bulkLocationId) {
-            await bulkCommit(serialResult.product, serialResult.batch, serialResult.stockLevels, serialResult.unit);
+            await bulkCommit(serialResult.product, serialResult.batch, serialResult.stockLevels);
           } else {
             setTimeout(() => setSheetOpen(true), 300);
           }
@@ -323,7 +249,7 @@ export function ScannerPage() {
     } catch (err) {
       showError(err instanceof Error ? err.message : t('Lookup failed'));
     }
-  }, [scanState, showError, t, bulkMode, bulkLocationId, bulkCommit, mode]);
+  }, [scanState, showError, showSuccess, t, bulkMode, bulkLocationId, bulkCommit]);
 
   // Batch selection (when GTIN-only scan returned multiple)
   const handleSelectBatch = useCallback(async (selectedBatch: ScannerBatch) => {
@@ -342,28 +268,25 @@ export function ScannerPage() {
     if (!product || !batch) return;
     setScanState('processing');
     try {
-      // Per-unit scan forces qty=1 — ignore any value from the sheet
-      const finalQty = scannedUnit ? 1 : quantity;
       await createGoodsReceipt({
         locationId,
         productId: product.id,
         batchId: batch.id,
-        quantity: finalQty,
-        unitId: scannedUnit?.id,
+        quantity,
       });
       session.addEntry({
         mode: 'in',
         productName: product.name,
-        batchSerial: scannedUnit ? scannedUnit.unitSerial : batch.serialNumber,
-        quantity: finalQty,
+        batchSerial: batch.serialNumber,
+        quantity,
         locationName,
       });
       setSheetOpen(false);
       showSuccess();
     } catch (err) {
-      showError(formatGoodsReceiptError(err));
+      showError(err instanceof Error ? err.message : t('Receipt failed'));
     }
-  }, [product, batch, scannedUnit, session, showSuccess, showError, formatGoodsReceiptError]);
+  }, [product, batch, session, showSuccess, showError, t]);
 
   // Pick confirmation
   const handlePickConfirm = useCallback(async (stockLevelId: string, locationName: string, quantity: number) => {
@@ -586,27 +509,6 @@ export function ScannerPage() {
             </div>
           )}
 
-          {/* Per-unit scan banner */}
-          {scanState === 'result' && scannedUnit && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 backdrop-blur">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-emerald-300/80">
-                    {t('Individual unit scanned')}
-                  </div>
-                  <div className="font-mono text-lg font-semibold text-white mt-1">
-                    {scannedUnit.unitSerial}
-                  </div>
-                  <div className="text-xs text-emerald-200/70 mt-1">
-                    {t('Status')}: <span className="font-medium">{scannedUnit.status}</span>
-                    {' · '}
-                    {t('Quantity is locked to 1')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Scan result */}
           {scanState === 'result' && product && (
             <ScanResultCard
@@ -628,7 +530,6 @@ export function ScannerPage() {
             onUndo={handleUndo}
             onClear={session.clearSession}
             undoDisabled={session.activeEntries.length === 0}
-            onPushShopify={shopifyConnected ? handlePushShopify : undefined}
           />
         </div>
       </div>
