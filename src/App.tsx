@@ -98,6 +98,7 @@ const SuppliersPage = lazy(() => import('@/pages/SuppliersPage').then(m => ({ de
 const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetailPage').then(m => ({ default: m.SupplierDetailPage })));
 const SupplierInvitationsPage = lazy(() => import('@/pages/SupplierInvitationsPage').then(m => ({ default: m.SupplierInvitationsPage })));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ActivityLogPage = lazy(() => import('@/pages/ActivityLogPage').then(m => ({ default: m.ActivityLogPage })));
 const BillingPage = lazy(() => import('@/pages/BillingPage').then(m => ({ default: m.BillingPage })));
 // Admin Portal
 const AdminGuard = lazy(() => import('@/components/admin/AdminGuard').then(m => ({ default: m.AdminGuard })));
@@ -521,6 +522,7 @@ function NormalAppRoutes() {
           <Route path="settings/users" element={<SettingsPage tab="users" />} />
           <Route path="settings/api-keys" element={<SettingsPage tab="api" />} />
           <Route path="settings/billing" element={<BillingPage />} />
+          <Route path="settings/activity-log" element={<ActivityLogPage />} />
 
           {/* Help */}
           <Route path="help" element={<TrainingGuidePage />} />
