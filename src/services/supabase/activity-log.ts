@@ -94,9 +94,11 @@ export async function getActivityLogPaginated(filter?: ActivityLogFilter): Promi
   const page = filter?.page || 1;
   const pageSize = filter?.pageSize || 50;
 
+  // No FK between activity_log.user_id and profiles.id, so we can't use
+  // PostgREST's embedded select. Fetch the rows and join client-side.
   let query = supabase
     .from('activity_log')
-    .select('*, profiles(email, full_name)', { count: 'exact' })
+    .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId);
 
   if (filter?.action) query = query.eq('action', filter.action);
@@ -117,12 +119,30 @@ export async function getActivityLogPaginated(filter?: ActivityLogFilter): Promi
     return { data: [], total: 0, page, pageSize, distinctActions: [], distinctEntityTypes: [], distinctUsers: [] };
   }
 
+  // Resolve profile info separately
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let results = (data || []).map((row: any) => ({
-    ...transformActivityLogEntry(row),
-    actorEmail: row.profiles?.email || undefined,
-    actorName: row.profiles?.full_name || undefined,
-  })) as ActivityLogEntry[];
+  const userIds = [...new Set((data || []).map((r: any) => r.user_id).filter(Boolean))];
+  const profileMap = new Map<string, { email?: string; name?: string }>();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, name')
+      .in('id', userIds);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const p of (profiles || []) as any[]) {
+      profileMap.set(p.id, { email: p.email, name: p.name });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let results = (data || []).map((row: any) => {
+    const prof = row.user_id ? profileMap.get(row.user_id) : undefined;
+    return {
+      ...transformActivityLogEntry(row),
+      actorEmail: prof?.email,
+      actorName: prof?.name,
+    };
+  }) as ActivityLogEntry[];
 
   if (filter?.search) {
     const q = filter.search.toLowerCase();
@@ -136,19 +156,35 @@ export async function getActivityLogPaginated(filter?: ActivityLogFilter): Promi
   // Distinct values — sample wider window so dropdowns aren't empty after filtering
   const { data: sample } = await supabase
     .from('activity_log')
-    .select('action, entity_type, user_id, profiles(email)')
+    .select('action, entity_type, user_id')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(1000);
 
   const distinctActionsSet = new Set<string>();
   const distinctEntityTypesSet = new Set<string>();
-  const distinctUsersMap = new Map<string, string | undefined>();
+  const distinctUserIds = new Set<string>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const row of (sample || []) as any[]) {
     if (row.action) distinctActionsSet.add(row.action);
     if (row.entity_type) distinctEntityTypesSet.add(row.entity_type);
-    if (row.user_id) distinctUsersMap.set(row.user_id, row.profiles?.email);
+    if (row.user_id) distinctUserIds.add(row.user_id);
+  }
+
+  // Resolve emails for the distinct user list
+  const distinctUsersMap = new Map<string, string | undefined>();
+  if (distinctUserIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .in('id', [...distinctUserIds]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const p of (profiles || []) as any[]) {
+      distinctUsersMap.set(p.id, p.email);
+    }
+    for (const id of distinctUserIds) {
+      if (!distinctUsersMap.has(id)) distinctUsersMap.set(id, undefined);
+    }
   }
 
   return {
