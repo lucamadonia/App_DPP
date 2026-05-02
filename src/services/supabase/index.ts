@@ -235,8 +235,10 @@ export {
 // Activity Log
 export {
   getActivityLog,
+  getActivityLogPaginated,
   logActivity,
 } from './activity-log';
+export type { ActivityLogFilter, PaginatedActivityLog } from './activity-log';
 
 // Compliance
 export {

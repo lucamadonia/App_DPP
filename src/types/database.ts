@@ -786,6 +786,9 @@ export interface ActivityLogEntry {
   entityId?: string;
   details: Record<string, unknown>;
   createdAt: string;
+  // Joined fields (optional)
+  actorEmail?: string;
+  actorName?: string;
 }
 
 // ============================================

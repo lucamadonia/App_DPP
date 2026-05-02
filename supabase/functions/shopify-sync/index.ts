@@ -953,6 +953,42 @@ async function handleSyncInventoryImport(supabase: any, tenantId: string, userId
         for (const level of levels) {
           const mapping = inventoryItemMap.get(level.inventory_item_id);
           if (!mapping) { counts.skipped++; counts.processed++; continue; }
+
+          // Capture the current DPP stock value so we can record what
+          // Shopify is asking us to overwrite (even if we don't actually
+          // overwrite — that's controlled by syncConfig.importInventory).
+          let stockQuery = supabase
+            .from('wh_stock_levels')
+            .select('quantity_available')
+            .eq('tenant_id', tenantId)
+            .eq('product_id', mapping.product_id)
+            .eq('location_id', locMap.location_id);
+          if (mapping.batch_id) stockQuery = stockQuery.eq('batch_id', mapping.batch_id);
+          const { data: stockRows } = await stockQuery;
+          // deno-lint-ignore no-explicit-any
+          const dppValue = (stockRows || []).reduce((s: number, r: any) => s + (r.quantity_available || 0), 0);
+
+          await supabase.from('activity_log').insert({
+            tenant_id: tenantId,
+            user_id: userId || null,
+            action: 'shopify.inventory_import.observed',
+            entity_type: 'shopify_product_map',
+            entity_id: mapping.id,
+            details: {
+              direction: 'shopify_to_dpp',
+              shopify_product_title: mapping.shopify_product_title,
+              shopify_variant_title: mapping.shopify_variant_title,
+              shopify_variant_id: mapping.shopify_variant_id,
+              shopify_location_name: locMap.shopify_location_name,
+              shopify_value: level.available || 0,
+              dpp_value_before: dppValue,
+              would_overwrite: level.available !== dppValue,
+              actually_written: false,
+              note: 'Import is observe-only in current implementation; DPP stock untouched.',
+              sync_log_id: syncLog.id,
+            },
+          });
+
           counts.processed++;
           counts.updated++;
         }
@@ -993,6 +1029,33 @@ async function handleSyncInventoryExport(supabase: any, tenantId: string, userId
       return json({ success: true, data: { counts, message: 'No export mappings' } });
     }
 
+    // Pre-fetch current Shopify inventory levels so we can audit "what
+    // value we overwrote". One batched GET per location, 50 items at a time.
+    const currentShopifyLevels = new Map<string, number>();
+    // deno-lint-ignore no-explicit-any
+    for (const locMap of locationMaps) {
+      const itemIds = (productMaps || [])
+        // deno-lint-ignore no-explicit-any
+        .filter((m: any) => m.shopify_inventory_item_id)
+        // deno-lint-ignore no-explicit-any
+        .map((m: any) => m.shopify_inventory_item_id);
+      for (let i = 0; i < itemIds.length; i += 50) {
+        const slice = itemIds.slice(i, i + 50);
+        try {
+          const { body } = await shopifyApi(
+            config.shopDomain, config.accessToken, config.apiVersion,
+            `inventory_levels.json?location_ids=${locMap.shopify_location_id}&inventory_item_ids=${slice.join(',')}`,
+          );
+          // deno-lint-ignore no-explicit-any
+          for (const lvl of (((body as any)?.inventory_levels) || [])) {
+            currentShopifyLevels.set(`${locMap.shopify_location_id}:${lvl.inventory_item_id}`, lvl.available || 0);
+          }
+        } catch {
+          // If pre-fetch fails for a batch, audit will just record null for previous values
+        }
+      }
+    }
+
     // deno-lint-ignore no-explicit-any
     for (const prodMap of productMaps) {
       if (!prodMap.shopify_inventory_item_id) { counts.skipped++; continue; }
@@ -1000,14 +1063,20 @@ async function handleSyncInventoryExport(supabase: any, tenantId: string, userId
       for (const locMap of locationMaps) {
         counts.total++;
         try {
-          const { data: stock } = await supabase
+          // Build stock query — if mapping is batch-specific, filter by batch_id;
+          // otherwise sum all batches. Always sum across multiple bins.
+          let stockQuery = supabase
             .from('wh_stock_levels')
             .select('quantity_available')
             .eq('tenant_id', tenantId)
             .eq('product_id', prodMap.product_id)
-            .eq('location_id', locMap.location_id)
-            .maybeSingle();
-          const available = stock?.quantity_available || 0;
+            .eq('location_id', locMap.location_id);
+          if (prodMap.batch_id) {
+            stockQuery = stockQuery.eq('batch_id', prodMap.batch_id);
+          }
+          const { data: stockRows } = await stockQuery;
+          // deno-lint-ignore no-explicit-any
+          const available = (stockRows || []).reduce((sum: number, row: any) => sum + (row.quantity_available || 0), 0);
 
           await shopifyApi(
             config.shopDomain, config.accessToken, config.apiVersion,
@@ -1020,6 +1089,34 @@ async function handleSyncInventoryExport(supabase: any, tenantId: string, userId
           );
 
           await supabase.from('shopify_product_map').update({ last_synced_at: new Date().toISOString() }).eq('id', prodMap.id);
+
+          // Audit trail — captures what we overwrote (Shopify before-value)
+          // and what we pushed (DPP after-value). One row per variant export.
+          const previousShopifyValue = currentShopifyLevels.get(
+            `${locMap.shopify_location_id}:${prodMap.shopify_inventory_item_id}`,
+          );
+          await supabase.from('activity_log').insert({
+            tenant_id: tenantId,
+            user_id: userId || null,
+            action: 'shopify.inventory_export',
+            entity_type: 'shopify_product_map',
+            entity_id: prodMap.id,
+            details: {
+              direction: 'dpp_to_shopify',
+              shopify_product_title: prodMap.shopify_product_title,
+              shopify_variant_title: prodMap.shopify_variant_title,
+              shopify_variant_id: prodMap.shopify_variant_id,
+              shopify_location_name: locMap.shopify_location_name,
+              shopify_location_id: locMap.shopify_location_id,
+              product_id: prodMap.product_id,
+              batch_id: prodMap.batch_id || null,
+              shopify_value_before: previousShopifyValue ?? null,
+              dpp_value_pushed: available,
+              changed: previousShopifyValue !== undefined ? previousShopifyValue !== available : null,
+              sync_log_id: syncLog.id,
+            },
+          });
+
           counts.updated++;
           counts.processed++;
         } catch (exportErr) {

@@ -33,6 +33,7 @@ import {
   BookOpen,
   Handshake,
   Store,
+  History,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -255,6 +256,7 @@ export function AppSidebar() {
         { title: t('Users & Roles'), url: '/settings/users', icon: Users },
         { title: t('API Keys'), url: '/settings/api-keys', icon: Key },
         { title: t('Billing'), url: '/settings/billing', icon: CreditCard },
+        { title: t('Activity Log'), url: '/settings/activity-log', icon: History },
       ],
     },
     ...(isSuperAdmin ? [{
