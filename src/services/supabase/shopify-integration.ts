@@ -176,10 +176,20 @@ export async function updateShopifySyncConfig(syncConfig: Partial<ShopifySyncCon
 }
 
 /**
- * Save access token securely via Edge Function
+ * Save access token securely via Edge Function. Auto-registers webhooks
+ * after a successful save so live order/inventory events flow without
+ * the user having to find the Webhook Setup tab.
  */
 export async function saveShopifyAccessToken(shopDomain: string, accessToken: string): Promise<void> {
   await callEdgeFunction('save_token', { shopDomain, accessToken });
+
+  // Best-effort webhook registration — never let it block the connect flow.
+  // The Webhook Setup tab also exposes a manual button as a fallback.
+  try {
+    await callEdgeFunction('register_webhooks');
+  } catch (err) {
+    console.warn('Auto webhook registration failed; user can retry from Webhook Setup tab:', err);
+  }
 }
 
 /**

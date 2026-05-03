@@ -657,6 +657,12 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
             if (reservationWarnings.length > 0) console.warn(`Stock reservation warnings for ${orderRef}:`, reservationWarnings);
           }
 
+          // Bridge to commerce_orders for the Mega Dashboard. Best-effort —
+          // failures here are logged but don't fail the sync.
+          // deno-lint-ignore no-explicit-any
+          await bridgeOrderToCommerce(supabase, tenantId, order, productMaps as any[], { source: backfill ? 'sync_backfill' : 'sync_manual' })
+            .catch((err) => console.error(`bridgeOrderToCommerce failed for ${orderRef}:`, err));
+
           counts.created++;
           counts.processed++;
         } catch (orderErr) {
@@ -1729,4 +1735,114 @@ async function reserveStockForItem(
     reference_number: orderRef,
     notes: `Auto-reserved via Shopify sync`,
   });
+}
+
+// ============================================
+// COMMERCE ORDERS BRIDGE
+// ============================================
+//
+// Mirror of shopify-webhook/index.ts:bridgeOrderToCommerce. Keep in
+// sync until edge functions can share modules.
+
+// deno-lint-ignore no-explicit-any
+async function bridgeOrderToCommerce(supabase: any, tenantId: string, order: any, productMaps: any[], opts: { source: string }) {
+  // deno-lint-ignore no-explicit-any
+  const variantMap = new Map<number, any>((productMaps || []).map((m: any) => [m.shopify_variant_id, m]));
+
+  const addr = order.shipping_address || order.billing_address || {};
+  const customerName = [addr.first_name, addr.last_name].filter(Boolean).join(' ')
+    || [order.customer?.first_name, order.customer?.last_name].filter(Boolean).join(' ')
+    || null;
+
+  const itemCount = (order.line_items || []).reduce((sum: number, li: { quantity: number }) => sum + (li.quantity || 0), 0);
+
+  let orderStatus: string = 'open';
+  if (order.cancelled_at) orderStatus = 'cancelled';
+  else if (order.closed_at) orderStatus = 'closed';
+
+  const orderRow = {
+    tenant_id: tenantId,
+    platform: 'shopify',
+    external_order_id: String(order.id),
+    external_order_number: order.name || (order.order_number ? `#${order.order_number}` : null),
+    external_customer_id: order.customer?.id ? String(order.customer.id) : null,
+    external_url: order.order_status_url || null,
+    currency: order.currency || 'EUR',
+    subtotal_amount: Number(order.subtotal_price ?? order.current_subtotal_price ?? 0),
+    shipping_amount: Number(order.total_shipping_price_set?.shop_money?.amount ?? 0),
+    tax_amount: Number(order.total_tax ?? order.current_total_tax ?? 0),
+    discount_amount: Number(order.total_discounts ?? order.current_total_discounts ?? 0),
+    total_amount: Number(order.total_price ?? order.current_total_price ?? 0),
+    customer_email: order.email || order.customer?.email || null,
+    customer_name: customerName,
+    customer_country: addr.country_code || null,
+    customer_country_name: addr.country || null,
+    customer_city: addr.city || null,
+    customer_postal_code: addr.zip || null,
+    financial_status: order.financial_status || null,
+    fulfillment_status: order.fulfillment_status || 'unfulfilled',
+    order_status: orderStatus,
+    is_test: order.test === true,
+    item_count: itemCount,
+    placed_at: order.created_at || order.processed_at || new Date().toISOString(),
+    paid_at: (order.financial_status === 'paid' && order.processed_at) ? order.processed_at : null,
+    fulfilled_at: order.fulfilled_at || null,
+    cancelled_at: order.cancelled_at || null,
+    raw_payload: order,
+    metadata: { source: opts.source },
+  };
+
+  const { data: upserted, error: orderErr } = await supabase
+    .from('commerce_orders')
+    .upsert(orderRow, { onConflict: 'tenant_id,platform,external_order_id' })
+    .select('id')
+    .single();
+
+  if (orderErr || !upserted) {
+    console.error('commerce_orders upsert failed:', orderErr);
+    return;
+  }
+
+  await supabase.from('commerce_order_items').delete().eq('order_id', upserted.id);
+
+  // deno-lint-ignore no-explicit-any
+  const itemRows: any[] = [];
+  let dppLinked = 0;
+  // deno-lint-ignore no-explicit-any
+  for (const li of (order.line_items || [])) {
+    const mapping = variantMap.get(li.variant_id);
+    const productId = mapping?.product_id || null;
+    const batchId = mapping?.batch_id || null;
+    if (productId) dppLinked += li.quantity || 0;
+
+    itemRows.push({
+      tenant_id: tenantId,
+      order_id: upserted.id,
+      external_item_id: li.id ? String(li.id) : null,
+      external_product_id: li.product_id ? String(li.product_id) : null,
+      external_variant_id: li.variant_id ? String(li.variant_id) : null,
+      title: li.title || li.name || 'Item',
+      variant_title: li.variant_title || null,
+      sku: li.sku || null,
+      gtin: null,
+      image_url: null,
+      quantity: li.quantity || 1,
+      unit_price: Number(li.price ?? 0),
+      total_price: Number(li.price ?? 0) * (li.quantity || 1),
+      product_id: productId,
+      batch_id: batchId,
+      match_method: mapping ? 'gtin' : null,
+      match_confidence: mapping ? 1.0 : null,
+    });
+  }
+
+  if (itemRows.length > 0) {
+    const { error: itemErr } = await supabase.from('commerce_order_items').insert(itemRows);
+    if (itemErr) console.error('commerce_order_items insert failed:', itemErr);
+  }
+
+  await supabase
+    .from('commerce_orders')
+    .update({ dpp_linked_count: dppLinked, dpp_total_count: itemCount })
+    .eq('id', upserted.id);
 }
