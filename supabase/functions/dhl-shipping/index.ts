@@ -918,6 +918,10 @@ async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
     return json({ events: [], error: 'Missing token' });
   }
 
+  // BCP-47 language for DHL Track API: 'de' or 'en' (default 'de').
+  const localeRaw = (params?.locale as string | undefined)?.trim().toLowerCase();
+  const locale = localeRaw === 'en' ? 'en' : 'de';
+
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return json({ events: [], error: 'Server misconfigured' });
   }
@@ -947,9 +951,10 @@ async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
   }
 
   try {
-    const trackingUrl = settings.sandbox
-      ? `https://api-sandbox.dhl.com/track/shipments?trackingNumber=${shipment.tracking_number}`
-      : `https://api-eu.dhl.com/track/shipments?trackingNumber=${shipment.tracking_number}`;
+    const base = settings.sandbox
+      ? 'https://api-sandbox.dhl.com/track/shipments'
+      : 'https://api-eu.dhl.com/track/shipments';
+    const trackingUrl = `${base}?trackingNumber=${shipment.tracking_number}&language=${locale}`;
 
     const resp = await fetch(trackingUrl, { headers: { 'DHL-API-Key': settings.apiKey } });
     if (!resp.ok) {
@@ -1025,10 +1030,13 @@ async function handlePublicTracking(params?: Record<string, unknown>) {
   }
 
   // Call DHL Tracking API
+  const localeRaw = (params?.locale as string | undefined)?.trim().toLowerCase();
+  const locale = localeRaw === 'en' ? 'en' : 'de';
   try {
-    const trackingUrl = settings.sandbox
-      ? `https://api-sandbox.dhl.com/track/shipments?trackingNumber=${trackingNumber}`
-      : `https://api-eu.dhl.com/track/shipments?trackingNumber=${trackingNumber}`;
+    const base = settings.sandbox
+      ? 'https://api-sandbox.dhl.com/track/shipments'
+      : 'https://api-eu.dhl.com/track/shipments';
+    const trackingUrl = `${base}?trackingNumber=${trackingNumber}&language=${locale}`;
 
     const resp = await fetch(trackingUrl, {
       headers: { 'DHL-API-Key': settings.apiKey },

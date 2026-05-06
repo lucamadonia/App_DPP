@@ -93,6 +93,11 @@ export function applyPrimaryColor(hexColor: string): boolean {
   root.style.setProperty('--sidebar-primary', normalizedHex);
   root.style.setProperty('--sidebar-ring', normalizedHex);
 
+  // Public tracking page accents (aurora blobs, gradient borders, ripple)
+  root.style.setProperty('--tracking-accent', normalizedHex);
+  root.style.setProperty('--tracking-accent-soft', `${normalizedHex}33`);
+  root.style.setProperty('--tracking-accent-glow', `${normalizedHex}66`);
+
   return true;
 }
 
@@ -108,6 +113,9 @@ export function resetPrimaryColor(): void {
   root.style.setProperty('--ring', defaultPrimary);
   root.style.setProperty('--sidebar-primary', defaultPrimary);
   root.style.setProperty('--sidebar-ring', defaultPrimary);
+  root.style.setProperty('--tracking-accent', defaultPrimary);
+  root.style.setProperty('--tracking-accent-soft', `${defaultPrimary}33`);
+  root.style.setProperty('--tracking-accent-glow', `${defaultPrimary}66`);
 }
 
 /**

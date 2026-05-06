@@ -239,8 +239,15 @@ export async function getPublicShipmentByToken(
  * Fetch live DHL tracking events for a token via the Edge Function.
  * Returns an empty list on any failure (the page degrades to the cached
  * `tracking_last_*` snapshot).
+ *
+ * @param locale BCP-47 short code 'de' or 'en'. Forwarded to DHL via
+ *   `&language=` so descriptions like "The shipment has been posted by the
+ *   sender at the Packstation" come back localized.
  */
-export async function getPublicShipmentTrackingEvents(token: string): Promise<PublicTrackingEvent[]> {
+export async function getPublicShipmentTrackingEvents(
+  token: string,
+  locale: 'de' | 'en' = 'de',
+): Promise<PublicTrackingEvent[]> {
   const cleanToken = token.trim().toLowerCase();
   if (!cleanToken) return [];
 
@@ -255,7 +262,7 @@ export async function getPublicShipmentTrackingEvents(token: string): Promise<Pu
       },
       body: JSON.stringify({
         action: 'get_public_shipment_tracking',
-        params: { token: cleanToken },
+        params: { token: cleanToken, locale },
       }),
     });
     if (!resp.ok) return [];
