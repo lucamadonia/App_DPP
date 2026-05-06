@@ -670,9 +670,30 @@ export function PublicShipmentTrackingPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8 space-y-4">
-        {/* HERO — greeting + ETA + pipeline */}
-        <Card>
-          <CardContent className="pt-6 pb-6 px-5 sm:px-7">
+        {/* HERO — banner + greeting + ETA + pipeline */}
+        <Card className="overflow-hidden">
+          {/* Hero banner: first product image, or branded gradient fallback */}
+          {items[0]?.productImageUrl ? (
+            <div className="relative h-32 sm:h-44 overflow-hidden bg-muted">
+              <img
+                src={items[0].productImageUrl}
+                alt={items[0].productName}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
+            </div>
+          ) : (
+            <div
+              className="relative h-32 sm:h-44 overflow-hidden flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, var(--tracking-accent, #3B82F6) 0%, var(--tracking-accent-glow, #3B82F666) 100%)',
+              }}
+            >
+              <Package className="h-12 w-12 text-white/70" strokeWidth={1.5} />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
+            </div>
+          )}
+          <CardContent className="pt-5 pb-6 px-5 sm:px-7">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
               {shipment.recipientFirstName
                 ? t('Hi {{name}}, your package is on the way').replace('{{name}}', shipment.recipientFirstName)
