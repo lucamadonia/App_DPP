@@ -595,6 +595,8 @@ export interface WhShipment {
   trackingLastEventAt?: string;
   trackingLastLocation?: string;
   trackingPolledAt?: string;
+  // Magic-link tracking token for /t/:token public page
+  trackingToken?: string;
   packagingTypeId?: string;
   packagingTypeName?: string;
   packagingTareGrams?: number;

@@ -47,6 +47,11 @@ Deno.serve(async (req) => {
       return await handlePublicTracking(params);
     }
 
+    // --- Public shipment tracking by magic-link token (no auth) ---
+    if (action === 'get_public_shipment_tracking') {
+      return await handlePublicShipmentTracking(params);
+    }
+
     // --- Cron-mode: poll all tenants. Requires Authorization: Bearer <SERVICE_ROLE_KEY> ---
     if (action === 'poll_all_tenants_cron') {
       if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -438,6 +443,13 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     console.error('Failed to update shipment:', updateErr);
   }
 
+  // 9. Magic-link email — fire and forget. Failures must not block label creation.
+  try {
+    await sendTrackingMagicLinkEmail(supabase, tenantId, shipmentId);
+  } catch (mailErr) {
+    console.error('Failed to send tracking magic-link email:', mailErr);
+  }
+
   return json({
     success: true,
     trackingNumber,
@@ -446,6 +458,204 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     labelStoragePath: storagePath,
     validationMessages: item.validationMessages || [],
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Magic-link tracking email — sends customer the /t/:token URL              */
+/* -------------------------------------------------------------------------- */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendTrackingMagicLinkEmail(supabase: any, tenantId: string, shipmentId: string) {
+  // Re-read the shipment so we have the auto-generated tracking_token
+  const { data: shipment } = await supabase
+    .from('wh_shipments')
+    .select('id, tenant_id, shipment_number, recipient_name, recipient_email, tracking_token, tracking_number, carrier, total_items')
+    .eq('id', shipmentId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (!shipment?.recipient_email || !shipment?.tracking_token) {
+    return;
+  }
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, settings')
+    .eq('id', tenantId)
+    .single();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings = (tenant?.settings ?? {}) as any;
+  const tenantName = (settings.branding?.appName as string) || tenant?.name || 'Trackbliss';
+  const primaryColor = (settings.branding?.primaryColor as string) || '#3B82F6';
+  const logoUrl = settings.branding?.logoUrl as string | undefined;
+  const appOrigin = (settings.branding?.appOrigin as string)
+    || (settings.publicAppUrl as string)
+    || 'https://dpp-app.fambliss.eu';
+
+  const trackingUrl = `${appOrigin.replace(/\/$/, '')}/t/${shipment.tracking_token}`;
+  const firstName = (shipment.recipient_name as string)?.split(' ')[0] || '';
+
+  // Locale heuristic: tenant locale > 'de' (most customers are DE today)
+  const locale = (settings.notifications?.emailLocale as string) || 'de';
+
+  const subject = locale === 'en'
+    ? `${tenantName} — your package is on its way`
+    : `${tenantName} — dein Paket ist unterwegs`;
+
+  const html = renderTrackingMagicLinkHtml({
+    locale,
+    firstName,
+    tenantName,
+    primaryColor,
+    logoUrl,
+    trackingUrl,
+    trackingNumber: shipment.tracking_number || '',
+    shipmentNumber: shipment.shipment_number,
+    carrier: shipment.carrier || 'DHL',
+    totalItems: shipment.total_items ?? 1,
+  });
+
+  // Insert into rh_notifications (channel=email, status=pending) — the
+  // Database Webhook OR our direct invoke below will hand this off to send-email.
+  const { data: notif, error: notifErr } = await supabase
+    .from('rh_notifications')
+    .insert({
+      tenant_id: tenantId,
+      channel: 'email',
+      template: 'shipment_label_ready',
+      status: 'pending',
+      recipient_email: shipment.recipient_email,
+      subject,
+      content: html,
+      metadata: { isHtml: true, senderName: tenantName, shipmentId, trackingToken: shipment.tracking_token },
+    })
+    .select()
+    .single();
+
+  if (notifErr || !notif) {
+    console.error('Failed to insert tracking notification:', notifErr?.message);
+    return;
+  }
+
+  // Direct invoke so we don't depend on a database webhook being configured.
+  await supabase.functions.invoke('send-email', { body: { record: notif } });
+}
+
+interface TrackingEmailParams {
+  locale: string;
+  firstName: string;
+  tenantName: string;
+  primaryColor: string;
+  logoUrl?: string;
+  trackingUrl: string;
+  trackingNumber: string;
+  shipmentNumber: string;
+  carrier: string;
+  totalItems: number;
+}
+
+function renderTrackingMagicLinkHtml(p: TrackingEmailParams): string {
+  const t = p.locale === 'en'
+    ? {
+        greeting: p.firstName ? `Hi ${p.firstName},` : 'Hi,',
+        intro: `Your order from <strong>${p.tenantName}</strong> just left our warehouse.`,
+        cta: 'Track your package',
+        liveStatus: 'Live status, location updates, and delivery prediction — no login, no tracking code, just one click.',
+        carrier: 'Carrier',
+        tracking: 'Tracking number',
+        items: p.totalItems === 1 ? '1 item' : `${p.totalItems} items`,
+        shipment: 'Shipment',
+        whatsNext: 'What happens next?',
+        next1: 'Carrier picks up your package today',
+        next2: 'You get live status updates here',
+        next3: 'We notify you on delivery',
+        footer: `Sent by ${p.tenantName} via Trackbliss. This link is unique to your shipment — please don't share it.`,
+        question: 'Questions? Just reply to this email.',
+      }
+    : {
+        greeting: p.firstName ? `Hallo ${p.firstName},` : 'Hallo,',
+        intro: `Deine Bestellung von <strong>${p.tenantName}</strong> hat soeben unser Lager verlassen.`,
+        cta: 'Paket verfolgen',
+        liveStatus: 'Live-Status, Standort-Updates und Liefer-Prognose — kein Login, kein Tracking-Code, ein Klick.',
+        carrier: 'Versand mit',
+        tracking: 'Sendungsnummer',
+        items: p.totalItems === 1 ? '1 Artikel' : `${p.totalItems} Artikel`,
+        shipment: 'Auftrag',
+        whatsNext: 'Wie geht es weiter?',
+        next1: 'Der Versanddienstleister holt das Paket heute ab',
+        next2: 'Du bekommst hier Live-Status-Updates',
+        next3: 'Wir benachrichtigen dich bei Zustellung',
+        footer: `Gesendet von ${p.tenantName} via Trackbliss. Dieser Link ist einzigartig für deine Sendung — bitte nicht weitergeben.`,
+        question: 'Fragen? Antworte einfach auf diese E-Mail.',
+      };
+
+  const logoBlock = p.logoUrl
+    ? `<img src="${p.logoUrl}" alt="${p.tenantName}" style="height:36px;width:auto;display:block;margin-bottom:12px" />`
+    : `<div style="font-size:18px;font-weight:700;color:${p.primaryColor};margin-bottom:12px">${p.tenantName}</div>`;
+
+  return `<!DOCTYPE html>
+<html lang="${p.locale}">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${p.tenantName}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f5f6f8;padding:24px 0;">
+  <tr><td align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.06);">
+      <tr><td style="padding:28px 28px 0">
+        ${logoBlock}
+        <div style="font-size:13px;color:#64748b;letter-spacing:.04em;text-transform:uppercase;font-weight:600">${t.shipment} · ${p.shipmentNumber}</div>
+      </td></tr>
+      <tr><td style="padding:20px 28px 8px">
+        <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a">${t.greeting}</h1>
+        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155">${t.intro}</p>
+      </td></tr>
+      <tr><td style="padding:0 28px 24px" align="center">
+        <a href="${p.trackingUrl}"
+           style="display:inline-block;padding:14px 28px;background:${p.primaryColor};color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:10px;box-shadow:0 4px 12px ${p.primaryColor}40">
+          ${t.cta} →
+        </a>
+        <p style="margin:14px 0 0;font-size:12px;color:#94a3b8;line-height:1.5">${t.liveStatus}</p>
+      </td></tr>
+      <tr><td style="padding:0 28px 20px">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0">
+          <tr>
+            <td style="padding:14px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #e2e8f0">
+              <strong style="color:#0f172a">${t.carrier}:</strong> ${p.carrier}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #e2e8f0">
+              <strong style="color:#0f172a">${t.tracking}:</strong> <span style="font-family:'SFMono-Regular',Consolas,monospace">${p.trackingNumber}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 16px;font-size:13px;color:#64748b">
+              <strong style="color:#0f172a">${t.items}</strong>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:0 28px 24px">
+        <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:10px">${t.whatsNext}</div>
+        <ol style="margin:0;padding-left:18px;font-size:13px;color:#475569;line-height:1.7">
+          <li>${t.next1}</li>
+          <li>${t.next2}</li>
+          <li>${t.next3}</li>
+        </ol>
+      </td></tr>
+      <tr><td style="padding:18px 28px;border-top:1px solid #e2e8f0;background:#f8fafc">
+        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;line-height:1.5">${t.question}</p>
+        <p style="margin:0;font-size:11px;color:#cbd5e1;line-height:1.5">${t.footer}</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -696,6 +906,86 @@ async function handlePollAllTenantsCron(supabase: any, _authHeader: string | nul
   }
 
   return json({ success: true, ...summary });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Action: get_public_shipment_tracking (no auth — validated by token)        */
+/* -------------------------------------------------------------------------- */
+
+async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
+  const token = (params?.token as string | undefined)?.trim().toLowerCase();
+  if (!token) {
+    return json({ events: [], error: 'Missing token' });
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return json({ events: [], error: 'Server misconfigured' });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  // Validate token + load tenant + tracking number
+  const { data: shipment, error: shipErr } = await supabase
+    .from('wh_shipments')
+    .select('tenant_id, tracking_number, carrier, tracking_history')
+    .eq('tracking_token', token)
+    .single();
+
+  if (shipErr || !shipment?.tenant_id || !shipment?.tracking_number) {
+    return json({ events: [], error: 'Tracking not found' });
+  }
+
+  // For non-DHL carriers we have no live integration yet; fall back to the
+  // cached tracking_history snapshot.
+  if (shipment.carrier !== 'DHL') {
+    return json({ events: shipment.tracking_history || [], carrier: shipment.carrier });
+  }
+
+  const settings = await getDHLSettings(supabase, shipment.tenant_id);
+  if (!settings?.apiKey) {
+    return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+  }
+
+  try {
+    const trackingUrl = settings.sandbox
+      ? `https://api-sandbox.dhl.com/track/shipments?trackingNumber=${shipment.tracking_number}`
+      : `https://api-eu.dhl.com/track/shipments?trackingNumber=${shipment.tracking_number}`;
+
+    const resp = await fetch(trackingUrl, { headers: { 'DHL-API-Key': settings.apiKey } });
+    if (!resp.ok) {
+      return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+    }
+    const data = await resp.json();
+    const shipments = data?.shipments || [];
+    if (shipments.length === 0) {
+      return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+    }
+
+    const events = (shipments[0]?.events || []).map((ev: {
+      timestamp?: string;
+      location?: { address?: { addressLocality?: string } };
+      description?: string;
+      statusCode?: string;
+    }) => ({
+      timestamp: ev.timestamp || '',
+      location: ev.location?.address?.addressLocality || undefined,
+      description: ev.description || '',
+      statusCode: ev.statusCode || undefined,
+    }));
+
+    // Persist as snapshot so future loads are fast even if DHL is down.
+    if (events.length > 0) {
+      await supabase
+        .from('wh_shipments')
+        .update({ tracking_history: events, tracking_polled_at: new Date().toISOString() })
+        .eq('tracking_token', token);
+    }
+
+    return json({ events, carrier: 'DHL' });
+  } catch (err) {
+    console.error('Public shipment tracking error:', err);
+    return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+  }
 }
 
 /* -------------------------------------------------------------------------- */

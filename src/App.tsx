@@ -44,6 +44,7 @@ const PublicLayout = lazy(() => import('@/pages/public/PublicLayout').then(m => 
 const PublicCustomerPage = lazy(() => import('@/pages/public/PublicCustomerPage').then(m => ({ default: m.PublicCustomerPage })));
 const PublicCustomsPage = lazy(() => import('@/pages/public/PublicCustomsPage').then(m => ({ default: m.PublicCustomsPage })));
 const TransparencyPage = lazy(() => import('@/pages/public/TransparencyPage').then(m => ({ default: m.TransparencyPage })));
+const PublicShipmentTrackingPage = lazy(() => import('@/pages/public/PublicShipmentTrackingPage').then(m => ({ default: m.PublicShipmentTrackingPage })));
 
 // Returns Portal (public)
 const ReturnsPortalLayout = lazy(() => import('@/pages/returns/public/ReturnsPortalLayout').then(m => ({ default: m.ReturnsPortalLayout })));
@@ -340,6 +341,9 @@ function NormalAppRoutes() {
 
         {/* Public Transparency Page (no auth, standalone) */}
         <Route path="transparency/:tenantSlug" element={<TransparencyPage />} />
+
+        {/* Public Shipment Tracking (magic-link, no auth) */}
+        <Route path="t/:token" element={<PublicShipmentTrackingPage />} />
 
         {/* Public Returns Portal (no auth, shared layout) */}
         <Route element={<ReturnsPortalLayout />}>

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Package, Truck, User, MapPin, ExternalLink, Copy,
   Check, X, Pencil, FileText, Clock, Weight, DollarSign,
-  AlertTriangle, Camera, Gift, RotateCcw, Heart,
+  AlertTriangle, Camera, Gift, RotateCcw, Heart, Link as LinkIcon, Send,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -732,6 +732,60 @@ export function ShipmentDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Customer Magic-Link Tracking */}
+              {shipment.trackingToken && (
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t('Customer Tracking Link')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const url = `${window.location.origin}/t/${shipment.trackingToken}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success(t('Link copied'));
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        {t('Copy', { ns: 'common' })}
+                      </Button>
+                      <a
+                        href={`${window.location.origin}/t/${shipment.trackingToken}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          {t('Open', { ns: 'common' })}
+                        </Button>
+                      </a>
+                      {shipment.recipientEmail && (
+                        <a
+                          href={`mailto:${shipment.recipientEmail}?subject=${encodeURIComponent(`${shipment.shipmentNumber} — Sendungsverfolgung`)}&body=${encodeURIComponent(
+                            `Hallo,\n\nhier ist der Live-Tracking-Link zu deinem Paket:\n${window.location.origin}/t/${shipment.trackingToken}\n\nViele Grüße`,
+                          )}`}
+                        >
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                            <Send className="h-3 w-3 mr-1" />
+                            {t('Email')}
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-1.5 text-[11px] font-mono text-muted-foreground break-all">
+                    /t/{shipment.trackingToken}
+                  </div>
+                </div>
+              )}
 
               {/* Latest DHL tracking event — populated by 8h cron poll */}
               {(shipment.trackingLastDescription || shipment.trackingLastStatus) && (

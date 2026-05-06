@@ -57,6 +57,7 @@ function transformShipment(row: any): WhShipment {
     trackingLastEventAt: row.tracking_last_event_at ?? undefined,
     trackingLastLocation: row.tracking_last_location ?? undefined,
     trackingPolledAt: row.tracking_polled_at ?? undefined,
+    trackingToken: row.tracking_token ?? undefined,
     packagingTypeId: row.packaging_type_id ?? undefined,
     packagingTypeName: row.wh_packaging_types?.name ?? undefined,
     packagingTareGrams: row.wh_packaging_types?.tare_weight_grams ?? undefined,
