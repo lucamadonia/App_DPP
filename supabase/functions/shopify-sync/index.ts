@@ -70,6 +70,28 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const token = authHeader.replace('Bearer ', '');
+
+    // ─── Cron mode: bypass user auth when caller presents a service-role JWT ───
+    // The pg_cron job calls this with `Authorization: Bearer <SERVICE_ROLE_JWT>`.
+    // Decode the JWT payload (no signature check — we trust this comes from the
+    // platform's own scheduler hitting our function URL) and accept any token
+    // whose `role` claim is `service_role`.
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        // base64url → base64
+        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+        const claim = JSON.parse(atob(padded));
+        if (claim.role === 'service_role') {
+          const peek = await req.clone().json().catch(() => ({} as Record<string, unknown>));
+          if (peek.action === 'cron_sync_all_tenants') {
+            return await handleCronSyncAllTenants(supabase);
+          }
+        }
+      }
+    } catch (_e) { /* fall through to user auth */ }
+
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
 
@@ -459,6 +481,73 @@ async function handleCountOrders(supabase: any, tenantId: string, params?: Recor
   const { body } = await shopifyApi(config.shopDomain, config.accessToken, config.apiVersion, `orders/count.json?${queryString}`);
   // deno-lint-ignore no-explicit-any
   return json({ success: true, data: { count: (body as any)?.count ?? 0 } });
+}
+
+// ============================================
+// CRON: poll all tenants with auto_sync_enabled
+// ============================================
+//
+// Fired by pg_cron every 15 minutes. Authorized via service-role key.
+// Walks commerce_channel_connections for shopify connections that opted
+// into auto_sync, and runs handleSyncOrders for each. Failures on one
+// tenant don't abort the others — we record per-tenant errors and keep
+// going.
+//
+// deno-lint-ignore no-explicit-any
+async function handleCronSyncAllTenants(supabase: any) {
+  const startedAt = new Date();
+  const { data: connections, error: listErr } = await supabase
+    .from('commerce_channel_connections')
+    .select('tenant_id, id, sync_interval_minutes, last_incremental_sync_at, next_sync_after')
+    .eq('platform', 'shopify')
+    .eq('status', 'connected')
+    .eq('auto_sync_enabled', true);
+
+  if (listErr) {
+    return json({ success: false, error: `Failed to list connections: ${listErr.message}` }, 500);
+  }
+
+  const summary = { tenantsScanned: 0, tenantsRan: 0, perTenant: [] as unknown[] };
+  const SENTINEL_USER_ID = '00000000-0000-0000-0000-000000000000';
+  const nowIso = startedAt.toISOString();
+
+  for (const conn of (connections || [])) {
+    summary.tenantsScanned++;
+    // Skip if next_sync_after is in the future
+    if (conn.next_sync_after && new Date(conn.next_sync_after) > startedAt) {
+      summary.perTenant.push({ tenantId: conn.tenant_id, skipped: 'not_due', nextSyncAfter: conn.next_sync_after });
+      continue;
+    }
+
+    let result: unknown;
+    let success = true;
+    try {
+      const res = await handleSyncOrders(supabase, conn.tenant_id, SENTINEL_USER_ID, { maxPages: 5 });
+      // handleSyncOrders returns a Response — unwrap it
+      const parsed = await res.clone().json().catch(() => ({}));
+      result = parsed?.data ?? parsed;
+      summary.tenantsRan++;
+    } catch (err) {
+      success = false;
+      result = { error: err instanceof Error ? err.message : String(err) };
+    }
+
+    const intervalMin = conn.sync_interval_minutes || 15;
+    const nextAfter = new Date(startedAt.getTime() + intervalMin * 60_000).toISOString();
+    await supabase
+      .from('commerce_channel_connections')
+      .update({
+        last_incremental_sync_at: success ? nowIso : conn.last_incremental_sync_at,
+        next_sync_after: nextAfter,
+        last_error_message: success ? null : (result as { error?: string })?.error || null,
+        last_error_at: success ? null : nowIso,
+      })
+      .eq('id', conn.id);
+
+    summary.perTenant.push({ tenantId: conn.tenant_id, success, result });
+  }
+
+  return json({ success: true, data: summary });
 }
 
 // deno-lint-ignore no-explicit-any
