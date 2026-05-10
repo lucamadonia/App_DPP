@@ -193,20 +193,21 @@ async function markEvent(supabase: any, id: string | null, status: string, error
 // deno-lint-ignore no-explicit-any
 async function resolveTenant(supabase: any, shopDomain: string): Promise<string | null> {
   if (!shopDomain) return null;
-  // Use the indexed expression: settings->'shopifyIntegration'->>'shopDomain'
-  const { data, error } = await supabase
+  // Shopify sends `myshopify_domain` (e.g. za6qkk-gt.myshopify.com) in the
+  // x-shopify-shop-domain header, even when the user-facing domain is
+  // different (e.g. fambliss.myshopify.com). We store both on tenant
+  // settings; match on either.
+  // deno-lint-ignore no-explicit-any
+  const { data: rows } = await supabase
     .from('tenants')
-    .select('id')
-    .filter('settings->shopifyIntegration->>shopDomain', 'eq', shopDomain)
-    .maybeSingle();
-  if (error) {
-    // Fallback: older PostgREST variants need different syntax
-    const { data: fallback } = await supabase.from('tenants').select('id, settings');
-    // deno-lint-ignore no-explicit-any
-    const match = (fallback || []).find((t: any) => t.settings?.shopifyIntegration?.shopDomain === shopDomain);
-    return match?.id || null;
-  }
-  return data?.id || null;
+    .select('id, settings');
+  // deno-lint-ignore no-explicit-any
+  const match = (rows || []).find((t: any) => {
+    const s = t.settings?.shopifyIntegration;
+    if (!s) return false;
+    return s.shopDomain === shopDomain || s.myshopifyDomain === shopDomain;
+  });
+  return match?.id || null;
 }
 
 function generateShipmentNumber(): string {

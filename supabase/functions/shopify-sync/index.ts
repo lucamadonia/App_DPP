@@ -384,7 +384,15 @@ async function handleTestConnection(supabase: any, tenantId: string) {
       .update({
         settings: {
           ...settings,
-          shopifyIntegration: { ...settings.shopifyIntegration, shopName: shop.name },
+          shopifyIntegration: {
+            ...settings.shopifyIntegration,
+            shopName: shop.name,
+            // shop.myshopify_domain is the canonical *.myshopify.com URL
+            // Shopify uses in webhook x-shopify-shop-domain headers. We need
+            // it for tenant resolution in shopify-webhook — the user-facing
+            // shopDomain alone is not enough.
+            myshopifyDomain: shop.myshopify_domain,
+          },
         },
       })
       .eq('id', tenantId);
