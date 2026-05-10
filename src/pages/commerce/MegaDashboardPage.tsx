@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Maximize2, Minimize2, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Maximize2, Minimize2, RefreshCw, Sparkles, X } from 'lucide-react';
 import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useBilling } from '@/contexts/BillingContext';
@@ -37,6 +37,18 @@ export function MegaDashboardPage() {
   const [now, setNow] = useState(() => new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // `null` means "today, follow the wall-clock". A non-null range pins the
+  // dashboard to that window — single day if `from === to`, otherwise a span.
+  const [range, setRange] = useState<{ from: Date; to: Date } | null>(null);
+  const isHistorical = range !== null;
+  const isRange = range !== null && !sameDay(range.from, range.to);
+  const fromDate = range?.from ?? now;
+  const toDate = range?.to ?? now;
+  // `now` ticks every second; reading it here is what causes `max=` on the
+  // date inputs to refresh past midnight without a hard page reload.
+  const todayInputValue = useMemo(() => toDateInputValue(now), [now]);
+  const fromInputValue = useMemo(() => toDateInputValue(fromDate), [fromDate]);
+  const toInputValue = useMemo(() => toDateInputValue(toDate), [toDate]);
 
   const limits = billing.entitlements?.limits as Record<string, boolean | number> | undefined;
   const enabled = Boolean(limits?.commerceMegaDashboardEnabled) || billing.hasAnyCommerceHubModule();
@@ -44,23 +56,52 @@ export function MegaDashboardPage() {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const s = await getMegaDashboardSnapshot();
+      const s = await getMegaDashboardSnapshot(range ?? undefined);
       setSnapshot(s);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [range]);
 
   useEffect(() => {
     if (!enabled) return;
     refresh();
+    // Auto-refresh stays on for historical ranges too — late sync data still
+    // trickles in — but the 1-second clock tick is meaningless then.
     const interval = setInterval(refresh, 30_000);
-    const clock = setInterval(() => setNow(new Date()), 1_000);
+    const clock = isHistorical ? null : setInterval(() => setNow(new Date()), 1_000);
     return () => {
       clearInterval(interval);
-      clearInterval(clock);
+      if (clock) clearInterval(clock);
     };
-  }, [enabled, refresh]);
+  }, [enabled, refresh, isHistorical]);
+
+  function setFrom(value: string) {
+    if (!value) return;
+    const parsed = parseDateInputValue(value);
+    const today = new Date();
+    // Build a normalised range whose `to` never precedes `from`.
+    const currentTo = range?.to ?? today;
+    const nextTo = parsed > currentTo ? parsed : currentTo;
+    if (sameDay(parsed, today) && sameDay(nextTo, today)) {
+      setRange(null);
+      return;
+    }
+    setRange({ from: parsed, to: nextTo });
+  }
+
+  function setTo(value: string) {
+    if (!value) return;
+    const parsed = parseDateInputValue(value);
+    const today = new Date();
+    const currentFrom = range?.from ?? today;
+    const nextFrom = parsed < currentFrom ? parsed : currentFrom;
+    if (sameDay(parsed, today) && sameDay(nextFrom, today)) {
+      setRange(null);
+      return;
+    }
+    setRange({ from: nextFrom, to: parsed });
+  }
 
   useEffect(() => {
     const onFs = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -184,28 +225,111 @@ export function MegaDashboardPage() {
             <div className="hidden h-5 w-px bg-white/15 md:block" />
             <div className="flex items-center gap-2 min-w-0">
               <span className="relative inline-flex h-2 w-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                {!isHistorical && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                )}
+                <span
+                  className={cn(
+                    'relative inline-flex h-2 w-2 rounded-full',
+                    isHistorical ? 'bg-white/30' : 'bg-emerald-500',
+                  )}
+                />
               </span>
               <span className="hidden text-xs font-medium uppercase tracking-[0.2em] text-white/70 md:inline">
-                {t('Live · Mega Dashboard')}
+                {isHistorical
+                  ? `${t('Snapshot')} · ${formatRangeLabel(fromDate, toDate)}`
+                  : t('Live · Mega Dashboard')}
               </span>
               <span className="font-display text-base tabular-nums text-white/80 md:hidden">
-                {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                {isHistorical
+                  ? formatRangeLabel(fromDate, toDate)
+                  : now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden text-right md:block">
-            <div className="font-display text-2xl font-bold tabular-nums">
-              {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            <div className="text-[11px] uppercase tracking-widest text-white/50">
-              {now.toLocaleDateString(undefined, { weekday: 'long', day: '2-digit', month: 'short' })}
-            </div>
+          <div className="hidden text-right lg:block">
+            {isHistorical ? (
+              <>
+                <div className="font-display text-xl font-bold tabular-nums">
+                  {formatRangeLabel(fromDate, toDate)}
+                </div>
+                <div className="text-[11px] uppercase tracking-widest text-white/50">
+                  {isRange
+                    ? `${rangeDayCount(fromDate, toDate)} ${t('Tage')}`
+                    : fromDate.toLocaleDateString(undefined, { weekday: 'long' })}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="font-display text-2xl font-bold tabular-nums">
+                  {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div className="text-[11px] uppercase tracking-widest text-white/50">
+                  {now.toLocaleDateString(undefined, { weekday: 'long', day: '2-digit', month: 'short' })}
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Range picker — two native inputs side by side. iOS/Android open
+              their respective OS date pickers; desktop browsers show their
+              calendar dropdowns. The visible pill shows the currently-set
+              window or "Heute" while inputs sit invisibly on top. */}
+          <div
+            className={cn(
+              'inline-flex items-stretch rounded-md border overflow-hidden text-[11px] font-medium uppercase tracking-wider',
+              'transition-colors',
+              isHistorical
+                ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10',
+            )}
+          >
+            <label className="relative inline-flex items-center gap-1.5 px-2.5 py-2 cursor-pointer touch-target">
+              <CalendarIcon className="h-3.5 w-3.5" />
+              <span className="hidden xs:inline tabular-nums">
+                {isHistorical ? compactDate(fromDate) : t('Heute')}
+              </span>
+              <input
+                type="date"
+                value={fromInputValue}
+                max={todayInputValue}
+                onChange={(e) => setFrom(e.target.value)}
+                className="absolute inset-0 cursor-pointer opacity-0 [color-scheme:dark]"
+                aria-label={t('Von')}
+              />
+            </label>
+            <div className="w-px self-stretch bg-current opacity-20" aria-hidden />
+            <label className="relative inline-flex items-center gap-1.5 px-2.5 py-2 cursor-pointer touch-target">
+              <span className="hidden xs:inline tabular-nums">
+                {isHistorical ? compactDate(toDate) : '—'}
+              </span>
+              <span className="xs:hidden text-[10px] opacity-60">{t('Bis')}</span>
+              <input
+                type="date"
+                value={toInputValue}
+                max={todayInputValue}
+                onChange={(e) => setTo(e.target.value)}
+                className="absolute inset-0 cursor-pointer opacity-0 [color-scheme:dark]"
+                aria-label={t('Bis')}
+              />
+            </label>
+          </div>
+
+          {isHistorical && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="touch-target text-white/70 hover:bg-white/5 hover:text-white"
+              onClick={() => setRange(null)}
+              aria-label={t('Back to live')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="icon"
@@ -327,4 +451,48 @@ function DotGridBackdrop({ reduced }: { reduced: boolean }) {
       <rect width="100%" height="100%" fill="url(#megaDot)" />
     </svg>
   );
+}
+
+/* ============================================
+   date helpers
+   ============================================ */
+
+/** YYYY-MM-DD using local time — what <input type="date"> expects. */
+function toDateInputValue(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Parse YYYY-MM-DD back to a Date at local midnight (no UTC offset shift). */
+function parseDateInputValue(v: string): Date {
+  const [y, m, d] = v.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function compactDate(d: Date): string {
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' });
+}
+
+function formatRangeLabel(from: Date, to: Date): string {
+  if (sameDay(from, to)) {
+    return from.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  // "05.–10.05.2026" if same month + year; otherwise full dates on both sides.
+  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
+  if (sameMonth) {
+    const day = String(from.getDate()).padStart(2, '0');
+    return `${day}.–${to.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+  }
+  return `${compactDate(from)} – ${to.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+}
+
+function rangeDayCount(from: Date, to: Date): number {
+  const ms = Math.abs(to.getTime() - from.getTime());
+  return Math.round(ms / 86_400_000) + 1;
 }

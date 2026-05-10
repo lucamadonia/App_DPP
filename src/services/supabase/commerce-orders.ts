@@ -185,18 +185,40 @@ function delta(current: number, prev: number): number | undefined {
   return Math.round(((current - prev) / prev) * 1000) / 10;
 }
 
-/** Build the full snapshot used by the MegaDashboard. */
-export async function getMegaDashboardSnapshot(): Promise<CommerceMegaDashboardSnapshot> {
+/**
+ * Build the full snapshot used by the MegaDashboard.
+ *
+ * @param range  Inclusive date range — `from` start-of-day to `to` end-of-day —
+ *   defining the "primary" window for hero KPIs, live feed, geo, and footer
+ *   KPIs. Defaults to `[today, today]`. Single-day filters use `from === to`.
+ *
+ *   The delta-comparison ("yesterday") window is the period of the same
+ *   length immediately preceding `from`, so a 5-day range compares against
+ *   the previous 5 days.
+ *
+ *   Rolling windows (7-day platform breakdown, 30-day top products) anchor
+ *   their end at `to.endOfDay`, so they always cap at the displayed slice.
+ */
+export async function getMegaDashboardSnapshot(
+  range?: { from: Date; to: Date },
+): Promise<CommerceMegaDashboardSnapshot> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return emptySnapshot();
 
-  const now = new Date();
-  const todayStart = dayStart(now);
-  const todayEnd = dayEnd(now);
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yStart = dayStart(yesterday);
-  const yEnd = dayEnd(yesterday);
+  const wallClock = new Date();
+  const from = range?.from ?? wallClock;
+  const to = range?.to ?? wallClock;
+  // Normalise: from must not be after to.
+  const [lo, hi] = from <= to ? [from, to] : [to, from];
+
+  const todayStart = dayStart(lo);
+  const todayEnd = dayEnd(hi);
+  // Compare against the immediately-preceding window of the same length.
+  const rangeDays = Math.max(1, Math.round((todayEnd.getTime() - todayStart.getTime()) / 86_400_000));
+  const yEnd = new Date(todayStart.getTime() - 1);
+  const yStart = new Date(yEnd.getTime() - (rangeDays * 86_400_000 - 1));
+  // Used downstream for the 7-day and 30-day rolling windows.
+  const now = hi;
 
   // 1) Today's orders + yesterday's orders for delta
   const [todayRes, yesterdayRes] = await Promise.all([
@@ -313,33 +335,36 @@ export async function getMegaDashboardSnapshot(): Promise<CommerceMegaDashboardS
   }
   const geoPoints = Array.from(geoMap.values()).sort((a, b) => b.orders - a.orders);
 
-  // 4) Platform breakdown — last 7 days, sparkline
+  // 4) Platform breakdown — 7 days ending on the reference date
   const since = new Date(now);
   since.setDate(since.getDate() - 7);
   const { data: weekRows } = await supabase
     .from('commerce_orders')
     .select('platform, total_amount_eur, total_amount, placed_at')
     .eq('tenant_id', tenantId)
-    .gte('placed_at', ISO_DATE(since));
+    .gte('placed_at', ISO_DATE(since))
+    .lte('placed_at', ISO_DATE(todayEnd));
 
   const platformMap = new Map<CommercePlatform, CommercePlatformBreakdownEntry>();
   for (const p of ALL_COMMERCE_PLATFORMS) {
     platformMap.set(p, { platform: p, orders: 0, revenue: 0, sparkline: Array(7).fill(0) });
   }
+  const referenceMs = now.getTime();
   for (const row of (weekRows || []) as Array<{ platform: CommercePlatform; total_amount_eur?: number; total_amount: number; placed_at: string }>) {
     const entry = platformMap.get(row.platform);
     if (!entry) continue;
     const amt = Number(row.total_amount_eur ?? row.total_amount ?? 0);
     entry.orders += 1;
     entry.revenue += amt;
-    const dayIdx = Math.max(0, 6 - Math.floor((Date.now() - new Date(row.placed_at).getTime()) / 86400000));
+    // Bucket index: day 6 is the reference date, day 0 is six days before it.
+    const dayIdx = Math.max(0, 6 - Math.floor((referenceMs - new Date(row.placed_at).getTime()) / 86400000));
     entry.sparkline[dayIdx] += amt;
   }
   const platformBreakdown = Array.from(platformMap.values())
     .filter((e) => e.orders > 0 || e.revenue > 0)
     .sort((a, b) => b.revenue - a.revenue);
 
-  // 5) Top products — last 30 days
+  // 5) Top products — 30 days ending on the reference date
   const since30 = new Date(now);
   since30.setDate(since30.getDate() - 30);
   const { data: itemRows } = await supabase
@@ -349,7 +374,8 @@ export async function getMegaDashboardSnapshot(): Promise<CommerceMegaDashboardS
       orders:commerce_orders!inner(tenant_id, placed_at, carbon_footprint_kg)
     `)
     .eq('tenant_id', tenantId)
-    .gte('orders.placed_at', ISO_DATE(since30));
+    .gte('orders.placed_at', ISO_DATE(since30))
+    .lte('orders.placed_at', ISO_DATE(todayEnd));
 
   const productMap = new Map<string, CommerceLeaderboardEntry>();
   for (const row of (itemRows || []) as Array<{
