@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { PlatformIcon } from './PlatformIcon';
+import { cn } from '@/lib/utils';
 import {
   type CommercePlatformBreakdownEntry,
   getPlatformDescriptor,
@@ -12,7 +14,11 @@ interface PlatformBreakdownProps {
 
 /**
  * Shows order count + revenue per platform with a 7-day sparkline.
- * Sorted by revenue descending. Designed for the wall display center column.
+ *
+ * Desktop: single row per platform — `[icon+label | sparkline | revenue+share-bar]`.
+ * Mobile (<sm): wraps to two rows — line 1 has icon/label/revenue, line 2 has
+ * the full-width sparkline and share bar. Removes the previous `min-w-[140px]`
+ * and `min-w-[120px]` that caused horizontal overflow under 375 px.
  */
 export function PlatformBreakdown({ entries }: PlatformBreakdownProps) {
   const { t } = useTranslation('commerce');
@@ -20,11 +26,11 @@ export function PlatformBreakdown({ entries }: PlatformBreakdownProps) {
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl">
-      <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+      <div className="flex items-center justify-between border-b border-white/5 px-4 py-3 sm:px-5 sm:py-4">
         <h3 className="text-sm font-medium tracking-wider uppercase text-white/80">
           {t('Channel Mix — 7 days')}
         </h3>
-        <span className="text-[10px] uppercase tracking-widest text-white/40">
+        <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-white/40">
           {t('share')} · 7 {t('day-sparkline')}
         </span>
       </div>
@@ -42,32 +48,64 @@ export function PlatformBreakdown({ entries }: PlatformBreakdownProps) {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-5 py-3.5"
             >
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <PlatformIcon platform={e.platform} size={16} badge />
-                <div>
-                  <div className="text-sm font-medium text-white">{desc.label}</div>
-                  <div className="text-[11px] text-white/45">
-                    {new Intl.NumberFormat('de-DE').format(e.orders)} {t('orders')}
+              <Link
+                to={`/commerce?platform=${e.platform}`}
+                className={cn(
+                  'flex flex-col gap-3 px-4 py-3.5 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4 sm:px-5',
+                  'transition-colors hover:bg-white/[0.03] active:bg-white/[0.04]',
+                )}
+              >
+                {/* Row 1 on mobile: icon + label + revenue side by side */}
+                <div className="flex items-center justify-between gap-3 sm:contents">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PlatformIcon platform={e.platform} size={16} badge />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-white">{desc.label}</div>
+                      <div className="text-[11px] text-white/45">
+                        {new Intl.NumberFormat('de-DE').format(e.orders)} {t('orders')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right sm:hidden">
+                    <div className="font-display tabular-nums text-base text-white">
+                      {new Intl.NumberFormat('de-DE', {
+                        style: 'currency',
+                        currency: 'EUR',
+                        maximumFractionDigits: 0,
+                      }).format(e.revenue)}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Sparkline */}
-              <Sparkline values={e.sparkline} color={desc.brandColor} />
+                {/* Sparkline — full width on mobile (row 2), bounded on desktop */}
+                <Sparkline values={e.sparkline} color={desc.brandColor} />
 
-              <div className="text-right min-w-[120px]">
-                <div className="font-display tabular-nums text-base text-white">
-                  {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(e.revenue)}
+                {/* Revenue + share bar (desktop column 3 only — mobile shows revenue inline above) */}
+                <div className="hidden sm:block text-right">
+                  <div className="font-display tabular-nums text-base text-white">
+                    {new Intl.NumberFormat('de-DE', {
+                      style: 'currency',
+                      currency: 'EUR',
+                      maximumFractionDigits: 0,
+                    }).format(e.revenue)}
+                  </div>
+                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${share}%`, background: desc.brandColor, opacity: 0.85 }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/5">
+
+                {/* Mobile-only share bar — full width below sparkline */}
+                <div className="h-1 w-full overflow-hidden rounded-full bg-white/5 sm:hidden">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${share}%`, background: desc.brandColor, opacity: 0.85 }}
                   />
                 </div>
-              </div>
+              </Link>
             </motion.li>
           );
         })}
@@ -95,7 +133,7 @@ function Sparkline({ values, color, width = 220, height = 36 }: SparklineProps) 
     .join(' ');
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-9 w-full max-w-xs">
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-9 w-full sm:max-w-xs">
       <defs>
         <linearGradient id={`spark-grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.7" />

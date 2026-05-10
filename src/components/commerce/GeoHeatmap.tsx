@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { CommerceGeoPoint } from '@/types/commerce-channels';
 
 interface GeoHeatmapProps {
@@ -7,13 +8,23 @@ interface GeoHeatmapProps {
 }
 
 /**
- * GeoHeatmap — a stylised world-grid visualization showing where orders flow from.
- * Uses an SVG dot-matrix base map (continents as dot density) for crisp rendering on TVs
- * without needing tile servers.
+ * GeoHeatmap — where today's orders flow from.
+ *
+ * Desktop / tablet (≥ md): SVG dot-matrix world map with pulsing rings per
+ * country. Looks great at wall-display sizes.
+ *
+ * Mobile (< md): the SVG world map renders unreadable at 360 px wide (its
+ * `fontSize="2.4"` viewBox-unit text becomes ~5 px CSS pixels). We swap to a
+ * sorted flag + bar list — same data, more legible.
  */
 export function GeoHeatmap({ points }: GeoHeatmapProps) {
   const { t } = useTranslation('commerce');
+  const isMobile = useIsMobile();
   const maxOrders = points.reduce((m, p) => Math.max(m, p.orders), 0) || 1;
+
+  if (isMobile) {
+    return <GeoCountryList points={points} maxOrders={maxOrders} />;
+  }
 
   return (
     <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl">
@@ -92,6 +103,95 @@ export function GeoHeatmap({ points }: GeoHeatmapProps) {
       </div>
     </div>
   );
+}
+
+/**
+ * Mobile alternative to the SVG world map. Top 6 countries with flag emoji,
+ * country name, order count, and a proportional bar. Same data shape; no
+ * fixed dimensions, no tiny viewBox text. Accessible to screen readers.
+ */
+function GeoCountryList({ points, maxOrders }: { points: CommerceGeoPoint[]; maxOrders: number }) {
+  const { t } = useTranslation('commerce');
+  const sorted = [...points].sort((a, b) => b.orders - a.orders);
+  const top = sorted.slice(0, 6);
+  const rest = Math.max(0, sorted.length - top.length);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl">
+      <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+        <h3 className="text-sm font-medium tracking-wider uppercase text-white/80">
+          {t('Orders by Country — Today')}
+        </h3>
+        <span className="text-[10px] uppercase tracking-widest text-white/40 tabular-nums">
+          {points.length} {t('countries')}
+        </span>
+      </div>
+
+      {top.length === 0 ? (
+        <div className="px-4 py-8 text-center text-sm text-white/40">
+          {t('No orders yet today — connect a channel to start streaming')}
+        </div>
+      ) : (
+        <ol className="divide-y divide-white/5">
+          {top.map((p, i) => {
+            const widthPct = Math.max(8, (p.orders / maxOrders) * 100);
+            return (
+              <motion.li
+                key={p.country}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3"
+              >
+                <span aria-hidden className="text-xl leading-none">
+                  {flagEmoji(p.country)}
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-white">
+                    {p.countryName || p.country}
+                  </div>
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                    <motion.div
+                      className="h-full rounded-full bg-emerald-500/60"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${widthPct}%` }}
+                      transition={{ duration: 0.6, delay: 0.1 + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-display tabular-nums text-sm text-white">
+                    {p.orders}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                    {t('Orders')}
+                  </div>
+                </div>
+              </motion.li>
+            );
+          })}
+        </ol>
+      )}
+
+      {rest > 0 && (
+        <div className="border-t border-white/5 px-4 py-2.5 text-center text-[11px] uppercase tracking-widest text-white/40">
+          + {rest} {t('countries')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** ISO-2 country code → flag emoji via Unicode regional indicator symbols. */
+function flagEmoji(iso2: string): string {
+  if (!iso2 || iso2.length !== 2) return '🌍';
+  const A = 0x1f1e6;
+  const a = 'A'.charCodeAt(0);
+  const upper = iso2.toUpperCase();
+  const cp1 = A + (upper.charCodeAt(0) - a);
+  const cp2 = A + (upper.charCodeAt(1) - a);
+  if (cp1 < A || cp1 > A + 25 || cp2 < A || cp2 > A + 25) return '🌍';
+  return String.fromCodePoint(cp1, cp2);
 }
 
 /**
