@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -198,7 +199,13 @@ export function InventoryListPage() {
   const [moveBinSaving, setMoveBinSaving] = useState(false);
 
   // Write-off dialog (Werbegeschenke, Tester, Spenden, Eigenverbrauch, Bruch, Ausschuss)
-  const [writeOffTarget, setWriteOffTarget] = useState<WhStockLevel | null>(null);
+  // Holds the stock rows to be written off. Single-row writeoffs put 1 stock
+  // here; the bulk-select action pushes multiple. Empty means dialog is closed.
+  const [writeOffStocks, setWriteOffStocks] = useState<WhStockLevel[]>([]);
+
+  // Multi-select for bulk operations (write-off, future: transfer, export).
+  // Stores the ids of selected stock rows.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Context menu (right-click)
   const [ctxMenu, setCtxMenu] = useState<{ row: WhStockLevel; x: number; y: number } | null>(null);
@@ -489,7 +496,7 @@ export function InventoryListPage() {
         <ArrowRightLeft className="mr-2 h-4 w-4" />
         {t('Transfer Stock')}
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => setWriteOffTarget(s)} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+      <DropdownMenuItem onClick={() => setWriteOffStocks([s])} className="text-red-600 focus:text-red-700 focus:bg-red-50">
         <MinusCircle className="mr-2 h-4 w-4" />
         {t('Ware ausbuchen')}
       </DropdownMenuItem>
@@ -556,16 +563,25 @@ export function InventoryListPage() {
 
   const renderRow = (s: WhStockLevel, idx: number) => {
     const isLow = s.reorderPoint != null && s.quantityAvailable <= s.reorderPoint;
+    const isSelected = selectedIds.has(s.id);
     return (
       <TableRow
         key={s.id}
-        className={`transition-all duration-200 hover:bg-muted/50 ${isLow ? 'border-l-2 border-l-orange-400' : ''} ${rowStagger[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+        data-state={isSelected ? 'selected' : undefined}
+        className={`transition-all duration-200 hover:bg-muted/50 ${isLow ? 'border-l-2 border-l-orange-400' : ''} ${isSelected ? 'bg-primary/5' : ''} ${rowStagger[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
         style={{ transition: 'opacity 0.3s ease, transform 0.3s ease' }}
         onContextMenu={(e) => {
           e.preventDefault();
           setCtxMenu({ row: s, x: e.clientX, y: e.clientY });
         }}
       >
+        <TableCell className="w-10" onClick={e => e.stopPropagation()}>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => toggleOne(s.id)}
+            aria-label={t('Position auswählen')}
+          />
+        </TableCell>
         <TableCell className="font-medium">
           <Link to={`/products/${s.productId}`} className="hover:underline text-primary">
             {s.productName || s.productId.slice(0, 8)}
@@ -612,7 +628,33 @@ export function InventoryListPage() {
     );
   };
 
-  const colCount = 9;
+  const colCount = 10;
+
+  // Multi-select helpers
+  const allOnPageSelected = sortedStock.length > 0 && sortedStock.every(s => selectedIds.has(s.id));
+  const someOnPageSelected = sortedStock.some(s => selectedIds.has(s.id)) && !allOnPageSelected;
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAllOnPage = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allOnPageSelected) {
+        for (const s of sortedStock) next.delete(s.id);
+      } else {
+        for (const s of sortedStock) next.add(s.id);
+      }
+      return next;
+    });
+  };
+  const selectedStocks = useMemo(
+    () => stock.filter(s => selectedIds.has(s.id)),
+    [stock, selectedIds],
+  );
 
   // Active filter count for mobile badge
   const filterCount = activeFilters.length;
@@ -1070,10 +1112,49 @@ export function InventoryListPage() {
         /* Table View */
         <Card>
           <CardContent className="p-0">
+            {/* Bulk action bar — appears when ≥1 row selected */}
+            {selectedIds.size > 0 && (
+              <div className="sticky top-0 z-10 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between border-b bg-primary/10 dark:bg-primary/20 px-3 sm:px-4 py-2.5 backdrop-blur">
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant="secondary" className="bg-primary text-primary-foreground">
+                    {selectedIds.size}
+                  </Badge>
+                  <span className="font-medium">
+                    {t('{{n}} Positionen ausgewählt', { n: selectedIds.size })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedIds(new Set())}
+                  >
+                    <X className="mr-1 h-3.5 w-3.5" />
+                    {t('Auswahl löschen')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setWriteOffStocks(selectedStocks)}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    disabled={selectedStocks.length === 0}
+                  >
+                    <MinusCircle className="mr-1 h-3.5 w-3.5" />
+                    {t('Ware ausbuchen ({{n}})', { n: selectedIds.size })}
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allOnPageSelected ? true : someOnPageSelected ? 'indeterminate' : false}
+                        onCheckedChange={toggleAllOnPage}
+                        aria-label={t('Alle auswählen')}
+                      />
+                    </TableHead>
                     <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('productName')}>
                       {t('Product')}<SortIcon col="productName" />
                     </TableHead>
@@ -1413,10 +1494,13 @@ export function InventoryListPage() {
       </Dialog>
 
       <StockWriteOffDialog
-        open={!!writeOffTarget}
-        onOpenChange={(o) => { if (!o) setWriteOffTarget(null); }}
-        stock={writeOffTarget}
-        onSaved={loadData}
+        open={writeOffStocks.length > 0}
+        onOpenChange={(o) => { if (!o) setWriteOffStocks([]); }}
+        stocks={writeOffStocks}
+        onSaved={() => {
+          loadData();
+          setSelectedIds(new Set());
+        }}
       />
     </div>
   );

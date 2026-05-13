@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Gift, FlaskConical, HeartHandshake, Home, Trash2, AlertOctagon, Loader2, MinusCircle, Box,
+  Gift, FlaskConical, HeartHandshake, Home, Trash2, AlertOctagon, Loader2, MinusCircle, Box, X,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -44,96 +44,178 @@ const REASONS: ReasonDef[] = [
   { key: 'other',     icon: Box,            color: '#525252', bg: 'bg-neutral-50 dark:bg-neutral-900/30', labelKey: 'Sonstiges',             descKey: 'Anderer Grund — bitte notieren' },
 ];
 
+const LABEL_MAP: Record<WriteOffCategory, string> = {
+  giveaway: 'Werbegeschenk',
+  tester: 'Tester / Influencer',
+  donation: 'Spende',
+  own_use: 'Eigenverbrauch',
+  damage: 'Bruch / Verlust',
+  expired: 'Ausschuss / Verfall',
+  other: 'Sonstiges',
+};
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The stock row from which to write off. */
-  stock: WhStockLevel | null;
+  /**
+   * One or more stock rows to write off. When multiple, the dialog shows a
+   * per-row quantity input but a single shared reason / recipient / notes.
+   */
+  stocks: WhStockLevel[];
   onSaved: () => void;
 }
 
 /**
- * Polished "Ware ausbuchen" dialog. Categorical reasons render as a
- * clickable picker grid (icon + label + description), then quantity +
- * optional recipient/notes. Writes a structured stock_transaction via
- * createStockAdjustment so reports can group by category later.
+ * Polished "Ware ausbuchen" dialog with single-row and bulk modes:
+ *  - 1 stock → compact UX (product header, quantity, reason, recipient/notes)
+ *  - N stocks → list of items with per-row quantity + remove-from-batch button,
+ *    one shared reason picker for the entire batch
+ *
+ * On submit it loops createStockAdjustment for each row. Partial failures
+ * are surfaced via toast (one row failing does not abort the rest).
  */
-export function StockWriteOffDialog({ open, onOpenChange, stock, onSaved }: Props) {
+export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Props) {
   const { t } = useTranslation('warehouse');
+
   const [reason, setReason] = useState<WriteOffCategory | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
+  // Per-row quantities, keyed by stock id.
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  // Local list of stocks that the user has decided to actually write off
+  // (allows removing individual rows without closing + reopening the dialog).
+  const [activeStocks, setActiveStocks] = useState<WhStockLevel[]>([]);
   const [recipient, setRecipient] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset every time the dialog opens with a (possibly new) stock row.
+  // Reset every time the dialog opens. Snapshot the props.stocks so the
+  // user can remove rows locally without affecting the parent component.
   useEffect(() => {
     if (!open) return;
     setReason(null);
-    setQuantity(1);
+    setActiveStocks(stocks);
+    const initial: Record<string, number> = {};
+    for (const s of stocks) initial[s.id] = Math.min(1, s.quantityAvailable);
+    setQuantities(initial);
     setRecipient('');
     setNotes('');
-  }, [open, stock?.id]);
+    // intentionally only depend on `open` + the stocks array reference to avoid
+    // accidental resets while the user types.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-  const maxQty = stock?.quantityAvailable ?? 0;
+  const isBulk = activeStocks.length > 1;
   const selectedReason = useMemo(() => REASONS.find(r => r.key === reason) || null, [reason]);
   const requiresRecipient = reason === 'giveaway' || reason === 'tester' || reason === 'donation';
   const requiresNotes = reason === 'other' || reason === 'damage' || reason === 'expired';
 
+  const totalQty = useMemo(
+    () => activeStocks.reduce((sum, s) => sum + (quantities[s.id] || 0), 0),
+    [activeStocks, quantities],
+  );
+
+  const anyInvalidQty = activeStocks.some(s => {
+    const q = quantities[s.id] || 0;
+    return q < 1 || q > s.quantityAvailable;
+  });
+
   const recipientMissing = requiresRecipient && !recipient.trim();
   const notesMissing = requiresNotes && !notes.trim();
   const canSubmit =
-    !!stock && !!reason && quantity > 0 && quantity <= maxQty && !recipientMissing && !notesMissing && !submitting;
+    activeStocks.length > 0 && !!reason && !anyInvalidQty && totalQty > 0
+    && !recipientMissing && !notesMissing && !submitting;
+
+  function updateQty(stockId: string, n: number) {
+    const stock = activeStocks.find(s => s.id === stockId);
+    if (!stock) return;
+    setQuantities(q => ({ ...q, [stockId]: Math.max(1, Math.min(stock.quantityAvailable, n)) }));
+  }
+
+  function removeRow(stockId: string) {
+    setActiveStocks(rows => rows.filter(r => r.id !== stockId));
+    setQuantities(q => {
+      const next = { ...q };
+      delete next[stockId];
+      return next;
+    });
+  }
 
   async function handleSubmit() {
-    if (!stock || !reason) return;
+    if (!reason || activeStocks.length === 0) return;
     setSubmitting(true);
-    try {
-      const labelMap: Record<WriteOffCategory, string> = {
-        giveaway: 'Werbegeschenk',
-        tester: 'Tester / Influencer',
-        donation: 'Spende',
-        own_use: 'Eigenverbrauch',
-        damage: 'Bruch / Verlust',
-        expired: 'Ausschuss / Verfall',
-        other: 'Sonstiges',
-      };
-      // Structured reason: "category:label[ — recipient]" so DB can be parsed later.
-      const parts = [`${reason}:${labelMap[reason]}`];
-      if (recipient.trim()) parts.push(recipient.trim());
-      const reasonStr = parts.join(' — ');
 
-      await createStockAdjustment({
-        stockId: stock.id,
-        quantityChange: -Math.abs(quantity), // always negative for write-off
-        reason: reasonStr,
-        notes: notes.trim() || undefined,
-      });
+    // Build the shared reason string once: "category:label[ — recipient]".
+    const parts = [`${reason}:${LABEL_MAP[reason]}`];
+    if (recipient.trim()) parts.push(recipient.trim());
+    const reasonStr = parts.join(' — ');
+    const sharedNotes = notes.trim() || undefined;
+
+    const failures: { name: string; error: string }[] = [];
+    let successCount = 0;
+
+    for (const s of activeStocks) {
+      const q = quantities[s.id] || 0;
+      if (q <= 0) continue;
+      try {
+        await createStockAdjustment({
+          stockId: s.id,
+          quantityChange: -Math.abs(q),
+          reason: reasonStr,
+          notes: sharedNotes,
+        });
+        successCount++;
+      } catch (e) {
+        failures.push({
+          name: s.productName || s.productId.slice(0, 8),
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
+    setSubmitting(false);
+
+    if (failures.length === 0) {
       toast.success(t('Bestand ausgebucht'), {
-        description: t('{{n}}× {{name}} — {{reason}}', {
-          n: quantity,
-          name: stock.productName || stock.productId.slice(0, 8),
-          reason: t(labelMap[reason]),
+        description: t('{{n}}× Positionen — {{reason}}', {
+          n: successCount,
+          reason: t(LABEL_MAP[reason]),
         }),
       });
       onSaved();
       onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSubmitting(false);
+    } else if (successCount > 0) {
+      // Partial success — keep dialog open so the user sees which rows failed.
+      toast.warning(t('Teilweise ausgebucht'), {
+        description: t('{{ok}} erfolgreich, {{fail}} fehlgeschlagen: {{names}}', {
+          ok: successCount,
+          fail: failures.length,
+          names: failures.map(f => f.name).join(', '),
+        }),
+        duration: 8000,
+      });
+      onSaved(); // refresh inventory anyway — successful rows changed stock
+      // Remove the successful rows from the active set so the user can retry the failed ones.
+      setActiveStocks(rows => rows.filter(r => failures.some(f => f.name === (r.productName || r.productId.slice(0, 8)))));
+    } else {
+      toast.error(t('Ausbuchen fehlgeschlagen'), {
+        description: failures.map(f => `${f.name}: ${f.error}`).join('\n'),
+        duration: 10000,
+      });
     }
   }
 
-  if (!stock) return null;
+  if (activeStocks.length === 0) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-4 sm:px-6 pt-5 pb-3 border-b">
           <DialogTitle className="flex items-center gap-2 min-w-0">
             <MinusCircle className="h-5 w-5 shrink-0 text-red-600" />
-            <span className="truncate">{t('Ware ausbuchen')}</span>
+            <span className="truncate">
+              {isBulk
+                ? t('{{n}} Positionen ausbuchen', { n: activeStocks.length })
+                : t('Ware ausbuchen')}
+            </span>
           </DialogTitle>
           <DialogDescription className="break-words">
             {t('Bestand reduzieren ohne Sendung — für Werbegeschenke, Tester, Spenden, Eigenverbrauch oder Bruch.')}
@@ -141,20 +223,59 @@ export function StockWriteOffDialog({ open, onOpenChange, stock, onSaved }: Prop
         </DialogHeader>
 
         <div className="space-y-5 px-4 sm:px-6 py-4 min-w-0">
-          {/* Product header */}
-          <div className="rounded-lg border bg-muted/30 p-3 flex items-start gap-3 min-w-0">
-            <Box className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm break-words">{stock.productName || stock.productId.slice(0, 8)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5 break-words">
-                {stock.locationName || '?'}
-                {stock.batchSerialNumber ? ` · ${stock.batchSerialNumber}` : ''}
-                {stock.binLocation ? ` · ${stock.binLocation}` : ''}
-              </div>
-              <div className="text-xs mt-1">
-                <span className="text-muted-foreground">{t('Verfügbar')}:</span>{' '}
-                <span className="font-semibold tabular-nums">{stock.quantityAvailable}</span>
-              </div>
+          {/* Selected items list */}
+          <div className="space-y-2 min-w-0">
+            <Label className="flex items-center justify-between gap-2">
+              <span>{isBulk ? t('Ausgewählte Positionen') : t('Position')}</span>
+              {isBulk && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {t('Summe')}: <span className="font-semibold tabular-nums">{totalQty}</span>
+                </span>
+              )}
+            </Label>
+            <div className="rounded-lg border divide-y max-h-64 overflow-y-auto">
+              {activeStocks.map(s => {
+                const q = quantities[s.id] || 0;
+                const max = s.quantityAvailable;
+                const invalid = q < 1 || q > max;
+                return (
+                  <div key={s.id} className={`flex items-center gap-3 p-3 ${invalid ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
+                    <Box className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm leading-tight break-words">
+                        {s.productName || s.productId.slice(0, 8)}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {s.locationName || '?'}
+                        {s.batchSerialNumber ? ` · ${s.batchSerialNumber}` : ''}
+                        {s.binLocation ? ` · ${s.binLocation}` : ''}
+                        {' · '}
+                        <span className="tabular-nums">{max} {t('verfügbar')}</span>
+                      </div>
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={max}
+                      value={q}
+                      onChange={e => updateQty(s.id, parseInt(e.target.value, 10) || 0)}
+                      className="w-16 sm:w-20 h-8 text-center tabular-nums"
+                      aria-label={t('Menge')}
+                    />
+                    {isBulk && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeRow(s.id)}
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-600"
+                        aria-label={t('Position entfernen')}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -193,55 +314,6 @@ export function StockWriteOffDialog({ open, onOpenChange, stock, onSaved }: Prop
             </div>
           </div>
 
-          {/* Quantity */}
-          {selectedReason && (
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="wo-qty">
-                {t('Menge ausbuchen')}{' '}
-                <span className="text-xs font-normal text-muted-foreground">
-                  ({t('max. {{n}}', { n: maxQty })})
-                </span>
-              </Label>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Input
-                  id="wo-qty"
-                  type="number"
-                  min={1}
-                  max={maxQty}
-                  value={quantity}
-                  onChange={e => {
-                    const v = parseInt(e.target.value, 10);
-                    setQuantity(isNaN(v) ? 1 : Math.max(1, Math.min(maxQty, v)));
-                  }}
-                  className="w-24 sm:w-32"
-                />
-                {[1, 5, 10].filter(n => n <= maxQty).map(n => (
-                  <Button
-                    key={n}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(n)}
-                    className="h-9"
-                  >
-                    {n}×
-                  </Button>
-                ))}
-                {maxQty > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(maxQty)}
-                    className="h-9"
-                  >
-                    {t('Alles ({{n}})', { n: maxQty })}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Recipient (conditional) */}
           {selectedReason && requiresRecipient && (
             <div className="space-y-2 min-w-0">
@@ -262,10 +334,15 @@ export function StockWriteOffDialog({ open, onOpenChange, stock, onSaved }: Prop
                 }
                 className="w-full"
               />
+              {isBulk && (
+                <p className="text-xs text-muted-foreground">
+                  {t('Empfänger gilt für alle {{n}} Positionen.', { n: activeStocks.length })}
+                </p>
+              )}
             </div>
           )}
 
-          {/* Notes (conditional + optional) */}
+          {/* Notes (conditional or optional) */}
           {selectedReason && (
             <div className="space-y-2 min-w-0">
               <Label htmlFor="wo-notes">
@@ -293,21 +370,26 @@ export function StockWriteOffDialog({ open, onOpenChange, stock, onSaved }: Prop
             </div>
           )}
 
-          {/* Confirmation summary */}
-          {selectedReason && quantity > 0 && quantity <= maxQty && (
+          {/* Summary */}
+          {selectedReason && totalQty > 0 && !anyInvalidQty && (
             <div className={`rounded-lg border p-3 text-sm ${selectedReason.bg}`}>
               <div className="flex items-start gap-2">
                 <selectedReason.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: selectedReason.color }} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium break-words">
-                    {t('{{n}} Stück werden als „{{reason}}" ausgebucht', {
-                      n: quantity,
-                      reason: t(selectedReason.labelKey),
-                    })}
+                    {isBulk
+                      ? t('{{n}} Positionen ({{q}} Stück gesamt) werden als „{{reason}}" ausgebucht', {
+                          n: activeStocks.length,
+                          q: totalQty,
+                          reason: t(selectedReason.labelKey),
+                        })
+                      : t('{{n}} Stück werden als „{{reason}}" ausgebucht', {
+                          n: totalQty,
+                          reason: t(selectedReason.labelKey),
+                        })}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 break-words">
-                    {t('Neuer Bestand')}: <span className="font-semibold tabular-nums">{Math.max(0, maxQty - quantity)}</span>{' '}
-                    {t('verfügbar')} · {t('wird im Aktivitätsverlauf protokolliert')}
+                    {t('wird im Aktivitätsverlauf protokolliert')}
                   </div>
                 </div>
               </div>

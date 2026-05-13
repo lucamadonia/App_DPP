@@ -1432,5 +1432,21 @@
   "wird im Aktivitätsverlauf protokolliert": "logged in the activity history",
   "Ausbuchen bestätigen": "Confirm write-off",
   "Bestand ausgebucht": "Stock written off",
-  "{{n}}× {{name}} — {{reason}}": "{{n}}× {{name}} — {{reason}}"
+  "{{n}}× {{name}} — {{reason}}": "{{n}}× {{name}} — {{reason}}",
+  "Alle auswählen": "Select all",
+  "Position auswählen": "Select item",
+  "Position entfernen": "Remove item",
+  "{{n}} Positionen ausgewählt": "{{n}} items selected",
+  "Auswahl löschen": "Clear selection",
+  "Ware ausbuchen ({{n}})": "Write off ({{n}})",
+  "{{n}} Positionen ausbuchen": "Write off {{n}} items",
+  "Ausgewählte Positionen": "Selected items",
+  "Position": "Item",
+  "Summe": "Total",
+  "Empfänger gilt für alle {{n}} Positionen.": "Recipient applies to all {{n}} items.",
+  "{{n}} Positionen ({{q}} Stück gesamt) werden als „{{reason}}\" ausgebucht": "{{n}} items ({{q}} units total) will be written off as \"{{reason}}\"",
+  "{{n}}× Positionen — {{reason}}": "{{n}}× items — {{reason}}",
+  "Teilweise ausgebucht": "Partially written off",
+  "{{ok}} erfolgreich, {{fail}} fehlgeschlagen: {{names}}": "{{ok}} succeeded, {{fail}} failed: {{names}}",
+  "Ausbuchen fehlgeschlagen": "Write-off failed"
 }

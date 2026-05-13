@@ -1432,5 +1432,21 @@
   "wird im Aktivitätsverlauf protokolliert": "wird im Aktivitätsverlauf protokolliert",
   "Ausbuchen bestätigen": "Ausbuchen bestätigen",
   "Bestand ausgebucht": "Bestand ausgebucht",
-  "{{n}}× {{name}} — {{reason}}": "{{n}}× {{name}} — {{reason}}"
+  "{{n}}× {{name}} — {{reason}}": "{{n}}× {{name}} — {{reason}}",
+  "Alle auswählen": "Alle auswählen",
+  "Position auswählen": "Position auswählen",
+  "Position entfernen": "Position entfernen",
+  "{{n}} Positionen ausgewählt": "{{n}} Positionen ausgewählt",
+  "Auswahl löschen": "Auswahl löschen",
+  "Ware ausbuchen ({{n}})": "Ware ausbuchen ({{n}})",
+  "{{n}} Positionen ausbuchen": "{{n}} Positionen ausbuchen",
+  "Ausgewählte Positionen": "Ausgewählte Positionen",
+  "Position": "Position",
+  "Summe": "Summe",
+  "Empfänger gilt für alle {{n}} Positionen.": "Empfänger gilt für alle {{n}} Positionen.",
+  "{{n}} Positionen ({{q}} Stück gesamt) werden als „{{reason}}\" ausgebucht": "{{n}} Positionen ({{q}} Stück gesamt) werden als „{{reason}}\" ausgebucht",
+  "{{n}}× Positionen — {{reason}}": "{{n}}× Positionen — {{reason}}",
+  "Teilweise ausgebucht": "Teilweise ausgebucht",
+  "{{ok}} erfolgreich, {{fail}} fehlgeschlagen: {{names}}": "{{ok}} erfolgreich, {{fail}} fehlgeschlagen: {{names}}",
+  "Ausbuchen fehlgeschlagen": "Ausbuchen fehlgeschlagen"
 }
