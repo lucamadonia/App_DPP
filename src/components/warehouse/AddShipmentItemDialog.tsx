@@ -144,9 +144,9 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="px-4 sm:px-6 pt-5 pb-3 border-b">
+          <DialogTitle className="flex items-center gap-2 min-w-0">
             <Plus className="h-5 w-5 shrink-0" />
             <span className="truncate">{t('Produkt zur Sendung hinzufügen')}</span>
           </DialogTitle>
@@ -155,22 +155,22 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-4 sm:px-6 py-4 min-w-0">
           {/* Step 1 — Product search */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label htmlFor="product-search">{t('Produkt suchen')}</Label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 id="product-search"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('Name, GTIN oder Hersteller...')}
-                className="pl-9"
+                className="pl-9 w-full"
                 autoFocus
               />
             </div>
-            <div className="rounded-lg border max-h-48 overflow-y-auto divide-y">
+            <div className="rounded-lg border max-h-40 sm:max-h-48 overflow-y-auto divide-y">
               {productsLoading ? (
                 <div className="p-3 text-sm text-muted-foreground flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> {t('Lade Produkte...')}
@@ -184,12 +184,12 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                   key={p.id}
                   type="button"
                   onClick={() => setSelectedProductId(p.id)}
-                  className={`w-full text-left p-2.5 hover:bg-muted/40 transition-colors ${
+                  className={`w-full text-left p-2.5 hover:bg-muted/40 transition-colors cursor-pointer min-w-0 ${
                     selectedProductId === p.id ? 'bg-primary/10' : ''
                   }`}
                 >
-                  <div className="font-medium text-sm leading-tight">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="font-medium text-sm leading-tight truncate">{p.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">
                     {p.gtin || t('Keine GTIN')} · {p.manufacturer || t('Kein Hersteller')}
                   </div>
                 </button>
@@ -199,29 +199,31 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
 
           {/* Step 2 — Batch / location with stock */}
           {selectedProductId && (
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="stock-pick">{t('Bestand & Standort')}</Label>
               {stockLoading ? (
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> {t('Lade Bestand...')}
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" /> {t('Lade Bestand...')}
                 </div>
               ) : stockOptions.length === 0 ? (
-                <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-2.5">
+                <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-2.5 break-words">
                   {t('Kein verfügbarer Bestand für dieses Produkt')}
                 </div>
               ) : (
                 <Select value={selectedStockId} onValueChange={setSelectedStockId}>
-                  <SelectTrigger id="stock-pick">
+                  <SelectTrigger id="stock-pick" className="w-full">
                     <SelectValue placeholder={t('Bestand wählen')} />
                   </SelectTrigger>
                   <SelectContent>
                     {stockOptions.map(s => (
                       <SelectItem key={s.id} value={s.id}>
-                        {(s.locationName || '?')}
-                        {s.batchSerialNumber ? ` · ${s.batchSerialNumber}` : ''}
-                        {s.binLocation ? ` · ${s.binLocation}` : ''}
-                        {' — '}
-                        {s.quantityAvailable} {t('verfügbar')}
+                        <span className="truncate">
+                          {(s.locationName || '?')}
+                          {s.batchSerialNumber ? ` · ${s.batchSerialNumber}` : ''}
+                          {s.binLocation ? ` · ${s.binLocation}` : ''}
+                          {' — '}
+                          {s.quantityAvailable} {t('verfügbar')}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -232,7 +234,7 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
 
           {/* Step 3 — Quantity */}
           {selectedStock && (
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="qty">
                 {t('Menge')}{' '}
                 <span className="text-xs font-normal text-muted-foreground">
@@ -249,33 +251,33 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                   const v = parseInt(e.target.value, 10);
                   setQuantity(isNaN(v) ? 1 : Math.max(1, Math.min(maxQty, v)));
                 }}
-                className="w-32"
+                className="w-24 sm:w-32"
               />
             </div>
           )}
 
           {/* Step 4 — Gift flag + note */}
           {selectedStock && (
-            <div className="rounded-lg border p-3 space-y-3 bg-muted/20">
-              <label className="flex items-start gap-3 cursor-pointer">
+            <div className="rounded-lg border p-3 space-y-3 bg-muted/20 min-w-0">
+              <label className="flex items-start gap-3 cursor-pointer min-w-0">
                 <Checkbox
                   checked={isGift}
                   onCheckedChange={v => setIsGift(!!v)}
-                  className="mt-0.5"
+                  className="mt-0.5 shrink-0"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <Gift className="h-4 w-4 text-pink-600" />
-                    {t('Als Beigabe / Geschenk markieren')}
+                    <Gift className="h-4 w-4 text-pink-600 shrink-0" />
+                    <span className="break-words">{t('Als Beigabe / Geschenk markieren')}</span>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
+                  <div className="text-xs text-muted-foreground mt-0.5 break-words">
                     {t('Position wird mit 0,00 € verrechnet und auf dem Lieferschein als Beigabe ausgewiesen.')}
                   </div>
                 </div>
               </label>
 
               {isGift ? (
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label htmlFor="gift-note" className="text-xs">
                     {t('Notiz zur Beigabe (optional)')}
                   </Label>
@@ -285,13 +287,14 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                     onChange={e => setGiftNote(e.target.value)}
                     placeholder={t('z. B. "Geburtstagsgeschenk" oder "Goodie zur Treuekampagne"')}
                     rows={2}
+                    className="w-full resize-none"
                   />
                   <Badge variant="outline" className="text-[10px] gap-1">
-                    <Gift className="h-3 w-3" /> {t('Wird auf Lieferschein hinterlegt')}
+                    <Gift className="h-3 w-3 shrink-0" /> <span className="truncate">{t('Wird auf Lieferschein hinterlegt')}</span>
                   </Badge>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label htmlFor="item-note" className="text-xs">
                     {t('Interne Notiz (optional)')}
                   </Label>
@@ -301,6 +304,7 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                     onChange={e => setNotes(e.target.value)}
                     placeholder={t('Notiz für interne Zwecke')}
                     rows={2}
+                    className="w-full resize-none"
                   />
                 </div>
               )}
@@ -309,9 +313,9 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
 
           {/* Summary */}
           {selectedProduct && selectedStock && (
-            <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1">
-              <div className="font-medium">{selectedProduct.name}</div>
-              <div className="text-xs text-muted-foreground">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1 min-w-0">
+              <div className="font-medium break-words">{selectedProduct.name}</div>
+              <div className="text-xs text-muted-foreground break-words">
                 {quantity}× · {selectedStock.locationName}
                 {selectedStock.batchSerialNumber ? ` · ${selectedStock.batchSerialNumber}` : ''}
                 {isGift ? ` · ${t('Beigabe')}` : ''}
@@ -320,11 +324,16 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+        <DialogFooter className="sticky bottom-0 bg-background border-t px-4 sm:px-6 py-3 flex-col-reverse sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+            className="w-full sm:w-auto"
+          >
             {t('Abbrechen')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
+          <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full sm:w-auto">
             {submitting ? (
               <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {t('Speichert...')}</>
             ) : (

@@ -224,18 +224,61 @@ function generateTransactionNumber(): string {
   return `TXN-${dateStr}-${rand}`;
 }
 
+/**
+ * Pick a batch for a Shopify-imported item. Prefers batches that actually
+ * have available stock at the source location (so the later reservation
+ * step succeeds). Falls back to plain FIFO across all live batches when
+ * no stock data is available — same behavior as before, but the caller
+ * can detect the fallback by comparing the result to a separate stock
+ * check if it cares.
+ *
+ * Returns: { batchId, stockBacked } — stockBacked=true means the chosen
+ * batch had quantity_available > 0 at sourceLocationId.
+ */
 // deno-lint-ignore no-explicit-any
-async function resolveAutoBatch(supabase: any, tenantId: string, productId: string): Promise<string | null> {
-  const { data } = await supabase
+async function resolveAutoBatch(
+  supabase: any,
+  tenantId: string,
+  productId: string,
+  sourceLocationId: string | null,
+): Promise<{ batchId: string | null; stockBacked: boolean }> {
+  // 1. Load all live batches for the product, FIFO-ordered.
+  const { data: batches } = await supabase
     .from('product_batches')
     .select('id')
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
     .eq('status', 'live')
     .order('expiry_date', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: true })
-    .limit(1);
-  return data?.[0]?.id || null;
+    .order('created_at', { ascending: true });
+
+  if (!batches?.length) return { batchId: null, stockBacked: false };
+
+  // 2. If we know the source location, prefer a batch with available stock there.
+  if (sourceLocationId) {
+    const batchIds = batches.map((b: { id: string }) => b.id);
+    const { data: stocks } = await supabase
+      .from('wh_stock_levels')
+      .select('batch_id, quantity_available')
+      .eq('tenant_id', tenantId)
+      .eq('location_id', sourceLocationId)
+      .in('batch_id', batchIds);
+
+    const stockByBatch = new Map<string, number>();
+    for (const s of stocks || []) {
+      stockByBatch.set(s.batch_id, (s.quantity_available as number) || 0);
+    }
+
+    // Walk FIFO, return first batch with stock > 0.
+    for (const b of batches) {
+      if ((stockByBatch.get(b.id) || 0) > 0) {
+        return { batchId: b.id, stockBacked: true };
+      }
+    }
+  }
+
+  // 3. Fallback: oldest live batch regardless of stock (legacy behavior).
+  return { batchId: batches[0].id, stockBacked: false };
 }
 
 /**
@@ -384,8 +427,15 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
     if (!locationId) continue;
 
     let batchId = mapping.batch_id || null;
+    let itemNote: string | null = null;
     if (!batchId && mapping.auto_batch) {
-      batchId = await resolveAutoBatch(supabase, tenantId, mapping.product_id);
+      const picked = await resolveAutoBatch(supabase, tenantId, mapping.product_id, locationId);
+      batchId = picked.batchId;
+      // If we fell back to a batch without stock, mark the item so the UI can
+      // show a warning badge — picker should manually confirm before pick.
+      if (batchId && !picked.stockBacked) {
+        itemNote = 'auto-batch ohne Stock-Check (FIFO-Fallback)';
+      }
     }
 
     items.push({
@@ -396,6 +446,7 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
       quantity: li.fulfillable_quantity || li.quantity,
       unit_price: parseFloat(li.price) || null,
       currency: order.currency || 'EUR',
+      notes: itemNote,
     });
   }
 

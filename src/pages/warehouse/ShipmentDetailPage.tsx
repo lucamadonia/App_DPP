@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, type PackagingType } from '@/services/supabase/wh-shipments';
+import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, ShipmentStatusError, type PackagingType } from '@/services/supabase/wh-shipments';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContentPosts } from '@/services/supabase/wh-content';
 import { updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
@@ -35,7 +35,18 @@ import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
 import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
 import { ShopifyShipmentSyncCard } from '@/components/warehouse/shopify/ShopifyShipmentSyncCard';
 import { PickPackConfirmDialog } from '@/components/warehouse/PickPackConfirmDialog';
+import { EditShipmentItemDialog } from '@/components/warehouse/EditShipmentItemDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase as sb } from '@/lib/supabase';
+
+const CARRIER_REQUIRED_FOR: ShipmentStatus[] = ['label_created', 'shipped', 'in_transit', 'delivered'];
+
+function isBackwardFromShipped(oldStatus: ShipmentStatus, newStatus: ShipmentStatus): boolean {
+  const order = SHIPMENT_STATUS_ORDER;
+  const oldIdx = order.indexOf(oldStatus);
+  const newIdx = order.indexOf(newStatus);
+  return oldIdx >= order.indexOf('shipped') && newIdx >= 0 && newIdx < order.indexOf('shipped');
+}
 
 /* -------------------------------------------------------------------------- */
 /*  STATUS TRANSITION LABELS                                                   */
@@ -214,6 +225,13 @@ export function ShipmentDetailPage() {
   const [pendingStatus, setPendingStatus] = useState<ShipmentStatus | null>(null);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, string>>({});
 
+  // Backward-from-shipped confirm dialog (irreversible: restores reservations).
+  const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
+  const [revertTargetStatus, setRevertTargetStatus] = useState<ShipmentStatus | null>(null);
+
+  // Manual batch-assignment dialog (per item).
+  const [editItem, setEditItem] = useState<WhShipmentItem | null>(null);
+
   useEffect(() => {
     if (items.length === 0) return;
     const productIds = items.map(i => i.productId);
@@ -233,14 +251,32 @@ export function ShipmentDetailPage() {
       await reloadShipment();
       toast.success(t('Status updated successfully'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error');
+      // Surface typed errors with helpful actions (e.g. open carrier picker).
+      if (err instanceof ShipmentStatusError && err.code === 'CARRIER_REQUIRED') {
+        toast.error(t('Spediteur fehlt'), {
+          description: t('Bitte zuerst einen Spediteur in der Versand-Karte auswählen.'),
+          action: { label: t('Spediteur setzen'), onClick: () => startEditing('shipping') },
+        });
+      } else if (err instanceof ShipmentStatusError && err.code === 'STATUS_LOCKED') {
+        toast.error(t('Status gelockt — bitte erst zurück auf Verpackt'));
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Error');
+      }
     } finally {
       setStatusUpdating(false);
     }
   };
 
   const handleStatusChange = async (newStatus: ShipmentStatus) => {
-    if (!id || statusUpdating) return;
+    if (!id || statusUpdating || !shipment) return;
+
+    // Going backward from shipped (or further) → confirm: triggers stock revert.
+    if (isBackwardFromShipped(shipment.status, newStatus)) {
+      setRevertTargetStatus(newStatus);
+      setRevertConfirmOpen(true);
+      return;
+    }
+
     // For picking and packed, require item-by-item confirmation first
     if (newStatus === 'picking' && items.length > 0) {
       setPendingStatus(newStatus);
@@ -376,8 +412,15 @@ export function ShipmentDetailPage() {
 
   const isDraft = shipment.status === 'draft';
   const canEditShipping = ['draft', 'picking', 'packed'].includes(shipment.status);
+  const canEditItems = ['draft', 'picking', 'packed'].includes(shipment.status);
   const isTerminal = shipment.status === 'delivered' || shipment.status === 'cancelled';
   const trackingUrl = getTrackingUrl(shipment.carrier, shipment.trackingNumber || '');
+
+  // Forward-step prerequisite check — disables next button if blocking condition exists.
+  const nextStatusBlocker: { reason: string; cta?: string } | null =
+    nextStatus && CARRIER_REQUIRED_FOR.includes(nextStatus) && !shipment.carrier
+      ? { reason: t('Spediteur fehlt'), cta: t('Spediteur setzen') }
+      : null;
 
   const hasSampleMeta = !!shipment.sampleMeta;
 
@@ -896,12 +939,13 @@ export function ShipmentDetailPage() {
                     <TableHead className="text-right">{t('Quantity')}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t('picking')}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t('packed')}</TableHead>
+                    <TableHead className="w-12 text-right"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">{t('No results found')}</TableCell>
+                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">{t('No results found')}</TableCell>
                     </TableRow>
                   ) : (
                     items.map((item) => {
@@ -910,9 +954,23 @@ export function ShipmentDetailPage() {
                       return (
                         <TableRow key={item.id}>
                           <TableCell>
-                            <Link to={`/products/${item.productId}`} className="font-medium text-primary hover:underline text-xs sm:text-sm">
-                              {item.productName || item.productId.slice(0, 8)}
-                            </Link>
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <Link to={`/products/${item.productId}`} className="font-medium text-primary hover:underline text-xs sm:text-sm break-words">
+                                {item.productName || item.productId.slice(0, 8)}
+                              </Link>
+                              <div className="flex flex-wrap gap-1">
+                                {!item.batchId && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                                    <AlertTriangle className="h-3 w-3" /> {t('Charge fehlt')}
+                                  </Badge>
+                                )}
+                                {item.isGift && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 text-pink-700 border-pink-300 bg-pink-50 dark:bg-pink-900/20">
+                                    <Gift className="h-3 w-3" /> {t('Beigabe')}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {item.batchId ? (
@@ -940,6 +998,34 @@ export function ShipmentDetailPage() {
                               <Progress value={packPct} className="h-1.5 flex-1" />
                               <span className="text-xs tabular-nums text-muted-foreground">{item.quantityPacked}/{item.quantity}</span>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {canEditItems ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setEditItem(item)}
+                                aria-label={t('Charge bearbeiten')}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0}>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-40 pointer-events-none" disabled>
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs max-w-xs">{t('Status gelockt — bitte erst zurück auf Verpackt')}</div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -1050,13 +1136,104 @@ export function ShipmentDetailPage() {
               </AlertDialogContent>
             </AlertDialog>
             {nextStatus && (
-              <Button onClick={() => handleStatusChange(nextStatus)} disabled={statusUpdating}>
-                {t(NEXT_STATUS_LABELS[shipment.status]) || t(`Mark as ${nextStatus}`)}
-              </Button>
+              nextStatusBlocker ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button
+                          disabled
+                          aria-disabled="true"
+                          className="pointer-events-none opacity-60"
+                        >
+                          {t(NEXT_STATUS_LABELS[shipment.status]) || t(`Mark as ${nextStatus}`)}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs max-w-xs">{nextStatusBlocker.reason}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button onClick={() => handleStatusChange(nextStatus)} disabled={statusUpdating}>
+                  {t(NEXT_STATUS_LABELS[shipment.status]) || t(`Mark as ${nextStatus}`)}
+                </Button>
+              )
             )}
           </div>
         </div>
       )}
+
+      {/* Inline CTA below the action bar when forward step is blocked */}
+      {!isTerminal && nextStatusBlocker && (
+        <div className="flex justify-end">
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => startEditing('shipping')}
+            className="h-auto p-0 text-amber-700 hover:text-amber-800"
+          >
+            <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+            {nextStatusBlocker.cta} →
+          </Button>
+        </div>
+      )}
+
+      {/* Revert confirmation — destructive: restores stock reservation */}
+      <AlertDialog open={revertConfirmOpen} onOpenChange={setRevertConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Status zurücksetzen?')}</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                {t('Die Sendung wird von "{{from}}" zurück auf "{{to}}" gestellt.', {
+                  from: t(shipment.status),
+                  to: revertTargetStatus ? t(revertTargetStatus) : '',
+                })}
+              </span>
+              <span className="block">
+                {t('Die bereits abgebuchten Bestände werden automatisch wieder reserviert. Die Versand-Zeitstempel werden gelöscht.')}
+              </span>
+              {shipment.shopifyFulfillmentId && (
+                <span className="block text-amber-700 font-medium">
+                  {t('Hinweis: Ein an Shopify gemeldetes Fulfillment muss separat manuell zurückgenommen werden — dieser Schritt informiert Shopify nicht.')}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setRevertTargetStatus(null);
+                setRevertConfirmOpen(false);
+              }}
+            >
+              {t('Cancel', { ns: 'common' })}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const target = revertTargetStatus;
+                setRevertConfirmOpen(false);
+                setRevertTargetStatus(null);
+                if (target) await applyStatusChange(target);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('Ja, zurücksetzen')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Manual batch-assignment dialog */}
+      <EditShipmentItemDialog
+        open={!!editItem}
+        onOpenChange={(o) => { if (!o) setEditItem(null); }}
+        item={editItem}
+        sourceLocationId={shipment.sourceLocationId}
+        onSaved={reloadShipment}
+      />
 
       <PickPackConfirmDialog
         open={pickDialogOpen}
