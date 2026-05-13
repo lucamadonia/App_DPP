@@ -25,7 +25,7 @@ export type WriteOffCategory =
 
 interface ReasonDef {
   key: WriteOffCategory;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   /** Hex used for accent (border + icon color). */
   color: string;
   /** Tailwind background tint. */
