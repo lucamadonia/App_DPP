@@ -52,7 +52,7 @@ function parseReason(raw?: string | null): ParsedReason {
 type MovementCategory =
   | 'shipment' | 'giveaway' | 'tester' | 'donation' | 'own_use'
   | 'damage' | 'expired' | 'other_outflow'
-  | 'goods_receipt' | 'transfer' | 'reservation' | 'release';
+  | 'goods_receipt' | 'transfer' | 'reservation' | 'release' | 'adjustment';
 
 interface CategoryDef {
   key: MovementCategory;
@@ -77,6 +77,7 @@ const CATEGORIES: CategoryDef[] = [
   { key: 'transfer',      icon: RotateCcw,      color: '#0891b2', bg: 'bg-cyan-50',     labelKey: 'Umlagerung',          isOutflow: false },
   { key: 'reservation',   icon: ArrowUpFromLine, color: '#6366f1', bg: 'bg-indigo-50',  labelKey: 'Reservierung',        isOutflow: false },
   { key: 'release',       icon: ArrowDownToLine, color: '#737373', bg: 'bg-gray-50',    labelKey: 'Freigabe',            isOutflow: false },
+  { key: 'adjustment',    icon: RotateCcw,      color: '#a16207', bg: 'bg-amber-50',    labelKey: 'Bestandsanpassung',   isOutflow: false },
 ];
 
 const CAT_BY_KEY = Object.fromEntries(CATEGORIES.map(c => [c.key, c])) as Record<MovementCategory, CategoryDef>;
@@ -96,8 +97,11 @@ function categorize(txn: WhStockTransaction): MovementCategory {
     case 'release': return 'release';
     case 'damage': return 'damage';
     case 'write_off': return 'other_outflow';
+    case 'return_receipt': return 'goods_receipt';
     case 'adjustment':
-    case 'return_receipt':
+      // Bare adjustment without a structured "category:" prefix — internal
+      // correction (split, migration, manual fix). NOT a real outflow.
+      return 'adjustment';
     default:
       return 'other_outflow';
   }
@@ -362,12 +366,14 @@ export function StockMovementsPage() {
       <Card>
         <CardContent className="pt-4 pb-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs flex items-center gap-1">
-                <Calendar className="h-3 w-3" /> {t('Zeitraum')}
+                <Calendar className="h-3 w-3 shrink-0" /> {t('Zeitraum')}
               </Label>
               <Select value={range} onValueChange={v => setRange(v as RangePreset)}>
-                <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-9 w-full max-w-full [&>span]:truncate">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7d">{t('Letzte 7 Tage')}</SelectItem>
                   <SelectItem value="30d">{t('Letzte 30 Tage')}</SelectItem>
@@ -377,12 +383,14 @@ export function StockMovementsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs flex items-center gap-1">
-                <PackageIcon className="h-3 w-3" /> {t('Produkt')}
+                <PackageIcon className="h-3 w-3 shrink-0" /> {t('Produkt')}
               </Label>
               <Select value={productFilter} onValueChange={setProductFilter}>
-                <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-9 w-full max-w-full [&>span]:truncate">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="all">{t('Alle Produkte')}</SelectItem>
                   {products.map(p => (
@@ -391,16 +399,16 @@ export function StockMovementsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs flex items-center gap-1">
-                <Box className="h-3 w-3" /> {t('Charge')}
+                <Box className="h-3 w-3 shrink-0" /> {t('Charge')}
               </Label>
               <Select
                 value={batchFilter}
                 onValueChange={setBatchFilter}
                 disabled={productFilter === 'all' || batchOptions.length === 0}
               >
-                <SelectTrigger className="mt-1 h-9">
+                <SelectTrigger className="mt-1 h-9 w-full max-w-full [&>span]:truncate">
                   <SelectValue placeholder={productFilter === 'all' ? t('Erst Produkt wählen') : t('Alle Chargen')} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -411,12 +419,14 @@ export function StockMovementsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs flex items-center gap-1">
-                <Filter className="h-3 w-3" /> {t('Kategorie')}
+                <Filter className="h-3 w-3 shrink-0" /> {t('Kategorie')}
               </Label>
               <Select value={categoryFilter} onValueChange={v => setCategoryFilter(v as MovementCategory | 'all')}>
-                <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-9 w-full max-w-full [&>span]:truncate">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('Alle Kategorien')}</SelectItem>
                   {CATEGORIES.map(c => (
@@ -425,26 +435,26 @@ export function StockMovementsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs flex items-center gap-1">
-                <Search className="h-3 w-3" /> {t('Suche')}
+                <Search className="h-3 w-3 shrink-0" /> {t('Suche')}
               </Label>
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('Empfänger, Charge, Notiz...')}
-                className="mt-1 h-9"
+                className="mt-1 h-9 w-full"
               />
             </div>
           </div>
           {/* Active batch hint */}
           {batchFilter !== 'all' && batchOptions.find(b => b.id === batchFilter) && (
-            <div className="mt-3 rounded-lg border bg-cyan-50 dark:bg-cyan-900/20 px-3 py-2 text-sm flex items-center gap-2">
+            <div className="mt-3 rounded-lg border bg-cyan-50 dark:bg-cyan-900/20 px-3 py-2 text-sm flex items-center gap-2 min-w-0">
               <Box className="h-4 w-4 text-cyan-700 dark:text-cyan-300 shrink-0" />
-              <span className="text-cyan-900 dark:text-cyan-100 break-words">
+              <span className="text-cyan-900 dark:text-cyan-100 break-words min-w-0 flex-1">
                 {t('Filter aktiv: nur Charge')} <span className="font-mono font-semibold">{batchOptions.find(b => b.id === batchFilter)?.label}</span>
               </span>
-              <Button variant="ghost" size="sm" onClick={() => setBatchFilter('all')} className="ml-auto h-7 px-2 text-xs">
+              <Button variant="ghost" size="sm" onClick={() => setBatchFilter('all')} className="h-7 px-2 text-xs shrink-0">
                 {t('Zurücksetzen')}
               </Button>
             </div>
