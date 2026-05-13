@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScanBarcode, Check, X, Package } from 'lucide-react';
+import { ScanBarcode, Check, X, Package, Plus, Gift } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { confirmItemPick, confirmItemPack } from '@/services/supabase/wh-shipments';
 import type { WhShipmentItem } from '@/types/warehouse';
+import { AddShipmentItemDialog } from '@/components/warehouse/AddShipmentItemDialog';
 import { toast } from 'sonner';
 
 interface Props {
@@ -16,6 +18,12 @@ interface Props {
   items: WhShipmentItem[];
   productBarcodeMap?: Record<string, string>;
   onConfirmed: () => void;
+  /** Required to add extra positions during picking/packing. */
+  shipmentId?: string;
+  /** Source location of the shipment, used to pre-select stock in the picker. */
+  sourceLocationId?: string;
+  /** Called after a new position was added so the parent can refetch items. */
+  onItemsChanged?: () => void;
 }
 
 /**
@@ -25,12 +33,13 @@ interface Props {
  * onConfirmed() ausgelöst — typischerweise ruft dann die parent
  * updateShipmentStatus().
  */
-export function PickPackConfirmDialog({ open, onOpenChange, mode, items, productBarcodeMap, onConfirmed }: Props) {
+export function PickPackConfirmDialog({ open, onOpenChange, mode, items, productBarcodeMap, onConfirmed, shipmentId, sourceLocationId, onItemsChanged }: Props) {
   const { t } = useTranslation('warehouse');
   // Map item.id → confirmed quantity
   const [confirmed, setConfirmed] = useState<Record<string, number>>({});
   const [scanValue, setScanValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   // Reset when dialog opens
   useEffect(() => {
@@ -135,6 +144,20 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
           </Button>
         </form>
 
+        {shipmentId && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setAddOpen(true)}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" /> {t('Produkt hinzufügen')}
+            </Button>
+          </div>
+        )}
+
         <div className="rounded-lg border divide-y">
           {items.map(item => {
             const qty = confirmed[item.id] || 0;
@@ -149,12 +172,22 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
                     className="mt-1 shrink-0"
                   />
                   <div className="flex-1 min-w-0 space-y-1">
-                    <div className="font-medium text-sm leading-tight break-words">
+                    <div className="font-medium text-sm leading-tight break-words flex flex-wrap items-center gap-1.5">
                       {item.productName || item.productId.slice(0, 8)}
+                      {item.isGift && (
+                        <Badge variant="secondary" className="gap-1 bg-pink-100 text-pink-800 hover:bg-pink-100 dark:bg-pink-900/30 dark:text-pink-200">
+                          <Gift className="h-3 w-3" /> {t('Beigabe')}
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground break-words">
                       {item.batchSerialNumber || t('Keine Charge')} · {item.locationName || t('Unbekannter Standort')}
                     </div>
+                    {item.isGift && item.giftNote && (
+                      <div className="text-xs text-pink-700 dark:text-pink-300 italic break-words">
+                        {item.giftNote}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <div className="flex items-center gap-1 text-sm tabular-nums">
@@ -171,6 +204,16 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
             );
           })}
         </div>
+
+        {shipmentId && (
+          <AddShipmentItemDialog
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            shipmentId={shipmentId}
+            preferredLocationId={sourceLocationId}
+            onAdded={() => onItemsChanged?.()}
+          />
+        )}
 
         <div className="flex items-center justify-between text-sm pt-2">
           <span className="text-muted-foreground">

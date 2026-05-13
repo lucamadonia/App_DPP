@@ -656,6 +656,10 @@ export interface WhShipmentItem {
   unitPrice?: number;
   currency: string;
   notes?: string;
+  /** Marks this position as a free-of-charge gift / Beigabe (excluded from invoicing). */
+  isGift: boolean;
+  /** Optional text shown next to the gift badge (e.g. "Geburtstagsgeschenk", "Goodie zur Bestellung"). */
+  giftNote?: string;
   createdAt: string;
   // Joined
   productName?: string;
@@ -671,6 +675,8 @@ export interface WhShipmentItemInput {
   unitPrice?: number;
   currency?: string;
   notes?: string;
+  isGift?: boolean;
+  giftNote?: string;
 }
 
 // ============================================

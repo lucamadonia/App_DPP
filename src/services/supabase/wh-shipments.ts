@@ -90,6 +90,8 @@ function transformShipmentItem(row: any): WhShipmentItem {
     unitPrice: row.unit_price != null ? Number(row.unit_price) : undefined,
     currency: row.currency || 'EUR',
     notes: row.notes || undefined,
+    isGift: !!row.is_gift,
+    giftNote: row.gift_note || undefined,
     createdAt: row.created_at,
     productName: row.products?.name || undefined,
     batchSerialNumber: row.product_batches?.serial_number || undefined,
@@ -823,6 +825,8 @@ export async function addShipmentItem(shipmentId: string, item: {
   quantity: number;
   unitPrice?: number;
   notes?: string;
+  isGift?: boolean;
+  giftNote?: string;
 }): Promise<WhShipmentItem> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) throw new Error('No tenant');
@@ -836,13 +840,58 @@ export async function addShipmentItem(shipmentId: string, item: {
       batch_id: item.batchId,
       location_id: item.locationId,
       quantity: item.quantity,
-      unit_price: item.unitPrice || null,
+      // Gift positions are billed at 0 regardless of any unit_price passed in.
+      unit_price: item.isGift ? 0 : (item.unitPrice ?? null),
       notes: item.notes || null,
+      is_gift: !!item.isGift,
+      gift_note: item.giftNote || null,
     })
     .select()
     .single();
 
   if (error) throw new Error(`Failed to add item: ${error.message}`);
+
+  // Reserve stock for the new position so inventory stays accurate and the
+  // reservation→shipment conversion in updateShipmentStatus('shipped') picks
+  // it up. Skip silently if no matching stock row exists or coverage is short
+  // — mirrors the behavior of createShipment().
+  if (item.batchId && item.locationId && item.quantity > 0) {
+    const { data: stock } = await supabase
+      .from('wh_stock_levels')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('location_id', item.locationId)
+      .eq('batch_id', item.batchId)
+      .maybeSingle();
+
+    if (stock && stock.quantity_available >= item.quantity) {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+
+      await supabase
+        .from('wh_stock_levels')
+        .update({
+          quantity_available: stock.quantity_available - item.quantity,
+          quantity_reserved: stock.quantity_reserved + item.quantity,
+        })
+        .eq('id', stock.id);
+
+      await supabase.from('wh_stock_transactions').insert({
+        tenant_id: tenantId,
+        transaction_number: generateTransactionNumber(),
+        type: 'reservation',
+        location_id: item.locationId,
+        product_id: item.productId,
+        batch_id: item.batchId,
+        quantity: -item.quantity,
+        quantity_before: stock.quantity_available,
+        quantity_after: stock.quantity_available - item.quantity,
+        shipment_id: shipmentId,
+        performed_by: userId,
+        notes: item.isGift ? 'Beigabe / Geschenk hinzugefügt' : null,
+      });
+    }
+  }
 
   // Update total items count
   const items = await getShipmentItems(shipmentId);

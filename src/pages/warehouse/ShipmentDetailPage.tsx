@@ -1064,6 +1064,9 @@ export function ShipmentDetailPage() {
         mode="pick"
         items={items}
         productBarcodeMap={barcodeMap}
+        shipmentId={id}
+        sourceLocationId={shipment?.sourceLocationId}
+        onItemsChanged={reloadShipment}
         onConfirmed={() => {
           if (pendingStatus) applyStatusChange(pendingStatus);
           setPendingStatus(null);
@@ -1075,6 +1078,9 @@ export function ShipmentDetailPage() {
         mode="pack"
         items={items}
         productBarcodeMap={barcodeMap}
+        shipmentId={id}
+        sourceLocationId={shipment?.sourceLocationId}
+        onItemsChanged={reloadShipment}
         onConfirmed={() => {
           if (pendingStatus) applyStatusChange(pendingStatus);
           setPendingStatus(null);
