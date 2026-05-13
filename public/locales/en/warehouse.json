@@ -1484,5 +1484,10 @@
   "Charge / Standort": "Batch / location",
   "Grund / Empfänger": "Reason / recipient",
   "Durch": "By",
-  "Sendung": "Shipment"
+  "Sendung": "Shipment",
+  "Charge": "Batch",
+  "Erst Produkt wählen": "Pick a product first",
+  "Alle Chargen": "All batches",
+  "Filter aktiv: nur Charge": "Active filter: only batch",
+  "Zurücksetzen": "Reset"
 }

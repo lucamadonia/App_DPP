@@ -127,6 +127,7 @@ export function StockMovementsPage() {
 
   const [range, setRange] = useState<RangePreset>('30d');
   const [productFilter, setProductFilter] = useState<string>('all');
+  const [batchFilter, setBatchFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<MovementCategory | 'all'>('all');
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'category' | 'recipient' | 'product' | 'log'>('category');
@@ -135,6 +136,11 @@ export function StockMovementsPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [userMap, setUserMap] = useState<Record<string, string>>({});
+  // Reset batch filter when product changes — old batchId would be from another product.
+  useEffect(() => { setBatchFilter('all'); }, [productFilter]);
+  // Map shipmentId → recipient label ("Sabrina P. · Shopify #1003"), so the
+  // "Nach Empfänger" tab can group Shopify orders by customer too.
+  const [shipmentRecipients, setShipmentRecipients] = useState<Record<string, string>>({});
 
   // Load transactions whenever date range changes — other filters are client-side.
   useEffect(() => {
@@ -149,6 +155,25 @@ export function StockMovementsPage() {
     })();
     return () => { cancelled = true; };
   }, [range]);
+
+  // Resolve shipment recipients for any transaction that has shipmentId set.
+  // We batch the lookup so a 200-row activity stream still uses 1 query.
+  useEffect(() => {
+    const ids = Array.from(new Set(txns.map(t => t.shipmentId).filter(Boolean) as string[]));
+    if (ids.length === 0) { setShipmentRecipients({}); return; }
+    supabase
+      .from('wh_shipments')
+      .select('id, recipient_name, recipient_company, order_reference')
+      .in('id', ids)
+      .then((res: { data: Array<{ id: string; recipient_name?: string; recipient_company?: string; order_reference?: string }> | null }) => {
+        const m: Record<string, string> = {};
+        for (const s of res.data || []) {
+          const name = s.recipient_company || s.recipient_name || 'Unbekannt';
+          m[s.id] = s.order_reference ? `${name} · ${s.order_reference}` : name;
+        }
+        setShipmentRecipients(m);
+      });
+  }, [txns]);
 
   // Load product list once (for filter picker).
   useEffect(() => {
@@ -170,46 +195,69 @@ export function StockMovementsPage() {
       });
   }, [txns]);
 
+  // Available batches for the currently selected product (derived from data).
+  const batchOptions = useMemo(() => {
+    if (productFilter === 'all') return [];
+    const seen = new Map<string, string>();
+    for (const t of txns) {
+      if (t.productId !== productFilter) continue;
+      if (!t.batchId) continue;
+      if (!seen.has(t.batchId)) {
+        seen.set(t.batchId, t.batchSerialNumber || t.batchId.slice(0, 8));
+      }
+    }
+    return Array.from(seen, ([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [txns, productFilter]);
+
   // Apply non-date filters client-side.
   const filtered = useMemo(() => {
     return txns.filter(t => {
       if (productFilter !== 'all' && t.productId !== productFilter) return false;
+      if (batchFilter !== 'all' && t.batchId !== batchFilter) return false;
       const cat = categorize(t);
       if (categoryFilter !== 'all' && cat !== categoryFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         const parsed = parseReason(t.reason);
+        const shipRecipient = t.shipmentId ? shipmentRecipients[t.shipmentId] : undefined;
         const haystack = [
           t.productName, t.batchSerialNumber, t.locationName,
           t.reason, t.notes, t.transactionNumber,
-          parsed.recipient,
+          parsed.recipient, shipRecipient,
         ].filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [txns, productFilter, categoryFilter, search]);
+  }, [txns, productFilter, batchFilter, categoryFilter, search, shipmentRecipients]);
 
   // KPI: sum |quantity| per category, only outflows + the sign of qty matters.
   const categoryStats = useMemo(() => {
-    const stats: Record<MovementCategory, { count: number; qty: number }> = {} as never;
+    const stats = {} as Record<MovementCategory, { count: number; qty: number }>;
     for (const c of CATEGORIES) stats[c.key] = { count: 0, qty: 0 };
     for (const t of filtered) {
       const cat = categorize(t);
-      stats[cat].count += 1;
-      stats[cat].qty += Math.abs(t.quantity || 0);
+      // Defensive: in case categorize() ever returns an unknown key, fall back
+      // to 'other_outflow' which is always initialized.
+      const bucket = stats[cat] || stats.other_outflow;
+      bucket.count += 1;
+      bucket.qty += Math.abs(t.quantity || 0);
     }
     return stats;
   }, [filtered]);
 
-  // Recipient breakdown (only for outflow + parsed recipient).
+  // Recipient breakdown — covers both write-off recipients (parsed from
+  // reason) AND shipment recipients (joined via shipmentRecipients map).
   const recipientBreakdown = useMemo(() => {
     const map = new Map<string, { recipient: string; category: MovementCategory; qty: number; count: number }>();
     for (const t of filtered) {
       const cat = categorize(t);
       if (!CAT_BY_KEY[cat]?.isOutflow) continue;
       const parsed = parseReason(t.reason);
-      const recipient = parsed.recipient || (cat === 'shipment' ? extractShipmentRecipient(t) : null);
+      const recipient =
+        parsed.recipient
+        || (cat === 'shipment' && t.shipmentId ? shipmentRecipients[t.shipmentId] : null);
       if (!recipient) continue;
       const key = `${cat}::${recipient}`;
       const existing = map.get(key);
@@ -221,7 +269,7 @@ export function StockMovementsPage() {
       }
     }
     return Array.from(map.values()).sort((a, b) => b.qty - a.qty);
-  }, [filtered]);
+  }, [filtered, shipmentRecipients]);
 
   // Per-product breakdown — for each product, the outflow split by category.
   const productBreakdown = useMemo(() => {
@@ -313,7 +361,7 @@ export function StockMovementsPage() {
       {/* Filter bar */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
               <Label className="text-xs flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> {t('Zeitraum')}
@@ -345,6 +393,26 @@ export function StockMovementsPage() {
             </div>
             <div>
               <Label className="text-xs flex items-center gap-1">
+                <Box className="h-3 w-3" /> {t('Charge')}
+              </Label>
+              <Select
+                value={batchFilter}
+                onValueChange={setBatchFilter}
+                disabled={productFilter === 'all' || batchOptions.length === 0}
+              >
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue placeholder={productFilter === 'all' ? t('Erst Produkt wählen') : t('Alle Chargen')} />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">{t('Alle Chargen')}</SelectItem>
+                  {batchOptions.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1">
                 <Filter className="h-3 w-3" /> {t('Kategorie')}
               </Label>
               <Select value={categoryFilter} onValueChange={v => setCategoryFilter(v as MovementCategory | 'all')}>
@@ -369,6 +437,18 @@ export function StockMovementsPage() {
               />
             </div>
           </div>
+          {/* Active batch hint */}
+          {batchFilter !== 'all' && batchOptions.find(b => b.id === batchFilter) && (
+            <div className="mt-3 rounded-lg border bg-cyan-50 dark:bg-cyan-900/20 px-3 py-2 text-sm flex items-center gap-2">
+              <Box className="h-4 w-4 text-cyan-700 dark:text-cyan-300 shrink-0" />
+              <span className="text-cyan-900 dark:text-cyan-100 break-words">
+                {t('Filter aktiv: nur Charge')} <span className="font-mono font-semibold">{batchOptions.find(b => b.id === batchFilter)?.label}</span>
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => setBatchFilter('all')} className="ml-auto h-7 px-2 text-xs">
+                {t('Zurücksetzen')}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -464,18 +544,6 @@ export function StockMovementsPage() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Helper for shipment recipients                                             */
-/* -------------------------------------------------------------------------- */
-
-function extractShipmentRecipient(_t: WhStockTransaction): string | null {
-  // Stock transactions don't carry the recipient name directly; we surface a
-  // shipment link in the audit log instead. Returning null skips it from the
-  // recipient breakdown — which is fine, shipments are aggregated per shipment
-  // separately on the shipments list page.
-  return null;
-}
-
-/* -------------------------------------------------------------------------- */
 /*  Tab components                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -537,7 +605,7 @@ function RecipientTab({ rows, t }: {
   return (
     <div className="space-y-2">
       {rows.map((r, i) => {
-        const c = CAT_BY_KEY[r.category];
+        const c = CAT_BY_KEY[r.category] || CAT_BY_KEY.other_outflow;
         const Icon = c.icon;
         return (
           <div key={`${r.category}-${r.recipient}-${i}`} className="flex items-center gap-3 rounded-lg border p-3">
@@ -639,7 +707,7 @@ function AuditLogTab({ rows, t, userMap, locale }: {
         <TableBody>
           {rows.map(txn => {
             const cat = categorize(txn);
-            const c = CAT_BY_KEY[cat];
+            const c = CAT_BY_KEY[cat] || CAT_BY_KEY.other_outflow;
             const Icon = c.icon;
             const parsed = parseReason(txn.reason);
             const qty = txn.quantity || 0;
