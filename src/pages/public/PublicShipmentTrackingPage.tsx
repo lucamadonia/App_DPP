@@ -63,8 +63,10 @@ function mapToStage(status: string): ShipmentStage {
     case 'picking':
       return 'created';
     case 'packed':
-      return 'packed';
     case 'label_created':
+      // label_created = DHL-Label generiert, Paket liegt aber noch im Lager
+      // (shipped_at ist noch NULL). Für den Kunden ist das visuell „verpackt".
+      return 'packed';
     case 'shipped':
       return 'shipped';
     case 'in_transit':
@@ -74,6 +76,16 @@ function mapToStage(status: string): ShipmentStage {
     default:
       return 'created';
   }
+}
+
+/**
+ * True only when the package has actually been handed off to the carrier
+ * (shipped_at is set OR status is shipped/in_transit/delivered). Drives
+ * the ETA card — predicted arrival makes no sense before this point.
+ */
+function isInTransit(s: PublicShipmentSummary): boolean {
+  if (s.shippedAt) return true;
+  return s.status === 'shipped' || s.status === 'in_transit' || s.status === 'delivered';
 }
 
 /* -------------------------------------------------------------------------- */
@@ -125,6 +137,28 @@ function ETADisplay({ shipment, eventCount, locale, t }: {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // If the package hasn't been handed to the carrier yet, don't show an
+  // ETA — that just confuses the customer (e.g. "should have arrived" while
+  // the box is still on the packing table). Show a "wird vorbereitet" hint.
+  if (!isInTransit(shipment) && !shipment.deliveredAt) {
+    const isLabelReady = shipment.status === 'label_created';
+    return (
+      <div className="space-y-1.5">
+        <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+          {isLabelReady ? t('Wird abgeholt') : t('Wird vorbereitet')}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          <span>
+            {isLabelReady
+              ? t('Versandetikett erstellt — wartet auf Übergabe an den Spediteur.')
+              : t('Wir kommissionieren und verpacken dein Paket — Tracking wird aktiv, sobald es unterwegs ist.')}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (!date) return null;
   const dateLabel = date.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
@@ -695,9 +729,31 @@ export function PublicShipmentTrackingPage() {
           )}
           <CardContent className="pt-5 pb-6 px-5 sm:px-7">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-              {shipment.recipientFirstName
-                ? t('Hi {{name}}, your package is on the way').replace('{{name}}', shipment.recipientFirstName)
-                : t('Your package is on the way')}
+              {(() => {
+                // State-aware greeting — never lie about being "on the way"
+                // when the package is still in the warehouse.
+                const inTransit = isInTransit(shipment);
+                const name = shipment.recipientFirstName;
+                if (shipment.deliveredAt) {
+                  return name
+                    ? t('Hi {{name}}, your package has arrived').replace('{{name}}', name)
+                    : t('Your package has arrived');
+                }
+                if (inTransit) {
+                  return name
+                    ? t('Hi {{name}}, your package is on the way').replace('{{name}}', name)
+                    : t('Your package is on the way');
+                }
+                if (shipment.status === 'label_created') {
+                  return name
+                    ? t('Hi {{name}}, your label is ready').replace('{{name}}', name)
+                    : t('Your label is ready');
+                }
+                // draft / picking / packed
+                return name
+                  ? t('Hi {{name}}, we are preparing your package').replace('{{name}}', name)
+                  : t('We are preparing your package');
+              })()}
             </div>
             <div className="mt-3">
               <ETADisplay
