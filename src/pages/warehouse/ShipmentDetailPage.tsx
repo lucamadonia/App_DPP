@@ -26,7 +26,7 @@ import { getContentPosts } from '@/services/supabase/wh-content';
 import { updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
 import { SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS, getTrackingUrl } from '@/lib/warehouse-constants';
 import type { WhShipment, WhShipmentItem, ShipmentStatus, WhContentPost } from '@/types/warehouse';
-import { SHIPMENT_STATUS_ORDER } from '@/types/warehouse';
+import { SHIPMENT_STATUS_ORDER, CARRIER_OPTIONS } from '@/types/warehouse';
 import { DHLLabelActions } from '@/components/warehouse/DHLLabelActions';
 import { DHLTrackingPanel } from '@/components/warehouse/DHLTrackingPanel';
 import { SampleStatusPipeline } from '@/components/warehouse/SampleStatusPipeline';
@@ -307,7 +307,9 @@ export function ShipmentDetailPage() {
       setEditingRecipient(true);
     } else if (section === 'shipping') {
       setEditFields({
-        carrier: shipment.carrier || '',
+        // Default DHL when no carrier set yet — covers >90% of cases for this tenant
+        // and unblocks the "Spediteur fehlt" forward guard immediately.
+        carrier: shipment.carrier || 'DHL',
         trackingNumber: shipment.trackingNumber || '',
         serviceLevel: shipment.serviceLevel || '',
         estimatedDelivery: shipment.estimatedDelivery || '',
@@ -639,7 +641,26 @@ export function ShipmentDetailPage() {
               )}
             </CardHeader>
             <CardContent className="space-y-2">
-              <EditableField label={t('Carrier')} value={shipment.carrier || ''} editing={editingShipping} editValue={editFields.carrier || ''} onChange={v => setEditFields(f => ({ ...f, carrier: v }))} />
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-muted-foreground text-sm shrink-0">{t('Carrier')}</span>
+                {editingShipping ? (
+                  <Select
+                    value={editFields.carrier || ''}
+                    onValueChange={(v) => setEditFields(f => ({ ...f, carrier: v }))}
+                  >
+                    <SelectTrigger className="max-w-[200px] h-8 text-sm">
+                      <SelectValue placeholder={t('Spediteur wählen')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CARRIER_OPTIONS.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-sm font-medium">{shipment.carrier || '—'}</span>
+                )}
+              </div>
               <div className="flex justify-between items-center gap-2">
                 <span className="text-muted-foreground text-sm shrink-0">{t('Tracking Number')}</span>
                 {editingShipping ? (
