@@ -22,6 +22,7 @@ import {
   TableIcon,
   SlidersHorizontal,
   Move,
+  MinusCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,6 +64,7 @@ import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
 import { InventoryCardView } from '@/components/warehouse/InventoryCardView';
+import { StockWriteOffDialog } from '@/components/warehouse/StockWriteOffDialog';
 import { formatBinLocation } from '@/lib/warehouse-utils';
 import type { WhStockLevel, WhLocation, WarehouseZone } from '@/types/warehouse';
 
@@ -194,6 +196,9 @@ export function InventoryListPage() {
   const [moveBinNewBinDisplay, setMoveBinNewBinDisplay] = useState('');
   const [moveBinQty, setMoveBinQty] = useState('');
   const [moveBinSaving, setMoveBinSaving] = useState(false);
+
+  // Write-off dialog (Werbegeschenke, Tester, Spenden, Eigenverbrauch, Bruch, Ausschuss)
+  const [writeOffTarget, setWriteOffTarget] = useState<WhStockLevel | null>(null);
 
   // Context menu (right-click)
   const [ctxMenu, setCtxMenu] = useState<{ row: WhStockLevel; x: number; y: number } | null>(null);
@@ -483,6 +488,10 @@ export function InventoryListPage() {
       <DropdownMenuItem onClick={() => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); }}>
         <ArrowRightLeft className="mr-2 h-4 w-4" />
         {t('Transfer Stock')}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setWriteOffTarget(s)} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+        <MinusCircle className="mr-2 h-4 w-4" />
+        {t('Ware ausbuchen')}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => navigate(`/products/${s.productId}`)}>
@@ -1402,6 +1411,13 @@ export function InventoryListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StockWriteOffDialog
+        open={!!writeOffTarget}
+        onOpenChange={(o) => { if (!o) setWriteOffTarget(null); }}
+        stock={writeOffTarget}
+        onSaved={loadData}
+      />
     </div>
   );
 }
