@@ -109,6 +109,7 @@ export function AppSidebar() {
             { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
             { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
             { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
+            { title: t('Bewegungen & Auswertung', { ns: 'warehouse' }), url: '/warehouse/movements' },
             { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
             { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
             { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
