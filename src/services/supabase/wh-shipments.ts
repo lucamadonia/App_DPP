@@ -13,6 +13,35 @@ import type {
   ShipmentStatus,
   WarehouseStats,
 } from '@/types/warehouse';
+import { SHIPMENT_STATUS_ORDER } from '@/types/warehouse';
+
+/**
+ * Status transition error — thrown by updateShipmentStatus when a forward
+ * transition is missing prerequisites (e.g. carrier not set before label
+ * creation). The UI catches these and surfaces them via toast or inline
+ * hint instead of a generic "Failed to update status" message.
+ */
+export class ShipmentStatusError extends Error {
+  /** Stable code so the UI can react (e.g. open the carrier picker). */
+  code: 'CARRIER_REQUIRED' | 'NO_TENANT' | 'NOT_FOUND' | 'STATUS_LOCKED' | 'INSUFFICIENT_STOCK';
+  constructor(code: ShipmentStatusError['code'], message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'ShipmentStatusError';
+  }
+}
+
+function statusIndex(s: ShipmentStatus): number {
+  // 'cancelled' is not in the linear order — treat as "off-track" (-1).
+  return SHIPMENT_STATUS_ORDER.indexOf(s);
+}
+
+function isBackwardFromShipped(oldStatus: ShipmentStatus, newStatus: ShipmentStatus): boolean {
+  // Going from shipped/in_transit/delivered back to anything before shipped.
+  const wasShippedOrLater = statusIndex(oldStatus) >= statusIndex('shipped');
+  const goingBeforeShipped = statusIndex(newStatus) >= 0 && statusIndex(newStatus) < statusIndex('shipped');
+  return wasShippedOrLater && goingBeforeShipped;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformShipment(row: any): WhShipment {
@@ -675,10 +704,46 @@ export async function updateShipment(id: string, updates: Partial<{
   return transformShipment(data);
 }
 
+/**
+ * Single guarded entry point for shipment status transitions.
+ *
+ * Forward guards (throws ShipmentStatusError):
+ *  - `label_created`, `shipped`, `in_transit`, `delivered` require carrier set
+ *
+ * Backward cleanup (silent, automatic):
+ *  - From `shipped|in_transit|delivered` → anything before `shipped`:
+ *    restores quantity_reserved, logs reverse-shipment transactions,
+ *    clears `shipped_at`/`shipped_by`.
+ *  - From `delivered` → anything before `delivered`: clears `delivered_at`.
+ *  - From `cancelled` → anything else: releases nothing (re-running the cycle
+ *    would re-reserve stock at the next forward step).
+ *
+ * Returns the updated shipment. Same-status calls are a no-op.
+ */
 export async function updateShipmentStatus(id: string, status: ShipmentStatus): Promise<WhShipment> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new ShipmentStatusError('NO_TENANT', 'No tenant');
+
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData?.user?.id;
 
+  // 1. Load current state — needed for both guards and cleanup decisions.
+  const current = await getShipment(id);
+  if (!current) throw new ShipmentStatusError('NOT_FOUND', `Shipment ${id} not found`);
+
+  const oldStatus = current.status;
+  if (oldStatus === status) return current; // no-op
+
+  // 2. Forward guards — fail fast before any DB mutation.
+  const carrierRequired: ShipmentStatus[] = ['label_created', 'shipped', 'in_transit', 'delivered'];
+  if (carrierRequired.includes(status) && !current.carrier) {
+    throw new ShipmentStatusError(
+      'CARRIER_REQUIRED',
+      'Carrier must be set before advancing to this status',
+    );
+  }
+
+  // 3. Build the patch for wh_shipments.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const update: Record<string, any> = { status };
 
@@ -690,51 +755,98 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
     update.delivered_at = new Date().toISOString();
   }
 
-  // When shipped, convert reservations to actual shipment deductions
-  if (status === 'shipped') {
-    const tenantId = await getCurrentTenantId();
+  // 4. Backward cleanup — fix the historical "silent revert" bug:
+  //   if user moves status from shipped (or later) back to anything before
+  //   shipped, restore the reservation that was consumed by the original
+  //   shipment, log a reverse transaction, and clear the timestamp so the
+  //   activity log doesn't lie about the state.
+  const goingBackward = isBackwardFromShipped(oldStatus, status);
+  if (goingBackward) {
     const items = await getShipmentItems(id);
-
     for (const item of items) {
+      if (!item.batchId || !item.locationId) continue;
       const { data: stock } = await supabase
         .from('wh_stock_levels')
         .select('*')
         .eq('location_id', item.locationId)
         .eq('batch_id', item.batchId)
         .maybeSingle();
+      if (!stock) continue;
 
-      if (stock) {
-        // Convert reservation to shipment (reduce reserved, don't touch available)
-        await supabase
-          .from('wh_stock_levels')
-          .update({
-            quantity_reserved: Math.max(0, stock.quantity_reserved - item.quantity),
-          })
-          .eq('id', stock.id);
+      const newReserved = stock.quantity_reserved + item.quantity;
+      await supabase
+        .from('wh_stock_levels')
+        .update({ quantity_reserved: newReserved })
+        .eq('id', stock.id);
 
-        // Log shipment transaction
-        await supabase.from('wh_stock_transactions').insert({
-          tenant_id: tenantId,
-          transaction_number: generateTransactionNumber(),
-          type: 'shipment',
-          location_id: item.locationId,
-          product_id: item.productId,
-          batch_id: item.batchId,
-          quantity: -item.quantity,
-          quantity_before: stock.quantity_available + stock.quantity_reserved,
-          quantity_after: stock.quantity_available + stock.quantity_reserved - item.quantity,
-          shipment_id: id,
-          performed_by: userId,
-        });
-      }
+      await supabase.from('wh_stock_transactions').insert({
+        tenant_id: tenantId,
+        transaction_number: generateTransactionNumber(),
+        type: 'reservation',
+        location_id: item.locationId,
+        product_id: item.productId,
+        batch_id: item.batchId,
+        quantity: item.quantity, // positive — restoring a reservation
+        quantity_before: stock.quantity_reserved,
+        quantity_after: newReserved,
+        shipment_id: id,
+        performed_by: userId,
+        notes: `Reverse: shipment status reverted ${oldStatus} → ${status}`,
+      });
+    }
+    update.shipped_at = null;
+    update.shipped_by = null;
+  }
+
+  // 5. Backward from delivered (but not as far as before-shipped): just
+  //    clear delivered_at so the activity log stays consistent.
+  if (oldStatus === 'delivered' && status !== 'delivered' && !goingBackward) {
+    update.delivered_at = null;
+  }
+
+  // 6. Forward to shipped — convert reservations to actual deductions.
+  //    (Skip when going from in_transit/delivered back to shipped — there's
+  //    no stock change in that direction.)
+  if (status === 'shipped' && statusIndex(oldStatus) < statusIndex('shipped')) {
+    const items = await getShipmentItems(id);
+    for (const item of items) {
+      if (!item.batchId || !item.locationId) continue;
+      const { data: stock } = await supabase
+        .from('wh_stock_levels')
+        .select('*')
+        .eq('location_id', item.locationId)
+        .eq('batch_id', item.batchId)
+        .maybeSingle();
+      if (!stock) continue;
+
+      await supabase
+        .from('wh_stock_levels')
+        .update({
+          quantity_reserved: Math.max(0, stock.quantity_reserved - item.quantity),
+        })
+        .eq('id', stock.id);
+
+      await supabase.from('wh_stock_transactions').insert({
+        tenant_id: tenantId,
+        transaction_number: generateTransactionNumber(),
+        type: 'shipment',
+        location_id: item.locationId,
+        product_id: item.productId,
+        batch_id: item.batchId,
+        quantity: -item.quantity,
+        quantity_before: stock.quantity_available + stock.quantity_reserved,
+        quantity_after: stock.quantity_available + stock.quantity_reserved - item.quantity,
+        shipment_id: id,
+        performed_by: userId,
+      });
     }
   }
 
-  // When cancelled, release all reservations
+  // 7. Cancelled — release all open reservations back into available stock.
   if (status === 'cancelled') {
     const items = await getShipmentItems(id);
-
     for (const item of items) {
+      if (!item.batchId || !item.locationId) continue;
       const { data: stock } = await supabase
         .from('wh_stock_levels')
         .select('*')
@@ -754,6 +866,7 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
     }
   }
 
+  // 8. Persist the patch.
   const { data, error } = await supabase
     .from('wh_shipments')
     .update(update)
@@ -763,17 +876,18 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
 
   if (error) throw new Error(`Failed to update status: ${error.message}`);
 
-  // Auto-export fulfillment to Shopify when shipped (respects autoExportFulfillment flag)
-  if (status === 'shipped' && (data.shopify_order_id || data.order_reference?.startsWith('Shopify '))) {
-    const tenantId = data.tenant_id;
+  // 9. Auto-export fulfillment to Shopify ONLY on the genuine forward
+  //    transition into shipped (not on revert+re-ship cycles where a
+  //    fulfillment already exists).
+  const isForwardToShipped = status === 'shipped' && statusIndex(oldStatus) < statusIndex('shipped');
+  if (isForwardToShipped && (data.shopify_order_id || data.order_reference?.startsWith('Shopify '))) {
     const { data: tenant } = await supabase
       .from('tenants')
       .select('settings')
-      .eq('id', tenantId)
+      .eq('id', data.tenant_id)
       .single();
     const autoExport = tenant?.settings?.shopifyIntegration?.syncConfig?.autoExportFulfillment;
     if (autoExport === false) {
-      // Mark as pending, don't push
       await supabase
         .from('wh_shipments')
         .update({ shopify_export_pending: true })
@@ -902,6 +1016,154 @@ export async function addShipmentItem(shipmentId: string, item: {
   await recomputeShipmentWeight(shipmentId);
 
   return transformShipmentItem(data);
+}
+
+/**
+ * Patch a shipment item — used by the manual batch-assignment UI to fix
+ * items that came in from Shopify without a batch (or with a wrong one).
+ *
+ * Reservation diff is auto-applied:
+ *  - if the old item had (batchId + locationId + quantity) reserved → release
+ *    via `quantity_reserved -= oldQuantity` + log `release` transaction
+ *  - if the new patch has (batchId + locationId + quantity) → reserve via
+ *    `quantity_available -= newQuantity, quantity_reserved += newQuantity` +
+ *    log `reservation` transaction
+ *
+ * Refuses to run when the shipment is past `packed` (label_created and later)
+ * because changing items after a real DHL label has been generated would
+ * desync the label PDF from the actual contents.
+ */
+export async function updateShipmentItem(
+  itemId: string,
+  patch: { batchId?: string | null; locationId?: string; quantity?: number; notes?: string | null },
+): Promise<WhShipmentItem> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new ShipmentStatusError('NO_TENANT', 'No tenant');
+
+  // Load the current item + its shipment for status check.
+  const { data: rawItem, error: loadErr } = await supabase
+    .from('wh_shipment_items')
+    .select('*')
+    .eq('id', itemId)
+    .single();
+  if (loadErr || !rawItem) throw new ShipmentStatusError('NOT_FOUND', `Item ${itemId} not found`);
+
+  const shipment = await getShipment(rawItem.shipment_id);
+  if (!shipment) throw new ShipmentStatusError('NOT_FOUND', `Shipment ${rawItem.shipment_id} not found`);
+
+  const editableStatuses: ShipmentStatus[] = ['draft', 'picking', 'packed'];
+  if (!editableStatuses.includes(shipment.status)) {
+    throw new ShipmentStatusError(
+      'STATUS_LOCKED',
+      `Cannot edit items in status ${shipment.status} — revert to "packed" first`,
+    );
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+
+  const oldBatchId = rawItem.batch_id as string | null;
+  const oldLocationId = rawItem.location_id as string;
+  const oldQuantity = rawItem.quantity as number;
+
+  const newBatchId = patch.batchId !== undefined ? patch.batchId : oldBatchId;
+  const newLocationId = patch.locationId ?? oldLocationId;
+  const newQuantity = patch.quantity ?? oldQuantity;
+
+  // 1. Release the old reservation (only if old item actually had stock locked).
+  if (oldBatchId && oldLocationId && oldQuantity > 0) {
+    const { data: oldStock } = await supabase
+      .from('wh_stock_levels')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('location_id', oldLocationId)
+      .eq('batch_id', oldBatchId)
+      .maybeSingle();
+
+    if (oldStock) {
+      const releasedReserved = Math.max(0, oldStock.quantity_reserved - oldQuantity);
+      const restoredAvailable = oldStock.quantity_available + Math.min(oldStock.quantity_reserved, oldQuantity);
+      await supabase
+        .from('wh_stock_levels')
+        .update({ quantity_reserved: releasedReserved, quantity_available: restoredAvailable })
+        .eq('id', oldStock.id);
+
+      await supabase.from('wh_stock_transactions').insert({
+        tenant_id: tenantId,
+        transaction_number: generateTransactionNumber(),
+        type: 'release',
+        location_id: oldLocationId,
+        product_id: rawItem.product_id,
+        batch_id: oldBatchId,
+        quantity: oldQuantity,
+        quantity_before: oldStock.quantity_reserved,
+        quantity_after: releasedReserved,
+        shipment_id: rawItem.shipment_id,
+        performed_by: userId,
+        notes: 'Released for shipment item edit',
+      });
+    }
+  }
+
+  // 2. Reserve the new combination (skip silently if no stock row or insufficient).
+  if (newBatchId && newLocationId && newQuantity > 0) {
+    const { data: newStock } = await supabase
+      .from('wh_stock_levels')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('location_id', newLocationId)
+      .eq('batch_id', newBatchId)
+      .maybeSingle();
+
+    if (newStock && newStock.quantity_available >= newQuantity) {
+      await supabase
+        .from('wh_stock_levels')
+        .update({
+          quantity_available: newStock.quantity_available - newQuantity,
+          quantity_reserved: newStock.quantity_reserved + newQuantity,
+        })
+        .eq('id', newStock.id);
+
+      await supabase.from('wh_stock_transactions').insert({
+        tenant_id: tenantId,
+        transaction_number: generateTransactionNumber(),
+        type: 'reservation',
+        location_id: newLocationId,
+        product_id: rawItem.product_id,
+        batch_id: newBatchId,
+        quantity: -newQuantity,
+        quantity_before: newStock.quantity_available,
+        quantity_after: newStock.quantity_available - newQuantity,
+        shipment_id: rawItem.shipment_id,
+        performed_by: userId,
+        notes: 'Reserved after shipment item edit',
+      });
+    }
+  }
+
+  // 3. Persist the item patch.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const itemUpdate: Record<string, any> = {};
+  if (patch.batchId !== undefined) itemUpdate.batch_id = patch.batchId;
+  if (patch.locationId !== undefined) itemUpdate.location_id = patch.locationId;
+  if (patch.quantity !== undefined) itemUpdate.quantity = patch.quantity;
+  if (patch.notes !== undefined) itemUpdate.notes = patch.notes;
+
+  const { data: updated, error: updErr } = await supabase
+    .from('wh_shipment_items')
+    .update(itemUpdate)
+    .eq('id', itemId)
+    .select('*, products(name), product_batches(serial_number), wh_locations(name)')
+    .single();
+  if (updErr) throw new Error(`Failed to update item: ${updErr.message}`);
+
+  // 4. Recompute totals.
+  const items = await getShipmentItems(rawItem.shipment_id);
+  const total = items.reduce((sum, i) => sum + i.quantity, 0);
+  await supabase.from('wh_shipments').update({ total_items: total }).eq('id', rawItem.shipment_id);
+  await recomputeShipmentWeight(rawItem.shipment_id);
+
+  return transformShipmentItem(updated);
 }
 
 export async function removeShipmentItem(itemId: string): Promise<void> {
