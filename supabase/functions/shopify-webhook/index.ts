@@ -249,7 +249,7 @@ async function resolveAutoBatch(
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
     .eq('status', 'live')
-    .order('expiry_date', { ascending: true, nullsFirst: false })
+    .order('expiration_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
 
   if (!batches?.length) return { batchId: null, stockBacked: false };

@@ -831,11 +831,11 @@ async function resolveAutoBatch(
 ): Promise<{ batchId: string | null; stockBacked: boolean }> {
   const { data: batches } = await supabase
     .from('product_batches')
-    .select('id, expiry_date, created_at')
+    .select('id, expiration_date, created_at')
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
     .eq('status', 'live')
-    .order('expiry_date', { ascending: true, nullsFirst: false })
+    .order('expiration_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
 
   if (!batches?.length) return { batchId: null, stockBacked: false };
