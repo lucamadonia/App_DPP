@@ -654,8 +654,13 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
             if (!primaryLocation?.location_id) continue;
 
             let batchId = mapping.batch_id || null;
+            let itemNote: string | null = null;
             if (!batchId && mapping.auto_batch) {
-              batchId = await resolveAutoBatch(supabase, tenantId, mapping.product_id);
+              const picked = await resolveAutoBatch(supabase, tenantId, mapping.product_id, primaryLocation.location_id);
+              batchId = picked.batchId;
+              if (batchId && !picked.stockBacked) {
+                itemNote = 'auto-batch ohne Stock-Check (FIFO-Fallback)';
+              }
             }
 
             items.push({
@@ -666,6 +671,7 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
               quantity: li.fulfillable_quantity || li.quantity,
               unit_price: parseFloat(li.price) || null,
               currency: order.currency || 'EUR',
+              notes: itemNote,
             });
           }
 
@@ -810,18 +816,50 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
   }
 }
 
+/**
+ * Stock-aware FIFO batch picker — mirrors the shopify-webhook helper so both
+ * order ingestion paths assign the same batch. Prefers batches with
+ * quantity_available > 0 at the source location; falls back to plain FIFO and
+ * marks the result as `stockBacked: false` so the caller can flag the item.
+ */
 // deno-lint-ignore no-explicit-any
-async function resolveAutoBatch(supabase: any, tenantId: string, productId: string): Promise<string | null> {
-  const { data } = await supabase
+async function resolveAutoBatch(
+  supabase: any,
+  tenantId: string,
+  productId: string,
+  sourceLocationId: string | null,
+): Promise<{ batchId: string | null; stockBacked: boolean }> {
+  const { data: batches } = await supabase
     .from('product_batches')
     .select('id, expiry_date, created_at')
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
     .eq('status', 'live')
     .order('expiry_date', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: true })
-    .limit(1);
-  return data?.[0]?.id || null;
+    .order('created_at', { ascending: true });
+
+  if (!batches?.length) return { batchId: null, stockBacked: false };
+
+  if (sourceLocationId) {
+    const batchIds = batches.map((b: { id: string }) => b.id);
+    const { data: stocks } = await supabase
+      .from('wh_stock_levels')
+      .select('batch_id, quantity_available')
+      .eq('tenant_id', tenantId)
+      .eq('location_id', sourceLocationId)
+      .in('batch_id', batchIds);
+    const stockByBatch = new Map<string, number>();
+    for (const s of stocks || []) {
+      stockByBatch.set(s.batch_id, (s.quantity_available as number) || 0);
+    }
+    for (const b of batches) {
+      if ((stockByBatch.get(b.id) || 0) > 0) {
+        return { batchId: b.id, stockBacked: true };
+      }
+    }
+  }
+
+  return { batchId: batches[0].id, stockBacked: false };
 }
 
 /**
