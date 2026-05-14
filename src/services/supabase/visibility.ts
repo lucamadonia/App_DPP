@@ -5,6 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { gtinCandidates } from '@/lib/barcode-parser';
 import type { VisibilityConfigV2, VisibilityConfigV3, FieldVisibilityConfig } from '@/types/visibility';
 import { defaultVisibilityConfigV2, defaultVisibilityConfigV3, migrateVisibilityV2toV3 } from '@/types/visibility';
 
@@ -194,11 +195,13 @@ export async function getPublicVisibilitySettings(
   let productId: string | null = null;
   let tenantId: string | null = null;
 
-  // Step 1: Find products by GTIN
+  // Step 1: Find products by GTIN (accept GS1-128 / GTIN-14 variants)
+  const candidates = gtinCandidates(gtin);
+  const lookupGtins = candidates.length > 0 ? candidates : [gtin];
   const { data: productRows } = await supabase
     .from('products')
     .select('id, tenant_id')
-    .eq('gtin', gtin);
+    .in('gtin', lookupGtins);
 
   if (productRows && productRows.length > 0) {
     // Step 2: Try to find a batch with the given serial number
@@ -222,7 +225,7 @@ export async function getPublicVisibilitySettings(
       const { data: legacyProduct } = await supabase
         .from('products')
         .select('id, tenant_id')
-        .eq('gtin', gtin)
+        .in('gtin', lookupGtins)
         .eq('serial_number', serial)
         .single();
 

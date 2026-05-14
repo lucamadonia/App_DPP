@@ -251,11 +251,13 @@ export async function getProductByGtinSerial(
   gtin: string,
   serial: string
 ): Promise<(Product & { tenantId: string }) | null> {
-  // Step 1: Find the product by GTIN
+  // Step 1: Find the product by GTIN (accept EAN-13 / GTIN-14 / GS1-AI variants)
+  const { gtinCandidates } = await import('@/lib/barcode-parser');
+  const candidates = gtinCandidates(gtin);
   const { data: productRows, error: productError } = await supabase
     .from('products')
     .select('*')
-    .eq('gtin', gtin);
+    .in('gtin', candidates.length > 0 ? candidates : [gtin]);
 
   if (productError || !productRows || productRows.length === 0) {
     return null;

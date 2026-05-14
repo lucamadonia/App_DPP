@@ -5,6 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { gtinCandidates } from '@/lib/barcode-parser';
 import type { Tenant, TenantSettings, BrandingSettings, QRCodeDomainSettings, DPPDesignSettings } from '@/types/database';
 
 // Transform database row to Tenant type
@@ -335,11 +336,12 @@ export async function getPublicBrandingByProduct(
   gtin: string,
   serial: string
 ): Promise<BrandingSettings | null> {
-  // First find the product to get its tenant_id
+  // First find the product to get its tenant_id (accept GS1-128 / GTIN-14 variants)
+  const candidates = gtinCandidates(gtin);
   const { data: product, error: productError } = await supabase
     .from('products')
     .select('tenant_id')
-    .eq('gtin', gtin)
+    .in('gtin', candidates.length > 0 ? candidates : [gtin])
     .eq('serial_number', serial)
     .single();
 
@@ -361,11 +363,12 @@ export async function getPublicTenantQRSettings(
   serial: string
 ): Promise<QRCodeDomainSettings | null> {
   try {
-    // Step 1: Find products by GTIN
+    // Step 1: Find products by GTIN (accept GS1-128 / GTIN-14 variants)
+    const candidates = gtinCandidates(gtin);
     const { data: productRows } = await supabase
       .from('products')
       .select('id, tenant_id')
-      .eq('gtin', gtin);
+      .in('gtin', candidates.length > 0 ? candidates : [gtin]);
 
     if (!productRows || productRows.length === 0) {
       return null;
@@ -501,11 +504,12 @@ export async function getPublicTenantDPPDesign(
   serial: string
 ): Promise<DPPDesignSettings | null> {
   try {
-    // Step 1: Find products by GTIN
+    // Step 1: Find products by GTIN (accept GS1-128 / GTIN-14 variants)
+    const candidates = gtinCandidates(gtin);
     const { data: productRows } = await supabase
       .from('products')
       .select('id, tenant_id')
-      .eq('gtin', gtin);
+      .in('gtin', candidates.length > 0 ? candidates : [gtin]);
 
     if (!productRows || productRows.length === 0) {
       return null;

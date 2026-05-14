@@ -329,6 +329,8 @@ export async function autoMapByGtin(shopifyProducts: ShopifyProduct[]): Promise<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gtinMap = new Map((tbProducts || []).map((p: any) => [p.gtin, p]));
 
+  const { gtinCandidates } = await import('@/lib/barcode-parser');
+
   const result: AutoMapResult = { mapped: 0, skipped: 0, details: [] };
 
   for (const product of shopifyProducts) {
@@ -346,7 +348,16 @@ export async function autoMapByGtin(shopifyProducts: ShopifyProduct[]): Promise<
       }
 
       const barcode = variant.barcode?.trim();
-      const matchedProduct = barcode ? gtinMap.get(barcode) : undefined;
+      // Try the raw barcode first, then every normalization (handles
+      // Shopify variants stored as GS1-128 / GTIN-14 vs. EAN-13 in Trackbliss).
+      let matchedProduct: { id: string; name: string; gtin: string } | undefined;
+      if (barcode) {
+        const candidates = [barcode, ...gtinCandidates(barcode)];
+        for (const c of candidates) {
+          const hit = gtinMap.get(c);
+          if (hit) { matchedProduct = hit; break; }
+        }
+      }
 
       if (matchedProduct) {
         // Create mapping

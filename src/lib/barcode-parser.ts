@@ -43,7 +43,14 @@ const GS1_AI_GTIN_PATTERN = /^01(\d{14})/;
  * For a GTIN-14 with indicator 1–9 (case/carton ITF-14), we still expose
  * the trailing 13 digits as a candidate — many tenants store the consumer
  * EAN-13 with the same body, so this lets the lookup recover.
+ *
+ * Exported for reuse by service-layer GTIN lookups so a scanned code
+ * with an "01" Application Identifier prefix matches the stored value.
  */
+export function gtinCandidates(gtin: string): string[] {
+  return buildGtinCandidates(gtin);
+}
+
 function buildGtinCandidates(gtin: string): string[] {
   const set = new Set<string>();
   if (!gtin) return [];
