@@ -93,6 +93,29 @@ function transformStockLevel(row: any): WhStockLevel {
 }
 
 /**
+ * Build GTIN candidates so a scanned code matches both EAN-13 and GTIN-14
+ * storage forms. Mirrors `buildGtinCandidates` in barcode-parser.ts.
+ */
+function gtinLookupCandidates(gtin: string): string[] {
+  const set = new Set<string>();
+  if (!gtin) return [];
+  set.add(gtin);
+  if (gtin.length === 14) {
+    set.add(gtin.slice(1));     // drop indicator (standard)
+    set.add(gtin.slice(0, 13)); // EAN-13 stored as first 13 digits of GTIN-14
+  }
+  if (gtin.length === 13) {
+    set.add('0' + gtin);
+    set.add(gtin + '0');
+  }
+  if (gtin.length === 8) {
+    set.add(gtin.padStart(13, '0'));
+    set.add(gtin.padStart(14, '0'));
+  }
+  return Array.from(set);
+}
+
+/**
  * Lookup product by GTIN only (e.g., EAN-13 barcode scan)
  * Returns product + all live batches
  */
@@ -100,11 +123,13 @@ export async function lookupByGtin(gtin: string): Promise<GtinLookupResult | nul
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return null;
 
+  const candidates = gtinLookupCandidates(gtin);
+
   const { data: product } = await supabase
     .from('products')
     .select('id, name, gtin, image_url, manufacturer, category')
     .eq('tenant_id', tenantId)
-    .eq('gtin', gtin)
+    .in('gtin', candidates)
     .maybeSingle();
 
   if (!product) return null;
@@ -131,11 +156,13 @@ export async function lookupByGtinSerial(gtin: string, serial: string): Promise<
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return null;
 
+  const candidates = gtinLookupCandidates(gtin);
+
   const { data: product } = await supabase
     .from('products')
     .select('id, name, gtin, image_url, manufacturer, category')
     .eq('tenant_id', tenantId)
-    .eq('gtin', gtin)
+    .in('gtin', candidates)
     .maybeSingle();
 
   if (!product) return null;
