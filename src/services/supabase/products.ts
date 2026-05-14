@@ -174,7 +174,21 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
     .order('created_at', { ascending: false });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,gtin.ilike.%${search}%,manufacturer.ilike.%${search}%`);
+    const conditions = [
+      `name.ilike.%${search}%`,
+      `gtin.ilike.%${search}%`,
+      `manufacturer.ilike.%${search}%`,
+    ];
+    // If the search looks like a scanned barcode (GS1-128 with "01" AI,
+    // bare GTIN-14, EAN-13, etc.), also match against all normalized GTIN forms.
+    const { parseBarcode } = await import('@/lib/barcode-parser');
+    const parsed = parseBarcode(search);
+    for (const candidate of parsed.gtinCandidates) {
+      if (candidate && candidate !== search) {
+        conditions.push(`gtin.eq.${candidate}`);
+      }
+    }
+    query = query.or(conditions.join(','));
   }
 
   const { data, error } = await query;
