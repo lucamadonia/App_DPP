@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { confirmItemPick, confirmItemPack } from '@/services/supabase/wh-shipments';
 import type { WhShipmentItem } from '@/types/warehouse';
 import { AddShipmentItemDialog } from '@/components/warehouse/AddShipmentItemDialog';
+import { parseBarcode } from '@/lib/barcode-parser';
 import { toast } from 'sonner';
 
 interface Props {
@@ -75,10 +76,14 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
     e.preventDefault();
     const code = scanValue.trim();
     if (!code) return;
-    // Find item whose product barcode matches
+    // Normalize scanned code: strip GS1-128 AI prefix, derive EAN-13/GTIN-14 variants
+    const parsed = parseBarcode(code);
+    const candidates = new Set<string>(parsed.gtinCandidates);
+    candidates.add(code);
+    // Find item whose product barcode matches any candidate form
     const match = items.find(it => {
       const bc = productBarcodeMap?.[it.productId];
-      return bc && bc === code;
+      return bc && candidates.has(bc);
     });
     if (!match) {
       toast.error(t('Kein Produkt mit GTIN {{gtin}} in dieser Sendung', { gtin: code }));
