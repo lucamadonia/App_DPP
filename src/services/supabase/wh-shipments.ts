@@ -1231,3 +1231,145 @@ export async function getShipmentStats(): Promise<Partial<WarehouseStats>> {
     shippedToday: todayRes.count || 0,
   };
 }
+
+// ============================================
+// SHIPMENT MERGE
+// ============================================
+
+/**
+ * Find other shipments that could be merged INTO the given one — same tenant,
+ * different shipment id, status in {draft, picking}, and preferably the same
+ * recipient. Returns email-matched candidates first, then name-matched, then
+ * all other open shipments (so the user can override when emails differ).
+ */
+export async function getMergeCandidates(shipmentId: string): Promise<WhShipment[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data: src, error: srcErr } = await supabase
+    .from('wh_shipments')
+    .select('id, recipient_email, recipient_name')
+    .eq('id', shipmentId)
+    .single();
+  if (srcErr || !src) return [];
+
+  const { data, error } = await supabase
+    .from('wh_shipments')
+    .select('*, wh_locations(name), wh_packaging_types(name, tare_weight_grams)')
+    .eq('tenant_id', tenantId)
+    .in('status', ['draft', 'picking'])
+    .neq('id', shipmentId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  const all = data.map(transformShipment);
+  const email = (src.recipient_email || '').trim().toLowerCase();
+  const name = (src.recipient_name || '').trim().toLowerCase();
+
+  // Rank: same-email first, then same-name, then the rest.
+  const score = (s: WhShipment): number => {
+    const e = (s.recipientEmail || '').trim().toLowerCase();
+    const n = (s.recipientName || '').trim().toLowerCase();
+    if (email && e === email) return 0;
+    if (name && n === name) return 1;
+    return 2;
+  };
+  return all.sort((a, b) => score(a) - score(b));
+}
+
+/**
+ * Merge `sourceId` INTO `targetId`. Both shipments must be in `draft` or
+ * `picking`. All line items move from source → target (stock reservation is
+ * untouched because the aggregate `quantity_reserved` is per location/batch,
+ * not per shipment). The source is set to `cancelled` directly — bypassing
+ * `updateShipmentStatus` so the standard cancel-path doesn't try to release
+ * reservations for items that have already moved off the source.
+ *
+ * Both shipments' internal_notes get an audit line referencing the other so
+ * the merge is traceable. The Shopify order references of the source are
+ * appended to the target's order_reference for the same reason.
+ */
+export async function mergeShipments(sourceId: string, targetId: string): Promise<WhShipment> {
+  if (sourceId === targetId) throw new Error('Source and target must differ');
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  const [{ data: srcRow, error: srcErr }, { data: tgtRow, error: tgtErr }] = await Promise.all([
+    supabase.from('wh_shipments').select('*').eq('id', sourceId).eq('tenant_id', tenantId).single(),
+    supabase.from('wh_shipments').select('*').eq('id', targetId).eq('tenant_id', tenantId).single(),
+  ]);
+  if (srcErr || !srcRow) throw new Error('Source shipment not found');
+  if (tgtErr || !tgtRow) throw new Error('Target shipment not found');
+
+  const editable: ShipmentStatus[] = ['draft', 'picking'];
+  if (!editable.includes(srcRow.status)) {
+    throw new Error(`Source must be draft or picking (currently ${srcRow.status})`);
+  }
+  if (!editable.includes(tgtRow.status)) {
+    throw new Error(`Target must be draft or picking (currently ${tgtRow.status})`);
+  }
+
+  // 1. Move every line item from source to target. Stock reservation aggregate
+  //    is per (location, batch) so simply changing shipment_id is correct.
+  const { error: moveErr } = await supabase
+    .from('wh_shipment_items')
+    .update({ shipment_id: targetId })
+    .eq('shipment_id', sourceId);
+  if (moveErr) throw new Error(`Failed to move items: ${moveErr.message}`);
+
+  // 2. Recompute target totals + weight.
+  const targetItems = await getShipmentItems(targetId);
+  const newTotal = targetItems.reduce((sum, i) => sum + i.quantity, 0);
+  await supabase.from('wh_shipments').update({ total_items: newTotal }).eq('id', targetId);
+  await recomputeShipmentWeight(targetId);
+
+  // 3. Build audit notes.
+  const stamp = new Date().toISOString().split('T')[0];
+  const srcOrderRef = srcRow.order_reference ? ` (${srcRow.order_reference})` : '';
+  const tgtOrderRef = tgtRow.order_reference ? ` (${tgtRow.order_reference})` : '';
+  const targetNote = `[${stamp}] Merged in ${srcRow.shipment_number}${srcOrderRef}`;
+  const sourceNote = `[${stamp}] Merged into ${tgtRow.shipment_number}${tgtOrderRef}`;
+
+  const newTargetNotes = tgtRow.internal_notes
+    ? `${tgtRow.internal_notes}\n${targetNote}`
+    : targetNote;
+  const newSourceNotes = srcRow.internal_notes
+    ? `${srcRow.internal_notes}\n${sourceNote}`
+    : sourceNote;
+
+  // 4. Append the source's order_reference to the target's so both Shopify
+  //    orders remain visible. Skip if the target already references it.
+  const refs = new Set<string>();
+  if (tgtRow.order_reference) refs.add(tgtRow.order_reference);
+  if (srcRow.order_reference) refs.add(srcRow.order_reference);
+  const combinedOrderRef = refs.size > 0 ? Array.from(refs).join(' + ') : null;
+
+  // 5. Patch target (no status change — keep its current draft/picking state).
+  const { error: tgtUpdErr } = await supabase
+    .from('wh_shipments')
+    .update({
+      internal_notes: newTargetNotes,
+      order_reference: combinedOrderRef,
+    })
+    .eq('id', targetId);
+  if (tgtUpdErr) throw new Error(`Failed to update target: ${tgtUpdErr.message}`);
+
+  // 6. Mark source as cancelled DIRECTLY (not via updateShipmentStatus to avoid
+  //    the reservation-release path — items have already moved off this row).
+  const { error: srcUpdErr } = await supabase
+    .from('wh_shipments')
+    .update({
+      status: 'cancelled' as ShipmentStatus,
+      internal_notes: newSourceNotes,
+      total_items: 0,
+      total_weight_grams: null,
+    })
+    .eq('id', sourceId);
+  if (srcUpdErr) throw new Error(`Failed to cancel source: ${srcUpdErr.message}`);
+
+  // 7. Return the updated target.
+  const updated = await getShipment(targetId);
+  if (!updated) throw new Error('Failed to reload target shipment');
+  return updated;
+}

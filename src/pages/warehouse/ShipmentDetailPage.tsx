@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Package, Truck, User, MapPin, ExternalLink, Copy,
   Check, X, Pencil, FileText, Clock, Weight, DollarSign,
-  AlertTriangle, Camera, Gift, RotateCcw, Heart, Link as LinkIcon, Send,
+  AlertTriangle, Camera, Gift, RotateCcw, Heart, Link as LinkIcon, Send, Merge,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
 import { ShopifyShipmentSyncCard } from '@/components/warehouse/shopify/ShopifyShipmentSyncCard';
 import { PickPackConfirmDialog } from '@/components/warehouse/PickPackConfirmDialog';
 import { EditShipmentItemDialog } from '@/components/warehouse/EditShipmentItemDialog';
+import { MergeShipmentDialog } from '@/components/warehouse/MergeShipmentDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase as sb } from '@/lib/supabase';
 
@@ -176,6 +177,7 @@ function EditableField({ label, value, editing, editValue, onChange }: {
 
 export function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t } = useTranslation('warehouse');
   const [shipment, setShipment] = useState<WhShipment | null>(null);
   const [items, setItems] = useState<WhShipmentItem[]>([]);
@@ -240,6 +242,9 @@ export function ShipmentDetailPage() {
 
   // Manual batch-assignment dialog (per item).
   const [editItem, setEditItem] = useState<WhShipmentItem | null>(null);
+
+  // Merge-into-another-shipment dialog.
+  const [mergeOpen, setMergeOpen] = useState(false);
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -1197,6 +1202,17 @@ export function ShipmentDetailPage() {
             {shipment.carrier === 'DHL' && (
               <DHLLabelActions shipment={shipment} onUpdate={reloadShipment} />
             )}
+            {(shipment.status === 'draft' || shipment.status === 'picking') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMergeOpen(true)}
+                disabled={statusUpdating}
+              >
+                <Merge className="mr-1 h-3.5 w-3.5" />
+                {t('Merge with…')}
+              </Button>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">{t('Cancel Shipment')}</Button>
@@ -1342,6 +1358,19 @@ export function ShipmentDetailPage() {
           setPendingStatus(null);
         }}
       />
+
+      {shipment && (
+        <MergeShipmentDialog
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+          source={shipment}
+          onMerged={(target) => {
+            // Source is now cancelled — navigate to the target so the user
+            // continues editing the merged shipment.
+            navigate(`/warehouse/shipments/${target.id}`);
+          }}
+        />
+      )}
     </div>
   );
 }

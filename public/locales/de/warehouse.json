@@ -1505,5 +1505,18 @@
   "Open scan dialog when transitioning to \"Picked\" and confirm each item individually.": "Beim Wechsel auf „Kommissioniert\" den Scan-Dialog öffnen und jede Position einzeln bestätigen.",
   "Open scan dialog when transitioning to \"Packed\" and confirm each item individually.": "Beim Wechsel auf „Verpackt\" den Scan-Dialog öffnen und jede Position einzeln bestätigen.",
   "Setting saved": "Einstellung gespeichert",
-  "Failed to save": "Speichern fehlgeschlagen"
+  "Failed to save": "Speichern fehlgeschlagen",
+  "Merge with…": "Mit Sendung zusammenführen…",
+  "Merge into another shipment": "Mit anderer Sendung zusammenführen",
+  "All positions from this shipment will move into the selected target. This shipment will then be cancelled.": "Alle Positionen dieser Sendung werden in die ausgewählte Ziel-Sendung übernommen. Diese Sendung wird anschließend storniert.",
+  "Current shipment: {{number}} ({{name}})": "Aktuelle Sendung: {{number}} ({{name}})",
+  "No other open shipments to merge with.": "Keine weiteren offenen Sendungen zum Zusammenführen vorhanden.",
+  "Same email": "Gleiche E-Mail",
+  "Same name": "Gleicher Name",
+  "Different recipient": "Anderer Empfänger",
+  "Order": "Bestellung",
+  "Positions": "Positionen",
+  "Merge": "Zusammenführen",
+  "Merging...": "Wird zusammengeführt...",
+  "Shipments merged into {{number}}": "Sendungen zu {{number}} zusammengeführt"
 }
