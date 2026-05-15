@@ -46,6 +46,9 @@ const PublicCustomsPage = lazy(() => import('@/pages/public/PublicCustomsPage').
 const TransparencyPage = lazy(() => import('@/pages/public/TransparencyPage').then(m => ({ default: m.TransparencyPage })));
 const PublicShipmentTrackingPage = lazy(() => import('@/pages/public/PublicShipmentTrackingPage').then(m => ({ default: m.PublicShipmentTrackingPage })));
 const PublicFeedbackPage = lazy(() => import('@/pages/feedback/public/PublicFeedbackPage').then(m => ({ default: m.PublicFeedbackPage })));
+const EmbedFeedbackPage = lazy(() => import('@/pages/feedback/public/EmbedFeedbackPage').then(m => ({ default: m.EmbedFeedbackPage })));
+const PublicIdeaSubmitPage = lazy(() => import('@/pages/feedback/public/PublicIdeaSubmitPage').then(m => ({ default: m.PublicIdeaSubmitPage })));
+const PublicIdeaBoardPage = lazy(() => import('@/pages/feedback/public/PublicIdeaBoardPage').then(m => ({ default: m.PublicIdeaBoardPage })));
 
 // Returns Portal (public)
 const ReturnsPortalLayout = lazy(() => import('@/pages/returns/public/ReturnsPortalLayout').then(m => ({ default: m.ReturnsPortalLayout })));
@@ -350,6 +353,13 @@ function NormalAppRoutes() {
 
         {/* Public Feedback Submission (token-protected, no auth) */}
         <Route path="feedback/:token" element={<PublicFeedbackPage />} />
+
+        {/* Public Idea Board surfaces (no auth) */}
+        <Route path="ideas/submit/:token" element={<PublicIdeaSubmitPage />} />
+        <Route path="ideas/:tenantSlug" element={<PublicIdeaBoardPage />} />
+
+        {/* Embed Feedback Widget (iframe, no auth, permissive CORS via vercel.json /embed/*) */}
+        <Route path="embed/feedback/:tenantSlug" element={<EmbedFeedbackPage />} />
 
         {/* Public Returns Portal (no auth, shared layout) */}
         <Route element={<ReturnsPortalLayout />}>
