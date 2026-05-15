@@ -35,6 +35,7 @@ export function DHLIntegrationPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [billingNumber, setBillingNumber] = useState('');
+  const [billingNumberInternational, setBillingNumberInternational] = useState('');
   const [defaultProduct, setDefaultProduct] = useState<DHLParcelProduct>('V01PAK');
   const [labelFormat, setLabelFormat] = useState<DHLLabelFormat>('PDF_A4');
 
@@ -56,6 +57,7 @@ export function DHLIntegrationPage() {
         setEnabled(s.enabled);
         setSandbox(s.sandbox);
         setBillingNumber(s.billingNumber);
+        setBillingNumberInternational(s.billingNumberInternational || '');
         setDefaultProduct(s.defaultProduct);
         setLabelFormat(s.labelFormat);
         if (s.shipper) {
@@ -90,6 +92,7 @@ export function DHLIntegrationPage() {
         username,
         password,
         billingNumber,
+        billingNumberInternational: billingNumberInternational || undefined,
         defaultProduct,
         labelFormat,
         shipper: {
@@ -260,14 +263,33 @@ export function DHLIntegrationPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label className="text-xs text-muted-foreground">{t('Billing Number')}</Label>
+            <Label className="text-xs text-muted-foreground">
+              {t('Billing Number')} <span className="opacity-70">({t('Domestic')} — V01PAK)</span>
+            </Label>
             <Input
               value={billingNumber}
               onChange={(e) => setBillingNumber(e.target.value)}
-              placeholder="33333333330102"
+              placeholder="33333333330101"
               maxLength={14}
             />
-            <p className="text-xs text-muted-foreground mt-1">14-{t('digit DHL billing number (Abrechnungsnummer)')}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('14-digit DHL billing number for domestic (V01PAK). Format: EKP(10) + 01 + Teilnahme(2).')}
+            </p>
+          </div>
+
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              {t('International Billing Number')} <span className="opacity-70">({t('Optional')} — V53WPAK)</span>
+            </Label>
+            <Input
+              value={billingNumberInternational}
+              onChange={(e) => setBillingNumberInternational(e.target.value)}
+              placeholder="33333333335301"
+              maxLength={14}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('Required for shipments outside the home country. Format: EKP(10) + 53 + Teilnahme(2). Must be activated in your DHL business contract.')}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

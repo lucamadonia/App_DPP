@@ -14,11 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getShipments, getShipmentStatusCounts } from '@/services/supabase/wh-shipments';
+import { getDHLSettings } from '@/services/supabase/dhl-carrier';
 import { invokeEdgeFunction } from '@/lib/edge-function';
 import { toast } from 'sonner';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
+import {
+  isInternational, getShippingZone, estimateShippingPrice, formatPriceEur,
+  countryFlagEmoji, normalizeCountryIso2,
+} from '@/lib/shipping-rates';
 import type { WhShipment, ShipmentStatus, ShipmentPriority } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
 
@@ -201,6 +206,16 @@ export function ShipmentListPage() {
     import('@/services/supabase/wh-shipments').then(({ getShipmentStats }) =>
       getShipmentStats().then(s => setShippedToday(s.shippedToday || 0))
     );
+  }, []);
+
+  // Home country (DHL shipper). Used to flag international shipments + estimate
+  // postage. Falls back to DE if DHL isn't configured yet.
+  const [homeCountry, setHomeCountry] = useState('DE');
+  useEffect(() => {
+    getDHLSettings().then((s) => {
+      const c = normalizeCountryIso2(s?.shipper?.country || 'DE');
+      if (c) setHomeCountry(c);
+    });
   }, []);
 
   // Manual tracking refresh (triggers the same poll as the 8h cron)
@@ -414,10 +429,35 @@ export function ShipmentListPage() {
                         <Badge variant="secondary" className={SHIPMENT_STATUS_COLORS[s.status]}>{t(s.status)}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{s.recipientName}</div>
+                        <div className="font-medium flex items-center gap-1.5">
+                          {s.recipientName}
+                          {isInternational(homeCountry, s.shippingCountry) && (
+                            <span
+                              className="inline-flex items-center gap-0.5 rounded-md bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+                              title={t('International shipment — needs DHL Paket International (V53WPAK)')}
+                            >
+                              <span aria-hidden>{countryFlagEmoji(s.shippingCountry)}</span>
+                              {normalizeCountryIso2(s.shippingCountry)}
+                            </span>
+                          )}
+                        </div>
                         {s.recipientCompany && <div className="text-xs text-muted-foreground">{s.recipientCompany}</div>}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{s.carrier || '—'}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div>{s.carrier || '—'}</div>
+                        {(() => {
+                          if (s.carrier !== 'DHL') return null;
+                          const est = estimateShippingPrice(homeCountry, s.shippingCountry, s.totalWeightGrams);
+                          const zone = getShippingZone(homeCountry, s.shippingCountry);
+                          const zoneLabel = zone === 'domestic' ? t('Domestic') : zone === 'eu' ? t('EU') : t('Worldwide');
+                          return (
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              <span className={zone !== 'domestic' ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>{zoneLabel}</span>
+                              {est && <> · {t('approx.')} {formatPriceEur(est.priceEur)}</>}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <Badge variant="secondary" className={PRIORITY_COLORS[s.priority] || ''}>{t(s.priority)}</Badge>
                       </TableCell>

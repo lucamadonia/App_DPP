@@ -11,7 +11,12 @@ export interface DHLSettings {
   apiKey: string;
   username: string;
   password: string;
+  /** Domestic billing number (V01PAK). DHL embeds the product code in
+   *  positions 11–12, so each product needs its own activated participation. */
   billingNumber: string;
+  /** Optional billing number for DHL Paket International (V53WPAK). Required
+   *  if you ship outside the home country. Format: EKP(10) + "53" + Teilnahme(2). */
+  billingNumberInternational?: string;
   defaultProduct: DHLParcelProduct;
   labelFormat: DHLLabelFormat;
   shipper: DHLAddress;
@@ -23,6 +28,7 @@ export interface DHLSettingsPublic {
   enabled: boolean;
   sandbox: boolean;
   billingNumber: string;
+  billingNumberInternational?: string;
   defaultProduct: DHLParcelProduct;
   labelFormat: DHLLabelFormat;
   shipper: DHLAddress;

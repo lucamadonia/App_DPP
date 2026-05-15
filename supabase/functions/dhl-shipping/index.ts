@@ -207,6 +207,7 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
     username: params.username || '',
     password: params.password || '',
     billingNumber: params.billingNumber || '',
+    billingNumberInternational: params.billingNumberInternational || '',
     defaultProduct: params.defaultProduct || 'V01PAK',
     labelFormat: params.labelFormat || 'PDF_A4',
     shipper: params.shipper || {},
@@ -317,8 +318,28 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
       .eq('tenant_id', tenantId);
   }
 
-  // 4. Build DHL order request
-  const product = (params.product as string) || settings.defaultProduct || 'V01PAK';
+  // 4. Build DHL order request.
+  //    Auto-pick the product: V01PAK (national) only works for DEU→DEU.
+  //    For any other destination we fall back to V53WPAK (Paket International).
+  //    Caller-supplied `params.product` always wins.
+  const shipperCountry = mapCountryToISO3(settings.shipper.country || 'DEU');
+  const consigneeCountry = mapCountryToISO3(shipment.shipping_country);
+  const isInternational = shipperCountry !== consigneeCountry;
+  const configuredProduct = settings.defaultProduct || 'V01PAK';
+  const autoProduct = isInternational && configuredProduct === 'V01PAK' ? 'V53WPAK' : configuredProduct;
+  const product = (params.product as string) || autoProduct;
+  // DHL embeds the product code in positions 11-12 of the billing number, so
+  // each product requires its own activated participation. Pick the right
+  // billing number for the product. If the international one is missing for
+  // an international shipment we fail fast with a clear message instead of
+  // letting DHL return its opaque "product unknown" fault.
+  const isV53 = product === 'V53WPAK' || product === 'V54EPAK' || product === 'V66WPI' || product === 'V62WP';
+  if (isV53 && !settings.billingNumberInternational) {
+    return json({
+      error: 'No international DHL billing number configured. Open Warehouse → DHL Integration and add the V53WPAK billing number (format: EKP + 53 + Teilnahme). It must be activated in your DHL business contract.',
+    });
+  }
+  const billingNumber = isV53 ? settings.billingNumberInternational : settings.billingNumber;
   const labelFormat = settings.labelFormat || 'PDF_A4';
   const weightKg = effectiveWeightGrams / 1000;
 
@@ -327,7 +348,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     shipments: [
       {
         product,
-        billingNumber: settings.billingNumber,
+        billingNumber,
         refNo: shipment.shipment_number,
         shipper: {
           name1: settings.shipper.name1,
@@ -335,7 +356,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
           addressStreet: settings.shipper.addressStreet,
           postalCode: settings.shipper.postalCode,
           city: settings.shipper.city,
-          country: settings.shipper.country || 'DEU',
+          country: shipperCountry,
           email: settings.shipper.email || undefined,
           phone: settings.shipper.phone || undefined,
         },
@@ -345,7 +366,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
           addressStreet: shipment.shipping_street,
           postalCode: shipment.shipping_postal_code,
           city: shipment.shipping_city,
-          country: mapCountryToISO3(shipment.shipping_country),
+          country: consigneeCountry,
           email: shipment.recipient_email || undefined,
           phone: shipment.recipient_phone || undefined,
         },
