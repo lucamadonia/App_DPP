@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScanBarcode, Check, X, Package, Plus, Gift } from 'lucide-react';
+import { ScanBarcode, Check, X, Package, Plus, Gift, AlertTriangle, PackageX } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,10 @@ import type { WhShipmentItem } from '@/types/warehouse';
 import { AddShipmentItemDialog } from '@/components/warehouse/AddShipmentItemDialog';
 import { parseBarcode } from '@/lib/barcode-parser';
 import { toast } from 'sonner';
+
+type ScanAlert =
+  | { kind: 'duplicate'; scannedCode: string; matchedItem: WhShipmentItem; override: boolean }
+  | { kind: 'unknown'; scannedCode: string; override: boolean };
 
 interface Props {
   open: boolean;
@@ -41,6 +45,10 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
   const [scanValue, setScanValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  // Warning banner for duplicate / unknown scans + override flow
+  const [scanAlert, setScanAlert] = useState<ScanAlert | null>(null);
+  // Product id to pre-select when AddShipmentItemDialog opens (duplicate case)
+  const [prefilledProductId, setPrefilledProductId] = useState<string | undefined>(undefined);
 
   // Reset when dialog opens
   useEffect(() => {
@@ -51,6 +59,8 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
       }
       setConfirmed(initial);
       setScanValue('');
+      setScanAlert(null);
+      setPrefilledProductId(undefined);
     }
   }, [open, items, mode]);
 
@@ -86,20 +96,32 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
       return bc && candidates.has(bc);
     });
     if (!match) {
-      toast.error(t('Kein Produkt mit GTIN {{gtin}} in dieser Sendung', { gtin: code }));
+      // Unknown code — show prominent banner with override option
+      setScanAlert({ kind: 'unknown', scannedCode: code, override: false });
+    } else if ((confirmed[match.id] || 0) >= match.quantity) {
+      // Already fully confirmed — show prominent banner with override option
+      setScanAlert({ kind: 'duplicate', scannedCode: code, matchedItem: match, override: false });
     } else {
-      if ((confirmed[match.id] || 0) >= match.quantity) {
-        toast.info(t('{{name}} bereits vollständig bestätigt', { name: match.productName || '?' }));
-      } else {
-        incrementItem(match);
-        toast.success(t('{{name}}: {{count}} von {{total}}', {
-          name: match.productName || '?',
-          count: (confirmed[match.id] || 0) + 1,
-          total: match.quantity,
-        }));
-      }
+      setScanAlert(null);
+      incrementItem(match);
+      toast.success(t('{{name}}: {{count}} von {{total}}', {
+        name: match.productName || '?',
+        count: (confirmed[match.id] || 0) + 1,
+        total: match.quantity,
+      }));
     }
     setScanValue('');
+  }
+
+  function dismissAlert() {
+    setScanAlert(null);
+  }
+
+  function openAddDialogFromAlert() {
+    if (!scanAlert) return;
+    setPrefilledProductId(scanAlert.kind === 'duplicate' ? scanAlert.matchedItem.productId : undefined);
+    setScanAlert(null);
+    setAddOpen(true);
   }
 
   async function handleConfirm() {
@@ -148,6 +170,103 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
             {t('Scan')}
           </Button>
         </form>
+
+        {scanAlert && (
+          <div
+            role="alert"
+            className={
+              scanAlert.kind === 'duplicate'
+                ? 'rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-600 p-4 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200'
+                : 'rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-900/30 dark:border-red-600 p-4 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200'
+            }
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={
+                  scanAlert.kind === 'duplicate'
+                    ? 'rounded-full bg-amber-500 p-2 shrink-0'
+                    : 'rounded-full bg-red-500 p-2 shrink-0'
+                }
+              >
+                {scanAlert.kind === 'duplicate' ? (
+                  <AlertTriangle className="h-5 w-5 text-white" />
+                ) : (
+                  <PackageX className="h-5 w-5 text-white" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <div>
+                  <div
+                    className={
+                      scanAlert.kind === 'duplicate'
+                        ? 'text-sm font-bold text-amber-900 dark:text-amber-100'
+                        : 'text-sm font-bold text-red-900 dark:text-red-100'
+                    }
+                  >
+                    {scanAlert.kind === 'duplicate'
+                      ? t('Produkt bereits vollständig bestätigt')
+                      : t('Unbekannter Code – keine passende Position')}
+                  </div>
+                  <div
+                    className={
+                      scanAlert.kind === 'duplicate'
+                        ? 'text-sm text-amber-800 dark:text-amber-200 mt-1 break-words'
+                        : 'text-sm text-red-800 dark:text-red-200 mt-1 break-words'
+                    }
+                  >
+                    {scanAlert.kind === 'duplicate'
+                      ? t('{{name}} steht nur 1× auf der Sendung und wurde bereits bestätigt.', {
+                          name: scanAlert.matchedItem.productName || '?',
+                        })
+                      : t('Kein Produkt mit GTIN {{gtin}} in dieser Sendung.', {
+                          gtin: scanAlert.scannedCode,
+                        })}
+                  </div>
+                </div>
+
+                <label className="flex items-start gap-2 cursor-pointer text-sm">
+                  <Checkbox
+                    checked={scanAlert.override}
+                    onCheckedChange={v =>
+                      setScanAlert(a => (a ? { ...a, override: !!v } : a))
+                    }
+                    className="mt-0.5 shrink-0"
+                  />
+                  <span
+                    className={
+                      scanAlert.kind === 'duplicate'
+                        ? 'text-amber-900 dark:text-amber-100 font-medium break-words'
+                        : 'text-red-900 dark:text-red-100 font-medium break-words'
+                    }
+                  >
+                    {t('Ich möchte dieses Produkt trotzdem als zusätzliche Position hinzufügen (z. B. als Beigabe).')}
+                  </span>
+                </label>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={openAddDialogFromAlert}
+                    disabled={!scanAlert.override || !shipmentId}
+                    className="gap-1"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('Position hinzufügen…')}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={dismissAlert}
+                  >
+                    {t('Schließen')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {shipmentId && (
           <div className="flex justify-end">
@@ -213,9 +332,13 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
         {shipmentId && (
           <AddShipmentItemDialog
             open={addOpen}
-            onOpenChange={setAddOpen}
+            onOpenChange={(v) => {
+              setAddOpen(v);
+              if (!v) setPrefilledProductId(undefined);
+            }}
             shipmentId={shipmentId}
             preferredLocationId={sourceLocationId}
+            prefilledProductId={prefilledProductId}
             onAdded={() => onItemsChanged?.()}
           />
         )}

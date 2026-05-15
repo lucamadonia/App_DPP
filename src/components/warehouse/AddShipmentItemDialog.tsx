@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { addShipmentItem } from '@/services/supabase/wh-shipments';
-import { getProducts, type ProductListItem } from '@/services/supabase/products';
+import { getProducts, getProductById, type ProductListItem } from '@/services/supabase/products';
 import { getStockLevels } from '@/services/supabase/wh-stock';
 import type { WhStockLevel } from '@/types/warehouse';
 import { toast } from 'sonner';
@@ -21,6 +21,12 @@ interface Props {
   shipmentId: string;
   /** Pre-select source location of the shipment so the picker filters there first. */
   preferredLocationId?: string;
+  /**
+   * Optional: pre-select this product when the dialog opens. Used by the
+   * pick/pack flow when the user scans a code that's already fully confirmed
+   * and confirms they want to add it again (e.g. as a gift).
+   */
+  prefilledProductId?: string;
   /** Called after a successful insert so the parent can refetch its items list. */
   onAdded: () => void;
 }
@@ -31,7 +37,7 @@ interface Props {
  * choice of batch + location and to cap the quantity. When `is_gift` is on,
  * the unit price is forced to 0 server-side.
  */
-export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferredLocationId, onAdded }: Props) {
+export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferredLocationId, prefilledProductId, onAdded }: Props) {
   const { t } = useTranslation('warehouse');
 
   const [search, setSearch] = useState('');
@@ -53,16 +59,17 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
   useEffect(() => {
     if (!open) return;
     setSearch('');
-    setSelectedProductId('');
+    setSelectedProductId(prefilledProductId || '');
     setStockOptions([]);
     setSelectedStockId('');
     setQuantity(1);
     setIsGift(true);
     setGiftNote('');
     setNotes('');
-  }, [open]);
+  }, [open, prefilledProductId]);
 
-  // Debounced product search.
+  // Debounced product search. If a prefilled product is set, make sure it
+  // appears in the visible list even when the search filter wouldn't match it.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -70,13 +77,32 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
     const handle = setTimeout(async () => {
       try {
         const list = await getProducts(search.trim() || undefined);
-        if (!cancelled) setProducts(list.slice(0, 50));
+        let final = list.slice(0, 50);
+        if (prefilledProductId && !final.some(p => p.id === prefilledProductId)) {
+          const prefetch = await getProductById(prefilledProductId);
+          if (prefetch) {
+            const asListItem: ProductListItem = {
+              id: prefetch.id,
+              name: prefetch.name,
+              manufacturer: prefetch.manufacturer || '',
+              gtin: prefetch.gtin || '',
+              serial: prefetch.serialNumber || '',
+              serialNumber: prefetch.serialNumber || '',
+              category: prefetch.category || '',
+              imageUrl: prefetch.imageUrl,
+              batchCount: 0,
+              status: 'live',
+            };
+            final = [asListItem, ...final];
+          }
+        }
+        if (!cancelled) setProducts(final);
       } finally {
         if (!cancelled) setProductsLoading(false);
       }
     }, 200);
     return () => { cancelled = true; clearTimeout(handle); };
-  }, [open, search]);
+  }, [open, search, prefilledProductId]);
 
   // When a product is selected, load its available stock rows.
   useEffect(() => {
