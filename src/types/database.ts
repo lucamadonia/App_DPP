@@ -244,6 +244,7 @@ export interface TenantSettings {
   onboardingCompleted?: boolean;
   shopifyIntegration?: ShopifyIntegrationSettings;
   warehouse?: WarehouseSettings;
+  feedback?: import('./feedback').FeedbackSettings;
 }
 
 export interface WarehouseSettings {

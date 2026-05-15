@@ -15,6 +15,7 @@ import {
   RETURNS_HUB_MODULES,
   WAREHOUSE_MODULES,
   COMMERCE_HUB_MODULES,
+  FEEDBACK_MODULES,
   type BillingPlan,
   type ModuleId,
   type TenantEntitlements,
@@ -126,6 +127,15 @@ export async function getTenantEntitlements(
     const chModule = COMMERCE_HUB_MODULES[i];
     if (activeModules.has(chModule)) {
       moduleLimits = { ...moduleLimits, ...MODULE_CONFIGS[chModule].limits };
+      break;
+    }
+  }
+
+  // Merge feedback module limits (from highest active feedback tier)
+  for (let i = FEEDBACK_MODULES.length - 1; i >= 0; i--) {
+    const fbModule = FEEDBACK_MODULES[i];
+    if (activeModules.has(fbModule)) {
+      moduleLimits = { ...moduleLimits, ...MODULE_CONFIGS[fbModule].limits };
       break;
     }
   }

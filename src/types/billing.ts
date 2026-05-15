@@ -31,7 +31,10 @@ export type ModuleId =
   | 'warehouse_business'
   | 'commerce_hub_starter'
   | 'commerce_hub_professional'
-  | 'commerce_hub_business';
+  | 'commerce_hub_business'
+  | 'feedback_starter'
+  | 'feedback_professional'
+  | 'feedback_business';
 
 export type SubscriptionStatus =
   | 'active'
@@ -86,6 +89,13 @@ export interface ModuleLimits {
   commerceMultiAccountEnabled: boolean;
   commerceWhitelabelEnabled: boolean;
   commerceApiAccess: 'none' | 'read' | 'readwrite';
+  // Feedback module limits
+  maxFeedbackRequestsPerMonth: number;
+  feedbackPhotosEnabled: boolean;
+  feedbackAiModerationEnabled: boolean;
+  feedbackIdeaBoardEnabled: boolean;
+  feedbackWidgetModes: ('carousel' | 'grid' | 'badge')[];
+  feedbackRepliesEnabled: boolean;
 }
 
 // ============================================
@@ -536,6 +546,45 @@ export const MODULE_CONFIGS: Record<ModuleId, {
       commerceApiAccess: 'readwrite',
     },
   },
+  feedback_starter: {
+    name: 'Feedback Starter',
+    priceMonthly: 19,
+    requiresPlan: 'pro',
+    limits: {
+      maxFeedbackRequestsPerMonth: 100,
+      feedbackPhotosEnabled: false,
+      feedbackAiModerationEnabled: false,
+      feedbackIdeaBoardEnabled: false,
+      feedbackWidgetModes: ['carousel'],
+      feedbackRepliesEnabled: false,
+    },
+  },
+  feedback_professional: {
+    name: 'Feedback Professional',
+    priceMonthly: 39,
+    requiresPlan: 'pro',
+    limits: {
+      maxFeedbackRequestsPerMonth: 500,
+      feedbackPhotosEnabled: true,
+      feedbackAiModerationEnabled: true,
+      feedbackIdeaBoardEnabled: true,
+      feedbackWidgetModes: ['carousel', 'grid', 'badge'],
+      feedbackRepliesEnabled: true,
+    },
+  },
+  feedback_business: {
+    name: 'Feedback Business',
+    priceMonthly: 89,
+    requiresPlan: 'enterprise',
+    limits: {
+      maxFeedbackRequestsPerMonth: Infinity,
+      feedbackPhotosEnabled: true,
+      feedbackAiModerationEnabled: true,
+      feedbackIdeaBoardEnabled: true,
+      feedbackWidgetModes: ['carousel', 'grid', 'badge'],
+      feedbackRepliesEnabled: true,
+    },
+  },
 };
 
 // ============================================
@@ -624,6 +673,35 @@ export function getActiveCommerceHubTier(modules: Set<ModuleId>): ModuleId | nul
 /** Check if any commerce hub module is active */
 export function hasAnyCommerceHub(modules: Set<ModuleId>): boolean {
   return getActiveCommerceHubTier(modules) !== null;
+}
+
+// ============================================
+// FEEDBACK MODULE HELPERS
+// ============================================
+
+/** All feedback module IDs in tier order */
+export const FEEDBACK_MODULES: ModuleId[] = [
+  'feedback_starter',
+  'feedback_professional',
+  'feedback_business',
+];
+
+/** Check if a module is any feedback tier */
+export function isFeedbackModule(moduleId: ModuleId): boolean {
+  return FEEDBACK_MODULES.includes(moduleId);
+}
+
+/** Get the active feedback tier from a set of modules */
+export function getActiveFeedbackTier(modules: Set<ModuleId>): ModuleId | null {
+  for (let i = FEEDBACK_MODULES.length - 1; i >= 0; i--) {
+    if (modules.has(FEEDBACK_MODULES[i])) return FEEDBACK_MODULES[i];
+  }
+  return null;
+}
+
+/** Check if any feedback module is active */
+export function hasAnyFeedback(modules: Set<ModuleId>): boolean {
+  return getActiveFeedbackTier(modules) !== null;
 }
 
 // ============================================
