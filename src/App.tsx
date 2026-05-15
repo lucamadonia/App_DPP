@@ -143,6 +143,9 @@ const LocationsPage = lazy(() => import('@/pages/warehouse/LocationsPage').then(
 const ContactsListPage = lazy(() => import('@/pages/warehouse/ContactsListPage').then(m => ({ default: m.ContactsListPage })));
 const WarehouseSettingsPage = lazy(() => import('@/pages/warehouse/WarehouseSettingsPage').then(m => ({ default: m.WarehouseSettingsPage })));
 const FeedbackQueuePage = lazy(() => import('@/pages/feedback/FeedbackQueuePage').then(m => ({ default: m.FeedbackQueuePage })));
+const FeedbackIdeasPage = lazy(() => import('@/pages/feedback/FeedbackIdeasPage').then(m => ({ default: m.FeedbackIdeasPage })));
+const FeedbackInvitesPage = lazy(() => import('@/pages/feedback/FeedbackInvitesPage').then(m => ({ default: m.FeedbackInvitesPage })));
+const FeedbackSettingsPage = lazy(() => import('@/pages/feedback/FeedbackSettingsPage').then(m => ({ default: m.FeedbackSettingsPage })));
 const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyIntegrationPage').then(m => ({ default: m.ShopifyIntegrationPage })));
 const DHLIntegrationPage = lazy(() => import('@/pages/warehouse/DHLIntegrationPage').then(m => ({ default: m.DHLIntegrationPage })));
 const LocationDetailPage = lazy(() => import('@/pages/warehouse/LocationDetailPage').then(m => ({ default: m.LocationDetailPage })));
@@ -537,6 +540,9 @@ function NormalAppRoutes() {
           {/* Feedback Module (Admin) */}
           <Route path="feedback" element={<FeedbackQueuePage />} />
           <Route path="feedback/queue" element={<FeedbackQueuePage />} />
+          <Route path="feedback/ideas" element={<FeedbackIdeasPage />} />
+          <Route path="feedback/invites" element={<FeedbackInvitesPage />} />
+          <Route path="feedback/settings" element={<FeedbackSettingsPage />} />
 
           {/* Pictograms */}
           <Route path="pictograms" element={<PictogramsPage />} />

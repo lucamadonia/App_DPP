@@ -158,6 +158,9 @@ export function AppSidebar() {
           badge: 'NEU',
           items: [
             { title: t('Queue'), url: '/feedback/queue' },
+            { title: t('Idea Board'), url: '/feedback/ideas' },
+            { title: t('Partner Invites'), url: '/feedback/invites' },
+            { title: t('Settings'), url: '/feedback/settings' },
           ],
         },
       ],
