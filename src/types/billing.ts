@@ -744,6 +744,7 @@ export interface BillingContextState {
   hasAnyReturnsHubModule: () => boolean;
   hasAnyWarehouseModule: () => boolean;
   hasAnyCommerceHubModule: () => boolean;
+  hasAnyFeedbackModule: () => boolean;
   canUseFeature: (feature: keyof BillingFeatures) => boolean;
   isTemplateAvailable: (template: DPPTemplateName) => boolean;
 }

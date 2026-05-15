@@ -34,6 +34,7 @@ import {
   Handshake,
   Store,
   History,
+  MessageCircleHeart,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -148,6 +149,15 @@ export function AppSidebar() {
             { title: t('Reports'), url: '/returns/reports' },
             { title: t('Workflows'), url: '/returns/workflows' },
             { title: t('Settings'), url: '/returns/settings' },
+          ],
+        },
+        {
+          title: t('Feedback'),
+          icon: MessageCircleHeart,
+          locked: billing ? !billing.hasAnyFeedbackModule() : false,
+          badge: 'NEU',
+          items: [
+            { title: t('Queue'), url: '/feedback/queue' },
           ],
         },
       ],

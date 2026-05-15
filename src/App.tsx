@@ -45,6 +45,7 @@ const PublicCustomerPage = lazy(() => import('@/pages/public/PublicCustomerPage'
 const PublicCustomsPage = lazy(() => import('@/pages/public/PublicCustomsPage').then(m => ({ default: m.PublicCustomsPage })));
 const TransparencyPage = lazy(() => import('@/pages/public/TransparencyPage').then(m => ({ default: m.TransparencyPage })));
 const PublicShipmentTrackingPage = lazy(() => import('@/pages/public/PublicShipmentTrackingPage').then(m => ({ default: m.PublicShipmentTrackingPage })));
+const PublicFeedbackPage = lazy(() => import('@/pages/feedback/public/PublicFeedbackPage').then(m => ({ default: m.PublicFeedbackPage })));
 
 // Returns Portal (public)
 const ReturnsPortalLayout = lazy(() => import('@/pages/returns/public/ReturnsPortalLayout').then(m => ({ default: m.ReturnsPortalLayout })));
@@ -138,6 +139,7 @@ const StockMovementsPage = lazy(() => import('@/pages/warehouse/StockMovementsPa
 const LocationsPage = lazy(() => import('@/pages/warehouse/LocationsPage').then(m => ({ default: m.LocationsPage })));
 const ContactsListPage = lazy(() => import('@/pages/warehouse/ContactsListPage').then(m => ({ default: m.ContactsListPage })));
 const WarehouseSettingsPage = lazy(() => import('@/pages/warehouse/WarehouseSettingsPage').then(m => ({ default: m.WarehouseSettingsPage })));
+const FeedbackQueuePage = lazy(() => import('@/pages/feedback/FeedbackQueuePage').then(m => ({ default: m.FeedbackQueuePage })));
 const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyIntegrationPage').then(m => ({ default: m.ShopifyIntegrationPage })));
 const DHLIntegrationPage = lazy(() => import('@/pages/warehouse/DHLIntegrationPage').then(m => ({ default: m.DHLIntegrationPage })));
 const LocationDetailPage = lazy(() => import('@/pages/warehouse/LocationDetailPage').then(m => ({ default: m.LocationDetailPage })));
@@ -346,6 +348,9 @@ function NormalAppRoutes() {
         {/* Public Shipment Tracking (magic-link, no auth) */}
         <Route path="t/:token" element={<PublicShipmentTrackingPage />} />
 
+        {/* Public Feedback Submission (token-protected, no auth) */}
+        <Route path="feedback/:token" element={<PublicFeedbackPage />} />
+
         {/* Public Returns Portal (no auth, shared layout) */}
         <Route element={<ReturnsPortalLayout />}>
           <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
@@ -518,6 +523,10 @@ function NormalAppRoutes() {
           <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
           <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />
           <Route path="warehouse/integrations/dhl" element={<DHLIntegrationPage />} />
+
+          {/* Feedback Module (Admin) */}
+          <Route path="feedback" element={<FeedbackQueuePage />} />
+          <Route path="feedback/queue" element={<FeedbackQueuePage />} />
 
           {/* Pictograms */}
           <Route path="pictograms" element={<PictogramsPage />} />

@@ -21,7 +21,12 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, ShipmentStatusError, confirmItemPick, confirmItemPack, type PackagingType } from '@/services/supabase/wh-shipments';
+import { getDHLSettings } from '@/services/supabase/dhl-carrier';
 import { getWarehouseSettings, DEFAULT_WAREHOUSE_SETTINGS } from '@/services/supabase/wh-settings';
+import {
+  isInternational, getShippingZone, estimateShippingPrice, formatPriceEur,
+  countryFlagEmoji, normalizeCountryIso2,
+} from '@/lib/shipping-rates';
 import { getVariantColorHex } from '@/lib/variant-color';
 import type { WarehouseSettings } from '@/types/database';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,6 +45,8 @@ import { ShopifyShipmentSyncCard } from '@/components/warehouse/shopify/ShopifyS
 import { PickPackConfirmDialog } from '@/components/warehouse/PickPackConfirmDialog';
 import { EditShipmentItemDialog } from '@/components/warehouse/EditShipmentItemDialog';
 import { MergeShipmentDialog } from '@/components/warehouse/MergeShipmentDialog';
+import { RequestFeedbackButton } from '@/components/feedback/RequestFeedbackButton';
+import { useBillingOptional } from '@/hooks/use-billing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase as sb } from '@/lib/supabase';
 
@@ -196,6 +203,16 @@ export function ShipmentDetailPage() {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // Home country (DHL shipper). Used to detect international shipments and
+  // ballpark postage. Falls back to DE when DHL isn't configured.
+  const [homeCountry, setHomeCountry] = useState('DE');
+  useEffect(() => {
+    getDHLSettings().then((s) => {
+      const c = normalizeCountryIso2(s?.shipper?.country || 'DE');
+      if (c) setHomeCountry(c);
+    });
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -245,6 +262,12 @@ export function ShipmentDetailPage() {
 
   // Merge-into-another-shipment dialog.
   const [mergeOpen, setMergeOpen] = useState(false);
+
+  // Feedback module gate — only show "Request Feedback" button if billed.
+  const billing = useBillingOptional();
+  const hasFeedbackModule = !!billing?.entitlements?.modules?.has('feedback_starter')
+    || !!billing?.entitlements?.modules?.has('feedback_professional')
+    || !!billing?.entitlements?.modules?.has('feedback_business');
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -490,6 +513,16 @@ export function ShipmentDetailPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{shipment.shipmentNumber}</h1>
             <Badge variant="secondary" className={SHIPMENT_STATUS_COLORS[shipment.status]}>{t(shipment.status)}</Badge>
             <Badge variant="secondary" className={PRIORITY_COLORS[shipment.priority]}>{t(shipment.priority)}</Badge>
+            {isInternational(homeCountry, shipment.shippingCountry) && (
+              <Badge
+                variant="secondary"
+                className="bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                title={t('International shipment — needs DHL Paket International (V53WPAK)')}
+              >
+                <span className="mr-1" aria-hidden>{countryFlagEmoji(shipment.shippingCountry)}</span>
+                {t('International')} · {normalizeCountryIso2(shipment.shippingCountry)}
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             {shipment.recipientCompany && `${shipment.recipientCompany} · `}{shipment.recipientName}
@@ -735,6 +768,36 @@ export function ShipmentDetailPage() {
               <EditableField label={t('Estimated Delivery')} value={shipment.estimatedDelivery ? new Date(shipment.estimatedDelivery).toLocaleDateString() : ''} editing={editingShipping} editValue={editFields.estimatedDelivery || ''} onChange={v => setEditFields(f => ({ ...f, estimatedDelivery: v }))} />
               <EditableField label={t('Shipping Cost')} value={shipment.shippingCost != null ? `€${shipment.shippingCost.toFixed(2)}` : ''} editing={editingShipping} editValue={editFields.shippingCost || ''} onChange={v => setEditFields(f => ({ ...f, shippingCost: v }))} />
               <EditableField label={t('Weight')} value={shipment.totalWeightGrams != null ? `${shipment.totalWeightGrams} g (${(shipment.totalWeightGrams / 1000).toFixed(1)} kg)` : ''} editing={editingShipping} editValue={editFields.totalWeightGrams || ''} onChange={v => setEditFields(f => ({ ...f, totalWeightGrams: v }))} />
+              {!editingShipping && shipment.carrier === 'DHL' && (() => {
+                const zone = getShippingZone(homeCountry, shipment.shippingCountry);
+                const est = estimateShippingPrice(homeCountry, shipment.shippingCountry, shipment.totalWeightGrams);
+                const isIntl = zone !== 'domestic';
+                const product = isIntl ? 'V53WPAK' : 'V01PAK';
+                const zoneLabel = zone === 'domestic' ? t('Domestic') : zone === 'eu' ? t('EU') : t('Worldwide');
+                return (
+                  <div className={`rounded-md border px-3 py-2 mt-2 text-xs space-y-1 ${
+                    isIntl
+                      ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-200'
+                      : 'bg-muted/40 border-border text-muted-foreground'
+                  }`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{t('Shipping zone')}</span>
+                      <span>{isIntl && <span aria-hidden className="mr-1">{countryFlagEmoji(shipment.shippingCountry)}</span>}{zoneLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{t('DHL product')}</span>
+                      <span className="font-mono">{product}</span>
+                    </div>
+                    {est && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold">{t('Estimated postage')}</span>
+                        <span>{t('approx.')} {formatPriceEur(est.priceEur)} <span className="opacity-70">({t('up to')} {est.tierMaxKg} kg)</span></span>
+                      </div>
+                    )}
+                    <p className="opacity-70 pt-0.5">{t('List price — your DHL contract may be lower.')}</p>
+                  </div>
+                );
+              })()}
               {shipment.carrierLabelData?.carrier === 'DHL' && !editingShipping && (
                 <div className="border-t pt-2 mt-2 space-y-2">
                   <div className="flex justify-between items-center">
@@ -1212,6 +1275,13 @@ export function ShipmentDetailPage() {
                 <Merge className="mr-1 h-3.5 w-3.5" />
                 {t('Merge with…')}
               </Button>
+            )}
+            {shipment.status === 'delivered' && hasFeedbackModule && (
+              <RequestFeedbackButton
+                shipment={shipment}
+                items={items}
+                disabled={statusUpdating}
+              />
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
