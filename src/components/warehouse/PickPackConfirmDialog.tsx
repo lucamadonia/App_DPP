@@ -10,6 +10,7 @@ import { confirmItemPick, confirmItemPack } from '@/services/supabase/wh-shipmen
 import type { WhShipmentItem } from '@/types/warehouse';
 import { AddShipmentItemDialog } from '@/components/warehouse/AddShipmentItemDialog';
 import { parseBarcode } from '@/lib/barcode-parser';
+import { getVariantColorHex } from '@/lib/variant-color';
 import { toast } from 'sonner';
 
 type ScanAlert =
@@ -298,6 +299,24 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="font-medium text-sm leading-tight break-words flex flex-wrap items-center gap-1.5">
                       {item.productName || item.productId.slice(0, 8)}
+                      {item.variantTitle && (() => {
+                        const hex = getVariantColorHex(item.variantTitle);
+                        return (
+                          <Badge
+                            variant="outline"
+                            className="gap-1.5 px-2 py-0.5 font-semibold border-2 bg-violet-50 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-100 dark:border-violet-700"
+                          >
+                            {hex && (
+                              <span
+                                aria-hidden="true"
+                                className="inline-block h-3 w-3 rounded-full border border-black/20 shadow-sm shrink-0"
+                                style={{ backgroundColor: hex }}
+                              />
+                            )}
+                            {item.variantTitle}
+                          </Badge>
+                        );
+                      })()}
                       {item.isGift && (
                         <Badge variant="secondary" className="gap-1 bg-pink-100 text-pink-800 hover:bg-pink-100 dark:bg-pink-900/30 dark:text-pink-200">
                           <Gift className="h-3 w-3" /> {t('Beigabe')}

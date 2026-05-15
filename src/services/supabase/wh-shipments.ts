@@ -106,6 +106,16 @@ function transformShipment(row: any): WhShipment {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformShipmentItem(row: any): WhShipmentItem {
+  // shopify_product_map is embedded under product_batches as an array (reverse
+  // FK lookup). One batch should map to one variant in practice; take the
+  // first active mapping that has a non-empty variant title.
+  const mappings: Array<{ shopify_variant_title?: string | null; is_active?: boolean }> | undefined =
+    row.product_batches?.shopify_product_map;
+  const variantTitle = Array.isArray(mappings)
+    ? mappings.find((m) => m?.is_active && m?.shopify_variant_title)?.shopify_variant_title
+        || mappings.find((m) => m?.shopify_variant_title)?.shopify_variant_title
+    : undefined;
+
   return {
     id: row.id,
     tenantId: row.tenant_id,
@@ -125,6 +135,7 @@ function transformShipmentItem(row: any): WhShipmentItem {
     productName: row.products?.name || undefined,
     batchSerialNumber: row.product_batches?.serial_number || undefined,
     locationName: row.wh_locations?.name || undefined,
+    variantTitle: variantTitle || undefined,
   };
 }
 
@@ -922,7 +933,7 @@ export async function cancelShipment(id: string): Promise<WhShipment> {
 export async function getShipmentItems(shipmentId: string): Promise<WhShipmentItem[]> {
   const { data, error } = await supabase
     .from('wh_shipment_items')
-    .select('*, products(name), product_batches(serial_number), wh_locations(name)')
+    .select('*, products(name), product_batches(serial_number, shopify_product_map(shopify_variant_title, is_active)), wh_locations(name)')
     .eq('shipment_id', shipmentId);
 
   if (error) {

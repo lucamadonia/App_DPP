@@ -665,6 +665,8 @@ export interface WhShipmentItem {
   productName?: string;
   batchSerialNumber?: string;
   locationName?: string;
+  /** Shopify variant title (e.g. "rose", "beige") joined via shopify_product_map. */
+  variantTitle?: string;
 }
 
 export interface WhShipmentItemInput {

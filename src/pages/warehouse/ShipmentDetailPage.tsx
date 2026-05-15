@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, ShipmentStatusError, confirmItemPick, confirmItemPack, type PackagingType } from '@/services/supabase/wh-shipments';
 import { getWarehouseSettings, DEFAULT_WAREHOUSE_SETTINGS } from '@/services/supabase/wh-settings';
+import { getVariantColorHex } from '@/lib/variant-color';
 import type { WarehouseSettings } from '@/types/database';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContentPosts } from '@/services/supabase/wh-content';
@@ -1019,6 +1020,24 @@ export function ShipmentDetailPage() {
                                 {item.productName || item.productId.slice(0, 8)}
                               </Link>
                               <div className="flex flex-wrap gap-1">
+                                {item.variantTitle && (() => {
+                                  const hex = getVariantColorHex(item.variantTitle);
+                                  return (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] gap-1 font-semibold border-2 bg-violet-50 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-100 dark:border-violet-700"
+                                    >
+                                      {hex && (
+                                        <span
+                                          aria-hidden="true"
+                                          className="inline-block h-2.5 w-2.5 rounded-full border border-black/20 shadow-sm shrink-0"
+                                          style={{ backgroundColor: hex }}
+                                        />
+                                      )}
+                                      {item.variantTitle}
+                                    </Badge>
+                                  );
+                                })()}
                                 {!item.batchId && (
                                   <Badge variant="outline" className="text-[10px] gap-1 text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
                                     <AlertTriangle className="h-3 w-3" /> {t('Charge fehlt')}
