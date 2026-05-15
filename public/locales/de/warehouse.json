@@ -1497,5 +1497,13 @@
   "Alle Chargen": "Alle Chargen",
   "Filter aktiv: nur Charge": "Filter aktiv: nur Charge",
   "Zurücksetzen": "Zurücksetzen",
-  "Bestandsanpassung": "Bestandsanpassung"
+  "Bestandsanpassung": "Bestandsanpassung",
+  "Pick & Pack": "Kommissionieren & Verpacken",
+  "Choose whether each shipment status transition requires per-item scan confirmation.": "Lege fest, ob beim jeweiligen Statuswechsel jede Position einzeln per Scan/Häkchen bestätigt werden muss.",
+  "Confirmation when picking": "Bestätigung beim Kommissionieren",
+  "Confirmation when packing": "Bestätigung beim Verpacken",
+  "Open scan dialog when transitioning to \"Picked\" and confirm each item individually.": "Beim Wechsel auf „Kommissioniert\" den Scan-Dialog öffnen und jede Position einzeln bestätigen.",
+  "Open scan dialog when transitioning to \"Packed\" and confirm each item individually.": "Beim Wechsel auf „Verpackt\" den Scan-Dialog öffnen und jede Position einzeln bestätigen.",
+  "Setting saved": "Einstellung gespeichert",
+  "Failed to save": "Speichern fehlgeschlagen"
 }

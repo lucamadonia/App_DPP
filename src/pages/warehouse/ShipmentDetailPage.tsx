@@ -20,7 +20,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, ShipmentStatusError, type PackagingType } from '@/services/supabase/wh-shipments';
+import { getShipment, getShipmentItems, updateShipmentStatus, updateShipment, getPackagingTypes, setShipmentPackaging, suggestPackaging, ShipmentStatusError, confirmItemPick, confirmItemPack, type PackagingType } from '@/services/supabase/wh-shipments';
+import { getWarehouseSettings, DEFAULT_WAREHOUSE_SETTINGS } from '@/services/supabase/wh-settings';
+import type { WarehouseSettings } from '@/types/database';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContentPosts } from '@/services/supabase/wh-content';
 import { updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
@@ -225,6 +227,12 @@ export function ShipmentDetailPage() {
   const [pendingStatus, setPendingStatus] = useState<ShipmentStatus | null>(null);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, string>>({});
 
+  // Tenant-level setting: whether per-item scan/confirm dialog is required at each step.
+  const [whSettings, setWhSettings] = useState<WarehouseSettings>(DEFAULT_WAREHOUSE_SETTINGS);
+  useEffect(() => {
+    getWarehouseSettings().then(setWhSettings).catch(() => { /* keep defaults */ });
+  }, []);
+
   // Backward-from-shipped confirm dialog (irreversible: restores reservations).
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
   const [revertTargetStatus, setRevertTargetStatus] = useState<ShipmentStatus | null>(null);
@@ -267,6 +275,16 @@ export function ShipmentDetailPage() {
     }
   };
 
+  // Auto-mark every item as fully picked / packed when the user has disabled the
+  // per-item confirmation dialog for that step. Keeps `quantity_picked` /
+  // `quantity_packed` consistent with `quantity` so reports stay correct.
+  const autoConfirmAllItems = async (mode: 'pick' | 'pack') => {
+    for (const it of items) {
+      if (mode === 'pick') await confirmItemPick(it.id, it.quantity);
+      else await confirmItemPack(it.id, it.quantity);
+    }
+  };
+
   const handleStatusChange = async (newStatus: ShipmentStatus) => {
     if (!id || statusUpdating || !shipment) return;
 
@@ -277,15 +295,36 @@ export function ShipmentDetailPage() {
       return;
     }
 
-    // For picking and packed, require item-by-item confirmation first
+    // For picking and packed, require item-by-item confirmation first — unless
+    // the tenant has explicitly disabled the dialog for that step in settings.
     if (newStatus === 'picking' && items.length > 0) {
-      setPendingStatus(newStatus);
-      setPickDialogOpen(true);
+      if (whSettings.pickPackConfirm?.requireAtPicking ?? true) {
+        setPendingStatus(newStatus);
+        setPickDialogOpen(true);
+        return;
+      }
+      setStatusUpdating(true);
+      try {
+        await autoConfirmAllItems('pick');
+      } finally {
+        setStatusUpdating(false);
+      }
+      await applyStatusChange(newStatus);
       return;
     }
     if (newStatus === 'packed' && items.length > 0) {
-      setPendingStatus(newStatus);
-      setPackDialogOpen(true);
+      if (whSettings.pickPackConfirm?.requireAtPacking ?? true) {
+        setPendingStatus(newStatus);
+        setPackDialogOpen(true);
+        return;
+      }
+      setStatusUpdating(true);
+      try {
+        await autoConfirmAllItems('pack');
+      } finally {
+        setStatusUpdating(false);
+      }
+      await applyStatusChange(newStatus);
       return;
     }
     await applyStatusChange(newStatus);

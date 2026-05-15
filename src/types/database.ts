@@ -243,6 +243,16 @@ export interface TenantSettings {
   masterLabelTemplates?: MasterLabelTemplate[];
   onboardingCompleted?: boolean;
   shopifyIntegration?: ShopifyIntegrationSettings;
+  warehouse?: WarehouseSettings;
+}
+
+export interface WarehouseSettings {
+  pickPackConfirm?: {
+    /** Require per-item scan/confirm dialog before transitioning to `picking`. Default: true. */
+    requireAtPicking: boolean;
+    /** Require per-item scan/confirm dialog before transitioning to `packed`. Default: true. */
+    requireAtPacking: boolean;
+  };
 }
 
 // ============================================

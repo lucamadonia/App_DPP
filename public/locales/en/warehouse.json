@@ -1497,5 +1497,13 @@
   "Alle Chargen": "All batches",
   "Filter aktiv: nur Charge": "Active filter: only batch",
   "Zurücksetzen": "Reset",
-  "Bestandsanpassung": "Stock adjustment"
+  "Bestandsanpassung": "Stock adjustment",
+  "Pick & Pack": "Pick & Pack",
+  "Choose whether each shipment status transition requires per-item scan confirmation.": "Choose whether each shipment status transition requires per-item scan confirmation.",
+  "Confirmation when picking": "Confirmation when picking",
+  "Confirmation when packing": "Confirmation when packing",
+  "Open scan dialog when transitioning to \"Picked\" and confirm each item individually.": "Open the scan dialog when transitioning to \"Picked\" and confirm each item individually.",
+  "Open scan dialog when transitioning to \"Packed\" and confirm each item individually.": "Open the scan dialog when transitioning to \"Packed\" and confirm each item individually.",
+  "Setting saved": "Setting saved",
+  "Failed to save": "Failed to save"
 }

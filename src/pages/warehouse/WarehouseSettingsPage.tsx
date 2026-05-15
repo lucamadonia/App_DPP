@@ -1,10 +1,15 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Settings, CreditCard, Warehouse, Package, Truck, Users } from 'lucide-react';
+import { Settings, CreditCard, Warehouse, Package, Truck, Users, ScanBarcode } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 import { useBilling } from '@/hooks/use-billing';
 import { WAREHOUSE_MODULES, getActiveWarehouseTier, type ModuleId } from '@/types/billing';
+import { getWarehouseSettings, updateWarehouseSettings, DEFAULT_WAREHOUSE_SETTINGS } from '@/services/supabase/wh-settings';
+import type { WarehouseSettings } from '@/types/database';
 
 export function WarehouseSettingsPage() {
   const { t } = useTranslation('warehouse');
@@ -15,6 +20,36 @@ export function WarehouseSettingsPage() {
   const tier = warehouseModule ? getActiveWarehouseTier(modules) : null;
 
   const limits = billing.entitlements?.limits;
+
+  const [whSettings, setWhSettings] = useState<WarehouseSettings>(DEFAULT_WAREHOUSE_SETTINGS);
+  const [savingToggle, setSavingToggle] = useState<'picking' | 'packing' | null>(null);
+
+  useEffect(() => {
+    getWarehouseSettings().then(setWhSettings).catch(() => {
+      /* fall back to defaults silently */
+    });
+  }, []);
+
+  async function toggleConfirm(which: 'picking' | 'packing', value: boolean) {
+    const prev = whSettings;
+    const next: WarehouseSettings = {
+      ...whSettings,
+      pickPackConfirm: {
+        requireAtPicking: which === 'picking' ? value : whSettings.pickPackConfirm?.requireAtPicking ?? true,
+        requireAtPacking: which === 'packing' ? value : whSettings.pickPackConfirm?.requireAtPacking ?? true,
+      },
+    };
+    setWhSettings(next);
+    setSavingToggle(which);
+    const res = await updateWarehouseSettings({ pickPackConfirm: next.pickPackConfirm });
+    setSavingToggle(null);
+    if (!res.success) {
+      setWhSettings(prev);
+      toast.error(res.error || t('Failed to save'));
+      return;
+    }
+    toast.success(t('Setting saved'));
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -115,6 +150,51 @@ export function WarehouseSettingsPage() {
                 </div>
               );
             })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pick & Pack */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ScanBarcode className="h-4 w-4" />
+            {t('Pick & Pack')}
+          </CardTitle>
+          <CardDescription>
+            {t('Choose whether each shipment status transition requires per-item scan confirmation.')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{t('Confirmation when picking')}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('Open scan dialog when transitioning to "Picked" and confirm each item individually.')}
+                </p>
+              </div>
+              <Switch
+                checked={whSettings.pickPackConfirm?.requireAtPicking ?? true}
+                onCheckedChange={(v) => toggleConfirm('picking', v)}
+                disabled={savingToggle === 'picking'}
+                aria-label={t('Confirmation when picking')}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{t('Confirmation when packing')}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('Open scan dialog when transitioning to "Packed" and confirm each item individually.')}
+                </p>
+              </div>
+              <Switch
+                checked={whSettings.pickPackConfirm?.requireAtPacking ?? true}
+                onCheckedChange={(v) => toggleConfirm('packing', v)}
+                disabled={savingToggle === 'packing'}
+                aria-label={t('Confirmation when packing')}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
