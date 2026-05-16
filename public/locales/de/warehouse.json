@@ -1541,5 +1541,6 @@
   "Positions": "Positionen",
   "Merge": "Zusammenführen",
   "Merging...": "Wird zusammengeführt...",
-  "Shipments merged into {{number}}": "Sendungen zu {{number}} zusammengeführt"
+  "Shipments merged into {{number}}": "Sendungen zu {{number}} zusammengeführt",
+  "More actions": "Mehr"
 }

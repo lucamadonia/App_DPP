@@ -1541,5 +1541,6 @@
   "Positions": "Positions",
   "Merge": "Merge",
   "Merging...": "Merging...",
-  "Shipments merged into {{number}}": "Shipments merged into {{number}}"
+  "Shipments merged into {{number}}": "Shipments merged into {{number}}",
+  "More actions": "More actions"
 }

@@ -4,8 +4,11 @@ import { useTranslation } from 'react-i18next';
 import {
   Plus, Truck, Search, Package, FileText, CheckCircle2,
   Rocket, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
-  ShoppingBag, Download, RefreshCw,
+  ShoppingBag, Download, RefreshCw, MoreVertical,
 } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -340,25 +343,35 @@ export function ShipmentListPage() {
             </h1>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={handleExport} disabled={exporting || loading} className="w-full sm:w-auto">
-            <Download className={`mr-2 h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
-            {exporting ? t('Exporting...') : t('Export CSV')}
-          </Button>
-          <Button variant="outline" onClick={handleShopifyRetry} disabled={pushingShopify} className="w-full sm:w-auto">
-            <ShoppingBag className={`mr-2 h-4 w-4 ${pushingShopify ? 'animate-pulse' : ''}`} />
-            {pushingShopify ? t('Pushing...') : t('Retry Shopify push')}
-          </Button>
-          <Button variant="outline" onClick={handleTrackingRefresh} disabled={refreshing} className="w-full sm:w-auto">
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? t('Refreshing...') : t('Refresh tracking')}
-          </Button>
-          <Button asChild className="w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button asChild className="flex-1 sm:flex-none">
             <Link to="/warehouse/shipments/new">
               <Plus className="mr-2 h-4 w-4" />
               {t('Create Shipment')}
             </Link>
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="default" className="shrink-0" aria-label={t('More actions')}>
+                <MoreVertical className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t('More actions')}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleExport} disabled={exporting || loading}>
+                <Download className={`mr-2 h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
+                {exporting ? t('Exporting...') : t('Export CSV')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShopifyRetry} disabled={pushingShopify}>
+                <ShoppingBag className={`mr-2 h-4 w-4 ${pushingShopify ? 'animate-pulse' : ''}`} />
+                {pushingShopify ? t('Pushing...') : t('Retry Shopify push')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleTrackingRefresh} disabled={refreshing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? t('Refreshing...') : t('Refresh tracking')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
