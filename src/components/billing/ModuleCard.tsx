@@ -123,6 +123,9 @@ function getModuleDescription(moduleId: ModuleId, t: (key: string, opts?: Record
     commerce_hub_starter: t('Connect 1 sales channel and stream 500 orders/month into the Mega Dashboard'),
     commerce_hub_professional: t('Up to 3 channels with webhooks and 5,000 orders/month + DPP auto-matching'),
     commerce_hub_business: t('Unlimited channels, white-label Mega Dashboard, full API access'),
+    feedback_starter: t('Collect up to 100 verified reviews/month with carousel embed widget'),
+    feedback_professional: t('500 verified reviews/month, all embed modes, AI moderation + photos + replies'),
+    feedback_business: t('Unlimited verified reviews + idea board + full API and white-label embed'),
   };
   return descriptions[moduleId];
 }

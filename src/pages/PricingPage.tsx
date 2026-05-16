@@ -24,6 +24,9 @@ const moduleKeyMap: Record<ModuleId, string> = {
   commerce_hub_starter: 'commerceHubStarter',
   commerce_hub_professional: 'commerceHubProfessional',
   commerce_hub_business: 'commerceHubBusiness',
+  feedback_starter: 'feedbackStarter',
+  feedback_professional: 'feedbackProfessional',
+  feedback_business: 'feedbackBusiness',
 };
 
 const FEATURE_ROWS = [

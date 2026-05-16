@@ -209,7 +209,8 @@ export function ShipmentReportsPage() {
                         cx="50%"
                         cy="50%"
                         outerRadius={80}
-                        label={(entry: { status: string; count: number }) => `${t(entry.status)}: ${entry.count}`}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        label={(entry: any) => `${t(entry.status)}: ${entry.count}`}
                         labelLine={false}
                       >
                         {analytics.statusBreakdown.map((s, i) => (
@@ -242,7 +243,7 @@ export function ShipmentReportsPage() {
                       <Legend />
                       <Bar dataKey="domestic" stackId="a" fill="#10B981" name={t('Domestic')} />
                       <Bar dataKey="eu" stackId="a" fill="#F59E0B" name={t('EU')} />
-                      <Bar dataKey="worldwide" stackId="a" fill="#EF4444" name={t('Worldwide')} />
+                      <Bar dataKey="world" stackId="a" fill="#EF4444" name={t('Worldwide')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -578,7 +579,7 @@ interface Analytics {
   avgLeadDays: number | null;
   timeline: { day: string; count: number }[];
   statusBreakdown: { status: ShipmentStatus; count: number }[];
-  carrierBreakdown: { carrier: string; domestic: number; eu: number; worldwide: number }[];
+  carrierBreakdown: { carrier: string; domestic: number; eu: number; world: number }[];
   topCountries: { country: string; count: number }[];
   topRecipients: { name: string; email: string; count: number; items: number; cost: number }[];
   leadTimeByStage: { stage: string; days: number }[];
@@ -596,7 +597,7 @@ function computeAnalytics(shipments: WhShipment[], homeCountry: string): Analyti
   // Timeline buckets — last 30 days minimum
   const timelineMap = new Map<string, number>();
   const statusMap = new Map<ShipmentStatus, number>();
-  const carrierZoneMap = new Map<string, { domestic: number; eu: number; worldwide: number }>();
+  const carrierZoneMap = new Map<string, { domestic: number; eu: number; world: number }>();
   const countryMap = new Map<string, number>();
   const recipientMap = new Map<string, { name: string; email: string; count: number; items: number; cost: number }>();
 
@@ -639,7 +640,7 @@ function computeAnalytics(shipments: WhShipment[], homeCountry: string): Analyti
 
     const carrier = s.carrier || '—';
     const zone = getShippingZone(homeCountry, s.shippingCountry);
-    const cz = carrierZoneMap.get(carrier) || { domestic: 0, eu: 0, worldwide: 0 };
+    const cz = carrierZoneMap.get(carrier) || { domestic: 0, eu: 0, world: 0 };
     cz[zone] = (cz[zone] || 0) + 1;
     carrierZoneMap.set(carrier, cz);
 
@@ -670,7 +671,7 @@ function computeAnalytics(shipments: WhShipment[], homeCountry: string): Analyti
 
   const carrierBreakdown = Array.from(carrierZoneMap.entries())
     .map(([carrier, zones]) => ({ carrier, ...zones }))
-    .sort((a, b) => b.domestic + b.eu + b.worldwide - (a.domestic + a.eu + a.worldwide));
+    .sort((a, b) => b.domestic + b.eu + b.world - (a.domestic + a.eu + a.world));
 
   const topCountries = Array.from(countryMap.entries())
     .map(([country, count]) => ({ country, count }))

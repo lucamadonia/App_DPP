@@ -224,6 +224,9 @@ function getModulePaywallDescription(
     commerce_hub_starter: t('Connect 1 sales channel and stream 500 orders/month'),
     commerce_hub_professional: t('3 channels with webhooks, real-time DPP matching and the Mega Dashboard'),
     commerce_hub_business: t('Unlimited channels, white-label Mega Dashboard, full API'),
+    feedback_starter: t('Verified customer reviews — 100/month, carousel embed widget'),
+    feedback_professional: t('500 reviews/month, all embed modes, AI moderation, photos, replies, partner idea board'),
+    feedback_business: t('Unlimited reviews and idea board, full API, white-label widget'),
   };
   return map[moduleId];
 }
@@ -304,6 +307,24 @@ function getModuleHighlights(
       t('Unlimited orders synced'),
       t('White-label Mega Dashboard'),
       t('Full Read/Write API access'),
+    ],
+    feedback_starter: [
+      t('Up to 100 verified reviews per month'),
+      t('Carousel embed widget'),
+      t('Schema.org JSON-LD for SEO'),
+      t('Admin moderation queue'),
+    ],
+    feedback_professional: [
+      t('500 verified reviews per month'),
+      t('All embed modes (carousel / grid / badge)'),
+      t('AI moderation + auto-sentiment'),
+      t('Photos, replies, partner idea board'),
+    ],
+    feedback_business: [
+      t('Unlimited verified reviews'),
+      t('Full idea board with roadmap status'),
+      t('White-label widget'),
+      t('Read/Write API access'),
     ],
   };
   return map[moduleId] || [];

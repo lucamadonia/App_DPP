@@ -91,6 +91,18 @@ export const MODULE_PRICES: Record<
     productId: 'prod_placeholder_ch_business',
     priceId: 'price_placeholder_ch_business',
   },
+  feedback_starter: {
+    productId: 'prod_placeholder_feedback_starter',
+    priceId: 'price_placeholder_feedback_starter',
+  },
+  feedback_professional: {
+    productId: 'prod_placeholder_feedback_professional',
+    priceId: 'price_placeholder_feedback_professional',
+  },
+  feedback_business: {
+    productId: 'prod_placeholder_feedback_business',
+    priceId: 'price_placeholder_feedback_business',
+  },
 };
 
 // ============================================
