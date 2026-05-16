@@ -930,6 +930,36 @@ export async function cancelShipment(id: string): Promise<WhShipment> {
 // SHIPMENT ITEMS
 // ============================================
 
+/**
+ * Batch-fetch items for many shipments in a single query. Used by the CSV
+ * export so we can include per-shipment product lists without N+1 round
+ * trips. Returns a map keyed by shipment_id.
+ */
+export async function getItemsForShipments(
+  shipmentIds: string[],
+): Promise<Map<string, WhShipmentItem[]>> {
+  const map = new Map<string, WhShipmentItem[]>();
+  if (shipmentIds.length === 0) return map;
+
+  // Supabase has a soft URL-length cap; chunk to 200 ids per request.
+  const CHUNK = 200;
+  for (let i = 0; i < shipmentIds.length; i += CHUNK) {
+    const slice = shipmentIds.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from('wh_shipment_items')
+      .select('*, products(name), product_batches(serial_number, shopify_product_map(shopify_variant_title, is_active)), wh_locations(name)')
+      .in('shipment_id', slice);
+    if (error || !data) continue;
+    for (const row of data) {
+      const transformed = transformShipmentItem(row);
+      const arr = map.get(transformed.shipmentId) || [];
+      arr.push(transformed);
+      map.set(transformed.shipmentId, arr);
+    }
+  }
+  return map;
+}
+
 export async function getShipmentItems(shipmentId: string): Promise<WhShipmentItem[]> {
   const { data, error } = await supabase
     .from('wh_shipment_items')

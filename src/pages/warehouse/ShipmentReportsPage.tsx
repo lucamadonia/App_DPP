@@ -14,15 +14,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { getShipments } from '@/services/supabase/wh-shipments';
+import { getShipments, getItemsForShipments } from '@/services/supabase/wh-shipments';
 import { buildCsv, downloadCsv, timestampedFilename, type CsvColumn } from '@/lib/csv-export';
 import {
   isInternational, getShippingZone, countryFlagEmoji, normalizeCountryIso2,
 } from '@/lib/shipping-rates';
 import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
-import type { WhShipment, ShipmentStatus } from '@/types/warehouse';
+import type { WhShipment, ShipmentStatus, WhShipmentItem } from '@/types/warehouse';
 import { toast } from 'sonner';
 
 type RangeKey = '7' | '30' | '90' | '365' | 'all';
@@ -68,7 +69,43 @@ export function ShipmentReportsPage() {
 
   const analytics = useMemo(() => computeAnalytics(shipments, homeCountry), [shipments, homeCountry]);
 
-  function handleExportCSV() {
+  async function handleExportCSV(mode: 'summary' | 'detail' = 'summary') {
+    const itemsMap = await getItemsForShipments(shipments.map(s => s.id));
+
+    if (mode === 'detail') {
+      type DetailRow = { shipment: WhShipment; item: WhShipmentItem | null };
+      const rows: DetailRow[] = [];
+      for (const s of shipments) {
+        const items = itemsMap.get(s.id) || [];
+        if (items.length === 0) {
+          rows.push({ shipment: s, item: null });
+        } else {
+          for (const it of items) rows.push({ shipment: s, item: it });
+        }
+      }
+      const detailCols: CsvColumn<DetailRow>[] = [
+        { header: t('Shipment Number'), value: r => r.shipment.shipmentNumber },
+        { header: t('Status'), value: r => t(r.shipment.status) },
+        { header: t('Recipient'), value: r => r.shipment.recipientName },
+        { header: t('Country'), value: r => r.shipment.shippingCountry },
+        { header: t('Carrier'), value: r => r.shipment.carrier || '' },
+        { header: t('Order Reference'), value: r => r.shipment.orderReference || '' },
+        { header: t('Product'), value: r => r.item?.productName || '' },
+        { header: t('Variant'), value: r => r.item?.variantTitle || '' },
+        { header: t('Batch / Serial'), value: r => r.item?.batchSerialNumber || '' },
+        { header: t('Quantity'), value: r => r.item?.quantity ?? '' },
+        { header: t('Gift'), value: r => (r.item?.isGift ? 'yes' : '') },
+        { header: t('Unit price'), value: r => r.item?.unitPrice ?? '' },
+        { header: t('Location'), value: r => r.item?.locationName || '' },
+        { header: t('Created', { ns: 'common' }), value: r => fmtDateTime(r.shipment.createdAt) },
+        { header: t('shipped'), value: r => (r.shipment.shippedAt ? fmtDateTime(r.shipment.shippedAt) : '') },
+      ];
+      const csv = buildCsv(rows, detailCols);
+      downloadCsv(timestampedFilename('shipments-detail'), csv);
+      toast.success(t('Exported {{n}} item rows', { n: rows.length }));
+      return;
+    }
+
     const cols: CsvColumn<WhShipment>[] = [
       { header: t('Shipment Number'), value: r => r.shipmentNumber },
       { header: t('Status'), value: r => t(r.status) },
@@ -84,6 +121,19 @@ export function ShipmentReportsPage() {
       { header: t('Carrier'), value: r => r.carrier || '' },
       { header: t('Tracking Number'), value: r => r.trackingNumber || '' },
       { header: t('Items'), value: r => r.totalItems },
+      {
+        header: t('Products'),
+        value: r => {
+          const items = itemsMap.get(r.id) || [];
+          return items
+            .map(it => {
+              const name = it.productName || '';
+              const variant = it.variantTitle ? ` ${it.variantTitle}` : '';
+              return `${name}${variant} ×${it.quantity}${it.isGift ? ' [Beigabe]' : ''}`.trim();
+            })
+            .join(' | ');
+        },
+      },
       { header: t('Weight') + ' (g)', value: r => r.totalWeightGrams ?? '' },
       { header: t('Shipping Cost'), value: r => r.shippingCost ?? '' },
       { header: t('Order Reference'), value: r => r.orderReference || '' },
@@ -126,10 +176,24 @@ export function ShipmentReportsPage() {
               <SelectItem value="all">{t('All time')}</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleExportCSV} disabled={shipments.length === 0} className="shrink-0 gap-2">
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">CSV</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={shipments.length === 0} className="shrink-0 gap-2">
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">CSV</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem onClick={() => handleExportCSV('summary')}>
+                <Download className="mr-2 h-4 w-4" />
+                {t('Export CSV (summary)')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportCSV('detail')}>
+                <Download className="mr-2 h-4 w-4" />
+                {t('Export CSV (one row per item)')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

@@ -1575,5 +1575,17 @@
   "Items": "Positionen",
   "No data in range": "Keine Daten im Zeitraum",
   "No shipments in this range": "Keine Sendungen im Zeitraum",
-  "Pivot — group shipments by two dimensions": "Pivot — Sendungen nach zwei Dimensionen gruppieren"
+  "Pivot — group shipments by two dimensions": "Pivot — Sendungen nach zwei Dimensionen gruppieren",
+  "Products": "Produkte",
+  "Product": "Produkt",
+  "Variant": "Variante",
+  "Batch / Serial": "Charge / Serie",
+  "Quantity": "Menge",
+  "Gift": "Beigabe",
+  "Gift note": "Beigabe-Notiz",
+  "Unit price": "Einzelpreis",
+  "Location": "Lager",
+  "Export CSV (summary)": "Export CSV (Übersicht)",
+  "Export CSV (one row per item)": "Export CSV (eine Zeile pro Position)",
+  "Exported {{n}} item rows": "{{n}} Positionen exportiert"
 }

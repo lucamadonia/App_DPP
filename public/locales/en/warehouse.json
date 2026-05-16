@@ -1575,5 +1575,17 @@
   "Items": "Items",
   "No data in range": "No data in range",
   "No shipments in this range": "No shipments in this range",
-  "Pivot — group shipments by two dimensions": "Pivot — group shipments by two dimensions"
+  "Pivot — group shipments by two dimensions": "Pivot — group shipments by two dimensions",
+  "Products": "Products",
+  "Product": "Product",
+  "Variant": "Variant",
+  "Batch / Serial": "Batch / Serial",
+  "Quantity": "Quantity",
+  "Gift": "Gift",
+  "Gift note": "Gift note",
+  "Unit price": "Unit price",
+  "Location": "Location",
+  "Export CSV (summary)": "Export CSV (summary)",
+  "Export CSV (one row per item)": "Export CSV (one row per item)",
+  "Exported {{n}} item rows": "Exported {{n}} item rows"
 }

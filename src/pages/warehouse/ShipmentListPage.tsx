@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { getShipments, getShipmentStatusCounts } from '@/services/supabase/wh-shipments';
+import { getShipments, getShipmentStatusCounts, getItemsForShipments } from '@/services/supabase/wh-shipments';
 import { getDHLSettings } from '@/services/supabase/dhl-carrier';
 import { retryShopifyFulfillment } from '@/services/supabase/shopify-integration';
 import { invokeEdgeFunction } from '@/lib/edge-function';
@@ -29,7 +29,7 @@ import {
   countryFlagEmoji, normalizeCountryIso2,
 } from '@/lib/shipping-rates';
 import { buildCsv, downloadCsv, timestampedFilename, type CsvColumn } from '@/lib/csv-export';
-import type { WhShipment, ShipmentStatus, ShipmentPriority } from '@/types/warehouse';
+import type { WhShipment, ShipmentStatus, ShipmentPriority, WhShipmentItem } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
 
 /* -------------------------------------------------------------------------- */
@@ -225,9 +225,11 @@ export function ShipmentListPage() {
 
   // CSV export — uses the *same* filter state as the visible table, just
   // fetches all pages instead of one. Page-size 10k is safe for our largest
-  // tenant (~3k shipments/quarter).
+  // tenant (~3k shipments/quarter). Two flavors:
+  //   - summary: one row per shipment, products joined as a string
+  //   - detail:  one row per item (denormalized) for analytical drilldowns
   const [exporting, setExporting] = useState(false);
-  async function handleExport() {
+  async function handleExport(mode: 'summary' | 'detail' = 'summary') {
     setExporting(true);
     try {
       const statusFilter = activeTab === 'all' ? undefined : [activeTab as ShipmentStatus];
@@ -245,6 +247,45 @@ export function ShipmentListPage() {
         sortDir,
       });
 
+      const itemsMap = await getItemsForShipments(all.data.map(s => s.id));
+
+      if (mode === 'detail') {
+        // One row per shipment item — denormalized for analytical drilldowns
+        type DetailRow = { shipment: WhShipment; item: WhShipmentItem | null };
+        const rows: DetailRow[] = [];
+        for (const s of all.data) {
+          const items = itemsMap.get(s.id) || [];
+          if (items.length === 0) {
+            rows.push({ shipment: s, item: null });
+          } else {
+            for (const it of items) rows.push({ shipment: s, item: it });
+          }
+        }
+        const detailCols: CsvColumn<DetailRow>[] = [
+          { header: t('Shipment Number'), value: r => r.shipment.shipmentNumber },
+          { header: t('Status'), value: r => t(r.shipment.status) },
+          { header: t('Recipient'), value: r => r.shipment.recipientName },
+          { header: t('Country'), value: r => r.shipment.shippingCountry },
+          { header: t('Carrier'), value: r => r.shipment.carrier || '' },
+          { header: t('Order Reference'), value: r => r.shipment.orderReference || '' },
+          { header: t('Product'), value: r => r.item?.productName || '' },
+          { header: t('Variant'), value: r => r.item?.variantTitle || '' },
+          { header: t('Batch / Serial'), value: r => r.item?.batchSerialNumber || '' },
+          { header: t('Quantity'), value: r => r.item?.quantity ?? '' },
+          { header: t('Gift'), value: r => (r.item?.isGift ? 'yes' : '') },
+          { header: t('Gift note'), value: r => r.item?.giftNote || '' },
+          { header: t('Unit price'), value: r => r.item?.unitPrice ?? '' },
+          { header: t('Location'), value: r => r.item?.locationName || '' },
+          { header: t('Created', { ns: 'common' }), value: r => new Date(r.shipment.createdAt).toLocaleString('de-DE') },
+          { header: t('shipped'), value: r => r.shipment.shippedAt ? new Date(r.shipment.shippedAt).toLocaleString('de-DE') : '' },
+        ];
+        const csv = buildCsv(rows, detailCols);
+        downloadCsv(timestampedFilename('shipments-detail'), csv);
+        toast.success(t('Exported {{n}} item rows', { n: rows.length }));
+        return;
+      }
+
+      // Summary mode — one row per shipment with a joined "Products" column
       const cols: CsvColumn<WhShipment>[] = [
         { header: t('Shipment Number'), value: (r) => r.shipmentNumber },
         { header: t('Status'), value: (r) => t(r.status) },
@@ -260,6 +301,19 @@ export function ShipmentListPage() {
         { header: t('Carrier'), value: (r) => r.carrier || '' },
         { header: t('Tracking Number'), value: (r) => r.trackingNumber || '' },
         { header: t('Items'), value: (r) => r.totalItems },
+        {
+          header: t('Products'),
+          value: (r) => {
+            const items = itemsMap.get(r.id) || [];
+            return items
+              .map(it => {
+                const name = it.productName || '';
+                const variant = it.variantTitle ? ` ${it.variantTitle}` : '';
+                return `${name}${variant} ×${it.quantity}${it.isGift ? ' [Beigabe]' : ''}`.trim();
+              })
+              .join(' | ');
+          },
+        },
         { header: t('Weight') + ' (g)', value: (r) => r.totalWeightGrams ?? '' },
         { header: t('Shipping Cost'), value: (r) => r.shippingCost ?? '' },
         { header: t('Order Reference'), value: (r) => r.orderReference || '' },
@@ -358,9 +412,13 @@ export function ShipmentListPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleExport} disabled={exporting || loading}>
+              <DropdownMenuItem onClick={() => handleExport('summary')} disabled={exporting || loading}>
                 <Download className={`mr-2 h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
-                {exporting ? t('Exporting...') : t('Export CSV')}
+                {exporting ? t('Exporting...') : t('Export CSV (summary)')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('detail')} disabled={exporting || loading}>
+                <Download className={`mr-2 h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
+                {exporting ? t('Exporting...') : t('Export CSV (one row per item)')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShopifyRetry} disabled={pushingShopify}>
                 <ShoppingBag className={`mr-2 h-4 w-4 ${pushingShopify ? 'animate-pulse' : ''}`} />
