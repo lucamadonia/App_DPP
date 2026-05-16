@@ -262,6 +262,55 @@ async function shopifyApi(
   return { body: payload, link };
 }
 
+/**
+ * Shopify GraphQL helper. Returns the parsed `{ data, errors }` payload.
+ *
+ * Surfaces scope errors with an actionable message — REST 403s on
+ * fulfillment endpoints have an opaque body, GraphQL gives us a hint via
+ * `errors[].extensions.code === 'ACCESS_DENIED'` plus a documentation link.
+ */
+async function shopifyGraphQL(
+  shopDomain: string,
+  accessToken: string,
+  apiVersion: string,
+  query: string,
+  // deno-lint-ignore no-explicit-any
+  variables?: Record<string, any>,
+): Promise<{ data?: unknown; errors?: Array<{ message: string; extensions?: Record<string, unknown> }> }> {
+  const url = `https://${shopDomain}/admin/api/${apiVersion}/graphql.json`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables: variables ?? {} }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Shopify GraphQL HTTP ${res.status}: ${text.slice(0, 300)}`);
+  }
+  return await res.json();
+}
+
+/** Pretty-print GraphQL errors. Detects access-denied and gives the operator
+ *  the exact scope name to add in their Shopify app configuration. */
+function formatGraphQLError(
+  errors: Array<{ message: string; extensions?: Record<string, unknown> }>,
+  missingScopeHint?: string,
+): string {
+  const scopeErr = errors.find((e) =>
+    e.extensions?.code === 'ACCESS_DENIED'
+    || /access denied|permission|scope/i.test(e.message)
+  );
+  if (scopeErr && missingScopeHint) {
+    return `Shopify denied access — your app is missing the "${missingScopeHint}" scope. `
+      + `Open Shopify Admin → Apps → Develop apps → [your app] → Configuration → `
+      + `Admin API access scopes, add "${missingScopeHint}", save, then "Install app" again.`;
+  }
+  return 'Shopify GraphQL error: ' + errors.map((e) => e.message).join('; ');
+}
+
 function parseNextCursor(linkHeader: string | null): string | null {
   if (!linkHeader) return null;
   const parts = linkHeader.split(',').map(p => p.trim());
@@ -1320,83 +1369,94 @@ async function handleCreateFulfillment(supabase: any, tenantId: string, userId: 
     }
     if (!shopifyOrderId) throw new Error(`Shopify order not found for ${shipment.order_reference}`);
 
-    // Try the modern fulfillment_orders endpoint first (needs
-    // read/write_merchant_managed_fulfillment_orders). If those scopes are
-    // missing, fall back to the legacy endpoint which only needs
-    // write_fulfillments.
-    let fulfillment: unknown = null;
-
-    try {
-      const { body: foBody } = await shopifyApi(
-        config.shopDomain, config.accessToken, config.apiVersion,
-        `orders/${shopifyOrderId}/fulfillment_orders.json`,
-      );
-      // deno-lint-ignore no-explicit-any
-      const fulfillmentOrders = ((foBody as any)?.fulfillment_orders || []);
-      // deno-lint-ignore no-explicit-any
-      const openFO = fulfillmentOrders.find((fo: any) => fo.status === 'open' || fo.status === 'in_progress');
-      if (openFO) {
-        const { body: result } = await shopifyApi(
-          config.shopDomain, config.accessToken, config.apiVersion,
-          'fulfillments.json', 'POST',
-          {
-            fulfillment: {
-              line_items_by_fulfillment_order: [{ fulfillment_order_id: openFO.id }],
-              tracking_info: shipment.tracking_number ? {
-                number: shipment.tracking_number,
-                company: shipment.carrier || undefined,
-                url: shipment.label_url || undefined,
-              } : undefined,
-              notify_customer: true,
-            },
-          },
-        );
-        // deno-lint-ignore no-explicit-any
-        fulfillment = (result as any)?.fulfillment;
+    // GraphQL `fulfillmentCreateV2` is the only path that still works.
+    // The legacy REST endpoint was removed by Shopify in API 2024-04 (returns 406).
+    // Both this mutation and the fulfillmentOrders query need the
+    // write_merchant_managed_fulfillment_orders scope on the app.
+    const foQuery = `
+      query OrderFOs($id: ID!) {
+        order(id: $id) {
+          fulfillmentOrders(first: 25) {
+            edges {
+              node { id status requestStatus }
+            }
+          }
+        }
       }
-    } catch (modernErr) {
-      const msg = modernErr instanceof Error ? modernErr.message : String(modernErr);
-      if (!/403|permission/i.test(msg)) throw modernErr; // only fall back on scope errors
-      console.warn('Modern fulfillment_orders path rejected (scope issue) — falling back to legacy endpoint:', msg);
+    `;
+    const foResp = await shopifyGraphQL(
+      config.shopDomain, config.accessToken, config.apiVersion,
+      foQuery, { id: `gid://shopify/Order/${shopifyOrderId}` },
+    );
+    if (foResp.errors?.length) {
+      throw new Error(formatGraphQLError(foResp.errors, 'read_merchant_managed_fulfillment_orders'));
     }
-
-    // Legacy fallback (deprecated but still functional up to API 2026-04)
-    if (!fulfillment) {
-      const locationMap = await supabase
-        .from('shopify_location_map')
-        .select('shopify_location_id')
-        .eq('tenant_id', tenantId)
-        .eq('is_primary', true)
-        .maybeSingle();
-      const shopifyLocationId = locationMap?.data?.shopify_location_id;
-      if (!shopifyLocationId) throw new Error('No primary Shopify location mapped — set one in Location Mapping');
-
-      const { body: legacyResult } = await shopifyApi(
-        config.shopDomain, config.accessToken, config.apiVersion,
-        `orders/${shopifyOrderId}/fulfillments.json`, 'POST',
-        {
-          fulfillment: {
-            location_id: shopifyLocationId,
-            tracking_number: shipment.tracking_number || undefined,
-            tracking_company: shipment.carrier || undefined,
-            tracking_url: shipment.label_url || undefined,
-            notify_customer: true,
-          },
-        },
-      );
-      // deno-lint-ignore no-explicit-any
-      fulfillment = (legacyResult as any)?.fulfillment;
-    }
-
-    if (!fulfillment) throw new Error('Shopify accepted neither modern nor legacy fulfillment endpoint');
     // deno-lint-ignore no-explicit-any
-    const ff = fulfillment as any;
+    const edges = ((foResp.data as any)?.order?.fulfillmentOrders?.edges || []) as Array<{
+      node: { id: string; status: string; requestStatus: string };
+    }>;
+    const openFO = edges.find((e) =>
+      e.node.status === 'OPEN' || e.node.status === 'IN_PROGRESS' || e.node.status === 'SCHEDULED'
+    );
+    if (!openFO) {
+      throw new Error(
+        'No open fulfillment order for this Shopify order. '
+        + 'The order may already be fully fulfilled, cancelled, or assigned to a 3PL.',
+      );
+    }
+
+    const mutation = `
+      mutation CreateFulfillment($fulfillment: FulfillmentV2Input!) {
+        fulfillmentCreateV2(fulfillment: $fulfillment) {
+          fulfillment {
+            id
+            status
+            createdAt
+            trackingInfo { number company url }
+          }
+          userErrors { field message }
+        }
+      }
+    `;
+    const input: Record<string, unknown> = {
+      lineItemsByFulfillmentOrder: [{ fulfillmentOrderId: openFO.node.id }],
+      notifyCustomer: true,
+    };
+    if (shipment.tracking_number) {
+      input.trackingInfo = {
+        number: shipment.tracking_number,
+        company: shipment.carrier || 'DHL',
+        url: shipment.label_url || undefined,
+      };
+    }
+    const createResp = await shopifyGraphQL(
+      config.shopDomain, config.accessToken, config.apiVersion,
+      mutation, { fulfillment: input },
+    );
+    if (createResp.errors?.length) {
+      throw new Error(formatGraphQLError(createResp.errors, 'write_merchant_managed_fulfillment_orders'));
+    }
+    // deno-lint-ignore no-explicit-any
+    const payload = (createResp.data as any)?.fulfillmentCreateV2;
+    const userErrs = (payload?.userErrors || []) as Array<{ field?: string[]; message: string }>;
+    if (userErrs.length) {
+      throw new Error(
+        'Shopify rejected the fulfillment: '
+        + userErrs.map((e) => `${e.field?.join('.') || 'input'} — ${e.message}`).join('; '),
+      );
+    }
+    const ff = payload?.fulfillment;
+    if (!ff) throw new Error('Shopify returned no fulfillment payload');
+
+    // GIDs look like "gid://shopify/Fulfillment/12345" — keep just the numeric tail
+    // so existing UI/links/CSV exports keep working.
+    const numericId = String(ff.id || '').split('/').pop() || null;
 
     await supabase
       .from('wh_shipments')
       .update({
-        shopify_fulfillment_id: ff?.id || null,
-        shopify_fulfillment_status: ff?.status || 'success',
+        shopify_fulfillment_id: numericId,
+        shopify_fulfillment_status: (ff.status || 'success').toLowerCase(),
         last_fulfillment_at: new Date().toISOString(),
         shopify_export_pending: false,
         shopify_export_error: null,
@@ -1406,7 +1466,7 @@ async function handleCreateFulfillment(supabase: any, tenantId: string, userId: 
     const syncLog = await createSyncLog(supabase, tenantId, 'fulfillment', 'export', userId);
     await completeSyncLog(supabase, syncLog.id, 'completed', { total: 1, processed: 1, created: 1, updated: 0, skipped: 0, failed: 0 });
 
-    return json({ success: true, data: { fulfillmentId: ff?.id, status: ff?.status } });
+    return json({ success: true, data: { fulfillmentId: numericId, status: ff.status } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await supabase
@@ -1430,6 +1490,20 @@ async function handleRetryFulfillment(supabase: any, tenantId: string, userId: s
     const { data } = await supabase.from('wh_shipments').select('id').eq('id', shipmentId).eq('tenant_id', tenantId);
     shipments = data || [];
   } else {
+    // Bulk-retry: also auto-enrol any *eligible* shipment that hasn't even
+    // been attempted yet (tracking present, Shopify order linked, no
+    // fulfillment_id, and physically out the door). Without this, shipments
+    // created before auto-export was wired up — or whose first push silently
+    // failed — never get a second chance.
+    await supabase
+      .from('wh_shipments')
+      .update({ shopify_export_pending: true, shopify_export_attempts: 0 })
+      .eq('tenant_id', tenantId)
+      .not('tracking_number', 'is', null)
+      .not('shopify_order_id', 'is', null)
+      .is('shopify_fulfillment_id', null)
+      .in('status', ['shipped', 'in_transit', 'delivered']);
+
     const { data } = await supabase
       .from('wh_shipments')
       .select('id, shopify_export_attempts')
@@ -1481,38 +1555,60 @@ async function handleUpdateFulfillmentTracking(supabase: any, tenantId: string, 
   if (!shipment.tracking_number) return json({ error: 'Shipment has no tracking number' }, 400);
 
   try {
-    const { body } = await shopifyApi(
-      config.shopDomain, config.accessToken, config.apiVersion,
-      `fulfillments/${shipment.shopify_fulfillment_id}/update_tracking.json`,
-      'POST',
-      {
-        fulfillment: {
-          notify_customer: true,
-          tracking_info: {
-            number: shipment.tracking_number,
-            company: shipment.carrier || undefined,
-            url: shipment.label_url || undefined,
-          },
-        },
+    // GraphQL counterpart to the deprecated POST /update_tracking.json REST call.
+    const mutation = `
+      mutation UpdateTracking($fulfillmentId: ID!, $trackingInfoInput: FulfillmentTrackingInput!, $notifyCustomer: Boolean) {
+        fulfillmentTrackingInfoUpdateV2(
+          fulfillmentId: $fulfillmentId,
+          trackingInfoInput: $trackingInfoInput,
+          notifyCustomer: $notifyCustomer
+        ) {
+          fulfillment { id status trackingInfo { number company url } }
+          userErrors { field message }
+        }
+      }
+    `;
+    const variables = {
+      fulfillmentId: `gid://shopify/Fulfillment/${shipment.shopify_fulfillment_id}`,
+      trackingInfoInput: {
+        number: shipment.tracking_number,
+        company: shipment.carrier || 'DHL',
+        url: shipment.label_url || undefined,
       },
+      notifyCustomer: true,
+    };
+    const resp = await shopifyGraphQL(
+      config.shopDomain, config.accessToken, config.apiVersion,
+      mutation, variables,
     );
+    if (resp.errors?.length) {
+      throw new Error(formatGraphQLError(resp.errors, 'write_merchant_managed_fulfillment_orders'));
+    }
     // deno-lint-ignore no-explicit-any
-    const fulfillment = (body as any)?.fulfillment;
+    const payload = (resp.data as any)?.fulfillmentTrackingInfoUpdateV2;
+    const userErrs = (payload?.userErrors || []) as Array<{ field?: string[]; message: string }>;
+    if (userErrs.length) {
+      const msg = userErrs.map((e) => `${e.field?.join('.') || 'input'} — ${e.message}`).join('; ');
+      // If Shopify says the fulfillment no longer exists, force a re-create
+      if (/not.*found|invalid.*id/i.test(msg)) {
+        await supabase
+          .from('wh_shipments')
+          .update({ shopify_fulfillment_id: null, shopify_export_pending: true })
+          .eq('id', shipmentId);
+      }
+      throw new Error('Shopify rejected tracking update: ' + msg);
+    }
+    const ff = payload?.fulfillment;
     await supabase
       .from('wh_shipments')
       .update({
-        shopify_fulfillment_status: fulfillment?.status || shipment.shopify_fulfillment_status,
+        shopify_fulfillment_status: (ff?.status || shipment.shopify_fulfillment_status || 'success').toLowerCase(),
         last_fulfillment_at: new Date().toISOString(),
       })
       .eq('id', shipmentId);
     return json({ success: true, data: { fulfillmentId: shipment.shopify_fulfillment_id } });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    // If fulfillment was deleted in Shopify, degrade to retry_fulfillment path
-    if (msg.includes('404')) {
-      await supabase.from('wh_shipments').update({ shopify_fulfillment_id: null, shopify_export_pending: true }).eq('id', shipmentId);
-    }
-    return json({ success: false, error: msg }, 500);
+    return json({ success: false, error: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 

@@ -832,13 +832,18 @@ async function pollTrackingForTenant(supabase: any, tenantId: string) {
     ? 'https://api-sandbox.dhl.com/track/shipments'
     : 'https://api-eu.dhl.com/track/shipments';
 
+  // Order by polled_at ASC NULLS FIRST so never-polled and oldest-polled
+  // shipments always go first. The Edge Function has a wall-time budget; if
+  // DHL is slow we still want the *new* labels to get their first poll instead
+  // of starving forever behind already-known ones.
   const { data: shipments } = await supabase
     .from('wh_shipments')
-    .select('id, shipment_number, tracking_number, status')
+    .select('id, shipment_number, tracking_number, status, tracking_polled_at')
     .eq('tenant_id', tenantId)
     .eq('carrier', 'DHL')
     .not('tracking_number', 'is', null)
-    .in('status', ['shipped', 'label_created', 'in_transit']);
+    .in('status', ['shipped', 'label_created', 'in_transit'])
+    .order('tracking_polled_at', { ascending: true, nullsFirst: true });
 
   const results = { tenantId, total: shipments?.length ?? 0, delivered: 0, inTransit: 0, noChange: 0, errors: 0 };
   const details: Array<Record<string, unknown>> = [];

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Plus, Truck, Search, Package, FileText, CheckCircle2,
   Rocket, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
-  ShoppingBag,
+  ShoppingBag, Download, RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getShipments, getShipmentStatusCounts } from '@/services/supabase/wh-shipments';
 import { getDHLSettings } from '@/services/supabase/dhl-carrier';
+import { retryShopifyFulfillment } from '@/services/supabase/shopify-integration';
 import { invokeEdgeFunction } from '@/lib/edge-function';
 import { toast } from 'sonner';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
@@ -24,6 +25,7 @@ import {
   isInternational, getShippingZone, estimateShippingPrice, formatPriceEur,
   countryFlagEmoji, normalizeCountryIso2,
 } from '@/lib/shipping-rates';
+import { buildCsv, downloadCsv, timestampedFilename, type CsvColumn } from '@/lib/csv-export';
 import type { WhShipment, ShipmentStatus, ShipmentPriority } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
 
@@ -218,6 +220,88 @@ export function ShipmentListPage() {
     });
   }, []);
 
+  // CSV export — uses the *same* filter state as the visible table, just
+  // fetches all pages instead of one. Page-size 10k is safe for our largest
+  // tenant (~3k shipments/quarter).
+  const [exporting, setExporting] = useState(false);
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const statusFilter = activeTab === 'all' ? undefined : [activeTab as ShipmentStatus];
+      const priorityArr = priorityFilter !== 'all' ? [priorityFilter as ShipmentPriority] : undefined;
+      const all = await getShipments({
+        status: statusFilter,
+        priority: priorityArr,
+        carrier: carrierFilter !== 'all' ? carrierFilter : undefined,
+        search: debouncedSearch || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        page: 1,
+        pageSize: 10000,
+        sortBy,
+        sortDir,
+      });
+
+      const cols: CsvColumn<WhShipment>[] = [
+        { header: t('Shipment Number'), value: (r) => r.shipmentNumber },
+        { header: t('Status'), value: (r) => t(r.status) },
+        { header: t('Priority'), value: (r) => t(r.priority) },
+        { header: t('Recipient'), value: (r) => r.recipientName },
+        { header: t('Company'), value: (r) => r.recipientCompany || '' },
+        { header: t('Email'), value: (r) => r.recipientEmail || '' },
+        { header: t('Phone'), value: (r) => r.recipientPhone || '' },
+        { header: t('Street'), value: (r) => r.shippingStreet },
+        { header: t('Postal Code'), value: (r) => r.shippingPostalCode },
+        { header: t('City'), value: (r) => r.shippingCity },
+        { header: t('Country'), value: (r) => r.shippingCountry },
+        { header: t('Carrier'), value: (r) => r.carrier || '' },
+        { header: t('Tracking Number'), value: (r) => r.trackingNumber || '' },
+        { header: t('Items'), value: (r) => r.totalItems },
+        { header: t('Weight') + ' (g)', value: (r) => r.totalWeightGrams ?? '' },
+        { header: t('Shipping Cost'), value: (r) => r.shippingCost ?? '' },
+        { header: t('Order Reference'), value: (r) => r.orderReference || '' },
+        { header: t('Created', { ns: 'common' }), value: (r) => new Date(r.createdAt).toLocaleString('de-DE') },
+        { header: t('shipped'), value: (r) => r.shippedAt ? new Date(r.shippedAt).toLocaleString('de-DE') : '' },
+        { header: t('delivered'), value: (r) => r.deliveredAt ? new Date(r.deliveredAt).toLocaleString('de-DE') : '' },
+      ];
+
+      const csv = buildCsv(all.data, cols);
+      downloadCsv(timestampedFilename('shipments'), csv);
+      toast.success(t('Exported {{n}} shipments', { n: all.data.length }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // Bulk-retry stuck Shopify fulfillments. Auto-enrols any shipment that has
+  // tracking + Shopify order but no fulfillment_id (covers the cases where
+  // the original auto-push silently failed).
+  const [pushingShopify, setPushingShopify] = useState(false);
+  async function handleShopifyRetry() {
+    setPushingShopify(true);
+    try {
+      const result = await retryShopifyFulfillment();
+      const r = result.data as { total?: number; results?: Array<{ success: boolean }> } | undefined;
+      const total = r?.total ?? 0;
+      const ok = r?.results?.filter((x) => x.success).length ?? 0;
+      const failed = total - ok;
+      if (total === 0) {
+        toast.info(t('No pending Shopify fulfillments'));
+      } else if (failed === 0) {
+        toast.success(t('Pushed {{n}} fulfillments to Shopify', { n: ok }));
+      } else {
+        toast.warning(t('{{ok}} pushed, {{failed}} failed — check shipment details for error', { ok, failed }));
+      }
+      loadShipments();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPushingShopify(false);
+    }
+  }
+
   // Manual tracking refresh (triggers the same poll as the 8h cron)
   const [refreshing, setRefreshing] = useState(false);
   async function handleTrackingRefresh() {
@@ -256,12 +340,20 @@ export function ShipmentListPage() {
             </h1>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={handleTrackingRefresh} disabled={refreshing}>
-            <ArrowUpDown className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleExport} disabled={exporting || loading} className="w-full sm:w-auto">
+            <Download className={`mr-2 h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
+            {exporting ? t('Exporting...') : t('Export CSV')}
+          </Button>
+          <Button variant="outline" onClick={handleShopifyRetry} disabled={pushingShopify} className="w-full sm:w-auto">
+            <ShoppingBag className={`mr-2 h-4 w-4 ${pushingShopify ? 'animate-pulse' : ''}`} />
+            {pushingShopify ? t('Pushing...') : t('Retry Shopify push')}
+          </Button>
+          <Button variant="outline" onClick={handleTrackingRefresh} disabled={refreshing} className="w-full sm:w-auto">
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? t('Refreshing...') : t('Refresh tracking')}
           </Button>
-          <Button asChild>
+          <Button asChild className="w-full sm:w-auto">
             <Link to="/warehouse/shipments/new">
               <Plus className="mr-2 h-4 w-4" />
               {t('Create Shipment')}
