@@ -460,8 +460,102 @@ export function ShipmentListPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <Card>
+      {/* Mobile card list — shown below md (768px); table below */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <ShimmerSkeleton key={i} className="h-28 w-full rounded-lg" />
+          ))
+        ) : shipments.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="rounded-full bg-muted p-3">
+                  <Truck className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-sm">{t('No shipments yet')}</p>
+                <Button asChild size="sm">
+                  <Link to="/warehouse/shipments/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('Create Shipment')}
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          shipments.map((s) => {
+            const isShopify = s.shopifyOrderId != null || s.orderReference?.startsWith('Shopify ');
+            const orderName = s.orderReference?.replace('Shopify ', '');
+            const hasExportIssue = s.shopifyExportPending || s.shopifyFulfillmentStatus === 'dead_letter';
+            const intl = isInternational(homeCountry, s.shippingCountry);
+            return (
+              <Link
+                key={s.id}
+                to={`/warehouse/shipments/${s.id}`}
+                className="block rounded-lg border bg-card p-3 hover:bg-muted/50 transition-colors active:scale-[0.99]"
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {hasExportIssue && (
+                      <span title={t('Shopify sync pending or failed')} className="h-2 w-2 rounded-full bg-red-500 inline-block shrink-0" />
+                    )}
+                    <span className="font-mono text-sm font-medium text-primary truncate">
+                      {s.shipmentNumber}
+                    </span>
+                  </div>
+                  <Badge variant="secondary" className={`${SHIPMENT_STATUS_COLORS[s.status]} text-[10px] shrink-0`}>
+                    {t(s.status)}
+                  </Badge>
+                </div>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm break-words flex flex-wrap items-center gap-1">
+                      {s.recipientName}
+                      {intl && (
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-md bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1 text-[9px] font-semibold tracking-wide"
+                          title={t('International shipment — needs DHL Paket International (V53WPAK)')}
+                        >
+                          <span aria-hidden>{countryFlagEmoji(s.shippingCountry)}</span>
+                          {normalizeCountryIso2(s.shippingCountry)}
+                        </span>
+                      )}
+                    </div>
+                    {s.recipientCompany && (
+                      <div className="text-xs text-muted-foreground truncate">{s.recipientCompany}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground pt-1">
+                  {s.carrier && <span>{s.carrier}</span>}
+                  {s.carrier && <span>·</span>}
+                  <span>{s.totalItems} {t('Items')}</span>
+                  <span>·</span>
+                  <Badge variant="secondary" className={`${PRIORITY_COLORS[s.priority] || ''} text-[9px] py-0`}>
+                    {t(s.priority)}
+                  </Badge>
+                  {isShopify && (
+                    <>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-0.5 text-green-700 dark:text-green-400">
+                        <ShoppingBag className="h-2.5 w-2.5" />
+                        <span className="font-mono">{orderName || 'Shopify'}</span>
+                      </span>
+                    </>
+                  )}
+                  <span className="ml-auto whitespace-nowrap">
+                    {new Date(s.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </Link>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop table — hidden below md */}
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
