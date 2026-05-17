@@ -121,6 +121,15 @@ export interface Product {
 
   // DPP Registry
   dppRegistryId?: string;
+
+  // EAR / ElektroG compliance (monthly Stiftung-EAR reporting)
+  isElectronic?: boolean;
+  earCategory?: 1 | 2 | 3 | 4 | 5 | 6;
+  earDeviceType?: string;
+  earBrand?: string;
+  earIncludesBattery?: boolean;
+  earBatteryWeightGrams?: number;
+  earB2b?: boolean;
 }
 
 export interface TranslatableProductFields {

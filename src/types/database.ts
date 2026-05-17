@@ -245,6 +245,7 @@ export interface TenantSettings {
   shopifyIntegration?: ShopifyIntegrationSettings;
   warehouse?: WarehouseSettings;
   feedback?: import('./feedback').FeedbackSettings;
+  compliance?: import('./compliance').ComplianceSettings;
 }
 
 export interface WarehouseSettings {

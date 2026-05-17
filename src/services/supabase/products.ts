@@ -79,6 +79,14 @@ function transformProduct(row: any): Product & { tenantId: string } {
     preferenceProof: row.preference_proof || undefined,
     componentDppUrls: (row.component_dpp_urls as string[]) || undefined,
     dppRegistryId: row.dpp_registry_id || undefined,
+    // EAR / ElektroG
+    isElectronic: !!row.is_electronic,
+    earCategory: row.ear_category ?? undefined,
+    earDeviceType: row.ear_device_type || undefined,
+    earBrand: row.ear_brand || undefined,
+    earIncludesBattery: !!row.ear_includes_battery,
+    earBatteryWeightGrams: row.ear_battery_weight_grams ?? undefined,
+    earB2b: !!row.ear_b2b,
   };
 }
 
@@ -463,6 +471,14 @@ export async function createProduct(
     preference_proof: product.preferenceProof || null,
     component_dpp_urls: product.componentDppUrls || null,
     dpp_registry_id: product.dppRegistryId || null,
+    // EAR / ElektroG
+    is_electronic: product.isElectronic ?? false,
+    ear_category: product.earCategory ?? null,
+    ear_device_type: product.earDeviceType || null,
+    ear_brand: product.earBrand || null,
+    ear_includes_battery: product.earIncludesBattery ?? false,
+    ear_battery_weight_grams: product.earBatteryWeightGrams ?? null,
+    ear_b2b: product.earB2b ?? false,
   };
 
   const { data, error } = await supabase
@@ -567,6 +583,14 @@ export async function updateProduct(
   if (product.preferenceProof !== undefined) updateData.preference_proof = product.preferenceProof || null;
   if (product.componentDppUrls !== undefined) updateData.component_dpp_urls = product.componentDppUrls || null;
   if (product.dppRegistryId !== undefined) updateData.dpp_registry_id = product.dppRegistryId || null;
+  // EAR / ElektroG
+  if (product.isElectronic !== undefined) updateData.is_electronic = product.isElectronic;
+  if (product.earCategory !== undefined) updateData.ear_category = product.earCategory ?? null;
+  if (product.earDeviceType !== undefined) updateData.ear_device_type = product.earDeviceType || null;
+  if (product.earBrand !== undefined) updateData.ear_brand = product.earBrand || null;
+  if (product.earIncludesBattery !== undefined) updateData.ear_includes_battery = product.earIncludesBattery;
+  if (product.earBatteryWeightGrams !== undefined) updateData.ear_battery_weight_grams = product.earBatteryWeightGrams ?? null;
+  if (product.earB2b !== undefined) updateData.ear_b2b = product.earB2b;
 
   const { error } = await supabase
     .from('products')

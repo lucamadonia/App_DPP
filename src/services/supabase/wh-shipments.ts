@@ -368,6 +368,10 @@ export interface PackagingType {
   stockOnHand?: number;
   stockThreshold?: number;
   lastRestockedAt?: string;
+  /** LUCID material classification (one of 8 VerpackG categories). */
+  primaryMaterial?: import('@/types/compliance').LucidMaterial;
+  /** Optional weight split for composite packagings. */
+  materialSplit?: import('@/types/compliance').MaterialSplitEntry[];
 }
 
 export async function getPackagingTypes(): Promise<PackagingType[]> {
@@ -394,6 +398,8 @@ export async function getPackagingTypes(): Promise<PackagingType[]> {
     stockOnHand: r.stock_on_hand ?? 0,
     stockThreshold: r.stock_threshold ?? 10,
     lastRestockedAt: r.last_restocked_at ?? undefined,
+    primaryMaterial: r.primary_material ?? undefined,
+    materialSplit: Array.isArray(r.material_split) ? r.material_split : undefined,
   }));
 }
 
