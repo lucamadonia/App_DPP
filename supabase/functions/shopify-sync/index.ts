@@ -142,6 +142,8 @@ Deno.serve(async (req) => {
         return await handleUpdateFulfillmentTracking(supabase, tenantId, user.id, params);
       case 'pull_fulfillments_from_shopify':
         return await handlePullFulfillments(supabase, tenantId, params);
+      case 'inventory_drift_report':
+        return await handleInventoryDrift(supabase, tenantId, params);
       case 'sync_customers':
         return await handleSyncCustomers(supabase, tenantId, user.id);
       case 'create_refund':
@@ -1750,6 +1752,237 @@ async function handlePullFulfillments(supabase: any, tenantId: string, params?: 
       noFulfillment,
       errors,
       results,
+    },
+  });
+}
+
+/**
+ * Inventory-drift report.
+ *
+ * For each Shopify-linked shipment in the window, compare Trackbliss
+ * shipment items against the Shopify order line items. Reports three
+ * kinds of mismatch:
+ *   • undershipped — Shopify line item that we never shipped
+ *   • extra        — Trackbliss item that's not on the Shopify order
+ *                    (giveaways, manual adds, restocked errors)
+ *   • quantity     — both sides have it but in different qty
+ *
+ * Matching uses shopify_product_map (variant_id → product_id+batch_id).
+ * Items the operator marked is_gift are ALWAYS bucketed as "extra"
+ * (expected drift, not an alarm).
+ *
+ * Read-only. Never writes.
+ */
+// deno-lint-ignore no-explicit-any
+async function handleInventoryDrift(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  const daysBack = typeof params?.daysBack === 'number' ? params.daysBack : 60;
+  const onlyWithDrift = params?.onlyWithDrift !== false; // default true
+  const oneShipmentId = params?.shipmentId as string | undefined;
+  const config = await getShopifyConfig(supabase, tenantId);
+
+  // 1. Load candidate shipments
+  let query = supabase
+    .from('wh_shipments')
+    .select('id, shipment_number, recipient_name, recipient_company, status, shopify_order_id, order_reference, created_at, shipped_at')
+    .eq('tenant_id', tenantId)
+    .not('shopify_order_id', 'is', null)
+    .order('created_at', { ascending: false });
+  if (oneShipmentId) {
+    query = query.eq('id', oneShipmentId);
+  } else {
+    const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+    query = query.gte('created_at', since).limit(500);
+  }
+  const { data: shipments } = await query;
+
+  if (!shipments || shipments.length === 0) {
+    return json({ success: true, data: { total: 0, shipments: [] } });
+  }
+
+  const shipmentIds = shipments.map((s: { id: string }) => s.id);
+
+  // 2. Load all shipment items in one query
+  const { data: allItems } = await supabase
+    .from('wh_shipment_items')
+    .select('shipment_id, product_id, batch_id, quantity, is_gift, gift_note, unit_price')
+    .in('shipment_id', shipmentIds);
+
+  const itemsByShipment = new Map<string, Array<{
+    product_id: string; batch_id: string; quantity: number;
+    is_gift: boolean; gift_note?: string; unit_price?: number;
+  }>>();
+  for (const it of (allItems || [])) {
+    if (!itemsByShipment.has(it.shipment_id)) itemsByShipment.set(it.shipment_id, []);
+    itemsByShipment.get(it.shipment_id)!.push(it);
+  }
+
+  // 3. Load product names so the report is readable
+  const productIds = Array.from(new Set((allItems || []).map((i: { product_id: string }) => i.product_id)));
+  const { data: products } = await supabase
+    .from('products')
+    .select('id, name')
+    .in('id', productIds);
+  const productNames = new Map<string, string>((products || []).map((p: { id: string; name: string }) => [p.id, p.name]));
+
+  // 4. Load shopify_product_map for the tenant (variant → product+batch)
+  const { data: maps } = await supabase
+    .from('shopify_product_map')
+    .select('shopify_variant_id, shopify_product_title, shopify_variant_title, shopify_sku, product_id, batch_id')
+    .eq('tenant_id', tenantId);
+  const mapByVariant = new Map<string, {
+    shopify_product_title?: string; shopify_variant_title?: string; shopify_sku?: string;
+    product_id?: string; batch_id?: string;
+  }>(
+    (maps || []).map((m: { shopify_variant_id: number }) => [String(m.shopify_variant_id), m]),
+  );
+
+  // 5. For each shipment, fetch the Shopify order and compute drift
+  const reports: Array<Record<string, unknown>> = [];
+  let driftCount = 0;
+
+  for (const s of shipments) {
+    try {
+      const { body } = await shopifyApi(
+        config.shopDomain, config.accessToken, config.apiVersion,
+        `orders/${s.shopify_order_id}.json?fields=name,financial_status,fulfillment_status,line_items,total_price,currency`,
+      );
+      // deno-lint-ignore no-explicit-any
+      const order = (body as any)?.order;
+      if (!order) {
+        reports.push({
+          shipmentId: s.id, shipmentNumber: s.shipment_number, recipientName: s.recipient_name,
+          status: s.status, createdAt: s.created_at, shopifyOrderId: s.shopify_order_id,
+          shopifyOrderName: s.order_reference, error: 'order_not_found',
+        });
+        continue;
+      }
+
+      // Index Shopify line items by (product_id, batch_id) via the mapping table
+      type ShopifyLine = {
+        sku?: string; title: string; variant_title?: string; quantity: number;
+        variant_id?: number; price?: string;
+      };
+      const shopifyLines = (order.line_items || []) as ShopifyLine[];
+
+      const shopifyByKey = new Map<string, {
+        productId: string; batchId: string; quantity: number; sku?: string;
+        title: string; variantTitle?: string; price?: string;
+      }>();
+      const shopifyUnmapped: Array<{ sku?: string; title: string; variantTitle?: string; quantity: number }> = [];
+
+      for (const li of shopifyLines) {
+        const m = li.variant_id ? mapByVariant.get(String(li.variant_id)) : undefined;
+        if (m?.product_id && m?.batch_id) {
+          const key = `${m.product_id}::${m.batch_id}`;
+          const existing = shopifyByKey.get(key);
+          if (existing) {
+            existing.quantity += li.quantity;
+          } else {
+            shopifyByKey.set(key, {
+              productId: m.product_id, batchId: m.batch_id, quantity: li.quantity,
+              sku: m.shopify_sku || li.sku, title: li.title, variantTitle: li.variant_title, price: li.price,
+            });
+          }
+        } else {
+          shopifyUnmapped.push({ sku: li.sku, title: li.title, variantTitle: li.variant_title, quantity: li.quantity });
+        }
+      }
+
+      // Index Trackbliss items by the same key
+      const trackblissItems = itemsByShipment.get(s.id) || [];
+      const tbByKey = new Map<string, { productId: string; batchId: string; quantity: number; isGift: boolean; giftNote?: string; productName?: string }>();
+      const tbGifts: Array<{ productId: string; productName?: string; quantity: number; giftNote?: string }> = [];
+
+      for (const it of trackblissItems) {
+        const productName = productNames.get(it.product_id);
+        if (it.is_gift) {
+          tbGifts.push({ productId: it.product_id, productName, quantity: it.quantity, giftNote: it.gift_note });
+          continue;
+        }
+        const key = `${it.product_id}::${it.batch_id}`;
+        const existing = tbByKey.get(key);
+        if (existing) {
+          existing.quantity += it.quantity;
+        } else {
+          tbByKey.set(key, { productId: it.product_id, batchId: it.batch_id, quantity: it.quantity, isGift: false, giftNote: it.gift_note, productName });
+        }
+      }
+
+      // Diff
+      const undershipped: Array<{ productName?: string; sku?: string; title: string; variantTitle?: string; expected: number; shipped: number }> = [];
+      const extra: Array<{ productName?: string; quantity: number; reason: 'gift' | 'unmapped' }> = [];
+      const quantityMismatches: Array<{ productName?: string; title?: string; expected: number; shipped: number; sku?: string }> = [];
+
+      for (const [key, sline] of shopifyByKey) {
+        const tb = tbByKey.get(key);
+        if (!tb) {
+          undershipped.push({
+            productName: productNames.get(sline.productId), sku: sline.sku, title: sline.title,
+            variantTitle: sline.variantTitle, expected: sline.quantity, shipped: 0,
+          });
+        } else if (tb.quantity !== sline.quantity) {
+          quantityMismatches.push({
+            productName: tb.productName || productNames.get(sline.productId),
+            title: sline.title, sku: sline.sku, expected: sline.quantity, shipped: tb.quantity,
+          });
+        }
+      }
+      for (const [key, tb] of tbByKey) {
+        if (!shopifyByKey.has(key)) {
+          extra.push({ productName: tb.productName, quantity: tb.quantity, reason: 'unmapped' });
+        }
+      }
+      for (const g of tbGifts) {
+        extra.push({ productName: g.productName, quantity: g.quantity, reason: 'gift' });
+      }
+
+      const hasDrift = undershipped.length > 0 || quantityMismatches.length > 0
+        || extra.filter((e) => e.reason === 'unmapped').length > 0;
+      // Severity: undershipped/qty mismatch = major (customer impact),
+      // extras (gifts) = minor (just accounting).
+      const severity: 'none' | 'minor' | 'major' =
+        undershipped.length > 0 || quantityMismatches.length > 0 ? 'major'
+        : extra.length > 0 ? 'minor' : 'none';
+
+      if (!hasDrift && onlyWithDrift && severity === 'none' && extra.length === 0) continue;
+      if (hasDrift) driftCount++;
+
+      reports.push({
+        shipmentId: s.id,
+        shipmentNumber: s.shipment_number,
+        recipientName: s.recipient_name,
+        recipientCompany: s.recipient_company,
+        status: s.status,
+        createdAt: s.created_at,
+        shippedAt: s.shipped_at,
+        shopifyOrderId: s.shopify_order_id,
+        shopifyOrderName: order.name,
+        shopifyFinancialStatus: order.financial_status,
+        shopifyFulfillmentStatus: order.fulfillment_status,
+        shopifyTotal: order.total_price,
+        shopifyCurrency: order.currency,
+        hasDrift,
+        severity,
+        undershipped,
+        extra,
+        quantityMismatches,
+        shopifyUnmapped, // line items we have no mapping for at all
+      });
+    } catch (err) {
+      reports.push({
+        shipmentId: s.id, shipmentNumber: s.shipment_number, recipientName: s.recipient_name,
+        status: s.status, createdAt: s.created_at, shopifyOrderId: s.shopify_order_id,
+        error: err instanceof Error ? err.message.slice(0, 200) : 'Unknown error',
+      });
+    }
+  }
+
+  return json({
+    success: true,
+    data: {
+      total: reports.length,
+      driftCount,
+      shipments: reports,
     },
   });
 }

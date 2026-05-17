@@ -609,6 +609,53 @@ export async function pullFulfillmentsFromShopify(apply = true): Promise<Shopify
   return callEdgeFunction('pull_fulfillments_from_shopify', { apply });
 }
 
+export interface InventoryDriftItem {
+  productName?: string;
+  sku?: string;
+  title?: string;
+  variantTitle?: string;
+  expected?: number;
+  shipped?: number;
+  quantity?: number;
+  reason?: 'gift' | 'unmapped';
+}
+
+export interface InventoryDriftShipment {
+  shipmentId: string;
+  shipmentNumber: string;
+  recipientName?: string;
+  recipientCompany?: string;
+  status: string;
+  createdAt: string;
+  shippedAt?: string;
+  shopifyOrderId: number;
+  shopifyOrderName?: string;
+  shopifyFinancialStatus?: string;
+  shopifyFulfillmentStatus?: string;
+  shopifyTotal?: string;
+  shopifyCurrency?: string;
+  hasDrift?: boolean;
+  severity?: 'none' | 'minor' | 'major';
+  undershipped: InventoryDriftItem[];
+  extra: InventoryDriftItem[];
+  quantityMismatches: InventoryDriftItem[];
+  shopifyUnmapped: InventoryDriftItem[];
+  error?: string;
+}
+
+export interface InventoryDriftResponse {
+  total: number;
+  driftCount: number;
+  shipments: InventoryDriftShipment[];
+}
+
+export async function getInventoryDrift(
+  opts?: { daysBack?: number; onlyWithDrift?: boolean; shipmentId?: string },
+): Promise<InventoryDriftResponse> {
+  const res = await callEdgeFunction('inventory_drift_report', opts);
+  return (res.data as InventoryDriftResponse) ?? { total: 0, driftCount: 0, shipments: [] };
+}
+
 export async function syncShopifyCustomers(): Promise<ShopifySyncResponse> {
   return callEdgeFunction('sync_customers');
 }

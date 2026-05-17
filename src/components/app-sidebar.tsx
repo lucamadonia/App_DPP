@@ -112,6 +112,7 @@ export function AppSidebar() {
             { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
             { title: t('Bewegungen & Auswertung', { ns: 'warehouse' }), url: '/warehouse/movements' },
             { title: t('Reports & Analytics', { ns: 'warehouse' }), url: '/warehouse/reports' },
+            { title: t('Inventory Drift', { ns: 'warehouse' }), url: '/warehouse/inventory-drift' },
             { title: t('Warehouse Locations', { ns: 'warehouse' }), url: '/warehouse/locations' },
             { title: t('Contacts', { ns: 'warehouse' }), url: '/warehouse/contacts' },
             { title: t('Shopify', { ns: 'warehouse' }), url: '/warehouse/integrations/shopify' },
