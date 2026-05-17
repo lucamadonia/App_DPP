@@ -14,6 +14,7 @@ import {
   Radio,
   Cpu,
   Command,
+  Brain,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -234,6 +235,12 @@ export function AILogisticsHubPage() {
   };
 
   const expertConfig: Record<WarehouseExpertId, { icon: React.ReactNode; nameKey: string; descKey: string; specialtyKey: string }> = useMemo(() => ({
+    omniscient: {
+      icon: <Brain className="h-6 w-6" />,
+      nameKey: 'Trackbliss Allwissender Assistent',
+      descKey: 'Allwissender Assistent Description',
+      specialtyKey: 'Alle Daten',
+    },
     shipping: {
       icon: <PackageOpen className="h-6 w-6" />,
       nameKey: 'Shipping & Packaging Expert',
@@ -270,7 +277,7 @@ export function AILogisticsHubPage() {
             <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-full bg-card/60 backdrop-blur-md border border-border/60 text-xs font-mono">
               <LiveDot />
               <span className="text-muted-foreground uppercase tracking-[0.2em]">
-                {t('3 AI Agents Online', { defaultValue: '3 AI Agents Online' })}
+                {t('4 AI Agents Online', { defaultValue: '4 AI Agents Online' })}
               </span>
               <div className="h-3 w-px bg-border" />
               <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">

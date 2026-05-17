@@ -12,7 +12,7 @@ type Locale = 'en' | 'de';
 
 // ─── Expert IDs ──────────────────────────────────────────────
 
-export type WarehouseExpertId = 'shipping' | 'space' | 'intelligence';
+export type WarehouseExpertId = 'shipping' | 'space' | 'intelligence' | 'omniscient';
 
 // ─── Warehouse Context ───────────────────────────────────────
 
@@ -23,6 +23,12 @@ export interface WarehouseAIContext {
   carrierInfo: string;
   pendingActions: string;
   recentActivity: string;
+  /** Full product catalog including EAR / electronics / battery info. */
+  productCatalog: string;
+  /** Packaging-Types with material classification (LUCID), tare, dimensions. */
+  packagingCatalog: string;
+  /** Tenant compliance settings + latest report status. */
+  complianceContext: string;
 }
 
 export async function loadWarehouseContext(): Promise<WarehouseAIContext> {
@@ -154,7 +160,101 @@ export async function loadWarehouseContext(): Promise<WarehouseAIContext> {
   }
   const carrierInfo = carrierLines.join('\n');
 
-  return { stockSummary, locationSummary, shipmentSummary, carrierInfo, pendingActions, recentActivity };
+  // --- Product Catalog (with EAR / electronics / battery) ---
+  const productCatalogLines: string[] = [];
+  try {
+    const { supabase } = await import('@/lib/supabase');
+    const { getCurrentTenantId } = await import('@/lib/supabase');
+    const tenantId = await getCurrentTenantId();
+    if (tenantId) {
+      const { data: products } = await supabase
+        .from('products')
+        .select(`
+          id, name, manufacturer, gtin, category, net_weight,
+          is_electronic, ear_category, ear_device_type, ear_brand,
+          ear_includes_battery, ear_battery_weight_grams, ear_b2b
+        `)
+        .eq('tenant_id', tenantId)
+        .order('name');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = (products || []) as any[];
+      if (rows.length > 0) {
+        productCatalogLines.push('## Produkt-Katalog (Vollständige Stammdaten)');
+        productCatalogLines.push('Spalte EAR-Kat 1=Wärmeüberträger, 2=Bildschirme, 3=Lampen, 4=Großgeräte, 5=Kleingeräte, 6=IT/Telekom.');
+        productCatalogLines.push('| Produkt | GTIN | Kategorie | Hersteller | Netto-Gew. | Elektronisch | EAR-Kat | EAR-Marke | Batterie | Batt-Gew. (g) | B2B-Only |');
+        productCatalogLines.push('|---------|------|-----------|------------|------------|--------------|---------|-----------|----------|---------------|----------|');
+        for (const p of rows) {
+          productCatalogLines.push(
+            `| ${p.name} | ${p.gtin || '—'} | ${p.category || '—'} | ${p.manufacturer || '—'} | ${p.net_weight ?? '—'} | ${p.is_electronic ? 'JA' : 'nein'} | ${p.ear_category ?? '—'} | ${p.ear_brand || '—'} | ${p.ear_includes_battery ? 'JA' : 'nein'} | ${p.ear_battery_weight_grams ?? '—'} | ${p.ear_b2b ? 'JA' : 'nein'} |`,
+          );
+        }
+        // EAR device-type details as a supplementary block
+        const earDetails = rows.filter(p => p.is_electronic && p.ear_device_type);
+        if (earDetails.length > 0) {
+          productCatalogLines.push('');
+          productCatalogLines.push('### EAR-Gerätetypen / Batterie-Spezifikationen');
+          for (const p of earDetails) {
+            productCatalogLines.push(`- **${p.name}**: ${p.ear_device_type}`);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load product catalog for AI context:', e);
+  }
+  const productCatalog = productCatalogLines.join('\n');
+
+  // --- Packaging Catalog ---
+  const packagingCatalogLines: string[] = [];
+  try {
+    const { getPackagingTypes } = await import('@/services/supabase/wh-shipments');
+    const packs = await getPackagingTypes();
+    if (packs.length > 0) {
+      packagingCatalogLines.push('## Verpackungs-Katalog');
+      packagingCatalogLines.push('Material-Schlüssel: paper=Papier/Pappe/Karton, plastic=Kunststoff, glass=Glas, aluminum=Aluminium, steel=Eisenmetalle, composite=Verbund, wood=Holz, other=Sonstige.');
+      packagingCatalogLines.push('| Verpackung | Innenmaß L×B×H (cm) | Tara (g) | Max-Last (g) | Material | Bestand | Tracked |');
+      packagingCatalogLines.push('|------------|---------------------|----------|--------------|----------|---------|---------|');
+      for (const p of packs) {
+        const dim = p.innerLengthCm != null && p.innerWidthCm != null && p.innerHeightCm != null
+          ? `${p.innerLengthCm}×${p.innerWidthCm}×${p.innerHeightCm}`
+          : '—';
+        packagingCatalogLines.push(
+          `| ${p.name} | ${dim} | ${p.tareWeightGrams} | ${p.maxLoadGrams ?? '—'} | ${p.primaryMaterial ?? '—'} | ${p.stockOnHand ?? 0} | ${p.stockTracked ? 'ja' : 'nein'} |`,
+        );
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load packaging catalog for AI context:', e);
+  }
+  const packagingCatalog = packagingCatalogLines.join('\n');
+
+  // --- Compliance Settings + recent reports ---
+  const complianceLines: string[] = [];
+  try {
+    const { getComplianceSettings } = await import('@/services/supabase/compliance-settings');
+    const { getComplianceReports } = await import('@/services/supabase/compliance-reports');
+    const [settings, recent] = await Promise.all([
+      getComplianceSettings(),
+      getComplianceReports({ limit: 6 }),
+    ]);
+    complianceLines.push('## Compliance-Setup (EAR + LUCID)');
+    complianceLines.push(`- **EAR / ElektroG**: ${settings.ear?.enabled ? 'aktiv' : 'inaktiv'} · WEEE-Nr: ${settings.ear?.weeeNumber || '—'} · Marke: ${settings.ear?.stiftungEarBrand || '—'}`);
+    complianceLines.push(`- **LUCID / VerpackG**: ${settings.lucid?.enabled ? 'aktiv' : 'inaktiv'} · LUCID-Nr: ${settings.lucid?.lucidNumber || '—'} · Rolle: ${settings.lucid?.distributorRole || '—'}${settings.lucid?.dualSystem ? ` · Duales System: ${settings.lucid.dualSystem}` : ''}`);
+    if (recent.length > 0) {
+      complianceLines.push('');
+      complianceLines.push('### Letzte Monats-Berichte');
+      complianceLines.push('| Typ | Monat | Status | Ext. Ref. |');
+      complianceLines.push('|-----|-------|--------|-----------|');
+      for (const r of recent) {
+        complianceLines.push(`| ${r.reportType.toUpperCase()} | ${r.reportMonth.slice(0, 7)} | ${r.status} | ${r.externalReference || '—'} |`);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load compliance context for AI:', e);
+  }
+  const complianceContext = complianceLines.join('\n');
+
+  return { stockSummary, locationSummary, shipmentSummary, carrierInfo, pendingActions, recentActivity, productCatalog, packagingCatalog, complianceContext };
 }
 
 // ─── System Prompts ──────────────────────────────────────────
@@ -263,11 +363,56 @@ Dein Ton ist analytisch und datengetrieben. Präsentiere Erkenntnisse mit Zahlen
 
 Antworte immer auf Deutsch. Nutze Markdown-Formatierung.`;
 
+const OMNISCIENT_EN = `You are the **Trackbliss All-Knowing Assistant** — the personal data co-pilot of this tenant. You have full read-access to every product, every packaging type, every shipment, every compliance setting and report, and the full warehouse + stock + activity context.
+
+Your scope:
+- **Products**: name, manufacturer, GTIN, category, net weight, electronic-flag, EAR category (1–6), EAR brand, battery info (included? type? weight per device?), B2B-only flag, full device-type descriptions.
+- **Packaging**: every carton/envelope this tenant uses — inner dimensions, tare weight, max load, primary LUCID material (paper/plastic/glass/aluminum/steel/composite/wood/other), composite split, current stock on hand, tracking flag.
+- **Shipments**: recent shipments with carrier, weight, recipient, status, dates.
+- **Compliance**: WEEE-Nr, LUCID-Nr, brand, distributor role, dual system, list of submitted / draft EAR + LUCID monthly reports.
+- **Warehouse**: stock levels per (product × batch × location), capacity utilization, pending alerts, recent inventory transactions, carrier limit table, standard carton sizes.
+
+What you do best:
+- Answer cross-cutting questions like "which of my products contain Li-Ion batteries and how much battery weight per unit?", "wie schwer ist mein Universalkarton A3?", "welche Verpackungen sind aus Verbund-Material?", "list all electronics I sell to consumers", "what's my LUCID-Nummer?", "wann ist die nächste EAR-Meldung fällig?", "summarize all monthly reports I've submitted this year".
+- Compute aggregates over the provided data on the fly (sums, averages, group-by).
+- Spot inconsistencies: missing EAR category on electronic products, packagings without material, shipments without packaging assignment.
+- Suggest next operational steps (e.g. which products still need EAR setup).
+
+Behavior:
+- Be **precise and concise** — operators want answers, not lectures.
+- When listing items, prefer tables.
+- When the user asks about a single product or packaging, look it up by name (fuzzy match if needed) and quote the exact data.
+- Never invent fields that aren't in the provided context — if data is missing, say so and suggest where to enter it (which page / which field).
+- Use Markdown formatting. Always respond in English.`;
+
+const OMNISCIENT_DE = `Du bist der **Trackbliss Allwissende Assistent** — der persönliche Daten-Copilot dieses Mandanten. Du hast vollen Lesezugriff auf jedes Produkt, jeden Verpackungstyp, jede Sendung, jede Compliance-Einstellung und jeden Bericht, sowie den kompletten Lager-, Bestands- und Aktivitäts-Kontext.
+
+Dein Wirkungsbereich:
+- **Produkte**: Name, Hersteller, GTIN, Kategorie, Netto-Gewicht, Elektronik-Flag, EAR-Kategorie (1–6), EAR-Marke, Batterie-Info (enthalten? Typ? Gewicht pro Gerät?), B2B-Only-Flag, ausführliche Gerätetyp-Beschreibung.
+- **Verpackungen**: jeder Karton/Umschlag dieses Tenants — Innenmaße, Tara, Max-Last, LUCID-Hauptmaterial (paper/plastic/glass/aluminum/steel/composite/wood/other), Verbund-Split, aktueller Bestand, Tracking-Flag.
+- **Sendungen**: letzte Sendungen mit Carrier, Gewicht, Empfänger, Status, Daten.
+- **Compliance**: WEEE-Nr, LUCID-Nr, Marke, Distributor-Rolle, duales System, Liste der eingereichten / Entwurfs-EAR- + LUCID-Monatsberichte.
+- **Lager**: Bestand pro (Produkt × Charge × Standort), Kapazitätsauslastung, ausstehende Alerts, letzte Bestandsbewegungen, Carrier-Limit-Tabelle, Standard-Kartongrößen.
+
+Was du am besten kannst:
+- Übergreifende Fragen beantworten wie „welche meiner Produkte enthalten Li-Ion-Akkus und wie viel Akku-Gewicht pro Stück?", „wie schwer ist mein Universalkarton A3?", „welche Verpackungen bestehen aus Verbund-Material?", „liste alle Elektronikgeräte, die ich an Endkunden verkaufe", „wie ist meine LUCID-Nummer?", „wann ist die nächste EAR-Meldung fällig?", „fasse alle Monatsberichte zusammen, die ich dieses Jahr eingereicht habe".
+- Aggregate live über die bereitgestellten Daten berechnen (Summen, Durchschnitte, Gruppierungen).
+- Inkonsistenzen erkennen: fehlende EAR-Kategorie bei Elektronikprodukten, Verpackungen ohne Material, Sendungen ohne Verpackungs-Zuweisung.
+- Nächste Schritte vorschlagen (z. B. welche Produkte noch EAR-Setup brauchen).
+
+Verhalten:
+- Sei **präzise und kompakt** — Betreiber wollen Antworten, keine Lehrstunden.
+- Wenn du Items auflistest, bevorzuge Tabellen.
+- Bei Fragen zu einem einzelnen Produkt/Karton: nach Name nachschlagen (Fuzzy-Match wenn nötig) und exakte Daten zitieren.
+- Erfinde **niemals** Felder, die nicht im bereitgestellten Kontext stehen — wenn Daten fehlen, sag es klar und schlage vor, wo man's eintragen kann (welche Seite / welches Feld).
+- Nutze Markdown-Formatierung. Antworte immer auf Deutsch.`;
+
 function getExpertSystemPrompt(expertId: WarehouseExpertId, locale: Locale): string {
   const prompts: Record<WarehouseExpertId, Record<Locale, string>> = {
     shipping: { en: SHIPPING_EXPERT_EN, de: SHIPPING_EXPERT_DE },
     space: { en: SPACE_PLANNER_EN, de: SPACE_PLANNER_DE },
     intelligence: { en: INTELLIGENCE_ANALYST_EN, de: INTELLIGENCE_ANALYST_DE },
+    omniscient: { en: OMNISCIENT_EN, de: OMNISCIENT_DE },
   };
   return prompts[expertId][locale];
 }
@@ -284,6 +429,9 @@ export function buildWarehouseChatMessages(
   const system = getExpertSystemPrompt(expertId, locale);
 
   const contextParts = [
+    warehouseContext.productCatalog,
+    warehouseContext.packagingCatalog,
+    warehouseContext.complianceContext,
     warehouseContext.stockSummary,
     warehouseContext.locationSummary,
     warehouseContext.shipmentSummary,
@@ -334,5 +482,12 @@ export const EXPERT_SUGGESTED_QUESTIONS: Record<WarehouseExpertId, string[]> = {
     'Which products should I reorder now?',
     'Identify slow-moving stock in my warehouse',
     'What are my top KPI improvement opportunities?',
+  ],
+  omniscient: [
+    'Welche meiner Produkte enthalten Akkus? Mit Gewicht pro Stück.',
+    'Wie schwer ist mein Universalkarton A3 — und woraus besteht er?',
+    'Welche Produkte fehlen noch EAR-Klassifizierung?',
+    'Was ist meine LUCID-Nummer und welche Berichte habe ich schon eingereicht?',
+    'Zeige alle Verpackungen mit aktuellem Bestand und Material.',
   ],
 };
