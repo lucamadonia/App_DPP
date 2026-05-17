@@ -12,6 +12,7 @@ import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import { CERTIFICATION_CATEGORIES } from '@/lib/certification-options';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
+import { ProductEarFields } from '@/components/compliance/ProductEarFields';
 import { LanguageSwitcher } from '@/components/product/LanguageSwitcher';
 import { ProductComponentsStep, type ComponentEntry } from '@/components/product/ProductComponentsStep';
 import { PackagingLayersEditor } from '@/components/product/PackagingLayersEditor';
@@ -46,9 +47,9 @@ import {
   ToggleLeft,
   ToggleRight,
   Factory,
+  Zap,
   AlertTriangle,
   ExternalLink,
-  Zap,
   Recycle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,7 @@ const BASE_STEPS = [
   { id: 'sustainability', title: 'Sustainability', icon: Leaf },
   { id: 'compliance', title: 'Compliance', icon: ShieldCheck },
   { id: 'espr-compliance', title: 'ESPR Compliance', icon: Factory },
+  { id: 'ear', title: 'EAR / ElektroG', icon: Zap },
   { id: 'documents', title: 'Documents', icon: FileText },
   { id: 'support', title: 'Support', icon: Headphones },
   { id: 'suppliers', title: 'Suppliers', icon: Truck },
@@ -278,6 +280,14 @@ export function ProductFormPage() {
         preferenceProof: product.preferenceProof || '',
         componentDppUrls: product.componentDppUrls || [],
         dppRegistryId: product.dppRegistryId || '',
+        // EAR / ElektroG
+        isElectronic: product.isElectronic ?? false,
+        earCategory: product.earCategory,
+        earDeviceType: product.earDeviceType || '',
+        earBrand: product.earBrand || '',
+        earIncludesBattery: product.earIncludesBattery ?? false,
+        earBatteryWeightGrams: product.earBatteryWeightGrams ?? '',
+        earB2b: product.earB2b ?? false,
       });
 
       setTranslations(product.translations || {});
@@ -369,9 +379,17 @@ export function ProductFormPage() {
     preferenceProof: '' as string,
     componentDppUrls: [] as string[],
     dppRegistryId: '' as string,
+    // EAR / ElektroG
+    isElectronic: false as boolean,
+    earCategory: undefined as (1 | 2 | 3 | 4 | 5 | 6 | undefined),
+    earDeviceType: '' as string,
+    earBrand: '' as string,
+    earIncludesBattery: false as boolean,
+    earBatteryWeightGrams: '' as number | '',
+    earB2b: false as boolean,
   });
 
-  const updateField = (field: string, value: string | number | boolean) => {
+  const updateField = (field: string, value: string | number | boolean | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -667,6 +685,14 @@ export function ProductFormPage() {
         preferenceProof: formData.preferenceProof || undefined,
         componentDppUrls: formData.componentDppUrls.filter(url => url.trim()),
         dppRegistryId: formData.dppRegistryId || undefined,
+        // EAR / ElektroG
+        isElectronic: formData.isElectronic,
+        earCategory: formData.earCategory,
+        earDeviceType: formData.earDeviceType || undefined,
+        earBrand: formData.earBrand || undefined,
+        earIncludesBattery: formData.earIncludesBattery,
+        earBatteryWeightGrams: formData.earBatteryWeightGrams === '' ? undefined : Number(formData.earBatteryWeightGrams),
+        earB2b: formData.earB2b,
       };
 
       if (isEditMode && id) {
@@ -2652,6 +2678,31 @@ export function ProductFormPage() {
                 </>
               )}
             </div>
+          )}
+
+          {/* Step: EAR / ElektroG */}
+          {currentStepId === 'ear' && (
+            <ProductEarFields
+              product={{
+                isElectronic: formData.isElectronic,
+                earCategory: formData.earCategory,
+                earDeviceType: formData.earDeviceType,
+                earBrand: formData.earBrand,
+                earIncludesBattery: formData.earIncludesBattery,
+                earBatteryWeightGrams: formData.earBatteryWeightGrams === '' ? undefined : Number(formData.earBatteryWeightGrams),
+                earB2b: formData.earB2b,
+                manufacturer: formData.manufacturer,
+              }}
+              onChange={(patch) => {
+                if (patch.isElectronic !== undefined) updateField('isElectronic', patch.isElectronic);
+                if (patch.earCategory !== undefined) updateField('earCategory', patch.earCategory);
+                if (patch.earDeviceType !== undefined) updateField('earDeviceType', patch.earDeviceType);
+                if (patch.earBrand !== undefined) updateField('earBrand', patch.earBrand);
+                if (patch.earIncludesBattery !== undefined) updateField('earIncludesBattery', patch.earIncludesBattery);
+                if (patch.earBatteryWeightGrams !== undefined) updateField('earBatteryWeightGrams', patch.earBatteryWeightGrams);
+                if (patch.earB2b !== undefined) updateField('earB2b', patch.earB2b);
+              }}
+            />
           )}
 
           {/* Step 5: Documents */}

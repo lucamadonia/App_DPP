@@ -235,6 +235,7 @@ export function AppSidebar() {
           icon: ShieldCheck,
           items: [
             { title: t('Audit Report'), url: '/compliance' },
+            { title: t('Monatsberichte'), url: '/compliance/reports' },
             { title: t('Export'), url: '/compliance/export' },
             { title: t('Audit Log'), url: '/compliance/audit-log' },
           ],

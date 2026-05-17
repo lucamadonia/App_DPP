@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ComplianceReminderBanner } from '@/components/compliance/ComplianceReminderBanner';
 import { Badge } from '@/components/ui/badge';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
@@ -123,6 +124,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Compliance reminder (EAR/LUCID monthly filings) */}
+      <ComplianceReminderBanner />
+
       {/* Personalized Greeting */}
       <motion.div
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"

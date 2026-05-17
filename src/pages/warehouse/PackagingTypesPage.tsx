@@ -13,6 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from '@/components/ui/switch';
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { recordPackagingReceipt, adjustPackagingStock, updatePackagingTracking } from '@/services/supabase/wh-shipments';
+import { PackagingMaterialFields } from '@/components/compliance/PackagingMaterialFields';
+import type { LucidMaterial, MaterialSplitEntry } from '@/types/compliance';
 import { toast } from 'sonner';
 
 interface PackagingRow {
@@ -31,6 +33,8 @@ interface PackagingRow {
   stock_on_hand: number;
   stock_threshold: number;
   last_restocked_at: string | null;
+  primary_material: LucidMaterial | null;
+  material_split: MaterialSplitEntry[] | null;
 }
 
 function stockTone(row: PackagingRow): { tone: string; label: string } {
@@ -56,6 +60,8 @@ interface FormState {
   sort_order: string;
   stock_tracked: boolean;
   stock_threshold: string;
+  primary_material: LucidMaterial | null;
+  material_split: MaterialSplitEntry[] | null;
 }
 
 const EMPTY: FormState = {
@@ -71,6 +77,8 @@ const EMPTY: FormState = {
   sort_order: '0',
   stock_tracked: false,
   stock_threshold: '10',
+  primary_material: null,
+  material_split: null,
 };
 
 export function PackagingTypesPage() {
@@ -124,6 +132,8 @@ export function PackagingTypesPage() {
       sort_order: String(r.sort_order ?? 0),
       stock_tracked: r.stock_tracked ?? false,
       stock_threshold: String(r.stock_threshold ?? 10),
+      primary_material: r.primary_material ?? null,
+      material_split: r.material_split ?? null,
     });
     setDialogOpen(true);
   }
@@ -148,6 +158,8 @@ export function PackagingTypesPage() {
         sort_order: parseInt(form.sort_order) || 0,
         stock_tracked: form.stock_tracked,
         stock_threshold: parseInt(form.stock_threshold) || 10,
+        primary_material: form.primary_material,
+        material_split: form.material_split,
       };
 
       if (form.is_default) {
@@ -391,7 +403,7 @@ export function PackagingTypesPage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{form.id ? t('Umverpackung bearbeiten') : t('Neue Umverpackung')}</DialogTitle>
           </DialogHeader>
@@ -459,6 +471,19 @@ export function PackagingTypesPage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="border-t pt-4 mt-2">
+              <PackagingMaterialFields
+                primaryMaterial={form.primary_material}
+                materialSplit={form.material_split}
+                tareWeightGrams={parseInt(form.tare_weight_grams) || 0}
+                onChange={(patch) => setForm({
+                  ...form,
+                  ...(patch.primaryMaterial !== undefined ? { primary_material: patch.primaryMaterial } : {}),
+                  ...(patch.materialSplit !== undefined ? { material_split: patch.materialSplit } : {}),
+                })}
+              />
             </div>
           </div>
           <DialogFooter>
