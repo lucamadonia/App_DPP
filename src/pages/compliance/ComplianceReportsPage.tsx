@@ -26,6 +26,10 @@ export function ComplianceReportsPage() {
   const [reports, setReports] = useState<ComplianceMonthlyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<'ear' | 'lucid' | null>(null);
+  const [customMonth, setCustomMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   const previousMonth = previousMonthStart();
   const daysUntil = daysUntilDeadline();
@@ -45,17 +49,29 @@ export function ComplianceReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  async function handleGenerate(type: 'ear' | 'lucid') {
+  async function handleGenerate(type: 'ear' | 'lucid', month: string = previousMonth) {
     setGenerating(type);
     const res = type === 'ear'
-      ? await generateEarReport(previousMonth)
-      : await generateLucidReport(previousMonth);
+      ? await generateEarReport(month)
+      : await generateLucidReport(month);
     setGenerating(null);
     if (!res.ok) {
       toast.error(res.error || 'Fehler beim Erstellen');
       return;
     }
-    toast.success(`${type.toUpperCase()}-Bericht für ${formatMonth(previousMonth)} erstellt`);
+    toast.success(`${type.toUpperCase()}-Bericht für ${formatMonth(month)} erstellt`);
+    reload();
+  }
+
+  async function handleGenerateBoth(month: string) {
+    setGenerating('ear');
+    const earRes = await generateEarReport(month);
+    if (!earRes.ok) toast.error(`EAR: ${earRes.error || 'Fehler'}`);
+    setGenerating('lucid');
+    const lucidRes = await generateLucidReport(month);
+    if (!lucidRes.ok) toast.error(`LUCID: ${lucidRes.error || 'Fehler'}`);
+    setGenerating(null);
+    if (earRes.ok && lucidRes.ok) toast.success(`Beide Berichte für ${formatMonth(month)} erstellt`);
     reload();
   }
 
@@ -168,6 +184,51 @@ export function ComplianceReportsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Beliebigen Monat erstellen */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Bericht für anderen Monat</CardTitle>
+          <CardDescription>Falls du rückwirkend oder im Voraus aggregieren willst.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Monat</label>
+            <input
+              type="month"
+              value={customMonth}
+              onChange={(e) => setCustomMonth(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+          </div>
+          <Button
+            onClick={() => handleGenerate('ear', `${customMonth}-01`)}
+            disabled={generating === 'ear'}
+            variant="outline"
+            className="gap-1.5"
+          >
+            <Zap className="h-4 w-4 text-blue-600" />
+            EAR erstellen
+          </Button>
+          <Button
+            onClick={() => handleGenerate('lucid', `${customMonth}-01`)}
+            disabled={generating === 'lucid'}
+            variant="outline"
+            className="gap-1.5"
+          >
+            <Recycle className="h-4 w-4 text-emerald-600" />
+            LUCID erstellen
+          </Button>
+          <Button
+            onClick={() => handleGenerateBoth(`${customMonth}-01`)}
+            disabled={!!generating}
+            className="gap-1.5"
+          >
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Beide für {customMonth} erstellen
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Liste aller Berichte */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as ComplianceReportType | 'all')}>
