@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getShipments, getShipmentStatusCounts, getItemsForShipments } from '@/services/supabase/wh-shipments';
 import { getDHLSettings } from '@/services/supabase/dhl-carrier';
-import { retryShopifyFulfillment } from '@/services/supabase/shopify-integration';
+import { retryShopifyFulfillment, pullFulfillmentsFromShopify } from '@/services/supabase/shopify-integration';
 import { invokeEdgeFunction } from '@/lib/edge-function';
 import { toast } from 'sonner';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
@@ -359,6 +359,38 @@ export function ShipmentListPage() {
     }
   }
 
+  // Pull-from-Shopify: read-only sync that links existing Shopify fulfillments
+  // back to our shipments by tracking-number match. Doesn't push anything, so
+  // safe to run when scopes are missing or shipments were fulfilled manually
+  // in Shopify Admin.
+  const [pullingShopify, setPullingShopify] = useState(false);
+  async function handleShopifyPull() {
+    setPullingShopify(true);
+    try {
+      const result = await pullFulfillmentsFromShopify(true);
+      const r = result.data as {
+        total: number; linked: number; mismatched: number; noFulfillment: number; errors: number;
+      } | undefined;
+      if (!r || r.total === 0) {
+        toast.info(t('Nothing to pull — all shipments already linked'));
+      } else {
+        const parts: string[] = [];
+        if (r.linked) parts.push(t('{{n}} linked', { n: r.linked }));
+        if (r.mismatched) parts.push(t('{{n}} mismatched', { n: r.mismatched }));
+        if (r.noFulfillment) parts.push(t('{{n}} without Shopify fulfillment', { n: r.noFulfillment }));
+        if (r.errors) parts.push(t('{{n}} errors', { n: r.errors }));
+        const msg = parts.join(' · ');
+        if (r.mismatched || r.errors) toast.warning(msg, { duration: 8000 });
+        else toast.success(msg);
+      }
+      loadShipments();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPullingShopify(false);
+    }
+  }
+
   // Manual tracking refresh (triggers the same poll as the 8h cron)
   const [refreshing, setRefreshing] = useState(false);
   async function handleTrackingRefresh() {
@@ -419,6 +451,10 @@ export function ShipmentListPage() {
               <DropdownMenuItem onClick={() => handleExport('detail')} disabled={exporting || loading}>
                 <Download className={`mr-2 h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
                 {exporting ? t('Exporting...') : t('Export CSV (one row per item)')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShopifyPull} disabled={pullingShopify}>
+                <ShoppingBag className={`mr-2 h-4 w-4 ${pullingShopify ? 'animate-pulse' : ''}`} />
+                {pullingShopify ? t('Pulling...') : t('Pull Shopify fulfillments')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShopifyRetry} disabled={pushingShopify}>
                 <ShoppingBag className={`mr-2 h-4 w-4 ${pushingShopify ? 'animate-pulse' : ''}`} />

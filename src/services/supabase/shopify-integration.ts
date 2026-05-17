@@ -601,6 +601,14 @@ export async function updateShopifyFulfillmentTracking(shipmentId: string): Prom
   return callEdgeFunction('update_fulfillment_tracking', { shipmentId });
 }
 
+/**
+ * Read-only sync that links existing Shopify fulfillments back to our
+ * shipments by tracking-number match. Pass apply=false to dry-run.
+ */
+export async function pullFulfillmentsFromShopify(apply = true): Promise<ShopifySyncResponse> {
+  return callEdgeFunction('pull_fulfillments_from_shopify', { apply });
+}
+
 export async function syncShopifyCustomers(): Promise<ShopifySyncResponse> {
   return callEdgeFunction('sync_customers');
 }

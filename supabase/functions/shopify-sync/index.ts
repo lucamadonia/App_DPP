@@ -140,6 +140,8 @@ Deno.serve(async (req) => {
         return await handleRetryFulfillment(supabase, tenantId, user.id, params);
       case 'update_fulfillment_tracking':
         return await handleUpdateFulfillmentTracking(supabase, tenantId, user.id, params);
+      case 'pull_fulfillments_from_shopify':
+        return await handlePullFulfillments(supabase, tenantId, params);
       case 'sync_customers':
         return await handleSyncCustomers(supabase, tenantId, user.id);
       case 'create_refund':
@@ -1610,6 +1612,146 @@ async function handleUpdateFulfillmentTracking(supabase: any, tenantId: string, 
   } catch (err) {
     return json({ success: false, error: err instanceof Error ? err.message : String(err) }, 500);
   }
+}
+
+/**
+ * Read-only sync that finds existing Shopify fulfillments and links them to
+ * our shipments. For each shipment that has a Shopify order but no
+ * fulfillment_id, query the order's fulfillments and match by tracking
+ * number. On exact tracking-number match → store the fulfillment_id.
+ *
+ * Safe to run repeatedly — never writes to Shopify, never touches inventory.
+ * Returns a per-shipment report so the operator can see which ones still
+ * need attention.
+ *
+ * Pass { apply: false } to dry-run (default: true).
+ */
+// deno-lint-ignore no-explicit-any
+async function handlePullFulfillments(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  const apply = params?.apply !== false; // default true
+  const config = await getShopifyConfig(supabase, tenantId);
+
+  const { data: shipments } = await supabase
+    .from('wh_shipments')
+    .select('id, shipment_number, tracking_number, carrier, shopify_order_id, status')
+    .eq('tenant_id', tenantId)
+    .not('shopify_order_id', 'is', null)
+    .is('shopify_fulfillment_id', null)
+    .in('status', ['shipped', 'in_transit', 'delivered', 'label_created', 'packed']);
+
+  const results: Array<{
+    shipmentNumber: string;
+    shipmentId: string;
+    status: 'linked' | 'no_fulfillment' | 'tracking_mismatch' | 'no_tracking_in_app' | 'order_not_found' | 'error';
+    detail?: string;
+    shopifyFulfillmentId?: string;
+    shopifyTracking?: string;
+  }> = [];
+
+  let linked = 0, mismatched = 0, noFulfillment = 0, errors = 0;
+
+  for (const s of (shipments || [])) {
+    try {
+      // Use legacy REST GET /orders/{id}/fulfillments.json — this needs only
+      // read_fulfillments which we already have. Avoids the modern-scope trap.
+      const { body } = await shopifyApi(
+        config.shopDomain, config.accessToken, config.apiVersion,
+        `orders/${s.shopify_order_id}/fulfillments.json`,
+      );
+      // deno-lint-ignore no-explicit-any
+      const fulfillments = ((body as any)?.fulfillments || []) as Array<{
+        id: number; status: string; tracking_number?: string; tracking_company?: string;
+      }>;
+
+      if (fulfillments.length === 0) {
+        results.push({ shipmentNumber: s.shipment_number, shipmentId: s.id, status: 'no_fulfillment' });
+        noFulfillment++;
+        continue;
+      }
+
+      if (!s.tracking_number) {
+        // App has no tracking but Shopify already has a fulfillment — link
+        // to the first one as a best effort. Caller can override later.
+        const f = fulfillments[0];
+        if (apply) {
+          await supabase.from('wh_shipments').update({
+            shopify_fulfillment_id: String(f.id),
+            shopify_fulfillment_status: (f.status || 'success').toLowerCase(),
+            shopify_export_pending: false,
+            shopify_export_error: null,
+            last_fulfillment_at: new Date().toISOString(),
+          }).eq('id', s.id);
+        }
+        results.push({
+          shipmentNumber: s.shipment_number,
+          shipmentId: s.id,
+          status: 'no_tracking_in_app',
+          shopifyFulfillmentId: String(f.id),
+          shopifyTracking: f.tracking_number,
+        });
+        linked++;
+        continue;
+      }
+
+      // Match by tracking number (exact). Ignore whitespace differences.
+      const want = s.tracking_number.replace(/\s+/g, '');
+      const match = fulfillments.find((f) => (f.tracking_number || '').replace(/\s+/g, '') === want);
+
+      if (match) {
+        if (apply) {
+          await supabase.from('wh_shipments').update({
+            shopify_fulfillment_id: String(match.id),
+            shopify_fulfillment_status: (match.status || 'success').toLowerCase(),
+            shopify_export_pending: false,
+            shopify_export_error: null,
+            last_fulfillment_at: new Date().toISOString(),
+          }).eq('id', s.id);
+        }
+        results.push({
+          shipmentNumber: s.shipment_number,
+          shipmentId: s.id,
+          status: 'linked',
+          shopifyFulfillmentId: String(match.id),
+          shopifyTracking: match.tracking_number,
+        });
+        linked++;
+      } else {
+        // Tracking mismatch: Shopify has a fulfillment but with a different
+        // tracking number. Operator should review and decide manually.
+        results.push({
+          shipmentNumber: s.shipment_number,
+          shipmentId: s.id,
+          status: 'tracking_mismatch',
+          shopifyFulfillmentId: String(fulfillments[0].id),
+          shopifyTracking: fulfillments[0].tracking_number,
+          detail: `App has ${s.tracking_number}, Shopify has ${fulfillments[0].tracking_number || '(none)'}`,
+        });
+        mismatched++;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push({
+        shipmentNumber: s.shipment_number,
+        shipmentId: s.id,
+        status: msg.includes('404') ? 'order_not_found' : 'error',
+        detail: msg.slice(0, 200),
+      });
+      errors++;
+    }
+  }
+
+  return json({
+    success: true,
+    data: {
+      apply,
+      total: (shipments || []).length,
+      linked,
+      mismatched,
+      noFulfillment,
+      errors,
+      results,
+    },
+  });
 }
 
 // ============================================
