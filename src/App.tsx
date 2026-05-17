@@ -166,6 +166,8 @@ const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ 
 const ComplianceReportsPage = lazy(() => import('@/pages/compliance/ComplianceReportsPage').then(m => ({ default: m.ComplianceReportsPage })));
 const EarReportDetailPage = lazy(() => import('@/pages/compliance/EarReportDetailPage').then(m => ({ default: m.EarReportDetailPage })));
 const LucidReportDetailPage = lazy(() => import('@/pages/compliance/LucidReportDetailPage').then(m => ({ default: m.LucidReportDetailPage })));
+const ComplianceSettingsPage = lazy(() => import('@/pages/compliance/ComplianceSettingsPage').then(m => ({ default: m.ComplianceSettingsPage })));
+const ComplianceAuditPage = lazy(() => import('@/pages/compliance/ComplianceAuditPage').then(m => ({ default: m.ComplianceAuditPage })));
 const RegulationsPage = lazy(() => import('@/pages/RegulationsPage').then(m => ({ default: m.RegulationsPage })));
 const ChecklistPage = lazy(() => import('@/pages/ChecklistPage').then(m => ({ default: m.ChecklistPage })));
 
@@ -501,6 +503,8 @@ function NormalAppRoutes() {
           <Route path="compliance/reports" element={<ComplianceReportsPage />} />
           <Route path="compliance/reports/ear/:yearMonth" element={<EarReportDetailPage />} />
           <Route path="compliance/reports/lucid/:yearMonth" element={<LucidReportDetailPage />} />
+          <Route path="compliance/settings" element={<ComplianceSettingsPage />} />
+          <Route path="compliance/audit" element={<ComplianceAuditPage />} />
 
           {/* Regulations & Checklists */}
           <Route path="news" element={<NewsPage />} />

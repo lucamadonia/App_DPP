@@ -236,6 +236,8 @@ export function AppSidebar() {
           items: [
             { title: t('Audit Report'), url: '/compliance' },
             { title: t('Monatsberichte'), url: '/compliance/reports' },
+            { title: t('Compliance Settings'), url: '/compliance/settings' },
+            { title: t('Audit-Trail'), url: '/compliance/audit' },
             { title: t('Export'), url: '/compliance/export' },
             { title: t('Audit Log'), url: '/compliance/audit-log' },
           ],
