@@ -14,6 +14,8 @@ import { ComplianceStatusBadge } from '@/components/compliance/ComplianceStatusB
 import { generateEarReport, getEarReportForMonth, submitEarReport } from '@/services/supabase/compliance-ear';
 import { markReportConfirmed, markReportRejected, deleteComplianceReport } from '@/services/supabase/compliance-reports';
 import { buildCsv, downloadCsv, timestampedFilename, type CsvColumn } from '@/lib/csv-export';
+import { generateEarPDF } from '@/components/compliance/ComplianceReportPDFs';
+import { getCurrentTenant } from '@/services/supabase/tenants';
 import type { ComplianceMonthlyReport, EarSnapshot, EarAggregateRow, EarCategory } from '@/types/compliance';
 import { EAR_CATEGORY_NAMES_DE } from '@/types/compliance';
 import { toast } from 'sonner';
@@ -90,6 +92,20 @@ export function EarReportDetailPage() {
     await deleteComplianceReport(report.id);
     toast.success('Gelöscht');
     navigate('/compliance/reports');
+  }
+
+  async function handlePdf() {
+    if (!report) return;
+    setBusy('pdf');
+    try {
+      const tenant = await getCurrentTenant();
+      await generateEarPDF(report, tenant?.name);
+      toast.success('PDF heruntergeladen');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
   }
 
   function handleCsv() {
@@ -245,6 +261,9 @@ export function EarReportDetailPage() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
+        <Button onClick={handlePdf} variant="outline" className="gap-1.5" disabled={busy === 'pdf'}>
+          <Download className="h-4 w-4" /> {busy === 'pdf' ? 'PDF wird erstellt…' : 'PDF herunterladen'}
+        </Button>
         <Button onClick={handleCsv} variant="outline" className="gap-1.5">
           <Download className="h-4 w-4" /> CSV herunterladen
         </Button>
