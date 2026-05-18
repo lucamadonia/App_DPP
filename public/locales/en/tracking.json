@@ -77,5 +77,9 @@
   "dpp_unlocked_announce": "New item revealed",
   "Unlocks at delivery": "Unlocks at delivery",
   "Tracking-Update steht aus": "Tracking update pending",
-  "Tracking hero illustration": "Your order on its way — packed, shipped, delivered"
+  "Tracking hero illustration": "Your order on its way — packed, shipped, delivered",
+  "hero_title_received": "Order received",
+  "hero_title_packing": "Packing your order",
+  "hero_title_in_transit": "On its way to you",
+  "hero_title_delivered": "Delivered"
 }

@@ -77,5 +77,9 @@
   "dpp_unlocked_announce": "Neues Produkt freigeschaltet",
   "Unlocks at delivery": "Wird bei Zustellung freigeschaltet",
   "Tracking-Update steht aus": "Tracking-Update steht aus",
-  "Tracking hero illustration": "Deine Bestellung ist unterwegs — verpackt, versendet, zugestellt"
+  "Tracking hero illustration": "Deine Bestellung ist unterwegs — verpackt, versendet, zugestellt",
+  "hero_title_received": "Bestellung eingegangen",
+  "hero_title_packing": "Wir packen dein Paket",
+  "hero_title_in_transit": "Unterwegs zu dir",
+  "hero_title_delivered": "Zugestellt"
 }

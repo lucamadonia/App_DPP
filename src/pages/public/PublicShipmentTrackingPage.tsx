@@ -73,6 +73,21 @@ function pickHeroForStage(
   return stageUrl ?? branding.trackingHeroUrl ?? null;
 }
 
+/**
+ * Big-display headline shown over the hero illustration so the customer
+ * sees the current stage at a glance without parsing the smaller greeting
+ * + ETA card below. Rendered as a text overlay (NOT baked into the image)
+ * so it stays translatable and editable.
+ */
+function heroTitleForStatus(status: string, t: TFunction): string {
+  if (status === 'delivered') return t('hero_title_delivered');
+  if (status === 'shipped' || status === 'in_transit') return t('hero_title_in_transit');
+  if (status === 'packed' || status === 'label_created') return t('hero_title_packing');
+  if (status === 'cancelled') return t('Cancelled');
+  // draft / picking / created
+  return t('hero_title_received');
+}
+
 function mapToStage(status: string): ShipmentStage {
   switch (status) {
     case 'draft':
@@ -729,6 +744,7 @@ export function PublicShipmentTrackingPage() {
           {(() => {
             const heroUrl = pickHeroForStage(mapToStage(shipment.status), branding);
             if (heroUrl) {
+              const heroTitle = heroTitleForStatus(shipment.status, t);
               return (
                 <div className="relative aspect-[21/9] overflow-hidden bg-muted">
                   <img
@@ -739,7 +755,23 @@ export function PublicShipmentTrackingPage() {
                     loading="eager"
                     decoding="async"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
+                  {/* Dark gradient at the bottom-left so the headline stays
+                      readable on cream + sand backgrounds. */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-black/55 via-black/15 to-transparent" />
+                  {/* Soft card-fade at the very bottom for a clean transition into the CardContent. */}
+                  <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent" />
+                  {/* Stage headline — large, premium, with subtle shadow for contrast on any pixel. */}
+                  <div className="absolute inset-x-0 bottom-0 px-5 sm:px-7 pb-6 sm:pb-8">
+                    <h2
+                      className="text-white font-bold tracking-tight leading-tight"
+                      style={{
+                        fontSize: 'clamp(1.5rem, 4.5vw, 2.75rem)',
+                        textShadow: '0 2px 12px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.3)',
+                      }}
+                    >
+                      {heroTitle}
+                    </h2>
+                  </div>
                 </div>
               );
             }
