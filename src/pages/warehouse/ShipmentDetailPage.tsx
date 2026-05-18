@@ -604,57 +604,65 @@ export function ShipmentDetailPage() {
         </Card>
       )}
 
-      {/* Inline KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
-          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-semibold tabular-nums">{shipment.totalItems}</p>
-            <p className="text-[10px] text-muted-foreground">{t('Items')}</p>
+      {/* Inline KPIs — horizontal scroll strip on mobile (all 4 visible at a glance
+          without cramming into 2x2), 4-column grid on sm+ */}
+      <div className="-mx-3 sm:mx-0">
+        <div className="flex sm:grid sm:grid-cols-4 gap-2 sm:gap-3 overflow-x-auto sm:overflow-visible px-3 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-pl-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card">
+            <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tabular-nums">{shipment.totalItems}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('Items')}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
-          <Weight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-semibold tabular-nums truncate">
-              {shipment.totalWeightGrams != null ? `${(shipment.totalWeightGrams / 1000).toFixed(1)} kg` : '—'}
-            </p>
-            <p className="text-[10px] text-muted-foreground">{t('Weight')}</p>
+          <div className="flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card">
+            <Weight className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tabular-nums truncate">
+                {shipment.totalWeightGrams != null ? `${(shipment.totalWeightGrams / 1000).toFixed(1)} kg` : '—'}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('Weight')}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
-          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-semibold tabular-nums truncate">
-              {shipment.shippingCost != null ? `€${shipment.shippingCost.toFixed(2)}` : '—'}
-            </p>
-            <p className="text-[10px] text-muted-foreground">{t('Shipping Cost')}</p>
+          <div className="flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card">
+            <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tabular-nums truncate">
+                {shipment.shippingCost != null ? `€${shipment.shippingCost.toFixed(2)}` : '—'}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('Shipping Cost')}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border p-2.5 sm:p-3">
-          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-semibold truncate">{shipment.sourceLocationName || '—'}</p>
-            <p className="text-[10px] text-muted-foreground">{t('Location')}</p>
+          <div className="flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card">
+            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{shipment.sourceLocationName || '—'}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('Location')}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b overflow-x-auto -mx-1 px-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === tab.key
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs — horizontal scroll on narrow screens, with a soft right-edge
+          fade so users see there's more to swipe to */}
+      <div className="relative -mx-3 sm:mx-0">
+        <div className="flex gap-1 border-b overflow-x-auto px-3 sm:px-0 snap-x snap-mandatory scroll-pl-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`snap-start px-3 sm:px-4 py-2.5 sm:py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+                activeTab === tab.key
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {/* Right-edge fade hint for "more tabs to the right" — pointer-events-none so it doesn't block taps */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent sm:hidden" />
       </div>
 
       {/* Tab: Overview */}
