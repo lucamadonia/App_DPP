@@ -25,11 +25,13 @@ export interface WizardItem {
 
 interface SelectItemsStepProps {
   items: WizardItem[];
-  /** Populated when step 0 successfully looked up a shipment; null = legacy
-   *  "pick from full catalogue" mode for tenants without Trackbliss shipments. */
-  availableItems: LookupItem[] | null;
+  /** Populated when step 0 successfully looked up a shipment; null/undefined =
+   *  legacy "pick from full catalogue" mode for tenants without Trackbliss
+   *  shipments. Optional so the logged-in customer-portal wizard (which has
+   *  its own order context) can keep using the legacy picker. */
+  availableItems?: LookupItem[] | null;
   /** Display reference like "SHP-20260512-FXYBM2" — shown as a subtle confirmation. */
-  shipmentNumber: string | null;
+  shipmentNumber?: string | null;
   onItemsChange: (items: WizardItem[]) => void;
 }
 
@@ -186,8 +188,8 @@ function ProductCombobox({
 
 export function SelectItemsStep({
   items,
-  availableItems,
-  shipmentNumber,
+  availableItems = null,
+  shipmentNumber = null,
   onItemsChange,
 }: SelectItemsStepProps) {
   const { t } = useTranslation('returns');
