@@ -430,20 +430,16 @@ export async function publicCancelReturn(
 // ============================================
 
 export async function publicGetTenantProducts(tenantSlug: string): Promise<Array<{ id: string; name: string; gtin?: string; imageUrl?: string }>> {
-  const { data: tenant } = await supabaseAnon
-    .from('tenants')
-    .select('id')
-    .eq('slug', tenantSlug)
-    .single();
-  if (!tenant) return [];
-
-  const { data } = await supabaseAnon
-    .from('products')
-    .select('id, name, gtin, image_url')
-    .eq('tenant_id', tenant.id)
-    .order('name');
-
-  return (data || []).map((p: any) => ({
+  // Go through the SECURITY DEFINER RPC so we get the gallery-image fallback
+  // (products.image_url is empty for tenants that use product_images instead).
+  const { data, error } = await supabaseAnon.rpc('get_public_tenant_products', {
+    p_tenant_slug: tenantSlug,
+  });
+  if (error) {
+    console.error('[publicGetTenantProducts] failed:', error.message);
+    return [];
+  }
+  return ((data as Array<{ id: string; name: string | null; gtin: string | null; image_url: string | null }> | null) || []).map((p) => ({
     id: p.id,
     name: p.name || '',
     gtin: p.gtin || undefined,

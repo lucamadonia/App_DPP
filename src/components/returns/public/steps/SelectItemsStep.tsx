@@ -86,6 +86,8 @@ function ProductCombobox({
     );
   }
 
+  const selectedProduct = productId ? products.find((p) => p.id === productId) : undefined;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -93,19 +95,35 @@ function ProductCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className="w-full justify-between font-normal h-auto py-2"
           autoFocus={autoFocus}
         >
-          <span className="truncate">
-            {value || t('Search product...')}
+          <span className="flex items-center gap-2 min-w-0 flex-1 text-left">
+            {selectedProduct?.imageUrl ? (
+              <img
+                src={selectedProduct.imageUrl}
+                alt=""
+                className="h-8 w-8 rounded object-cover shrink-0 bg-muted"
+              />
+            ) : null}
+            <span className="truncate">{value || t('Search product...')}</span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      {/* Constrain dropdown to viewport: match trigger width, allow collision
+          padding so it doesn't bleed past the modal edge on phones. */}
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-1.5rem)] p-0"
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        collisionPadding={12}
+        avoidCollisions
+      >
         <Command>
           <CommandInput placeholder={t('Search product...')} />
-          <CommandList>
+          <CommandList className="max-h-[40vh]">
             <CommandEmpty>{t('No products found')}</CommandEmpty>
             <CommandGroup>
               {products.map((product) => (
@@ -116,19 +134,31 @@ function ProductCombobox({
                     onChange(product.name, product.id);
                     setOpen(false);
                   }}
+                  className="py-2"
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
+                      'mr-1 h-4 w-4 shrink-0',
                       productId === product.id ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  <div className="flex-1 truncate">
-                    <span>{product.name}</span>
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt=""
+                      className="h-9 w-9 rounded object-cover shrink-0 mr-2 bg-muted"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0 mr-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm leading-snug">{product.name}</div>
                     {product.gtin && (
-                      <span className="ml-2 text-xs text-muted-foreground">
+                      <div className="text-[10px] text-muted-foreground font-mono">
                         {product.gtin}
-                      </span>
+                      </div>
                     )}
                   </div>
                 </CommandItem>
