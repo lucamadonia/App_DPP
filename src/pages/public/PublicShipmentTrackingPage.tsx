@@ -731,7 +731,7 @@ export function PublicShipmentTrackingPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-muted/20 overflow-x-hidden">
       {/* HEADER */}
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
@@ -1046,13 +1046,15 @@ export function PublicShipmentTrackingPage() {
             // Override shadcn default 'grid' → flex column so footer can stick
             // to the bottom while only the middle body scrolls.
             '!grid-rows-none flex flex-col p-0 gap-0',
-            // Mobile: anchor to the bottom edge, full width, rounded only on top — feels like a sheet
-            'max-w-none w-full rounded-t-2xl rounded-b-none border-x-0 border-b-0',
-            'top-auto left-0 right-0 bottom-0 translate-x-0 translate-y-0',
+            // Mobile: pin to bottom edge, capped at the viewport width.
+            // !max-w-[100vw] beats the default max-w-[calc(100%-2rem)] without
+            // letting any child push us wider than the phone screen.
+            '!w-screen !max-w-[100vw] rounded-t-2xl rounded-b-none border-x-0 border-b-0',
+            '!top-auto !left-0 !right-0 !bottom-0 !translate-x-0 !translate-y-0',
             'max-h-[85vh] overflow-hidden',
             // Desktop: revert to a proper centered dialog
-            'sm:rounded-2xl sm:border sm:max-w-lg sm:w-auto',
-            'sm:top-[50%] sm:left-[50%] sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%]',
+            'sm:!rounded-2xl sm:border sm:!max-w-lg sm:!w-auto',
+            'sm:!top-[50%] sm:!left-[50%] sm:!bottom-auto sm:!translate-x-[-50%] sm:!translate-y-[-50%]',
             'sm:max-h-[85vh]',
           ].join(' ')}
         >
@@ -1062,17 +1064,18 @@ export function PublicShipmentTrackingPage() {
           </div>
 
           {/* Sticky header */}
-          <DialogHeader className="space-y-0.5 px-4 sm:px-6 pt-2 pb-3 sm:pt-5 sm:pb-2 border-b sm:border-b-0 shrink-0 text-left">
-            <DialogTitle className="text-base sm:text-lg">{t('Contact support')}</DialogTitle>
-            <DialogDescription className="text-[11px] sm:text-sm break-words">
+          <DialogHeader className="space-y-0.5 px-4 sm:px-6 pt-2 pb-3 sm:pt-5 sm:pb-2 border-b sm:border-b-0 shrink-0 text-left min-w-0">
+            <DialogTitle className="text-base sm:text-lg truncate pr-8">{t('Contact support')}</DialogTitle>
+            <DialogDescription className="text-[11px] sm:text-sm break-all min-w-0">
               <span className="font-mono">{shipment.shipmentNumber}</span>
               <span className="text-muted-foreground/60"> · </span>
               <span>{shipment.recipientFirstName}</span>
             </DialogDescription>
           </DialogHeader>
 
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-2 space-y-3 sm:space-y-4">
+          {/* Scrollable body — overflow-x-hidden prevents long product names
+              or auto-filled subject lines from pushing the dialog off-screen. */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-3 sm:py-2 space-y-3 sm:space-y-4 min-w-0">
             <div className="space-y-1">
               <Label htmlFor="support-email" className="text-xs">{t('Your email')}</Label>
               <Input
