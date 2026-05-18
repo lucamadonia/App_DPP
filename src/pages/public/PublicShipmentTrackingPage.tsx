@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -106,22 +105,19 @@ function isInTransit(s: PublicShipmentSummary): boolean {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  PREDICTIVE ETA                                                            */
+/*  ARRIVAL DATE                                                              */
 /* -------------------------------------------------------------------------- */
 
-function predictArrival(
-  s: PublicShipmentSummary,
-  eventCount: number,
-): { date: Date | null; confidence: 'high' | 'medium' | 'low' } {
-  if (s.deliveredAt) return { date: new Date(s.deliveredAt), confidence: 'high' };
-  if (s.trackingPredictedArrivalAt) return { date: new Date(s.trackingPredictedArrivalAt), confidence: 'medium' };
-  if (s.estimatedDelivery) return { date: new Date(s.estimatedDelivery), confidence: 'medium' };
-
-  const base = s.shippedAt ? new Date(s.shippedAt) : new Date(s.createdAt);
-  const days = eventCount > 5 ? 1 : 2;
-  const eta = new Date(base);
-  eta.setDate(eta.getDate() + days);
-  return { date: eta, confidence: 'low' };
+/**
+ * Returns only carrier-confirmed dates: delivered timestamp, DHL's predicted
+ * arrival, or the planned estimatedDelivery. No self-made guesses — those
+ * just unsettle the customer ("should have arrived" while the parcel is fine).
+ */
+function arrivalDate(s: PublicShipmentSummary): { date: Date | null; kind: 'delivered' | 'estimated' | null } {
+  if (s.deliveredAt) return { date: new Date(s.deliveredAt), kind: 'delivered' };
+  if (s.trackingPredictedArrivalAt) return { date: new Date(s.trackingPredictedArrivalAt), kind: 'estimated' };
+  if (s.estimatedDelivery) return { date: new Date(s.estimatedDelivery), kind: 'estimated' };
+  return { date: null, kind: null };
 }
 
 function titleCaseCity(raw: string | undefined): string {
@@ -139,16 +135,12 @@ function titleCaseCity(raw: string | undefined): string {
 /*  ETA DISPLAY                                                                */
 /* -------------------------------------------------------------------------- */
 
-function ETADisplay({ shipment, eventCount, locale, t }: {
+function ETADisplay({ shipment, locale, t }: {
   shipment: PublicShipmentSummary;
-  eventCount: number;
   locale: 'de' | 'en';
   t: TFunction;
 }) {
-  const { date, confidence } = useMemo(
-    () => predictArrival(shipment, eventCount),
-    [shipment, eventCount],
-  );
+  const { date, kind } = useMemo(() => arrivalDate(shipment), [shipment]);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
@@ -156,8 +148,7 @@ function ETADisplay({ shipment, eventCount, locale, t }: {
   }, []);
 
   // If the package hasn't been handed to the carrier yet, don't show an
-  // ETA — that just confuses the customer (e.g. "should have arrived" while
-  // the box is still on the packing table). Show a "wird vorbereitet" hint.
+  // ETA — that just confuses the customer. Show a "wird vorbereitet" hint.
   if (!isInTransit(shipment) && !shipment.deliveredAt) {
     const isLabelReady = shipment.status === 'label_created';
     return (
@@ -177,12 +168,11 @@ function ETADisplay({ shipment, eventCount, locale, t }: {
     );
   }
 
-  if (!date) return null;
-  const dateLabel = date.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
-    weekday: 'short', day: '2-digit', month: 'long',
-  });
-
-  if (shipment.deliveredAt) {
+  // Delivered — show the actual delivery date in a green confirmation.
+  if (shipment.deliveredAt && date) {
+    const dateLabel = date.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
+      weekday: 'short', day: '2-digit', month: 'long',
+    });
     return (
       <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
         <CheckCheck className="h-4 w-4" />
@@ -191,46 +181,48 @@ function ETADisplay({ shipment, eventCount, locale, t }: {
     );
   }
 
-  const diffMs = date.getTime() - now.getTime();
-  const diffH = Math.round(diffMs / 3_600_000);
-  const diffD = Math.round(diffMs / 86_400_000);
-  const isOverdue = diffMs < 0;
-
-  // If we have zero actual carrier scans, the predicted "should have
-  // arrived" date is just an estimate — don't trumpet it as overdue.
-  // Show a calm "Tracking-Update steht aus" message instead so customers
-  // don't think their parcel is lost when DHL simply hasn't scanned it.
-  const noEventsYet = eventCount === 0 && !shipment.deliveredAt;
-
-  let mainText = '';
-  if (noEventsYet && isOverdue) {
-    mainText = t('Tracking-Update steht aus');
-  } else if (isOverdue) {
-    mainText = t('Should have arrived');
-  } else if (diffH < 6) {
-    mainText = t('Arriving soon');
-  } else if (diffH < 24) {
-    mainText = t('Arriving in ~{{h}} hours', { h: Math.max(1, diffH) });
-  } else {
-    mainText = t('Arriving in ~{{d}} days', { d: Math.max(1, diffD) });
+  // In transit and we have a carrier-provided ETA → show it without
+  // confidence labels (those just read as "we made this up").
+  if (date && kind === 'estimated') {
+    const diffMs = date.getTime() - now.getTime();
+    const diffH = Math.round(diffMs / 3_600_000);
+    const diffD = Math.round(diffMs / 86_400_000);
+    const dateLabel = date.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
+      weekday: 'short', day: '2-digit', month: 'long',
+    });
+    let mainText = '';
+    if (diffMs < 0) {
+      // Carrier's own ETA has passed — calmer wording than "should have arrived".
+      mainText = t('Tracking-Update steht aus');
+    } else if (diffH < 6) {
+      mainText = t('Arriving soon');
+    } else if (diffH < 24) {
+      mainText = t('Arriving in ~{{h}} hours', { h: Math.max(1, diffH) });
+    } else {
+      mainText = t('Arriving in ~{{d}} days', { d: Math.max(1, diffD) });
+    }
+    return (
+      <div className="space-y-1.5">
+        <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+          {mainText}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          <span>{dateLabel}</span>
+        </div>
+      </div>
+    );
   }
 
-  const confidenceLabel = confidence === 'high'
-    ? t('confirmed')
-    : confidence === 'medium'
-      ? t('estimated')
-      : t('predicted');
-
+  // In transit but no carrier ETA → calm "on its way" message, no guesswork.
   return (
     <div className="space-y-1.5">
       <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
-        {mainText}
+        {t('Your package is on the way')}
       </div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Clock className="h-3.5 w-3.5" />
-        <span>{dateLabel}</span>
-        <span className="text-muted-foreground/50">·</span>
-        <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-medium">{confidenceLabel}</Badge>
+        <span>{t('narration_shipped_no_events')}</span>
       </div>
     </div>
   );
@@ -806,7 +798,6 @@ export function PublicShipmentTrackingPage() {
             <div className="mt-3">
               <ETADisplay
                 shipment={shipment}
-                eventCount={events.length}
                 locale={locale}
                 t={t}
               />
