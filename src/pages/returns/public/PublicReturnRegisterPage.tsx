@@ -8,6 +8,10 @@ import { useReturnsPortal } from '@/hooks/useReturnsPortal';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { sendReturnCreatedEvent } from '@/lib/embed-messaging';
 import { publicCreateReturn, publicUploadReturnPhoto } from '@/services/supabase';
+import {
+  lookupShipmentWithItemsByOrderAndEmail,
+  type LookupItem,
+} from '@/services/supabase/shipment-tracking';
 import type { DesiredSolution, ItemCondition } from '@/types/returns-hub';
 
 import { WizardStepIndicator } from '@/components/returns/public/WizardStepIndicator';
@@ -26,6 +30,8 @@ import { ConfirmationStep } from '@/components/returns/public/steps/Confirmation
 const STEP_LABELS = ['Identification', 'Select Items', 'Return Reason', 'Photos', 'Preferred Solution', 'Shipping', 'Confirmation'];
 
 // State
+export type LookupState = 'idle' | 'loading' | 'hit' | 'miss';
+
 interface WizardState {
   step: number;
   direction: 'forward' | 'backward';
@@ -40,6 +46,13 @@ interface WizardState {
   solution: DesiredSolution;
   shippingMethod: string;
   shippingAddress: ShippingAddress;
+  // Shipment lookup — set after step 0 succeeds. availableItems=null means
+  // we fall back to the legacy "all tenant products" picker. shipmentToken
+  // + shipmentNumber are recorded in rh_returns.metadata for the operator.
+  lookupState: LookupState;
+  shipmentToken: string | null;
+  shipmentNumber: string | null;
+  availableItems: LookupItem[] | null;
 }
 
 type WizardAction =
@@ -56,14 +69,18 @@ type WizardAction =
   | { type: 'SET_PHOTOS'; photos: File[] }
   | { type: 'SET_SOLUTION'; value: DesiredSolution }
   | { type: 'SET_SHIPPING'; value: string }
-  | { type: 'SET_SHIPPING_ADDRESS'; address: ShippingAddress };
+  | { type: 'SET_SHIPPING_ADDRESS'; address: ShippingAddress }
+  | { type: 'LOOKUP_START' }
+  | { type: 'LOOKUP_HIT'; trackingToken: string; shipmentNumber: string; items: LookupItem[] }
+  | { type: 'LOOKUP_MISS' }
+  | { type: 'LOOKUP_RESET' };
 
 const initialState: WizardState = {
   step: 0,
   direction: 'forward',
   orderNumber: '',
   email: '',
-  items: [{ name: '', quantity: 1, condition: 'used' as ItemCondition }],
+  items: [],
   reasonCategory: '',
   reasonSubcategory: '',
   reasonText: '',
@@ -72,6 +89,10 @@ const initialState: WizardState = {
   solution: 'refund',
   shippingMethod: 'print_label',
   shippingAddress: { name: '', company: '', street: '', postalCode: '', city: '', country: 'DE' },
+  lookupState: 'idle',
+  shipmentToken: null,
+  shipmentNumber: null,
+  availableItems: null,
 };
 
 function reducer(state: WizardState, action: WizardAction): WizardState {
@@ -83,9 +104,19 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
     case 'GO_TO_STEP':
       return { ...state, step: action.step, direction: action.step < state.step ? 'backward' : 'forward' };
     case 'SET_ORDER_NUMBER':
-      return { ...state, orderNumber: action.value };
+      // Editing identification fields invalidates a previous lookup result
+      // so the customer gets a fresh chance instead of stuck on a stale miss.
+      return {
+        ...state,
+        orderNumber: action.value,
+        lookupState: state.lookupState === 'miss' ? 'idle' : state.lookupState,
+      };
     case 'SET_EMAIL':
-      return { ...state, email: action.value };
+      return {
+        ...state,
+        email: action.value,
+        lookupState: state.lookupState === 'miss' ? 'idle' : state.lookupState,
+      };
     case 'SET_ITEMS':
       return { ...state, items: action.items };
     case 'SET_REASON_CATEGORY':
@@ -104,6 +135,45 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, shippingMethod: action.value };
     case 'SET_SHIPPING_ADDRESS':
       return { ...state, shippingAddress: action.address };
+    case 'LOOKUP_START':
+      return { ...state, lookupState: 'loading' };
+    case 'LOOKUP_HIT':
+      return {
+        ...state,
+        lookupState: 'hit',
+        shipmentToken: action.trackingToken,
+        shipmentNumber: action.shipmentNumber,
+        availableItems: action.items,
+        // Pre-fill the items list with the order's items but leave the
+        // quantity at 0 so the next step makes the customer actively pick
+        // what they're returning (default unchecked).
+        items: action.items.map((it) => ({
+          name: it.name,
+          productId: it.productId,
+          quantity: 0,
+          condition: 'used' as ItemCondition,
+          maxQuantity: it.quantity,
+          imageUrl: it.imageUrl,
+        })),
+        step: state.step + 1,
+        direction: 'forward',
+      };
+    case 'LOOKUP_MISS':
+      return {
+        ...state,
+        lookupState: 'miss',
+        shipmentToken: null,
+        shipmentNumber: null,
+        availableItems: null,
+      };
+    case 'LOOKUP_RESET':
+      return {
+        ...state,
+        lookupState: 'idle',
+        shipmentToken: null,
+        shipmentNumber: null,
+        availableItems: null,
+      };
     default:
       return state;
   }
@@ -121,8 +191,20 @@ export function PublicReturnRegisterPage() {
 
   const canProceed = () => {
     switch (state.step) {
-      case 0: return state.orderNumber.trim() && state.email.trim();
-      case 1: return state.items.some(i => i.name.trim());
+      case 0:
+        // Order + email entered AND we haven't already established that the
+        // lookup misses — the button stays disabled while we're loading or
+        // showing the miss block.
+        return !!(
+          state.orderNumber.trim() &&
+          state.email.trim() &&
+          state.lookupState !== 'loading' &&
+          state.lookupState !== 'miss'
+        );
+      case 1:
+        // At least one item with a positive quantity. Works for both the
+        // pre-filled order list (checkbox + qty) and the legacy free-form list.
+        return state.items.some((i) => i.name.trim() && i.quantity > 0);
       case 2: return true;
       case 3: return true;
       case 4: return true;
@@ -133,6 +215,28 @@ export function PublicReturnRegisterPage() {
       case 6: return true;
       default: return false;
     }
+  };
+
+  // Step-0 → step-1 transition: try to look up the shipment with the supplied
+  // order number + email. On hit the reducer advances; on miss the reducer
+  // surfaces the help block and the button stays disabled.
+  const advanceFromIdentification = async () => {
+    if (state.lookupState === 'loading') return;
+    dispatch({ type: 'LOOKUP_START' });
+    const result = await lookupShipmentWithItemsByOrderAndEmail(
+      state.orderNumber,
+      state.email,
+    );
+    if (!result || result.items.length === 0) {
+      dispatch({ type: 'LOOKUP_MISS' });
+      return;
+    }
+    dispatch({
+      type: 'LOOKUP_HIT',
+      trackingToken: result.trackingToken,
+      shipmentNumber: result.shipmentNumber,
+      items: result.items,
+    });
   };
 
   const handleSubmit = async () => {
@@ -147,12 +251,16 @@ export function PublicReturnRegisterPage() {
       desiredSolution: state.solution,
       shippingMethod: state.shippingMethod,
       shippingAddress: state.shippingAddress,
-      items: state.items.filter(i => i.name.trim()).map(i => ({
-        name: i.name,
-        quantity: i.quantity,
-        condition: i.condition,
-        productId: i.productId,
-      })),
+      shipmentToken: state.shipmentToken || undefined,
+      shipmentNumber: state.shipmentNumber || undefined,
+      items: state.items
+        .filter((i) => i.name.trim() && i.quantity > 0)
+        .map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          condition: i.condition,
+          productId: i.productId,
+        })),
     });
 
     if (result.success && result.returnNumber) {
@@ -182,6 +290,7 @@ export function PublicReturnRegisterPage() {
           <IdentificationStep
             orderNumber={state.orderNumber}
             email={state.email}
+            lookupState={state.lookupState}
             onOrderNumberChange={(v) => dispatch({ type: 'SET_ORDER_NUMBER', value: v })}
             onEmailChange={(v) => dispatch({ type: 'SET_EMAIL', value: v })}
           />
@@ -190,6 +299,8 @@ export function PublicReturnRegisterPage() {
         return (
           <SelectItemsStep
             items={state.items}
+            availableItems={state.availableItems}
+            shipmentNumber={state.shipmentNumber}
             onItemsChange={(items) => dispatch({ type: 'SET_ITEMS', items })}
           />
         );
@@ -295,9 +406,18 @@ export function PublicReturnRegisterPage() {
 
         {state.step < STEP_LABELS.length - 1 ? (
           <Button
-            onClick={() => dispatch({ type: 'NEXT_STEP' })}
+            onClick={() => {
+              if (state.step === 0) {
+                void advanceFromIdentification();
+              } else {
+                dispatch({ type: 'NEXT_STEP' });
+              }
+            }}
             disabled={!canProceed()}
           >
+            {state.lookupState === 'loading' && state.step === 0 ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : null}
             {t('Next')}
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>

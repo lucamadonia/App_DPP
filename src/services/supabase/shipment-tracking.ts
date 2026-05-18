@@ -389,6 +389,68 @@ export async function lookupShipmentByOrderAndEmail(
 }
 
 /**
+ * Lookup item shape returned by lookupShipmentWithItemsByOrderAndEmail —
+ * only the fields the returns-portal wizard needs to render an item picker.
+ */
+export interface LookupItem {
+  productId: string;
+  name: string;
+  imageUrl: string | null;
+  gtin: string | null;
+  quantity: number;
+}
+
+/**
+ * Returns-portal lookup: order number + email → shipment + the line items
+ * the customer actually ordered, so the wizard can show ONLY those items
+ * in step 2 instead of the full tenant catalogue. Combines two existing
+ * RPCs (lookup_shipment_by_order_email + get_public_shipment_items_by_token).
+ * Returns null on miss so the wizard can block and show its help link.
+ */
+export async function lookupShipmentWithItemsByOrderAndEmail(
+  orderNumber: string,
+  email: string,
+): Promise<
+  | {
+      trackingToken: string;
+      shipmentNumber: string;
+      status: string;
+      items: LookupItem[];
+    }
+  | null
+> {
+  const head = await lookupShipmentByOrderAndEmail(orderNumber, email);
+  if (!head) return null;
+
+  const { data, error } = await supabaseAnon.rpc('get_public_shipment_items_by_token', {
+    p_token: head.trackingToken,
+  });
+  if (error) {
+    console.error('[returns-lookup] items RPC failed:', error.message);
+    // Still surface the head so the wizard can decide to fall back to the
+    // full catalogue instead of blocking — but we treat it as a soft miss
+    // because we promised items. Null keeps the UX consistent.
+    return null;
+  }
+  type ItemRow = {
+    product_id: string;
+    product_name: string;
+    product_image_url: string | null;
+    product_gtin: string | null;
+    quantity: number;
+  };
+  const rows = (Array.isArray(data) ? data : []) as ItemRow[];
+  const items: LookupItem[] = rows.map((r) => ({
+    productId: r.product_id,
+    name: r.product_name,
+    imageUrl: r.product_image_url,
+    gtin: r.product_gtin,
+    quantity: r.quantity,
+  }));
+  return { ...head, items };
+}
+
+/**
  * Build the full magic-link URL for an admin to share with a customer.
  * Used by the admin shipment detail page.
  */

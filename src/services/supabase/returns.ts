@@ -462,6 +462,10 @@ export async function publicCreateReturn(
     shippingMethod: string;
     shippingAddress?: { name: string; company: string; street: string; postalCode: string; city: string; country: string };
     items: Array<{ name: string; quantity: number; condition?: string; productId?: string }>;
+    /** Tracking token of the matching wh_shipments row, if step 0 looked it up. */
+    shipmentToken?: string;
+    /** Human-readable shipment number for the operator's UI (e.g. SHP-20260512-FXYBM2). */
+    shipmentNumber?: string;
   }
 ): Promise<{ success: boolean; returnNumber?: string; error?: string }> {
   // Get tenant by slug
@@ -491,6 +495,11 @@ export async function publicCreateReturn(
       metadata: {
         source: 'public_portal',
         email: data.email,
+        // Set when the public wizard pre-filtered items via the shipment
+        // lookup — lets the operator jump straight back to the underlying
+        // wh_shipments row without re-matching by email.
+        ...(data.shipmentToken && { tracking_token: data.shipmentToken }),
+        ...(data.shipmentNumber && { shipment_number: data.shipmentNumber }),
         ...(data.shippingAddress && {
           customerName: data.shippingAddress.name,
           shippingCompany: data.shippingAddress.company || undefined,

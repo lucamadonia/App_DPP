@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Minus, X, Package, Check, ChevronsUpDown, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { useReturnsPortal } from '@/hooks/useReturnsPortal';
+import type { LookupItem } from '@/services/supabase/shipment-tracking';
 import type { ItemCondition } from '@/types/returns-hub';
 
 export interface WizardItem {
@@ -15,10 +17,19 @@ export interface WizardItem {
   productId?: string;
   quantity: number;
   condition: ItemCondition;
+  /** Set when the item came from a shipment lookup — caps the quantity stepper. */
+  maxQuantity?: number;
+  /** Product image from the shipment lookup, used in the order-only picker. */
+  imageUrl?: string | null;
 }
 
 interface SelectItemsStepProps {
   items: WizardItem[];
+  /** Populated when step 0 successfully looked up a shipment; null = legacy
+   *  "pick from full catalogue" mode for tenants without Trackbliss shipments. */
+  availableItems: LookupItem[] | null;
+  /** Display reference like "SHP-20260512-FXYBM2" — shown as a subtle confirmation. */
+  shipmentNumber: string | null;
   onItemsChange: (items: WizardItem[]) => void;
 }
 
@@ -143,7 +154,12 @@ function ProductCombobox({
   );
 }
 
-export function SelectItemsStep({ items, onItemsChange }: SelectItemsStepProps) {
+export function SelectItemsStep({
+  items,
+  availableItems,
+  shipmentNumber,
+  onItemsChange,
+}: SelectItemsStepProps) {
   const { t } = useTranslation('returns');
 
   const addItem = () => {
@@ -165,6 +181,103 @@ export function SelectItemsStep({ items, onItemsChange }: SelectItemsStepProps) 
     updated[index] = { ...updated[index], name, productId };
     onItemsChange(updated);
   };
+
+  // Order-specific picker: when step 0 returned items from a real shipment,
+  // show only those (checkbox + image + qty stepper). Default unchecked so
+  // the customer actively confirms what's going back.
+  if (availableItems !== null) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold mb-1">{t('Select Items')}</h2>
+          <p className="text-sm text-muted-foreground">
+            {t('Select the items from your order that you want to return')}
+          </p>
+          {shipmentNumber && (
+            <p className="text-xs text-muted-foreground/80 mt-1 font-mono">
+              {shipmentNumber}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {items.map((item, i) => {
+            const checked = item.quantity > 0;
+            const max = item.maxQuantity ?? 1;
+            return (
+              <label
+                key={item.productId || i}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-lg border bg-white cursor-pointer transition-colors',
+                  checked ? 'border-primary bg-primary/5' : 'hover:bg-muted/30',
+                )}
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(c) => {
+                    const next = c ? 1 : 0;
+                    updateItem(i, 'quantity', Math.min(next, max));
+                  }}
+                  className="shrink-0"
+                />
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="h-12 w-12 rounded object-cover shrink-0 bg-muted"
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded bg-muted flex items-center justify-center shrink-0">
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate leading-snug">{item.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {t('Ordered: {{count}}', { count: max })}
+                  </div>
+                </div>
+                {checked && (
+                  <div
+                    className="flex items-center gap-1 border rounded-lg bg-white shrink-0"
+                    // Stop the surrounding label from toggling the checkbox when
+                    // the customer just wants to change the quantity.
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => updateItem(i, 'quantity', Math.max(1, item.quantity - 1))}
+                      className="p-1.5 hover:bg-muted rounded-l-lg transition-colors"
+                      aria-label={t('Decrease quantity')}
+                      disabled={item.quantity <= 1}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-7 text-center text-sm font-medium tabular-nums">
+                      {item.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateItem(i, 'quantity', Math.min(max, item.quantity + 1))}
+                      className="p-1.5 hover:bg-muted rounded-r-lg transition-colors"
+                      aria-label={t('Increase quantity')}
+                      disabled={item.quantity >= max}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </label>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {t('items_select_at_least_one')}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
