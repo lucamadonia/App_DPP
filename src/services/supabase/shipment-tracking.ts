@@ -357,6 +357,38 @@ export async function createPublicSupportTicket(input: {
 }
 
 /**
+ * Public widget lookup: order number + email → tracking token.
+ * Called by the embeddable widget on shop.fambliss.de so a customer can
+ * find their shipment without having the magic link from the email.
+ * Returns null on miss (mismatch / unknown order) so the widget UI can
+ * show a friendly "not found".
+ */
+export async function lookupShipmentByOrderAndEmail(
+  orderNumber: string,
+  email: string,
+): Promise<{ trackingToken: string; shipmentNumber: string; status: string } | null> {
+  const cleanOrder = orderNumber.trim();
+  const cleanEmail = email.trim();
+  if (!cleanOrder || !cleanEmail) return null;
+
+  const { data, error } = await supabaseAnon.rpc('lookup_shipment_by_order_email', {
+    p_order: cleanOrder,
+    p_email: cleanEmail,
+  });
+  if (error) {
+    console.error('[widget-lookup] failed:', error.message);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.tracking_token) return null;
+  return {
+    trackingToken: row.tracking_token as string,
+    shipmentNumber: row.shipment_number as string,
+    status: row.status as string,
+  };
+}
+
+/**
  * Build the full magic-link URL for an admin to share with a customer.
  * Used by the admin shipment detail page.
  */

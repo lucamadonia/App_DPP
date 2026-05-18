@@ -95,5 +95,12 @@
   "Question about shipment {{number}}": "Frage zu Sendung {{number}}",
   "Support ticket {{number}} created": "Support-Ticket {{number}} erstellt — wir melden uns in Kürze.",
   "Please enter a valid email": "Bitte gib eine gültige E-Mail-Adresse ein.",
-  "Please describe your issue": "Bitte beschreibe dein Anliegen in der Nachricht."
+  "Please describe your issue": "Bitte beschreibe dein Anliegen in der Nachricht.",
+  "widget_title": "Sendung verfolgen",
+  "widget_subtitle": "Gib deine Bestellnummer und E-Mail ein, um den Live-Status zu sehen.",
+  "widget_order_label": "Bestellnummer",
+  "widget_email_label": "E-Mail-Adresse",
+  "widget_submit": "Paket verfolgen",
+  "widget_not_found": "Wir konnten keine Sendung mit dieser Bestellnummer und E-Mail finden. Bitte beides prüfen und erneut versuchen.",
+  "widget_powered_by": "Live-Tracking von Trackbliss"
 }

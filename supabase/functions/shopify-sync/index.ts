@@ -34,6 +34,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
+// Public Trackbliss origin used when we push a tracking URL to Shopify.
+// Overridable via the TRACKBLISS_PUBLIC_URL secret in case the tenant
+// runs under a custom domain. Defaults to the production origin.
+const TRACKBLISS_PUBLIC_URL = (Deno.env.get('TRACKBLISS_PUBLIC_URL') || 'https://dpp-app.fambliss.eu').replace(/\/+$/, '');
+
+/**
+ * Build the public Trackbliss tracking URL for a shipment, given its token.
+ * Returns null when the token is missing — callers fall back to whatever
+ * label URL they had before, so nothing breaks for legacy shipments.
+ */
+function trackblissTrackingUrl(token: string | null | undefined): string | null {
+  const clean = (token || '').trim().toLowerCase();
+  if (!clean) return null;
+  return `${TRACKBLISS_PUBLIC_URL}/t/${clean}`;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1430,7 +1446,11 @@ async function handleCreateFulfillment(supabase: any, tenantId: string, userId: 
       input.trackingInfo = {
         number: shipment.tracking_number,
         company: shipment.carrier || 'DHL',
-        url: shipment.label_url || undefined,
+        // Always prefer the Trackbliss public tracking page over the DHL label
+        // PDF. The Shopify shipping-confirmation email's "Track your order"
+        // button links to whatever we pass here, so this drives the entire
+        // post-purchase experience to our branded page.
+        url: trackblissTrackingUrl(shipment.tracking_token) ?? shipment.label_url ?? undefined,
       };
     }
     const createResp = await shopifyGraphQL(
@@ -1577,7 +1597,8 @@ async function handleUpdateFulfillmentTracking(supabase: any, tenantId: string, 
       trackingInfoInput: {
         number: shipment.tracking_number,
         company: shipment.carrier || 'DHL',
-        url: shipment.label_url || undefined,
+        // Send customers to the Trackbliss tracking page, not the raw DHL label.
+        url: trackblissTrackingUrl(shipment.tracking_token) ?? shipment.label_url ?? undefined,
       },
       notifyCustomer: true,
     };

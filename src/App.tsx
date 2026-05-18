@@ -45,6 +45,7 @@ const PublicCustomerPage = lazy(() => import('@/pages/public/PublicCustomerPage'
 const PublicCustomsPage = lazy(() => import('@/pages/public/PublicCustomsPage').then(m => ({ default: m.PublicCustomsPage })));
 const TransparencyPage = lazy(() => import('@/pages/public/TransparencyPage').then(m => ({ default: m.TransparencyPage })));
 const PublicShipmentTrackingPage = lazy(() => import('@/pages/public/PublicShipmentTrackingPage').then(m => ({ default: m.PublicShipmentTrackingPage })));
+const TrackingWidgetPage = lazy(() => import('@/pages/public/TrackingWidgetPage').then(m => ({ default: m.TrackingWidgetPage })));
 const PublicFeedbackPage = lazy(() => import('@/pages/feedback/public/PublicFeedbackPage').then(m => ({ default: m.PublicFeedbackPage })));
 const EmbedFeedbackPage = lazy(() => import('@/pages/feedback/public/EmbedFeedbackPage').then(m => ({ default: m.EmbedFeedbackPage })));
 const PublicIdeaSubmitPage = lazy(() => import('@/pages/feedback/public/PublicIdeaSubmitPage').then(m => ({ default: m.PublicIdeaSubmitPage })));
@@ -360,6 +361,10 @@ function NormalAppRoutes() {
 
         {/* Public Shipment Tracking (magic-link, no auth) */}
         <Route path="t/:token" element={<PublicShipmentTrackingPage />} />
+
+        {/* Embeddable Tracking Widget (iframe-friendly, no auth).
+            Designed for shop.fambliss.de — order number + email → magic link. */}
+        <Route path="widget/track" element={<TrackingWidgetPage />} />
 
         {/* Public Feedback Submission (token-protected, no auth) */}
         <Route path="feedback/:token" element={<PublicFeedbackPage />} />
