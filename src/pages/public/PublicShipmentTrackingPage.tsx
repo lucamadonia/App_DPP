@@ -1041,66 +1041,71 @@ export function PublicShipmentTrackingPage() {
 
       {/* SUPPORT DIALOG */}
       <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('Contact support')}</DialogTitle>
-            <DialogDescription>
-              {t('Shipment')} <span className="font-mono">{shipment.shipmentNumber}</span>
-              {' · '}
-              {shipment.recipientFirstName}
+        <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto p-4 sm:p-6 gap-3 sm:gap-4">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base sm:text-lg">{t('Contact support')}</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm break-words">
+              <span className="font-mono">{shipment.shipmentNumber}</span>
+              <span className="text-muted-foreground/60"> · </span>
+              <span className="break-words">{shipment.recipientFirstName}</span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-1">
               <Label htmlFor="support-email" className="text-xs">{t('Your email')}</Label>
               <Input
                 id="support-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
                 value={supportEmail}
                 onChange={(e) => setSupportEmail(e.target.value)}
                 placeholder="name@example.com"
                 disabled={supportSending}
+                className="text-base sm:text-sm"
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="support-subject" className="text-xs">{t('Subject')}</Label>
               <Input
                 id="support-subject"
                 value={supportSubject}
                 onChange={(e) => setSupportSubject(e.target.value)}
                 disabled={supportSending}
+                className="text-base sm:text-sm"
               />
             </div>
 
             {items.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs">{t('Affected products (optional)')}</Label>
-                <div className="rounded-lg border divide-y max-h-48 overflow-y-auto">
+                <div className="rounded-lg border divide-y max-h-44 sm:max-h-48 overflow-y-auto">
                   {items.map((item) => {
                     const checked = supportProductIds.includes(item.productId);
                     return (
                       <label
                         key={item.productId}
-                        className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                        className="flex items-center gap-2.5 px-2.5 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
                       >
                         <Checkbox
                           checked={checked}
                           onCheckedChange={() => toggleSupportProduct(item.productId)}
                           disabled={supportSending}
+                          className="shrink-0"
                         />
                         {item.productImageUrl && (
                           <img
                             src={item.productImageUrl}
                             alt=""
-                            className="h-10 w-10 rounded object-cover shrink-0 bg-muted"
+                            className="h-9 w-9 sm:h-10 sm:w-10 rounded object-cover shrink-0 bg-muted"
                           />
                         )}
                         <div className="text-sm min-w-0 flex-1">
-                          <div className="truncate font-medium">{item.productName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.quantity}× {item.productManufacturer ? '· ' + item.productManufacturer : ''}
+                          <div className="truncate font-medium leading-snug">{item.productName}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {item.quantity}×{item.productManufacturer ? ' · ' + item.productManufacturer : ''}
                           </div>
                         </div>
                       </label>
@@ -1110,7 +1115,7 @@ export function PublicShipmentTrackingPage() {
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="support-message" className="text-xs">{t('Your message')}</Label>
               <Textarea
                 id="support-message"
@@ -1120,17 +1125,24 @@ export function PublicShipmentTrackingPage() {
                 maxLength={4000}
                 placeholder={t('Describe your question or issue...')}
                 disabled={supportSending}
+                className="text-base sm:text-sm"
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSupportOpen(false)} disabled={supportSending}>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSupportOpen(false)}
+              disabled={supportSending}
+              className="w-full sm:w-auto"
+            >
               {t('Cancel')}
             </Button>
             <Button
               onClick={handleSupportSubmit}
               disabled={supportSending || !supportEmail.trim() || !supportMessage.trim()}
+              className="w-full sm:w-auto"
             >
               {supportSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               {t('Send to support')}
