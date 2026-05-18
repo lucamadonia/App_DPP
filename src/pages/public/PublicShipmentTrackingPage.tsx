@@ -179,8 +179,16 @@ function ETADisplay({ shipment, eventCount, locale, t }: {
   const diffD = Math.round(diffMs / 86_400_000);
   const isOverdue = diffMs < 0;
 
+  // If we have zero actual carrier scans, the predicted "should have
+  // arrived" date is just an estimate — don't trumpet it as overdue.
+  // Show a calm "Tracking-Update steht aus" message instead so customers
+  // don't think their parcel is lost when DHL simply hasn't scanned it.
+  const noEventsYet = eventCount === 0 && !shipment.deliveredAt;
+
   let mainText = '';
-  if (isOverdue) {
+  if (noEventsYet && isOverdue) {
+    mainText = t('Tracking-Update steht aus');
+  } else if (isOverdue) {
     mainText = t('Should have arrived');
   } else if (diffH < 6) {
     mainText = t('Arriving soon');

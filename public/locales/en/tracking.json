@@ -75,5 +75,6 @@
   "narration_cancelled": "This shipment was cancelled.",
   "dpp_locked_aria": "Item details unlock as your package travels",
   "dpp_unlocked_announce": "New item revealed",
-  "Unlocks at delivery": "Unlocks at delivery"
+  "Unlocks at delivery": "Unlocks at delivery",
+  "Tracking-Update steht aus": "Tracking update pending"
 }

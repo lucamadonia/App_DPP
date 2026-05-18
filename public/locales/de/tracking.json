@@ -75,5 +75,6 @@
   "narration_cancelled": "Diese Sendung wurde storniert.",
   "dpp_locked_aria": "Produktdetails werden freigeschaltet, sobald dein Paket näher kommt",
   "dpp_unlocked_announce": "Neues Produkt freigeschaltet",
-  "Unlocks at delivery": "Wird bei Zustellung freigeschaltet"
+  "Unlocks at delivery": "Wird bei Zustellung freigeschaltet",
+  "Tracking-Update steht aus": "Tracking-Update steht aus"
 }

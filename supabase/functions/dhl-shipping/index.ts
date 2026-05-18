@@ -881,6 +881,10 @@ async function pollTrackingForTenant(supabase: any, tenantId: string) {
         tracking_last_event_at: lastEventAt,
         tracking_last_location: lastLocation,
         tracking_polled_at: now,
+        // Persist the full event timeline so the public tracking page can
+        // show all scans, not just the latest one. Without this the cron
+        // poll leaves tracking_history empty and the UI says "no events".
+        tracking_history: events,
       };
 
       if (statusCode === 'delivered') {
