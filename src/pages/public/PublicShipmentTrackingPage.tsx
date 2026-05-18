@@ -57,6 +57,23 @@ const STAGE_ICONS: Record<ShipmentStage, typeof PackageOpen> = {
   delivered: PackageCheck,
 };
 
+/**
+ * Pick the tracking hero banner for the current shipment stage.
+ * Order: stage-specific URL → legacy single hero → null (caller falls back to
+ * first product image, then to branded gradient).
+ */
+function pickHeroForStage(
+  stage: ShipmentStage,
+  branding: PublicShipmentBranding,
+): string | null {
+  // 'shipped' / 'in_transit' / 'delivered' all share stage-3 (journey + DHL van + doorstep).
+  const stageUrl =
+    stage === 'created' ? branding.trackingHeroStage1 :
+    stage === 'packed'  ? branding.trackingHeroStage2 :
+                          branding.trackingHeroStage3;
+  return stageUrl ?? branding.trackingHeroUrl ?? null;
+}
+
 function mapToStage(status: string): ShipmentStage {
   switch (status) {
     case 'draft':
@@ -714,27 +731,50 @@ export function PublicShipmentTrackingPage() {
       <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8 space-y-4">
         {/* HERO — banner + greeting + ETA + pipeline */}
         <Card className="overflow-hidden">
-          {/* Hero banner: first product image, or branded gradient fallback */}
-          {items[0]?.productImageUrl ? (
-            <div className="relative h-32 sm:h-44 overflow-hidden bg-muted">
-              <img
-                src={items[0].productImageUrl}
-                alt={items[0].productName}
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
-            </div>
-          ) : (
-            <div
-              className="relative h-32 sm:h-44 overflow-hidden flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, var(--tracking-accent, #3B82F6) 0%, var(--tracking-accent-glow, #3B82F666) 100%)',
-              }}
-            >
-              <Package className="h-12 w-12 text-white/70" strokeWidth={1.5} />
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
-            </div>
-          )}
+          {/* Hero banner priority: stage-specific tracking hero → legacy hero → first product image → branded gradient.
+              Tracking heroes are 21:9 illustrations chosen by current shipment stage:
+                created → cart with products, packed → packing scene, shipped+ → journey w/ DHL van. */}
+          {(() => {
+            const heroUrl = pickHeroForStage(mapToStage(shipment.status), branding);
+            if (heroUrl) {
+              return (
+                <div className="relative aspect-[21/9] overflow-hidden bg-muted">
+                  <img
+                    key={heroUrl}
+                    src={heroUrl}
+                    alt={t('Tracking hero illustration')}
+                    className="h-full w-full object-cover"
+                    loading="eager"
+                    decoding="async"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
+                </div>
+              );
+            }
+            if (items[0]?.productImageUrl) {
+              return (
+                <div className="relative h-32 sm:h-44 overflow-hidden bg-muted">
+                  <img
+                    src={items[0].productImageUrl}
+                    alt={items[0].productName}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
+                </div>
+              );
+            }
+            return (
+              <div
+                className="relative h-32 sm:h-44 overflow-hidden flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, var(--tracking-accent, #3B82F6) 0%, var(--tracking-accent-glow, #3B82F666) 100%)',
+                }}
+              >
+                <Package className="h-12 w-12 text-white/70" strokeWidth={1.5} />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/0 to-card/0" />
+              </div>
+            );
+          })()}
           <CardContent className="pt-5 pb-6 px-5 sm:px-7">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
               {(() => {

@@ -59,6 +59,13 @@ export interface PublicShipmentBranding {
   logoUrl: string | null;
   appName: string;
   supportEmail: string | null;
+  /** Legacy single-image hero (still used as fallback when no stage-specific is set). */
+  trackingHeroUrl: string | null;
+  /** Stage-specific tracking heroes. Each is optional; null falls back to trackingHeroUrl,
+   *  then to product image, then to the branded gradient. */
+  trackingHeroStage1: string | null;  // order received / created
+  trackingHeroStage2: string | null;  // being packed
+  trackingHeroStage3: string | null;  // shipped / in_transit / delivered
 }
 
 export interface PublicTrackingEvent {
@@ -126,6 +133,10 @@ interface PublicBrandingRow {
   logo_url: string | null;
   app_name: string;
   support_email: string | null;
+  tracking_hero_url: string | null;
+  tracking_hero_stage_1: string | null;
+  tracking_hero_stage_2: string | null;
+  tracking_hero_stage_3: string | null;
 }
 
 function transformShipment(row: PublicShipmentRow): PublicShipmentSummary {
@@ -180,6 +191,10 @@ function transformBranding(row: PublicBrandingRow): PublicShipmentBranding {
     logoUrl: row.logo_url,
     appName: row.app_name,
     supportEmail: row.support_email,
+    trackingHeroUrl: row.tracking_hero_url,
+    trackingHeroStage1: row.tracking_hero_stage_1,
+    trackingHeroStage2: row.tracking_hero_stage_2,
+    trackingHeroStage3: row.tracking_hero_stage_3,
   };
 }
 
@@ -231,6 +246,10 @@ export async function getPublicShipmentByToken(
       logoUrl: null,
       appName: 'Trackbliss',
       supportEmail: null,
+      trackingHeroUrl: null,
+      trackingHeroStage1: null,
+      trackingHeroStage2: null,
+      trackingHeroStage3: null,
     },
   };
 }
