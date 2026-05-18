@@ -1,8 +1,31 @@
 import { useTranslation } from 'react-i18next';
+import {
+  PackageX,
+  Wrench,
+  PackageMinus,
+  FileWarning,
+  ThumbsDown,
+  Clock,
+  MoreHorizontal,
+  type LucideIcon,
+} from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { RhReturnReason, RhFollowUpQuestion } from '@/types/returns-hub';
+
+// Visual + i18n key per reason category. Anything not in this map falls
+// back to a neutral icon and the raw category slug — but the seven slugs
+// we seed today are covered.
+const REASON_META: Record<string, { icon: LucideIcon; labelKey: string }> = {
+  damaged:          { icon: PackageX,        labelKey: 'reason_damaged' },
+  defective:        { icon: Wrench,          labelKey: 'reason_defective' },
+  wrong_item:       { icon: PackageMinus,    labelKey: 'reason_wrong_item' },
+  not_as_described: { icon: FileWarning,     labelKey: 'reason_not_as_described' },
+  not_needed:       { icon: ThumbsDown,      labelKey: 'reason_not_needed' },
+  arrived_late:     { icon: Clock,           labelKey: 'reason_arrived_late' },
+  other:            { icon: MoreHorizontal,  labelKey: 'reason_other' },
+};
 
 interface ReturnReasonStepProps {
   reasons: RhReturnReason[];
@@ -40,41 +63,65 @@ export function ReturnReasonStep({
         <p className="text-sm text-muted-foreground">{t('Why are you returning?')}</p>
       </div>
 
-      {/* Reason category cards */}
+      {/* Reason category cards — icon + translated label, fallback to the
+          raw slug + neutral icon if the tenant adds custom categories. */}
       <div className="space-y-2">
         <Label>{t('Select a reason category')}</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {reasons.filter(r => r.active).map((reason) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {reasons.filter((r) => r.active).map((reason) => {
+            const meta = REASON_META[reason.category];
+            const Icon = meta?.icon ?? MoreHorizontal;
+            const label = meta ? t(meta.labelKey) : reason.category;
+            const isSelected = selectedCategory === reason.category;
+            return (
+              <button
+                key={reason.id}
+                type="button"
+                onClick={() => {
+                  onCategoryChange(reason.category);
+                  onSubcategoryChange('');
+                }}
+                className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border-2 text-center transition-all min-h-[5.5rem] ${
+                  isSelected
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-muted/30'
+                }`}
+              >
+                <Icon
+                  className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}
+                  strokeWidth={1.6}
+                />
+                <span className={`text-xs sm:text-sm font-medium leading-tight ${isSelected ? 'text-primary' : ''}`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+          {/* Always offer an Other fallback even if the tenant didn't seed it,
+              so the customer is never stuck. Hidden when the tenant explicitly
+              defined 'other' so we don't show two duplicate tiles. */}
+          {!reasons.some((r) => r.active && r.category === 'other') && (
             <button
-              key={reason.id}
               type="button"
               onClick={() => {
-                onCategoryChange(reason.category);
+                onCategoryChange('other');
                 onSubcategoryChange('');
               }}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${
-                selectedCategory === reason.category
+              className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border-2 text-center transition-all min-h-[5.5rem] ${
+                selectedCategory === 'other'
                   ? 'border-primary bg-primary/5 shadow-sm'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-muted/30'
               }`}
             >
-              <span className="font-medium text-sm">{reason.category}</span>
+              <MoreHorizontal
+                className={`h-6 w-6 ${selectedCategory === 'other' ? 'text-primary' : 'text-muted-foreground'}`}
+                strokeWidth={1.6}
+              />
+              <span className="text-xs sm:text-sm font-medium leading-tight">
+                {t('reason_other')}
+              </span>
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              onCategoryChange('other');
-              onSubcategoryChange('');
-            }}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              selectedCategory === 'other'
-                ? 'border-primary bg-primary/5 shadow-sm'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <span className="font-medium text-sm">{t('Other')}</span>
-          </button>
+          )}
         </div>
       </div>
 
