@@ -18,6 +18,7 @@ export interface PublicShipmentSummary {
   shipmentNumber: string;
   status: string;
   recipientFirstName: string;
+  recipientEmail: string | null;
   recipientCompany: string | null;
   shippingCity: string;
   shippingPostalCode: string;
@@ -92,6 +93,7 @@ interface PublicShipmentRow {
   shipment_number: string;
   status: string;
   recipient_first_name: string;
+  recipient_email: string | null;
   recipient_company: string | null;
   shipping_city: string;
   shipping_postal_code: string;
@@ -146,6 +148,7 @@ function transformShipment(row: PublicShipmentRow): PublicShipmentSummary {
     shipmentNumber: row.shipment_number,
     status: row.status,
     recipientFirstName: row.recipient_first_name,
+    recipientEmail: row.recipient_email,
     recipientCompany: row.recipient_company,
     shippingCity: row.shipping_city,
     shippingPostalCode: row.shipping_postal_code,
@@ -313,6 +316,44 @@ export async function reportShipmentNotReceived(
     return false;
   }
   return Boolean(data);
+}
+
+/**
+ * Customer opens a support ticket from the tracking page. Creates a public
+ * rh_ticket in the shipment's tenant with the chosen items recorded in
+ * metadata.affected_product_ids, plus an initial customer message in
+ * rh_ticket_messages. Returns the new ticket number on success.
+ */
+export async function createPublicSupportTicket(input: {
+  token: string;
+  email: string;
+  subject: string;
+  message: string;
+  affectedProductIds: string[];
+}): Promise<{ ticketNumber: string } | { error: string }> {
+  const cleanToken = input.token.trim().toLowerCase();
+  if (!cleanToken) return { error: 'invalid_token' };
+  const cleanEmail = input.email.trim().toLowerCase();
+  if (!cleanEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) {
+    return { error: 'invalid_email' };
+  }
+  const cleanMessage = input.message.trim();
+  if (!cleanMessage) return { error: 'empty_message' };
+
+  const { data, error } = await supabaseAnon.rpc('create_public_support_ticket', {
+    p_token: cleanToken,
+    p_email: cleanEmail,
+    p_subject: input.subject.slice(0, 200) || 'Support request',
+    p_message: cleanMessage.slice(0, 4000),
+    p_affected_product_ids: input.affectedProductIds,
+  });
+  if (error) {
+    console.error('[shipment-tracking] support ticket failed:', error.message);
+    return { error: error.message };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.ticket_number) return { error: 'no_ticket_number' };
+  return { ticketNumber: row.ticket_number as string };
 }
 
 /**

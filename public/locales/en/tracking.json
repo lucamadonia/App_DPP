@@ -81,5 +81,19 @@
   "hero_title_received": "Order received",
   "hero_title_packing": "Packing your order",
   "hero_title_in_transit": "On its way to you",
-  "hero_title_delivered": "Delivered"
+  "hero_title_delivered": "Delivered",
+  "Need help with this order?": "Need help with this order?",
+  "Open a support ticket — your shipment details and products are already prefilled.": "Open a support ticket — your shipment details and products are already prefilled.",
+  "Contact support": "Contact support",
+  "Shipment": "Shipment",
+  "Your email": "Your email",
+  "Subject": "Subject",
+  "Affected products (optional)": "Affected products (optional)",
+  "Your message": "Your message",
+  "Describe your question or issue...": "Describe your question or issue...",
+  "Send to support": "Send to support",
+  "Question about shipment {{number}}": "Question about shipment {{number}}",
+  "Support ticket {{number}} created": "Support ticket {{number}} created — we'll be in touch shortly.",
+  "Please enter a valid email": "Please enter a valid email address.",
+  "Please describe your issue": "Please describe your issue in the message field."
 }

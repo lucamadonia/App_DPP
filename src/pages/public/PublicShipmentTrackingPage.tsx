@@ -21,7 +21,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   Package, MapPin, Clock, Truck, Check, CheckCheck, AlertTriangle,
   RefreshCw, Share2, Recycle, Leaf, ExternalLink, ChevronDown, Loader2,
-  PackageCheck, PackageX, MailWarning, Box, PackageOpen,
+  PackageCheck, PackageX, MailWarning, Box, PackageOpen, LifeBuoy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,12 +29,16 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { applyPrimaryColor, applyDocumentTitle } from '@/lib/dynamic-theme';
 import {
   getPublicShipmentByToken,
   getPublicShipmentTrackingEvents,
   reportShipmentNotReceived,
+  createPublicSupportTicket,
   type PublicShipmentSummary,
   type PublicShipmentItem,
   type PublicShipmentBranding,
@@ -530,6 +534,14 @@ export function PublicShipmentTrackingPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
   const [reportSending, setReportSending] = useState(false);
+
+  // --- Support ticket dialog state ---
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportProductIds, setSupportProductIds] = useState<string[]>([]);
+  const [supportSending, setSupportSending] = useState(false);
   const lastStageRef = useRef<ShipmentStage | null>(null);
 
   /* ---------- Reset CSS vars on unmount ---------- */
@@ -640,6 +652,49 @@ export function PublicShipmentTrackingPage() {
       setReportMessage('');
     } else {
       toast.error(t('Failed to send report'));
+    }
+  };
+
+  // When opening the Support dialog, prefill from the shipment so the
+  // customer doesn't retype their name + email.
+  const openSupportDialog = () => {
+    if (!shipment) return;
+    if (!supportEmail) setSupportEmail(shipment.recipientEmail || '');
+    if (!supportSubject) {
+      setSupportSubject(
+        t('Question about shipment {{number}}', { number: shipment.shipmentNumber }),
+      );
+    }
+    setSupportOpen(true);
+  };
+
+  const toggleSupportProduct = (productId: string) => {
+    setSupportProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId],
+    );
+  };
+
+  const handleSupportSubmit = async () => {
+    if (!token) return;
+    setSupportSending(true);
+    const result = await createPublicSupportTicket({
+      token,
+      email: supportEmail,
+      subject: supportSubject,
+      message: supportMessage,
+      affectedProductIds: supportProductIds,
+    });
+    setSupportSending(false);
+    if ('ticketNumber' in result) {
+      toast.success(t('Support ticket {{number}} created', { number: result.ticketNumber }));
+      setSupportOpen(false);
+      setSupportMessage('');
+      setSupportProductIds([]);
+    } else {
+      const msg = result.error === 'invalid_email' ? t('Please enter a valid email')
+        : result.error === 'empty_message' ? t('Please describe your issue')
+        : t('Failed to send report');
+      toast.error(msg);
     }
   };
 
@@ -897,6 +952,28 @@ export function PublicShipmentTrackingPage() {
           </Card>
         )}
 
+        {/* SUPPORT — always visible, prefilled with shipment data */}
+        {!isCancelled && (
+          <Card>
+            <CardContent className="pt-5 pb-5 px-5 sm:px-7">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <LifeBuoy className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{t('Need help with this order?')}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {t('Open a support ticket — your shipment details and products are already prefilled.')}
+                    </div>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={openSupportDialog} className="shrink-0">
+                  {t('Contact support')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* DELIVERY ISSUE */}
         {isDelivered && (
           <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/10">
@@ -957,6 +1034,106 @@ export function PublicShipmentTrackingPage() {
             <Button onClick={handleReport} disabled={reportSending || !reportMessage.trim()}>
               {reportSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               {t('Send report')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SUPPORT DIALOG */}
+      <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('Contact support')}</DialogTitle>
+            <DialogDescription>
+              {t('Shipment')} <span className="font-mono">{shipment.shipmentNumber}</span>
+              {' · '}
+              {shipment.recipientFirstName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="support-email" className="text-xs">{t('Your email')}</Label>
+              <Input
+                id="support-email"
+                type="email"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                placeholder="name@example.com"
+                disabled={supportSending}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="support-subject" className="text-xs">{t('Subject')}</Label>
+              <Input
+                id="support-subject"
+                value={supportSubject}
+                onChange={(e) => setSupportSubject(e.target.value)}
+                disabled={supportSending}
+              />
+            </div>
+
+            {items.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs">{t('Affected products (optional)')}</Label>
+                <div className="rounded-lg border divide-y max-h-48 overflow-y-auto">
+                  {items.map((item) => {
+                    const checked = supportProductIds.includes(item.productId);
+                    return (
+                      <label
+                        key={item.productId}
+                        className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleSupportProduct(item.productId)}
+                          disabled={supportSending}
+                        />
+                        {item.productImageUrl && (
+                          <img
+                            src={item.productImageUrl}
+                            alt=""
+                            className="h-10 w-10 rounded object-cover shrink-0 bg-muted"
+                          />
+                        )}
+                        <div className="text-sm min-w-0 flex-1">
+                          <div className="truncate font-medium">{item.productName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.quantity}× {item.productManufacturer ? '· ' + item.productManufacturer : ''}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="support-message" className="text-xs">{t('Your message')}</Label>
+              <Textarea
+                id="support-message"
+                value={supportMessage}
+                onChange={(e) => setSupportMessage(e.target.value)}
+                rows={4}
+                maxLength={4000}
+                placeholder={t('Describe your question or issue...')}
+                disabled={supportSending}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSupportOpen(false)} disabled={supportSending}>
+              {t('Cancel')}
+            </Button>
+            <Button
+              onClick={handleSupportSubmit}
+              disabled={supportSending || !supportEmail.trim() || !supportMessage.trim()}
+            >
+              {supportSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {t('Send to support')}
             </Button>
           </DialogFooter>
         </DialogContent>

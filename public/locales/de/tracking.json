@@ -81,5 +81,19 @@
   "hero_title_received": "Bestellung eingegangen",
   "hero_title_packing": "Wir packen dein Paket",
   "hero_title_in_transit": "Unterwegs zu dir",
-  "hero_title_delivered": "Zugestellt"
+  "hero_title_delivered": "Zugestellt",
+  "Need help with this order?": "Brauchst du Hilfe zu dieser Bestellung?",
+  "Open a support ticket — your shipment details and products are already prefilled.": "Eröffne einen Support-Fall — deine Sendungs- und Produktdaten sind bereits vorausgefüllt.",
+  "Contact support": "Support kontaktieren",
+  "Shipment": "Sendung",
+  "Your email": "Deine E-Mail",
+  "Subject": "Betreff",
+  "Affected products (optional)": "Betroffene Produkte (optional)",
+  "Your message": "Deine Nachricht",
+  "Describe your question or issue...": "Beschreibe deine Frage oder dein Anliegen...",
+  "Send to support": "An Support senden",
+  "Question about shipment {{number}}": "Frage zu Sendung {{number}}",
+  "Support ticket {{number}} created": "Support-Ticket {{number}} erstellt — wir melden uns in Kürze.",
+  "Please enter a valid email": "Bitte gib eine gültige E-Mail-Adresse ein.",
+  "Please describe your issue": "Bitte beschreibe dein Anliegen in der Nachricht."
 }
