@@ -836,11 +836,15 @@ async function pollTrackingForTenant(supabase: any, tenantId: string) {
   // shipments always go first. The Edge Function has a wall-time budget; if
   // DHL is slow we still want the *new* labels to get their first poll instead
   // of starving forever behind already-known ones.
+  // Use ILIKE 'DHL%' instead of eq('DHL') — historically two carrier strings
+  // drifted in the DB ('DHL' and 'DHL Germany'), and an exact-match filter
+  // silently skipped half the fleet for two days. ILIKE matches both, plus
+  // any future variant like 'DHL Express'.
   const { data: shipments } = await supabase
     .from('wh_shipments')
     .select('id, shipment_number, tracking_number, status, tracking_polled_at')
     .eq('tenant_id', tenantId)
-    .eq('carrier', 'DHL')
+    .ilike('carrier', 'DHL%')
     .not('tracking_number', 'is', null)
     .in('status', ['shipped', 'label_created', 'in_transit'])
     .order('tracking_polled_at', { ascending: true, nullsFirst: true });
@@ -971,7 +975,8 @@ async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
 
   // For non-DHL carriers we have no live integration yet; fall back to the
   // cached tracking_history snapshot.
-  if (shipment.carrier !== 'DHL') {
+  // Accept any DHL variant in the legacy data (DHL, DHL Germany, DHL Express).
+  if (!shipment.carrier?.toUpperCase().startsWith('DHL')) {
     return json({ events: shipment.tracking_history || [], carrier: shipment.carrier });
   }
 
