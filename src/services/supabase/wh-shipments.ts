@@ -979,6 +979,36 @@ async function fireShipmentEmail(shipment: any, eventType: 'shipment_packed' | '
 
     const firstName = (shipment.recipient_name || '').trim().split(/\s+/)[0] || undefined;
 
+    // On delivered: silently create feedback_requests rows (one per variant)
+    // so the customer can click "Bewerten" right from the delivery mail and
+    // land on a populated review form. The dedicated `feedback_request` mail
+    // with star-buttons is sent later by the engagement cron, NOT here.
+    let feedbackUrl: string | undefined;
+    if (eventType === 'shipment_delivered') {
+      try {
+        const { createFeedbackRequestsForShipment } = await import('./feedback-requests');
+        const result = await createFeedbackRequestsForShipment(shipment.id, { silent: true });
+        if (result.firstToken) {
+          feedbackUrl = `https://dpp-app.fambliss.eu/feedback/${result.firstToken}`;
+        } else {
+          // No new request created — look up existing one (rerun on a re-delivered shipment)
+          const { data: existing } = await supabase
+            .from('feedback_requests')
+            .select('token')
+            .eq('shipment_id', shipment.id)
+            .in('status', ['pending', 'opened'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (existing?.token) {
+            feedbackUrl = `https://dpp-app.fambliss.eu/feedback/${existing.token}`;
+          }
+        }
+      } catch (e) {
+        console.warn('[wh-shipments] feedback request creation failed (non-fatal):', e);
+      }
+    }
+
     await triggerPublicEmailNotification(shipment.tenant_id, eventType, {
       recipientEmail: shipment.recipient_email,
       customerName: shipment.recipient_name || undefined,
@@ -988,6 +1018,7 @@ async function fireShipmentEmail(shipment: any, eventType: 'shipment_packed' | '
       trackingNumber: shipment.tracking_number || undefined,
       trackingUrl,
       itemCount: itemCount || undefined,
+      feedbackUrl,
     });
   } catch (err) {
     // Never block the status update — mails are best-effort.

@@ -38,9 +38,13 @@ function transform(row: any): FeedbackRequest {
  * Reuses the existing 10-char tracking-token generator (Postgres function).
  * Triggers the request email via the shared notification trigger.
  */
-export async function createFeedbackRequestsForShipment(shipmentId: string): Promise<{
+export async function createFeedbackRequestsForShipment(
+  shipmentId: string,
+  options: { silent?: boolean } = {},
+): Promise<{
   created: number;
   emailsSent: number;
+  firstToken?: string;
   error?: string;
 }> {
   const tenantId = await getCurrentTenantId();
@@ -144,7 +148,7 @@ export async function createFeedbackRequestsForShipment(shipmentId: string): Pro
   // sibling requests via the shipment_id join.
   const firstToken = inserted?.[0]?.token;
   let emailsSent = 0;
-  if (firstToken) {
+  if (firstToken && !options.silent) {
     try {
       // Dynamic import to avoid pulling the email module unless needed
       const mod = await import('./rh-notification-trigger');
@@ -172,7 +176,7 @@ export async function createFeedbackRequestsForShipment(shipmentId: string): Pro
     }
   }
 
-  return { created: rows.length, emailsSent };
+  return { created: rows.length, emailsSent, firstToken };
 }
 
 export async function getFeedbackRequests(filter?: FeedbackRequestFilter): Promise<FeedbackRequest[]> {
