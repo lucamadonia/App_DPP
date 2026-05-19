@@ -925,7 +925,74 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
     }
   }
 
+  // Fire-and-forget lifecycle email — only on genuine forward transitions
+  // into one of the customer-facing milestones. The notification trigger
+  // dedups inside a 365-day window per shipment_id, so retries / status
+  // flickers never cause double-sends.
+  const fired = decideShipmentMailEvent(oldStatus, status);
+  if (fired && data.recipient_email) {
+    void fireShipmentEmail(data, fired);
+  }
+
   return transformShipment(data);
+}
+
+/**
+ * Map a forward status transition to its customer-facing email event.
+ * Returns null when there's nothing to send (e.g. moving label_created
+ * back to packed, or shipped → in_transit where the customer already got
+ * the shipped mail).
+ */
+function decideShipmentMailEvent(
+  from: ShipmentStatus,
+  to: ShipmentStatus,
+): 'shipment_packed' | 'shipment_shipped' | 'shipment_delivered' | null {
+  if (statusIndex(to) <= statusIndex(from)) return null;
+  if (to === 'packed')    return 'shipment_packed';
+  if (to === 'shipped')   return 'shipment_shipped';
+  if (to === 'delivered') return 'shipment_delivered';
+  return null;
+}
+
+/**
+ * Build the notification context from a shipment row and trigger the public
+ * email path. We use the public trigger so the same code path serves both
+ * admin-initiated status updates and any future automation (cron, webhook).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fireShipmentEmail(shipment: any, eventType: 'shipment_packed' | 'shipment_shipped' | 'shipment_delivered') {
+  try {
+    const { triggerPublicEmailNotification } = await import('./rh-notification-trigger');
+
+    // Pull a quick item count + first-product image for the hero — keeps the
+    // mail useful even before the product onboarding fields are filled.
+    const { data: items } = await supabase
+      .from('wh_shipment_items')
+      .select('quantity')
+      .eq('shipment_id', shipment.id);
+    const itemCount = (items || []).reduce((acc: number, r: { quantity: number }) => acc + (r.quantity || 0), 0);
+
+    const trackingToken = (shipment.tracking_token || '').trim().toLowerCase();
+    const trackingUrl = trackingToken
+      ? `https://dpp-app.fambliss.eu/t/${trackingToken}`
+      : undefined;
+
+    const firstName = (shipment.recipient_name || '').trim().split(/\s+/)[0] || undefined;
+
+    await triggerPublicEmailNotification(shipment.tenant_id, eventType, {
+      recipientEmail: shipment.recipient_email,
+      customerName: shipment.recipient_name || undefined,
+      firstName,
+      shipmentId: shipment.id,
+      shipmentNumber: shipment.shipment_number,
+      trackingNumber: shipment.tracking_number || undefined,
+      trackingUrl,
+      itemCount: itemCount || undefined,
+    });
+  } catch (err) {
+    // Never block the status update — mails are best-effort.
+    console.warn('[wh-shipments] lifecycle mail trigger failed:', err);
+  }
 }
 
 export async function cancelShipment(id: string): Promise<WhShipment> {

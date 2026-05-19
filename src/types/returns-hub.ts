@@ -291,9 +291,24 @@ export type RhNotificationEventType =
   | 'voucher_issued'
   | 'feedback_request'
   | 'return_reminder'
-  | 'return_status_update';
+  | 'return_status_update'
+  // Shipment lifecycle — fired by wh_shipments status-change.
+  // shipment_packed = picked & packed, awaiting carrier handoff.
+  // shipment_shipped = label scanned by DHL, on its way.
+  // shipment_delivered = DHL confirmed delivery; this mail carries the
+  // "first steps with your products" content blocks.
+  | 'shipment_packed'
+  | 'shipment_shipped'
+  | 'shipment_delivered'
+  // Post-delivery engagement — fired by the daily engagement cron.
+  // day_1 = onboarding follow-up, day_7 = check-in, day_14 = review,
+  // day_30 = community / idea-board invite.
+  | 'engagement_day_1'
+  | 'engagement_day_7'
+  | 'engagement_day_14'
+  | 'engagement_day_30';
 
-export type EmailTemplateCategory = 'returns' | 'tickets' | 'general';
+export type EmailTemplateCategory = 'returns' | 'tickets' | 'general' | 'shipment';
 
 export interface RhEmailTemplate {
   id: string;

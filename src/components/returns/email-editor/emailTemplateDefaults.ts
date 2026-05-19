@@ -793,6 +793,298 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
       },
     },
   },
+
+  // ─── SHIPMENT LIFECYCLE (3) ───────────────────
+  // Triggered by wh_shipments status-change. All three carry {{shipmentNumber}}
+  // and a {{trackingUrl}} that points at our branded /t/{token} page.
+  {
+    eventType: 'shipment_packed',
+    category: 'shipment',
+    name: 'Order Being Packed',
+    description: 'Anti-anxiety message — we picked + packed, awaiting carrier handoff',
+    subjectTemplate: 'Wir packen deine Bestellung {{shipmentNumber}}',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\nwir packen deine Bestellung gerade liebevoll zusammen. Sobald sie DHL übergeben ist, bekommst du eine Versandbestätigung mit Tracking-Link.\n\nBis gleich!\nDein Fambliss-Team',
+    sortOrder: 100,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'wir packen deine Bestellung gerade liebevoll zusammen. Sobald das Paket DHL übergeben ist, bekommst du die Versandbestätigung mit deinem Live-Tracking-Link.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'info-box', id: makeId(), label: 'Bestellung', value: '{{shipmentNumber}}', backgroundColor: '#f8f4ee', borderColor: '#c9a661' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Bis gleich,\ndein Fambliss-Team 💛' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'We are packing your order {{shipmentNumber}}',
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'We are carefully packing your order. Once handed over to DHL you will receive the shipping confirmation with a live tracking link.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'info-box', id: makeId(), label: 'Order', value: '{{shipmentNumber}}', backgroundColor: '#f8f4ee', borderColor: '#c9a661' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'See you soon,\nthe Fambliss team 💛' },
+          ],
+        },
+      },
+    },
+  },
+  {
+    eventType: 'shipment_shipped',
+    category: 'shipment',
+    name: 'Shipment Shipped',
+    description: 'Sent the moment DHL scans the label — links to Trackbliss tracking page',
+    subjectTemplate: 'Deine Bestellung {{shipmentNumber}} ist unterwegs',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\ndein Paket ist unterwegs zu dir! Hier dein Live-Tracking-Link: {{trackingUrl}}',
+    sortOrder: 110,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'dein Paket ist jetzt offiziell unterwegs zu dir. Verfolge den Status live mit dem Button unten — du siehst alle Stationen, Bilder deiner Produkte und kannst direkt unseren Support erreichen, falls etwas unklar ist.' },
+        { type: 'spacer', id: makeId(), height: 20 },
+        { type: 'button', id: makeId(), label: 'Sendung verfolgen', url: '{{trackingUrl}}', alignment: 'center', backgroundColor: '#c9a661', textColor: '#ffffff', borderRadius: 8 },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'info-box', id: makeId(), label: 'Sendungsnummer', value: '{{shipmentNumber}}', backgroundColor: '#f8f4ee', borderColor: '#c9a661' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Wir freuen uns für dich,\ndein Fambliss-Team' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'Your order {{shipmentNumber}} is on its way',
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'Your parcel is officially on its way. Track it live with the button below — see every step, the products inside, and reach our support right from the tracking page.' },
+            { type: 'spacer', id: makeId(), height: 20 },
+            { type: 'button', id: makeId(), label: 'Track shipment', url: '{{trackingUrl}}', alignment: 'center', backgroundColor: '#c9a661', textColor: '#ffffff', borderRadius: 8 },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'info-box', id: makeId(), label: 'Tracking number', value: '{{shipmentNumber}}', backgroundColor: '#f8f4ee', borderColor: '#c9a661' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'See you soon,\nthe Fambliss team' },
+          ],
+        },
+      },
+    },
+  },
+  {
+    eventType: 'shipment_delivered',
+    category: 'shipment',
+    name: 'Shipment Delivered',
+    description: 'Sent on DHL delivery confirmation — celebrates arrival + previews first steps',
+    subjectTemplate: 'Dein Paket ist da! Erste Schritte mit Fambliss',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\ndein Paket wurde zugestellt. Hier sind ein paar Tipps für den ersten Tag mit deinen Produkten.\n\nMorgen schicken wir dir die ersten Mini-Übungen pro Produkt.',
+    sortOrder: 120,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: '🎉 Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'dein Paket ist angekommen! Wir hoffen, du freust dich genauso wie wir, dass es bei dir ist.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Bevor du loslegst — drei kleine Tipps:\n\n• Pack alles ruhig aus, lass dein Kind dabei sein\n• Räum dir eine Ecke frei wo die Magnetwand hin kann\n• Lade die Lichter direkt einmal voll, dann sind sie morgen einsatzbereit' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Morgen schicken wir dir per Mail die ersten Mini-Übungen pro Produkt — du musst nichts vorbereiten, einfach klicken und loslegen.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Viel Spaß,\ndein Fambliss-Team 💛' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'Your parcel arrived! First steps with Fambliss',
+          blocks: [
+            { type: 'text', id: makeId(), content: '🎉 Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'Your parcel is with you. We hope you are as excited as we are.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Three small tips before you start:\n\n• Unpack together with your child\n• Find a wall spot for the magnetic board\n• Charge the lights once, they will be ready tomorrow' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Tomorrow we will send you the first mini-exercises per product — no prep needed, just click and go.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Have fun,\nthe Fambliss team 💛' },
+          ],
+        },
+      },
+    },
+  },
+
+  // ─── ENGAGEMENT (4) ───────────────────────────
+  // Triggered by daily cron based on delivered_at + N days. The
+  // {{productsHtml}} placeholder is rendered by the shipment-engagement-mails
+  // edge function and contains one card per product in the shipment with
+  // image + onboarding bullets pulled from products.onboarding_steps.
+  {
+    eventType: 'engagement_day_1',
+    category: 'shipment',
+    name: 'Engagement — Day 1 onboarding',
+    description: 'Sent 1 day after delivered_at — concrete first exercises per product',
+    subjectTemplate: 'Erste Übungen mit deinen Fambliss-Produkten',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\nhier sind die ersten konkreten Schritte für jedes deiner Produkte.\n\n{{productsHtml}}',
+    sortOrder: 130,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'wir hoffen, das Auspacken hat gestern Spaß gemacht. Heute starten wir mit den ersten kleinen Übungen — alles 5-Minuten-fit, alles ohne Vorbereitung.' },
+        { type: 'spacer', id: makeId(), height: 20 },
+        { type: 'text', id: makeId(), content: '{{productsHtml}}' },
+        { type: 'spacer', id: makeId(), height: 20 },
+        { type: 'text', id: makeId(), content: 'Wir hören in einer Woche wieder von dir — bis dahin alles Gute!\n\nDein Fambliss-Team' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'First exercises with your Fambliss products',
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'We hope unpacking was fun. Today we kick off with the first small exercises — all 5-minute friendly, no prep needed.' },
+            { type: 'spacer', id: makeId(), height: 20 },
+            { type: 'text', id: makeId(), content: '{{productsHtml}}' },
+            { type: 'spacer', id: makeId(), height: 20 },
+            { type: 'text', id: makeId(), content: 'We will check in again in a week — all the best until then!\n\nThe Fambliss team' },
+          ],
+        },
+      },
+    },
+  },
+  {
+    eventType: 'engagement_day_7',
+    category: 'shipment',
+    name: 'Engagement — Day 7 check-in',
+    description: 'Sent 7 days after delivery — friendly check-in + invitation to share',
+    subjectTemplate: 'Wie läuft es bei euch?',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\neine Woche mit deinen Fambliss-Produkten — wie läuft es bei euch? Antworte direkt auf diese Mail, wir lesen jede.',
+    sortOrder: 140,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'eine Woche mit Fambliss — wie war sie? Gab es einen Moment, der euch zum Lachen gebracht hat? Eine Routine, die plötzlich klappt? Oder etwas, das noch nicht so läuft wie erhofft?' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Antworte direkt auf diese Mail — wir lesen jede Nachricht persönlich.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Bis bald,\ndein Fambliss-Team 💛' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'How is it going so far?',
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'One week of Fambliss — how has it been? Any moment that made you laugh? A routine that suddenly works? Or something that is not yet clicking?' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Just reply to this email — we read every message personally.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Speak soon,\nthe Fambliss team 💛' },
+          ],
+        },
+      },
+    },
+  },
+  {
+    eventType: 'engagement_day_14',
+    category: 'shipment',
+    name: 'Engagement — Day 14 review request',
+    description: 'Sent 14 days after delivery — asks for a product review',
+    subjectTemplate: 'Würdest du uns mit einer kurzen Bewertung helfen?',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\nzwei Wochen mit deinen Fambliss-Produkten. Wenn du magst, hilf anderen Familien mit einer kurzen Bewertung.\n\n{{productsHtml}}',
+    sortOrder: 150,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'zwei Wochen Fambliss bei euch — wir hoffen, ihr habt euch eingelebt. Wenn dir etwas richtig gut gefällt, würdest du uns mit einer kurzen Bewertung helfen?' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Andere Eltern lesen genau diese Erfahrungsberichte, bevor sie sich entscheiden — dein Wort hat Gewicht.' },
+        { type: 'spacer', id: makeId(), height: 20 },
+        { type: 'text', id: makeId(), content: '{{productsHtml}}' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Danke von Herzen,\ndein Fambliss-Team 💛' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'Would you help us with a quick review?',
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'Two weeks of Fambliss in your home — we hope you have settled in. If something really clicks for you, would you help us with a quick review?' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Other parents read exactly these stories before deciding — your words matter.' },
+            { type: 'spacer', id: makeId(), height: 20 },
+            { type: 'text', id: makeId(), content: '{{productsHtml}}' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'Thank you from the bottom of our hearts,\nthe Fambliss team 💛' },
+          ],
+        },
+      },
+    },
+  },
+  {
+    eventType: 'engagement_day_30',
+    category: 'shipment',
+    name: 'Engagement — Day 30 community invite',
+    description: 'Sent 30 days after delivery — invites to the Idea Board to co-create',
+    subjectTemplate: 'Was würdest du an Fambliss verbessern?',
+    bodyTemplate:
+      'Hallo {{customerName}},\n\nein Monat mit Fambliss. Wir bauen die Produkte mit unserer Community weiter — sag uns, was dir fehlt!',
+    sortOrder: 160,
+    designConfig: {
+      layout: DEFAULT_LAYOUT,
+      header: DEFAULT_HEADER,
+      blocks: [
+        { type: 'text', id: makeId(), content: 'Hallo {{customerName}},' },
+        { type: 'spacer', id: makeId(), height: 12 },
+        { type: 'text', id: makeId(), content: 'ein ganzer Monat mit Fambliss — wir hoffen, ihr habt eure Routinen gefunden. Wir bauen unsere Produkte gemeinsam mit unserer Community weiter. Wenn dir etwas fehlt, eine Idee einfällt, oder du etwas ganz anders machen würdest:' },
+        { type: 'spacer', id: makeId(), height: 20 },
+        { type: 'button', id: makeId(), label: 'Idee einreichen oder abstimmen', url: 'https://shop.fambliss.de/pages/ideen', alignment: 'center', backgroundColor: '#c9a661', textColor: '#ffffff', borderRadius: 8 },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Wir lesen alles und antworten persönlich. Die besten Ideen werden gemeinsam zur Abstimmung gestellt — und wenn dein Vorschlag gewinnt, bekommst du das fertige Produkt geschenkt.' },
+        { type: 'spacer', id: makeId(), height: 16 },
+        { type: 'text', id: makeId(), content: 'Bis bald,\ndein Fambliss-Team 💛' },
+      ],
+      footer: DEFAULT_FOOTER_EN,
+      locales: {
+        en: {
+          subjectTemplate: 'What would you improve about Fambliss?',
+          blocks: [
+            { type: 'text', id: makeId(), content: 'Hi {{customerName}},' },
+            { type: 'spacer', id: makeId(), height: 12 },
+            { type: 'text', id: makeId(), content: 'A full month with Fambliss — we hope you have found your routines. We build our products together with our community. If something is missing, an idea comes to mind, or you would do things differently:' },
+            { type: 'spacer', id: makeId(), height: 20 },
+            { type: 'button', id: makeId(), label: 'Submit or vote on an idea', url: 'https://shop.fambliss.de/pages/ideas', alignment: 'center', backgroundColor: '#c9a661', textColor: '#ffffff', borderRadius: 8 },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'We read everything and reply personally. The best ideas go up for community vote — and if yours wins, you get the finished product for free.' },
+            { type: 'spacer', id: makeId(), height: 16 },
+            { type: 'text', id: makeId(), content: 'See you soon,\nthe Fambliss team 💛' },
+          ],
+        },
+      },
+    },
+  },
 ];
 
 export function getDefaultTemplate(eventType: RhNotificationEventType) {
