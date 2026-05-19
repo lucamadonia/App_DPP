@@ -48,6 +48,87 @@ export interface NotificationContext {
   hrbNumber?: string;
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Phase D — Family-Joy Mail-Hub cutover
+//
+// When VITE_MAIL_HUB_VIA_FAMILY_JOY=true the notification trigger POSTs
+// to the Family-Joy mail-event-receiver edge function instead of writing
+// to rh_notifications + invoking the local send-email function. The
+// local rh_notifications row is still written as a *mirror* so the
+// admin UIs in Trackbliss (e.g. /returns/notifications) keep working
+// without code changes. On Family-Joy delivery success the mirror's
+// status is updated to 'sent'; on failure we fall back to the legacy
+// local send-email pipeline so customers always get a mail eventually.
+//
+// To activate:
+//   1) Deploy Family-Joy mail-event-receiver (see family-joy/docs/MAIL-HUB-DEPLOY.md)
+//   2) Add to App_DPP/.env (or Vercel env):
+//      VITE_MAIL_HUB_VIA_FAMILY_JOY=true
+//      VITE_MAIL_HUB_URL=https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
+//      VITE_MAIL_HUB_SECRET=<MAIL_EVENT_RECEIVER_SECRET from Family-Joy>
+//   3) Re-enable Phase-1 shipment templates: node scripts/disable-shipment-templates.mjs (flip to enable=true)
+// ────────────────────────────────────────────────────────────────────
+
+const MAIL_HUB_ENABLED = (import.meta.env.VITE_MAIL_HUB_VIA_FAMILY_JOY || '') === 'true';
+const MAIL_HUB_URL = import.meta.env.VITE_MAIL_HUB_URL || '';
+const MAIL_HUB_SECRET = import.meta.env.VITE_MAIL_HUB_SECRET || '';
+
+/** HMAC-SHA256(hex) over the request body. Family-Joy mail-event-receiver
+ *  uses constant-time compare on the same secret. */
+async function hmacHex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Forward an event to Family-Joy mail-event-receiver. Returns true on 2xx,
+ * false otherwise so the caller can decide to fall back to the local pipe.
+ */
+async function postToFamilyJoy(input: {
+  eventType: RhNotificationEventType;
+  sourceEventId: string;
+  recipientEmail: string;
+  language?: string;
+  context: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}): Promise<boolean> {
+  if (!MAIL_HUB_ENABLED || !MAIL_HUB_URL) return false;
+  const body = JSON.stringify({
+    eventType: input.eventType,
+    source: 'trackbliss',
+    sourceEventId: input.sourceEventId,
+    recipientEmail: input.recipientEmail,
+    language: input.language || 'de',
+    userType: 'customer',
+    context: input.context,
+    metadata: input.metadata,
+  });
+  try {
+    const signature = MAIL_HUB_SECRET ? await hmacHex(MAIL_HUB_SECRET, body) : '';
+    const res = await fetch(MAIL_HUB_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(signature ? { 'X-Hook-Signature': signature } : {}),
+      },
+      body,
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('[mail-hub] POST failed, will fall back to local pipeline:', err);
+    return false;
+  }
+}
+
 /**
  * Directly invoke the send-email Edge Function after creating a notification record.
  * This bypasses the need for a Database Webhook (which isn't configured).
@@ -57,6 +138,38 @@ async function sendNotificationEmail(
   notificationRecord: Record<string, unknown>,
   client?: typeof supabase
 ) {
+  // Phase D — when the mail-hub is enabled, the Family-Joy receiver is the
+  // source of truth for the actual SMTP send. We still wrote a row into
+  // rh_notifications above (so Trackbliss admin UIs stay populated), but
+  // we forward to Family-Joy instead of invoking Trackbliss's send-email.
+  if (MAIL_HUB_ENABLED) {
+    const ok = await postToFamilyJoy({
+      eventType: notificationRecord.template as RhNotificationEventType,
+      sourceEventId: `trackbliss:rh_notif:${notificationRecord.id}`,
+      recipientEmail: notificationRecord.recipient_email as string,
+      language: (notificationRecord.metadata as { locale?: string } | undefined)?.locale,
+      context: {
+        // Pass through the rendered subject + content so the receiver can
+        // skip its own template lookup if the same trigger_event happens
+        // to be missing in Family-Joy. The receiver still prefers its own
+        // template lookup when present (Phase C imports cover this).
+        renderedSubject: notificationRecord.subject,
+        renderedBody: notificationRecord.content,
+      },
+      metadata: {
+        shipment_id: notificationRecord.wh_shipment_id,
+        return_id: notificationRecord.return_id,
+        ticket_id: notificationRecord.ticket_id,
+        customer_id: notificationRecord.customer_id,
+        ...(notificationRecord.metadata as Record<string, unknown> | null),
+      },
+    });
+    if (ok) return;
+    // If Family-Joy is down we keep the customer journey safe by silently
+    // falling through to the legacy local send-email pipeline.
+    console.warn('[mail-hub] forward failed, using local fallback');
+  }
+
   try {
     if (client && client !== supabase) {
       // Public (anon) context — use direct invoke (no session refresh needed)
