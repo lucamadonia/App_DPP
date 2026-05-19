@@ -144,7 +144,7 @@ export interface EmailDesignConfig {
   locales?: Record<string, EmailLocaleContent>;
 }
 
-export type EmailTemplateCategory = 'returns' | 'tickets' | 'general';
+export type EmailTemplateCategory = 'returns' | 'tickets' | 'general' | 'shipment';
 
 export interface TemplateVariable {
   key: string;
