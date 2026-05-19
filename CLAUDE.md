@@ -1462,6 +1462,152 @@ Route: `/settings/billing`. 4 sections: Plans (monthly/yearly toggle), Add-on Mo
 
 `billing` — 70+ keys in `public/locales/{en,de}/billing.json` covering plans, modules, credits, invoices, upgrade prompts.
 
+## Mail Hub Integration (Family-Joy)
+
+### Overview
+
+Trackbliss schickt seit Phase D des Mail-Hub-Konsolidierungs-Projekts (2026-05-19) Customer-Mails **nicht mehr selbst** über die lokale `send-email` Edge Function, sondern POSTet Events an die **Family-Joy mail-event-receiver** Edge Function. Family-Joy ist das zentrale Mail-System für alle Fambliss-Properties (Trackbliss + Shopify-Store + Family-Joy intern) und hält Templates, sendet via all-inkl SMTP, trackt Opens/Clicks, bietet Per-Customer-Mail-History und Reporting-Dashboard.
+
+**Why:** Vor Phase D liefen Customer-Mails durch 3 Systeme — unübersichtlich, 3 Template-Editoren, 3 SMTP-Configs, kein 360°-Customer-View. Family-Joy ist Single-Tenant-Fambliss-only mit existierender Auth-Mail-Infrastruktur — naheliegender Ort für Konsolidierung.
+
+### Feature-Flag-Architektur
+
+Die Cutover passiert in `src/services/supabase/rh-notification-trigger.ts` via 3 Env-Variablen:
+
+```ts
+const MAIL_HUB_ENABLED = (import.meta.env.VITE_MAIL_HUB_VIA_FAMILY_JOY || '') === 'true';
+const MAIL_HUB_URL = import.meta.env.VITE_MAIL_HUB_URL || '';
+const MAIL_HUB_SECRET = import.meta.env.VITE_MAIL_HUB_SECRET || '';
+```
+
+**Wenn `MAIL_HUB_ENABLED=true`**: `sendNotificationEmail()` ruft `postToFamilyJoy()` mit HMAC-SHA256-Signatur auf, statt einen `rh_notifications` Insert + lokale `send-email` Function zu triggern.
+
+**Wenn `MAIL_HUB_ENABLED=false` (oder env var nicht gesetzt)**: Legacy-Pfad — `rh_notifications` Insert + lokale Pipeline. Diese fallback-Logik bleibt erhalten als Rollback-Mechanismus.
+
+### POST-Contract zu Family-Joy
+
+```
+POST https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
+Content-Type: application/json
+X-Hook-Signature: <hex sha256(rawBody, MAIL_EVENT_RECEIVER_SECRET)>
+
+{
+  "eventType": "shipment_shipped",         // muss zu Family-Joy message_templates.trigger_event matchen
+  "source": "trackbliss",
+  "sourceEventId": "<rh_notif_uuid>",       // optional Dedup-Key
+  "recipientEmail": "customer@example.com",
+  "language": "de",                         // 'de' oder 'en'
+  "region": "dach",                         // 'dach' oder 'intl', steuert SMTP-Mailbox
+  "userType": "customer",
+  "context": {
+    "customerName": "Max",
+    "shipmentNumber": "...",
+    "trackingUrl": "..."
+    // alle Liquid-Variablen die das Template erwartet
+  },
+  "metadata": { ... }                       // optional, audit-only
+}
+```
+
+### Welche Events Trackbliss-seitig auslösen
+
+Alle 25+ `RhNotificationEventType` aus `src/types/returns-hub.ts`. Die wichtigsten Customer-facing:
+- Returns: `return_confirmed`, `return_approved`, `return_rejected`, `return_shipped`, `return_label_ready`, `return_inspection_complete`, `refund_completed`
+- Tickets: `ticket_created`, `ticket_agent_reply`, `ticket_resolved`
+- Shipments (gepushed via wh_shipments Status-Change-Trigger): `shipment_packed`, `shipment_shipped`, `shipment_delivered`
+- Engagement (Tage nach Delivery): `engagement_day_1/7/14/30`
+
+### Env-Variablen (Cross-Project)
+
+#### App_DPP `.env` + Vercel Production Env
+
+```env
+VITE_MAIL_HUB_VIA_FAMILY_JOY=true
+VITE_MAIL_HUB_URL=https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
+VITE_MAIL_HUB_SECRET=<hex string — MUSS exakt gleich sein wie MAIL_EVENT_RECEIVER_SECRET in Family-Joy>
+```
+
+Vercel: Production + Preview Environments separat setzen (sonst nur lokaler dev gecutovert).
+
+#### Family-Joy Supabase Secrets (Project `bkaaepzqejzdczivquoh`)
+
+| Key | Zweck |
+|---|---|
+| `MAIL_EVENT_RECEIVER_SECRET` | HMAC-Schlüssel, identisch mit `VITE_MAIL_HUB_SECRET` in App_DPP |
+| `SHOPIFY_WEBHOOK_SECRET` | Verifiziert Shopify-Webhook-HMAC (für Phase E) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_*_USER/PASS` | all-inkl Kasserver, DACH+INTL Mailbox-Routing |
+| `MAIL_TRACKING_BASE_URL` (optional) | Override für Pixel/Click-Redirect-Domain (default = `SUPABASE_URL`) |
+
+### Cross-Project Code-Locations
+
+| File | Repo | Zweck |
+|---|---|---|
+| `rh-notification-trigger.ts` | App_DPP | Feature-Flag + HMAC + POST zu Family-Joy |
+| `supabase/functions/mail-event-receiver/index.ts` | Family-Joy | Universal Event-Receiver |
+| `supabase/functions/email-pixel/index.ts` | Family-Joy | Open-Tracking 1x1 GIF |
+| `supabase/functions/email-click-redirect/index.ts` | Family-Joy | Click-Tracking 302-Redirect |
+| `supabase/functions/shopify-mail-dispatcher/index.ts` | Family-Joy | Shopify-Webhook → mail-event-receiver Bridge |
+| `scripts/migrate-templates-to-family-joy.mjs` | Family-Joy | Bulk-Import von 3 Quellen in message_templates |
+| `supabase/migrations/20260519_mail_event_receiver.sql` | Family-Joy | mail_events Table + Unique-Index auf is_active+trigger_event |
+| `src/pages/admin/AdminCustomerMails.tsx` | Family-Joy | `/admin/customers/:email/mails` Timeline |
+| `src/pages/admin/AdminEmailReporting.tsx` | Family-Joy | `/admin/email-reporting` Dashboard |
+
+### Wichtige Schema-Drifts & Lessons
+
+1. **`rendered_html` Column existiert NICHT in `message_templates`** — sie existiert in `email_campaigns`. Template-HTML gehört in `content` (TEXT). Receiver erkennt HTML vs Plain via Regex auf `<!DOCTYPE|<html`.
+
+2. **`message_templates_category_check` CHECK constraint** erlaubt nur `'influencer','reseller','email','general','expert','customer','transactional','acquisition'`. Trackbliss schickt `'returns'`, `'tickets'` etc. — Migrate-Script forciert daher immer `category='transactional'`, Original-Category landet in `subcategory`.
+
+3. **Unique-Index `uniq_message_templates_active_per_trigger`** kann durch Duplikate blockiert werden. Vor Migration-Run: Dedup-SQL via ROW_NUMBER() OVER PARTITION BY (trigger_event, language).
+
+4. **`EmailButtonBlock` Schema**: `{ type, id, text, url, alignment, backgroundColor, textColor, borderRadius }` — **NICHT `label`**. War ein Drift-Bug in den ursprünglichen Shipment-Templates.
+
+5. **`EmailTemplateCategory` Type-Union**: `'returns' | 'tickets' | 'general' | 'shipment'`. Jede Erweiterung erfordert Update an `TemplateGalleryCard.tsx::CATEGORY_COLORS` Record.
+
+6. **Family-Joy CLI Migration-History**: Remote-DB hat direkt im Dashboard angelegte Migrationen die lokal nicht existieren. Workarounds: `supabase migration repair --status applied <id>` ODER direkt SQL Editor benutzen.
+
+### Verifikation nach Cutover
+
+Family-Joy Supabase SQL Editor (Project `bkaaepzqejzdczivquoh`):
+
+```sql
+-- Letzte 10 Sends
+SELECT trigger_event, recipient_email, status, error_message, created_at
+FROM email_send_log ORDER BY created_at DESC LIMIT 10;
+
+-- Engagement-Events (sent → opened → clicked)
+SELECT event, recipient_email, source, trigger_event, metadata, created_at
+FROM mail_events ORDER BY created_at DESC LIMIT 20;
+
+-- Aktive Templates
+SELECT trigger_event, language, is_active, LENGTH(content) AS bytes
+FROM message_templates WHERE trigger_event IS NOT NULL AND is_active = true
+ORDER BY trigger_event, language;
+```
+
+Admin-Pages für QA:
+- `https://app.family-joy.com/admin/customers/<email>/mails` (Phase F Customer Timeline)
+- `https://app.family-joy.com/admin/email-reporting` (Phase G Reporting-Dashboard)
+
+### Phase-Status (2026-05-19)
+
+| Phase | Code | Deploy | Notes |
+|---|---|---|---|
+| A — Architektur-Doc | ✅ | ✅ | family-joy/docs/MAIL-HUB-MIGRATION.md |
+| B — Receiver + mail_events Table | ✅ | ✅ | Deployed + Table existiert |
+| C — Template-Migration | ✅ | ✅ | 17 aktive Templates in message_templates |
+| D — Trackbliss-Cutover | ✅ | ⏳ | Code committed, Vercel-Build pending mit Env-Vars |
+| E — Shopify-Cutover | ✅ code | ❌ | shopify-mail-dispatcher deployed, aber 4 Templates fehlen (`order_confirmation`, `order_shipped`, `order_cancelled`, `order_refunded`), Webhooks nicht angelegt, Shopify-Defaults noch aktiv |
+| F — Customer Mail-History | ✅ | ✅ | /admin/customers/:email/mails live |
+| G — Tracking + Reporting | ✅ | ✅ | Pixel/Redirect deployed, /admin/email-reporting live |
+
+### Pending TODOs
+
+- **Phase E komplettieren**: 4 Shopify-Templates schreiben (`order-cancelled.html`, `refund-notification.html` existieren nicht; `order-confirmation.html`, `shipping-notification.html` existieren in `fambliss-store/hydrogen-storefront/emails/` aber Migrate-Script sucht in `docs/email-templates/`), Pfad fixen, 4 Webhooks in Shopify-Admin anlegen, 4 Default-Notifications deaktivieren.
+- **5 Trackbliss-Templates ohne HTML**: `return_shipped`, `return_label_ready`, `return_inspection_complete`, `ticket_agent_reply`, `return_reminder` haben nur 120-153 bytes Plain-Text. Hand-schreiben oder via Block-Renderer ersetzen.
+- **Disabled Trackbliss-Shipment-Templates reaktivieren**: Nach erfolgreichem Cutover-Test in `rh_email_templates` SET `enabled=true` für 7 Events (`shipment_*`, `engagement_day_*`).
+- **Tracking-Subdomain**: `mail.fambliss.de` als Pixel-URL via `MAIL_TRACKING_BASE_URL` für bessere Open-Rates.
+
 ## Database Schema
 
 ### SQL Files
@@ -1780,4 +1926,9 @@ VERCEL_PROJECT_ID=prj_...            # Vercel project ID
 VERCEL_TEAM_ID=team_...              # Vercel team ID (optional, for team accounts)
 STRIPE_SECRET_KEY=sk_...             # Stripe API secret key (for checkout, portal, webhook)
 STRIPE_WEBHOOK_SECRET=whsec_...      # Stripe webhook signing secret
+
+# Mail Hub feature flag — siehe Sektion "Mail Hub Integration (Family-Joy)"
+VITE_MAIL_HUB_VIA_FAMILY_JOY=true                                                  # Flag: route customer mails through Family-Joy receiver
+VITE_MAIL_HUB_URL=https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
+VITE_MAIL_HUB_SECRET=<hex 32-byte>                                                  # MUSS identisch sein mit MAIL_EVENT_RECEIVER_SECRET in Family-Joy Supabase Secrets
 ```
