@@ -4,10 +4,10 @@
  * Cron-triggered fire of post-delivery engagement mails. Supports four
  * day-offset actions:
  *
- *   action=fire_engagement_day_1  → trigger_event "engagement.day_1"
+ *   action=fire_engagement_day_1  → trigger_event "engagement_day_1"
  *   action=fire_feedback_day_7    → trigger_event "feedback_request"   (legacy / v1)
- *   action=fire_engagement_day_14 → trigger_event "engagement.day_14"
- *   action=fire_engagement_day_30 → trigger_event "engagement.day_30"
+ *   action=fire_engagement_day_14 → trigger_event "engagement_day_14"
+ *   action=fire_engagement_day_30 → trigger_event "engagement_day_30"
  *
  * Each cron run scans wh_shipments for rows with `delivered_at` falling in
  * the UTC day N days ago, dedupes against the central mail-hub's
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     if (action === 'fire_engagement_day_1') {
       return json(await fireEngagementDay(supabase, {
         delayDays: 1,
-        triggerEvent: 'engagement.day_1',
+        triggerEvent: 'engagement_day_1',
         // Day 1: ask for a review.
         buildContext: (ship, firstName) => ({
           customer_first_name: firstName,
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     if (action === 'fire_engagement_day_14') {
       return json(await fireEngagementDay(supabase, {
         delayDays: 14,
-        triggerEvent: 'engagement.day_14',
+        triggerEvent: 'engagement_day_14',
         // Day 14: tips for using / loving the product.
         buildContext: (ship, firstName) => ({
           customer_first_name: firstName,
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
     if (action === 'fire_engagement_day_30') {
       return json(await fireEngagementDay(supabase, {
         delayDays: 30,
-        triggerEvent: 'engagement.day_30',
+        triggerEvent: 'engagement_day_30',
         // Day 30: community + refer-a-friend.
         buildContext: (ship, firstName) => ({
           customer_first_name: firstName,
