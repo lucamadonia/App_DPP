@@ -37,6 +37,8 @@ export interface NotificationContext {
   heroImageUrl?: string;
   tutorialUrl?: string;
   reviewUrl?: string;
+  /** Feedback CTA URL used in shipment-delivered + engagement mails (template var: {{feedbackUrl}}). */
+  feedbackUrl?: string;
   // Branding / footer (resolved once per tenant by the caller)
   shopUrl?: string;
   journalUrl?: string;
@@ -255,6 +257,8 @@ function renderTemplate(template: string, ctx: NotificationContext): string {
     .replace(/\{\{heroImageUrl\}\}/g,  ctx.heroImageUrl || '')
     .replace(/\{\{tutorialUrl\}\}/g,   ctx.tutorialUrl || '')
     .replace(/\{\{reviewUrl\}\}/g,     ctx.reviewUrl || '')
+    .replace(/\{\{feedbackUrl\}\}/g,   ctx.feedbackUrl || '')
+    .replace(/\{\{feedback_url\}\}/g,  ctx.feedbackUrl || '')
     .replace(/\{\{shopUrl\}\}/g,       ctx.shopUrl || brand.shopUrl)
     .replace(/\{\{shop_url\}\}/g,      ctx.shopUrl || brand.shopUrl)
     .replace(/\{\{journalUrl\}\}/g,    ctx.journalUrl || brand.journalUrl)
