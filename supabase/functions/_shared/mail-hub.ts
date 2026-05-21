@@ -117,6 +117,98 @@ export async function postToMailHub(args: PostToMailHubArgs): Promise<PostToMail
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// logToCentralLog — fire-and-forget INSERT into Family-Joy email_send_log
+// for satellite paths that send mail via local SMTP (auth-email-hook,
+// send-email fallback). This is NOT a send call — it ONLY logs.
+//
+// Target Edge Function: Family-Joy `mail-log-ingest`. Same HMAC secret
+// as mail-event-receiver. URL derived from MAIL_HUB_URL by swapping the
+// path: `.../mail-event-receiver` → `.../mail-log-ingest`. Override with
+// MAIL_LOG_INGEST_URL if you need a different endpoint.
+// ─────────────────────────────────────────────────────────────────────
+
+const DEFAULT_MAIL_LOG_INGEST_URL =
+  'https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-log-ingest';
+
+export interface LogToCentralLogArgs {
+  /** trigger_event anchoring the row to a flow. e.g. 'auth.signup', 'auth.recovery', 'rh.return_confirmed' */
+  triggerEvent: string;
+  recipientEmail: string;
+  status: 'sent' | 'failed' | 'skipped';
+  source: string;                    // 'fambliss-plus' / 'trackbliss' / etc
+  sourceEventId?: string;             // optional stable dedupe key
+  recipientType?: string;             // 'fambliss_plus' / 'expert_portal' / etc
+  language?: string;                  // 'de' / 'en' / 'el' / ...
+  region?: 'dach' | 'intl';
+  userType?: string;                  // mirrors recipientType for filter parity
+  subject?: string;
+  fromAddress?: string;
+  replyTo?: string;
+  htmlBody?: string;
+  previewText?: string;
+  errorMessage?: string | null;
+  templateId?: string | null;
+  meta?: Record<string, unknown>;
+}
+
+export async function logToCentralLog(args: LogToCentralLogArgs): Promise<{ ok: boolean; status: number }> {
+  const url =
+    Deno.env.get('MAIL_LOG_INGEST_URL') ||
+    (Deno.env.get('MAIL_HUB_URL') || '').replace(/\/mail-event-receiver\b.*$/, '/mail-log-ingest') ||
+    DEFAULT_MAIL_LOG_INGEST_URL;
+  const secret = Deno.env.get('MAIL_HUB_SECRET') || '';
+
+  if (!secret) {
+    console.error('[mail-log-ingest] MAIL_HUB_SECRET missing — skipping log');
+    return { ok: false, status: 0 };
+  }
+
+  const body = JSON.stringify({
+    trigger_event: args.triggerEvent,
+    recipient_email: args.recipientEmail,
+    status: args.status,
+    source: args.source,
+    source_event_id: args.sourceEventId,
+    recipient_type: args.recipientType,
+    language: args.language,
+    region: args.region,
+    user_type: args.userType ?? args.recipientType,
+    subject: args.subject,
+    from_address: args.fromAddress,
+    reply_to: args.replyTo,
+    html_body: args.htmlBody,
+    preview_text: args.previewText,
+    error_message: args.errorMessage,
+    template_id: args.templateId,
+    meta: args.meta ?? {},
+  });
+
+  try {
+    const signature = await hmacSha256Hex(secret, body);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Hook-Signature': signature,
+      },
+      body,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.warn(
+        `[mail-log-ingest] non-2xx status=${res.status} trigger=${args.triggerEvent}: ${text.slice(0, 200)}`,
+      );
+      return { ok: false, status: res.status };
+    }
+    return { ok: true, status: res.status };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[mail-log-ingest] fetch failed trigger=${args.triggerEvent}: ${msg}`);
+    return { ok: false, status: 0 };
+  }
+}
+
 /** HMAC-SHA256(hex) over the raw body. The receiver uses constant-time
  *  compare on the same secret and accepts an optional "sha256=" prefix
  *  (we send the bare hex form). */

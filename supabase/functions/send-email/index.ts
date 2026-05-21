@@ -20,6 +20,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
+import { logToCentralLog } from '../_shared/mail-hub.ts';
 
 const SMTP_HOST = Deno.env.get('SMTP_HOST') || '';
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '465', 10);
@@ -153,6 +154,7 @@ Deno.serve(async (req) => {
       },
     });
 
+    let sendError: string | null = null;
     try {
       await client.send({
         from: fromAddress,
@@ -161,14 +163,41 @@ Deno.serve(async (req) => {
         html: htmlBody,
       });
     } catch (sendErr) {
-      try { await client.close(); } catch { /* ignore close error */ }
-      const errorMsg = sendErr instanceof Error ? sendErr.message : String(sendErr);
-      console.error('SMTP send error:', errorMsg);
-      await markFailed(record.id, record.metadata, errorMsg);
-      return new Response(JSON.stringify({ error: errorMsg }), { status: 200 });
+      sendError = sendErr instanceof Error ? sendErr.message : String(sendErr);
+      console.error('SMTP send error:', sendError);
     }
 
     try { await client.close(); } catch { /* ignore close error */ }
+
+    // Fire-and-forget central log to Family-Joy email_send_log so every
+    // Returns-Hub / transactional mail sent via this fallback path is
+    // visible in the central Email Center.
+    logToCentralLog({
+      triggerEvent: String(record.metadata?.eventType || record.metadata?.event_type || 'rh.notification'),
+      recipientEmail,
+      status: sendError ? 'failed' : 'sent',
+      source: 'trackbliss-send-email',
+      sourceEventId: String(record.id),
+      recipientType: 'customer',
+      userType: 'shop',
+      language: String(record.metadata?.locale || 'en'),
+      subject: record.subject || 'Notification',
+      fromAddress: effectiveFromAddress,
+      htmlBody,
+      previewText: record.subject || '',
+      errorMessage: sendError,
+      meta: {
+        tenant_id: record.tenant_id ?? null,
+        channel: record.channel ?? 'email',
+        notification_id: record.id,
+        used_tenant_smtp: !!tenantSmtp,
+      },
+    }).catch(() => { /* never propagate logging errors */ });
+
+    if (sendError) {
+      await markFailed(record.id, record.metadata, sendError);
+      return new Response(JSON.stringify({ error: sendError }), { status: 200 });
+    }
 
     await supabase
       .from('rh_notifications')

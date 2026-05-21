@@ -27,6 +27,7 @@
 
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0';
+import { logToCentralLog } from '../_shared/mail-hub.ts';
 
 // ─── Config ──────────────────────────────────────────────────
 
@@ -243,6 +244,7 @@ Deno.serve(async (req) => {
     },
   });
 
+  let sendError: string | null = null;
   try {
     await client.send({
       from: `${DEFAULT_FROM_NAME} <${SMTP_FROM}>`,
@@ -251,13 +253,41 @@ Deno.serve(async (req) => {
       html: renderedHtml,
     });
   } catch (sendErr) {
-    try { await client.close(); } catch { /* ignore */ }
-    const msg = sendErr instanceof Error ? sendErr.message : String(sendErr);
-    console.error('SMTP send failed:', msg);
-    return new Response(JSON.stringify({ error: msg }), { status: 500 });
+    sendError = sendErr instanceof Error ? sendErr.message : String(sendErr);
+    console.error('SMTP send failed:', sendError);
   }
 
   try { await client.close(); } catch { /* ignore */ }
+
+  // Fire-and-forget central log to Family-Joy email_send_log so every
+  // Trackbliss/Fambliss+ auth mail is visible in /admin/email-log.
+  // We don't await this — never block the auth hook response on logging.
+  logToCentralLog({
+    triggerEvent: `auth.${email_action_type}`,
+    recipientEmail: user.email,
+    status: sendError ? 'failed' : 'sent',
+    source: 'trackbliss-auth-hook',
+    sourceEventId: token_hash || `${email_action_type}:${user.email}:${Date.now()}`,
+    recipientType: 'fambliss_plus',
+    userType: 'fambliss_plus',
+    language: locale,
+    region: locale === 'de' ? 'dach' : 'intl',
+    subject,
+    fromAddress: SMTP_FROM,
+    htmlBody: renderedHtml,
+    previewText: subject,
+    errorMessage: sendError,
+    meta: {
+      template: templateName,
+      action: email_action_type,
+      site_url: site_url ?? null,
+      new_email: new_email ?? null,
+    },
+  }).catch(() => { /* never propagate logging errors */ });
+
+  if (sendError) {
+    return new Response(JSON.stringify({ error: sendError }), { status: 500 });
+  }
 
   return new Response(JSON.stringify({ success: true, locale, template: templateName }), {
     status: 200,
