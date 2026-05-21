@@ -173,6 +173,73 @@ export async function deleteContact(id: string): Promise<void> {
 }
 
 /**
+ * Pulls the most recent shipping address from wh_shipments for each given customer.
+ * Used as a fallback when rh_customers.addresses is empty (which it is for Shopify-
+ * imported customers — Shopify writes the address into the order/shipment, not the
+ * customer record). Keyed by both customer id AND email so callers can match on
+ * whichever they have.
+ */
+async function getLatestShipmentAddresses(
+  tenantId: string,
+  customers: { id: string; email?: string | null }[],
+): Promise<Map<string, { street?: string; city?: string; postalCode?: string; country?: string; phone?: string }>> {
+  const out = new Map<string, { street?: string; city?: string; postalCode?: string; country?: string; phone?: string }>();
+  if (customers.length === 0) return out;
+
+  const ids = customers.map((c) => c.id).filter(Boolean);
+  const emails = customers.map((c) => (c.email || '').toLowerCase()).filter(Boolean);
+
+  // Build an OR filter that matches by customer_id OR recipient_email (lowercased).
+  const filters: string[] = [];
+  if (ids.length > 0) filters.push(`customer_id.in.(${ids.join(',')})`);
+  if (emails.length > 0) filters.push(`recipient_email.in.(${emails.map((e) => `"${e}"`).join(',')})`);
+  if (filters.length === 0) return out;
+
+  const { data: shipments } = await supabase
+    .from('wh_shipments')
+    .select('customer_id, recipient_email, recipient_phone, shipping_street, shipping_city, shipping_postal_code, shipping_country')
+    .eq('tenant_id', tenantId)
+    .or(filters.join(','))
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (!shipments) return out;
+
+  for (const s of shipments) {
+    const addr = {
+      street: s.shipping_street || undefined,
+      city: s.shipping_city || undefined,
+      postalCode: s.shipping_postal_code || undefined,
+      country: s.shipping_country || undefined,
+      phone: s.recipient_phone || undefined,
+    };
+    // Most recent comes first (because of order desc) — only keep first hit per key.
+    if (s.customer_id && !out.has(`id:${s.customer_id}`)) out.set(`id:${s.customer_id}`, addr);
+    if (s.recipient_email) {
+      const key = `email:${s.recipient_email.toLowerCase()}`;
+      if (!out.has(key)) out.set(key, addr);
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Picks address fields from rh_customers.addresses[0] (which can be a normalized
+ * object with snake_case OR a raw Shopify shipping_address with address1/zip).
+ */
+function pickAddressFromCustomerRow(row: { addresses?: unknown }): { street?: string; city?: string; postalCode?: string; country?: string } {
+  const arr = Array.isArray(row.addresses) ? row.addresses : [];
+  const a = (arr[0] || {}) as Record<string, unknown>;
+  return {
+    street: (a.street as string) || (a.address1 as string) || undefined,
+    city: (a.city as string) || undefined,
+    postalCode: (a.postal_code as string) || (a.postalCode as string) || (a.zip as string) || undefined,
+    country: (a.country_code as string) || (a.country as string) || undefined,
+  };
+}
+
+/**
  * Combined recipient search: searches both wh_contacts (B2B) and rh_customers (B2C).
  * Returns a unified list with type badges for the shipment wizard.
  */
@@ -234,9 +301,17 @@ export async function searchRecipients(query: string): Promise<RecipientSearchRe
     )
     .limit(10);
 
-  if (customers) {
+  if (customers && customers.length > 0) {
+    const shipmentAddrs = await getLatestShipmentAddresses(
+      tenantId,
+      customers.map((c) => ({ id: c.id, email: c.email })),
+    );
     for (const c of customers) {
-      const addr = Array.isArray(c.addresses) ? c.addresses[0] : undefined;
+      const profileAddr = pickAddressFromCustomerRow(c);
+      const fallback =
+        shipmentAddrs.get(`id:${c.id}`) ||
+        (c.email ? shipmentAddrs.get(`email:${c.email.toLowerCase()}`) : undefined) ||
+        {};
       const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim()
         || c.company
         || c.email
@@ -247,11 +322,11 @@ export async function searchRecipients(query: string): Promise<RecipientSearchRe
         name: fullName,
         company: c.company || undefined,
         email: c.email || undefined,
-        phone: c.phone || undefined,
-        street: addr?.street || undefined,
-        city: addr?.city || undefined,
-        postalCode: addr?.postal_code || addr?.postalCode || undefined,
-        country: addr?.country || undefined,
+        phone: c.phone || fallback.phone || undefined,
+        street: profileAddr.street || fallback.street || undefined,
+        city: profileAddr.city || fallback.city || undefined,
+        postalCode: profileAddr.postalCode || fallback.postalCode || undefined,
+        country: profileAddr.country || fallback.country || undefined,
       });
     }
   }
@@ -326,9 +401,17 @@ export async function listRecipients(opts: {
       .order('last_order_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(perSource);
-    if (customers) {
+    if (customers && customers.length > 0) {
+      const shipmentAddrs = await getLatestShipmentAddresses(
+        tenantId,
+        customers.map((c) => ({ id: c.id, email: c.email })),
+      );
       for (const c of customers) {
-        const addr = Array.isArray(c.addresses) ? c.addresses[0] : undefined;
+        const profileAddr = pickAddressFromCustomerRow(c);
+        const fallback =
+          shipmentAddrs.get(`id:${c.id}`) ||
+          (c.email ? shipmentAddrs.get(`email:${c.email.toLowerCase()}`) : undefined) ||
+          {};
         const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim()
           || c.company
           || c.email
@@ -339,11 +422,11 @@ export async function listRecipients(opts: {
           name: fullName,
           company: c.company || undefined,
           email: c.email || undefined,
-          phone: c.phone || undefined,
-          street: addr?.street || undefined,
-          city: addr?.city || undefined,
-          postalCode: addr?.postal_code || addr?.postalCode || undefined,
-          country: addr?.country || undefined,
+          phone: c.phone || fallback.phone || undefined,
+          street: profileAddr.street || fallback.street || undefined,
+          city: profileAddr.city || fallback.city || undefined,
+          postalCode: profileAddr.postalCode || fallback.postalCode || undefined,
+          country: profileAddr.country || fallback.country || undefined,
         });
       }
     }
