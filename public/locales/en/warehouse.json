@@ -9,6 +9,7 @@
   "Country must be a 2-letter ISO code": "Country must be a 2-letter ISO code",
   "Invalid postal code for {{country}} (e.g. {{example}})": "Invalid postal code for {{country}} (e.g. {{example}})",
   "Checking address with DHL...": "Checking address with DHL…",
+  "Checking address...": "Checking address…",
   "Address accepted by DHL": "Address accepted by DHL",
   "DHL flagged this address": "DHL flagged this address",
   "You can still continue — DHL will re-check at label creation.": "You can still continue — DHL will re-check at label creation.",

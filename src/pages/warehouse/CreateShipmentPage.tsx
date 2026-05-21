@@ -1019,76 +1019,83 @@ export function CreateShipmentPage() {
               </div>
             </div>
 
-            {/* Google "Did you mean?" suggestion */}
-            {addressValidation.valid && hasGoogleSuggestion && (
-              <div className="mt-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 text-xs flex items-start gap-2">
-                <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                    {t('Did you mean:')}
-                  </div>
-                  <div className="text-blue-800 dark:text-blue-200">
-                    {googleValidation?.normalized?.formattedAddress}
-                  </div>
-                  {(googleValidation?.messages?.length ?? 0) > 0 && (
-                    <ul className="mt-1 space-y-0.5 text-[11px] text-blue-700/80 dark:text-blue-300/80 list-disc list-inside">
-                      {googleValidation?.messages.slice(0, 3).map((m, i) => <li key={i}>{m}</li>)}
-                    </ul>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={applyGoogleSuggestion}
-                  className="h-7 px-2.5 text-[11px] rounded-lg border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/60 flex-shrink-0"
-                >
-                  {t('Apply')}
-                </Button>
-              </div>
-            )}
+            {/*
+              Address validation banner — consolidated.
+              Priority of display (top to bottom):
+                1. Blue "Did you mean?" if Google suggests a correction
+                2. Yellow warning if DHL flagged the address
+                3. Single slim green confirmation when everything is fine
+                4. Subtle loading state while a check is in flight
+            */}
+            {addressValidation.valid && (() => {
+              const isChecking = googleValidation === null || dhlValidating;
+              const dhlHasIssue = !!dhlValidation && dhlValidation.configured && !dhlValidation.valid;
+              const showSuggestion = !!hasGoogleSuggestion;
+              const googleOk = !!googleValidation?.enabled && !!googleValidation?.valid && !showSuggestion;
+              const dhlOk = !!dhlValidation && dhlValidation.configured && dhlValidation.valid;
+              const allOk = !isChecking && !showSuggestion && !dhlHasIssue && (googleOk || dhlOk);
 
-            {/* Google "address verified" tick (only when valid AND nothing to suggest) */}
-            {addressValidation.valid && googleValidation?.enabled && googleValidation?.valid && !hasGoogleSuggestion && (
-              <div className="mt-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
-                <Check className="h-4 w-4 flex-shrink-0" strokeWidth={3} />
-                <span className="font-medium">{t('Address verified')}</span>
-              </div>
-            )}
-
-            {/* DHL pre-shipment validation banner */}
-            {addressValidation.valid && (dhlValidating || (dhlValidation && dhlValidation.configured)) && (
-              <div className={`mt-3 rounded-xl border px-3 py-2.5 text-xs flex items-start gap-2 ${
-                dhlValidating
-                  ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                  : dhlValidation?.valid
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200'
-              }`}>
-                {dhlValidating ? (
-                  <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin mt-0.5" />
-                ) : dhlValidation?.valid ? (
-                  <Check className="h-4 w-4 flex-shrink-0 mt-0.5" strokeWidth={3} />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1 min-w-0">
-                  {dhlValidating ? (
-                    <span>{t('Checking address with DHL...')}</span>
-                  ) : dhlValidation?.valid ? (
-                    <span className="font-medium">{t('Address accepted by DHL')}</span>
-                  ) : (
-                    <>
+              if (showSuggestion) {
+                return (
+                  <div className="mt-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 text-xs flex items-start gap-2">
+                    <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                        {t('Did you mean:')}
+                      </div>
+                      <div className="text-blue-800 dark:text-blue-200">
+                        {googleValidation?.normalized?.formattedAddress}
+                      </div>
+                      {(googleValidation?.messages?.length ?? 0) > 0 && (
+                        <ul className="mt-1 space-y-0.5 text-[11px] text-blue-700/80 dark:text-blue-300/80 list-disc list-inside">
+                          {googleValidation?.messages.slice(0, 3).map((m, i) => <li key={i}>{m}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={applyGoogleSuggestion}
+                      className="h-7 px-2.5 text-[11px] rounded-lg border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/60 flex-shrink-0"
+                    >
+                      {t('Apply')}
+                    </Button>
+                  </div>
+                );
+              }
+              if (dhlHasIssue) {
+                return (
+                  <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-xs flex items-start gap-2 text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
                       <div className="font-semibold mb-1">{t('DHL flagged this address')}</div>
                       <ul className="space-y-0.5 list-disc list-inside marker:text-amber-600">
                         {dhlValidation?.messages.map((m, i) => <li key={i}>{m}</li>)}
                       </ul>
                       <div className="mt-1.5 text-[11px] opacity-80">{t('You can still continue — DHL will re-check at label creation.')}</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
+                    </div>
+                  </div>
+                );
+              }
+              if (isChecking) {
+                return (
+                  <div className="mt-3 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>{t('Checking address...')}</span>
+                  </div>
+                );
+              }
+              if (allOk) {
+                return (
+                  <div className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                    <span className="font-medium">{t('Address verified')}</span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </Section>
 
           {recipientType === 'influencer' && (
