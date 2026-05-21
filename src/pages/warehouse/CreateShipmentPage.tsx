@@ -26,6 +26,10 @@ import { getBatches } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
 import { getStockLevels } from '@/services/supabase/wh-stock';
 import { searchRecipients, type RecipientSearchResult } from '@/services/supabase/wh-contacts';
+import { validateAddress, normalizePostalCode } from '@/lib/address-validation';
+import { validateAddressWithDHL, type DHLAddressValidationResult } from '@/services/supabase/dhl-carrier';
+import { AddressAutocompleteInput } from '@/components/warehouse/AddressAutocompleteInput';
+import { validateGoogleAddress, type GoogleValidationResult } from '@/services/supabase/address-validation';
 import { createShipment } from '@/services/supabase/wh-shipments';
 import { getCountries } from '@/services/supabase/master-data';
 import { PRIORITY_COLORS } from '@/lib/warehouse-constants';
@@ -560,7 +564,110 @@ export function CreateShipmentPage() {
     }
   };
 
-  const step1Valid = !!recipientName && !!shippingStreet && !!shippingCity && !!shippingPostalCode;
+  const addressValidation = useMemo(
+    () => validateAddress({
+      street: shippingStreet,
+      city: shippingCity,
+      postalCode: shippingPostalCode,
+      country: shippingCountry,
+    }),
+    [shippingStreet, shippingCity, shippingPostalCode, shippingCountry],
+  );
+  const addressErrorFor = (field: 'street' | 'city' | 'postalCode' | 'country') =>
+    addressValidation.errors.find((e) => e.field === field);
+  const step1Valid = !!recipientName && addressValidation.valid;
+
+  // ── Tier 3: Google "Did you mean?" address verification ──
+  // Calls the Google Address Validation API once the address passes Tier-1.
+  // Surfaces corrections (e.g. wrong postal code → suggests the right one) so
+  // the user can apply them with a single click.
+  const [googleValidation, setGoogleValidation] = useState<GoogleValidationResult | null>(null);
+  useEffect(() => {
+    if (!addressValidation.valid) {
+      setGoogleValidation(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const res = await validateGoogleAddress({
+        street: addressValidation.normalized.street,
+        postalCode: addressValidation.normalized.postalCode,
+        city: addressValidation.normalized.city,
+        country: addressValidation.normalized.country,
+      });
+      if (!cancelled) {
+        setGoogleValidation(res);
+      }
+    }, 700);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    addressValidation.valid,
+    addressValidation.normalized.street,
+    addressValidation.normalized.postalCode,
+    addressValidation.normalized.city,
+    addressValidation.normalized.country,
+  ]);
+
+  /** Apply Google's normalized address to the form fields. */
+  const applyGoogleSuggestion = () => {
+    const n = googleValidation?.normalized;
+    if (!n) return;
+    if (n.street) setShippingStreet(n.street);
+    if (n.city) setShippingCity(n.city);
+    if (n.postalCode) setShippingPostalCode(n.postalCode);
+    if (n.country) setShippingCountry(n.country);
+    setGoogleValidation(null);
+  };
+
+  /** Is the Google suggestion meaningfully different from what the user typed? */
+  const hasGoogleSuggestion =
+    googleValidation?.enabled &&
+    googleValidation?.normalized?.formattedAddress &&
+    !googleValidation.valid &&
+    (googleValidation.normalized?.street !== addressValidation.normalized.street ||
+      googleValidation.normalized?.postalCode !== addressValidation.normalized.postalCode ||
+      googleValidation.normalized?.city !== addressValidation.normalized.city);
+
+  // ── Tier 2: DHL pre-shipment sanity check ──
+  // Runs once the address passes Tier-1 format checks. Debounced; DHL probe
+  // is best-effort — issues surface as a soft warning, never block the wizard.
+  const [dhlValidation, setDhlValidation] = useState<DHLAddressValidationResult | null>(null);
+  const [dhlValidating, setDhlValidating] = useState(false);
+  useEffect(() => {
+    if (!addressValidation.valid) {
+      setDhlValidation(null);
+      return;
+    }
+    let cancelled = false;
+    setDhlValidating(true);
+    const timer = setTimeout(async () => {
+      const res = await validateAddressWithDHL({
+        street: addressValidation.normalized.street,
+        postalCode: addressValidation.normalized.postalCode,
+        city: addressValidation.normalized.city,
+        country: addressValidation.normalized.country,
+        weightKg: 1,
+      });
+      if (!cancelled) {
+        setDhlValidation(res);
+        setDhlValidating(false);
+      }
+    }, 800);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setDhlValidating(false);
+    };
+  }, [
+    addressValidation.valid,
+    addressValidation.normalized.street,
+    addressValidation.normalized.postalCode,
+    addressValidation.normalized.city,
+    addressValidation.normalized.country,
+  ]);
   const step2Valid = items.length > 0 && items.every(i => i.productId && i.batchId && i.locationId && i.quantity > 0);
   const step3Valid = true; // Shipping fields are optional; SmartPackingCard only advises.
   const canAdvance = step === 0 ? step1Valid : step === 1 ? step2Valid : step === 2 ? step3Valid : false;
@@ -843,17 +950,26 @@ export function CreateShipmentPage() {
             title={t('Shipping address')}
             gradient="from-emerald-500 to-teal-500"
           >
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                {t('Street')} <span className="text-rose-500">*</span>
-              </Label>
-              <Input
-                value={shippingStreet}
-                onChange={(e) => setShippingStreet(e.target.value)}
-                className="h-11 rounded-xl"
-                placeholder={t('Street and number')}
-              />
-            </div>
+            <AddressAutocompleteInput
+              label={t('Street')}
+              required
+              value={shippingStreet}
+              onChange={setShippingStreet}
+              countryHint={shippingCountry}
+              placeholder={t('Street and number')}
+              className={`h-11 rounded-xl ${addressErrorFor('street') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
+              onAddressPicked={(picked) => {
+                if (picked.street) setShippingStreet(picked.street);
+                if (picked.city) setShippingCity(picked.city);
+                if (picked.postalCode) setShippingPostalCode(picked.postalCode);
+                if (picked.country) setShippingCountry(picked.country);
+              }}
+            />
+            {addressErrorFor('street') && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 -mt-2">
+                {t(addressErrorFor('street')!.i18nKey, addressErrorFor('street')!.i18nParams)}
+              </p>
+            )}
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -862,9 +978,15 @@ export function CreateShipmentPage() {
                 <Input
                   value={shippingPostalCode}
                   onChange={(e) => setShippingPostalCode(e.target.value)}
-                  className="h-11 rounded-xl"
+                  onBlur={() => setShippingPostalCode(normalizePostalCode(shippingPostalCode, shippingCountry))}
+                  className={`h-11 rounded-xl ${addressErrorFor('postalCode') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
                   placeholder="PLZ"
                 />
+                {addressErrorFor('postalCode') && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+                    {t(addressErrorFor('postalCode')!.i18nKey, addressErrorFor('postalCode')!.i18nParams)}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5 col-span-1">
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -873,8 +995,13 @@ export function CreateShipmentPage() {
                 <Input
                   value={shippingCity}
                   onChange={(e) => setShippingCity(e.target.value)}
-                  className="h-11 rounded-xl"
+                  className={`h-11 rounded-xl ${addressErrorFor('city') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
                 />
+                {addressErrorFor('city') && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+                    {t(addressErrorFor('city')!.i18nKey, addressErrorFor('city')!.i18nParams)}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -891,6 +1018,77 @@ export function CreateShipmentPage() {
                 </Select>
               </div>
             </div>
+
+            {/* Google "Did you mean?" suggestion */}
+            {addressValidation.valid && hasGoogleSuggestion && (
+              <div className="mt-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 text-xs flex items-start gap-2">
+                <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    {t('Did you mean:')}
+                  </div>
+                  <div className="text-blue-800 dark:text-blue-200">
+                    {googleValidation?.normalized?.formattedAddress}
+                  </div>
+                  {(googleValidation?.messages?.length ?? 0) > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-[11px] text-blue-700/80 dark:text-blue-300/80 list-disc list-inside">
+                      {googleValidation?.messages.slice(0, 3).map((m, i) => <li key={i}>{m}</li>)}
+                    </ul>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={applyGoogleSuggestion}
+                  className="h-7 px-2.5 text-[11px] rounded-lg border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/60 flex-shrink-0"
+                >
+                  {t('Apply')}
+                </Button>
+              </div>
+            )}
+
+            {/* Google "address verified" tick (only when valid AND nothing to suggest) */}
+            {addressValidation.valid && googleValidation?.enabled && googleValidation?.valid && !hasGoogleSuggestion && (
+              <div className="mt-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
+                <Check className="h-4 w-4 flex-shrink-0" strokeWidth={3} />
+                <span className="font-medium">{t('Address verified')}</span>
+              </div>
+            )}
+
+            {/* DHL pre-shipment validation banner */}
+            {addressValidation.valid && (dhlValidating || (dhlValidation && dhlValidation.configured)) && (
+              <div className={`mt-3 rounded-xl border px-3 py-2.5 text-xs flex items-start gap-2 ${
+                dhlValidating
+                  ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                  : dhlValidation?.valid
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200'
+              }`}>
+                {dhlValidating ? (
+                  <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin mt-0.5" />
+                ) : dhlValidation?.valid ? (
+                  <Check className="h-4 w-4 flex-shrink-0 mt-0.5" strokeWidth={3} />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 min-w-0">
+                  {dhlValidating ? (
+                    <span>{t('Checking address with DHL...')}</span>
+                  ) : dhlValidation?.valid ? (
+                    <span className="font-medium">{t('Address accepted by DHL')}</span>
+                  ) : (
+                    <>
+                      <div className="font-semibold mb-1">{t('DHL flagged this address')}</div>
+                      <ul className="space-y-0.5 list-disc list-inside marker:text-amber-600">
+                        {dhlValidation?.messages.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                      <div className="mt-1.5 text-[11px] opacity-80">{t('You can still continue — DHL will re-check at label creation.')}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </Section>
 
           {recipientType === 'influencer' && (

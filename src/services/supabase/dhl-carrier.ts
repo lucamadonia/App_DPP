@@ -27,6 +27,41 @@ async function callDHL(action: string, params?: Record<string, unknown>): Promis
   return data;
 }
 
+export interface DHLAddressValidationResult {
+  valid: boolean;
+  /** False when DHL isn't configured for this tenant — caller should skip silently. */
+  configured: boolean;
+  messages: string[];
+}
+
+/**
+ * Dry-run an address against DHL Parcel-DE-v2 (POST /orders?validate=true).
+ * Catches "postal code doesn't match city", "country not in product zone",
+ * "missing house number", etc. Never blocks the flow — caller decides whether
+ * to treat issues as hard errors or soft warnings.
+ */
+export async function validateAddressWithDHL(input: {
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  weightKg?: number;
+  product?: string;
+}): Promise<DHLAddressValidationResult> {
+  try {
+    const data = await callDHL('validate_address', input);
+    return {
+      valid: data?.valid !== false,
+      configured: data?.configured !== false,
+      messages: Array.isArray(data?.messages) ? data.messages : [],
+    };
+  } catch (err) {
+    // Treat infrastructure failures as non-blocking.
+    console.warn('[DHL] validate_address failed:', err);
+    return { valid: true, configured: false, messages: [] };
+  }
+}
+
 /**
  * Get DHL settings for the current tenant (without credentials).
  * Reads from tenants.settings.warehouse.dhl directly.

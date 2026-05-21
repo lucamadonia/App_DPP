@@ -133,6 +133,8 @@ Deno.serve(async (req) => {
         return await handleTestConnection(supabase, tenantId);
       case 'create_label':
         return await handleCreateLabel(supabase, tenantId, params);
+      case 'validate_address':
+        return await handleValidateAddress(supabase, tenantId, params);
       case 'cancel_label':
         return await handleCancelLabel(supabase, tenantId, params);
       case 'get_tracking':
@@ -479,6 +481,116 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     labelStoragePath: storagePath,
     validationMessages: item.validationMessages || [],
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Action: validate_address                                                   */
+/*                                                                             */
+/*  Dry-run a DHL order with ?validate=true. DHL returns validationMessages    */
+/*  for any issue (wrong postal code, country not in product zone, etc.) but   */
+/*  never produces a label/tracking number. Used as a sanity gate before the   */
+/*  user commits to label creation.                                            */
+/* -------------------------------------------------------------------------- */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleValidateAddress(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  const street = params?.street as string | undefined;
+  const postalCode = params?.postalCode as string | undefined;
+  const city = params?.city as string | undefined;
+  const country = params?.country as string | undefined;
+  if (!street || !postalCode || !city || !country) {
+    return json({ valid: false, configured: true, messages: ['Missing required address field'] });
+  }
+
+  // If DHL isn't configured for this tenant we silently report "not configured"
+  // so the frontend can skip the gate without showing an error.
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.apiKey || !settings?.username || !settings?.password || !settings?.billingNumber) {
+    return json({ valid: true, configured: false, messages: [] });
+  }
+
+  const shipperCountry = mapCountryToISO3(settings.shipper.country || 'DEU');
+  const consigneeCountry = mapCountryToISO3(country);
+  const isInternational = shipperCountry !== consigneeCountry;
+  const configuredProduct = settings.defaultProduct || 'V01PAK';
+  const autoProduct = isInternational && configuredProduct === 'V01PAK' ? 'V53WPAK' : configuredProduct;
+  const product = (params?.product as string) || autoProduct;
+  const isV53 = product === 'V53WPAK' || product === 'V54EPAK' || product === 'V66WPI' || product === 'V62WP';
+  const billingNumber = isV53 ? settings.billingNumberInternational : settings.billingNumber;
+  if (!billingNumber) {
+    // No international billing number — surface as configuration hint but don't block.
+    return json({ valid: true, configured: false, messages: ['Skipped: no DHL billing number for this destination'] });
+  }
+
+  // Minimal-but-valid order payload — DHL still enforces shape checks.
+  const dhlOrder = {
+    profile: 'STANDARD_GRUPPENPROFIL',
+    shipments: [
+      {
+        product,
+        billingNumber,
+        refNo: `validate-${Date.now()}`,
+        shipper: {
+          name1: settings.shipper.name1 || 'Shipper',
+          addressStreet: settings.shipper.addressStreet || 'Strasse 1',
+          postalCode: settings.shipper.postalCode || '10115',
+          city: settings.shipper.city || 'Berlin',
+          country: shipperCountry,
+        },
+        consignee: {
+          name1: 'Address Validation Probe',
+          addressStreet: street,
+          postalCode,
+          city,
+          country: consigneeCountry,
+        },
+        details: {
+          dim: { uom: 'mm', height: 100, length: 300, width: 200 },
+          weight: { uom: 'kg', value: Math.max(0.1, Number(params?.weightKg) || 1) },
+        },
+      },
+    ],
+  };
+
+  const baseUrl = getDHLBaseUrl(settings);
+  const headers = getDHLHeaders(settings);
+
+  let respBody: Record<string, unknown> = {};
+  try {
+    const resp = await fetch(`${baseUrl}/orders?validate=true`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(dhlOrder),
+    });
+    respBody = (await resp.json()) as Record<string, unknown>;
+  } catch (e) {
+    return json({ valid: true, configured: false, messages: [`DHL probe failed: ${e instanceof Error ? e.message : String(e)}`] });
+  }
+
+  // Collect validation messages from the response.
+  const items = (respBody as { items?: Array<{ sstatus?: { statusCode?: number }; validationMessages?: Array<{ validationMessage?: string; property?: string }> }> }).items || [];
+  const messages: string[] = [];
+  let statusOk = true;
+  for (const item of items) {
+    if (item?.sstatus?.statusCode && item.sstatus.statusCode >= 400) statusOk = false;
+    for (const m of item?.validationMessages || []) {
+      if (m?.validationMessage) {
+        messages.push(m.property ? `${m.property}: ${m.validationMessage}` : m.validationMessage);
+        statusOk = false;
+      }
+    }
+  }
+  // Top-level DHL error (auth, billing, etc.) — surface but treat as non-blocking
+  // so users with misconfigured DHL aren't held up.
+  if (respBody?.detail || respBody?.title) {
+    return json({
+      valid: true,
+      configured: true,
+      messages: [String(respBody.detail || respBody.title)],
+    });
+  }
+
+  return json({ valid: statusOk, configured: true, messages });
 }
 
 /* -------------------------------------------------------------------------- */
