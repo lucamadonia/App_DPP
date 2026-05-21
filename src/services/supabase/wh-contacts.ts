@@ -223,21 +223,29 @@ export async function searchRecipients(query: string): Promise<RecipientSearchRe
     }
   }
 
-  // Search B2C customers (from Returns Hub)
+  // Search B2C customers (from Returns Hub / Shopify import).
+  // rh_customers has first_name/last_name/company (no single `name` column).
   const { data: customers } = await supabase
     .from('rh_customers')
     .select('*')
     .eq('tenant_id', tenantId)
-    .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
+    .or(
+      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,company.ilike.%${query}%`,
+    )
     .limit(10);
 
   if (customers) {
     for (const c of customers) {
-      const addr = c.addresses?.[0];
+      const addr = Array.isArray(c.addresses) ? c.addresses[0] : undefined;
+      const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim()
+        || c.company
+        || c.email
+        || '—';
       results.push({
         id: c.id,
         type: 'customer',
-        name: c.name,
+        name: fullName,
+        company: c.company || undefined,
         email: c.email || undefined,
         phone: c.phone || undefined,
         street: addr?.street || undefined,
@@ -249,6 +257,99 @@ export async function searchRecipients(query: string): Promise<RecipientSearchRe
   }
 
   return results;
+}
+
+/**
+ * Browse/search recipients for the picker dialog.
+ * - When `query` is empty: returns the most recently active contacts and customers.
+ * - When `query` is set: same fields as `searchRecipients` but configurable type filter and limit.
+ */
+export async function listRecipients(opts: {
+  query?: string;
+  typeFilter?: 'all' | 'b2b' | 'customer';
+  limit?: number;
+} = {}): Promise<RecipientSearchResult[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const query = (opts.query || '').trim();
+  const typeFilter = opts.typeFilter || 'all';
+  const limit = Math.max(1, Math.min(opts.limit ?? 30, 100));
+  const perSource = typeFilter === 'all' ? limit : limit;
+  const results: RecipientSearchResult[] = [];
+
+  if (typeFilter === 'all' || typeFilter === 'b2b') {
+    let q = supabase
+      .from('wh_contacts')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true);
+    if (query.length >= 1) {
+      q = q.or(
+        `contact_name.ilike.%${query}%,company_name.ilike.%${query}%,email.ilike.%${query}%`,
+      );
+    }
+    const { data: contacts } = await q
+      .order('updated_at', { ascending: false })
+      .limit(perSource);
+    if (contacts) {
+      for (const c of contacts) {
+        results.push({
+          id: c.id,
+          type: 'b2b',
+          name: c.contact_name,
+          company: c.company_name || undefined,
+          email: c.email || undefined,
+          phone: c.phone || undefined,
+          street: c.street || undefined,
+          city: c.city || undefined,
+          postalCode: c.postal_code || undefined,
+          country: c.country || undefined,
+          contactId: c.id,
+        });
+      }
+    }
+  }
+
+  if (typeFilter === 'all' || typeFilter === 'customer') {
+    let q = supabase
+      .from('rh_customers')
+      .select('*')
+      .eq('tenant_id', tenantId);
+    if (query.length >= 1) {
+      q = q.or(
+        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,company.ilike.%${query}%`,
+      );
+    }
+    // Prefer customers with real order activity first, then fall back to created_at.
+    const { data: customers } = await q
+      .order('last_order_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(perSource);
+    if (customers) {
+      for (const c of customers) {
+        const addr = Array.isArray(c.addresses) ? c.addresses[0] : undefined;
+        const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim()
+          || c.company
+          || c.email
+          || '—';
+        results.push({
+          id: c.id,
+          type: 'customer',
+          name: fullName,
+          company: c.company || undefined,
+          email: c.email || undefined,
+          phone: c.phone || undefined,
+          street: addr?.street || undefined,
+          city: addr?.city || undefined,
+          postalCode: addr?.postal_code || addr?.postalCode || undefined,
+          country: addr?.country || undefined,
+        });
+      }
+    }
+  }
+
+  return results.slice(0, limit);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

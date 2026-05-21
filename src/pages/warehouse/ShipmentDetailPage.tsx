@@ -32,12 +32,13 @@ import type { WarehouseSettings } from '@/types/database';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getContentPosts } from '@/services/supabase/wh-content';
 import { updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
-import { SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS, getTrackingUrl } from '@/lib/warehouse-constants';
+import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS, getTrackingUrl } from '@/lib/warehouse-constants';
 import type { WhShipment, WhShipmentItem, ShipmentStatus, WhContentPost } from '@/types/warehouse';
 import { SHIPMENT_STATUS_ORDER, CARRIER_OPTIONS } from '@/types/warehouse';
 import { DHLLabelActions } from '@/components/warehouse/DHLLabelActions';
 import { DHLTrackingPanel } from '@/components/warehouse/DHLTrackingPanel';
 import { SampleStatusPipeline } from '@/components/warehouse/SampleStatusPipeline';
+import { ShipmentStatusPipeline } from '@/components/warehouse/ShipmentStatusPipeline';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import { ContentStatusBadge } from '@/components/warehouse/ContentStatusBadge';
 import { ContentPostsTable } from '@/components/warehouse/ContentPostsTable';
@@ -74,86 +75,6 @@ const NEXT_STATUS_LABELS: Record<ShipmentStatus, string> = {
   cancelled: '',
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Status Pipeline                                                            */
-/* -------------------------------------------------------------------------- */
-
-function StatusPipeline({ current, createdAt, shippedAt, deliveredAt, t }: {
-  current: ShipmentStatus;
-  createdAt: string;
-  shippedAt?: string;
-  deliveredAt?: string;
-  t: (key: string) => string;
-}) {
-  const currentIdx = SHIPMENT_STATUS_ORDER.indexOf(current);
-  const isCancelled = current === 'cancelled';
-
-  const dateMap: Record<string, string | undefined> = {
-    draft: createdAt,
-    shipped: shippedAt,
-    delivered: deliveredAt,
-  };
-
-  return (
-    <div className="overflow-x-auto pb-2">
-      <div className="flex items-center min-w-[500px] px-2 sm:px-4">
-        {SHIPMENT_STATUS_ORDER.map((status, idx) => {
-          const isPast = !isCancelled && currentIdx > idx;
-          const isCurrent = !isCancelled && status === current;
-          const colors = SHIPMENT_STATUS_ICON_COLORS[status];
-          const date = dateMap[status];
-
-          return (
-            <div key={status} className="flex items-center flex-1">
-              <div className="flex flex-col items-center">
-                {/* Circle */}
-                <div className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
-                  isPast
-                    ? `h-8 w-8 bg-primary text-primary-foreground`
-                    : isCurrent
-                      ? `h-10 w-10 ${colors.bg} ring-2 ring-primary ring-offset-2 ring-offset-background`
-                      : `h-8 w-8 border-2 border-dashed border-muted-foreground/30 bg-muted/30`
-                }`}>
-                  {isPast ? (
-                    <Check className="h-4 w-4" />
-                  ) : isCurrent ? (
-                    <div className={`h-3 w-3 rounded-full bg-primary animate-pulse`} />
-                  ) : null}
-                </div>
-                {/* Label */}
-                <span className={`text-[10px] mt-1.5 whitespace-nowrap ${
-                  isCurrent ? 'font-semibold text-foreground' : isPast ? 'text-muted-foreground' : 'text-muted-foreground/50'
-                }`}>
-                  {t(status)}
-                </span>
-                {/* Date */}
-                {date && (isPast || isCurrent) && (
-                  <span className="text-[9px] text-muted-foreground/70 mt-0.5">
-                    {new Date(date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })}
-                  </span>
-                )}
-              </div>
-              {/* Connector */}
-              {idx < SHIPMENT_STATUS_ORDER.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-1 transition-colors ${
-                  isPast ? 'bg-primary' : 'bg-muted'
-                }`} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {isCancelled && (
-        <div className="flex items-center justify-center mt-3 gap-2">
-          <Badge variant="destructive" className="gap-1">
-            <X className="h-3 w-3" />
-            {t('cancelled')}
-          </Badge>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*  Editable Card Section                                                      */
@@ -533,12 +454,11 @@ export function ShipmentDetailPage() {
       {/* Status Pipeline */}
       <Card>
         <CardContent className="pt-4 sm:pt-6 pb-3 sm:pb-4 px-2 sm:px-6">
-          <StatusPipeline
+          <ShipmentStatusPipeline
             current={shipment.status}
             createdAt={shipment.createdAt}
             shippedAt={shipment.shippedAt}
             deliveredAt={shipment.deliveredAt}
-            t={t}
           />
         </CardContent>
       </Card>

@@ -474,6 +474,7 @@ export {
   updateContact as updateWhContact,
   deleteContact as deleteWhContact,
   searchRecipients,
+  listRecipients,
   type RecipientSearchResult,
 } from './wh-contacts';
 

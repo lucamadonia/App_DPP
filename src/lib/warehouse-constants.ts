@@ -2,6 +2,8 @@
  * Warehouse zone type configuration with icons, colors, and labels.
  */
 
+import type { LucideIcon } from 'lucide-react';
+import { FileText, PackageSearch, Package, Tag, Send, Truck, CheckCircle2, XCircle } from 'lucide-react';
 import type { WarehouseZoneType, ShipmentStatus, SampleStatus, ContentStatus, CampaignStatus, CampaignInfluencerStatus, CompensationType, ContentType, CampaignEventType, InfluencerTier, SocialPlatform } from '@/types/warehouse';
 
 export interface ZoneTypeConfig {
@@ -103,6 +105,28 @@ export const SHIPMENT_STATUS_ICON_COLORS: Record<ShipmentStatus, { color: string
   in_transit: { color: 'text-orange-600', bg: 'bg-orange-100 dark:bg-orange-900/30' },
   delivered: { color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30' },
   cancelled: { color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30' },
+};
+
+export const SHIPMENT_STATUS_ICONS: Record<ShipmentStatus, LucideIcon> = {
+  draft: FileText,
+  picking: PackageSearch,
+  packed: Package,
+  label_created: Tag,
+  shipped: Send,
+  in_transit: Truck,
+  delivered: CheckCircle2,
+  cancelled: XCircle,
+};
+
+export const SHIPMENT_STATUS_GRADIENTS: Record<ShipmentStatus, string> = {
+  draft: 'from-slate-400 to-slate-500',
+  picking: 'from-amber-500 to-yellow-500',
+  packed: 'from-blue-500 to-cyan-500',
+  label_created: 'from-indigo-500 to-violet-500',
+  shipped: 'from-violet-500 to-fuchsia-500',
+  in_transit: 'from-orange-500 to-rose-500',
+  delivered: 'from-emerald-500 to-teal-500',
+  cancelled: 'from-rose-500 to-red-600',
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {

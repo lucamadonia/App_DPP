@@ -90,12 +90,16 @@ function RecipientSearchField({
   onChange,
   results,
   onSelect,
+  onBrowseClick,
+  browseLabel,
   placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
   results: RecipientSearchResult[];
   onSelect: (r: RecipientSearchResult) => void;
+  onBrowseClick?: () => void;
+  browseLabel?: string;
   placeholder: string;
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -123,14 +127,39 @@ function RecipientSearchField({
   }, [results.length]);
 
   return (
-    <div ref={wrapperRef} className="relative">
-      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
-      <Input
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="pl-10 h-11 rounded-xl border-slate-200 dark:border-slate-700 focus-visible:ring-blue-500/50"
-      />
+    <div ref={wrapperRef} className="relative flex items-stretch gap-2">
+      <div className="relative flex-1">
+        {onBrowseClick ? (
+          <button
+            type="button"
+            onClick={onBrowseClick}
+            aria-label={browseLabel}
+            title={browseLabel}
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+        ) : (
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        )}
+        <Input
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="pl-10 pr-3 h-11 rounded-xl border-slate-200 dark:border-slate-700 focus-visible:ring-blue-500/50"
+        />
+      </div>
+      {onBrowseClick && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBrowseClick}
+          className="h-11 rounded-xl px-3 sm:px-4 flex-shrink-0 border-slate-200 dark:border-slate-700"
+        >
+          <Search className="h-4 w-4 sm:mr-1.5" />
+          <span className="hidden sm:inline text-sm">{browseLabel}</span>
+        </Button>
+      )}
       {rect && results.length > 0 && typeof document !== 'undefined' &&
         createPortal(
           <div
