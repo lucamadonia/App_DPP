@@ -321,18 +321,26 @@ async function fireEngagementDay(
 async function processShipment(supabase: any, ship: ShipmentRow):
   Promise<{ shipmentId: string; tenantId: string; outcome: 'fired' | 'skipped' | 'failed'; reason?: string; token?: string }> {
 
-  // Dedup: skip if ANY feedback_request already exists for this shipment.
+  // A feedback_request is pre-created (silently) when the shipment is marked
+  // delivered, so the delivery mail can already carry a review link. That must
+  // NOT block the day-7 feedback mail. If one already exists we REUSE its token
+  // and still send; only when none exists do we create it here. Duplicate sends
+  // are prevented downstream by the receiver's sourceEventId dedup
+  // (trackbliss:engagement_cron:<shipmentId>).
+  let firstToken: string | undefined;
   const { data: existing } = await supabase
     .from('feedback_requests')
     .select('id, token')
     .eq('shipment_id', ship.id)
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  if (existing) {
-    return { shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'skipped', reason: 'already_has_feedback_request', token: existing.token };
+  if (existing?.token) {
+    firstToken = existing.token as string;
   }
 
+  if (!firstToken) {
   // Fetch shipment items. Note: wh_shipment_items has no variant_title column —
   // variant info lives on product_batches.shopify_product_map (matches the
   // client-side transformShipmentItem() join in wh-shipments.ts:1054).
@@ -411,7 +419,13 @@ async function processShipment(supabase: any, ship: ShipmentRow):
     return { shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'failed', reason: `insert_failed:${insErr?.message || 'no_rows'}` };
   }
 
-  const firstToken = inserted[0].token as string;
+    firstToken = inserted[0].token as string;
+  }
+
+  if (!firstToken) {
+    return { shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'failed', reason: 'no_token' };
+  }
+
   const firstName = (ship.recipient_name || '').trim().split(/\s+/)[0] || 'Kunde';
 
   const ok = await postToFamilyJoy({
