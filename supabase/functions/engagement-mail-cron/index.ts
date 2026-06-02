@@ -427,17 +427,18 @@ async function processShipment(supabase: any, ship: ShipmentRow):
   }
 
   const firstName = (ship.recipient_name || '').trim().split(/\s+/)[0] || 'Kunde';
+  const feedbackUrl = `${TRACKBLISS_PUBLIC_URL}/feedback/${firstToken}`;
 
   const ok = await postToFamilyJoy({
     eventType: 'feedback_request',
     sourceEventId: `trackbliss:engagement_cron:${ship.id}`,
     recipientEmail: ship.recipient_email,
     language: 'de',
+    // Passthrough: send the fully-written feedback body; the Family-Joy receiver
+    // wraps it in the Fambliss brand shell (logo, card, Rebecca signature, footer).
     context: {
-      customerName: ship.recipient_name || 'Kunde',
-      firstName,
-      feedbackUrl: `${TRACKBLISS_PUBLIC_URL}/feedback/${firstToken}`,
-      shipmentNumber: ship.shipment_number || '',
+      renderedSubject: 'Wie war’s? Erzähl uns von deinem Fambliss-Moment 🌿',
+      renderedHtml: buildFeedbackBody(firstName, feedbackUrl),
     },
     metadata: {
       shipment_id: ship.id,
@@ -451,6 +452,24 @@ async function processShipment(supabase: any, ship: ShipmentRow):
   }
 
   return { shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'fired', token: firstToken };
+}
+
+// ─── Feedback mail body (wrapped in the Fambliss shell by the receiver) ───────
+
+/** Warm, on-brand German feedback-request / reminder body. Returns an inner
+ *  fragment — the receiver adds logo, card, Rebecca signature and footer. */
+function buildFeedbackBody(firstName: string, feedbackUrl: string): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const name = esc(firstName || 'du');
+  const url = esc(feedbackUrl);
+  return `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#2d3a28;">Hallo ${name},</p>`
+    + `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#6b6e64;">vor ein paar Tagen ist dein Fambliss-Paket bei dir angekommen — wir hoffen, es hat schon einen festen Platz in eurem Familienalltag gefunden. 💛</p>`
+    + `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#6b6e64;">Wir würden uns riesig freuen, wenn du dir einen kurzen Moment nimmst und deine Erfahrung teilst. Deine Bewertung hilft anderen Familien bei der Entscheidung — und uns, Fambliss noch besser zu machen.</p>`
+    + `<p style="margin:0 0 4px;font-size:16px;line-height:1.6;color:#6b6e64;">Es dauert wirklich nur eine Minute:</p>`
+    + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 6px;"><tr><td bgcolor="#2d3a28" style="border-radius:9999px;"><a href="${url}" target="_blank" rel="noopener" style="display:inline-block;padding:15px 44px;color:#f5f4ef;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">Jetzt bewerten</a></td></tr></table>`
+    + `<p style="margin:6px 0 18px;font-size:12px;line-height:1.5;color:#94978d;">Falls der Button nicht funktioniert: <a href="${url}" style="color:#5a6855;">${url}</a></p>`
+    + `<p style="margin:0 0 4px;font-size:16px;line-height:1.6;color:#6b6e64;">Vielen Dank, dass du Teil der Fambliss-Familie bist.</p>`
+    + `<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:#2d3a28;">Herzliche Grüße</p>`;
 }
 
 // ─── Family-Joy mail-event-receiver POST (HMAC-SHA256 signed) ─────────────────
