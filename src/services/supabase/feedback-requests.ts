@@ -136,69 +136,71 @@ export async function createFeedbackRequestsForShipment(
     });
   }
 
+  // Resolve the token we link to. If every variant already has a request
+  // (e.g. silently pre-created on delivery), reuse the latest one and STILL
+  // send — don't abort. Otherwise insert the new requests.
+  let firstToken: string | undefined;
+  let createdCount = 0;
   if (rows.length === 0) {
-    return { created: 0, emailsSent: 0, error: 'All variants already have an open request' };
+    const { data: existing } = await supabase
+      .from('feedback_requests')
+      .select('token')
+      .eq('shipment_id', shipmentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    firstToken = existing?.token || undefined;
+    if (!firstToken) {
+      return { created: 0, emailsSent: 0, error: 'No feedback request found for this shipment' };
+    }
+  } else {
+    const { data: inserted, error: insErr } = await supabase
+      .from('feedback_requests')
+      .insert(rows)
+      .select('id, token');
+    if (insErr) return { created: 0, emailsSent: 0, error: insErr.message };
+    firstToken = inserted?.[0]?.token;
+    createdCount = rows.length;
   }
 
-  const { data: inserted, error: insErr } = await supabase
-    .from('feedback_requests')
-    .insert(rows)
-    .select('id, token');
-
-  if (insErr) return { created: 0, emailsSent: 0, error: insErr.message };
-
-  // Fire one email per recipient (regardless of how many variant requests
-  // were created — they all share one form, accessed via the first token).
-  // Pick the first token as the "primary" link — the form will load
-  // sibling requests via the shipment_id join.
-  const firstToken = inserted?.[0]?.token;
+  // Send via sendCustomFeedbackEmail — it writes the rh_notifications row
+  // directly (no dependency on an enabled rh_email_templates row, which could
+  // be disabled and silently skip), so the DB dispatch trigger always fires.
+  // The verified link is injected as a "Jetzt bewerten" CTA button.
   let emailsSent = 0;
   if (firstToken && !options.silent) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dpp-app.fambliss.eu';
     const feedbackUrl = `${origin}/feedback/${firstToken}`;
+    const custom = options.email?.mode === 'custom' ? options.email : null;
     try {
-      const mod = await import('./rh-notification-trigger');
-
-      if (options.email?.mode === 'custom') {
-        // Operator-edited mail — the verified link is injected as a CTA button
-        // so it can't be broken by free-text editing.
-        const res = await mod.sendCustomFeedbackEmail({
-          tenantId,
-          recipientEmail: shipment.recipientEmail!,
-          recipientName: shipment.recipientName,
-          subject: options.email.subject,
-          body: options.email.body,
-          feedbackUrl,
-          shipmentId: shipment.id,
-          shipmentNumber: shipment.shipmentNumber,
-        });
-        if (res.success) emailsSent = 1;
-      } else {
-        // Default: piggyback on the existing 'feedback_request' template.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const trigger = (mod as any).triggerPublicEmailNotification;
-        if (typeof trigger === 'function') {
-          const productNames = variants
-            .map(v => `${v.productName || ''} ${v.variantTitle ? `(${v.variantTitle})` : ''}`.trim())
-            .filter(Boolean)
-            .join(', ');
-          await trigger(tenantId, 'feedback_request', {
-            customerName: shipment.recipientName,
-            customerEmail: shipment.recipientEmail,
-            productNames,
-            feedbackUrl,
-            shipmentNumber: shipment.shipmentNumber,
-          });
-          emailsSent = 1;
-        }
-      }
+      const { sendCustomFeedbackEmail } = await import('./rh-notification-trigger');
+      const res = await sendCustomFeedbackEmail({
+        tenantId,
+        recipientEmail: shipment.recipientEmail!,
+        recipientName: shipment.recipientName,
+        subject: custom ? custom.subject : 'Wie war’s? Erzähl uns von deinem Fambliss-Moment 🌿',
+        body: custom ? custom.body : DEFAULT_FEEDBACK_BODY,
+        feedbackUrl,
+        shipmentId: shipment.id,
+        shipmentNumber: shipment.shipmentNumber,
+      });
+      if (res.success) emailsSent = 1;
     } catch (e) {
-      console.warn('Email trigger failed (non-fatal):', e);
+      console.warn('Feedback email failed (non-fatal):', e);
     }
   }
 
-  return { created: rows.length, emailsSent, firstToken };
+  return { created: createdCount, emailsSent, firstToken };
 }
+
+/** Default warm feedback text. The greeting ("Hallo …") and the "Jetzt
+ *  bewerten" CTA button are added automatically by sendCustomFeedbackEmail; the
+ *  Family-Joy receiver wraps everything in the Fambliss shell + signature. */
+const DEFAULT_FEEDBACK_BODY = `vor ein paar Tagen ist dein Fambliss-Paket bei dir angekommen — wir hoffen, es hat schon einen festen Platz in eurem Familienalltag gefunden. 💛
+
+Wir würden uns riesig freuen, wenn du dir einen kurzen Moment nimmst und deine Erfahrung teilst. Deine Bewertung hilft anderen Familien bei der Entscheidung — und uns, Fambliss noch besser zu machen.
+
+Es dauert wirklich nur eine Minute:`;
 
 export async function getFeedbackRequests(filter?: FeedbackRequestFilter): Promise<FeedbackRequest[]> {
   const tenantId = await getCurrentTenantId();
