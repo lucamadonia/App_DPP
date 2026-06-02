@@ -44,7 +44,11 @@ export function ContactCustomerDialog({ open, onOpenChange, shipment }: Props) {
   const { t } = useTranslation('warehouse');
 
   const firstName = (shipment.recipientName || '').trim().split(/\s+/)[0] || '';
-  const interp = { shipmentNumber: shipment.shipmentNumber, firstName };
+  // Customers recognize their Shopify order number, not the internal SHP-… —
+  // prefer orderReference (strip a leading "Shopify " prefix), fall back to it.
+  const orderNumber = (shipment.orderReference || '').replace(/^shopify\s*/i, '').trim()
+    || shipment.shipmentNumber;
+  const interp = { shipmentNumber: orderNumber, firstName };
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');

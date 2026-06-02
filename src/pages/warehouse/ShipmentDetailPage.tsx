@@ -452,6 +452,14 @@ export function ShipmentDetailPage() {
             {shipment.recipientCompany && `${shipment.recipientCompany} · `}{shipment.recipientName}
           </p>
         </div>
+        {hasFeedbackModule && (
+          <RequestFeedbackButton
+            shipment={shipment}
+            items={items}
+            disabled={statusUpdating}
+            notYetDelivered={shipment.status !== 'delivered'}
+          />
+        )}
       </div>
 
       {/* Status Pipeline */}
@@ -1211,14 +1219,6 @@ export function ShipmentDetailPage() {
                 <Merge className="mr-1 h-3.5 w-3.5" />
                 {t('Merge with…')}
               </Button>
-            )}
-            {hasFeedbackModule && (
-              <RequestFeedbackButton
-                shipment={shipment}
-                items={items}
-                disabled={statusUpdating}
-                notYetDelivered={shipment.status !== 'delivered'}
-              />
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
