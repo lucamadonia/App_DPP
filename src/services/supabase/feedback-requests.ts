@@ -178,7 +178,7 @@ export async function createFeedbackRequestsForShipment(
         tenantId,
         recipientEmail: shipment.recipientEmail!,
         recipientName: shipment.recipientName,
-        subject: custom ? custom.subject : 'Wie war’s? Erzähl uns von deinem Fambliss-Moment 🌿',
+        subject: custom ? custom.subject : 'Wie war dein Fambliss-Moment?',
         body: custom ? custom.body : DEFAULT_FEEDBACK_BODY,
         feedbackUrl,
         shipmentId: shipment.id,
