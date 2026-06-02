@@ -1,5 +1,6 @@
 {
   "contact.contact": "Contact",
+  "contact.tpl.custom.label": "Custom",
   "contact.title": "Contact customer",
   "contact.description": "Send the recipient of this shipment an email directly from the system.",
   "contact.recipient": "Recipient",

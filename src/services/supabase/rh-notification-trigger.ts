@@ -495,18 +495,18 @@ function wrapCustomMessageHtml(
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const body = esc(message).replace(/\r?\n/g, '<br>');
-  const greeting = greetingName ? `<p style="margin:0 0 16px">Hallo ${esc(greetingName)},</p>` : '';
-  const button = cta
-    ? `<div style="margin:24px 0 8px"><a href="${esc(cta.url)}" target="_blank" rel="noopener" style="display:inline-block;background:#F59E0B;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">${esc(cta.label)}</a></div>`
-      + `<p style="margin:0;font-size:12px;color:#6b7280;word-break:break-all">${esc(cta.url)}</p>`
+  const greeting = greetingName
+    ? `<p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:#2d3a28">Hallo ${esc(greetingName)},</p>`
     : '';
-  return [
-    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:560px;margin:0 auto;padding:8px">',
-    greeting,
-    `<div>${body}</div>`,
-    button,
-    '</div>',
-  ].join('');
+  const button = cta
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 4px"><tr><td bgcolor="#2d3a28" style="border-radius:9999px"><a href="${esc(cta.url)}" target="_blank" rel="noopener" style="display:inline-block;padding:15px 40px;color:#f5f4ef;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase">${esc(cta.label)}</a></td></tr></table>`
+    : '';
+  // Inner fragment only — the Family-Joy receiver wraps this in the full
+  // Fambliss brand shell (logo, white card, footer), so branding stays in one
+  // place. Colours match the Fambliss palette (#2d3a28 / #6b6e64).
+  return greeting
+    + `<div style="font-size:16px;line-height:1.6;color:#6b6e64">${body}</div>`
+    + button;
 }
 
 /**
