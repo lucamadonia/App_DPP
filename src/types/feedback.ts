@@ -74,6 +74,7 @@ export interface FeedbackReview {
   nameVisibility?: NameVisibility;
   reviewerCity?: string;
   reviewerCountry?: string;
+  reviewerChildren?: { count: number; ages: number[] };
   status: FeedbackReviewStatus;
   moderationNotes?: string;
   aiSentiment?: FeedbackAiSentiment;
@@ -229,6 +230,7 @@ export interface PublicFeedbackReviewItem {
   comment?: string;
   reviewer_display_name: string;
   reviewer_city?: string;
+  reviewer_children?: { count: number; ages: number[] } | null;
   created_at: string;
   photos: Array<{ path: string }>;
   reply?: { author: string; content: string; created_at: string };
