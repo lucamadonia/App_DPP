@@ -1,5 +1,6 @@
 {
   "contact.contact": "Kontaktieren",
+  "contact.tpl.custom.label": "Individuell",
   "contact.title": "Kunde kontaktieren",
   "contact.description": "Sende dem Empfänger dieser Sendung eine E-Mail direkt aus dem System.",
   "contact.recipient": "Empfänger",

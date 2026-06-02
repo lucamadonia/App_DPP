@@ -122,6 +122,15 @@ export function ContactCustomerDialog({ open, onOpenChange, shipment }: Props) {
           <div className="space-y-1.5">
             <p className="text-xs text-muted-foreground">{t('contact.templates')}</p>
             <div className="flex flex-wrap gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={activeTpl === 'custom' ? 'default' : 'outline'}
+                className="h-7 text-xs"
+                onClick={() => { setActiveTpl('custom'); setSubject(''); setMessage(''); }}
+              >
+                {t('contact.tpl.custom.label')}
+              </Button>
               {CONTACT_TEMPLATES.map((tpl) => (
                 <Button
                   key={tpl.id}
