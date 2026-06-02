@@ -306,7 +306,12 @@ export type RhNotificationEventType =
   | 'engagement_day_1'
   | 'engagement_day_7'
   | 'engagement_day_14'
-  | 'engagement_day_30';
+  | 'engagement_day_30'
+  // Ad-hoc free-text customer contact (e.g. from the warehouse packing screen
+  // when something needs clarifying: incomplete address, out of stock,
+  // shipping delay, holiday closure …). No fixed template — subject + body are
+  // composed by the sender and passed through as rendered content.
+  | 'custom_message';
 
 export type EmailTemplateCategory = 'returns' | 'tickets' | 'general' | 'shipment';
 

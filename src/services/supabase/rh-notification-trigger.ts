@@ -389,6 +389,7 @@ export async function triggerPublicEmailNotification(
       .eq('id', tenantId)
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rhSettings = (tenant?.settings as any)?.returnsHub;
     const emailLocale = rhSettings?.notifications?.emailLocale || 'en';
 
@@ -451,6 +452,105 @@ export async function triggerPublicEmailNotification(
     return { success: true };
   } catch (err) {
     console.error('triggerPublicEmailNotification error:', err);
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/**
+ * Wrap a plain-text message in a minimal, brand-consistent HTML shell.
+ * Newlines become <br>. Kept deliberately simple — these ad-hoc contact
+ * mails carry operational notes (incomplete address, shipping delay, …),
+ * not marketing layout.
+ */
+function wrapCustomMessageHtml(message: string, greetingName?: string): string {
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const body = esc(message).replace(/\r?\n/g, '<br>');
+  const greeting = greetingName ? `<p style="margin:0 0 16px">Hallo ${esc(greetingName)},</p>` : '';
+  return [
+    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:560px;margin:0 auto;padding:8px">',
+    greeting,
+    `<div>${body}</div>`,
+    '</div>',
+  ].join('');
+}
+
+/**
+ * Send a free-text email to a shipment's recipient straight from the system
+ * (e.g. from the warehouse packing screen). Unlike triggerEmailNotification
+ * this does NOT require an enabled template and does NOT dedup — the operator
+ * may legitimately send several messages about the same shipment.
+ *
+ * Works in both delivery modes: with the Family-Joy mail-hub enabled the
+ * rendered subject/body are forwarded (the receiver sends them as-is since
+ * there's no template for 'custom_message'); otherwise the local send-email
+ * Edge Function is invoked. A mirror row is always written to rh_notifications
+ * so the message shows up in the admin notification history.
+ */
+export async function sendCustomShipmentEmail(params: {
+  shipmentId: string;
+  shipmentNumber?: string;
+  recipientEmail: string;
+  recipientName?: string;
+  customerId?: string;
+  subject: string;
+  message: string;
+}): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+  try {
+    const recipientEmail = params.recipientEmail?.trim();
+    if (!recipientEmail) return { success: false, error: 'No recipient email' };
+    if (!params.subject?.trim() || !params.message?.trim()) {
+      return { success: false, error: 'Subject and message are required' };
+    }
+
+    const tenantId = await getCurrentTenantId();
+    if (!tenantId) return { success: false, error: 'No tenant set' };
+
+    const settings = await getReturnsHubSettings();
+    const emailLocale = settings.notifications?.emailLocale || 'de';
+    const firstName = (params.recipientName || '').trim().split(/\s+/)[0] || undefined;
+
+    const renderedBody = wrapCustomMessageHtml(params.message, firstName);
+
+    const notificationPayload = {
+      tenant_id: tenantId,
+      return_id: null,
+      ticket_id: null,
+      customer_id: params.customerId || null,
+      wh_shipment_id: params.shipmentId || null,
+      channel: 'email',
+      template: 'custom_message' as RhNotificationEventType,
+      recipient_email: recipientEmail,
+      subject: params.subject.trim(),
+      content: renderedBody,
+      status: 'pending',
+      metadata: {
+        senderName: settings.notifications?.senderName || '',
+        isHtml: true,
+        locale: emailLocale,
+        custom: true,
+        ...(params.shipmentNumber && { shipment_number: params.shipmentNumber }),
+      },
+    };
+
+    const { data, error } = await supabase
+      .from('rh_notifications')
+      .insert(notificationPayload)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Failed to create custom email notification:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Fire-and-forget: forwards to Family-Joy when the mail-hub is enabled,
+    // otherwise invokes the local send-email function.
+    sendNotificationEmail({ ...notificationPayload, id: data.id });
+
+    return { success: true, notificationId: data.id };
+  } catch (err) {
+    console.error('sendCustomShipmentEmail error:', err);
     return { success: false, error: 'Unexpected error' };
   }
 }

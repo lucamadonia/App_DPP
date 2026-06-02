@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Package, Truck, User, MapPin, ExternalLink, Copy,
   Check, X, Pencil, FileText, Clock, Weight, DollarSign,
-  AlertTriangle, Camera, Gift, RotateCcw, Heart, Link as LinkIcon, Send, Merge,
+  AlertTriangle, Camera, Gift, RotateCcw, Heart, Link as LinkIcon, Send, Merge, Mail,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ import { ShopifyShipmentSyncCard } from '@/components/warehouse/shopify/ShopifyS
 import { PickPackConfirmDialog } from '@/components/warehouse/PickPackConfirmDialog';
 import { EditShipmentItemDialog } from '@/components/warehouse/EditShipmentItemDialog';
 import { MergeShipmentDialog } from '@/components/warehouse/MergeShipmentDialog';
+import { ContactCustomerDialog } from '@/components/warehouse/ContactCustomerDialog';
 import { RequestFeedbackButton } from '@/components/feedback/RequestFeedbackButton';
 import { useBillingOptional } from '@/hooks/use-billing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -183,6 +184,9 @@ export function ShipmentDetailPage() {
 
   // Merge-into-another-shipment dialog.
   const [mergeOpen, setMergeOpen] = useState(false);
+
+  // Contact-customer (free-text email) dialog.
+  const [contactOpen, setContactOpen] = useState(false);
 
   // Feedback module gate — only show "Request Feedback" button if billed.
   const billing = useBillingOptional();
@@ -401,7 +405,6 @@ export function ShipmentDetailPage() {
     : null;
   const prevStatus = currentIdx > 0 ? SHIPMENT_STATUS_ORDER[currentIdx - 1] : null;
 
-  const isDraft = shipment.status === 'draft';
   const canEditShipping = ['draft', 'picking', 'packed'].includes(shipment.status);
   const canEditItems = ['draft', 'picking', 'packed'].includes(shipment.status);
   const isTerminal = shipment.status === 'delivered' || shipment.status === 'cancelled';
@@ -602,7 +605,12 @@ export function ShipmentDetailPage() {
                     </Link>
                   </Button>
                 )}
-                {isDraft && !editingRecipient && (
+                {shipment.recipientEmail && !editingRecipient && (
+                  <Button variant="ghost" size="sm" onClick={() => setContactOpen(true)}>
+                    <Mail className="h-3.5 w-3.5 mr-1" /> {t('contact.contact')}
+                  </Button>
+                )}
+                {canEditShipping && !editingRecipient && (
                   <Button variant="ghost" size="sm" onClick={() => startEditing('recipient')}>
                     <Pencil className="h-3.5 w-3.5 mr-1" /> {t('Edit', { ns: 'common' })}
                   </Button>
@@ -1367,6 +1375,14 @@ export function ShipmentDetailPage() {
             // continues editing the merged shipment.
             navigate(`/warehouse/shipments/${target.id}`);
           }}
+        />
+      )}
+
+      {shipment && (
+        <ContactCustomerDialog
+          open={contactOpen}
+          onOpenChange={setContactOpen}
+          shipment={shipment}
         />
       )}
     </div>
