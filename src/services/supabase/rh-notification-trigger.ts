@@ -462,15 +462,24 @@ export async function triggerPublicEmailNotification(
  * mails carry operational notes (incomplete address, shipping delay, …),
  * not marketing layout.
  */
-function wrapCustomMessageHtml(message: string, greetingName?: string): string {
+function wrapCustomMessageHtml(
+  message: string,
+  greetingName?: string,
+  cta?: { label: string; url: string },
+): string {
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const body = esc(message).replace(/\r?\n/g, '<br>');
   const greeting = greetingName ? `<p style="margin:0 0 16px">Hallo ${esc(greetingName)},</p>` : '';
+  const button = cta
+    ? `<div style="margin:24px 0 8px"><a href="${esc(cta.url)}" target="_blank" rel="noopener" style="display:inline-block;background:#F59E0B;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">${esc(cta.label)}</a></div>`
+      + `<p style="margin:0;font-size:12px;color:#6b7280;word-break:break-all">${esc(cta.url)}</p>`
+    : '';
   return [
     '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:560px;margin:0 auto;padding:8px">',
     greeting,
     `<div>${body}</div>`,
+    button,
     '</div>',
   ].join('');
 }
@@ -551,6 +560,91 @@ export async function sendCustomShipmentEmail(params: {
     return { success: true, notificationId: data.id };
   } catch (err) {
     console.error('sendCustomShipmentEmail error:', err);
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/**
+ * Send a customized feedback-request email. Like sendCustomShipmentEmail but
+ * guarantees the review link is always present and correct: any
+ * `{{feedbackUrl}}` placeholder is stripped from the text and a real
+ * "Jetzt bewerten" CTA button (pointing at the verified feedbackUrl) is
+ * appended — so an operator editing the copy can never break the link.
+ */
+export async function sendCustomFeedbackEmail(params: {
+  tenantId: string;
+  recipientEmail: string;
+  recipientName?: string;
+  subject: string;
+  body: string;
+  feedbackUrl: string;
+  shipmentId?: string;
+  shipmentNumber?: string;
+}): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+  try {
+    const recipientEmail = params.recipientEmail?.trim();
+    if (!recipientEmail) return { success: false, error: 'No recipient email' };
+    if (!params.feedbackUrl) return { success: false, error: 'Missing feedback link' };
+
+    // Subject: substitute the placeholder (the link lives in the CTA button,
+    // so we just drop any stray placeholder from the subject line).
+    const subject = (params.subject || 'Wie war deine Bestellung?')
+      .replace(/\{\{feedbackUrl\}\}/g, '')
+      .trim() || 'Wie war deine Bestellung?';
+
+    // Body: strip the placeholder line(s); the verified link is rendered as a
+    // CTA button by the wrapper so it can never be malformed.
+    const cleanedBody = (params.body || '')
+      .replace(/\{\{feedbackUrl\}\}/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    const firstName = (params.recipientName || '').trim().split(/\s+/)[0] || undefined;
+    const renderedBody = wrapCustomMessageHtml(cleanedBody, firstName, {
+      label: 'Jetzt bewerten',
+      url: params.feedbackUrl,
+    });
+
+    const settings = await getReturnsHubSettings();
+    const emailLocale = settings.notifications?.emailLocale || 'de';
+
+    const notificationPayload = {
+      tenant_id: params.tenantId,
+      return_id: null,
+      ticket_id: null,
+      customer_id: null,
+      wh_shipment_id: params.shipmentId || null,
+      channel: 'email',
+      template: 'custom_message' as RhNotificationEventType,
+      recipient_email: recipientEmail,
+      subject,
+      content: renderedBody,
+      status: 'pending',
+      metadata: {
+        senderName: settings.notifications?.senderName || '',
+        isHtml: true,
+        locale: emailLocale,
+        custom: true,
+        kind: 'feedback_request_custom',
+        ...(params.shipmentNumber && { shipment_number: params.shipmentNumber }),
+      },
+    };
+
+    const { data, error } = await supabase
+      .from('rh_notifications')
+      .insert(notificationPayload)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Failed to create custom feedback email notification:', error);
+      return { success: false, error: error.message };
+    }
+
+    sendNotificationEmail({ ...notificationPayload, id: data.id });
+    return { success: true, notificationId: data.id };
+  } catch (err) {
+    console.error('sendCustomFeedbackEmail error:', err);
     return { success: false, error: 'Unexpected error' };
   }
 }

@@ -36,6 +36,8 @@ export interface ReviewSubmitItem {
   title?: string;
   comment?: string;
   reviewer_city?: string;
+  /** How the reviewer's name is published. Default 'abbreviated'. */
+  name_visibility?: 'full' | 'abbreviated' | 'anonymous';
 }
 
 export async function submitFeedbackReviews(

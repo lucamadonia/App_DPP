@@ -15,6 +15,7 @@ import {
   type ReviewStats,
 } from '@/services/supabase/feedback-reviews';
 import type { FeedbackReview, FeedbackReviewStatus } from '@/types/feedback';
+import { getFeedbackPhotoPublicUrl } from '@/services/supabase/feedback-public';
 import { getVariantColorHex } from '@/lib/variant-color';
 import { toast } from 'sonner';
 
@@ -166,6 +167,7 @@ function ModerationRow({
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <StarRating value={review.rating} size="sm" />
+              <span className="text-sm font-semibold tabular-nums">{review.rating}/5</span>
               <span className="text-xs text-muted-foreground">·</span>
               <span className="text-sm font-medium">{review.productName || review.productId.slice(0, 8)}</span>
               {review.variantTitle && (
@@ -190,11 +192,60 @@ function ModerationRow({
                 {review.comment}
               </p>
             )}
-            <div className="text-xs text-muted-foreground pt-1">
-              {review.reviewerDisplayName}
-              {review.reviewerCity ? ` · ${review.reviewerCity}` : ''}
-              {' · '}
-              {new Date(review.createdAt).toLocaleString()}
+            {!review.title && !review.comment && (
+              <p className="text-sm italic text-muted-foreground">
+                Nur Sterne-Bewertung – kein Kommentartext.
+              </p>
+            )}
+            {review.photos && review.photos.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {review.photos.map(photo => {
+                  const url = getFeedbackPhotoPublicUrl(photo.storagePath);
+                  return (
+                    <a
+                      key={photo.id}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-md overflow-hidden border hover:ring-2 hover:ring-primary transition"
+                      title="Foto in voller Größe öffnen"
+                    >
+                      <img
+                        src={url}
+                        alt="Bewertungsfoto"
+                        loading="lazy"
+                        className="h-16 w-16 object-cover"
+                      />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground pt-1 flex items-center gap-1.5 flex-wrap">
+              <span>{review.reviewerDisplayName}</span>
+              {review.nameVisibility && (
+                <Badge
+                  variant="outline"
+                  className={
+                    review.nameVisibility === 'full'
+                      ? 'text-[10px] px-1.5 py-0 bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200'
+                      : review.nameVisibility === 'anonymous'
+                      ? 'text-[10px] px-1.5 py-0 bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-200'
+                      : 'text-[10px] px-1.5 py-0'
+                  }
+                  title="So wird der Name öffentlich angezeigt"
+                >
+                  {review.nameVisibility === 'full'
+                    ? 'Klarname'
+                    : review.nameVisibility === 'anonymous'
+                    ? 'Anonym'
+                    : 'Abgekürzt'}
+                </Badge>
+              )}
+              <span>
+                {review.reviewerCity ? `· ${review.reviewerCity} ` : ''}
+                · {new Date(review.createdAt).toLocaleString()}
+              </span>
             </div>
             {review.aiSentiment && (
               <div className="flex items-center gap-1.5 pt-1">

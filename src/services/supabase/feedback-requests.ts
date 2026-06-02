@@ -40,7 +40,12 @@ function transform(row: any): FeedbackRequest {
  */
 export async function createFeedbackRequestsForShipment(
   shipmentId: string,
-  options: { silent?: boolean } = {},
+  options: {
+    silent?: boolean;
+    /** Email mode: default template, or a custom (operator-edited) mail.
+     *  In custom mode the verified feedback link is injected automatically. */
+    email?: { mode: 'default' } | { mode: 'custom'; subject: string; body: string };
+  } = {},
 ): Promise<{
   created: number;
   emailsSent: number;
@@ -149,27 +154,43 @@ export async function createFeedbackRequestsForShipment(
   const firstToken = inserted?.[0]?.token;
   let emailsSent = 0;
   if (firstToken && !options.silent) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const feedbackUrl = `${origin}/feedback/${firstToken}`;
     try {
-      // Dynamic import to avoid pulling the email module unless needed
       const mod = await import('./rh-notification-trigger');
-      // We piggyback on the existing notification trigger; event type
-      // 'feedback_request' is a new one we register.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const trigger = (mod as any).triggerPublicEmailNotification;
-      if (typeof trigger === 'function') {
-        const productNames = variants
-          .map(v => `${v.productName || ''} ${v.variantTitle ? `(${v.variantTitle})` : ''}`.trim())
-          .filter(Boolean)
-          .join(', ');
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        await trigger(tenantId, 'feedback_request', {
-          customerName: shipment.recipientName,
-          customerEmail: shipment.recipientEmail,
-          productNames,
-          feedbackUrl: `${origin}/feedback/${firstToken}`,
+
+      if (options.email?.mode === 'custom') {
+        // Operator-edited mail — the verified link is injected as a CTA button
+        // so it can't be broken by free-text editing.
+        const res = await mod.sendCustomFeedbackEmail({
+          tenantId,
+          recipientEmail: shipment.recipientEmail!,
+          recipientName: shipment.recipientName,
+          subject: options.email.subject,
+          body: options.email.body,
+          feedbackUrl,
+          shipmentId: shipment.id,
           shipmentNumber: shipment.shipmentNumber,
         });
-        emailsSent = 1;
+        if (res.success) emailsSent = 1;
+      } else {
+        // Default: piggyback on the existing 'feedback_request' template.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const trigger = (mod as any).triggerPublicEmailNotification;
+        if (typeof trigger === 'function') {
+          const productNames = variants
+            .map(v => `${v.productName || ''} ${v.variantTitle ? `(${v.variantTitle})` : ''}`.trim())
+            .filter(Boolean)
+            .join(', ');
+          await trigger(tenantId, 'feedback_request', {
+            customerName: shipment.recipientName,
+            customerEmail: shipment.recipientEmail,
+            productNames,
+            feedbackUrl,
+            shipmentNumber: shipment.shipmentNumber,
+          });
+          emailsSent = 1;
+        }
       }
     } catch (e) {
       console.warn('Email trigger failed (non-fatal):', e);

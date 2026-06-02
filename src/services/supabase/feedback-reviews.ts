@@ -22,6 +22,7 @@ function transformReview(row: any): FeedbackReview {
     title: row.title || undefined,
     comment: row.comment || undefined,
     reviewerDisplayName: row.reviewer_display_name,
+    nameVisibility: row.name_visibility || undefined,
     reviewerCity: row.reviewer_city || undefined,
     reviewerCountry: row.reviewer_country || undefined,
     status: row.status,
@@ -90,7 +91,32 @@ export async function getReviews(filter?: FeedbackReviewFilter): Promise<Feedbac
 
   const { data, error } = await q;
   if (error || !data) return [];
-  return data.map(transformReview);
+
+  const reviews = data.map(transformReview);
+
+  // Attach photos so the moderation queue can show exactly what's being
+  // approved (a review may have only photos and no text). Batched in one
+  // query keyed by review_id to avoid N+1.
+  const ids = reviews.map(r => r.id);
+  if (ids.length > 0) {
+    const { data: photoRows } = await supabase
+      .from('feedback_photos')
+      .select('*')
+      .in('review_id', ids)
+      .order('sort_order');
+    if (photoRows && photoRows.length > 0) {
+      const byReview = new Map<string, FeedbackPhoto[]>();
+      for (const pr of photoRows) {
+        const photo = transformPhoto(pr);
+        const arr = byReview.get(photo.reviewId) || [];
+        arr.push(photo);
+        byReview.set(photo.reviewId, arr);
+      }
+      for (const r of reviews) r.photos = byReview.get(r.id) || [];
+    }
+  }
+
+  return reviews;
 }
 
 export async function getReviewDetail(id: string): Promise<FeedbackReview | null> {

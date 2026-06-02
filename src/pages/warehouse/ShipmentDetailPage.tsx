@@ -1212,11 +1212,12 @@ export function ShipmentDetailPage() {
                 {t('Merge with…')}
               </Button>
             )}
-            {shipment.status === 'delivered' && hasFeedbackModule && (
+            {hasFeedbackModule && (
               <RequestFeedbackButton
                 shipment={shipment}
                 items={items}
                 disabled={statusUpdating}
+                notYetDelivered={shipment.status !== 'delivered'}
               />
             )}
             <AlertDialog>

@@ -40,6 +40,7 @@ export function PublicFeedbackPage() {
   const [data, setData] = useState<PublicFeedbackRequest | null>(null);
   const [ratings, setRatings] = useState<RatingState[]>([]);
   const [city, setCity] = useState('');
+  const [nameVisibility, setNameVisibility] = useState<'full' | 'abbreviated' | 'anonymous'>('abbreviated');
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export function PublicFeedbackPage() {
         title: r.title.trim() || undefined,
         comment: r.comment.trim() || undefined,
         reviewer_city: city.trim() || undefined,
+        name_visibility: nameVisibility,
       }));
     if (payload.length === 0) {
       setStatus('ready');
@@ -299,10 +301,46 @@ export function PublicFeedbackPage() {
           />
         )}
 
-        <p className="text-[11px] text-muted-foreground text-center">
-          Es wird nur dein Vorname mit Anfangsbuchstabe des Nachnamens veröffentlicht
-          {city.trim() ? ` und „${city.trim()}"` : ''}.
-        </p>
+        {anyRated && (() => {
+          // Live preview of the published name. The server re-derives this
+          // authoritatively from the order name — this is just for the customer.
+          const parts = data.customer_name.trim().split(/\s+/);
+          const abbreviated = parts[0] + (parts.length > 1 ? ` ${parts[1].charAt(0)}.` : '');
+          const previewName =
+            nameVisibility === 'full' ? data.customer_name.trim()
+            : nameVisibility === 'anonymous' ? 'Anonym'
+            : abbreviated;
+          const OPTIONS: { value: typeof nameVisibility; label: string }[] = [
+            { value: 'full', label: 'Voller Name' },
+            { value: 'abbreviated', label: 'Vorname + Initial' },
+            { value: 'anonymous', label: 'Anonym' },
+          ];
+          return (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-center">Wie soll dein Name veröffentlicht werden?</p>
+              <div className="grid grid-cols-3 gap-2">
+                {OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setNameVisibility(opt.value)}
+                    className={`rounded-lg border px-2 py-2 text-xs font-medium transition ${
+                      nameVisibility === opt.value
+                        ? 'border-transparent text-white'
+                        : 'border-border bg-background text-foreground hover:bg-muted'
+                    }`}
+                    style={nameVisibility === opt.value ? { backgroundColor: primaryColor } : undefined}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Angezeigt wird: „{previewName}"{city.trim() ? ` · „${city.trim()}"` : ''}.
+              </p>
+            </div>
+          );
+        })()}
 
         <Button
           onClick={handleSubmit}

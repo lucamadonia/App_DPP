@@ -52,6 +52,14 @@ export interface FeedbackRequest {
   shipmentNumber?: string;
 }
 
+/**
+ * How the reviewer's name is published:
+ *   full        → clear name ("Stefan Genscher")
+ *   abbreviated → first name + last initial ("Stefan G.") — default
+ *   anonymous   → "Anonym"
+ */
+export type NameVisibility = 'full' | 'abbreviated' | 'anonymous';
+
 export interface FeedbackReview {
   id: string;
   tenantId: string;
@@ -63,6 +71,7 @@ export interface FeedbackReview {
   title?: string;
   comment?: string;
   reviewerDisplayName: string;
+  nameVisibility?: NameVisibility;
   reviewerCity?: string;
   reviewerCountry?: string;
   status: FeedbackReviewStatus;
