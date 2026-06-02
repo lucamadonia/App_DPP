@@ -1931,4 +1931,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...      # Stripe webhook signing secret
 VITE_MAIL_HUB_VIA_FAMILY_JOY=true                                                  # Flag: route customer mails through Family-Joy receiver
 VITE_MAIL_HUB_URL=https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
 VITE_MAIL_HUB_SECRET=<hex 32-byte>                                                  # MUSS identisch sein mit MAIL_EVENT_RECEIVER_SECRET in Family-Joy Supabase Secrets
+VITE_MAIL_HUB_TENANT_IDS=522f6254-f73c-4a26-b1e9-662035194bc5                       # Allowlist (CSV): NUR diese (Fambliss-eigenen) Tenants routen über Family-Joy; alle anderen SaaS-Tenants nutzen normal Trackbliss send-email / eigenen SMTP. Default = MYFAMBLISS GmbH
 ```
+
+> **SaaS-Hinweis:** Der Family-Joy-Hub ist Fambliss' Eigenlösung (Fambliss-Absender). Das Hub-Routing ist daher tenant-gated über `VITE_MAIL_HUB_TENANT_IDS` (Gate-Funktion `mailHubAllowsTenant()` in `rh-notification-trigger.ts`). Nicht gelistete Tenants senden **immer** über die lokale `send-email` Edge Function (Plattform-Absender `noreply@trackbliss.eu` bzw. per-Tenant `tenant_smtp_config`). Ohne gesetzte Variable greift der Default (nur MYFAMBLISS GmbH).

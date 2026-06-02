@@ -75,6 +75,30 @@ const MAIL_HUB_ENABLED = (import.meta.env.VITE_MAIL_HUB_VIA_FAMILY_JOY || '') ==
 const MAIL_HUB_URL = import.meta.env.VITE_MAIL_HUB_URL || '';
 const MAIL_HUB_SECRET = import.meta.env.VITE_MAIL_HUB_SECRET || '';
 
+// SaaS multi-tenant safety: the Family-Joy hub is Fambliss' OWN mail system
+// (Fambliss-branded mailbox/sender). Only Fambliss-owned tenants may route
+// through it — every other tenant must send the normal Trackbliss way
+// (platform send-email with the neutral trackbliss sender, or the tenant's
+// own SMTP via tenant_smtp_config). The allowlist is configurable via
+// VITE_MAIL_HUB_TENANT_IDS (comma-separated tenant UUIDs); it defaults to the
+// known Fambliss tenant so the existing cutover keeps working without an env
+// change. An unrecognized tenant ALWAYS falls back to the local pipeline.
+const DEFAULT_FAMBLISS_TENANT_ID = '522f6254-f73c-4a26-b1e9-662035194bc5'; // MYFAMBLISS GmbH
+const MAIL_HUB_TENANT_IDS = (import.meta.env.VITE_MAIL_HUB_TENANT_IDS || DEFAULT_FAMBLISS_TENANT_ID)
+  .split(',')
+  .map((s: string) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+/**
+ * Whether a given tenant's mail should route through the Family-Joy hub.
+ * Requires both the global cutover flag AND tenant membership in the allowlist.
+ */
+function mailHubAllowsTenant(tenantId: unknown): boolean {
+  if (!MAIL_HUB_ENABLED || MAIL_HUB_TENANT_IDS.length === 0) return false;
+  const tid = typeof tenantId === 'string' ? tenantId.trim().toLowerCase() : '';
+  return tid.length > 0 && MAIL_HUB_TENANT_IDS.includes(tid);
+}
+
 /** HMAC-SHA256(hex) over the request body. Family-Joy mail-event-receiver
  *  uses constant-time compare on the same secret. */
 async function hmacHex(secret: string, body: string): Promise<string> {
@@ -140,11 +164,12 @@ async function sendNotificationEmail(
   notificationRecord: Record<string, unknown>,
   client?: typeof supabase
 ) {
-  // Phase D — when the mail-hub is enabled, the Family-Joy receiver is the
-  // source of truth for the actual SMTP send. We still wrote a row into
-  // rh_notifications above (so Trackbliss admin UIs stay populated), but
-  // we forward to Family-Joy instead of invoking Trackbliss's send-email.
-  if (MAIL_HUB_ENABLED) {
+  // Phase D — when the mail-hub is enabled FOR THIS TENANT, the Family-Joy
+  // receiver is the source of truth for the actual SMTP send. We still wrote a
+  // row into rh_notifications above (so Trackbliss admin UIs stay populated),
+  // but we forward to Family-Joy instead of invoking Trackbliss's send-email.
+  // Non-Fambliss tenants skip this entirely and use the normal Trackbliss path.
+  if (mailHubAllowsTenant(notificationRecord.tenant_id)) {
     const ok = await postToFamilyJoy({
       eventType: notificationRecord.template as RhNotificationEventType,
       sourceEventId: `trackbliss:rh_notif:${notificationRecord.id}`,
