@@ -437,7 +437,7 @@ async function processShipment(supabase: any, ship: ShipmentRow):
     // Passthrough: send the fully-written feedback body; the Family-Joy receiver
     // wraps it in the Fambliss brand shell (logo, card, Rebecca signature, footer).
     context: {
-      renderedSubject: 'Wie war’s? Erzähl uns von deinem Fambliss-Moment 🌿',
+      renderedSubject: 'Wie war dein Fambliss-Moment?',
       renderedHtml: buildFeedbackBody(firstName, feedbackUrl),
     },
     metadata: {

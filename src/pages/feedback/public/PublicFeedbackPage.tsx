@@ -29,8 +29,9 @@ interface RatingState {
   lowExpected: string;
 }
 
-/** Fallback logo when the tenant has no branding logo set. */
-const FAMBLISS_LOGO = 'https://www.fambliss.eu/fambliss-logo-green.png';
+/** Fallback logo when the tenant has no branding logo set. Same-origin asset
+ *  in /public so it always loads (no cross-origin/hotlink surprises). */
+const FAMBLISS_LOGO = '/fambliss-logo-green.png';
 
 /**
  * Public, token-protected feedback submission page.
@@ -190,7 +191,7 @@ export function PublicFeedbackPage() {
   // ---------- SUBMITTED ----------
   if (status === 'submitted') {
     return (
-      <PublicShell tenantName={data?.tenant_name} logoUrl={branding?.logoUrl}>
+      <PublicShell tenantName={data?.tenant_name} logoUrl={branding?.logoUrl || branding?.logo}>
         <SuccessState customerName={data?.customer_name} tenantName={data?.tenant_name} tenantSlug={data?.tenant_slug} />
       </PublicShell>
     );
@@ -202,7 +203,7 @@ export function PublicFeedbackPage() {
 
   // ---------- READY / SUBMITTING ----------
   return (
-    <PublicShell tenantName={data.tenant_name} logoUrl={branding?.logoUrl}>
+    <PublicShell tenantName={data.tenant_name} logoUrl={branding?.logoUrl || branding?.logo}>
       {/* HERO */}
       <div className="px-4 pt-8 pb-2 text-center">
         <Badge variant="outline" className="mb-3 gap-1 bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200">
