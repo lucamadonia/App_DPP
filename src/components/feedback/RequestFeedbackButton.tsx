@@ -59,7 +59,7 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
       toast.error(res.error);
       return;
     }
-    toast.success(`${res.created} Bewertungsanfrage(n) versendet`);
+    toast.success(res.emailsSent > 0 ? 'Bewertungsanfrage versendet' : 'Bewertungsanfrage erstellt');
     setOpen(false);
     onRequested?.();
   }
