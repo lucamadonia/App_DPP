@@ -23,6 +23,7 @@ function transformReview(row: any): FeedbackReview {
     comment: row.comment || undefined,
     reviewerDisplayName: row.reviewer_display_name,
     nameVisibility: row.name_visibility || undefined,
+    reviewerChildren: row.reviewer_children || undefined,
     reviewerCity: row.reviewer_city || undefined,
     reviewerCountry: row.reviewer_country || undefined,
     status: row.status,

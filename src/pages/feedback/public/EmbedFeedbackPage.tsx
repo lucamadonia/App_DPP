@@ -319,6 +319,14 @@ function EmbedReviewCard({
         <div className="text-xs text-muted-foreground pt-1 mt-auto flex flex-wrap items-center gap-1.5">
           <span className="font-medium text-foreground/80">{review.reviewer_display_name}</span>
           {review.reviewer_city && <span>· {review.reviewer_city}</span>}
+          {review.reviewer_children && review.reviewer_children.count > 0 && (
+            <span>
+              · {review.reviewer_children.count} {review.reviewer_children.count === 1 ? 'Kind' : 'Kinder'}
+              {review.reviewer_children.ages && review.reviewer_children.ages.length > 0
+                ? ` (${review.reviewer_children.ages.join(', ')} J.)`
+                : ''}
+            </span>
+          )}
         </div>
         {review.reply && (
           <div className="rounded-md bg-muted/50 p-2 border-l-2 text-xs" style={{ borderColor: accent }}>

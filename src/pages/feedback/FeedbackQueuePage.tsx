@@ -242,6 +242,18 @@ function ModerationRow({
                     : 'Abgekürzt'}
                 </Badge>
               )}
+              {review.reviewerChildren && review.reviewerChildren.count > 0 && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-200"
+                  title="Eltern-Kontext"
+                >
+                  {review.reviewerChildren.count} {review.reviewerChildren.count === 1 ? 'Kind' : 'Kinder'}
+                  {review.reviewerChildren.ages && review.reviewerChildren.ages.length > 0
+                    ? ` · ${review.reviewerChildren.ages.join(', ')} J.`
+                    : ''}
+                </Badge>
+              )}
               <span>
                 {review.reviewerCity ? `· ${review.reviewerCity} ` : ''}
                 · {new Date(review.createdAt).toLocaleString()}

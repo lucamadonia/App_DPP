@@ -38,6 +38,8 @@ export interface ReviewSubmitItem {
   reviewer_city?: string;
   /** How the reviewer's name is published. Default 'abbreviated'. */
   name_visibility?: 'full' | 'abbreviated' | 'anonymous';
+  /** Optional parent context, e.g. { count: 2, ages: [3, 5] }. */
+  reviewer_children?: { count: number; ages: number[] } | null;
 }
 
 export async function submitFeedbackReviews(
@@ -52,6 +54,31 @@ export async function submitFeedbackReviews(
   if (!data) return { ok: false, error: 'empty_response' };
   if (data.error) return { ok: false, error: data.error as string };
   return { ok: true, reviewIds: data.review_ids || [] };
+}
+
+/**
+ * Submit an idea / overall feedback straight from the feedback form, using the
+ * FEEDBACK-REQUEST token (no separate idea invite). Lands in the idea board /
+ * roadmap (feedback_ideas, status pending_review).
+ */
+export async function submitFeedbackIdeaFromRequest(
+  token: string,
+  payload: {
+    area: FeedbackIdeaArea;
+    category: FeedbackIdeaCategory;
+    title?: string;
+    body: string;
+    is_public_requested?: boolean;
+  },
+): Promise<{ ok: boolean; ideaId?: string; error?: string }> {
+  const { data, error } = await supabase.rpc('submit_feedback_idea_from_request', {
+    p_token: token,
+    p_payload: payload,
+  });
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: 'empty_response' };
+  if (data.error) return { ok: false, error: data.error as string };
+  return { ok: true, ideaId: data.idea_id as string };
 }
 
 export async function getPublicReviewsForTenant(params: {

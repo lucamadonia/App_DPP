@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, AlertCircle, Sparkles, ChevronDown, Heart } from 'lucide-react';
+import { Check, AlertCircle, Sparkles, Heart, Lightbulb, Baby, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,7 @@ import { StarRating } from '@/components/feedback/StarRating';
 import {
   getFeedbackRequestByToken,
   submitFeedbackReviews,
+  submitFeedbackIdeaFromRequest,
   type ReviewSubmitItem,
 } from '@/services/supabase/feedback-public';
 import { getVariantColorHex } from '@/lib/variant-color';
@@ -23,7 +24,13 @@ interface RatingState {
   rating: 0 | 1 | 2 | 3 | 4 | 5;
   title: string;
   comment: string;
+  /** 1–3★ follow-ups */
+  lowWhat: string;
+  lowExpected: string;
 }
+
+/** Fallback logo when the tenant has no branding logo set. */
+const FAMBLISS_LOGO = 'https://www.fambliss.eu/fambliss-logo-green.png';
 
 /**
  * Public, token-protected feedback submission page.
@@ -41,7 +48,12 @@ export function PublicFeedbackPage() {
   const [ratings, setRatings] = useState<RatingState[]>([]);
   const [city, setCity] = useState('');
   const [nameVisibility, setNameVisibility] = useState<'full' | 'abbreviated' | 'anonymous'>('abbreviated');
-  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+  // Parent context (optional) — number of children + their ages.
+  const [childrenAges, setChildrenAges] = useState<number[]>([]);
+  // Overall experience + community idea (both land in the idea board / roadmap).
+  const [overall, setOverall] = useState('');
+  const [ideaText, setIdeaText] = useState('');
+  const [ideaPublic, setIdeaPublic] = useState(true);
 
   useEffect(() => {
     if (!token) return;
@@ -61,6 +73,8 @@ export function PublicFeedbackPage() {
           rating: 0,
           title: '',
           comment: '',
+          lowWhat: '',
+          lowExpected: '',
         })),
       );
       setStatus('ready');
@@ -91,34 +105,61 @@ export function PublicFeedbackPage() {
     setRatings(rs => rs.map(r => (r.request_id === req_id ? { ...r, ...patch } : r)));
   }
 
-  function toggleDetails(req_id: string) {
-    setExpandedDetails(prev => ({ ...prev, [req_id]: !prev[req_id] }));
-  }
-
   async function handleSubmit() {
     if (!token || !data) return;
     setStatus('submitting');
+    const children = childrenAges.length > 0
+      ? { count: childrenAges.length, ages: childrenAges }
+      : null;
+
     const payload: ReviewSubmitItem[] = ratings
       .filter(r => r.rating > 0)
-      .map(r => ({
-        request_id: r.request_id,
-        rating: r.rating,
-        title: r.title.trim() || undefined,
-        comment: r.comment.trim() || undefined,
-        reviewer_city: city.trim() || undefined,
-        name_visibility: nameVisibility,
-      }));
+      .map(r => {
+        let comment: string | undefined;
+        if (r.rating <= 3) {
+          comment = [
+            r.lowWhat.trim() && `Was nicht gepasst hat: ${r.lowWhat.trim()}`,
+            r.lowExpected.trim() && `Anders vorgestellt: ${r.lowExpected.trim()}`,
+          ].filter(Boolean).join('\n\n') || undefined;
+        } else {
+          comment = r.comment.trim() || undefined;
+        }
+        return {
+          request_id: r.request_id,
+          rating: r.rating,
+          title: r.title.trim() || undefined,
+          comment,
+          reviewer_city: city.trim() || undefined,
+          name_visibility: nameVisibility,
+          reviewer_children: children,
+        };
+      });
+
     if (payload.length === 0) {
       setStatus('ready');
       return;
     }
+
     const res = await submitFeedbackReviews(token, payload);
-    if (res.ok) {
-      setStatus('submitted');
-    } else {
+    if (!res.ok) {
       setStatus('error');
       setErrorCode(res.error || 'submit_failed');
+      return;
     }
+
+    // Best-effort: overall experience + community idea → idea board / roadmap.
+    if (overall.trim()) {
+      await submitFeedbackIdeaFromRequest(token, {
+        area: 'general', category: 'praise', body: overall.trim(), is_public_requested: false,
+      }).catch(() => { /* non-fatal */ });
+    }
+    if (ideaText.trim()) {
+      await submitFeedbackIdeaFromRequest(token, {
+        area: 'products', category: 'new_idea', body: ideaText.trim(), is_public_requested: ideaPublic,
+      }).catch(() => { /* non-fatal */ });
+    }
+
+    setStatus('submitted');
   }
 
   // ---------- LOADING ----------
@@ -150,7 +191,7 @@ export function PublicFeedbackPage() {
   if (status === 'submitted') {
     return (
       <PublicShell tenantName={data?.tenant_name} logoUrl={branding?.logoUrl}>
-        <SuccessState customerName={data?.customer_name} tenantName={data?.tenant_name} />
+        <SuccessState customerName={data?.customer_name} tenantName={data?.tenant_name} tenantSlug={data?.tenant_slug} />
       </PublicShell>
     );
   }
@@ -183,7 +224,6 @@ export function PublicFeedbackPage() {
           const r = ratings.find(x => x.request_id === item.request_id);
           if (!r) return null;
           const variantHex = item.variant_title ? getVariantColorHex(item.variant_title) : null;
-          const isExpanded = expandedDetails[item.request_id] || false;
           const hasRating = r.rating > 0;
 
           return (
@@ -246,41 +286,57 @@ export function PublicFeedbackPage() {
                   </div>
                 )}
 
-                {/* Step 2: optional details (collapsible) */}
+                {/* Rating-tailored follow-up — appears as soon as rated */}
                 {hasRating && (
-                  <div className="space-y-2 pt-2 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <button
-                      type="button"
-                      onClick={() => toggleDetails(item.request_id)}
-                      className="flex items-center justify-between w-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1"
-                    >
-                      <span>{isExpanded ? 'Details ausblenden' : 'Möchtest du mehr sagen? (optional)'}</span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-                    {isExpanded && (
-                      <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <Input
-                          value={r.title}
-                          onChange={e => updateRating(item.request_id, { title: e.target.value })}
-                          placeholder="Eine kurze Überschrift (optional)"
-                          maxLength={120}
-                          className="text-sm"
-                        />
+                  <div className="space-y-3 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    {r.rating >= 4 ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">
+                          Was war für dich besonders an {item.product_name}?{' '}
+                          <span className="text-muted-foreground font-normal">(optional)</span>
+                        </label>
                         <Textarea
                           value={r.comment}
                           onChange={e => updateRating(item.request_id, { comment: e.target.value })}
-                          placeholder="Was hat dir gefallen? Was würdest du anderen sagen?"
+                          placeholder="Erzähl uns, was dich begeistert hat …"
                           maxLength={2000}
-                          rows={4}
+                          rows={3}
                           className="text-sm resize-none"
                         />
-                        <p className="text-[10px] text-muted-foreground text-right">
-                          {r.comment.length} / 2000
-                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium">Was hat nicht gepasst?</label>
+                          <Textarea
+                            value={r.lowWhat}
+                            onChange={e => updateRating(item.request_id, { lowWhat: e.target.value })}
+                            placeholder="Was hat dich gestört oder enttäuscht?"
+                            maxLength={1000}
+                            rows={2}
+                            className="text-sm resize-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium">Was hättest du dir anders vorgestellt?</label>
+                          <Textarea
+                            value={r.lowExpected}
+                            onChange={e => updateRating(item.request_id, { lowExpected: e.target.value })}
+                            placeholder="Wie wäre es für dich perfekt gewesen?"
+                            maxLength={1000}
+                            rows={2}
+                            className="text-sm resize-none"
+                          />
+                        </div>
                       </div>
                     )}
+                    <Input
+                      value={r.title}
+                      onChange={e => updateRating(item.request_id, { title: e.target.value })}
+                      placeholder="Kurze Überschrift (optional)"
+                      maxLength={120}
+                      className="text-sm"
+                    />
                   </div>
                 )}
               </CardContent>
@@ -299,6 +355,56 @@ export function PublicFeedbackPage() {
             maxLength={80}
             className="text-sm"
           />
+        )}
+
+        {/* Parent context (optional) */}
+        {anyRated && (
+          <div className="rounded-xl border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Baby className="h-4 w-4 text-muted-foreground" />
+              Hast du Kinder? <span className="text-muted-foreground font-normal">(optional)</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Anzahl</span>
+              <button
+                type="button" aria-label="Weniger Kinder"
+                onClick={() => setChildrenAges(a => a.slice(0, Math.max(0, a.length - 1)))}
+                disabled={childrenAges.length === 0}
+                className="h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="w-6 text-center text-sm font-semibold tabular-nums">{childrenAges.length}</span>
+              <button
+                type="button" aria-label="Mehr Kinder"
+                onClick={() => setChildrenAges(a => (a.length >= 6 ? a : [...a, 0]))}
+                disabled={childrenAges.length >= 6}
+                className="h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {childrenAges.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {childrenAges.map((age, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <Input
+                      type="number" min={0} max={17}
+                      value={age === 0 ? '' : age}
+                      onChange={e => {
+                        const v = Math.max(0, Math.min(17, parseInt(e.target.value) || 0));
+                        setChildrenAges(a => a.map((x, j) => (j === i ? v : x)));
+                      }}
+                      placeholder="Alter"
+                      className="h-9 w-[72px] text-sm"
+                      aria-label={`Alter Kind ${i + 1}`}
+                    />
+                    <span className="text-xs text-muted-foreground">J.</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {anyRated && (() => {
@@ -341,6 +447,54 @@ export function PublicFeedbackPage() {
             </div>
           );
         })()}
+
+        {/* Overall experience */}
+        {anyRated && (
+          <div className="rounded-xl border bg-card p-4 space-y-2">
+            <label className="block text-sm font-medium">Dein Gesamteindruck <span className="text-muted-foreground font-normal">(optional)</span></label>
+            <Textarea
+              value={overall}
+              onChange={e => setOverall(e.target.value)}
+              placeholder="Magst du uns mehr über dein Fambliss-Erlebnis erzählen?"
+              maxLength={2000}
+              rows={3}
+              className="text-sm resize-none"
+            />
+          </div>
+        )}
+
+        {/* Ideas / roadmap — community */}
+        {anyRated && (
+          <div
+            className="rounded-2xl border-2 p-4 space-y-3"
+            style={{ borderColor: '#c7d1c0', background: 'rgba(199,209,192,0.14)' }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: primaryColor }}>
+              <Lightbulb className="h-4 w-4" />
+              Deine Idee für Fambliss
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Wir entwickeln Fambliss gemeinsam mit euch. Teile deine Idee — sie landet auf unserer Roadmap und wird von uns geprüft.
+            </p>
+            <div className="flex items-center justify-center gap-2 py-1 text-[11px] font-medium text-muted-foreground">
+              <span>Idee</span><span aria-hidden>→</span><span>In Prüfung</span><span aria-hidden>→</span><span>Umgesetzt</span>
+            </div>
+            <Textarea
+              value={ideaText}
+              onChange={e => setIdeaText(e.target.value)}
+              placeholder="Was würdest du dir von Fambliss wünschen?"
+              maxLength={1000}
+              rows={3}
+              className="text-sm resize-none bg-background"
+            />
+            {ideaText.trim() && (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={ideaPublic} onChange={e => setIdeaPublic(e.target.checked)} className="rounded" />
+                Meine Idee darf öffentlich auf der Roadmap erscheinen
+              </label>
+            )}
+          </div>
+        )}
 
         <Button
           onClick={handleSubmit}
@@ -393,12 +547,12 @@ function PublicShell({ children, tenantName, logoUrl }: ShellProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <header className="px-4 pt-4 flex items-center justify-center gap-2">
-        {logoUrl ? (
-          <img src={logoUrl} alt={tenantName || ''} className="h-7 max-w-[140px] object-contain" />
-        ) : tenantName ? (
-          <div className="text-sm font-semibold text-muted-foreground">{tenantName}</div>
-        ) : null}
+      <header className="px-4 pt-6 pb-1 flex items-center justify-center">
+        <img
+          src={logoUrl || FAMBLISS_LOGO}
+          alt={tenantName || 'Fambliss'}
+          className="h-10 max-w-[180px] object-contain"
+        />
       </header>
       {children}
     </div>
@@ -431,7 +585,7 @@ function ErrorState({ code }: { code: string | null }) {
   );
 }
 
-function SuccessState({ customerName, tenantName }: { customerName?: string; tenantName?: string }) {
+function SuccessState({ customerName, tenantName, tenantSlug }: { customerName?: string; tenantName?: string; tenantSlug?: string }) {
   const firstName = (customerName || '').split(' ')[0];
   return (
     <div className="max-w-md mx-auto px-4 pt-16 text-center">
@@ -449,8 +603,17 @@ function SuccessState({ customerName, tenantName }: { customerName?: string; ten
       <p className="mt-3 text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-700 delay-100">
         Deine Bewertung wurde gesendet. {tenantName} prüft sie und veröffentlicht sie in Kürze.
       </p>
-      <p className="mt-8 text-xs text-muted-foreground">
-        Du kannst diese Seite jetzt schließen.
+      {tenantSlug && (
+        <a
+          href={`/ideas/${tenantSlug}`}
+          className="mt-8 inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium hover:bg-muted transition-colors cursor-pointer"
+        >
+          <Lightbulb className="h-4 w-4" />
+          Schau dir unsere Roadmap an
+        </a>
+      )}
+      <p className="mt-6 text-xs text-muted-foreground">
+        Danke, dass du Fambliss mitgestaltest. 🌿 Du kannst diese Seite jetzt schließen.
       </p>
     </div>
   );
