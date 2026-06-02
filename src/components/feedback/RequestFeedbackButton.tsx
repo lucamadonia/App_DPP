@@ -1,14 +1,26 @@
-import { useState } from 'react';
-import { MessageCircleHeart, Loader2, AlertTriangle, Link2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageCircleHeart, Loader2, AlertTriangle, Link2, MailCheck, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { createFeedbackRequestsForShipment } from '@/services/supabase/feedback-requests';
+import { createFeedbackRequestsForShipment, getFeedbackRequests } from '@/services/supabase/feedback-requests';
 import { getVariantColorHex } from '@/lib/variant-color';
 import type { WhShipment, WhShipmentItem } from '@/types/warehouse';
+import type { FeedbackRequest } from '@/types/feedback';
+
+/** Format an ISO timestamp as German date + time (e.g. "27.05.2026, 11:00 Uhr"). */
+function formatSentAt(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }) + ' Uhr';
+}
 
 interface Props {
   shipment: WhShipment;
@@ -36,6 +48,29 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
   const [customize, setCustomize] = useState(false);
   const [subject, setSubject] = useState(DEFAULT_CUSTOM_SUBJECT);
   const [body, setBody] = useState(DEFAULT_CUSTOM_BODY);
+
+  // Existing feedback requests for this shipment — so the operator sees
+  // whether (and when) a request was already sent before sending again.
+  const [existing, setExisting] = useState<FeedbackRequest[] | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getFeedbackRequests({ shipmentId: shipment.id })
+      .then(rows => { if (!cancelled) setExisting(rows); })
+      .catch(() => { if (!cancelled) setExisting([]); });
+    return () => { cancelled = true; };
+  }, [open, shipment.id]);
+
+  // Latest send timestamp + whether the customer already responded.
+  const priorRequests = existing ?? [];
+  const alreadyRequested = priorRequests.length > 0;
+  const latestSentAt = priorRequests
+    .map(r => r.sentAt || r.createdAt)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  const submittedRequest = priorRequests.find(r => r.status === 'submitted');
 
   // Dedup by (productId, batchId, variantTitle)
   const seen = new Set<string>();
@@ -88,6 +123,27 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
               {shipment.recipientName} ({shipment.recipientEmail}) erhält per Email einen Link, um die folgenden Varianten zu bewerten. Es wird eine separate Bewertung pro Variante erstellt — Antworten werden vor Veröffentlichung von dir geprüft.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Already-requested / already-answered notice */}
+          {submittedRequest ? (
+            <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-200">
+              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                {shipment.recipientName} hat bereits eine Bewertung abgegeben
+                {submittedRequest.submittedAt ? <> (am <strong>{formatSentAt(submittedRequest.submittedAt)}</strong>)</> : null}.
+                Ein erneutes Senden ist normalerweise nicht nötig.
+              </span>
+            </div>
+          ) : alreadyRequested ? (
+            <div className="flex items-start gap-2 rounded-md border border-sky-300 bg-sky-50 dark:bg-sky-900/20 px-3 py-2 text-xs text-sky-800 dark:text-sky-200">
+              <MailCheck className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                Diese Sendung wurde bereits zur Bewertung angefragt
+                {latestSentAt ? <> — versendet am <strong>{formatSentAt(latestSentAt)}</strong></> : null}.
+                Erneutes Senden schreibt {shipment.recipientName} <strong>noch einmal</strong> an.
+              </span>
+            </div>
+          ) : null}
 
           {notYetDelivered && (
             <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
@@ -186,7 +242,7 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
               ) : (
                 <>
                   <MessageCircleHeart className="mr-1 h-4 w-4" />
-                  Anfrage senden
+                  {alreadyRequested ? 'Trotzdem erneut senden' : 'Anfrage senden'}
                 </>
               )}
             </Button>
