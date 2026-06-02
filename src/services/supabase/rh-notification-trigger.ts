@@ -501,11 +501,17 @@ function wrapCustomMessageHtml(
       + `<p style="margin:0;font-size:12px;color:#6b7280;word-break:break-all">${esc(cta.url)}</p>`
     : '';
   return [
-    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:560px;margin:0 auto;padding:8px">',
+    '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1"></head>',
+    '<body style="margin:0;padding:0;background:#f4f4f5;">',
+    '<div style="max-width:560px;margin:0 auto;padding:32px 16px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;">',
+    '<div style="background:#ffffff;border-radius:12px;padding:28px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.08)">',
     greeting,
     `<div>${body}</div>`,
     button,
     '</div>',
+    '<p style="text-align:center;color:#9ca3af;font-size:12px;margin:20px 0 0">Fambliss</p>',
+    '</div></body></html>',
   ].join('');
 }
 
