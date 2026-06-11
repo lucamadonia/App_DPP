@@ -118,6 +118,30 @@ export function ShipmentDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'content' | 'activity'>('overview');
   const [contentPosts, setContentPosts] = useState<WhContentPost[]>([]);
 
+  // Product packaging weight of all items (grams), lazily computed from the
+  // product_packaging layers of the shipment's products. null = not loaded.
+  const [productPackagingG, setProductPackagingG] = useState<number | null>(null);
+  useEffect(() => {
+    if (items.length === 0) { setProductPackagingG(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getProductPackagingLayers } = await import('@/services/supabase/wh-packaging-usage');
+        const layersMap = await getProductPackagingLayers(items.map((i) => i.productId));
+        if (cancelled) return;
+        let grams = 0;
+        for (const it of items) {
+          const layers = layersMap.get(it.productId) || [];
+          grams += layers.reduce((sum, l) => sum + l.weightG, 0) * it.quantity;
+        }
+        setProductPackagingG(grams);
+      } catch {
+        if (!cancelled) setProductPackagingG(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [items]);
+
   // Edit mode
   const [editingRecipient, setEditingRecipient] = useState(false);
   const [editingShipping, setEditingShipping] = useState(false);
@@ -850,11 +874,38 @@ export function ShipmentDetailPage() {
                     </Button>
                   </div>
                 </div>
-                {shipment.packagingTareGrams != null && (
-                  <div className="text-xs text-muted-foreground">
-                    {t('Tara')}: {shipment.packagingTareGrams}g · {t('Gesamt inkl. Umverpackung')}: {shipment.totalWeightGrams}g
-                  </div>
-                )}
+                {shipment.packagingTareGrams != null && (() => {
+                  // Weight breakdown: total = items gross (products + product
+                  // packaging) + outer carton tare. Product packaging is lazily
+                  // computed from product_packaging layers of the items.
+                  const tareG = shipment.packagingTareGrams ?? 0;
+                  const totalG = shipment.totalWeightGrams ?? 0;
+                  const itemsG = Math.max(0, totalG - tareG);
+                  const prodPkgG = productPackagingG != null ? Math.min(productPackagingG, itemsG) : null;
+                  const productsG = prodPkgG != null ? itemsG - prodPkgG : itemsG;
+                  return (
+                    <div className="text-xs text-muted-foreground space-y-0.5 tabular-nums max-w-[260px]">
+                      <div className="flex justify-between gap-4">
+                        <span>{t('Products')}</span>
+                        <span>{productsG.toLocaleString()} g</span>
+                      </div>
+                      {prodPkgG != null && prodPkgG > 0 && (
+                        <div className="flex justify-between gap-4">
+                          <span>+ {t('Product packaging')}</span>
+                          <span>{prodPkgG.toLocaleString()} g</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between gap-4">
+                        <span>+ {t('Outer packaging (tare)')}</span>
+                        <span>{tareG.toLocaleString()} g</span>
+                      </div>
+                      <div className="flex justify-between gap-4 border-t pt-0.5 font-medium text-foreground">
+                        <span>= {t('Total', { ns: 'common' })}</span>
+                        <span>{totalG.toLocaleString()} g</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Customer Magic-Link Tracking */}

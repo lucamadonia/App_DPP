@@ -521,6 +521,18 @@ export {
   type WhPackagingTypeInput,
 } from './wh-packaging-types';
 
+// Warehouse - Packaging Usage (material weight analytics)
+export {
+  getPackagingUsage,
+  getProductPackagingLayers,
+  type PackagingUsageResult,
+  type PackagingUsageTotals,
+  type PackagingUsageMaterialRow,
+  type PackagingUsageTypeRow,
+  type PackagingUsageTimelinePoint,
+  type ProductPackagingLayerWeight,
+} from './wh-packaging-usage';
+
 // Warehouse - Campaigns
 export {
   getCampaigns,

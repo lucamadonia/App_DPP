@@ -847,20 +847,28 @@ export interface CartonRecommendation {
   carton: CartonSize;
   fits: boolean;
   fillPct: number;
-  grossWeightKg: number; // contents + 0.4 kg packaging tare
+  grossWeightKg: number; // contents + carton tare (real tare when known, 0.4 kg fallback)
   overloadedBy: number | null;
   reason?: string;
 }
 
-const CARTON_TARE_KG = 0.4;
+/** Flat fallback tare when the real carton weight is unknown. */
+export const CARTON_TARE_KG = 0.4;
 
-export function recommendCarton(items: ContentItem[]): CartonRecommendation[] {
+/**
+ * @param tareKg Real carton tare in kg (e.g. wh_packaging_types.tare_weight_grams
+ *               / 1000 of the selected carton). Defaults to the 0.4 kg flat rate.
+ */
+export function recommendCarton(
+  items: ContentItem[],
+  tareKg: number = CARTON_TARE_KG,
+): CartonRecommendation[] {
   const totalVolumeCm3 = items.reduce((sum, it) => {
     const q = it.quantity ?? 1;
     return sum + it.lengthCm * it.widthCm * it.heightCm * q;
   }, 0);
   const contentsWeight = items.reduce((sum, it) => sum + it.weightKg * (it.quantity ?? 1), 0);
-  const grossWeightKg = contentsWeight + CARTON_TARE_KG;
+  const grossWeightKg = contentsWeight + tareKg;
 
   const longestItem = items.reduce((max, it) => Math.max(max, it.lengthCm), 0);
 
