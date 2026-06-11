@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import {
   Plus, Truck, Search, Package, FileText, CheckCircle2,
   Rocket, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
-  ShoppingBag, Download, RefreshCw, MoreVertical,
+  ShoppingBag, Download, RefreshCw, MoreVertical, Clock, X,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -16,14 +17,18 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { getShipments, getShipmentStatusCounts, getItemsForShipments } from '@/services/supabase/wh-shipments';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { getShipments, getShipmentStatusCounts, getItemsForShipments, getShipmentStats } from '@/services/supabase/wh-shipments';
 import { getDHLSettings } from '@/services/supabase/dhl-carrier';
 import { retryShopifyFulfillment, pullFulfillmentsFromShopify } from '@/services/supabase/shopify-integration';
 import { invokeEdgeFunction } from '@/lib/edge-function';
 import { toast } from 'sonner';
-import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
-import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
+import { gridStagger, gridItem, spring, useReducedMotion } from '@/lib/motion';
+import {
+  SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICONS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS,
+} from '@/lib/warehouse-constants';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
+import { ShipmentQuickAction } from '@/components/warehouse/shipment-list-quick-action';
 import {
   isInternational, getShippingZone, estimateShippingPrice, formatPriceEur,
   countryFlagEmoji, normalizeCountryIso2,
@@ -44,9 +49,8 @@ function KPICard({ label, value, icon: Icon, color, bgColor, loading }: {
   bgColor: string;
   loading: boolean;
 }) {
-  const animated = useAnimatedNumber(loading ? 0 : value);
   return (
-    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+    <Card className="h-full hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
       <CardContent className="pt-4 sm:pt-5 pb-3 sm:pb-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`rounded-lg p-2 sm:p-2.5 ${bgColor}`}>
@@ -56,13 +60,118 @@ function KPICard({ label, value, icon: Icon, color, bgColor, loading }: {
             {loading ? (
               <ShimmerSkeleton className="h-6 sm:h-7 w-12 mb-1" />
             ) : (
-              <p className="text-xl sm:text-2xl font-bold tabular-nums leading-none">{animated}</p>
+              <p className="text-xl sm:text-2xl font-bold tabular-nums leading-none">
+                <AnimatedCounter value={value} />
+              </p>
             )}
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{label}</p>
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Age / SLA chip — "how long has this shipment been stuck in its status?"    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Days the shipment has been sitting in its current status. Basis is
+ * `updatedAt` (last status change proxy) for pre-ship stages and `shippedAt`
+ * for shipped/in_transit. Returns null below the 3-day warning threshold and
+ * for terminal statuses (delivered/cancelled).
+ */
+function getShipmentAgeDays(s: WhShipment): number | null {
+  if (s.status === 'delivered' || s.status === 'cancelled') return null;
+  const basis = (s.status === 'shipped' || s.status === 'in_transit')
+    ? (s.shippedAt || s.updatedAt)
+    : s.updatedAt;
+  if (!basis) return null;
+  const days = Math.floor((Date.now() - new Date(basis).getTime()) / 86_400_000);
+  return days >= 3 ? days : null;
+}
+
+function AgeChip({ shipment }: { shipment: WhShipment }) {
+  const { t } = useTranslation('warehouse');
+  const days = getShipmentAgeDays(shipment);
+  if (days === null) return null;
+  const danger = days >= 7;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[9px] font-semibold tabular-nums shrink-0 ${
+        danger
+          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+      }`}
+      title={t("In '{{status}}' for {{days}} days", { status: t(shipment.status), days })}
+    >
+      <Clock className="h-2.5 w-2.5" />
+      {t('{{days}}d', { days })}
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Shopify export issue indicator — live ping dot                             */
+/* -------------------------------------------------------------------------- */
+
+function ExportIssueDot({ title }: { title: string }) {
+  return (
+    <span title={title} className="relative flex h-2 w-2 shrink-0">
+      <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Status pipeline chip                                                       */
+/* -------------------------------------------------------------------------- */
+
+function StatusChip({ status, label, count, isActive, onClick, reducedMotion }: {
+  status: ShipmentStatus | 'all';
+  label: string;
+  count: number;
+  isActive: boolean;
+  onClick: () => void;
+  reducedMotion: boolean;
+}) {
+  const Icon = status === 'all' ? null : SHIPMENT_STATUS_ICONS[status];
+  const iconColor = status === 'all' ? '' : SHIPMENT_STATUS_ICON_COLORS[status].color;
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+      aria-pressed={isActive}
+      className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-11 sm:min-h-9 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap snap-start shrink-0 transition-colors ${
+        isActive
+          ? 'text-primary-foreground'
+          : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      {isActive && (
+        reducedMotion ? (
+          <span className="absolute inset-0 rounded-full bg-primary shadow-sm" />
+        ) : (
+          <motion.span
+            layoutId="shipment-status-pill"
+            className="absolute inset-0 rounded-full bg-primary shadow-sm"
+            transition={spring.snappy}
+          />
+        )
+      )}
+      <span className="relative z-10 flex items-center gap-1 sm:gap-1.5">
+        {Icon && <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-primary-foreground' : iconColor}`} />}
+        {label}
+        <span className={`inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.25rem] h-5 text-xs font-semibold tabular-nums ${
+          isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-background text-muted-foreground'
+        }`}>
+          <AnimatedCounter value={count} />
+        </span>
+      </span>
+    </motion.button>
   );
 }
 
@@ -97,11 +206,12 @@ function SortableHeader({ label, sortKey, currentSort, currentDir, onSort, class
 }
 
 /* -------------------------------------------------------------------------- */
-/*  STATUS TABS                                                                */
+/*  STATUS PIPELINE                                                            */
 /* -------------------------------------------------------------------------- */
 
-const STATUS_TAB_ORDER: (ShipmentStatus | 'all')[] = [
-  'all', 'draft', 'picking', 'packed', 'label_created', 'shipped', 'in_transit', 'delivered', 'cancelled',
+/** Linear fulfillment pipeline — rendered with chevron separators between stages. */
+const PIPELINE_ORDER: ShipmentStatus[] = [
+  'draft', 'picking', 'packed', 'label_created', 'shipped', 'in_transit', 'delivered',
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -110,11 +220,13 @@ const STATUS_TAB_ORDER: (ShipmentStatus | 'all')[] = [
 
 export function ShipmentListPage() {
   const { t } = useTranslation('warehouse');
+  const prefersReduced = useReducedMotion();
 
   // Data
   const [shipments, setShipments] = useState<WhShipment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [shippedToday, setShippedToday] = useState(0);
   const [loading, setLoading] = useState(true);
   const [countsLoading, setCountsLoading] = useState(true);
 
@@ -146,19 +258,28 @@ export function ShipmentListPage() {
     setPage(1);
   }, [debouncedSearch, activeTab, carrierFilter, priorityFilter, dateFrom, dateTo, pageSize]);
 
-  // Load status counts
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setCountsLoading(true);
-      const counts = await getShipmentStatusCounts();
-      if (!cancelled) {
-        setStatusCounts(counts);
-        setCountsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+  // Load status counts + "shipped today" KPI. Extracted so mutating actions
+  // (quick actions, Shopify push/pull, tracking refresh) can keep the chips
+  // and KPI cards in sync instead of going stale until the next full mount.
+  const loadCounts = useCallback(async () => {
+    setCountsLoading(true);
+    try {
+      const [counts, stats] = await Promise.all([
+        getShipmentStatusCounts(),
+        getShipmentStats(),
+      ]);
+      setStatusCounts(counts);
+      setShippedToday(stats.shippedToday || 0);
+    } catch (e) {
+      console.error('Failed to load shipment counts', e);
+    } finally {
+      setCountsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
 
   // Load shipments
   const loadShipments = useCallback(async () => {
@@ -187,6 +308,12 @@ export function ShipmentListPage() {
     loadShipments();
   }, [loadShipments]);
 
+  // Refresh list + counts together — used after every mutating action.
+  const refreshAll = useCallback(() => {
+    loadShipments();
+    loadCounts();
+  }, [loadShipments, loadCounts]);
+
   // Sorting toggle
   const handleSort = (key: string) => {
     if (sortBy === key) {
@@ -205,22 +332,16 @@ export function ShipmentListPage() {
   const kpiInProgress = (statusCounts.picking || 0) + (statusCounts.packed || 0) + (statusCounts.label_created || 0);
   const kpiDelivered = statusCounts.delivered || 0;
 
-  // Today shipped count — use dedicated field from stats if available, fallback to shipped count
-  const [shippedToday, setShippedToday] = useState(0);
-  useEffect(() => {
-    import('@/services/supabase/wh-shipments').then(({ getShipmentStats }) =>
-      getShipmentStats().then(s => setShippedToday(s.shippedToday || 0))
-    );
-  }, []);
-
   // Home country (DHL shipper). Used to flag international shipments + estimate
   // postage. Falls back to DE if DHL isn't configured yet.
   const [homeCountry, setHomeCountry] = useState('DE');
   useEffect(() => {
-    getDHLSettings().then((s) => {
-      const c = normalizeCountryIso2(s?.shipper?.country || 'DE');
-      if (c) setHomeCountry(c);
-    });
+    getDHLSettings()
+      .then((s) => {
+        const c = normalizeCountryIso2(s?.shipper?.country || 'DE');
+        if (c) setHomeCountry(c);
+      })
+      .catch((e) => console.error('Failed to load DHL settings', e));
   }, []);
 
   // CSV export — uses the *same* filter state as the visible table, just
@@ -351,7 +472,7 @@ export function ShipmentListPage() {
       } else {
         toast.warning(t('{{ok}} pushed, {{failed}} failed — check shipment details for error', { ok, failed }));
       }
-      loadShipments();
+      refreshAll();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -383,7 +504,7 @@ export function ShipmentListPage() {
         if (r.mismatched || r.errors) toast.warning(msg, { duration: 8000 });
         else toast.success(msg);
       }
-      loadShipments();
+      refreshAll();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -407,7 +528,7 @@ export function ShipmentListPage() {
         ? `${my.total} shipments, ${my.delivered} delivered, ${my.inTransit} in transit, ${my.noChange} unchanged`
         : t('Tracking refreshed');
       toast.success(summary);
-      loadShipments();
+      refreshAll();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -429,8 +550,9 @@ export function ShipmentListPage() {
             </h1>
           </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button asChild className="flex-1 sm:flex-none">
+        <div className="flex gap-2 w-full sm:w-auto justify-end">
+          {/* Desktop create button — mobile uses the FAB at the bottom instead */}
+          <Button asChild className="hidden sm:inline-flex">
             <Link to="/warehouse/shipments/new">
               <Plus className="mr-2 h-4 w-4" />
               {t('Create Shipment')}
@@ -469,52 +591,88 @@ export function ShipmentListPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-        <KPICard label={t('Total Shipments')} value={kpiTotal} icon={Package} color="text-blue-600" bgColor="bg-blue-100 dark:bg-blue-900/30" loading={countsLoading} />
-        <KPICard label={t('Drafts')} value={kpiDraft} icon={FileText} color="text-gray-600" bgColor="bg-gray-100 dark:bg-gray-800" loading={countsLoading} />
-        <KPICard label={t('In Progress')} value={kpiInProgress} icon={ArrowUpDown} color="text-yellow-600" bgColor="bg-yellow-100 dark:bg-yellow-900/30" loading={countsLoading} />
-        <KPICard label={t('delivered')} value={kpiDelivered} icon={CheckCircle2} color="text-green-600" bgColor="bg-green-100 dark:bg-green-900/30" loading={countsLoading} />
-        <KPICard label={t('Shipped Today')} value={shippedToday} icon={Rocket} color="text-purple-600" bgColor="bg-purple-100 dark:bg-purple-900/30" loading={countsLoading} />
+      {/* KPI Cards — choreographed entrance */}
+      <motion.div
+        variants={prefersReduced ? undefined : gridStagger}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3"
+      >
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
+          <KPICard label={t('Total Shipments')} value={kpiTotal} icon={Package} color="text-blue-600" bgColor="bg-blue-100 dark:bg-blue-900/30" loading={countsLoading} />
+        </motion.div>
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
+          <KPICard label={t('Drafts')} value={kpiDraft} icon={FileText} color="text-gray-600" bgColor="bg-gray-100 dark:bg-gray-800" loading={countsLoading} />
+        </motion.div>
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
+          <KPICard label={t('In Progress')} value={kpiInProgress} icon={ArrowUpDown} color="text-yellow-600" bgColor="bg-yellow-100 dark:bg-yellow-900/30" loading={countsLoading} />
+        </motion.div>
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
+          <KPICard label={t('delivered')} value={kpiDelivered} icon={CheckCircle2} color="text-green-600" bgColor="bg-green-100 dark:bg-green-900/30" loading={countsLoading} />
+        </motion.div>
+        <motion.div variants={prefersReduced ? undefined : gridItem}>
+          <KPICard label={t('Shipped Today')} value={shippedToday} icon={Rocket} color="text-purple-600" bgColor="bg-purple-100 dark:bg-purple-900/30" loading={countsLoading} />
+        </motion.div>
+      </motion.div>
+
+      {/* Status pipeline chips — draft → … → delivered, with "all"/"cancelled" set apart */}
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide snap-x pb-1 -mb-1 -mx-1 px-1">
+        <StatusChip
+          status="all"
+          label={t('All')}
+          count={statusCounts.all || 0}
+          isActive={activeTab === 'all'}
+          onClick={() => setActiveTab('all')}
+          reducedMotion={!!prefersReduced}
+        />
+        <span className="h-5 w-px bg-border shrink-0 mx-0.5" aria-hidden />
+        {PIPELINE_ORDER.map((status, i) => (
+          <Fragment key={status}>
+            {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0" aria-hidden />}
+            <StatusChip
+              status={status}
+              label={t(status)}
+              count={statusCounts[status] || 0}
+              isActive={activeTab === status}
+              onClick={() => setActiveTab(status)}
+              reducedMotion={!!prefersReduced}
+            />
+          </Fragment>
+        ))}
+        <span className="h-5 w-px bg-border shrink-0 mx-0.5" aria-hidden />
+        <StatusChip
+          status="cancelled"
+          label={t('cancelled')}
+          count={statusCounts.cancelled || 0}
+          isActive={activeTab === 'cancelled'}
+          onClick={() => setActiveTab('cancelled')}
+          reducedMotion={!!prefersReduced}
+        />
       </div>
 
-      {/* Status Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 -mb-1 -mx-1 px-1">
-        {STATUS_TAB_ORDER.map((status) => {
-          const count = statusCounts[status] || 0;
-          const isActive = activeTab === status;
-          return (
-            <button
-              key={status}
-              onClick={() => setActiveTab(status)}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
-                isActive
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-              }`}
-            >
-              {status === 'all' ? t('All') : t(status)}
-              <span className={`inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.25rem] h-5 text-xs font-semibold ${
-                isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-background text-muted-foreground'
-              }`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Search — prominent, own row, with clear button */}
+      <div className="relative w-full sm:max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder={t('Search recipient, shipment or tracking number...')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 pr-9 h-10"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label={t('Clear search')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-        <div className="relative flex-1 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('Search...')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
         <Select value={carrierFilter} onValueChange={setCarrierFilter}>
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder={t('Carrier')} />
@@ -555,11 +713,13 @@ export function ShipmentListPage() {
       </div>
 
       {/* Mobile card list — shown below md (768px); table below */}
-      <div className="md:hidden space-y-2">
+      <div className="md:hidden">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <ShimmerSkeleton key={i} className="h-28 w-full rounded-lg" />
-          ))
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <ShimmerSkeleton key={i} className="h-32 w-full rounded-lg" />
+            ))}
+          </div>
         ) : shipments.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -578,29 +738,39 @@ export function ShipmentListPage() {
             </CardContent>
           </Card>
         ) : (
-          shipments.map((s) => {
+          <motion.div
+            key={`${activeTab}-${page}`}
+            variants={prefersReduced ? undefined : gridStagger}
+            initial="initial"
+            animate="animate"
+            className="space-y-2"
+          >
+          {shipments.map((s) => {
             const isShopify = s.shopifyOrderId != null || s.orderReference?.startsWith('Shopify ');
             const orderName = s.orderReference?.replace('Shopify ', '');
             const hasExportIssue = s.shopifyExportPending || s.shopifyFulfillmentStatus === 'dead_letter';
             const intl = isInternational(homeCountry, s.shippingCountry);
+            const StatusIcon = SHIPMENT_STATUS_ICONS[s.status];
             return (
+              <motion.div key={s.id} variants={prefersReduced ? undefined : gridItem}>
               <Link
-                key={s.id}
                 to={`/warehouse/shipments/${s.id}`}
-                className="block rounded-lg border bg-card p-3 hover:bg-muted/50 transition-colors active:scale-[0.99]"
+                className="block rounded-lg border bg-card p-3 hover:bg-muted/50 hover:shadow-md transition-all active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    {hasExportIssue && (
-                      <span title={t('Shopify sync pending or failed')} className="h-2 w-2 rounded-full bg-red-500 inline-block shrink-0" />
-                    )}
+                    {hasExportIssue && <ExportIssueDot title={t('Shopify sync pending or failed')} />}
                     <span className="font-mono text-sm font-medium text-primary truncate">
                       {s.shipmentNumber}
                     </span>
                   </div>
-                  <Badge variant="secondary" className={`${SHIPMENT_STATUS_COLORS[s.status]} text-[10px] shrink-0`}>
-                    {t(s.status)}
-                  </Badge>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <AgeChip shipment={s} />
+                    <Badge variant="secondary" className={`${SHIPMENT_STATUS_COLORS[s.status]} text-[10px] gap-1`}>
+                      <StatusIcon className="h-2.5 w-2.5" />
+                      {t(s.status)}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <div className="min-w-0 flex-1">
@@ -642,9 +812,12 @@ export function ShipmentListPage() {
                     {new Date(s.createdAt).toLocaleDateString()}
                   </span>
                 </div>
+                <ShipmentQuickAction shipment={s} onChanged={refreshAll} size="card" />
               </Link>
+              </motion.div>
             );
-          })
+          })}
+          </motion.div>
         )}
       </div>
 
@@ -664,13 +837,14 @@ export function ShipmentListPage() {
                   <TableHead className="hidden lg:table-cell">{t('Tracking Number')}</TableHead>
                   <TableHead className="hidden xl:table-cell">{t('Sample Status')}</TableHead>
                   <SortableHeader label={t('Created', { ns: 'common' })} sortKey="createdAt" currentSort={sortBy} currentDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
+                  <TableHead className="w-[1%]" aria-hidden />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 9 }).map((_, j) => (
+                      {Array.from({ length: 10 }).map((_, j) => (
                         <TableCell key={j} className={j === 4 || j === 8 ? 'hidden sm:table-cell' : j === 3 ? 'hidden md:table-cell' : j === 6 ? 'hidden lg:table-cell' : j === 7 ? 'hidden xl:table-cell' : ''}>
                           <ShimmerSkeleton className="h-5 w-full" />
                         </TableCell>
@@ -679,7 +853,7 @@ export function ShipmentListPage() {
                   ))
                 ) : shipments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-48 text-center">
+                    <TableCell colSpan={10} className="h-48 text-center">
                       <div className="flex flex-col items-center gap-3 py-8">
                         <div className="rounded-full bg-muted p-4">
                           <Truck className="h-8 w-8 text-muted-foreground" />
@@ -702,11 +876,12 @@ export function ShipmentListPage() {
                     const isShopify = s.shopifyOrderId != null || s.orderReference?.startsWith('Shopify ');
                     const orderName = s.orderReference?.replace('Shopify ', '');
                     const hasExportIssue = s.shopifyExportPending || s.shopifyFulfillmentStatus === 'dead_letter';
+                    const StatusIcon = SHIPMENT_STATUS_ICONS[s.status];
                     return (
                     <TableRow key={s.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          {hasExportIssue && <span title={t('Shopify sync pending or failed')} className="h-2 w-2 rounded-full bg-red-500 inline-block" />}
+                          {hasExportIssue && <ExportIssueDot title={t('Shopify sync pending or failed')} />}
                           <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
                             {s.shipmentNumber}
                           </Link>
@@ -719,7 +894,13 @@ export function ShipmentListPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className={SHIPMENT_STATUS_COLORS[s.status]}>{t(s.status)}</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary" className={`${SHIPMENT_STATUS_COLORS[s.status]} gap-1`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {t(s.status)}
+                          </Badge>
+                          <AgeChip shipment={s} />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium flex items-center gap-1.5">
@@ -779,6 +960,9 @@ export function ShipmentListPage() {
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-sm whitespace-nowrap">
                         {new Date(s.createdAt).toLocaleDateString()}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <ShipmentQuickAction shipment={s} onChanged={refreshAll} size="table" />
+                      </TableCell>
                     </TableRow>
                     );
                   })
@@ -815,6 +999,17 @@ export function ShipmentListPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile FAB — replaces the header create button below sm */}
+      <Button
+        asChild
+        size="icon"
+        className="sm:hidden fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full shadow-lg"
+      >
+        <Link to="/warehouse/shipments/new" aria-label={t('Create Shipment')}>
+          <Plus className="h-6 w-6" />
+        </Link>
+      </Button>
     </div>
   );
 }

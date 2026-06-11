@@ -1,11 +1,10 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { Fragment, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import {
   Package,
   AlertTriangle,
-  Filter,
-  Search,
   ChevronDown,
   ChevronUp,
   ChevronLeft,
@@ -13,14 +12,8 @@ import {
   CircleCheck,
   Clock,
   MoreHorizontal,
-  ArrowRightLeft,
-  Eye,
-  Clipboard,
-  X,
-  Pencil,
   LayoutGrid,
   TableIcon,
-  SlidersHorizontal,
   Move,
   MinusCircle,
 } from 'lucide-react';
@@ -34,7 +27,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -46,8 +38,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -58,23 +48,46 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { getStockLevelsPaginated, createStockAdjustment, createStockTransfer, moveStockBinLocation } from '@/services/supabase/wh-stock';
+import { ListToolbar } from '@/components/ui/list-toolbar';
+import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
+import { EmptyState, ErrorState } from '@/components/ui/state-feedback';
+import {
+  getStockLevelsPaginated,
+  getWarehouseStats,
+  createStockAdjustment,
+  createStockTransfer,
+  moveStockBinLocation,
+} from '@/services/supabase/wh-stock';
 import { ShelfPicker, type ShelfPickerValue } from '@/components/warehouse/ShelfPicker';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { blurIn, gridStagger, gridItem, useMotionVariants } from '@/lib/motion';
 import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
-import { InventoryCardView } from '@/components/warehouse/InventoryCardView';
 import { StockWriteOffDialog } from '@/components/warehouse/StockWriteOffDialog';
+import { InventoryCardGrid, type InventoryCardGroup } from '@/components/warehouse/inventory-card-grid';
+import {
+  InventoryFilterControls,
+  InventoryFilterPills,
+  type InventoryGroupBy,
+  type InventoryFilterPill,
+} from '@/components/warehouse/inventory-filter-controls';
+import { InventoryRowActions } from '@/components/warehouse/inventory-row-actions';
+import { InventoryStockBar, getStockHealth } from '@/components/warehouse/inventory-stock-bar';
 import { formatBinLocation } from '@/lib/warehouse-utils';
 import type { WhStockLevel, WhLocation, WarehouseZone } from '@/types/warehouse';
 
 type SortKey = 'productName' | 'batchSerialNumber' | 'locationName' | 'binLocation' | 'quantityAvailable' | 'quantityReserved' | 'reorderPoint';
 type SortDir = 'asc' | 'desc';
-type GroupBy = 'none' | 'location' | 'product';
 type ViewMode = 'table' | 'cards';
 
 const STORAGE_KEY = 'wh-inventory-view';
+
+interface GlobalStats {
+  totalStock: number;
+  totalLocations: number;
+  lowStockAlerts: number;
+}
 
 /* ─── Skeleton Rows ─── */
 function SkeletonRows() {
@@ -82,6 +95,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 8 }).map((_, i) => (
         <TableRow key={i}>
+          <TableCell><ShimmerSkeleton className="h-4 w-4 rounded" /></TableCell>
           <TableCell><ShimmerSkeleton className="h-4 w-28" /></TableCell>
           <TableCell><ShimmerSkeleton className="h-4 w-20" /></TableCell>
           <TableCell><ShimmerSkeleton className="h-4 w-24" /></TableCell>
@@ -97,28 +111,31 @@ function SkeletonRows() {
   );
 }
 
-/* ─── Skeleton Cards ─── */
+/* ─── Skeleton Cards — mirror the card grid layout ─── */
 function SkeletonCards() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
       {Array.from({ length: 6 }).map((_, i) => (
         <Card key={i}>
-          <CardContent className="pt-4 pb-3 px-4 space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1.5">
-                <ShimmerSkeleton className="h-4 w-32" />
-                <ShimmerSkeleton className="h-3 w-20" />
+          <CardContent className="pt-3.5 pb-3 px-3.5 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 flex-1">
+                <ShimmerSkeleton className="h-4 w-4 rounded mt-0.5" />
+                <div className="space-y-1.5 flex-1">
+                  <ShimmerSkeleton className="h-4 w-32" />
+                  <ShimmerSkeleton className="h-3 w-20" />
+                </div>
               </div>
-              <ShimmerSkeleton className="h-7 w-7 rounded" />
+              <ShimmerSkeleton className="h-8 w-8 rounded" />
             </div>
             <div className="flex gap-1.5">
-              <ShimmerSkeleton className="h-4 w-20 rounded-full" />
-              <ShimmerSkeleton className="h-4 w-14 rounded-full" />
+              <ShimmerSkeleton className="h-5 w-24 rounded-full" />
+              <ShimmerSkeleton className="h-5 w-16 rounded-full" />
             </div>
             <ShimmerSkeleton className="h-2 w-full rounded-full" />
-            <div className="flex items-center justify-between">
-              <ShimmerSkeleton className="h-6 w-12" />
-              <ShimmerSkeleton className="h-3 w-16" />
+            <div className="flex items-end justify-between">
+              <ShimmerSkeleton className="h-7 w-14" />
+              <ShimmerSkeleton className="h-3 w-20" />
             </div>
           </CardContent>
         </Card>
@@ -133,20 +150,17 @@ export function InventoryListPage() {
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
-  // View mode: persist in localStorage, default to cards on mobile
+  // Motion variants (no-op when prefers-reduced-motion)
+  const headerVariants = useMotionVariants(blurIn);
+  const kpiContainerVariants = useMotionVariants(gridStagger);
+  const kpiItemVariants = useMotionVariants(gridItem);
+
+  // View mode: persist in localStorage (desktop only — mobile always renders cards)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'table' || stored === 'cards') return stored;
-    return 'table'; // will override to cards on mobile via effect
+    return 'table';
   });
-
-  // On first render, default to cards on mobile if no stored preference
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored && isMobile) {
-      setViewMode('cards');
-    }
-  }, [isMobile]);
 
   // Persist view mode
   useEffect(() => {
@@ -158,6 +172,10 @@ export function InventoryListPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [locations, setLocations] = useState<WhLocation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Global stats (whole warehouse, not just current page)
+  const [stats, setStats] = useState<GlobalStats | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,11 +184,8 @@ export function InventoryListPage() {
   const [zoneFilter, setZoneFilter] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(searchParams.get('lowStock') === 'true');
 
-  // Mobile filter sheet
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-
   // Grouping & sorting
-  const [groupBy, setGroupBy] = useState<GroupBy>('none');
+  const [groupBy, setGroupBy] = useState<InventoryGroupBy>('none');
   const [sortKey, setSortKey] = useState<SortKey>('productName');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -199,23 +214,19 @@ export function InventoryListPage() {
   const [moveBinSaving, setMoveBinSaving] = useState(false);
 
   // Write-off dialog (Werbegeschenke, Tester, Spenden, Eigenverbrauch, Bruch, Ausschuss)
-  // Holds the stock rows to be written off. Single-row writeoffs put 1 stock
-  // here; the bulk-select action pushes multiple. Empty means dialog is closed.
   const [writeOffStocks, setWriteOffStocks] = useState<WhStockLevel[]>([]);
 
-  // Multi-select for bulk operations (write-off, future: transfer, export).
-  // Stores the ids of selected stock rows.
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Multi-select for bulk operations. Stores the FULL row objects so that the
+  // selection survives page changes (fix: previously only ids were kept and
+  // rows from other pages were silently dropped on bulk write-off).
+  const [selectedRows, setSelectedRows] = useState<Map<string, WhStockLevel>>(new Map());
 
-  // Context menu (right-click)
+  // Context menu (right-click, desktop table)
   const [ctxMenu, setCtxMenu] = useState<{ row: WhStockLevel; x: number; y: number } | null>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
 
-  // Collapsible groups
+  // Collapsible groups (table view)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-
-  // Staggered animations for KPI cards
-  const kpiVisible = useStaggeredList(4, { interval: 80, initialDelay: 100 });
 
   // Debounce search input
   useEffect(() => {
@@ -236,9 +247,10 @@ export function InventoryListPage() {
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [debouncedSearch, locationFilter, zoneFilter, lowStockOnly, pageSize]);
 
-  // Load data
+  // Load page data (with error handling — fix: previously errors were unhandled)
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [result, locs] = await Promise.all([
         getStockLevelsPaginated({
@@ -254,12 +266,34 @@ export function InventoryListPage() {
       setStock(result.data);
       setTotalCount(result.total);
       setLocations(locs);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setLoadError(message);
+      toast.error(t('Failed to load inventory'));
     } finally {
       setLoading(false);
     }
-  }, [locationFilter, zoneFilter, lowStockOnly, debouncedSearch, page, pageSize]);
+  }, [locationFilter, zoneFilter, lowStockOnly, debouncedSearch, page, pageSize, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Load global stats (fix: KPIs previously summed only the current page).
+  // Non-blocking — page content does not depend on it.
+  const loadStats = useCallback(async () => {
+    try {
+      setStats(await getWarehouseStats());
+    } catch {
+      // KPI fallback: cards keep showing loading/last value
+    }
+  }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  // Refresh page data + global stats after a mutation
+  const refreshAll = useCallback(() => {
+    loadData();
+    loadStats();
+  }, [loadData, loadStats]);
 
   // Close context menu on outside click
   useEffect(() => {
@@ -298,9 +332,9 @@ export function InventoryListPage() {
   }, [stock, sortKey, sortDir]);
 
   // Grouping
-  const groups = useMemo(() => {
+  const groups = useMemo<InventoryCardGroup[] | null>(() => {
     if (groupBy === 'none') return null;
-    const map = new Map<string, { label: string; linkTo?: string; rows: WhStockLevel[] }>();
+    const map = new Map<string, InventoryCardGroup>();
     for (const row of sortedStock) {
       let key: string;
       let label: string;
@@ -314,23 +348,21 @@ export function InventoryListPage() {
         label = row.productName ?? row.productId.slice(0, 8);
         linkTo = `/products/${row.productId}`;
       }
-      if (!map.has(key)) map.set(key, { label, linkTo, rows: [] });
+      if (!map.has(key)) map.set(key, { key, label, linkTo, rows: [] });
       map.get(key)!.rows.push(row);
     }
-    return [...map.entries()];
+    return [...map.values()];
   }, [sortedStock, groupBy]);
 
-  // Summary totals
-  const totalAvailable = stock.reduce((s, r) => s + r.quantityAvailable, 0);
+  // Page-scoped reserved sum (global reserved is not available from the stats service)
   const totalReserved = stock.reduce((s, r) => s + r.quantityReserved, 0);
-  const lowStockCount = stock.filter(s => s.reorderPoint != null && s.quantityAvailable <= s.reorderPoint).length;
 
   // Pagination computed
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // Active filters
-  const activeFilters = useMemo(() => {
-    const filters: { key: string; label: string; onRemove: () => void }[] = [];
+  // Active filter pills (low-stock has its own quick chip)
+  const pillFilters = useMemo<InventoryFilterPill[]>(() => {
+    const filters: InventoryFilterPill[] = [];
     if (debouncedSearch) {
       filters.push({ key: 'search', label: `"${debouncedSearch}"`, onRemove: () => { setSearchTerm(''); setDebouncedSearch(''); } });
     }
@@ -341,11 +373,17 @@ export function InventoryListPage() {
     if (zoneFilter !== 'all') {
       filters.push({ key: 'zone', label: zoneFilter, onRemove: () => setZoneFilter('all') });
     }
-    if (lowStockOnly) {
-      filters.push({ key: 'lowStock', label: t('Low Stock Alerts'), onRemove: () => setLowStockOnly(false) });
-    }
     return filters;
-  }, [debouncedSearch, locationFilter, zoneFilter, lowStockOnly, locations, t]);
+  }, [debouncedSearch, locationFilter, zoneFilter, locations]);
+
+  const hasActiveFilters = pillFilters.length > 0 || lowStockOnly;
+
+  // Count for the mobile filter-drawer badge
+  const drawerFilterCount =
+    (locationFilter !== 'all' ? 1 : 0) +
+    (zoneFilter !== 'all' ? 1 : 0) +
+    (lowStockOnly ? 1 : 0) +
+    (groupBy !== 'none' ? 1 : 0);
 
   // Sort handler
   const handleSort = (key: SortKey) => {
@@ -364,7 +402,7 @@ export function InventoryListPage() {
       : <ChevronDown className="inline ml-0.5 h-3 w-3" />;
   };
 
-  // Toggle group collapse
+  // Toggle group collapse (table view)
   const toggleGroup = (key: string) => {
     setCollapsedGroups(prev => {
       const next = new Set(prev);
@@ -372,6 +410,12 @@ export function InventoryListPage() {
       return next;
     });
   };
+
+  // ── Dialog openers (shared between table, cards and context menu) ──
+  const openAdjust = (s: WhStockLevel) => { setAdjustTarget(s); setAdjustDelta(''); setAdjustReason(''); };
+  const openMoveShelf = (s: WhStockLevel) => { setMoveBinTarget(s); setMoveBinNewBin(''); setMoveBinNewBinDisplay(''); setMoveBinQty(''); };
+  const openTransfer = (s: WhStockLevel) => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); };
+  const openWriteOff = (s: WhStockLevel) => setWriteOffStocks([s]);
 
   // Adjust submit
   const handleAdjustSubmit = async () => {
@@ -385,7 +429,7 @@ export function InventoryListPage() {
       setAdjustTarget(null);
       setAdjustDelta('');
       setAdjustReason('');
-      loadData();
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed');
     } finally {
@@ -417,7 +461,7 @@ export function InventoryListPage() {
       setTransferDest('');
       setTransferQty('');
       setTransferReason('');
-      loadData();
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed');
     } finally {
@@ -450,18 +494,12 @@ export function InventoryListPage() {
       setMoveBinNewBin('');
       setMoveBinNewBinDisplay('');
       setMoveBinQty('');
-      loadData();
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed');
     } finally {
       setMoveBinSaving(false);
     }
-  };
-
-  // Copy SKU
-  const copySKU = (s: WhStockLevel) => {
-    navigator.clipboard.writeText(s.batchSerialNumber ?? s.batchId);
-    toast.success(t('Copied!'));
   };
 
   // Clear all filters
@@ -481,89 +519,39 @@ export function InventoryListPage() {
     return adjustTarget.quantityAvailable + delta;
   }, [adjustTarget, adjustDelta]);
 
-  // Row actions dropdown content (shared between button and right-click)
-  const renderRowActions = (s: WhStockLevel) => (
-    <>
-      <DropdownMenuItem onClick={() => { setAdjustTarget(s); setAdjustDelta(''); setAdjustReason(''); }}>
-        <Pencil className="mr-2 h-4 w-4" />
-        {t('Adjust Stock')}
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setMoveBinTarget(s); setMoveBinNewBin(''); setMoveBinNewBinDisplay(''); setMoveBinQty(''); }}>
-        <Move className="mr-2 h-4 w-4" />
-        {t('Move to Another Shelf')}
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); }}>
-        <ArrowRightLeft className="mr-2 h-4 w-4" />
-        {t('Transfer Stock')}
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => setWriteOffStocks([s])} className="text-red-600 focus:text-red-700 focus:bg-red-50">
-        <MinusCircle className="mr-2 h-4 w-4" />
-        {t('Write off stock')}
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem onClick={() => navigate(`/products/${s.productId}`)}>
-        <Eye className="mr-2 h-4 w-4" />
-        {t('View Product')}
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => navigate(`/products/${s.productId}/batches/${s.batchId}`)}>
-        <Eye className="mr-2 h-4 w-4" />
-        {t('View Batch')}
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => navigate(`/warehouse/locations/${s.locationId}`)}>
-        <Eye className="mr-2 h-4 w-4" />
-        {t('View Location')}
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem onClick={() => copySKU(s)}>
-        <Clipboard className="mr-2 h-4 w-4" />
-        {t('Copy SKU')}
-      </DropdownMenuItem>
-    </>
-  );
+  // ── Multi-select helpers (Map keeps rows across page changes) ──
+  const selectedIdSet = useMemo(() => new Set(selectedRows.keys()), [selectedRows]);
+  const allOnPageSelected = sortedStock.length > 0 && sortedStock.every(s => selectedRows.has(s.id));
+  const someOnPageSelected = sortedStock.some(s => selectedRows.has(s.id)) && !allOnPageSelected;
 
-  // Stock bar with tooltip
-  const StockBar = ({ row }: { row: WhStockLevel }) => {
-    const total = row.quantityAvailable + row.quantityReserved + row.quantityDamaged + row.quantityQuarantine;
-    if (total === 0) return <div className="h-2 w-full rounded-full bg-muted" />;
-    const pct = (v: number) => `${(v / total) * 100}%`;
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="cursor-default">
-              <div className="flex h-2 w-full min-w-[80px] rounded-full overflow-hidden bg-muted">
-                {row.quantityAvailable > 0 && <div className="bg-emerald-500 transition-all duration-300" style={{ width: pct(row.quantityAvailable) }} />}
-                {row.quantityReserved > 0 && <div className="bg-blue-500 transition-all duration-300" style={{ width: pct(row.quantityReserved) }} />}
-                {row.quantityDamaged > 0 && <div className="bg-orange-500 transition-all duration-300" style={{ width: pct(row.quantityDamaged) }} />}
-                {row.quantityQuarantine > 0 && <div className="bg-red-500 transition-all duration-300" style={{ width: pct(row.quantityQuarantine) }} />}
-              </div>
-              <div className="flex gap-2 mt-0.5 text-[10px] text-muted-foreground leading-none">
-                <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />{row.quantityAvailable}</span>
-                <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" />{row.quantityReserved}</span>
-                {row.quantityDamaged > 0 && <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500" />{row.quantityDamaged}</span>}
-                {row.quantityQuarantine > 0 && <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />{row.quantityQuarantine}</span>}
-              </div>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            <div className="space-y-0.5">
-              <div>{t('Available Quantity')}: {row.quantityAvailable.toLocaleString()}</div>
-              <div>{t('Reserved Quantity')}: {row.quantityReserved.toLocaleString()}</div>
-              {row.quantityDamaged > 0 && <div>{t('Damaged Quantity')}: {row.quantityDamaged.toLocaleString()}</div>}
-              {row.quantityQuarantine > 0 && <div>{t('Quarantine Quantity')}: {row.quantityQuarantine.toLocaleString()}</div>}
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
+  const toggleOne = (s: WhStockLevel) => {
+    setSelectedRows(prev => {
+      const next = new Map(prev);
+      if (next.has(s.id)) next.delete(s.id); else next.set(s.id, s);
+      return next;
+    });
   };
 
-  // Row renderer with stagger animation support
+  const toggleAllOnPage = () => {
+    setSelectedRows(prev => {
+      const next = new Map(prev);
+      if (allOnPageSelected) {
+        for (const s of sortedStock) next.delete(s.id);
+      } else {
+        for (const s of sortedStock) next.set(s.id, s);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedRows(new Map());
+
+  // Row renderer with stagger animation support (table view)
   const rowStagger = useStaggeredList(sortedStock.length, { interval: 25, initialDelay: 150 });
 
   const renderRow = (s: WhStockLevel, idx: number) => {
-    const isLow = s.reorderPoint != null && s.quantityAvailable <= s.reorderPoint;
-    const isSelected = selectedIds.has(s.id);
+    const isLow = getStockHealth(s) === 'critical';
+    const isSelected = selectedRows.has(s.id);
     return (
       <TableRow
         key={s.id}
@@ -578,7 +566,7 @@ export function InventoryListPage() {
         <TableCell className="w-10" onClick={e => e.stopPropagation()}>
           <Checkbox
             checked={isSelected}
-            onCheckedChange={() => toggleOne(s.id)}
+            onCheckedChange={() => toggleOne(s)}
             aria-label={t('Select item')}
           />
         </TableCell>
@@ -600,7 +588,7 @@ export function InventoryListPage() {
         </TableCell>
         <TableCell className="hidden lg:table-cell text-muted-foreground">{formatBinLocation(s.binLocation, locations.find(l => l.id === s.locationId))}</TableCell>
         <TableCell className="hidden sm:table-cell w-[120px] px-2">
-          <StockBar row={s} />
+          <InventoryStockBar row={s} />
         </TableCell>
         <TableCell className="text-right tabular-nums">
           <span className="inline-flex items-center gap-1">
@@ -615,12 +603,18 @@ export function InventoryListPage() {
         <TableCell className="w-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {renderRowActions(s)}
+            <DropdownMenuContent align="end" className="w-52">
+              <InventoryRowActions
+                stock={s}
+                onAdjust={openAdjust}
+                onMoveShelf={openMoveShelf}
+                onTransfer={openTransfer}
+                onWriteOff={openWriteOff}
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
@@ -630,120 +624,109 @@ export function InventoryListPage() {
 
   const colCount = 10;
 
-  // Multi-select helpers
-  const allOnPageSelected = sortedStock.length > 0 && sortedStock.every(s => selectedIds.has(s.id));
-  const someOnPageSelected = sortedStock.some(s => selectedIds.has(s.id)) && !allOnPageSelected;
-  const toggleOne = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-  const toggleAllOnPage = () => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (allOnPageSelected) {
-        for (const s of sortedStock) next.delete(s.id);
-      } else {
-        for (const s of sortedStock) next.add(s.id);
-      }
-      return next;
-    });
-  };
-  const selectedStocks = useMemo(
-    () => stock.filter(s => selectedIds.has(s.id)),
-    [stock, selectedIds],
+  // Content mode: mobile always renders the card grid (a 10-column table is
+  // unusable at 375px and caused horizontal overflow)
+  const showCards = isMobile || viewMode === 'cards';
+
+  // ── Toolbar slots ──
+  const viewToggle = (
+    <div className="hidden md:flex items-center border rounded-md">
+      <Button
+        variant={viewMode === 'table' ? 'default' : 'ghost'}
+        size="icon"
+        className="h-9 w-9 rounded-r-none"
+        onClick={() => setViewMode('table')}
+        title={t('Table View')}
+      >
+        <TableIcon className="h-4 w-4" />
+      </Button>
+      <Button
+        variant={viewMode === 'cards' ? 'default' : 'ghost'}
+        size="icon"
+        className="h-9 w-9 rounded-l-none"
+        onClick={() => setViewMode('cards')}
+        title={t('Card View')}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </Button>
+    </div>
   );
 
-  // Active filter count for mobile badge
-  const filterCount = activeFilters.length;
-
-  // ── Filter controls (shared between inline and sheet) ──
-  const filterControls = (isSheet: boolean) => (
-    <div className={isSheet ? 'space-y-4' : 'flex flex-wrap gap-2 sm:gap-3 items-center'}>
-      {/* Search */}
-      <div className={`relative ${isSheet ? '' : ''}`}>
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t('Search...')}
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className={`pl-8 pr-8 h-9 ${isSheet ? 'w-full' : 'w-full sm:w-[220px]'}`}
-        />
-        {searchTerm && (
-          <button
-            type="button"
-            onClick={() => { setSearchTerm(''); setDebouncedSearch(''); }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* Location */}
-      <div className={isSheet ? '' : ''}>
-        {isSheet && <Label className="text-xs text-muted-foreground mb-1.5 block">{t('Location')}</Label>}
-        <Select value={locationFilter} onValueChange={setLocationFilter}>
-          <SelectTrigger className={`h-9 ${isSheet ? 'w-full' : 'w-[180px]'}`}>
-            <SelectValue placeholder={t('All Locations')} />
+  // ── Pagination bar (shared between table and card views) ──
+  const paginationBar = (withFrame: boolean) => (
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-2 text-sm ${withFrame ? 'border-t px-4 py-3' : ''}`}>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+          <SelectTrigger className="w-[76px] h-11 sm:h-8">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('All Locations')}</SelectItem>
-            {locations.map(l => (
-              <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-            ))}
+            <SelectItem value="25">25</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
           </SelectContent>
         </Select>
+        <span>{t('per page')}</span>
       </div>
-
-      {/* Zone (only when location selected) */}
-      {availableZones.length > 0 && (
-        <div>
-          {isSheet && <Label className="text-xs text-muted-foreground mb-1.5 block">{t('Zone')}</Label>}
-          <Select value={zoneFilter} onValueChange={setZoneFilter}>
-            <SelectTrigger className={`h-9 ${isSheet ? 'w-full' : 'w-[160px]'}`}>
-              <SelectValue placeholder={t('All Zones')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('All Zones')}</SelectItem>
-              {availableZones.map(z => (
-                <SelectItem key={z.code} value={z.code}>{z.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Low Stock toggle */}
-      <Button
-        variant={lowStockOnly ? 'default' : 'outline'}
-        size="sm"
-        className={`h-9 ${isSheet ? 'w-full justify-start' : ''}`}
-        onClick={() => setLowStockOnly(v => !v)}
-      >
-        <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
-        {t('Low Stock Alerts')}
-      </Button>
-
-      {/* Group by (only in sheet or desktop) */}
-      {isSheet ? (
-        <div>
-          <Label className="text-xs text-muted-foreground mb-1.5 block">{t('Group by')}</Label>
-          <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
-            <SelectTrigger className="w-full h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t('None')}</SelectItem>
-              <SelectItem value="location">{t('By Location')}</SelectItem>
-              <SelectItem value="product">{t('By Product')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-11 w-11 sm:h-8 sm:w-8"
+          disabled={page <= 1}
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-muted-foreground tabular-nums">
+          {t('Page')} {page} {t('of')} {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-11 w-11 sm:h-8 sm:w-8"
+          disabled={page >= totalPages}
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
+  );
+
+  // ── Empty / error blocks ──
+  const emptyBlock = (
+    <Card>
+      <CardContent className="py-8">
+        {hasActiveFilters ? (
+          <EmptyState
+            icon={Package}
+            title={t('No items match your filters')}
+            actionLabel={t('Clear Filters')}
+            onAction={clearAllFilters}
+          />
+        ) : (
+          <EmptyState
+            icon={Package}
+            title={t('No inventory yet')}
+            actionLabel={t('Goods Receipt')}
+            onAction={() => navigate('/warehouse/goods-receipt')}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const errorBlock = (
+    <Card>
+      <CardContent className="py-8">
+        <ErrorState
+          title={t('Failed to load inventory')}
+          message={loadError ?? undefined}
+          onRetry={loadData}
+        />
+      </CardContent>
+    </Card>
   );
 
   // Adjust dialog content
@@ -832,318 +815,195 @@ export function InventoryListPage() {
     </div>
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Inventory')}</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          {totalCount.toLocaleString()} {t('Items')}
+  // Move-bin dialog content (Sheet on mobile / Dialog on desktop — fix:
+  // previously the only stock dialog without a mobile bottom-sheet variant)
+  const moveBinDialogContent = (
+    <div className="space-y-4 py-2">
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <Label className="text-xs text-muted-foreground">{t('Location')}</Label>
+          <div className="font-medium">{moveBinTarget?.locationName}</div>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">{t('Current Shelf')}</Label>
+          <div className="font-medium font-mono">
+            {moveBinTarget?.binLocation
+              ? formatBinLocation(moveBinTarget.binLocation)
+              : <span className="text-muted-foreground italic">{t('Unassigned')}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t('New Shelf')}</Label>
+        {(() => {
+          const loc = locations.find(l => l.id === moveBinTarget?.locationId);
+          if (!loc) return <Input value={moveBinNewBin} onChange={e => setMoveBinNewBin(e.target.value)} placeholder="A-03-12" />;
+          return (
+            <ShelfPicker
+              location={loc}
+              value={moveBinNewBin || undefined}
+              onSelect={(val: ShelfPickerValue) => {
+                setMoveBinNewBin(val.binLocation);
+                setMoveBinNewBinDisplay(val.displayLabel);
+              }}
+              onClear={() => {
+                setMoveBinNewBin('');
+                setMoveBinNewBinDisplay('');
+              }}
+            />
+          );
+        })()}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t('Quantity to Move')}</Label>
+        <Input
+          type="number"
+          min={1}
+          max={moveBinTarget?.quantityAvailable ?? 9999}
+          placeholder={String(moveBinTarget?.quantityAvailable ?? '')}
+          value={moveBinQty}
+          onChange={e => setMoveBinQty(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t('Available Quantity')}: {moveBinTarget?.quantityAvailable.toLocaleString()} —{' '}
+          {t('Leave empty to move everything')}
         </p>
       </div>
 
-      {/* KPI Cards — using WarehouseKPICard */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: t('Total Items'), value: totalCount, icon: Package, color: 'text-blue-600', gradient: 'from-blue-500/20 to-blue-600/10', sparkColor: '#3B82F6' },
-          { label: t('Available Stock'), value: totalAvailable, icon: CircleCheck, color: 'text-emerald-600', gradient: 'from-emerald-500/20 to-emerald-600/10', sparkColor: '#10B981' },
-          { label: t('Reserved Stock'), value: totalReserved, icon: Clock, color: 'text-amber-600', gradient: 'from-amber-500/20 to-amber-600/10', sparkColor: '#F59E0B' },
-          { label: t('Low Stock Alerts'), value: lowStockCount, icon: AlertTriangle, color: 'text-red-600', gradient: 'from-red-500/20 to-red-600/10', sparkColor: '#EF4444', onClick: () => setLowStockOnly(true) },
-        ].map((kpi, i) => (
-          <div
-            key={kpi.label}
-            className={`transition-all duration-300 ${kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-          >
-            <WarehouseKPICard {...kpi} loading={loading} />
-          </div>
-        ))}
-      </div>
-
-      {/* Filters — Desktop: inline card, Mobile: Sheet trigger */}
-      {isMobile ? (
-        <>
-          <div className="flex items-center gap-2">
-            {/* Mobile: search always visible */}
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('Search...')}
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-8 pr-8 h-9 w-full"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchTerm(''); setDebouncedSearch(''); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter trigger */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1.5 shrink-0"
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              {t('Filters')}
-              {filterCount > 0 && (
-                <Badge variant="secondary" className="h-5 min-w-[20px] px-1 text-[10px]">
-                  {filterCount}
-                </Badge>
-              )}
-            </Button>
-
-            {/* View toggle */}
-            <div className="flex items-center border rounded-md">
-              <Button
-                variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                size="icon"
-                className="h-9 w-9 rounded-r-none"
-                onClick={() => setViewMode('cards')}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
-                size="icon"
-                className="h-9 w-9 rounded-l-none"
-                onClick={() => setViewMode('table')}
-              >
-                <TableIcon className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Filter Sheet */}
-          <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-            <SheetContent side="bottom" className="max-h-[70vh] rounded-t-2xl">
-              <SheetHeader>
-                <SheetTitle>{t('Filters')}</SheetTitle>
-                <SheetDescription>{t('Filter inventory items')}</SheetDescription>
-              </SheetHeader>
-              <div className="px-4 overflow-y-auto flex-1">
-                {filterControls(true)}
-              </div>
-              <SheetFooter className="flex-row gap-2">
-                {activeFilters.length > 0 && (
-                  <Button variant="outline" className="flex-1" onClick={() => { clearAllFilters(); setFilterSheetOpen(false); }}>
-                    {t('Clear Filters')}
-                  </Button>
-                )}
-                <Button className="flex-1" onClick={() => setFilterSheetOpen(false)}>
-                  {t('Apply')}
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </>
-      ) : (
-        <Card className="backdrop-blur-sm bg-card/80 border">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-              {filterControls(false)}
-
-              <div className="flex-1" />
-
-              {/* Group by */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">{t('Group by')}:</span>
-                <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
-                  <SelectTrigger className="w-[140px] h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t('None')}</SelectItem>
-                    <SelectItem value="location">{t('By Location')}</SelectItem>
-                    <SelectItem value="product">{t('By Product')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* View Toggle — desktop */}
-              <div className="flex items-center border rounded-md ml-1">
-                <Button
-                  variant={viewMode === 'table' ? 'default' : 'ghost'}
-                  size="icon"
-                  className="h-9 w-9 rounded-r-none"
-                  onClick={() => setViewMode('table')}
-                  title={t('Table View')}
-                >
-                  <TableIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                  size="icon"
-                  className="h-9 w-9 rounded-l-none"
-                  onClick={() => setViewMode('cards')}
-                  title={t('Card View')}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Active filter pills */}
-            {activeFilters.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t">
-                <span className="text-xs text-muted-foreground mr-1">{t('Active Filters')}:</span>
-                {activeFilters.map(f => (
-                  <Badge key={f.key} variant="secondary" className="gap-1 pr-1 text-xs">
-                    {f.label}
-                    <button
-                      type="button"
-                      onClick={f.onRemove}
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-                {activeFilters.length > 1 && (
-                  <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearAllFilters}>
-                    {t('Clear Filters')}
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mobile active filter pills (shown outside sheet) */}
-      {isMobile && activeFilters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 -mt-3">
-          {activeFilters.map(f => (
-            <Badge key={f.key} variant="secondary" className="gap-1 pr-1 text-xs">
-              {f.label}
-              <button
-                type="button"
-                onClick={f.onRemove}
-                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-          {activeFilters.length > 1 && (
-            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearAllFilters}>
-              {t('Clear Filters')}
-            </Button>
-          )}
+      {moveBinNewBinDisplay && (
+        <div className="rounded-md bg-muted/40 p-2 text-xs">
+          {t('Will move to')}: <span className="font-mono font-medium">{moveBinNewBinDisplay}</span>
         </div>
       )}
+    </div>
+  );
 
-      {/* Content: Card View or Table View */}
-      {viewMode === 'cards' ? (
+  const moveBinSubmitDisabled = moveBinSaving || !moveBinNewBin || (moveBinNewBin === (moveBinTarget?.binLocation ?? ''));
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <motion.div variants={headerVariants} initial="initial" animate="animate">
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Inventory')}</h1>
+        <p className="text-muted-foreground text-sm mt-0.5 tabular-nums">
+          {totalCount.toLocaleString()} {t('Items')}
+        </p>
+      </motion.div>
+
+      {/* KPI Cards — global values via getWarehouseStats() (fix: were page-scoped) */}
+      <motion.div
+        variants={kpiContainerVariants}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+      >
+        {[
+          { label: t('Total Items'), value: totalCount, loading, icon: Package, color: 'text-blue-600', gradient: 'from-blue-500/20 to-blue-600/10', sparkColor: '#3B82F6' },
+          { label: t('Available Stock'), value: stats?.totalStock ?? 0, loading: stats === null, icon: CircleCheck, color: 'text-emerald-600', gradient: 'from-emerald-500/20 to-emerald-600/10', sparkColor: '#10B981' },
+          { label: `${t('Reserved Stock')} · ${t('On this page')}`, value: totalReserved, loading, icon: Clock, color: 'text-amber-600', gradient: 'from-amber-500/20 to-amber-600/10', sparkColor: '#F59E0B' },
+          { label: t('Low Stock Alerts'), value: stats?.lowStockAlerts ?? 0, loading: stats === null, icon: AlertTriangle, color: 'text-red-600', gradient: 'from-red-500/20 to-red-600/10', sparkColor: '#EF4444', onClick: () => setLowStockOnly(true) },
+        ].map(kpi => (
+          <motion.div key={kpi.label} variants={kpiItemVariants}>
+            <WarehouseKPICard {...kpi} />
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Toolbar: search + filters (drawer on mobile, inline on desktop) + view toggle */}
+      <ListToolbar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: t('Search...') }}
+        filters={
+          <InventoryFilterControls
+            layout={isMobile ? 'sheet' : 'inline'}
+            locations={locations}
+            availableZones={availableZones}
+            locationFilter={locationFilter}
+            onLocationChange={setLocationFilter}
+            zoneFilter={zoneFilter}
+            onZoneChange={setZoneFilter}
+            groupBy={groupBy}
+            onGroupByChange={setGroupBy}
+            lowStockOnly={lowStockOnly}
+            onLowStockChange={setLowStockOnly}
+          />
+        }
+        activeFilterCount={drawerFilterCount}
+        viewToggle={viewToggle}
+      />
+
+      {/* Quick-filter chips: low-stock toggle + active filter pills */}
+      <div className="flex flex-wrap items-center gap-1.5 -mt-2">
+        <button
+          type="button"
+          onClick={() => setLowStockOnly(v => !v)}
+          aria-pressed={lowStockOnly}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors min-h-11 sm:min-h-7 sm:px-2.5 ${
+            lowStockOnly
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-background text-foreground hover:bg-muted'
+          }`}
+        >
+          <AlertTriangle className="h-3.5 w-3.5" />
+          {t('Low stock only')}
+          {stats != null && stats.lowStockAlerts > 0 && (
+            <Badge
+              variant={lowStockOnly ? 'secondary' : 'destructive'}
+              className="h-4 min-w-4 px-1 text-[10px] tabular-nums"
+            >
+              {stats.lowStockAlerts}
+            </Badge>
+          )}
+        </button>
+        <InventoryFilterPills filters={pillFilters} onClearAll={clearAllFilters} />
+      </div>
+
+      {/* Bulk actions — works in table AND card view, selection survives paging */}
+      <BulkActionsBar
+        count={selectedRows.size}
+        onClear={clearSelection}
+        label={t('{{n}} items selected', { n: selectedRows.size })}
+        actions={[
+          {
+            id: 'write-off',
+            label: t('Write off ({{n}})', { n: selectedRows.size }),
+            icon: <MinusCircle className="size-4" />,
+            variant: 'destructive',
+            onRun: () => setWriteOffStocks([...selectedRows.values()]),
+          },
+        ]}
+      />
+
+      {/* Content */}
+      {loadError && !loading ? (
+        errorBlock
+      ) : !loading && sortedStock.length === 0 ? (
+        emptyBlock
+      ) : showCards ? (
         loading ? (
           <SkeletonCards />
-        ) : sortedStock.length === 0 ? (
-          <Card>
-            <CardContent className="py-16">
-              <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <div className="rounded-full bg-muted p-4">
-                  <Package className="h-8 w-8 opacity-50" />
-                </div>
-                {activeFilters.length > 0 ? (
-                  <>
-                    <p className="font-medium">{t('No items match your filters')}</p>
-                    <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                      {t('Clear Filters')}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-medium">{t('No inventory yet')}</p>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to="/warehouse/goods-receipt">{t('Goods Receipt')}</Link>
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         ) : (
           <>
-            <InventoryCardView
+            <InventoryCardGrid
               stock={sortedStock}
+              groups={groups}
               locations={locations}
-              onAdjust={s => { setAdjustTarget(s); setAdjustDelta(''); setAdjustReason(''); }}
-              onTransfer={s => { setTransferTarget(s); setTransferDest(''); setTransferQty(''); setTransferReason(''); }}
+              selectedIds={selectedIdSet}
+              onToggleSelect={toggleOne}
+              onAdjust={openAdjust}
+              onMoveShelf={openMoveShelf}
+              onTransfer={openTransfer}
+              onWriteOff={openWriteOff}
             />
-            {/* Card View Pagination */}
-            {totalCount > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
-                    <SelectTrigger className="w-[70px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span>{t('per page')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-muted-foreground">
-                    {t('Page')} {page} {t('of')} {totalPages}
-                  </span>
-                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* Pagination — hidden while loading (fix) */}
+            {totalCount > 0 && paginationBar(false)}
           </>
         )
       ) : (
-        /* Table View */
+        /* Table View (desktop only) */
         <Card>
           <CardContent className="p-0">
-            {/* Bulk action bar — appears when ≥1 row selected */}
-            {selectedIds.size > 0 && (
-              <div className="sticky top-0 z-10 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between border-b bg-primary/10 dark:bg-primary/20 px-3 sm:px-4 py-2.5 backdrop-blur">
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="secondary" className="bg-primary text-primary-foreground">
-                    {selectedIds.size}
-                  </Badge>
-                  <span className="font-medium">
-                    {t('{{n}} items selected', { n: selectedIds.size })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedIds(new Set())}
-                  >
-                    <X className="mr-1 h-3.5 w-3.5" />
-                    {t('Clear selection')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setWriteOffStocks(selectedStocks)}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                    disabled={selectedStocks.length === 0}
-                  >
-                    <MinusCircle className="mr-1 h-3.5 w-3.5" />
-                    {t('Write off ({{n}})', { n: selectedIds.size })}
-                  </Button>
-                </div>
-              </div>
-            )}
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -1169,8 +1029,7 @@ export function InventoryListPage() {
                     </TableHead>
                     <TableHead className="hidden sm:table-cell text-center">{t('Stock Level')}</TableHead>
                     <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityAvailable')}>
-                      <span className="hidden sm:inline">{t('Available Quantity')}</span>
-                      <span className="sm:hidden">{t('Avail.')}</span>
+                      {t('Available Quantity')}
                       <SortIcon col="quantityAvailable" />
                     </TableHead>
                     <TableHead className="hidden md:table-cell text-right cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('quantityReserved')}>
@@ -1187,40 +1046,15 @@ export function InventoryListPage() {
                 <TableBody>
                   {loading ? (
                     <SkeletonRows />
-                  ) : sortedStock.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={colCount} className="h-48 text-center">
-                        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                          <div className="rounded-full bg-muted p-4">
-                            <Package className="h-8 w-8 opacity-50" />
-                          </div>
-                          {activeFilters.length > 0 ? (
-                            <>
-                              <p className="font-medium">{t('No items match your filters')}</p>
-                              <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                                {t('Clear Filters')}
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <p className="font-medium">{t('No inventory yet')}</p>
-                              <Button variant="outline" size="sm" asChild>
-                                <Link to="/warehouse/goods-receipt">{t('Goods Receipt')}</Link>
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
                   ) : groups ? (
-                    groups.map(([key, group]) => {
-                      const isCollapsed = collapsedGroups.has(key);
+                    groups.map(group => {
+                      const isCollapsed = collapsedGroups.has(group.key);
                       return (
-                        <>{/* Fragment per group */}
+                        /* Fix: group fragments previously rendered without a key */
+                        <Fragment key={group.key}>
                           <TableRow
-                            key={`group-${key}`}
                             className="bg-muted/50 hover:bg-muted/70 cursor-pointer"
-                            onClick={() => toggleGroup(key)}
+                            onClick={() => toggleGroup(group.key)}
                           >
                             <TableCell colSpan={colCount} className="py-2">
                               <div className="flex items-center gap-2 font-medium">
@@ -1234,14 +1068,14 @@ export function InventoryListPage() {
                                     {group.label}
                                   </Link>
                                 ) : group.label}
-                                <Badge variant="secondary" className="ml-1 text-xs">
+                                <Badge variant="secondary" className="ml-1 text-xs tabular-nums">
                                   {group.rows.length}
                                 </Badge>
                               </div>
                             </TableCell>
                           </TableRow>
                           {!isCollapsed && group.rows.map((row, idx) => renderRow(row, idx))}
-                        </>
+                        </Fragment>
                       );
                     })
                   ) : (
@@ -1252,50 +1086,13 @@ export function InventoryListPage() {
             </div>
 
             {/* Pagination */}
-            {!loading && totalCount > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
-                    <SelectTrigger className="w-[70px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span>{t('per page')}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={page <= 1}
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-muted-foreground">
-                    {t('Page')} {page} {t('of')} {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            {!loading && totalCount > 0 && paginationBar(true)}
           </CardContent>
         </Card>
       )}
+
+      {/* Spacer so the fixed mobile bulk bar never covers content */}
+      {selectedRows.size > 0 && <div className="h-16 md:hidden" aria-hidden="true" />}
 
       {/* Right-click context menu (positioned absolutely) */}
       {ctxMenu && (
@@ -1308,8 +1105,14 @@ export function InventoryListPage() {
             <DropdownMenuTrigger asChild>
               <span className="sr-only">context</span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="bottom" className="w-48">
-              {renderRowActions(ctxMenu.row)}
+            <DropdownMenuContent align="start" side="bottom" className="w-52">
+              <InventoryRowActions
+                stock={ctxMenu.row}
+                onAdjust={openAdjust}
+                onMoveShelf={openMoveShelf}
+                onTransfer={openTransfer}
+                onWriteOff={openWriteOff}
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1329,9 +1132,9 @@ export function InventoryListPage() {
               {adjustDialogContent}
             </div>
             <SheetFooter className="flex-row gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setAdjustTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button variant="outline" className="flex-1 min-h-11" onClick={() => setAdjustTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
               <Button
-                className="flex-1"
+                className="flex-1 min-h-11"
                 disabled={adjustSaving || !adjustDelta || !adjustReason.trim()}
                 onClick={handleAdjustSubmit}
               >
@@ -1377,9 +1180,9 @@ export function InventoryListPage() {
               {transferDialogContent}
             </div>
             <SheetFooter className="flex-row gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setTransferTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button variant="outline" className="flex-1 min-h-11" onClick={() => setTransferTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
               <Button
-                className="flex-1"
+                className="flex-1 min-h-11"
                 disabled={transferSaving || !transferDest || !transferQty || parseInt(transferQty, 10) <= 0}
                 onClick={handleTransferSubmit}
               >
@@ -1411,95 +1214,63 @@ export function InventoryListPage() {
         </Dialog>
       )}
 
-      {/* Move to another shelf within the same location */}
-      <Dialog open={!!moveBinTarget} onOpenChange={open => { if (!open) setMoveBinTarget(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('Move to Another Shelf')}</DialogTitle>
-            <DialogDescription>
-              {moveBinTarget?.productName ?? ''} — {moveBinTarget?.batchSerialNumber ?? ''}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <Label className="text-xs text-muted-foreground">{t('Location')}</Label>
-                <div className="font-medium">{moveBinTarget?.locationName}</div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">{t('Current Shelf')}</Label>
-                <div className="font-medium font-mono">
-                  {moveBinTarget?.binLocation
-                    ? formatBinLocation(moveBinTarget.binLocation)
-                    : <span className="text-muted-foreground italic">{t('Unassigned')}</span>}
-                </div>
-              </div>
+      {/* Move to another shelf — Sheet on mobile, Dialog on desktop (fix) */}
+      {isMobile ? (
+        <Sheet open={!!moveBinTarget} onOpenChange={open => { if (!open) setMoveBinTarget(null); }}>
+          <SheetContent side="bottom" className="max-h-[80vh] rounded-t-2xl">
+            <SheetHeader>
+              <SheetTitle>{t('Move to Another Shelf')}</SheetTitle>
+              <SheetDescription>
+                {moveBinTarget?.productName ?? ''} — {moveBinTarget?.batchSerialNumber ?? ''}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="px-4 overflow-y-auto flex-1">
+              {moveBinDialogContent}
             </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('New Shelf')}</Label>
-              {(() => {
-                const loc = locations.find(l => l.id === moveBinTarget?.locationId);
-                if (!loc) return <Input value={moveBinNewBin} onChange={e => setMoveBinNewBin(e.target.value)} placeholder="A-03-12" />;
-                return (
-                  <ShelfPicker
-                    location={loc}
-                    value={moveBinNewBin || undefined}
-                    onSelect={(val: ShelfPickerValue) => {
-                      setMoveBinNewBin(val.binLocation);
-                      setMoveBinNewBinDisplay(val.displayLabel);
-                    }}
-                    onClear={() => {
-                      setMoveBinNewBin('');
-                      setMoveBinNewBinDisplay('');
-                    }}
-                  />
-                );
-              })()}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('Quantity to Move')}</Label>
-              <Input
-                type="number"
-                min={1}
-                max={moveBinTarget?.quantityAvailable ?? 9999}
-                placeholder={String(moveBinTarget?.quantityAvailable ?? '')}
-                value={moveBinQty}
-                onChange={e => setMoveBinQty(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('Available Quantity')}: {moveBinTarget?.quantityAvailable.toLocaleString()} —{' '}
-                {t('Leave empty to move everything')}
-              </p>
-            </div>
-
-            {moveBinNewBinDisplay && (
-              <div className="rounded-md bg-muted/40 p-2 text-xs">
-                {t('Will move to')}: <span className="font-mono font-medium">{moveBinNewBinDisplay}</span>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveBinTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
-            <Button
-              disabled={moveBinSaving || !moveBinNewBin || (moveBinNewBin === (moveBinTarget?.binLocation ?? ''))}
-              onClick={handleMoveBinSubmit}
-            >
-              <Move className="mr-2 h-4 w-4" />
-              {t('Move')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <SheetFooter className="flex-row gap-2">
+              <Button variant="outline" className="flex-1 min-h-11" onClick={() => setMoveBinTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button
+                className="flex-1 min-h-11"
+                disabled={moveBinSubmitDisabled}
+                onClick={handleMoveBinSubmit}
+              >
+                <Move className="mr-2 h-4 w-4" />
+                {t('Move')}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={!!moveBinTarget} onOpenChange={open => { if (!open) setMoveBinTarget(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t('Move to Another Shelf')}</DialogTitle>
+              <DialogDescription>
+                {moveBinTarget?.productName ?? ''} — {moveBinTarget?.batchSerialNumber ?? ''}
+              </DialogDescription>
+            </DialogHeader>
+            {moveBinDialogContent}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMoveBinTarget(null)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button
+                disabled={moveBinSubmitDisabled}
+                onClick={handleMoveBinSubmit}
+              >
+                <Move className="mr-2 h-4 w-4" />
+                {t('Move')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <StockWriteOffDialog
         open={writeOffStocks.length > 0}
         onOpenChange={(o) => { if (!o) setWriteOffStocks([]); }}
         stocks={writeOffStocks}
         onSaved={() => {
-          loadData();
-          setSelectedIds(new Set());
+          refreshAll();
+          clearSelection();
         }}
       />
     </div>

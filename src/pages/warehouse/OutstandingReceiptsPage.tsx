@@ -5,19 +5,23 @@
  * has been received so far. Sorted oldest-first so old supplier
  * issues bubble up. Direct "Einlagern"-action prefills the goods
  * receipt wizard with the batch.
+ *
+ * Mobile (<md): card list with prominent Stock-In CTA.
+ * Desktop (md+): sortable ResponsiveTable.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { useLocale } from '@/hooks/use-locale';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   PackageOpen,
   Boxes,
   Clock,
   CheckCircle2,
   Filter,
-  Search,
   AlertTriangle,
   ArrowDownToLine,
   RefreshCw,
@@ -25,51 +29,81 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Progress } from '@/components/ui/progress';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { ListToolbar } from '@/components/ui/list-toolbar';
+import {
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+  type SortState,
+} from '@/components/ui/responsive-table';
+import {
+  OutstandingReceiptCard,
+  AgePill,
+  getAgeTier,
+} from '@/components/warehouse/OutstandingReceiptCard';
+import { gridStagger, gridItem, blurIn, useMotionVariants, useReducedMotion } from '@/lib/motion';
 import { getOutstandingBatches } from '@/services/supabase/batches';
 import { formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { OutstandingBatch } from '@/services/supabase/batches';
+
+type ReceiptFilter = 'all' | 'zero' | 'partial';
+
+const RECEIPT_FILTER_OPTIONS: Array<{ value: ReceiptFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'zero', label: 'Not yet received' },
+  { value: 'partial', label: 'Partially received' },
+];
 
 export function OutstandingReceiptsPage() {
   const { t } = useTranslation('warehouse');
   const locale = useLocale();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const prefersReduced = useReducedMotion();
 
   const [data, setData] = useState<OutstandingBatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [includeAllStatuses, setIncludeAllStatuses] = useState(false);
-  const [showZeroReceived, setShowZeroReceived] = useState(true);
-  const [showPartial, setShowPartial] = useState(true);
+  const [receiptFilter, setReceiptFilter] = useState<ReceiptFilter>('all');
+  const [sort, setSort] = useState<SortState>({ by: 'age', order: 'desc' });
 
-  const load = async () => {
+  // Stale-response guard: only the latest request may update state.
+  const requestIdRef = useRef(0);
+
+  const load = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setError(null);
     try {
       const rows = await getOutstandingBatches({ includeAllStatuses });
+      if (requestId !== requestIdRef.current) return;
       setData(rows);
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      console.error('Failed to load outstanding receipts:', err);
+      setError(err instanceof Error ? err.message : 'unknown');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  };
+  }, [includeAllStatuses]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeAllStatuses]);
+  }, [load]);
 
   // Filtered view
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return data.filter(row => {
-      if (!showZeroReceived && row.received === 0) return false;
-      if (!showPartial && row.received > 0) return false;
+      if (receiptFilter === 'zero' && row.received !== 0) return false;
+      if (receiptFilter === 'partial' && row.received === 0) return false;
       if (!q) return true;
       return (
         row.productName.toLowerCase().includes(q) ||
@@ -79,7 +113,30 @@ export function OutstandingReceiptsPage() {
         (row.supplierName?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [data, search, showZeroReceived, showPartial]);
+  }, [data, search, receiptFilter]);
+
+  // Sorted view (desktop table sorting; service default = oldest first = age desc)
+  const sorted = useMemo(() => {
+    const dir = sort.order === 'asc' ? 1 : -1;
+    const accessor = (row: OutstandingBatch): string | number => {
+      switch (sort.by) {
+        case 'product':
+          return row.productName.toLowerCase();
+        case 'outstanding':
+          return row.outstanding;
+        case 'age':
+        default:
+          return row.daysOutstanding;
+      }
+    };
+    return [...filtered].sort((a, b) => {
+      const av = accessor(a);
+      const bv = accessor(b);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [filtered, sort]);
 
   // Aggregate KPIs over the *unfiltered* dataset
   const kpis = useMemo(() => {
@@ -94,222 +151,397 @@ export function OutstandingReceiptsPage() {
     return { openBatches, totalOutstanding, totalOrdered, totalReceived, overallPercent, oldestDays };
   }, [data]);
 
+  const oldestTier = getAgeTier(kpis.oldestDays);
+
+  const activeFilterCount =
+    (receiptFilter !== 'all' ? 1 : 0) + (includeAllStatuses ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearch('');
+    setReceiptFilter('all');
+  };
+
+  // Motion variants (no-op when prefers-reduced-motion)
+  const containerVariants = useMotionVariants(gridStagger);
+  const itemVariants = useMotionVariants(gridItem);
+  const headerVariants = useMotionVariants(blurIn);
+
+  // -------------------------------------------------------------------------
+  // Toolbar filter content (inline on desktop, bottom drawer on mobile)
+  // -------------------------------------------------------------------------
+  const filtersNode = (
+    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-3">
+      <div className="space-y-1.5 md:space-y-0">
+        <Label className="md:sr-only text-xs text-muted-foreground">{t('Receipt status')}</Label>
+        <div
+          role="group"
+          aria-label={t('Receipt status')}
+          className="flex w-full md:w-auto rounded-lg border bg-muted/40 p-1 gap-1"
+        >
+          {RECEIPT_FILTER_OPTIONS.map(opt => (
+            <button
+              type="button"
+              key={opt.value}
+              onClick={() => setReceiptFilter(opt.value)}
+              aria-pressed={receiptFilter === opt.value}
+              className={cn(
+                'flex-1 md:flex-none h-11 md:h-8 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                receiptFilter === opt.value
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {t(opt.label)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 min-h-11 md:min-h-0">
+        <Switch
+          id="include-all-statuses"
+          checked={includeAllStatuses}
+          onCheckedChange={setIncludeAllStatuses}
+        />
+        <Label htmlFor="include-all-statuses" className="cursor-pointer text-sm">
+          {t('Include draft + archived')}
+        </Label>
+      </div>
+    </div>
+  );
+
+  // -------------------------------------------------------------------------
+  // Empty states
+  // -------------------------------------------------------------------------
+  const emptyStateNode =
+    data.length === 0 ? (
+      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+        <motion.div
+          initial={prefersReduced ? false : { scale: 0.6, opacity: 0 }}
+          animate={prefersReduced ? undefined : { scale: [0.6, 1.12, 1], opacity: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
+          <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+        </motion.div>
+        <p className="font-medium text-foreground">{t('All batches are fully stocked')}</p>
+        <p className="text-xs">{t('No outstanding goods receipts.')}</p>
+      </div>
+    ) : (
+      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+        <Filter className="h-8 w-8" />
+        <p className="text-sm">{t('No matches with the current filter')}</p>
+        <Button variant="outline" size="sm" className="h-11 md:h-9" onClick={resetFilters}>
+          {t('Reset filters')}
+        </Button>
+      </div>
+    );
+
+  // -------------------------------------------------------------------------
+  // Desktop table columns
+  // -------------------------------------------------------------------------
+  const columns = useMemo<ResponsiveTableColumn<OutstandingBatch>[]>(() => [
+    {
+      id: 'product',
+      header: t('Product'),
+      sortable: true,
+      cell: row => (
+        <div>
+          <Link to={`/products/${row.productId}`} className="font-medium hover:underline">
+            {row.productName}
+          </Link>
+          <div className="text-xs text-muted-foreground font-mono">{row.productGtin}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'batch',
+      header: t('Batch'),
+      cell: row => (
+        <div>
+          <Link
+            to={`/products/${row.productId}/batches/${row.batchId}`}
+            className="font-mono text-sm hover:underline"
+          >
+            {row.batchSerial}
+          </Link>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(row.productionDate, locale)}
+            {row.status !== 'live' && (
+              <Badge variant="outline" className="ml-2 text-[10px]">{row.status}</Badge>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'supplier',
+      header: t('Supplier'),
+      hideBelow: 'lg',
+      cell: row => (
+        <span className="text-sm text-muted-foreground">{row.supplierName || '—'}</span>
+      ),
+    },
+    {
+      id: 'ordered',
+      header: t('Ordered'),
+      className: 'text-right',
+      cell: row => <span className="tabular-nums">{row.ordered.toLocaleString()}</span>,
+    },
+    {
+      id: 'received',
+      header: t('Received'),
+      className: 'text-right',
+      cell: row => <span className="tabular-nums">{row.received.toLocaleString()}</span>,
+    },
+    {
+      id: 'outstanding',
+      header: t('Outstanding'),
+      sortable: true,
+      className: 'text-right',
+      cell: row => (
+        <span className="tabular-nums font-bold text-amber-600 dark:text-amber-400">
+          {row.outstanding.toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      id: 'progress',
+      header: t('Progress'),
+      className: 'min-w-[160px]',
+      cell: row => (
+        <div className="flex items-center gap-2">
+          <Progress value={row.receivedPercent} className="h-1.5 flex-1" />
+          <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
+            {row.receivedPercent}%
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: 'age',
+      header: t('Age'),
+      sortable: true,
+      cell: row => (
+        <div className="space-y-1">
+          <AgePill days={row.daysOutstanding} />
+          <div className="text-xs text-muted-foreground">
+            {t('Last receipt')}:{' '}
+            {row.lastReceiptAt ? (
+              formatDate(row.lastReceiptAt, locale)
+            ) : (
+              <span className="italic">{t('Never')}</span>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'action',
+      header: <span className="sr-only">{t('Action')}</span>,
+      className: 'text-right',
+      cell: row => (
+        <Button
+          size="sm"
+          onClick={() =>
+            navigate(`/warehouse/goods-receipt?productId=${row.productId}&batchId=${row.batchId}`)
+          }
+        >
+          <ArrowDownToLine className="h-3.5 w-3.5" />
+          {t('Stock In')}
+        </Button>
+      ),
+    },
+  ], [t, locale, navigate]);
+
+  // -------------------------------------------------------------------------
+  // KPI cards
+  // -------------------------------------------------------------------------
+  const kpiCardClass =
+    'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md h-full';
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Outstanding Goods Receipts')}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('Batches with units that the supplier ordered but the warehouse has not yet received in full.')}
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {t('Reload')}
-        </Button>
-      </div>
+      <motion.div variants={headerVariants} initial="initial" animate="animate">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+          {t('Outstanding Goods Receipts')}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t('Batches with units that the supplier ordered but the warehouse has not yet received in full.')}
+        </p>
+      </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3 px-4 space-y-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <PackageOpen className="h-3.5 w-3.5" />
-              {t('Open batches')}
-            </div>
-            <div className="text-2xl font-bold">{loading ? <ShimmerSkeleton className="h-7 w-16" /> : kpis.openBatches}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 px-4 space-y-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Boxes className="h-3.5 w-3.5" />
-              {t('Outstanding units')}
-            </div>
-            <div className="text-2xl font-bold tabular-nums">
-              {loading ? <ShimmerSkeleton className="h-7 w-16" /> : kpis.totalOutstanding.toLocaleString()}
-            </div>
-            {!loading && kpis.totalOrdered > 0 && (
-              <div className="text-xs text-muted-foreground">
-                {kpis.totalReceived.toLocaleString()} / {kpis.totalOrdered.toLocaleString()} {t('received')}
+      <motion.div
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+      >
+        <motion.div variants={itemVariants}>
+          <Card className={kpiCardClass}>
+            <CardContent className="pt-4 pb-3 px-4 space-y-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <PackageOpen className="h-3.5 w-3.5" />
+                {t('Open batches')}
               </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 px-4 space-y-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              {t('Overall progress')}
-            </div>
-            <div className="text-2xl font-bold">{loading ? <ShimmerSkeleton className="h-7 w-16" /> : `${kpis.overallPercent}%`}</div>
-            {!loading && (
-              <Progress value={kpis.overallPercent} className="h-1.5 mt-2" />
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 px-4 space-y-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              {t('Oldest open')}
-            </div>
-            <div className="text-2xl font-bold">
-              {loading ? <ShimmerSkeleton className="h-7 w-16" /> : `${kpis.oldestDays} ${t('days')}`}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-4 pb-4 px-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('Search by product, GTIN, batch, supplier…')}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Switch checked={showZeroReceived} onCheckedChange={setShowZeroReceived} id="zero" />
-            <Label htmlFor="zero" className="cursor-pointer">{t('Not yet received')}</Label>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Switch checked={showPartial} onCheckedChange={setShowPartial} id="partial" />
-            <Label htmlFor="partial" className="cursor-pointer">{t('Partially received')}</Label>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Switch checked={includeAllStatuses} onCheckedChange={setIncludeAllStatuses} id="status" />
-            <Label htmlFor="status" className="cursor-pointer">{t('Include draft + archived')}</Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Product')}</TableHead>
-                  <TableHead>{t('Batch')}</TableHead>
-                  <TableHead>{t('Supplier')}</TableHead>
-                  <TableHead className="text-right">{t('Ordered')}</TableHead>
-                  <TableHead className="text-right">{t('Received')}</TableHead>
-                  <TableHead className="text-right">{t('Outstanding')}</TableHead>
-                  <TableHead>{t('Progress')}</TableHead>
-                  <TableHead>{t('Last receipt')}</TableHead>
-                  <TableHead className="text-right">{t('Action')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && (
-                  <>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell colSpan={9}><ShimmerSkeleton className="h-6 w-full" /></TableCell>
-                      </TableRow>
-                    ))}
-                  </>
+              <div className="text-2xl font-bold">
+                {loading ? (
+                  <ShimmerSkeleton className="h-7 w-16" />
+                ) : (
+                  <AnimatedCounter value={kpis.openBatches} />
                 )}
-
-                {!loading && filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={9}>
-                      <div className="text-center py-10 text-muted-foreground">
-                        {data.length === 0 ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-                            <p className="font-medium">{t('All batches are fully stocked')}</p>
-                            <p className="text-xs">{t('No outstanding goods receipts.')}</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2">
-                            <Filter className="h-8 w-8" />
-                            <p>{t('No matches with the current filter')}</p>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card className={kpiCardClass}>
+            <CardContent className="pt-4 pb-3 px-4 space-y-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Boxes className="h-3.5 w-3.5" />
+                {t('Outstanding units')}
+              </div>
+              <div className="text-2xl font-bold">
+                {loading ? (
+                  <ShimmerSkeleton className="h-7 w-16" />
+                ) : (
+                  <AnimatedCounter value={kpis.totalOutstanding} />
                 )}
+              </div>
+              {!loading && kpis.totalOrdered > 0 && (
+                <div className="text-xs text-muted-foreground tabular-nums">
+                  {kpis.totalReceived.toLocaleString()} / {kpis.totalOrdered.toLocaleString()}{' '}
+                  {t('received')}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card className={kpiCardClass}>
+            <CardContent className="pt-4 pb-3 px-4 space-y-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                {t('Overall progress')}
+              </div>
+              <div className="text-2xl font-bold">
+                {loading ? (
+                  <ShimmerSkeleton className="h-7 w-16" />
+                ) : (
+                  <AnimatedCounter value={kpis.overallPercent} suffix="%" />
+                )}
+              </div>
+              {!loading && <Progress value={kpis.overallPercent} className="h-1.5 mt-2" />}
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card className={kpiCardClass}>
+            <CardContent className="pt-4 pb-3 px-4 space-y-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock
+                  className={cn(
+                    'h-3.5 w-3.5',
+                    oldestTier === 'overdue' && 'text-red-500',
+                    oldestTier === 'aging' && 'text-amber-500'
+                  )}
+                />
+                {t('Oldest open')}
+              </div>
+              <div
+                className={cn(
+                  'text-2xl font-bold',
+                  !loading && oldestTier === 'overdue' && 'text-red-600 dark:text-red-400',
+                  !loading && oldestTier === 'aging' && 'text-amber-600 dark:text-amber-400'
+                )}
+              >
+                {loading ? (
+                  <ShimmerSkeleton className="h-7 w-16" />
+                ) : (
+                  <AnimatedCounter value={kpis.oldestDays} suffix={` ${t('days')}`} />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
-                {!loading && filtered.map(row => {
-                  const danger = row.daysOutstanding > 30;
-                  const warn = row.daysOutstanding > 14;
-                  const dotClass = danger ? 'bg-red-500' : warn ? 'bg-amber-500' : 'bg-muted-foreground/40';
-                  return (
-                    <TableRow key={row.batchId}>
-                      <TableCell>
-                        <Link to={`/products/${row.productId}`} className="font-medium hover:underline">
-                          {row.productName}
-                        </Link>
-                        <div className="text-xs text-muted-foreground font-mono">{row.productGtin}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/products/${row.productId}/batches/${row.batchId}`} className="font-mono text-sm hover:underline">
-                          {row.batchSerial}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(row.productionDate, locale)}
-                          {row.status !== 'live' && (
-                            <Badge variant="outline" className="ml-2 text-[10px]">{row.status}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {row.supplierName || '—'}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{row.ordered}</TableCell>
-                      <TableCell className="text-right tabular-nums">{row.received}</TableCell>
-                      <TableCell className="text-right tabular-nums font-bold text-amber-600 dark:text-amber-400">
-                        {row.outstanding}
-                      </TableCell>
-                      <TableCell className="min-w-[160px]">
-                        <div className="flex items-center gap-2">
-                          <Progress value={row.receivedPercent} className="h-1.5 flex-1" />
-                          <span className="text-xs text-muted-foreground w-10 text-right">{row.receivedPercent}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />
-                          {row.lastReceiptAt ? (
-                            <span>{formatDate(row.lastReceiptAt, locale)}</span>
-                          ) : (
-                            <span className="italic">{t('Never')}</span>
-                          )}
-                          {danger && (
-                            <Badge variant="destructive" className="text-[10px] ml-1">
-                              <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                              {row.daysOutstanding}d
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => navigate(`/warehouse/goods-receipt?productId=${row.productId}&batchId=${row.batchId}`)}
-                        >
-                          <ArrowDownToLine className="mr-1.5 h-3.5 w-3.5" />
-                          {t('Stock In')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+      {/* Toolbar: search + filters + reload */}
+      <ListToolbar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: t('Search by product, GTIN, batch, supplier…'),
+        }}
+        filters={filtersNode}
+        activeFilterCount={activeFilterCount}
+        actions={
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            <span className="hidden sm:inline">{t('Reload')}</span>
+          </Button>
+        }
+      />
+
+      {/* Error panel */}
+      {error && !loading ? (
+        <Card className="border-destructive/40">
+          <CardContent className="py-10 flex flex-col items-center gap-3 text-center">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+            <p className="font-medium">{t('Failed to load outstanding receipts')}</p>
+            <Button variant="outline" size="sm" className="h-11 md:h-9" onClick={load}>
+              <RefreshCw className="h-4 w-4" />
+              {t('Try again')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : isMobile ? (
+        /* Mobile: card list */
+        loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <ShimmerSkeleton className="h-4 w-36" />
+                    <ShimmerSkeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                  <ShimmerSkeleton className="h-3 w-28" />
+                  <ShimmerSkeleton className="h-1.5 w-full" />
+                  <ShimmerSkeleton className="h-3 w-40" />
+                  <ShimmerSkeleton className="h-11 w-full rounded-md" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        ) : sorted.length === 0 ? (
+          <div className="py-12 text-center">{emptyStateNode}</div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            className="space-y-3"
+          >
+            {sorted.map(row => (
+              <motion.div key={row.batchId} variants={itemVariants}>
+                <OutstandingReceiptCard row={row} locale={locale} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )
+      ) : (
+        /* Desktop: sortable table */
+        <ResponsiveTable
+          data={sorted}
+          columns={columns}
+          rowKey={row => row.batchId}
+          sort={sort}
+          onSortChange={setSort}
+          loading={loading}
+          emptyState={emptyStateNode}
+        />
+      )}
     </div>
   );
 }

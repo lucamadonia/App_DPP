@@ -387,7 +387,9 @@ export function AppSidebar() {
                                 asChild
                                 isActive={isActive(subItem.url)}
                               >
-                                <Link to={subItem.url}>{subItem.title}</Link>
+                                <Link to={subItem.url} title={subItem.title}>
+                                  <span>{subItem.title}</span>
+                                </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
@@ -446,9 +448,9 @@ export function AppSidebar() {
                                 asChild
                                 isActive={isActive(subItem.url)}
                               >
-                                <Link to={subItem.url}>
+                                <Link to={subItem.url} title={subItem.title}>
                                   {subItem.icon && <subItem.icon className="h-3 w-3" />}
-                                  {subItem.title}
+                                  <span>{subItem.title}</span>
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
