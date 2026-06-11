@@ -95,6 +95,9 @@ $$;
 GRANT EXECUTE ON FUNCTION submit_feedback_reviews(TEXT, JSONB) TO anon, authenticated;
 
 -- ── get_public_feedback_reviews: + reviewer_children ──
+-- The function already exists with a different OUT row type (deployed via
+-- dashboard before this migration ran), so CREATE OR REPLACE alone fails.
+DROP FUNCTION IF EXISTS get_public_feedback_reviews(TEXT, UUID, SMALLINT, INT);
 CREATE OR REPLACE FUNCTION get_public_feedback_reviews(
   p_tenant_slug TEXT,
   p_product_id  UUID DEFAULT NULL,
