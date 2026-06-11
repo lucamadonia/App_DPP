@@ -182,7 +182,7 @@ export function PackagingTypesPage() {
   async function handleToggleTracked(r: WhPackagingType) {
     try {
       await updatePackagingTracking(r.id, !r.stockTracked, r.stockThreshold);
-      toast.success(r.stockTracked ? t('Tracking deaktiviert') : t('Tracking aktiviert'));
+      toast.success(r.stockTracked ? t('Tracking disabled') : t('Tracking enabled'));
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));

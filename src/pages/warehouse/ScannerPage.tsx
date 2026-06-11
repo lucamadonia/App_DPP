@@ -7,6 +7,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   Camera,
@@ -42,6 +43,30 @@ import type { ScannerProduct, ScannerBatch, GtinLookupResult, GtinSerialLookupRe
 import type { WhStockLevel } from '@/types/warehouse';
 
 type ScanState = 'idle' | 'looking_up' | 'result' | 'action' | 'processing' | 'success' | 'error';
+
+/**
+ * Tailwind cannot see template-literal class names (`text-${color}-400` gets
+ * purged from the production CSS), so every accent class is spelled out
+ * explicitly per mode color.
+ */
+const ACCENT_CLASSES = {
+  emerald: {
+    headerIcon: 'text-emerald-400',
+    cameraActive: 'bg-emerald-500/20 text-emerald-400',
+    scanArea: 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/60 hover:bg-emerald-500/10',
+    pulseRing: 'border-emerald-500/10',
+    scanIcon: 'text-emerald-500/60',
+    spinner: 'text-emerald-400',
+  },
+  blue: {
+    headerIcon: 'text-blue-400',
+    cameraActive: 'bg-blue-500/20 text-blue-400',
+    scanArea: 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/60 hover:bg-blue-500/10',
+    pulseRing: 'border-blue-500/10',
+    scanIcon: 'text-blue-500/60',
+    spinner: 'text-blue-400',
+  },
+} as const;
 
 export function ScannerPage() {
   const { t } = useTranslation('warehouse');
@@ -108,7 +133,12 @@ export function ScannerPage() {
     bat: ScannerBatch,
     levels: WhStockLevel[],
   ) => {
-    if (!bulkLocationId) return;
+    if (!bulkLocationId) {
+      // Defensive: should never happen (callers guard on bulkLocationId), but
+      // make sure we never strand the scanner in a non-scannable state.
+      resetToIdle();
+      return;
+    }
     setScanState('processing');
     try {
       if (mode === 'in') {
@@ -128,6 +158,7 @@ export function ScannerPage() {
       } else {
         const stockLevel = levels.find((s) => s.locationId === bulkLocationId);
         if (!stockLevel) {
+          toast.error(t('No stock available for this batch'));
           showError(t('No stock available for this batch'));
           return;
         }
@@ -143,9 +174,14 @@ export function ScannerPage() {
       }
       showSuccess();
     } catch (err) {
-      showError(err instanceof Error ? err.message : t(mode === 'in' ? 'Receipt failed' : 'Pick failed'));
+      // Surface the failure loudly (bulk scanning is heads-down work) and put
+      // the scanner into the auto-resetting error state so the next barcode
+      // can be scanned immediately. Bulk mode itself stays active.
+      const msg = err instanceof Error ? err.message : t(mode === 'in' ? 'Receipt failed' : 'Pick failed');
+      toast.error(msg);
+      showError(msg);
     }
-  }, [mode, bulkLocationId, bulkLocationName, bulkQuantity, session, showSuccess, showError, t]);
+  }, [mode, bulkLocationId, bulkLocationName, bulkQuantity, session, showSuccess, showError, resetToIdle, t]);
 
   // Main scan handler
   const handleScan = useCallback(async (rawValue: string) => {
@@ -337,6 +373,7 @@ export function ScannerPage() {
   });
 
   const accentColor = mode === 'in' ? 'emerald' : 'blue';
+  const accent = ACCENT_CLASSES[accentColor];
 
   return (
     <div className="fixed inset-0 z-40 bg-slate-950 text-white flex flex-col">
@@ -355,7 +392,7 @@ export function ScannerPage() {
         </button>
 
         <div className="flex items-center gap-2">
-          <ScanBarcode className={`h-5 w-5 text-${accentColor}-400`} />
+          <ScanBarcode className={`h-5 w-5 ${accent.headerIcon}`} />
           <span className="text-lg font-bold">{t('Scanner')}</span>
         </div>
 
@@ -365,7 +402,7 @@ export function ScannerPage() {
           className={`
             flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors
             ${cameraOpen
-              ? `bg-${accentColor}-500/20 text-${accentColor}-400`
+              ? accent.cameraActive
               : 'text-slate-400 hover:text-white hover:bg-white/10'
             }
           `}
@@ -407,14 +444,13 @@ export function ScannerPage() {
               type="button"
               onClick={() => setCameraOpen(true)}
               className={`
-                w-full relative rounded-2xl border-2 border-dashed border-${accentColor}-500/30
-                bg-${accentColor}-500/5 p-12 text-center transition-all duration-500
-                hover:border-${accentColor}-500/60 hover:bg-${accentColor}-500/10
+                w-full relative rounded-2xl border-2 border-dashed ${accent.scanArea}
+                p-12 text-center transition-all duration-500
                 active:scale-[0.99] cursor-pointer
               `}
             >
-              <div className={`absolute inset-0 rounded-2xl animate-pulse-ring border-2 border-${accentColor}-500/10 pointer-events-none`} />
-              <ScanBarcode className={`h-16 w-16 mx-auto text-${accentColor}-500/60 mb-4`} />
+              <div className={`absolute inset-0 rounded-2xl animate-pulse-ring border-2 ${accent.pulseRing} pointer-events-none`} />
+              <ScanBarcode className={`h-16 w-16 mx-auto ${accent.scanIcon} mb-4`} />
               <p className="text-lg font-semibold text-slate-200">{t('Scan a barcode')}</p>
               <p className="text-sm text-slate-400 mt-1">
                 {t('Tap to open camera or use hardware scanner')}
@@ -429,7 +465,7 @@ export function ScannerPage() {
           {/* Looking up state */}
           {scanState === 'looking_up' && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-              <Loader2 className={`h-12 w-12 mx-auto text-${accentColor}-400 animate-spin mb-4`} />
+              <Loader2 className={`h-12 w-12 mx-auto ${accent.spinner} animate-spin mb-4`} />
               <p className="text-sm text-slate-400">{t('Looking up product')}...</p>
             </div>
           )}
@@ -504,7 +540,7 @@ export function ScannerPage() {
           {/* Processing state */}
           {scanState === 'processing' && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-              <Loader2 className={`h-12 w-12 mx-auto text-${accentColor}-400 animate-spin mb-3`} />
+              <Loader2 className={`h-12 w-12 mx-auto ${accent.spinner} animate-spin mb-3`} />
               <p className="text-sm text-slate-400">{t('Processing')}...</p>
             </div>
           )}
