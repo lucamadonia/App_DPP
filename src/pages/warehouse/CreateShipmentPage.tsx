@@ -24,6 +24,7 @@ import type { ContentItem } from '@/lib/smart-packing';
 import { getProducts } from '@/services/supabase/products';
 import { getBatches } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
+import { getPackagingTypes } from '@/services/supabase/wh-packaging-types';
 import { getStockLevels } from '@/services/supabase/wh-stock';
 import { searchRecipients, type RecipientSearchResult } from '@/services/supabase/wh-contacts';
 import { validateAddress, normalizePostalCode } from '@/lib/address-validation';
@@ -353,6 +354,20 @@ export function CreateShipmentPage() {
   );
   const [locations, setLocations] = useState<WhLocation[]>([]);
 
+  // Real tare of the tenant's default shipping carton (kg). Used by the
+  // Smart Packing Assistant and the weight auto-fill instead of the 0.4 kg
+  // flat rate when a carton is configured in wh_packaging_types.
+  const [defaultTareKg, setDefaultTareKg] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    getPackagingTypes()
+      .then((types) => {
+        const active = types.filter((p) => p.isActive);
+        const def = active.find((p) => p.isDefault) ?? active[0];
+        if (def && def.tareWeightGrams > 0) setDefaultTareKg(def.tareWeightGrams / 1000);
+      })
+      .catch(() => { /* keep 0.4 kg fallback */ });
+  }, []);
+
   // Step 3: Shipping
   const [carrier, setCarrier] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -390,13 +405,13 @@ export function CreateShipmentPage() {
   useEffect(() => {
     if (computedTotalWeightKg <= 0) return;
     const currentKg = weightGrams ? Number(weightGrams) / 1000 : 0;
-    const totalWithTare = computedTotalWeightKg + 0.4;
+    const totalWithTare = computedTotalWeightKg + (defaultTareKg ?? 0.4);
     const isEmpty = !weightGrams || currentKg === 0;
     const isClearlyStale = currentKg > 0 && currentKg < totalWithTare * 0.8;
     if (isEmpty || isClearlyStale) {
       setWeightGrams(String(Math.round(totalWithTare * 1000)));
     }
-  }, [computedTotalWeightKg, weightGrams]);
+  }, [computedTotalWeightKg, weightGrams, defaultTareKg]);
 
   // ─── Auto-fill carrier + cost from price estimates ───────────
   // When destination + weight are known, suggest the cheapest carrier and
@@ -1302,6 +1317,7 @@ export function CreateShipmentPage() {
           <SmartPackingCard
             items={resolvedItems}
             packageWeightKg={weightGrams ? Number(weightGrams) / 1000 : 0}
+            packagingTareKg={defaultTareKg}
             destinationCountry={shippingCountry}
             originCountry="DE"
             customerType={recipientType === 'customer' ? 'b2c' : 'b2b'}

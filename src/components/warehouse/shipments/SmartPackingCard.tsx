@@ -17,6 +17,7 @@ import {
 import {
   matchCarrierServices,
   recommendCarton,
+  CARTON_TARE_KG,
   upcomingPpwrDeadlines,
   getCountryZone,
   estimatePrices,
@@ -50,6 +51,12 @@ interface SmartPackingCardProps {
   declaredValueEur?: number;
   /** Whether shipment is B2C or B2B (drives Incoterm recommendation). */
   customerType?: 'b2c' | 'b2b';
+  /**
+   * Real tare weight of the (default/selected) outer carton in kg, e.g.
+   * wh_packaging_types.tare_weight_grams / 1000. Falls back to the 0.4 kg
+   * flat rate when not provided.
+   */
+  packagingTareKg?: number;
   /** Optional user-selected carton ID to highlight. */
   onPickCarton?: (cartonId: string) => void;
   /** Optional user-selected carrier service ID. */
@@ -93,6 +100,7 @@ export function SmartPackingCard({
   contents = [],
   declaredValueEur = 0,
   customerType = 'b2c',
+  packagingTareKg,
   onPickCarton,
   onPickService,
 }: SmartPackingCardProps) {
@@ -107,21 +115,24 @@ export function SmartPackingCard({
   );
   const itemsMissingDims = items.length - itemsWithDims.length;
 
+  // Real carton tare when known (wh_packaging_types), 0.4 kg flat fallback.
+  const tareKg = packagingTareKg != null && packagingTareKg > 0 ? packagingTareKg : CARTON_TARE_KG;
+
   // Carton recommendations — only items with dimensions contribute.
   const cartonRecs: CartonRecommendation[] = useMemo(
-    () => (itemsWithDims.length > 0 ? recommendCarton(itemsWithDims) : []),
-    [itemsWithDims],
+    () => (itemsWithDims.length > 0 ? recommendCarton(itemsWithDims, tareKg) : []),
+    [itemsWithDims, tareKg],
   );
 
   const bestCarton = cartonRecs.find((c) => c.fits) ?? cartonRecs[0] ?? null;
 
-  // Compute total weight from items (with 400 g packaging tare). This is the
+  // Compute total weight from items (plus carton tare). This is the
   // authoritative weight we use IF the user hasn't typed an explicit override.
   const itemsTotalWeightKg = useMemo(
     () => items.reduce((sum, it) => sum + it.weightKg * (it.quantity ?? 1), 0),
     [items],
   );
-  const computedGrossKg = itemsTotalWeightKg > 0 ? itemsTotalWeightKg + 0.4 : 0;
+  const computedGrossKg = itemsTotalWeightKg > 0 ? itemsTotalWeightKg + tareKg : 0;
 
   /** Final weight: user-supplied (manual override) wins; else computed from items. */
   const effectiveWeightKg = packageWeightKg > 0 ? packageWeightKg : computedGrossKg;
@@ -345,7 +356,7 @@ export function SmartPackingCard({
             </div>
             <div className="flex items-center justify-between text-slate-400">
               <span>+ {t('Packaging tare')}</span>
-              <span>0,40 kg</span>
+              <span>{tareKg.toFixed(2).replace('.', ',')} kg</span>
             </div>
             <div className="flex items-center justify-between border-t border-white/10 pt-1">
               <span className="font-semibold text-white">
