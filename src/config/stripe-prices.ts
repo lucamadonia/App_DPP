@@ -24,14 +24,14 @@ export const PLAN_PRICES: Record<
   { productId: string; monthlyPriceId: string; yearlyPriceId: string }
 > = {
   pro: {
-    productId: 'prod_TvgDLzshAxfoCl',
-    monthlyPriceId: 'price_1SxoqmG3F2f0Er100x4oGnyv',
-    yearlyPriceId: 'price_1SxoqmG3F2f0Er10rRkPwRPv',
+    productId: 'prod_UgZDMi57cAthKC',
+    monthlyPriceId: 'price_1ThC4i9GJBS1rMz1aBG0g5ke',
+    yearlyPriceId: 'price_1ThC4i9GJBS1rMz1tWx74ybZ',
   },
   enterprise: {
-    productId: 'prod_TvgDR2azJai4u4',
-    monthlyPriceId: 'price_1SxoqnG3F2f0Er10VadyvTiC',
-    yearlyPriceId: 'price_1SxoqnG3F2f0Er10ri6ZqyOg',
+    productId: 'prod_UgZDK4whamSkYJ',
+    monthlyPriceId: 'price_1ThC4j9GJBS1rMz1MrcbbRQ9',
+    yearlyPriceId: 'price_1ThC4j9GJBS1rMz1gCFsqTyP',
   },
 };
 
@@ -44,28 +44,28 @@ export const MODULE_PRICES: Record<
   { productId: string; priceId: string }
 > = {
   returns_hub_starter: {
-    productId: 'prod_TvgD6MR0IbdzAJ',
-    priceId: 'price_1SxoqoG3F2f0Er10UH5feeWe',
+    productId: 'prod_UgZDBwoc427Wpd',
+    priceId: 'price_1ThC4k9GJBS1rMz1E0t69M1L',
   },
   returns_hub_professional: {
-    productId: 'prod_TvgDuuV9322Ls2',
-    priceId: 'price_1SxoqpG3F2f0Er10gx3JxZ6s',
+    productId: 'prod_UgZD95TM43lhPw',
+    priceId: 'price_1ThC4k9GJBS1rMz1A2LJAqEt',
   },
   returns_hub_business: {
-    productId: 'prod_TvgDIVxUAvTcP1',
-    priceId: 'price_1SxoqpG3F2f0Er10F6pRjcZw',
+    productId: 'prod_UgZDLN8j3vGdne',
+    priceId: 'price_1ThC4l9GJBS1rMz1y47ayzYM',
   },
   supplier_portal: {
-    productId: 'prod_TvgDTLBVHJma66',
-    priceId: 'price_1SxoqqG3F2f0Er10fCZaYXoI',
+    productId: 'prod_UgZDaXgDWaOcqY',
+    priceId: 'price_1ThC4l9GJBS1rMz13Cq2v7ef',
   },
   customer_portal: {
-    productId: 'prod_TvgDVqxF8utVgc',
-    priceId: 'price_1SxoqqG3F2f0Er10eBSCmdRl',
+    productId: 'prod_UgZDlyJL73y9yU',
+    priceId: 'price_1ThC4m9GJBS1rMz1fRnUxzg0',
   },
   custom_domain: {
-    productId: 'prod_TvgDLyypedZ6O6',
-    priceId: 'price_1SxoqrG3F2f0Er10TDht6nRj',
+    productId: 'prod_UgZDu7JlgEDjf3',
+    priceId: 'price_1ThC4m9GJBS1rMz1IInGn8M0',
   },
   warehouse_starter: {
     productId: 'prod_placeholder_wh_starter',
@@ -114,16 +114,16 @@ export const CREDIT_PACK_PRICES: Record<
   { productId: string; priceId: string }
 > = {
   small: {
-    productId: 'prod_TvgDOafMmbU4c9',
-    priceId: 'price_1SxoqsG3F2f0Er103x3yZWaJ',
+    productId: 'prod_UgZD2Zjyv4b3pB',
+    priceId: 'price_1ThC4n9GJBS1rMz11s9rYSRp',
   },
   medium: {
-    productId: 'prod_TvgDUcsTOqC4g5',
-    priceId: 'price_1SxoqsG3F2f0Er10kUvs9aqA',
+    productId: 'prod_UgZDXYK6TBRQ5v',
+    priceId: 'price_1ThC4n9GJBS1rMz1UCruqASu',
   },
   large: {
-    productId: 'prod_TvgDrKfCOS7w10',
-    priceId: 'price_1SxoqtG3F2f0Er10yVbLgAK5',
+    productId: 'prod_UgZDHJM9MDaFCl',
+    priceId: 'price_1ThC4o9GJBS1rMz125SKXxqb',
   },
 };
 
