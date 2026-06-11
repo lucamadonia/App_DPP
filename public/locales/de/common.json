@@ -149,5 +149,18 @@
   "No matching entries": "Keine passenden Einträge",
   "Page {{page}} of {{total}}": "Seite {{page}} von {{total}}",
   "{{n}} entries": "{{n}} Einträge",
-  "Previous": "Zurück"
+  "Previous": "Zurück",
+
+  "Search customers or switch pages...": "Kunde suchen oder Seite wechseln ...",
+  "Navigation": "Navigation",
+  "DPP": "DPP",
+  "Warehouse": "Lager",
+  "Commerce": "Commerce",
+  "CRM": "CRM",
+  "Feedback": "Feedback",
+  "Billing": "Abrechnung",
+  "Shipments": "Sendungen",
+  "At-risk customers": "Gefährdete Kunden",
+  "Top customers": "Top-Kunden",
+  "Requires an upgrade": "Erfordert ein Upgrade"
 }

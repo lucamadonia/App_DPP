@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Package, RotateCcw, Ticket, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, RotateCcw, Ticket, Settings, Warehouse } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useBillingOptional } from '@/contexts/BillingContext';
 
 interface NavItem {
   to: string;
@@ -15,38 +16,53 @@ interface NavItem {
   badge?: React.ReactNode;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    to: '/',
-    matchPaths: ['/dashboard', '/'],
-    icon: LayoutDashboard,
-    labelKey: 'Dashboard',
-  },
-  {
-    to: '/products',
-    matchPaths: ['/products'],
-    icon: Package,
-    labelKey: 'Products',
-  },
-  {
-    to: '/returns',
-    matchPaths: ['/returns'],
-    icon: RotateCcw,
-    labelKey: 'Returns',
-  },
-  {
-    to: '/returns/tickets',
-    matchPaths: ['/returns/tickets'],
-    icon: Ticket,
-    labelKey: 'Tickets',
-  },
-  {
-    to: '/settings/company',
-    matchPaths: ['/settings'],
-    icon: Settings,
-    labelKey: 'Settings',
-  },
-];
+const DASHBOARD_ITEM: NavItem = {
+  to: '/',
+  matchPaths: ['/dashboard', '/'],
+  icon: LayoutDashboard,
+  labelKey: 'Dashboard',
+};
+
+const PRODUCTS_ITEM: NavItem = {
+  to: '/products',
+  matchPaths: ['/products'],
+  icon: Package,
+  labelKey: 'Products',
+};
+
+const WAREHOUSE_ITEM: NavItem = {
+  to: '/warehouse',
+  matchPaths: ['/warehouse'],
+  icon: Warehouse,
+  labelKey: 'Warehouse',
+};
+
+const RETURNS_ITEM: NavItem = {
+  to: '/returns',
+  matchPaths: ['/returns'],
+  icon: RotateCcw,
+  labelKey: 'Returns',
+};
+
+const TICKETS_ITEM: NavItem = {
+  to: '/returns/tickets',
+  matchPaths: ['/returns/tickets'],
+  icon: Ticket,
+  labelKey: 'Tickets',
+};
+
+const SETTINGS_ITEM: NavItem = {
+  to: '/settings/company',
+  matchPaths: ['/settings'],
+  icon: Settings,
+  labelKey: 'Settings',
+};
+
+const GRID_COLS: Record<number, string> = {
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+};
 
 function isPathActive(pathname: string, item: NavItem): boolean {
   if (pathname === item.to) return true;
@@ -63,11 +79,28 @@ function isPathActive(pathname: string, item: NavItem): boolean {
  * Only renders on `<md` (hidden on tablets + desktop).
  * Respects safe-area-inset-bottom for iOS notched devices.
  * z-30 sits below StickyBottomBar (z-40) so form actions stack on top.
+ * Module-aware: middle slots adapt to the tenant's active modules
+ * (Warehouse prioritized over Returns/Tickets), max 5 items.
  */
 export function MobileBottomNav() {
   const { t } = useTranslation('common');
   const { pathname } = useLocation();
   const prefersReduced = useReducedMotion();
+  const billing = useBillingOptional();
+
+  const navItems = React.useMemo<NavItem[]>(() => {
+    // Same fallback pattern as app-sidebar: no billing context → treat as available
+    const hasWarehouse = billing ? billing.hasAnyWarehouseModule() : true;
+    const hasReturns = billing ? billing.hasAnyReturnsHubModule() : true;
+
+    const middleCandidates: NavItem[] = [
+      ...(hasWarehouse ? [WAREHOUSE_ITEM] : []),
+      ...(hasReturns ? [RETURNS_ITEM, TICKETS_ITEM] : []),
+    ];
+
+    // Max 5 items: Dashboard + Products + up to 2 module items + Settings
+    return [DASHBOARD_ITEM, PRODUCTS_ITEM, ...middleCandidates.slice(0, 2), SETTINGS_ITEM];
+  }, [billing]);
 
   // Only show on actual mobile app shell paths — not on public/portal routes
   const isPublicRoute =
@@ -94,8 +127,8 @@ export function MobileBottomNav() {
       )}
       aria-label={t('Menu')}
     >
-      <ul className="grid grid-cols-5 h-14">
-        {NAV_ITEMS.map((item) => {
+      <ul className={cn('grid h-14', GRID_COLS[navItems.length] ?? 'grid-cols-5')}>
+        {navItems.map((item) => {
           const active = isPathActive(pathname, item);
           const Icon = item.icon;
           return (
