@@ -40,6 +40,8 @@ export interface SupplyChainDialogProps {
   suppliers: Supplier[];
   supplyChainLength: number;
   selectedProductId?: string;
+  /** Prefill for create mode (e.g. inline "+ station" between journey nodes) */
+  prefill?: { productId?: string; step?: number } | null;
   onSave: (data: Partial<SupplyChainEntry>) => Promise<void>;
   isLoading: boolean;
 }
@@ -53,6 +55,7 @@ export function SupplyChainDialog({
   suppliers,
   supplyChainLength,
   selectedProductId,
+  prefill,
   onSave,
   isLoading,
 }: SupplyChainDialogProps) {
@@ -68,8 +71,9 @@ export function SupplyChainDialog({
         setFormData({ ...entry });
       } else {
         setFormData({
-          product_id: (selectedProductId && selectedProductId !== 'all') ? selectedProductId : (products[0]?.id || ''),
-          step: supplyChainLength + 1,
+          product_id: prefill?.productId
+            || ((selectedProductId && selectedProductId !== 'all') ? selectedProductId : (products[0]?.id || '')),
+          step: prefill?.step ?? supplyChainLength + 1,
           location: '',
           country: 'DE',
           date: new Date().toISOString().split('T')[0],
@@ -90,7 +94,8 @@ export function SupplyChainDialog({
         });
       }
     }
-  }, [open, mode, entry, products, supplyChainLength]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, entry, products, supplyChainLength, prefill]);
 
   const updateForm = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));

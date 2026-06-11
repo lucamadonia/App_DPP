@@ -32,7 +32,6 @@ interface SupplyChainProductCardProps {
 }
 
 export function SupplyChainProductCard({
-  productId: _productId,
   productName,
   entries,
   suppliers,
