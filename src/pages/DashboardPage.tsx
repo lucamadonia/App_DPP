@@ -177,101 +177,110 @@ export function DashboardPage() {
       {/* Compliance reminder (EAR/LUCID monthly filings) */}
       <ComplianceReminderBanner />
 
-      {/* Hero band — branded atmosphere via tenant --primary */}
-      <motion.section
-        className="relative overflow-hidden rounded-2xl border bg-card p-5 sm:p-7"
-        variants={prefersReduced ? undefined : blurIn}
-        initial={prefersReduced ? false : 'initial'}
-        animate="animate"
-      >
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-20 -top-28 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-          <div className="absolute -bottom-36 left-1/3 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-          <div
-            className="absolute inset-0 text-muted-foreground/20 opacity-40"
-            style={{
-              backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
-              backgroundSize: '22px 22px',
-            }}
-          />
-        </div>
-
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              <GreetingTimeIcon hour={hour} className="h-3.5 w-3.5 text-primary" />
-              {dateLine}
-            </p>
-            <h1 className="mt-2 truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              {displayName
-                ? t(getGreetingKey(hour) + ', {{name}}!', { name: displayName })
-                : t(getGreetingKey(hour) + '!')}
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">
-              {isNewUser
-                ? t('Get started by creating your first product')
-                : t('Here is your overview for today')}
-            </p>
+      {/* Hero band — bold branded gradient, KPI cards overlap it */}
+      <div>
+        <motion.section
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/75 p-5 pb-24 text-primary-foreground sm:p-7 sm:pb-28"
+          variants={prefersReduced ? undefined : blurIn}
+          initial={prefersReduced ? false : 'initial'}
+          animate="animate"
+        >
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute -right-20 -top-28 h-72 w-72 rounded-full bg-primary-foreground/15 blur-3xl" />
+            <div className="absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-black/20 blur-3xl" />
+            <div
+              className="absolute inset-0 opacity-25"
+              style={{
+                backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
+                backgroundSize: '24px 24px',
+              }}
+            />
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-            <Button variant="outline" className="w-full sm:w-auto" asChild>
-              <Link to="/dpp/qr-generator">
-                <QrCode className="mr-2 h-4 w-4" />
-                {t('Generate QR')}
-              </Link>
-            </Button>
-            <Button className="w-full sm:w-auto" asChild>
-              <Link to="/products/new">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('New Product')}
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </motion.section>
 
-      {/* KPI grid */}
-      <motion.div
-        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        variants={prefersReduced ? undefined : gridStagger}
-        initial={prefersReduced ? false : 'initial'}
-        animate="animate"
-      >
-        {stats.map((stat) => (
-          <motion.div key={stat.title} variants={prefersReduced ? undefined : gridItem}>
-            <Link to={stat.href} className="group block h-full">
-              <GlassCard
-                enableTilt={!prefersReduced}
-                className="h-full transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted/30 hover:shadow-md"
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary-foreground/75">
+                <GreetingTimeIcon hour={hour} className="h-3.5 w-3.5" />
+                {dateLine}
+              </p>
+              <h1 className="mt-2 truncate text-2xl font-bold tracking-tight sm:text-4xl">
+                {displayName
+                  ? t(getGreetingKey(hour) + ', {{name}}!', { name: displayName })
+                  : t(getGreetingKey(hour) + '!')}
+              </h1>
+              <p className="mt-1.5 text-sm text-primary-foreground/80 sm:text-base">
+                {isNewUser
+                  ? t('Get started by creating your first product')
+                  : t('Here is your overview for today')}
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+              <Button
+                variant="ghost"
+                className="w-full border border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground sm:w-auto"
+                asChild
               >
-                <CardContent className="flex h-full flex-col p-4 sm:p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className={`rounded-xl p-2 sm:p-2.5 ${stat.bgColor}`}>
-                      <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+                <Link to="/dpp/qr-generator">
+                  <QrCode className="mr-2 h-4 w-4" />
+                  {t('Generate QR')}
+                </Link>
+              </Button>
+              <Button
+                className="w-full bg-primary-foreground text-primary shadow-lg hover:bg-primary-foreground/90 sm:w-auto"
+                asChild
+              >
+                <Link to="/products/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('New Product')}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* KPI grid — layered on top of the hero */}
+        <motion.div
+          className="relative z-10 -mt-16 grid grid-cols-2 gap-3 px-3 sm:-mt-20 sm:gap-4 sm:px-5 lg:grid-cols-4"
+          variants={prefersReduced ? undefined : gridStagger}
+          initial={prefersReduced ? false : 'initial'}
+          animate="animate"
+        >
+          {stats.map((stat) => (
+            <motion.div key={stat.title} variants={prefersReduced ? undefined : gridItem}>
+              <Link to={stat.href} className="group block h-full">
+                <GlassCard
+                  enableTilt={!prefersReduced}
+                  className="h-full shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <CardContent className="flex h-full flex-col p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className={`rounded-xl p-2 sm:p-2.5 ${stat.bgColor}`}>
+                        <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+                      </div>
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  </div>
-                  <div className="mt-3 text-2xl font-bold tabular-nums sm:text-3xl">
-                    <AnimatedCounter value={stat.value} />
-                  </div>
-                  <p className="mt-0.5 truncate text-xs font-medium text-foreground sm:text-sm">
-                    {stat.title}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">{stat.subtitle}</p>
-                  {stat.sparkline && (
-                    <div className="mt-auto pt-3">
-                      <Sparkline data={weeklyCounts} />
-                      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {t('Last 8 weeks')}
-                      </p>
+                    <div className="mt-3 text-3xl font-bold tabular-nums tracking-tight sm:text-4xl">
+                      <AnimatedCounter value={stat.value} />
                     </div>
-                  )}
-                </CardContent>
-              </GlassCard>
-            </Link>
-          </motion.div>
-        ))}
-      </motion.div>
+                    <p className="mt-0.5 truncate text-xs font-medium text-foreground sm:text-sm">
+                      {stat.title}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">{stat.subtitle}</p>
+                    {stat.sparkline && (
+                      <div className="mt-auto pt-3">
+                        <Sparkline data={weeklyCounts} />
+                        <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {t('Last 8 weeks')}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </GlassCard>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
 
       {/* Onboarding CTA for new users */}
       {isNewUser && (
@@ -379,16 +388,21 @@ export function DashboardPage() {
                           <div className="min-w-0 flex-1 space-y-0.5">
                             <div className="flex items-center gap-2">
                               <p className="truncate font-medium">{product.name}</p>
-                              <Badge
-                                variant={product.status === 'live' ? 'default' : 'secondary'}
-                                className="shrink-0 text-xs"
-                              >
-                                {product.status === 'live' && (
-                                  <CheckCircle2 className="mr-1 h-3 w-3" />
-                                )}
-                                {product.status === 'draft' && <Clock className="mr-1 h-3 w-3" />}
-                                {t(product.status || 'draft')}
-                              </Badge>
+                              {(() => {
+                                // DB contains 'active' alongside the typed 'live' status.
+                                const rawStatus = (product.status as string) || 'draft';
+                                const isLive = rawStatus === 'live' || rawStatus === 'active';
+                                return (
+                                  <Badge
+                                    variant={isLive ? 'default' : 'secondary'}
+                                    className="shrink-0 text-xs"
+                                  >
+                                    {isLive && <CheckCircle2 className="mr-1 h-3 w-3" />}
+                                    {rawStatus === 'draft' && <Clock className="mr-1 h-3 w-3" />}
+                                    {t(rawStatus)}
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <p className="truncate font-mono text-xs text-muted-foreground">
                               GTIN: {product.gtin} · {t('{{count}} Batches', { count: product.batchCount || 0 })}

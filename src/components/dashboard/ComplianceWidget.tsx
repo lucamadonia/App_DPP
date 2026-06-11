@@ -32,7 +32,7 @@ function ComplianceGauge({ rate }: { rate: number }) {
   const prefersReduced = useReducedMotion();
   const offset = GAUGE_C * (1 - Math.min(Math.max(rate, 0), 100) / 100);
   return (
-    <div className="relative h-20 w-20 shrink-0">
+    <div className="relative h-24 w-24 shrink-0">
       <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90">
         <circle
           cx="36" cy="36" r={GAUGE_R}
@@ -49,7 +49,7 @@ function ComplianceGauge({ rate }: { rate: number }) {
           className={`${scoreColor(rate)} stroke-current`}
         />
       </svg>
-      <span className={`absolute inset-0 flex items-center justify-center text-lg font-bold tabular-nums ${scoreColor(rate)}`}>
+      <span className={`absolute inset-0 flex items-center justify-center text-xl font-bold tabular-nums ${scoreColor(rate)}`}>
         {rate}%
       </span>
     </div>
