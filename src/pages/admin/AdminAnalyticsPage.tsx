@@ -5,6 +5,7 @@
  *   - Feature-Adoption-Liste
  */
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Activity, GitBranch, RefreshCw, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ function fmtEuro(n: number): string {
 }
 
 export function AdminAnalyticsPage() {
+  const { t } = useTranslation('admin');
   const [mrr, setMrr] = useState<MrrWaterfallEntry[]>([]);
   const [cohorts, setCohorts] = useState<CohortCell[]>([]);
   const [adoption, setAdoption] = useState<FeatureAdoption[]>([]);
@@ -72,15 +74,15 @@ export function AdminAnalyticsPage() {
         <div className="flex items-center gap-2.5">
           <TrendingUp className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-xl font-bold">Analytics</h1>
+            <h1 className="text-xl font-bold">{t('Analytics')}</h1>
             <p className="text-xs text-muted-foreground">
-              MRR-Trend · Cohort-Retention · Feature-Adoption
+              {t('MRR trend · Cohort retention · Feature adoption')}
             </p>
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={() => load(true)} disabled={refreshing}>
           <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-          Neu berechnen
+          {t('Recalculate')}
         </Button>
       </div>
 
@@ -89,7 +91,7 @@ export function AdminAnalyticsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="h-4 w-4 text-emerald-600" />
-            MRR-Trend (12 Monate)
+            {t('MRR Trend (12 months)')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -97,7 +99,7 @@ export function AdminAnalyticsPage() {
             <ShimmerSkeleton className="h-[280px]" />
           ) : mrr.length === 0 ? (
             <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
-              Noch keine MRR-Daten verfügbar
+              {t('No MRR data available yet')}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
@@ -107,9 +109,9 @@ export function AdminAnalyticsPage() {
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmtEuro(v)} />
                 <Tooltip formatter={(v) => fmtEuro(Number(v) || 0)} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="endMrr" name="End-MRR" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="newMrr" name="Neu" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="churnMrr" name="Churn" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="endMrr" name={t('End MRR')} fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="newMrr" name={t('New')} fill="#38bdf8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="churnMrr" name={t('Churn')} fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -121,10 +123,10 @@ export function AdminAnalyticsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <GitBranch className="h-4 w-4 text-primary" />
-            Cohort-Retention
+            {t('Cohort Retention')}
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Zeilen = Monat der Tenant-Anmeldung. Spalten = N Monate nach Anmeldung. Farbe = % aktive Tenants.
+            {t('Rows = tenant signup month. Columns = N months after signup. Color = % active tenants.')}
           </p>
         </CardHeader>
         <CardContent>
@@ -132,7 +134,7 @@ export function AdminAnalyticsPage() {
             <ShimmerSkeleton className="h-[280px]" />
           ) : cohortMonths.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              Noch zu wenig Daten für Cohort-Analyse (mind. 2 Tenants über mehrere Monate)
+              {t('Not enough data for cohort analysis yet (at least 2 tenants over several months)')}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -140,7 +142,7 @@ export function AdminAnalyticsPage() {
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left font-semibold text-muted-foreground sticky left-0 bg-background z-10">
-                      Signup-Monat
+                      {t('Signup month')}
                     </th>
                     <th className="px-2 py-1 text-center font-semibold text-muted-foreground">#</th>
                     {Array.from({ length: maxOffset + 1 }).map((_, i) => (
@@ -165,7 +167,7 @@ export function AdminAnalyticsPage() {
                               {cell ? (
                                 <div
                                   className={`w-full h-7 flex items-center justify-center rounded text-[10px] font-semibold tabular-nums ${retentionColor(cell.retentionPct)}`}
-                                  title={`${cell.activeCount} von ${cell.tenantCount} aktiv`}
+                                  title={t('{{active}} of {{total}} active', { active: cell.activeCount, total: cell.tenantCount })}
                                 >
                                   {cell.retentionPct}%
                                 </div>
@@ -190,17 +192,17 @@ export function AdminAnalyticsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" />
-            Feature-Adoption
+            {t('Feature Adoption')}
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            % der Tenants mit aktivem Modul-Abo.
+            {t('% of tenants with an active module subscription.')}
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
             [...Array(3)].map((_, i) => <ShimmerSkeleton key={i} className="h-10" />)
           ) : adoption.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Noch keine Module aktiv</p>
+            <p className="text-sm text-muted-foreground text-center py-6">{t('No modules active yet')}</p>
           ) : (
             adoption.map(f => (
               <div key={f.feature}>

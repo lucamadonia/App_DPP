@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Settings, Zap, Recycle, Mail, Save, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import type { ComplianceSettings, DistributorRole } from '@/types/compliance';
 import { toast } from 'sonner';
 
 export function ComplianceSettingsPage() {
+  const { t } = useTranslation('compliance');
   const [settings, setSettings] = useState<ComplianceSettings>(DEFAULT_COMPLIANCE_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,10 +31,10 @@ export function ComplianceSettingsPage() {
     const res = await updateComplianceSettings(settings);
     setSaving(false);
     if (!res.success) {
-      toast.error(res.error || 'Fehler beim Speichern');
+      toast.error(res.error || t('Error saving'));
       return;
     }
-    toast.success('Compliance-Einstellungen gespeichert');
+    toast.success(t('Compliance settings saved'));
   }
 
   if (loading) return <ShimmerSkeleton className="h-96 w-full" />;
@@ -46,15 +48,15 @@ export function ComplianceSettingsPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
             <Settings className="h-6 w-6" />
-            Compliance-Einstellungen
+            {t('Compliance Settings')}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Registrierungsnummern, Marken und Reminder-Optionen für die EAR-/LUCID-Monatsmeldungen.
+            {t('Registration numbers, brands, and reminder options for the EAR/LUCID monthly reports.')}
           </p>
         </div>
         <Button onClick={save} disabled={saving} className="gap-1.5">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Speichern
+          {t('Save')}
         </Button>
       </div>
 
@@ -67,37 +69,37 @@ export function ComplianceSettingsPage() {
         <TabsContent value="ear" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Stiftung-EAR-Registrierung</CardTitle>
+              <CardTitle className="text-base">{t('Stiftung EAR Registration')}</CardTitle>
               <CardDescription>
-                Pflicht-Identifiers für die Monatsmeldung an die Stiftung Elektro-Altgeräte-Register.
+                {t('Mandatory identifiers for the monthly report to the Stiftung Elektro-Altgeräte-Register.')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ToggleRow
-                title="EAR-Modul aktiv"
-                desc="Aktiviere die monatliche EAR-Berichterstattung für diesen Tenant."
+                title={t('EAR module active')}
+                desc={t('Enable monthly EAR reporting for this tenant.')}
                 checked={ear.enabled}
                 onChange={(v) => setSettings(prev => ({ ...prev, ear: { ...ear, enabled: v } }))}
               />
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">WEEE-Reg.-Nummer *</label>
+                  <label className="text-sm font-medium">{t('WEEE Reg. No. *')}</label>
                   <Input
                     value={ear.weeeNumber}
                     onChange={(e) => setSettings(prev => ({ ...prev, ear: { ...ear, weeeNumber: e.target.value } }))}
                     placeholder="WEEE-Reg.-Nr. DE 12345678"
                     className="font-mono"
                   />
-                  <p className="text-[10px] text-muted-foreground">Vergeben durch die Stiftung EAR nach Registrierung.</p>
+                  <p className="text-[10px] text-muted-foreground">{t('Issued by the Stiftung EAR after registration.')}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Marke *</label>
+                  <label className="text-sm font-medium">{t('Brand *')}</label>
                   <Input
                     value={ear.stiftungEarBrand}
                     onChange={(e) => setSettings(prev => ({ ...prev, ear: { ...ear, stiftungEarBrand: e.target.value } }))}
-                    placeholder="z. B. FAMBLISS"
+                    placeholder={t('e.g. FAMBLISS')}
                   />
-                  <p className="text-[10px] text-muted-foreground">Unter der die Geräte bei Stiftung EAR gemeldet werden.</p>
+                  <p className="text-[10px] text-muted-foreground">{t('Under which the devices are reported to the Stiftung EAR.')}</p>
                 </div>
               </div>
             </CardContent>
@@ -105,32 +107,32 @@ export function ComplianceSettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" />Erinnerungen</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" />{t('Reminders')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <ToggleRow
-                title="Email-Reminder aktiv"
-                desc="Automatische Erinnerungen 5/2/0 Tage vor der 15.-Frist, sowie Eskalation bei Überschreitung."
+                title={t('Email reminders active')}
+                desc={t('Automatic reminders 5/2/0 days before the 15th deadline, plus escalation when overdue.')}
                 checked={ear.autoReminders}
                 onChange={(v) => setSettings(prev => ({ ...prev, ear: { ...ear, autoReminders: v } }))}
               />
               <ToggleRow
-                title="Auto-Entwurf am Monatsende"
-                desc="Erstellt am 1. eines Monats automatisch einen Bericht-Entwurf für den Vormonat."
+                title={t('Auto-draft at month end')}
+                desc={t('Automatically creates a report draft for the previous month on the 1st of each month.')}
                 checked={ear.autoGenerateOnMonthEnd}
                 onChange={(v) => setSettings(prev => ({ ...prev, ear: { ...ear, autoGenerateOnMonthEnd: v } }))}
               />
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Email-Empfänger</label>
+                <label className="text-sm font-medium">{t('Email recipients')}</label>
                 <Input
                   value={(ear.contactEmails || []).join(', ')}
                   onChange={(e) => setSettings(prev => ({
                     ...prev,
                     ear: { ...ear, contactEmails: e.target.value.split(',').map(s => s.trim()).filter(Boolean) },
                   }))}
-                  placeholder="compliance@firma.de, geschaeftsfuehrung@firma.de"
+                  placeholder={t('compliance@company.com, management@company.com')}
                 />
-                <p className="text-[10px] text-muted-foreground">Mehrere Emails durch Komma trennen.</p>
+                <p className="text-[10px] text-muted-foreground">{t('Separate multiple emails with commas.')}</p>
               </div>
             </CardContent>
           </Card>
@@ -139,79 +141,79 @@ export function ComplianceSettingsPage() {
         <TabsContent value="lucid" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">ZSVR-LUCID-Registrierung</CardTitle>
+              <CardTitle className="text-base">{t('ZSVR LUCID Registration')}</CardTitle>
               <CardDescription>
-                Pflicht-Identifiers für die Monatsmeldung an die Zentrale Stelle Verpackungsregister.
+                {t('Mandatory identifiers for the monthly report to the Zentrale Stelle Verpackungsregister.')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ToggleRow
-                title="LUCID-Modul aktiv"
-                desc="Aktiviere die monatliche LUCID-Berichterstattung für diesen Tenant."
+                title={t('LUCID module active')}
+                desc={t('Enable monthly LUCID reporting for this tenant.')}
                 checked={lucid.enabled}
                 onChange={(v) => setSettings(prev => ({ ...prev, lucid: { ...lucid, enabled: v } }))}
               />
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">LUCID-Nummer *</label>
+                  <label className="text-sm font-medium">{t('LUCID Number *')}</label>
                   <Input
                     value={lucid.lucidNumber}
                     onChange={(e) => setSettings(prev => ({ ...prev, lucid: { ...lucid, lucidNumber: e.target.value } }))}
                     placeholder="DE1234567890123"
                     className="font-mono"
                   />
-                  <p className="text-[10px] text-muted-foreground">13-stellig, vergeben durch die ZSVR.</p>
+                  <p className="text-[10px] text-muted-foreground">{t('13 digits, issued by the ZSVR.')}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Rolle</label>
+                  <label className="text-sm font-medium">{t('Role')}</label>
                   <Select value={lucid.distributorRole} onValueChange={(v) => setSettings(prev => ({ ...prev, lucid: { ...lucid, distributorRole: v as DistributorRole } }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="manufacturer">Hersteller</SelectItem>
-                      <SelectItem value="distributor">Vertreiber / Händler</SelectItem>
-                      <SelectItem value="importer">Importeur</SelectItem>
+                      <SelectItem value="manufacturer">{t('Manufacturer')}</SelectItem>
+                      <SelectItem value="distributor">{t('Distributor / Retailer')}</SelectItem>
+                      <SelectItem value="importer">{t('Importer')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Duales System (optional)</label>
+                <label className="text-sm font-medium">{t('Dual system (optional)')}</label>
                 <Input
                   value={lucid.dualSystem || ''}
                   onChange={(e) => setSettings(prev => ({ ...prev, lucid: { ...lucid, dualSystem: e.target.value || undefined } }))}
-                  placeholder="z. B. Der Grüne Punkt, Interseroh+, LIZENZERO"
+                  placeholder={t('e.g. Der Grüne Punkt, Interseroh+, LIZENZERO')}
                 />
-                <p className="text-[10px] text-muted-foreground">Wo du systembeteiligt bist — wird auf dem PDF gemeldet.</p>
+                <p className="text-[10px] text-muted-foreground">{t('Where you participate in a dual system — reported on the PDF.')}</p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" />Erinnerungen</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" />{t('Reminders')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <ToggleRow
-                title="Email-Reminder aktiv"
-                desc="Automatische Erinnerungen 5/2/0 Tage vor der 15.-Frist."
+                title={t('Email reminders active')}
+                desc={t('Automatic reminders 5/2/0 days before the 15th deadline.')}
                 checked={lucid.autoReminders}
                 onChange={(v) => setSettings(prev => ({ ...prev, lucid: { ...lucid, autoReminders: v } }))}
               />
               <ToggleRow
-                title="Auto-Entwurf am Monatsende"
-                desc="Erstellt am 1. eines Monats automatisch einen Bericht-Entwurf."
+                title={t('Auto-draft at month end')}
+                desc={t('Automatically creates a report draft on the 1st of each month.')}
                 checked={lucid.autoGenerateOnMonthEnd}
                 onChange={(v) => setSettings(prev => ({ ...prev, lucid: { ...lucid, autoGenerateOnMonthEnd: v } }))}
               />
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Email-Empfänger</label>
+                <label className="text-sm font-medium">{t('Email recipients')}</label>
                 <Input
                   value={(lucid.contactEmails || []).join(', ')}
                   onChange={(e) => setSettings(prev => ({
                     ...prev,
                     lucid: { ...lucid, contactEmails: e.target.value.split(',').map(s => s.trim()).filter(Boolean) },
                   }))}
-                  placeholder="compliance@firma.de"
+                  placeholder={t('compliance@company.com')}
                 />
               </div>
             </CardContent>

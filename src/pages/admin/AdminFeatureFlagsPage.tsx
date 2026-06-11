@@ -5,6 +5,7 @@
  *   - Whitelist / Blacklist pro Tenant
  */
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ToggleRight, Plus, Save, Trash2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import type { FeatureFlag } from '@/types/admin-extended';
 import { toast } from 'sonner';
 
 export function AdminFeatureFlagsPage() {
+  const { t } = useTranslation('admin');
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,7 +62,7 @@ export function AdminFeatureFlagsPage() {
         enabledForTenants: flag.enabledForTenants,
         disabledForTenants: flag.disabledForTenants,
       });
-      toast.success(`"${flag.key}" gespeichert`);
+      toast.success(t('"{{key}}" saved', { key: flag.key }));
       setDirty(prev => {
         const next = new Set(prev);
         next.delete(flag.key);
@@ -74,11 +76,11 @@ export function AdminFeatureFlagsPage() {
   }
 
   async function handleDelete(flag: FeatureFlag) {
-    if (!confirm(`Feature Flag "${flag.key}" wirklich löschen?`)) return;
+    if (!confirm(t('Really delete feature flag "{{key}}"?', { key: flag.key }))) return;
     setBusyKey(flag.key);
     try {
       await deleteFeatureFlag(flag.key);
-      toast.success('Flag gelöscht');
+      toast.success(t('Flag deleted'));
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -96,7 +98,7 @@ export function AdminFeatureFlagsPage() {
         enabledGlobally: false,
         rolloutPercentage: 0,
       });
-      toast.success('Flag angelegt');
+      toast.success(t('Flag created'));
       setCreateOpen(false);
       setNewKey('');
       setNewDescription('');
@@ -112,20 +114,20 @@ export function AdminFeatureFlagsPage() {
         <div className="flex items-center gap-2.5">
           <ToggleRight className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-xl font-bold">Feature Flags</h1>
+            <h1 className="text-xl font-bold">{t('Feature Flags')}</h1>
             <p className="text-xs text-muted-foreground">
-              Features staged per Tenant aktivieren, Rollout-Percentage steuern.
+              {t('Enable features per tenant in stages and control rollout percentage.')}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => load(true)} disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-            Neu laden
+            {t('Reload')}
           </Button>
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" />
-            Neuer Flag
+            {t('New Flag')}
           </Button>
         </div>
       </div>
@@ -136,10 +138,10 @@ export function AdminFeatureFlagsPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <ToggleRight className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Noch keine Feature Flags angelegt.</p>
+            <p className="text-sm text-muted-foreground">{t('No feature flags created yet.')}</p>
             <Button size="sm" className="mt-3" onClick={() => setCreateOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Ersten Flag anlegen
+              {t('Create first flag')}
             </Button>
           </CardContent>
         </Card>
@@ -171,7 +173,7 @@ export function AdminFeatureFlagsPage() {
                     {isDirty && (
                       <Button size="sm" onClick={() => saveFlag(flag)} disabled={busy}>
                         <Save className="h-3.5 w-3.5 mr-1" />
-                        Speichern
+                        {t('Save')}
                       </Button>
                     )}
                     <Button
@@ -193,15 +195,15 @@ export function AdminFeatureFlagsPage() {
                         onCheckedChange={(v) => updateFlag(flag.key, { enabledGlobally: v })}
                       />
                       <div>
-                        <div className="font-medium text-sm">Global aktivieren</div>
+                        <div className="font-medium text-sm">{t('Enable globally')}</div>
                         <div className="text-[11px] text-muted-foreground">
-                          Für alle Tenants aktiv
+                          {t('Active for all tenants')}
                         </div>
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between mb-2">
-                        <Label className="text-sm font-medium">Rollout</Label>
+                        <Label className="text-sm font-medium">{t('Rollout')}</Label>
                         <span className="font-mono tabular-nums text-sm">{flag.rolloutPercentage}%</span>
                       </div>
                       <input
@@ -214,27 +216,27 @@ export function AdminFeatureFlagsPage() {
                         className="w-full cursor-pointer accent-primary"
                       />
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        % der Tenants, die den Flag erhalten (stabile Hash-Verteilung)
+                        {t('% of tenants receiving the flag (stable hash distribution)')}
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div>
                       <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 block">
-                        Immer aktiv (Whitelist)
+                        {t('Always on (whitelist)')}
                       </Label>
                       <div className="flex items-center justify-between px-3 py-2 rounded border bg-emerald-50/40 dark:bg-emerald-950/20">
-                        <span className="text-xs">{activeForCount} Tenant(s)</span>
-                        {activeForCount > 0 && <Badge variant="secondary" className="text-[10px]">via Tenant-Detail</Badge>}
+                        <span className="text-xs">{t('{{n}} tenant(s)', { n: activeForCount })}</span>
+                        {activeForCount > 0 && <Badge variant="secondary" className="text-[10px]">{t('via tenant detail')}</Badge>}
                       </div>
                     </div>
                     <div>
                       <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 block">
-                        Immer aus (Blacklist)
+                        {t('Always off (blacklist)')}
                       </Label>
                       <div className="flex items-center justify-between px-3 py-2 rounded border bg-red-50/40 dark:bg-red-950/20">
-                        <span className="text-xs">{disabledForCount} Tenant(s)</span>
-                        {disabledForCount > 0 && <Badge variant="secondary" className="text-[10px]">via Tenant-Detail</Badge>}
+                        <span className="text-xs">{t('{{n}} tenant(s)', { n: disabledForCount })}</span>
+                        {disabledForCount > 0 && <Badge variant="secondary" className="text-[10px]">{t('via tenant detail')}</Badge>}
                       </div>
                     </div>
                   </div>
@@ -248,34 +250,34 @@ export function AdminFeatureFlagsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Neuer Feature Flag</DialogTitle>
+            <DialogTitle>{t('New Feature Flag')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Key (eindeutig, snake_case)</Label>
+              <Label>{t('Key (unique, snake_case)')}</Label>
               <Input
                 value={newKey}
                 onChange={e => setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
-                placeholder="z.B. new_email_editor"
+                placeholder={t('e.g. new_email_editor')}
                 autoFocus
               />
             </div>
             <div>
-              <Label>Beschreibung (optional)</Label>
+              <Label>{t('Description (optional)')}</Label>
               <Textarea
                 value={newDescription}
                 onChange={e => setNewDescription(e.target.value)}
-                placeholder="Was macht der Flag?"
+                placeholder={t('What does this flag do?')}
                 rows={2}
                 className="resize-none"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Abbrechen</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>{t('Cancel')}</Button>
             <Button onClick={handleCreate} disabled={!newKey.trim()}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Anlegen
+              {t('Create')}
             </Button>
           </DialogFooter>
         </DialogContent>
