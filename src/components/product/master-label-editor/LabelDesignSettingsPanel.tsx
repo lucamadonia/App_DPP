@@ -41,7 +41,7 @@ export function LabelDesignSettingsPanel({ design, onDesignChange, brandingLogo,
   const hasBranding = !!(brandingLogo || (brandingPrimaryColor && brandingPrimaryColor !== '#3B82F6'));
 
   const applyCorporateDesign = () => {
-    let updatedDesign = { ...design };
+    const updatedDesign = { ...design };
 
     // Apply primary color to sections with default border color
     if (brandingPrimaryColor) {

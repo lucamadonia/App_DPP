@@ -77,7 +77,7 @@ export function InventoryDriftPage() {
     }
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [range, onlyWithDrift]);
+  useEffect(() => { load();   }, [range, onlyWithDrift]);
 
   // Search filter (client-side, on the loaded set)
   const filtered = useMemo(() => {

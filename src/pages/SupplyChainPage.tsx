@@ -124,7 +124,7 @@ export function SupplyChainPage() {
     } else {
       loadSupplyChain(selectedProductId);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [selectedProductId]);
 
   // Helpers

@@ -399,8 +399,8 @@ export async function consumeCredits(
   }
 
   // Determine how much from each source
-  let fromMonthly = Math.min(amount, monthlyRemaining);
-  let fromPurchased = amount - fromMonthly;
+  const fromMonthly = Math.min(amount, monthlyRemaining);
+  const fromPurchased = amount - fromMonthly;
 
   // Update credits atomically
   const { error } = await supabase
