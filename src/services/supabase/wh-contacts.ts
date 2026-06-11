@@ -67,10 +67,54 @@ export async function getContacts(filters?: { search?: string; activeOnly?: bool
   const { data, error } = await query.order('contact_name');
 
   if (error) {
-    console.error('Failed to load contacts:', error);
-    return [];
+    // Surface the error so the list page can render a proper error state
+    // (only consumer is ContactsListPage, which catches and shows ErrorState).
+    throw new Error(`Failed to load contacts: ${error.message}`);
   }
   return (data || []).map(transformContact);
+}
+
+/** Compact per-contact shipment aggregate for the contacts list cards. */
+export interface ContactShipmentSummary {
+  count: number;
+  /** ISO timestamp of the most recent shipment, if any */
+  lastShipmentAt?: string;
+}
+
+/**
+ * Batched shipment summaries for the contacts Aktions-Hub.
+ * Loads contact_id + created_at for ALL given contacts in ONE query (no N+1)
+ * and aggregates count + most-recent date client-side.
+ */
+export async function getContactShipmentSummaries(
+  contactIds: string[],
+): Promise<Map<string, ContactShipmentSummary>> {
+  const out = new Map<string, ContactShipmentSummary>();
+  if (contactIds.length === 0) return out;
+
+  const { data, error } = await supabase
+    .from('wh_shipments')
+    .select('contact_id, created_at')
+    .in('contact_id', contactIds)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    // Non-fatal: cards degrade to "no shipment info" instead of failing the page.
+    console.error('Failed to load contact shipment summaries:', error);
+    return out;
+  }
+
+  for (const row of data || []) {
+    if (!row.contact_id) continue;
+    const existing = out.get(row.contact_id);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      // Rows are ordered desc, so the first row per contact is the latest.
+      out.set(row.contact_id, { count: 1, lastShipmentAt: row.created_at });
+    }
+  }
+  return out;
 }
 
 export async function getContact(id: string): Promise<WhContact | null> {
