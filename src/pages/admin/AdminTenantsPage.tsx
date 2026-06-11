@@ -29,10 +29,9 @@ import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { TenantHealthGauge } from '@/components/admin/TenantHealthGauge';
 import { ConfirmWithReasonDialog } from '@/components/admin/ConfirmWithReasonDialog';
 import {
-  listAdminTenants, suspendTenant, reactivateTenant, startImpersonation,
+  listAdminTenants, suspendTenant, reactivateTenant, startImpersonation, getTenantsHealth,
 } from '@/services/supabase/admin';
 import { saveImpersonation } from '@/services/supabase/admin-impersonation';
-import { supabase } from '@/lib/supabase';
 import type { AdminTenant } from '@/types/admin';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
@@ -81,18 +80,14 @@ export function AdminTenantsPage() {
     else setLoading(true);
     try {
       const tenantList = await listAdminTenants();
-      const ids = tenantList.map(x => x.id);
-      const { data: rows } = ids.length
-        ? await supabase.from('tenants').select('id, health_score, status, suspended_reason, suspended_at').in('id', ids)
-        : { data: [] };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const map = new Map((rows || []).map((r: any) => [r.id, r]));
+      const rows = await getTenantsHealth(tenantList.map(x => x.id));
+      const map = new Map(rows.map(r => [r.id, r]));
       setTenants(tenantList.map(x => ({
         ...x,
-        healthScore: map.get(x.id)?.health_score ?? undefined,
+        healthScore: map.get(x.id)?.healthScore,
         status: map.get(x.id)?.status || 'active',
-        suspendedReason: map.get(x.id)?.suspended_reason ?? undefined,
-        suspendedAt: map.get(x.id)?.suspended_at ?? undefined,
+        suspendedReason: map.get(x.id)?.suspendedReason,
+        suspendedAt: map.get(x.id)?.suspendedAt,
       })));
     } catch (err) {
       console.error('Failed to load tenants:', err);

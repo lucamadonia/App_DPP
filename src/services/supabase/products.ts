@@ -231,6 +231,30 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 }
 
 /**
+ * All GTINs of the current tenant's products.
+ * Used for duplicate checks (e.g. CSV import validation).
+ */
+export async function getExistingGtins(): Promise<string[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    console.warn('No tenant set - cannot load GTINs');
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('gtin')
+    .eq('tenant_id', tenantId);
+
+  if (error) {
+    console.error('Failed to load GTINs:', error);
+    return [];
+  }
+
+  return (data || []).map((r) => r.gtin).filter((g): g is string => Boolean(g));
+}
+
+/**
  * Get multiple products by their IDs in a single query.
  * Used for batch lookups (e.g. stock volume calculation).
  */
