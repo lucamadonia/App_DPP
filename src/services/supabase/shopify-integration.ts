@@ -610,6 +610,10 @@ export async function pullFulfillmentsFromShopify(apply = true): Promise<Shopify
 }
 
 export interface InventoryDriftItem {
+  /** Trackbliss product id (set when the line is mapped) — enables direct stock correction */
+  productId?: string;
+  /** Trackbliss batch id (set when known from the shipment item) */
+  batchId?: string;
   productName?: string;
   sku?: string;
   title?: string;

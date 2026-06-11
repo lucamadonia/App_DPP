@@ -1817,7 +1817,7 @@ async function handleInventoryDrift(supabase: any, tenantId: string, params?: Re
   const { data: shipments } = await query;
 
   if (!shipments || shipments.length === 0) {
-    return json({ success: true, data: { total: 0, shipments: [] } });
+    return json({ success: true, data: { total: 0, driftCount: 0, shipments: [] } });
   }
 
   const shipmentIds = shipments.map((s: { id: string }) => s.id);
@@ -1885,22 +1885,26 @@ async function handleInventoryDrift(supabase: any, tenantId: string, params?: Re
       };
       const shopifyLines = (order.line_items || []) as ShopifyLine[];
 
+      // NOTE: matching is per PRODUCT, not product+batch. Variant mappings with
+      // auto_batch=true have no batch_id (the batch is resolved at order-sync
+      // time), so a batch-level key would mark every auto-batch line as
+      // unmapped and produce 100% false drift.
       const shopifyByKey = new Map<string, {
-        productId: string; batchId: string; quantity: number; sku?: string;
+        productId: string; quantity: number; sku?: string;
         title: string; variantTitle?: string; price?: string;
       }>();
       const shopifyUnmapped: Array<{ sku?: string; title: string; variantTitle?: string; quantity: number }> = [];
 
       for (const li of shopifyLines) {
         const m = li.variant_id ? mapByVariant.get(String(li.variant_id)) : undefined;
-        if (m?.product_id && m?.batch_id) {
-          const key = `${m.product_id}::${m.batch_id}`;
+        if (m?.product_id) {
+          const key = m.product_id;
           const existing = shopifyByKey.get(key);
           if (existing) {
             existing.quantity += li.quantity;
           } else {
             shopifyByKey.set(key, {
-              productId: m.product_id, batchId: m.batch_id, quantity: li.quantity,
+              productId: m.product_id, quantity: li.quantity,
               sku: m.shopify_sku || li.sku, title: li.title, variantTitle: li.variant_title, price: li.price,
             });
           }
@@ -1909,18 +1913,18 @@ async function handleInventoryDrift(supabase: any, tenantId: string, params?: Re
         }
       }
 
-      // Index Trackbliss items by the same key
+      // Index Trackbliss items by the same product-level key
       const trackblissItems = itemsByShipment.get(s.id) || [];
       const tbByKey = new Map<string, { productId: string; batchId: string; quantity: number; isGift: boolean; giftNote?: string; productName?: string }>();
-      const tbGifts: Array<{ productId: string; productName?: string; quantity: number; giftNote?: string }> = [];
+      const tbGifts: Array<{ productId: string; batchId?: string; productName?: string; quantity: number; giftNote?: string }> = [];
 
       for (const it of trackblissItems) {
         const productName = productNames.get(it.product_id);
         if (it.is_gift) {
-          tbGifts.push({ productId: it.product_id, productName, quantity: it.quantity, giftNote: it.gift_note });
+          tbGifts.push({ productId: it.product_id, batchId: it.batch_id, productName, quantity: it.quantity, giftNote: it.gift_note });
           continue;
         }
-        const key = `${it.product_id}::${it.batch_id}`;
+        const key = it.product_id;
         const existing = tbByKey.get(key);
         if (existing) {
           existing.quantity += it.quantity;
@@ -1930,19 +1934,21 @@ async function handleInventoryDrift(supabase: any, tenantId: string, params?: Re
       }
 
       // Diff
-      const undershipped: Array<{ productName?: string; sku?: string; title: string; variantTitle?: string; expected: number; shipped: number }> = [];
-      const extra: Array<{ productName?: string; quantity: number; reason: 'gift' | 'unmapped' }> = [];
-      const quantityMismatches: Array<{ productName?: string; title?: string; expected: number; shipped: number; sku?: string }> = [];
+      const undershipped: Array<{ productId?: string; productName?: string; sku?: string; title: string; variantTitle?: string; expected: number; shipped: number }> = [];
+      const extra: Array<{ productId?: string; batchId?: string; productName?: string; quantity: number; reason: 'gift' | 'unmapped' }> = [];
+      const quantityMismatches: Array<{ productId?: string; batchId?: string; productName?: string; title?: string; expected: number; shipped: number; sku?: string }> = [];
 
       for (const [key, sline] of shopifyByKey) {
         const tb = tbByKey.get(key);
         if (!tb) {
           undershipped.push({
+            productId: sline.productId,
             productName: productNames.get(sline.productId), sku: sline.sku, title: sline.title,
             variantTitle: sline.variantTitle, expected: sline.quantity, shipped: 0,
           });
         } else if (tb.quantity !== sline.quantity) {
           quantityMismatches.push({
+            productId: sline.productId, batchId: tb.batchId,
             productName: tb.productName || productNames.get(sline.productId),
             title: sline.title, sku: sline.sku, expected: sline.quantity, shipped: tb.quantity,
           });
@@ -1950,11 +1956,11 @@ async function handleInventoryDrift(supabase: any, tenantId: string, params?: Re
       }
       for (const [key, tb] of tbByKey) {
         if (!shopifyByKey.has(key)) {
-          extra.push({ productName: tb.productName, quantity: tb.quantity, reason: 'unmapped' });
+          extra.push({ productId: tb.productId, batchId: tb.batchId, productName: tb.productName, quantity: tb.quantity, reason: 'unmapped' });
         }
       }
       for (const g of tbGifts) {
-        extra.push({ productName: g.productName, quantity: g.quantity, reason: 'gift' });
+        extra.push({ productId: g.productId, batchId: g.batchId, productName: g.productName, quantity: g.quantity, reason: 'gift' });
       }
 
       const hasDrift = undershipped.length > 0 || quantityMismatches.length > 0
@@ -2001,7 +2007,9 @@ async function handleInventoryDrift(supabase: any, tenantId: string, params?: Re
   return json({
     success: true,
     data: {
-      total: reports.length,
+      // total = analyzed shipments (the KPI denominator), not just the
+      // returned subset — with onlyWithDrift the clean ones are filtered out.
+      total: shipments.length,
       driftCount,
       shipments: reports,
     },

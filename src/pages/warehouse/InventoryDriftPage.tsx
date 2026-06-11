@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   AlertTriangle, CheckCircle2, Gift, Package, RefreshCw, Search,
   ShoppingBag, ExternalLink, Sparkles, FileWarning, ChevronDown, ChevronRight,
-  Filter, Download,
+  Filter, Download, Sigma, ListChecks, Wrench,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,10 +16,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
+import { gridStagger, gridItem, useMotionVariants, useReducedMotion } from '@/lib/motion';
 import {
   getInventoryDrift,
   type InventoryDriftShipment, type InventoryDriftItem,
 } from '@/services/supabase/shopify-integration';
+import { DriftCorrectionDialog, type DriftCorrectionTarget } from '@/components/warehouse/drift-correction-dialog';
 import { buildCsv, downloadCsv, timestampedFilename, type CsvColumn } from '@/lib/csv-export';
 import { toast } from 'sonner';
 
@@ -34,7 +37,7 @@ function StatCard({ label, value, icon: Icon, color, bg, loading }: {
 }) {
   const animated = useAnimatedNumber(loading ? 0 : value);
   return (
-    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 h-full">
       <CardContent className="pt-4 sm:pt-5 pb-3 sm:pb-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`rounded-lg p-2 sm:p-2.5 ${bg}`}>
@@ -63,21 +66,24 @@ export function InventoryDriftPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<InventoryDriftShipment[]>([]);
+  const [analyzed, setAnalyzed] = useState(0);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [correctionTarget, setCorrectionTarget] = useState<DriftCorrectionTarget | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getInventoryDrift({ daysBack: parseInt(range, 10), onlyWithDrift });
       setData(res.shipments);
+      setAnalyzed(res.total);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }
+  }, [range, onlyWithDrift]);
 
-  useEffect(() => { load();   }, [range, onlyWithDrift]);
+  useEffect(() => { void load(); }, [load]);
 
   // Search filter (client-side, on the loaded set)
   const filtered = useMemo(() => {
@@ -90,12 +96,28 @@ export function InventoryDriftPage() {
     );
   }, [data, search]);
 
-  const stats = useMemo(() => ({
-    total: data.length,
-    major: data.filter((s) => s.severity === 'major').length,
-    minor: data.filter((s) => s.severity === 'minor').length,
-    clean: data.filter((s) => !s.hasDrift && s.severity === 'none').length,
-  }), [data]);
+  const stats = useMemo(() => {
+    const major = data.filter((s) => s.severity === 'major').length;
+    const minor = data.filter((s) => s.severity === 'minor').length;
+    const errored = data.filter((s) => !!s.error).length;
+    // Drift line positions + total absolute unit deviation
+    let positions = 0;
+    let deviation = 0;
+    for (const s of data) {
+      positions += s.undershipped.length + s.quantityMismatches.length + s.extra.length;
+      for (const u of s.undershipped) deviation += Math.abs((u.expected ?? 0) - (u.shipped ?? 0));
+      for (const q of s.quantityMismatches) deviation += Math.abs((q.expected ?? 0) - (q.shipped ?? 0));
+      for (const e of s.extra) deviation += Math.abs(e.quantity ?? 0);
+    }
+    return {
+      analyzed,
+      major,
+      minor,
+      clean: Math.max(0, analyzed - major - minor - errored),
+      positions,
+      deviation,
+    };
+  }, [data, analyzed]);
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {
@@ -132,6 +154,9 @@ export function InventoryDriftPage() {
     toast.success(t('Exported {{n}} drift rows', { n: rows.length }));
   }
 
+  const containerVariants = useMotionVariants(gridStagger);
+  const itemVariants = useMotionVariants(gridItem);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -150,11 +175,11 @@ export function InventoryDriftPage() {
           </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={load} disabled={loading} className="flex-1 sm:flex-none">
+          <Button variant="outline" onClick={load} disabled={loading} className="flex-1 sm:flex-none min-h-11 sm:min-h-9 active:scale-[0.97] transition-transform">
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             {t('Refresh')}
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={loading || filtered.length === 0} className="flex-1 sm:flex-none">
+          <Button variant="outline" onClick={handleExport} disabled={loading || filtered.length === 0} className="flex-1 sm:flex-none min-h-11 sm:min-h-9 active:scale-[0.97] transition-transform">
             <Download className="mr-2 h-4 w-4" />
             {t('Export CSV')}
           </Button>
@@ -162,16 +187,37 @@ export function InventoryDriftPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        <StatCard label={t('Analyzed')} value={stats.total} icon={Package}
-          color="text-blue-600" bg="bg-blue-100 dark:bg-blue-900/30" loading={loading} />
-        <StatCard label={t('Major drift')} value={stats.major} icon={AlertTriangle}
-          color="text-rose-600" bg="bg-rose-100 dark:bg-rose-900/30" loading={loading} />
-        <StatCard label={t('Gifts / extras')} value={stats.minor} icon={Gift}
-          color="text-amber-600" bg="bg-amber-100 dark:bg-amber-900/30" loading={loading} />
-        <StatCard label={t('Clean')} value={stats.clean} icon={CheckCircle2}
-          color="text-emerald-600" bg="bg-emerald-100 dark:bg-emerald-900/30" loading={loading} />
-      </div>
+      <motion.div
+        className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3"
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+      >
+        <motion.div variants={itemVariants}>
+          <StatCard label={t('Analyzed')} value={stats.analyzed} icon={Package}
+            color="text-blue-600" bg="bg-blue-100 dark:bg-blue-900/30" loading={loading} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard label={t('Major drift')} value={stats.major} icon={AlertTriangle}
+            color="text-rose-600" bg="bg-rose-100 dark:bg-rose-900/30" loading={loading} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard label={t('Gifts / extras')} value={stats.minor} icon={Gift}
+            color="text-amber-600" bg="bg-amber-100 dark:bg-amber-900/30" loading={loading} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard label={t('Clean')} value={stats.clean} icon={CheckCircle2}
+            color="text-emerald-600" bg="bg-emerald-100 dark:bg-emerald-900/30" loading={loading} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard label={t('Positions with difference')} value={stats.positions} icon={ListChecks}
+            color="text-violet-600" bg="bg-violet-100 dark:bg-violet-900/30" loading={loading} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard label={t('Σ deviation (units)')} value={stats.deviation} icon={Sigma}
+            color="text-cyan-600" bg="bg-cyan-100 dark:bg-cyan-900/30" loading={loading} />
+        </motion.div>
+      </motion.div>
 
       {/* Filter bar */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
@@ -179,11 +225,11 @@ export function InventoryDriftPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('Search shipment / order / recipient...')}
-            value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9"
+            value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 min-h-11 sm:min-h-9"
           />
         </div>
         <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48 min-h-11 sm:min-h-9">
             <Filter className="h-4 w-4 mr-2 opacity-70" />
             <SelectValue />
           </SelectTrigger>
@@ -196,7 +242,7 @@ export function InventoryDriftPage() {
             <SelectItem value="365">{t('Last year')}</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-md border bg-card">
+        <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-md border bg-card min-h-11 sm:min-h-9">
           <Switch id="drift-only" checked={onlyWithDrift} onCheckedChange={setOnlyWithDrift} />
           <Label htmlFor="drift-only" className="text-sm cursor-pointer whitespace-nowrap">
             {t('Only with drift')}
@@ -216,7 +262,9 @@ export function InventoryDriftPage() {
               <Sparkles className="h-8 w-8 text-emerald-600" />
             </div>
             <div>
-              <p className="font-semibold">{onlyWithDrift ? t('No drift detected') : t('No shipments found')}</p>
+              <p className="font-semibold">
+                {onlyWithDrift ? t('No differences — stock is in sync') : t('No shipments found')}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
                 {onlyWithDrift
                   ? t('Trackbliss and Shopify match for every shipment in this window.')
@@ -226,18 +274,30 @@ export function InventoryDriftPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <motion.div
+          className="space-y-3"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+        >
           {filtered.map((s) => (
-            <DriftCard
-              key={s.shipmentId}
-              shipment={s}
-              expanded={expanded.has(s.shipmentId)}
-              onToggle={() => toggleExpand(s.shipmentId)}
-              t={t}
-            />
+            <motion.div key={s.shipmentId} variants={itemVariants}>
+              <DriftCard
+                shipment={s}
+                expanded={expanded.has(s.shipmentId)}
+                onToggle={() => toggleExpand(s.shipmentId)}
+                onCorrect={setCorrectionTarget}
+                t={t}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
+
+      <DriftCorrectionDialog
+        target={correctionTarget}
+        onClose={() => setCorrectionTarget(null)}
+      />
     </div>
   );
 }
@@ -246,12 +306,14 @@ export function InventoryDriftPage() {
 /*  Per-shipment drift card                                                    */
 /* -------------------------------------------------------------------------- */
 
-function DriftCard({ shipment, expanded, onToggle, t }: {
+function DriftCard({ shipment, expanded, onToggle, onCorrect, t }: {
   shipment: InventoryDriftShipment;
   expanded: boolean;
   onToggle: () => void;
+  onCorrect: (target: DriftCorrectionTarget) => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
 }) {
+  const reduceMotion = useReducedMotion();
   const sev = shipment.severity;
   const sevConfig = {
     major: { label: t('Major drift'), bg: 'bg-rose-50 dark:bg-rose-950/30', border: 'border-l-rose-500', icon: AlertTriangle, iconColor: 'text-rose-600' },
@@ -261,10 +323,29 @@ function DriftCard({ shipment, expanded, onToggle, t }: {
   const SevIcon = sevConfig.icon;
   const totalIssues = shipment.undershipped.length + shipment.quantityMismatches.length + shipment.extra.length + shipment.shopifyUnmapped.length;
 
+  /** Build a correction target from a drift line (only when product is known) */
+  function correctionFor(item: InventoryDriftItem): (() => void) | undefined {
+    if (!item.productId) return undefined;
+    const target: DriftCorrectionTarget = {
+      productId: item.productId,
+      batchId: item.batchId,
+      productName: item.productName || item.title,
+      shipmentNumber: shipment.shipmentNumber,
+      defaultDelta: item.expected !== undefined && item.shipped !== undefined
+        ? item.shipped - item.expected
+        : 0,
+    };
+    return () => onCorrect(target);
+  }
+
   return (
     <Card className={`border-l-4 ${sevConfig.border} ${sevConfig.bg} transition-shadow hover:shadow-md`}>
       <CardContent className="p-3 sm:p-4">
-        <button onClick={onToggle} className="w-full text-left">
+        <motion.button
+          onClick={onToggle}
+          className="w-full text-left min-h-11"
+          whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+        >
           <div className="flex items-start gap-3">
             <div className={`rounded-lg p-1.5 sm:p-2 bg-background/60 ${sevConfig.iconColor} shrink-0`}>
               <SevIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -345,7 +426,7 @@ function DriftCard({ shipment, expanded, onToggle, t }: {
               </div>
             </div>
           </div>
-        </button>
+        </motion.button>
 
         {expanded && totalIssues > 0 && (
           <div className="mt-4 pt-4 border-t border-foreground/10 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -357,6 +438,8 @@ function DriftCard({ shipment, expanded, onToggle, t }: {
                     secondary={[u.variantTitle, u.sku].filter(Boolean).join(' · ')}
                     expected={u.expected}
                     actual={u.shipped}
+                    onCorrect={correctionFor(u)}
+                    t={t}
                   />
                 ))}
               </DriftSection>
@@ -369,6 +452,8 @@ function DriftCard({ shipment, expanded, onToggle, t }: {
                     secondary={q.sku || ''}
                     expected={q.expected}
                     actual={q.shipped}
+                    onCorrect={correctionFor(q)}
+                    t={t}
                   />
                 ))}
               </DriftSection>
@@ -380,6 +465,8 @@ function DriftCard({ shipment, expanded, onToggle, t }: {
                     primary={e.productName || e.title || '?'}
                     secondary={e.reason === 'gift' ? t('Gift / Beigabe') : t('Not on Shopify order')}
                     actual={e.quantity}
+                    onCorrect={correctionFor(e)}
+                    t={t}
                   />
                 ))}
               </DriftSection>
@@ -391,12 +478,13 @@ function DriftCard({ shipment, expanded, onToggle, t }: {
                     primary={u.title || '?'}
                     secondary={[u.variantTitle, u.sku].filter(Boolean).join(' · ')}
                     actual={u.quantity}
+                    t={t}
                   />
                 ))}
               </DriftSection>
             )}
             <div className="md:col-span-2 flex justify-end">
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild className="min-h-11 sm:min-h-8">
                 <Link to={`/warehouse/shipments/${shipment.shipmentId}`}>
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                   {t('Open shipment')}
@@ -451,14 +539,25 @@ function DriftSection({ title, icon: Icon, color, children }: {
   );
 }
 
-function LineRow({ primary, secondary, expected, actual }: {
+function LineRow({ primary, secondary, expected, actual, onCorrect, t }: {
   primary: string;
   secondary?: string;
   expected?: number;
   actual?: number;
+  onCorrect?: () => void;
+  t: (k: string, opts?: Record<string, unknown>) => string;
 }) {
+  // Color code the actual quantity: red = shortage, green = surplus
+  const qtyClass = expected !== undefined && actual !== undefined
+    ? actual < expected
+      ? 'text-rose-600 font-bold'
+      : actual > expected
+        ? 'text-emerald-600 font-bold'
+        : 'text-foreground'
+    : 'text-foreground';
+
   return (
-    <div className="flex items-start justify-between gap-2 px-2.5 py-1.5 rounded-md bg-background/60 border text-sm">
+    <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-background/60 border text-sm">
       <div className="min-w-0 flex-1">
         <div className="font-medium truncate">{primary}</div>
         {secondary && <div className="text-xs text-muted-foreground truncate">{secondary}</div>}
@@ -468,12 +567,24 @@ function LineRow({ primary, secondary, expected, actual }: {
           <>
             <span className="text-muted-foreground">{expected}</span>
             <span className="mx-1 opacity-60">→</span>
-            <span className={actual < expected ? 'text-rose-600 font-bold' : 'text-foreground'}>{actual}</span>
+            <span className={qtyClass}>{actual}</span>
           </>
         ) : (
           <span className="text-foreground">×{actual ?? expected ?? '?'}</span>
         )}
       </div>
+      {onCorrect && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCorrect}
+          className="shrink-0 min-h-11 sm:min-h-8 px-2 text-xs active:scale-[0.97] transition-transform"
+          title={t('Correct stock')}
+        >
+          <Wrench className="h-3.5 w-3.5 sm:mr-1" />
+          <span className="hidden sm:inline">{t('Correct stock')}</span>
+        </Button>
+      )}
     </div>
   );
 }
