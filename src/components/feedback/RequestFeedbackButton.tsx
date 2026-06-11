@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircleHeart, Loader2, AlertTriangle, Link2, MailCheck, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,6 +44,7 @@ const DEFAULT_CUSTOM_BODY =
  * injected automatically (as a CTA button), so it can never break.
  */
 export function RequestFeedbackButton({ shipment, items, disabled, notYetDelivered, onRequested }: Props) {
+  const { t } = useTranslation('warehouse');
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [customize, setCustomize] = useState(false);
@@ -94,7 +96,7 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
       toast.error(res.error);
       return;
     }
-    toast.success(res.emailsSent > 0 ? 'Bewertungsanfrage versendet' : 'Bewertungsanfrage erstellt');
+    toast.success(res.emailsSent > 0 ? t('Review request sent') : t('Review request created'));
     setOpen(false);
     onRequested?.();
   }
@@ -109,7 +111,7 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
         className="gap-1"
       >
         <MessageCircleHeart className="h-4 w-4" />
-        Feedback anfragen
+        {t('Request Feedback')}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -117,10 +119,10 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageCircleHeart className="h-5 w-5" />
-              Bewertung anfragen
+              {t('Request Review')}
             </DialogTitle>
             <DialogDescription>
-              {shipment.recipientName} ({shipment.recipientEmail}) erhält per Email einen Link, um die folgenden Varianten zu bewerten. Es wird eine separate Bewertung pro Variante erstellt — Antworten werden vor Veröffentlichung von dir geprüft.
+              {t('{{name}} ({{email}}) will receive an email with a link to review the following variants. A separate review is created per variant — responses are checked by you before publication.', { name: shipment.recipientName, email: shipment.recipientEmail })}
             </DialogDescription>
           </DialogHeader>
 
@@ -129,18 +131,20 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
             <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-200">
               <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
-                {shipment.recipientName} hat bereits eine Bewertung abgegeben
-                {submittedRequest.submittedAt ? <> (am <strong>{formatSentAt(submittedRequest.submittedAt)}</strong>)</> : null}.
-                Ein erneutes Senden ist normalerweise nicht nötig.
+                {submittedRequest.submittedAt
+                  ? t('{{name}} has already submitted a review (on {{date}}).', { name: shipment.recipientName, date: formatSentAt(submittedRequest.submittedAt) })
+                  : t('{{name}} has already submitted a review.', { name: shipment.recipientName })}{' '}
+                {t('Sending again is usually not necessary.')}
               </span>
             </div>
           ) : alreadyRequested ? (
             <div className="flex items-start gap-2 rounded-md border border-sky-300 bg-sky-50 dark:bg-sky-900/20 px-3 py-2 text-xs text-sky-800 dark:text-sky-200">
               <MailCheck className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
-                Diese Sendung wurde bereits zur Bewertung angefragt
-                {latestSentAt ? <> — versendet am <strong>{formatSentAt(latestSentAt)}</strong></> : null}.
-                Erneutes Senden schreibt {shipment.recipientName} <strong>noch einmal</strong> an.
+                {latestSentAt
+                  ? t('A review request was already sent for this shipment — sent on {{date}}.', { date: formatSentAt(latestSentAt) })
+                  : t('A review request was already sent for this shipment.')}{' '}
+                {t('Sending again will email {{name}} once more.', { name: shipment.recipientName })}
               </span>
             </div>
           ) : null}
@@ -148,7 +152,7 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
           {notYetDelivered && (
             <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>Diese Sendung ist noch nicht als „zugestellt" markiert. Du kannst die Anfrage trotzdem senden.</span>
+              <span>{t('This shipment is not yet marked as "delivered". You can still send the request.')}</span>
             </div>
           )}
 
@@ -192,7 +196,7 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
                   !customize ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted text-muted-foreground'
                 }`}
               >
-                Standard-Mail
+                {t('Standard email')}
               </button>
               <button
                 type="button"
@@ -201,24 +205,24 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
                   customize ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted text-muted-foreground'
                 }`}
               >
-                Mail anpassen
+                {t('Customize email')}
               </button>
             </div>
 
             {customize && (
               <div className="space-y-2">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Betreff</p>
-                  <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Betreff der E-Mail" />
+                  <p className="text-xs text-muted-foreground">{t('Subject')}</p>
+                  <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder={t('Email subject')} />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Nachricht</p>
+                  <p className="text-xs text-muted-foreground">{t('Message')}</p>
                   <Textarea value={body} onChange={e => setBody(e.target.value)} rows={7} />
                 </div>
                 <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
                   <Link2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   <span>
-                    Der persönliche Bewertungs-Link wird automatisch als „Jetzt bewerten"-Button eingefügt — du musst ihn nicht selbst einbauen. Der Platzhalter <code className="font-mono">{'{{feedbackUrl}}'}</code> markiert nur die Stelle und wird ersetzt.
+                    {t('The personal review link is automatically inserted as a "Review now" button — you don\'t need to add it yourself. The placeholder')} <code className="font-mono">{'{{feedbackUrl}}'}</code> {t('only marks the position and will be replaced.')}
                   </span>
                 </div>
               </div>
@@ -226,23 +230,23 @@ export function RequestFeedbackButton({ shipment, items, disabled, notYetDeliver
           </div>
 
           <div className="text-xs text-muted-foreground">
-            {uniqueVariants.length} {uniqueVariants.length === 1 ? 'Variante' : 'Varianten'} · 1 Email an {shipment.recipientEmail}
+            {t('{{count}} variants · 1 email to {{email}}', { count: uniqueVariants.length, email: shipment.recipientEmail })}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
-              Abbrechen
+              {t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleConfirm} disabled={busy || !shipment.recipientEmail || customInvalid}>
               {busy ? (
                 <>
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  Wird versendet…
+                  {t('Sending…')}
                 </>
               ) : (
                 <>
                   <MessageCircleHeart className="mr-1 h-4 w-4" />
-                  {alreadyRequested ? 'Trotzdem erneut senden' : 'Anfrage senden'}
+                  {alreadyRequested ? t('Send again anyway') : t('Send request')}
                 </>
               )}
             </Button>

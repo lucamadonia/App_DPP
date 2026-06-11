@@ -14,6 +14,23 @@
   "important": "Wichtig",
   "note": "Hinweis",
   "allComplete": "Herzlichen Glückwunsch! Sie haben den gesamten Guide abgeschlossen.",
+  "nextChapter": "Nächstes Kapitel",
+  "previousChapter": "Vorheriges Kapitel",
+  "resetProgress": "Fortschritt zurücksetzen",
+  "resetConfirm": "Sind Sie sicher, dass Sie den gesamten Fortschritt zurücksetzen möchten? Dies kann nicht rückgängig gemacht werden.",
+  "searchPlaceholder": "Kapitel und Schritte durchsuchen...",
+  "gettingStarted": "Erste Schritte",
+  "estimatedTime": "Geschätzte Dauer",
+  "minutes": "Minuten",
+  "prerequisite": "Voraussetzung",
+  "stepOf": "Schritt {{current}} von {{total}}",
+  "notStarted": "Nicht begonnen",
+  "inProgress": "In Bearbeitung",
+  "startLearning": "Jetzt lernen",
+  "resumeLearning": "Weiterlernen",
+  "overview": "Übersicht",
+  "jumpToChapter": "Zum Kapitel springen",
+  "backToOverview": "Zurück zur Übersicht",
 
   "dashboard.title": "Dashboard",
   "dashboard.subtitle": "Ihre Kommandozentrale für Digitale Produktpässe",
@@ -33,6 +50,8 @@
   "dashboard.step5.description": "Trackbliss unterstützt Deutsch und Englisch — wechseln Sie jederzeit.",
   "dashboard.step5.detail": "Klicken Sie auf das Sprach-Symbol in der oberen rechten Ecke der Kopfzeile, um zwischen Deutsch und Englisch zu wechseln. Die Einstellung wird lokal gespeichert und bleibt beim nächsten Login erhalten. Alle Oberflächen-Texte, Labels und Meldungen werden sofort in der gewählten Sprache angezeigt.",
   "dashboard.tip1": "Nutzen Sie die Tastenkombination Strg+K (oder Cmd+K auf Mac), um die Befehlspalette zu öffnen. Damit können Sie blitzschnell zu jeder Seite navigieren oder Aktionen ausführen.",
+  "dashboard.shortcut1": "Strg+K / Cmd+K öffnet die Befehlspalette von überall in der App.",
+  "dashboard.estimatedTime": "5",
   "dashboard.link": "/",
 
   "products.title": "Produkte",
@@ -60,6 +79,8 @@
   "products.step7.detail": "Im Tab 'Dokumente' sehen Sie alle mit dem Produkt verknüpften Dateien. Klicken Sie auf 'Dokument hinzufügen', um ein bereits hochgeladenes Dokument zuzuweisen, oder laden Sie ein neues Dokument direkt hoch. Dokumenttypen wie CE-Konformitätserklärungen, Testberichte und Sicherheitsdatenblätter verbessern den Compliance-Score erheblich.",
   "products.tip1": "Verwenden Sie die GTIN (Global Trade Item Number) konsequent — sie ist der Schlüssel für die eindeutige Produktidentifikation im GS1 Digital Link und wird im QR-Code codiert.",
   "products.tip2": "Legen Sie Chargen für verschiedene Produktionslose an, um einzelne Einheiten über Seriennummern rückverfolgen zu können. Jede Kombination aus GTIN und Seriennummer erzeugt einen eindeutigen DPP-Link.",
+  "products.important1": "Jedes Produkt benötigt eine gültige GTIN, um GS1-Digital-Link-URLs zu generieren. Ohne GTIN können keine QR-Codes und öffentlichen DPP-Links erstellt werden.",
+  "products.estimatedTime": "15",
   "products.link": "/products",
 
   "dpp.title": "Digitaler Produktpass",
@@ -87,6 +108,9 @@
   "dpp.step7.detail": "Durch Anhängen von /customs an die DPP-URL wird die Zoll-Ansicht aktiviert. Diese zeigt zusätzliche Felder wie HS-Code, Ursprungsland, Netto-/Bruttogewicht, Herstelleradresse, EORI-Nummer und USt-IdNr. Die Zoll-Ansicht ist für Zollbehörden und Handelspartner gedacht und zeigt alle Felder mit Sichtbarkeitsstufe 'Zoll' oder 'Verbraucher'.",
   "dpp.tip1": "Testen Sie die öffentliche DPP-Seite regelmäßig, indem Sie den QR-Code mit Ihrem Smartphone scannen. So sehen Sie genau, was Ihre Kunden und Partner sehen.",
   "dpp.tip2": "Nutzen Sie das 'Accessible'-Template, wenn Sie WCAG-AA-konforme DPP-Seiten mit hohem Kontrast, großer Schrift und semantischem HTML benötigen.",
+  "dpp.important1": "Das GS1-Digital-Link-Format (/01/{gtin}/21/{serial}) ist der international anerkannte Standard. Verwenden Sie dieses Format, wenn Sie QR-Codes auf physische Produkte oder Verpackungen drucken.",
+  "dpp.note1": "Änderungen am DPP-Design gelten für alle Produkte, die die mandantenweiten Einstellungen verwenden. Individuelle Produkt-Überschreibungen für die Sichtbarkeit sind von den Design-Einstellungen getrennt.",
+  "dpp.estimatedTime": "15",
   "dpp.link": "/dpp",
 
   "documents.title": "Dokumente",
@@ -107,6 +131,8 @@
   "documents.step5.description": "Nutzen Sie den integrierten Viewer für eine schnelle Vorschau.",
   "documents.step5.detail": "Klicken Sie auf ein Dokument in der Liste, um eine Vorschau im integrierten Viewer zu öffnen. PDF-Dateien werden direkt im Browser angezeigt, Bilder in einer Lightbox. Von hier aus können Sie das Dokument herunterladen, die Details bearbeiten oder die Verknüpfung zu Produkten verwalten.",
   "documents.tip1": "Laden Sie Ihre CE-Konformitätserklärungen und Testberichte als Erstes hoch — sie haben den größten Einfluss auf den AI-Compliance-Score und sind für die ESPR-Verordnung besonders relevant.",
+  "documents.important1": "Dokumente mit Ablaufdatum lösen im Tracker 30 Tage vor Ablauf Warnungen aus. Hinterlegen Sie Ablaufdaten bei allen zeitlich begrenzten Zertifikaten.",
+  "documents.estimatedTime": "10",
   "documents.link": "/documents",
 
   "supply-chain.title": "Lieferkette",
@@ -130,6 +156,8 @@
   "supply-chain.step6.description": "Verwenden Sie GS1 Global Location Numbers für die Standortidentifikation.",
   "supply-chain.step6.detail": "Jeder Lieferketten-Eintrag kann eine GLN (Global Location Number) oder einen alternativen Facility Identifier erhalten. Die GLN ist ein 13-stelliger GS1-Standard zur eindeutigen Identifikation von Standorten und wird zunehmend für die Lieferkettentransparenz nach EU-ESPR gefordert. Tragen Sie die GLN im Feld 'Standort-Identifier' ein.",
   "supply-chain.tip1": "Beginnen Sie mit einer groben Lieferkette (Rohstoff → Fertigung → Distribution) und verfeinern Sie diese schrittweise. Eine vollständige Lieferkette verbessert den Compliance-Score erheblich.",
+  "supply-chain.note1": "Lieferketten-Einträge sind produktspezifisch. Jedes Produkt hat seine eigene unabhängige Lieferkette, die mit unterschiedlichen Schritten und Lieferanten konfiguriert werden kann.",
+  "supply-chain.estimatedTime": "12",
   "supply-chain.link": "/supply-chain",
 
   "compliance.title": "Compliance & AI",
@@ -160,6 +188,9 @@
   "compliance.step8.detail": "Unter Regulierungen finden Sie eine umfassende Datenbank mit EU-Verordnungen (ESPR, Batterie-VO, PPWR, GPSR), nationalen Gesetzen (ElektroG, BattG, VerpackG, AGEC), Piktogramm-Übersichten und aktuellen Compliance-Nachrichten. Nutzen Sie die Länderspezifischen Checklisten, um die Anforderungen für Ihre Zielmärkte systematisch abzuarbeiten.",
   "compliance.tip1": "Füllen Sie möglichst viele Produktdaten, ESPR-Felder und Lieferketten-Informationen aus, bevor Sie die AI-Prüfung starten. Je vollständiger die Daten, desto genauer und hilfreicher ist die Analyse.",
   "compliance.tip2": "Jede AI-Compliance-Prüfung verbraucht 3 AI-Credits (eine pro Phase). Überlegen Sie strategisch, welche Produkte Sie zuerst prüfen lassen — beginnen Sie mit Ihren meistverkauften oder regulatorisch sensibelsten Produkten.",
+  "compliance.important1": "Jede AI-Compliance-Prüfung verbraucht 3 Credits (einen pro Phase). Stellen Sie sicher, dass Ihre Produktdaten so vollständig wie möglich sind, bevor Sie eine Prüfung starten, um den größten Nutzen aus Ihren Credits zu ziehen.",
+  "compliance.note1": "Die AI-Analyse deckt über 14 EU-Verordnungen ab, darunter ESPR, Batterieverordnung, PPWR, GPSR, CE-Richtlinien, REACH und nationale Gesetze. Ergebnisse werden automatisch gespeichert und können im Zeitverlauf verglichen werden.",
+  "compliance.estimatedTime": "20",
   "compliance.link": "/compliance",
 
   "returns.title": "Returns Hub",
@@ -190,6 +221,9 @@
   "returns.step8.detail": "Die Returns-Einstellungen umfassen 7 Tabs: Allgemein (Aktivierung, Nummernpräfix, Standard-Lösung), Retourengründe (Kategorien mit Untergründen und Folgefragen), Lizenz (Tarifmanagement), Branding (Farben, Logo, Portal-URLs), Tickets/SLA (Reaktionszeiten, Schnellantworten), Benachrichtigungen (E-Mail-Aktivierung, Absendername, Sprache) und Kundenportal (Funktionen, Registrierung, Sicherheit).",
   "returns.tip1": "Konfigurieren Sie Ihre Retourengründe mit Unterkategorien und Folgefragen, um strukturierte Daten zu sammeln, die bei der Ursachenanalyse helfen. Zum Beispiel: Hauptgrund 'Defekt' → Untergrund 'Anzeige defekt' → Folgefrage 'Wann ist der Defekt aufgetreten?'.",
   "returns.tip2": "Erstellen Sie Workflow-Regeln für häufige Szenarien: z.B. automatische Genehmigung bei Retourenwert unter 50€, automatische Ticket-Erstellung bei hohem Risiko-Score, oder automatische E-Mail-Benachrichtigung bei Statusänderung.",
+  "returns.important1": "Der Returns Hub erfordert ein Returns-Hub-Modul-Abonnement (Starter, Professional oder Business). Aktivieren Sie unter Einstellungen > Abrechnung die passende Stufe für Ihre Anforderungen.",
+  "returns.shortcut1": "Verwenden Sie Strg+S / Cmd+S, um E-Mail-Vorlagen während der Bearbeitung im visuellen Editor zu speichern.",
+  "returns.estimatedTime": "25",
   "returns.link": "/returns",
 
   "portals.title": "Portale",
@@ -213,6 +247,8 @@
   "portals.step6.description": "Prüfen und genehmigen oder lehnen Sie Lieferantenregistrierungen ab.",
   "portals.step6.detail": "Neue Lieferantenregistrierungen erscheinen in der Lieferantenliste mit dem Status 'Genehmigung ausstehend'. Klicken Sie auf 'Genehmigen', um den Lieferanten zu aktivieren (Status: aktiv, verifiziert: ja), oder auf 'Ablehnen' mit optionaler Begründung (Status: gesperrt). Genehmigte Lieferanten können dann Produkten zugeordnet werden.",
   "portals.tip1": "Passen Sie das Kundenportal-Branding an Ihre Marke an: Primärfarbe, Logo, Willkommensnachricht und Footer-Text können unabhängig vom Admin-Branding konfiguriert werden.",
+  "portals.important1": "Das Kundenportal erfordert sowohl ein Returns-Hub-Modul als auch das Kundenportal-Zusatzmodul. Das Lieferantenportal ist ein separates Zusatzmodul, das für Pro- und Enterprise-Tarife verfügbar ist.",
+  "portals.estimatedTime": "15",
   "portals.link": "/returns/settings",
 
   "settings.title": "Einstellungen",
@@ -236,6 +272,9 @@
   "settings.step6.description": "Erstellen und verwalten Sie API-Schlüssel für Integrationen.",
   "settings.step6.detail": "Unter Einstellungen → API-Keys können Sie Schlüssel für die programmatische Anbindung verwalten. API-Keys ermöglichen den Zugriff auf Ihre Daten über die Supabase API. Behandeln Sie API-Keys vertraulich und rotieren Sie sie regelmäßig. Abgelaufene oder kompromittierte Keys können jederzeit widerrufen werden.",
   "settings.tip1": "Richten Sie zuerst das Branding (Logo und Primärfarbe) ein — diese Einstellungen werden in allen Portalen, E-Mail-Vorlagen und der DPP-Ansicht verwendet und schaffen ein einheitliches Markenerlebnis.",
+  "settings.important1": "Ihr Tenant-Slug wird in allen Portal-URLs verwendet. Eine Änderung, nachdem Sie Portal-Links mit Kunden geteilt haben, macht bestehende Lesezeichen und gespeicherte Links unbrauchbar.",
+  "settings.note1": "Die Einrichtung einer eigenen Domain erfordert das Anlegen eines CNAME-DNS-Eintrags. Die DNS-Propagierung kann bis zu 48 Stunden dauern, bei den meisten Anbietern ist sie jedoch innerhalb von Minuten abgeschlossen.",
+  "settings.estimatedTime": "15",
   "settings.link": "/settings/company",
 
   "billing.title": "Abrechnung",
@@ -256,5 +295,8 @@
   "billing.step5.description": "Kontingente werden in Echtzeit geprüft und durchgesetzt.",
   "billing.step5.detail": "Beim Erreichen eines Limits (z.B. maximale Produktanzahl) wird die entsprechende Aktion blockiert und ein Upgrade-Hinweis angezeigt mit aktuellem Verbrauch und Limit. Überwachen Sie Ihren Verbrauch auf der Abrechnungsseite: Fortschrittsbalken zeigen die Auslastung an (gelb ab 80%, rot ab 100%). Betroffene Ressourcen: Produkte, Chargen/Produkt, Benutzer, Dokumente, Speicherplatz und AI-Credits.",
   "billing.tip1": "Starten Sie mit dem Free-Tarif, um Trackbliss kennenzulernen. Sie können jederzeit auf Pro oder Enterprise upgraden, wenn Sie mehr Kapazität oder Zusatzmodule benötigen — ein Downgrade ist ebenso jederzeit möglich.",
+  "billing.important1": "Monatliche AI-Credits werden zu Beginn jedes Abrechnungszeitraums zurückgesetzt und nicht übertragen. Gekaufte Credit-Pakete verfallen nie und werden erst verbraucht, wenn die monatlichen Credits aufgebraucht sind.",
+  "billing.note1": "Bei einem Downgrade Ihres Tarifs bleiben alle vorhandenen Daten erhalten. Lediglich das Erstellen neuer Ressourcen ist auf die Kontingente des niedrigeren Tarifs beschränkt.",
+  "billing.estimatedTime": "10",
   "billing.link": "/settings/billing"
 }
