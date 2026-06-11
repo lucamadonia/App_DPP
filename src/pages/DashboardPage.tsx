@@ -22,6 +22,7 @@ import { CommerceModuleCard } from '@/components/dashboard/CommerceModuleCard';
 import { CrmModuleCard } from '@/components/dashboard/CrmModuleCard';
 import { FeedbackModuleCard } from '@/components/dashboard/FeedbackModuleCard';
 import { CreditsQuotaCard } from '@/components/dashboard/CreditsQuotaCard';
+import { AgendaWidget } from '@/components/dashboard/AgendaWidget';
 import { LockedModuleCard } from '@/components/dashboard/LockedModuleCard';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 
@@ -185,6 +186,14 @@ export function DashboardPage() {
                 <CommerceModuleCard enabled={hasCommerce} className="h-full" />
               </motion.div>
             )}
+            <motion.div variants={prefersReduced ? undefined : gridItem} className="lg:col-span-4">
+              <AgendaWidget
+                hasReturns={hasReturns}
+                hasWarehouse={hasWarehouse}
+                hasFeedback={hasFeedback}
+                className="h-full"
+              />
+            </motion.div>
             <motion.div variants={prefersReduced ? undefined : gridItem} className="lg:col-span-4">
               <CreditsQuotaCard className="h-full" />
             </motion.div>

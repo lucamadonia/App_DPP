@@ -11,4 +11,5 @@ export {
   useCrmModuleStats,
   useFeedbackModuleStats,
   useUsageSummary,
+  useAgendaDeadlines,
 } from './useDashboardStats';

@@ -91,12 +91,21 @@ interface MiniStatProps {
 
 /** Flat label/value pair used inside module cards (lighter than full KPI cards). */
 export function MiniStat({ label, value, sublabel, accentClassName, animated = true }: MiniStatProps) {
+  const isText = typeof value === 'string';
   return (
-    <div className="min-w-0">
-      <div className={cn('text-xl font-bold tabular-nums tracking-tight sm:text-2xl', accentClassName)}>
+    <div className="min-w-0 overflow-hidden">
+      <div
+        className={cn(
+          'truncate font-bold tabular-nums tracking-tight',
+          // Formatted strings (currency etc.) can get long — render them a step smaller.
+          isText ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl',
+          accentClassName,
+        )}
+        title={isText ? value : undefined}
+      >
         {typeof value === 'number' && animated ? <AnimatedCounter value={value} /> : value}
       </div>
-      <p className="truncate text-xs text-muted-foreground">{label}</p>
+      <p className="truncate text-xs text-muted-foreground" title={label}>{label}</p>
       {sublabel && <p className="truncate text-[10px] text-muted-foreground/70">{sublabel}</p>}
     </div>
   );

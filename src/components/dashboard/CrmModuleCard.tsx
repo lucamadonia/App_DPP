@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react';
 import { ModuleCard, MiniStat, MiniStatGrid } from './ModuleCard';
 import { useCrmModuleStats } from '@/hooks/queries';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrencyCompact } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 
 export function CrmModuleCard({ enabled, className }: { enabled: boolean; className?: string }) {
@@ -27,7 +27,7 @@ export function CrmModuleCard({ enabled, className }: { enabled: boolean; classN
           <MiniStat label={t('New (30 days)')} value={data.newLast30d} />
           <MiniStat
             label={t('Avg. CLV')}
-            value={formatCurrency(data.avgCLV, 'EUR', locale)}
+            value={formatCurrencyCompact(data.avgCLV, 'EUR', locale)}
             animated={false}
           />
           <div className="min-w-0">

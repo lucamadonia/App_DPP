@@ -66,11 +66,11 @@ export function CreditsQuotaCard({ className }: { className?: string }) {
       <div className="space-y-4">
         {credits && (
           <div>
-            <div className="flex items-baseline justify-between">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-2xl font-bold tabular-nums tracking-tight sm:text-3xl">
                 {credits.totalAvailable}
               </span>
-              <span className="text-xs tabular-nums text-muted-foreground">
+              <span className="min-w-0 truncate text-xs tabular-nums text-muted-foreground">
                 {t('{{used}} of {{total}} used', {
                   used: credits.monthlyUsed,
                   total: credits.monthlyAllowance,

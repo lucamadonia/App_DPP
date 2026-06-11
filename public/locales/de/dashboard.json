@@ -106,5 +106,15 @@
   "{{used}} of {{total}} used": "{{used}} von {{total}} verbraucht",
   "Products quota": "Produkt-Kontingent",
   "Documents quota": "Dokumenten-Kontingent",
-  "Unlimited": "Unbegrenzt"
+  "Unlimited": "Unbegrenzt",
+  "Agenda & Tasks": "Termine & Pendenzen",
+  "EAR report {{month}}": "EAR-Meldung {{month}}",
+  "LUCID report {{month}}": "LUCID-Meldung {{month}}",
+  "Due today": "Heute fällig",
+  "Due tomorrow": "Morgen fällig",
+  "Due in {{count}} days": "Fällig in {{count}} Tagen",
+  "{{count}} days overdue": "{{count}} Tage überfällig",
+  "Open tasks": "Offene Pendenzen",
+  "Overdue tickets": "Überfällige Tickets",
+  "All caught up — nothing due": "Alles erledigt — nichts fällig"
 }

@@ -8,6 +8,9 @@ import { getMegaDashboardSnapshot } from '@/services/supabase/commerce-orders';
 import { getTenantCRMKPIs } from '@/services/supabase/crm-analytics';
 import { getReviewStats } from '@/services/supabase/feedback-reviews';
 import { getUsageSummary } from '@/services/supabase/billing';
+import { getComplianceSettings } from '@/services/supabase/compliance-settings';
+import { getPendingReportStatus } from '@/services/supabase/compliance-reports';
+import { getDocuments } from '@/services/supabase/documents';
 
 export const dashboardKeys = {
   all: ['dashboard'] as const,
@@ -18,6 +21,7 @@ export const dashboardKeys = {
   crm: () => [...dashboardKeys.all, 'crm'] as const,
   reviews: () => [...dashboardKeys.all, 'reviews'] as const,
   usage: () => [...dashboardKeys.all, 'usage'] as const,
+  agenda: () => [...dashboardKeys.all, 'agenda'] as const,
 };
 
 /** Returns Hub + ticket stats bundled into a single widget query. */
@@ -96,5 +100,66 @@ export function useUsageSummary() {
     queryKey: dashboardKeys.usage(),
     queryFn: getUsageSummary,
     staleTime: 2 * 60_000,
+  });
+}
+
+export interface AgendaFiling {
+  kind: 'ear' | 'lucid';
+  /** First day of the month being reported, ISO date */
+  reportMonth: string;
+  /** Filing deadline (the 15th), ISO datetime */
+  dueDate: string;
+  overdue: boolean;
+}
+
+export interface AgendaDocument {
+  id: string;
+  name: string;
+  validUntil: string;
+  expired: boolean;
+}
+
+/** Upcoming deadlines: EAR/LUCID monthly filings + expiring/expired documents. */
+export function useAgendaDeadlines() {
+  return useQuery({
+    queryKey: dashboardKeys.agenda(),
+    queryFn: async () => {
+      const [settings, status, docs] = await Promise.all([
+        getComplianceSettings(),
+        getPendingReportStatus(),
+        getDocuments(),
+      ]);
+
+      // Filings are due on the 15th of the current month (see daysUntilDeadline).
+      const now = new Date();
+      const due15 = new Date(now.getFullYear(), now.getMonth(), 15, 23, 59, 59, 999);
+      const overdue = now.getTime() > due15.getTime();
+      const dueDate = due15.toISOString();
+
+      const earActive = settings.ear?.enabled !== false && !!settings.ear?.weeeNumber;
+      const lucidActive = settings.lucid?.enabled !== false && !!settings.lucid?.lucidNumber;
+
+      const filings: AgendaFiling[] = [];
+      if (earActive && (status.ear.status === 'missing' || status.ear.status === 'draft')) {
+        filings.push({ kind: 'ear', reportMonth: status.ear.reportMonth, dueDate, overdue });
+      }
+      if (lucidActive && (status.lucid.status === 'missing' || status.lucid.status === 'draft')) {
+        filings.push({ kind: 'lucid', reportMonth: status.lucid.reportMonth, dueDate, overdue });
+      }
+
+      const documents: AgendaDocument[] = docs
+        .filter((d) => d.validUntil && (d.status === 'expiring' || d.status === 'expired'))
+        .sort((a, b) => (a.validUntil || '').localeCompare(b.validUntil || ''))
+        .slice(0, 6)
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          validUntil: d.validUntil as string,
+          expired: d.status === 'expired',
+        }));
+
+      return { filings, documents };
+    },
+    staleTime: 5 * 60_000,
   });
 }

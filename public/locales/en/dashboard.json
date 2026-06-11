@@ -106,5 +106,15 @@
   "{{used}} of {{total}} used": "{{used}} of {{total}} used",
   "Products quota": "Products quota",
   "Documents quota": "Documents quota",
-  "Unlimited": "Unlimited"
+  "Unlimited": "Unlimited",
+  "Agenda & Tasks": "Agenda & Tasks",
+  "EAR report {{month}}": "EAR report {{month}}",
+  "LUCID report {{month}}": "LUCID report {{month}}",
+  "Due today": "Due today",
+  "Due tomorrow": "Due tomorrow",
+  "Due in {{count}} days": "Due in {{count}} days",
+  "{{count}} days overdue": "{{count}} days overdue",
+  "Open tasks": "Open tasks",
+  "Overdue tickets": "Overdue tickets",
+  "All caught up — nothing due": "All caught up — nothing due"
 }
