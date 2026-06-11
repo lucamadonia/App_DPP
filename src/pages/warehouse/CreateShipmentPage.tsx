@@ -268,6 +268,10 @@ export function CreateShipmentPage() {
   const goToStep = (next: number) => {
     setDirection(next > step ? 'forward' : 'backward');
     prevStepRef.current = step;
+    // Reset the recipient autocomplete so returning to the recipient step
+    // never shows a stale search box / results dropdown.
+    setRecipientSearch('');
+    setRecipientResults([]);
     setStep(next);
   };
 

@@ -168,13 +168,17 @@ export function GoodsReceiptPage() {
       setLoadingCapacity(true);
       getLocationUsedVolumeM3(locationId)
         .then(({ totalM3, coverage }) => { setLocationUsedM3(totalM3); setVolumeCoverage(coverage); })
-        .catch(() => { setLocationUsedM3(null); setVolumeCoverage(1); })
+        .catch(() => {
+          setLocationUsedM3(null);
+          setVolumeCoverage(1);
+          toast.error(t('Could not load location capacity'));
+        })
         .finally(() => setLoadingCapacity(false));
     } else {
       setLocationUsedM3(null);
       setVolumeCoverage(1);
     }
-  }, [locationId]);
+  }, [locationId, t]);
 
   const handleSubmit = async () => {
     if (!productId || !batchId || !locationId || quantity <= 0) return;

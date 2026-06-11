@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/ui/state-feedback';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
 import { getRhWorkflowRules, createRhWorkflowRule, updateRhWorkflowRule, deleteRhWorkflowRule } from '@/services/supabase';
 import type { RhWorkflowRule } from '@/types/returns-hub';
+import { toast } from 'sonner';
 
 function isGraphBased(rule: RhWorkflowRule): boolean {
   return (rule.conditions as { _graphVersion?: number })?._graphVersion === 2;
@@ -43,21 +44,35 @@ export function WorkflowRulesPage() {
 
   useEffect(() => { load(); }, []);
 
+  const showActionError = (err: unknown) => {
+    toast.error(`${t('Action failed')}: ${err instanceof Error ? err.message : String(err)}`);
+  };
+
   const handleCreate = async (rule: Omit<RhWorkflowRule, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>) => {
     setSaving(true);
-    await createRhWorkflowRule(rule);
-    setCreating(false);
-    setSaving(false);
-    await load();
+    try {
+      await createRhWorkflowRule(rule);
+      setCreating(false);
+      await load();
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpdate = async (rule: Omit<RhWorkflowRule, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>) => {
     if (!editing) return;
     setSaving(true);
-    await updateRhWorkflowRule(editing.id, rule);
-    setEditing(null);
-    setSaving(false);
-    await load();
+    try {
+      await updateRhWorkflowRule(editing.id, rule);
+      setEditing(null);
+      await load();
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggle = async (id: string, active: boolean) => {

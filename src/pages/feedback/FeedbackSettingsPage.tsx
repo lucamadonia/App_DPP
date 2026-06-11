@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, Check, Code2, Settings, Star, Lightbulb, Mail } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import type { FeedbackSettings, FeedbackWidgetMode } from '@/types/feedback';
 import { toast } from 'sonner';
 
 export function FeedbackSettingsPage() {
+  const { t } = useTranslation('warehouse');
   const [settings, setSettings] = useState<FeedbackSettings>(DEFAULT_FEEDBACK_SETTINGS);
   const [tenantSlug, setTenantSlug] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,9 +47,9 @@ export function FeedbackSettingsPage() {
     setSettings(next);
     const res = await updateFeedbackSettings(updates);
     if (!res.success) {
-      toast.error(res.error || 'Speichern fehlgeschlagen');
+      toast.error(res.error || t('Saving failed'));
     } else {
-      toast.success('Einstellung gespeichert');
+      toast.success(t('Setting saved'));
     }
   }
 
@@ -55,8 +57,8 @@ export function FeedbackSettingsPage() {
     const merged = { ...settings.widget, ...updates };
     setSettings(prev => ({ ...prev, widget: merged }));
     const res = await updateFeedbackSettings({ widget: merged });
-    if (!res.success) toast.error(res.error || 'Speichern fehlgeschlagen');
-    else toast.success('Einstellung gespeichert');
+    if (!res.success) toast.error(res.error || t('Saving failed'));
+    else toast.success(t('Setting saved'));
   }
 
   if (loading) return <ShimmerSkeleton className="h-96 w-full" />;

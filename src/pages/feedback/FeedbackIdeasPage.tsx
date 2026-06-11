@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, X, Lightbulb, Sparkles, ChevronUp, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import { StarRating } from '@/components/feedback/StarRating';
 import { cn } from '@/lib/utils';
 
 export function FeedbackIdeasPage() {
+  const { t } = useTranslation('warehouse');
   const [tab, setTab] = useState<FeedbackIdeaStatus>('pending_review');
   const [ideas, setIdeas] = useState<FeedbackIdea[]>([]);
   const [stats, setStats] = useState<IdeaStats | null>(null);
@@ -52,7 +54,7 @@ export function FeedbackIdeasPage() {
       await publishIdea(idea.id, {
         adminResponse: responseDraft[idea.id] || idea.adminResponse,
       });
-      toast.success('Idee veröffentlicht');
+      toast.success(t('Idea published'));
       reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -62,7 +64,7 @@ export function FeedbackIdeasPage() {
   async function handleReject(idea: FeedbackIdea) {
     try {
       await rejectIdea(idea.id);
-      toast.success('Idee abgelehnt');
+      toast.success(t('Idea rejected'));
       reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -72,7 +74,7 @@ export function FeedbackIdeasPage() {
   async function handleMoveStatus(idea: FeedbackIdea, status: FeedbackIdeaStatus, roadmap?: FeedbackIdeaRoadmapStatus) {
     try {
       await setIdeaStatus(idea.id, status, roadmap);
-      toast.success('Status aktualisiert');
+      toast.success(t('Status updated'));
       reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -84,7 +86,7 @@ export function FeedbackIdeasPage() {
     if (text == null) return;
     try {
       await setIdeaAdminResponse(idea.id, text);
-      toast.success('Antwort gespeichert');
+      toast.success(t('Response saved'));
       reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));

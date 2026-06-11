@@ -35,6 +35,7 @@ import type { RhReturn, RhReturnItem, RhReturnTimeline as TimelineType, ItemCond
 import type { Profile } from '@/services/supabase/profiles';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // ============================================
 // WORKFLOW STAGE DEFINITIONS
@@ -182,138 +183,182 @@ export function ReturnDetailPage() {
   // ACTION HANDLERS
   // ============================================
 
+  const showActionError = (err: unknown) => {
+    toast.error(`${t('Action failed')}: ${err instanceof Error ? err.message : String(err)}`);
+  };
+
   const handleStatusChange = async (status: string, comment?: string) => {
     if (!id) return;
     setActionLoading(true);
-    await updateReturnStatus(id, status as ReturnStatus, comment);
-    await reload();
-    // Auto-switch tab after status change
-    const idx = getStageIndex(status as ReturnStatus);
-    if (idx >= 0) setActiveTab(WORKFLOW_STAGES[idx].id);
-    setActionLoading(false);
+    try {
+      await updateReturnStatus(id, status as ReturnStatus, comment);
+      await reload();
+      // Auto-switch tab after status change
+      const idx = getStageIndex(status as ReturnStatus);
+      if (idx >= 0) setActiveTab(WORKFLOW_STAGES[idx].id);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleProcessRefund = async () => {
     if (!id || !refundAmount) return;
     setActionLoading(true);
-    await updateReturn(id, {
-      refundAmount: Number(refundAmount),
-      refundMethod: refundMethod,
-      refundedAt: new Date().toISOString(),
-    });
-    await handleStatusChange('REFUND_COMPLETED', `${t('Refund processed')}: €${refundAmount}`);
-    setActionLoading(false);
+    try {
+      await updateReturn(id, {
+        refundAmount: Number(refundAmount),
+        refundMethod: refundMethod,
+        refundedAt: new Date().toISOString(),
+      });
+      await handleStatusChange('REFUND_COMPLETED', `${t('Refund processed')}: €${refundAmount}`);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleSaveInspection = async () => {
     if (!id || !inspCondition) return;
     setInspSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const result = {
-      condition: inspCondition as ItemCondition,
-      notes: inspNotes || undefined,
-      inspectedBy: user?.id,
-      inspectedAt: new Date().toISOString(),
-    };
-    await updateReturn(id, { inspectionResult: result });
-    await reload();
-    setInspSaving(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const result = {
+        condition: inspCondition as ItemCondition,
+        notes: inspNotes || undefined,
+        inspectedBy: user?.id,
+        inspectedAt: new Date().toISOString(),
+      };
+      await updateReturn(id, { inspectionResult: result });
+      await reload();
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setInspSaving(false);
+    }
   };
 
   const handleInspectionApprove = async () => {
     if (!id || !inspCondition) return;
     setInspSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const result = {
-      condition: inspCondition as ItemCondition,
-      notes: inspNotes || undefined,
-      approved: true,
-      inspectedBy: user?.id,
-      inspectedAt: new Date().toISOString(),
-    };
-    await updateReturn(id, { inspectionResult: result });
-    await handleStatusChange('REFUND_PROCESSING', t('Inspection approved, proceeding to refund'));
-    setInspSaving(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const result = {
+        condition: inspCondition as ItemCondition,
+        notes: inspNotes || undefined,
+        approved: true,
+        inspectedBy: user?.id,
+        inspectedAt: new Date().toISOString(),
+      };
+      await updateReturn(id, { inspectionResult: result });
+      await handleStatusChange('REFUND_PROCESSING', t('Inspection approved, proceeding to refund'));
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setInspSaving(false);
+    }
   };
 
   const handleInspectionDeduction = async () => {
     if (!id || !inspCondition || !deductionAmount || !deductionReason.trim()) return;
     setInspSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const deduction = Number(deductionAmount);
-    const originalAmount = returnData?.refundAmount || 0;
-    const finalAmount = Math.max(0, originalAmount - deduction);
-    const result = {
-      condition: inspCondition as ItemCondition,
-      notes: inspNotes || undefined,
-      approved: true,
-      deductionAmount: deduction,
-      deductionReason: deductionReason.trim(),
-      inspectedBy: user?.id,
-      inspectedAt: new Date().toISOString(),
-    };
-    await updateReturn(id, { inspectionResult: result, refundAmount: finalAmount });
-    await handleStatusChange('REFUND_PROCESSING', t('Inspection approved with deductions, proceeding to refund'));
-    setDeductionDialogOpen(false);
-    setDeductionAmount('');
-    setDeductionReason('');
-    setInspSaving(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const deduction = Number(deductionAmount);
+      const originalAmount = returnData?.refundAmount || 0;
+      const finalAmount = Math.max(0, originalAmount - deduction);
+      const result = {
+        condition: inspCondition as ItemCondition,
+        notes: inspNotes || undefined,
+        approved: true,
+        deductionAmount: deduction,
+        deductionReason: deductionReason.trim(),
+        inspectedBy: user?.id,
+        inspectedAt: new Date().toISOString(),
+      };
+      await updateReturn(id, { inspectionResult: result, refundAmount: finalAmount });
+      await handleStatusChange('REFUND_PROCESSING', t('Inspection approved with deductions, proceeding to refund'));
+      setDeductionDialogOpen(false);
+      setDeductionAmount('');
+      setDeductionReason('');
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setInspSaving(false);
+    }
   };
 
   const handleInspectionReject = async () => {
     if (!id || !inspCondition || !inspRejectReason.trim()) return;
     setInspSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const result = {
-      condition: inspCondition as ItemCondition,
-      notes: inspNotes || undefined,
-      approved: false,
-      rejectedAfterInspection: true,
-      rejectionReason: inspRejectReason.trim(),
-      returnToCustomer: inspReturnToCustomer,
-      inspectedBy: user?.id,
-      inspectedAt: new Date().toISOString(),
-    };
-    await updateReturn(id, { inspectionResult: result });
-    await handleStatusChange('REJECTED', `${t('Rejected after inspection')}: ${inspRejectReason.trim()}`);
-    if (inspReturnToCustomer) {
-      await addTimelineEntry({
-        returnId: id,
-        status: 'REJECTED',
-        comment: t('Items will be returned to customer'),
-        actorType: 'system',
-        metadata: { type: 'return_to_customer' },
-      });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const result = {
+        condition: inspCondition as ItemCondition,
+        notes: inspNotes || undefined,
+        approved: false,
+        rejectedAfterInspection: true,
+        rejectionReason: inspRejectReason.trim(),
+        returnToCustomer: inspReturnToCustomer,
+        inspectedBy: user?.id,
+        inspectedAt: new Date().toISOString(),
+      };
+      await updateReturn(id, { inspectionResult: result });
+      await handleStatusChange('REJECTED', `${t('Rejected after inspection')}: ${inspRejectReason.trim()}`);
+      if (inspReturnToCustomer) {
+        await addTimelineEntry({
+          returnId: id,
+          status: 'REJECTED',
+          comment: t('Items will be returned to customer'),
+          actorType: 'system',
+          metadata: { type: 'return_to_customer' },
+        });
+      }
+      setInspRejectDialogOpen(false);
+      setInspRejectReason('');
+      setInspReturnToCustomer(false);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setInspSaving(false);
     }
-    setInspRejectDialogOpen(false);
-    setInspRejectReason('');
-    setInspReturnToCustomer(false);
-    setInspSaving(false);
   };
 
   const handleSaveNotes = async () => {
     if (!id) return;
     setNotesSaving(true);
-    await updateReturn(id, { internalNotes: notesValue || undefined });
-    const ret = await getReturn(id);
-    setReturnData(ret);
-    setEditingNotes(false);
-    setNotesSaving(false);
+    try {
+      await updateReturn(id, { internalNotes: notesValue || undefined });
+      const ret = await getReturn(id);
+      setReturnData(ret);
+      setEditingNotes(false);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setNotesSaving(false);
+    }
   };
 
   const handlePriorityChange = async (priority: ReturnPriority) => {
     if (!id || !returnData || priority === returnData.priority) return;
     setActionLoading(true);
-    await updateReturn(id, { priority });
-    await addTimelineEntry({
-      returnId: id,
-      status: returnData.status,
-      comment: `${t('Priority changed to')} ${t(priority.charAt(0).toUpperCase() + priority.slice(1))}`,
-      actorType: 'agent',
-      metadata: { type: 'priority_change', from: returnData.priority, to: priority },
-    });
-    await reload();
-    setActionLoading(false);
+    try {
+      await updateReturn(id, { priority });
+      await addTimelineEntry({
+        returnId: id,
+        status: returnData.status,
+        comment: `${t('Priority changed to')} ${t(priority.charAt(0).toUpperCase() + priority.slice(1))}`,
+        actorType: 'agent',
+        metadata: { type: 'priority_change', from: returnData.priority, to: priority },
+      });
+      await reload();
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleAssigneeChange = async (assignedTo: string) => {
@@ -321,55 +366,75 @@ export function ReturnDetailPage() {
     const value = assignedTo === '__unassigned' ? undefined : assignedTo;
     if (value === (returnData.assignedTo || undefined)) return;
     setActionLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await updateReturn(id, { assignedTo: value || '' as any });
-    const assigneeName = value ? profiles.find(p => p.id === value)?.name || value : t('Unassigned');
-    await addTimelineEntry({
-      returnId: id,
-      status: returnData.status,
-      comment: `${t('Assigned to')} ${assigneeName}`,
-      actorType: 'agent',
-      metadata: { type: 'assignee_change', to: value || null },
-    });
-    await reload();
-    setActionLoading(false);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateReturn(id, { assignedTo: value || '' as any });
+      const assigneeName = value ? profiles.find(p => p.id === value)?.name || value : t('Unassigned');
+      await addTimelineEntry({
+        returnId: id,
+        status: returnData.status,
+        comment: `${t('Assigned to')} ${assigneeName}`,
+        actorType: 'agent',
+        metadata: { type: 'assignee_change', to: value || null },
+      });
+      await reload();
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleAddComment = async () => {
     if (!id || !returnData || !timelineComment.trim()) return;
     setCommentSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    await addTimelineEntry({
-      returnId: id,
-      status: returnData.status,
-      comment: timelineComment.trim(),
-      actorId: user?.id,
-      actorType: 'agent',
-      metadata: { type: 'manual_comment' },
-    });
-    const tl = await getReturnTimeline(id);
-    setTimeline(tl);
-    setTimelineComment('');
-    setCommentSaving(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await addTimelineEntry({
+        returnId: id,
+        status: returnData.status,
+        comment: timelineComment.trim(),
+        actorId: user?.id,
+        actorType: 'agent',
+        metadata: { type: 'manual_comment' },
+      });
+      const tl = await getReturnTimeline(id);
+      setTimeline(tl);
+      setTimelineComment('');
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setCommentSaving(false);
+    }
   };
 
   const handleCancel = async () => {
     if (!id) return;
     setActionLoading(true);
-    await cancelReturn(id, cancelReason || undefined);
-    await reload();
-    setActionLoading(false);
-    setCancelDialogOpen(false);
-    setCancelReason('');
+    try {
+      await cancelReturn(id, cancelReason || undefined);
+      await reload();
+      setCancelDialogOpen(false);
+      setCancelReason('');
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleReject = async () => {
     if (!id || !rejectReason.trim()) return;
     setActionLoading(true);
-    await handleStatusChange('REJECTED', rejectReason.trim());
-    setActionLoading(false);
-    setRejectDialogOpen(false);
-    setRejectReason('');
+    try {
+      await handleStatusChange('REJECTED', rejectReason.trim());
+      setRejectDialogOpen(false);
+      setRejectReason('');
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // ============================================

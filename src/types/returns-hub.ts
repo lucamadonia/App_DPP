@@ -27,6 +27,16 @@ export type ReturnPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type DesiredSolution = 'refund' | 'exchange' | 'voucher' | 'repair';
 export type ItemCondition = 'new' | 'like_new' | 'used' | 'damaged' | 'defective';
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed';
+
+/** English display labels for ticket statuses — pass through t() for i18n (keys exist in returns.json). */
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  waiting: 'Waiting',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
 export type TicketSenderType = 'agent' | 'customer' | 'system';
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'websocket';
 export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'failed';

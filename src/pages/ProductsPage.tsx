@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
@@ -170,6 +170,7 @@ export function ProductsPage() {
   const { t: tCommon } = useTranslation('common');
   const { t: tBilling } = useTranslation('billing');
   const locale = useLocale();
+  const navigate = useNavigate();
   const { entitlements } = useBilling();
   const { data: products = [], isLoading, isError, refetch: refetchProducts } = useProducts();
   const isMobile = useIsMobile();
@@ -509,7 +510,7 @@ export function ProductsPage() {
               title={t('No products available')}
               description={t('Create your first product to get started with Trackbliss.')}
               actionLabel={t('Create First Product')}
-              onAction={() => (window.location.href = '/products/new')}
+              onAction={() => navigate('/products/new')}
             />
           </CardContent>
         </Card>

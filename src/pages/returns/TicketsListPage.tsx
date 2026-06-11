@@ -34,14 +34,11 @@ import { ErrorState } from '@/components/ui/state-feedback';
 import { PaginationBar } from '@/components/returns/PaginationBar';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, fadeIn, useReducedMotion } from '@/lib/motion';
-import type {
-  RhTicket, RhCustomer, TicketStatus, TicketStats, TicketsFilter, TicketSortField,
-  PaginatedResult,
+import {
+  TICKET_STATUS_LABELS,
+  type RhTicket, type RhCustomer, type TicketStatus, type TicketStats, type TicketsFilter, type TicketSortField,
+  type PaginatedResult,
 } from '@/types/returns-hub';
-
-const statusLabels: Record<TicketStatus, string> = {
-  open: 'Open', in_progress: 'In Progress', waiting: 'Waiting', resolved: 'Resolved', closed: 'Closed',
-};
 
 export function TicketsListPage() {
   const { t, i18n } = useTranslation('returns');
@@ -342,8 +339,8 @@ export function TicketsListPage() {
               <Select onValueChange={(v) => handleBulkStatus(v as TicketStatus)}>
                 <SelectTrigger className="w-full sm:w-36 h-8"><SelectValue placeholder={t('Change Status')} /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(statusLabels) as TicketStatus[]).map(s => (
-                    <SelectItem key={s} value={s}>{t(statusLabels[s])}</SelectItem>
+                  {(Object.keys(TICKET_STATUS_LABELS) as TicketStatus[]).map(s => (
+                    <SelectItem key={s} value={s}>{t(TICKET_STATUS_LABELS[s])}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -439,7 +436,7 @@ export function TicketsListPage() {
                                 ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
                                 ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-600'
-                              }`}>{t(statusLabels[ticket.status])}</Badge>
+                              }`}>{t(TICKET_STATUS_LABELS[ticket.status])}</Badge>
                               <TicketSLABadge ticket={ticket} className="text-[10px]" />
                               <span className="text-xs text-muted-foreground ml-auto">
                                 {relativeTime(ticket.createdAt, i18n.language)}
@@ -508,7 +505,7 @@ export function TicketsListPage() {
                                 ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
                                 ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-600'
-                              }`}>{t(statusLabels[ticket.status])}</Badge>
+                              }`}>{t(TICKET_STATUS_LABELS[ticket.status])}</Badge>
                             </td>
                             <td className="py-3"><TicketPriorityBadge priority={ticket.priority} /></td>
                             <td className="py-3" onClick={(e) => e.stopPropagation()}>
@@ -545,7 +542,7 @@ export function TicketsListPage() {
                                 ticket.status === 'waiting' ? 'bg-purple-100 text-purple-800' :
                                 ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-600'
-                              }`}>{t(statusLabels[ticket.status])}</Badge>
+                              }`}>{t(TICKET_STATUS_LABELS[ticket.status])}</Badge>
                             </td>
                             <td className="py-3"><TicketPriorityBadge priority={ticket.priority} /></td>
                             <td className="py-3" onClick={(e) => e.stopPropagation()}>

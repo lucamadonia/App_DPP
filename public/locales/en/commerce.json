@@ -140,6 +140,7 @@
   "DPP linked": "DPP linked",
   "Loading…": "Loading…",
   "No orders match these filters.": "No orders match these filters.",
+  "Failed to load data": "Failed to load data",
   "Import existing Shopify orders": "Import existing Shopify orders",
   "Importing…": "Importing…",
   "Imported {{n}} Shopify orders ({{linked}} DPP-linked)": "Imported {{n}} Shopify orders ({{linked}} DPP-linked)",

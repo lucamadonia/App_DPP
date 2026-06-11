@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -149,8 +149,13 @@ export function LocationDetailPage() {
   const [editForm, setEditForm] = useState<WhLocationInput>({ name: '' });
 
   // ------- Load -------
+  // In-flight guard (ref, not state, to avoid re-renders and stale-closure
+  // races) — prevents overlapping loads of the same location from clobbering
+  // each other. Keyed by id so navigating to another location is never blocked.
+  const loadInFlightRef = useRef<string | null>(null);
   const loadAll = async () => {
-    if (!id) return;
+    if (!id || loadInFlightRef.current === id) return;
+    loadInFlightRef.current = id;
     try {
       setLoading(true);
       setError(null);
@@ -171,6 +176,7 @@ export function LocationDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
     } finally {
+      loadInFlightRef.current = null;
       setLoading(false);
     }
   };

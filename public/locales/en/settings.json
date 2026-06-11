@@ -825,5 +825,15 @@
   "Dark Band": "Dark Band",
   "Show Powered By": "Show Powered By",
 
-  "Components": "Components"
+  "Components": "Components",
+  "Error saving": "Error saving",
+  "Error deleting": "Error deleting",
+  "Error assigning product": "Error assigning product",
+  "Error generating invitation": "Error generating invitation",
+  "Error approving supplier": "Error approving supplier",
+  "Error rejecting supplier": "Error rejecting supplier",
+  "Could not copy link to clipboard": "Could not copy link to clipboard",
+  "Delete supplier?": "Delete supplier?",
+  "Really delete this supplier? All product assignments will also be removed.": "Really delete this supplier? All product assignments will also be removed.",
+  "Delete entry?": "Delete entry?"
 }

@@ -1,14 +1,16 @@
 /**
  * Global Cmd+K / Ctrl+K command palette.
- * Jumps to customers by name/email/company and common CRM pages.
+ * Jumps to customers by name/email/company and common app pages.
  */
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
   Users, LayoutDashboard, AlertTriangle, Sparkles, Package, RotateCcw,
-  Warehouse, ArrowRight, Search,
+  Warehouse, ArrowRight, Search, FolderArchive, QrCode, ShieldCheck,
+  Handshake, Ticket, Store, Heart, MessageCircleHeart, Settings, CreditCard,
 } from 'lucide-react';
 import { getCustomerList, type CrmCustomer } from '@/services/supabase/crm-analytics';
 
@@ -17,6 +19,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [customers, setCustomers] = useState<CrmCustomer[]>([]);
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -61,7 +64,7 @@ export function CommandPalette() {
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder="Kunde suchen oder Seite wechseln ..."
+              placeholder={t('Search customers or switch pages...')}
               className="h-10 border-0 focus-visible:ring-0 bg-transparent flex-1"
             />
             <kbd className="hidden sm:inline-flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -69,10 +72,10 @@ export function CommandPalette() {
             </kbd>
           </div>
           <CommandList className="max-h-[400px]">
-            <CommandEmpty>Keine Treffer.</CommandEmpty>
+            <CommandEmpty>{t('No results')}</CommandEmpty>
 
             {filtered.length > 0 && (
-              <CommandGroup heading="Kunden">
+              <CommandGroup heading={t('Customers')}>
                 {filtered.map(c => (
                   <CommandItem
                     key={c.id}
@@ -100,14 +103,25 @@ export function CommandPalette() {
               </CommandGroup>
             )}
 
-            <CommandGroup heading="Navigation">
-              <CmdNav icon={LayoutDashboard} label="CRM Dashboard" onSelect={() => go('/crm')} />
-              <CmdNav icon={Users} label="Kundenliste" onSelect={() => go('/crm/customers')} />
-              <CmdNav icon={AlertTriangle} label="Gefährdete Kunden" onSelect={() => go('/crm/customers?segment=at_risk')} />
-              <CmdNav icon={Sparkles} label="Top-Kunden (CLV)" onSelect={() => go('/crm/customers?sort=total_spent-desc')} />
-              <CmdNav icon={RotateCcw} label="Retouren" onSelect={() => go('/returns')} />
-              <CmdNav icon={Warehouse} label="Lager" onSelect={() => go('/warehouse')} />
-              <CmdNav icon={Package} label="Shipments" onSelect={() => go('/warehouse/shipments')} />
+            <CommandGroup heading={t('Navigation')}>
+              <CmdNav icon={LayoutDashboard} label={t('Dashboard')} onSelect={() => go('/')} />
+              <CmdNav icon={Package} label={t('Products')} onSelect={() => go('/products')} />
+              <CmdNav icon={FolderArchive} label={t('Documents')} onSelect={() => go('/documents')} />
+              <CmdNav icon={QrCode} label={t('DPP')} onSelect={() => go('/dpp')} />
+              <CmdNav icon={ShieldCheck} label={t('Compliance')} onSelect={() => go('/compliance')} />
+              <CmdNav icon={Handshake} label={t('Suppliers')} onSelect={() => go('/suppliers')} />
+              <CmdNav icon={RotateCcw} label={t('Returns')} onSelect={() => go('/returns')} />
+              <CmdNav icon={Ticket} label={t('Tickets')} onSelect={() => go('/returns/tickets')} />
+              <CmdNav icon={Warehouse} label={t('Warehouse')} onSelect={() => go('/warehouse')} />
+              <CmdNav icon={Store} label={t('Commerce')} onSelect={() => go('/commerce')} />
+              <CmdNav icon={Heart} label={t('CRM')} onSelect={() => go('/crm')} />
+              <CmdNav icon={MessageCircleHeart} label={t('Feedback')} onSelect={() => go('/feedback')} />
+              <CmdNav icon={Settings} label={t('Settings')} onSelect={() => go('/settings/company')} />
+              <CmdNav icon={CreditCard} label={t('Billing')} onSelect={() => go('/settings/billing')} />
+              <CmdNav icon={Users} label={t('Customers')} onSelect={() => go('/crm/customers')} />
+              <CmdNav icon={AlertTriangle} label={t('At-risk customers')} onSelect={() => go('/crm/customers?segment=at_risk')} />
+              <CmdNav icon={Sparkles} label={t('Top customers')} onSelect={() => go('/crm/customers?sort=total_spent-desc')} />
+              <CmdNav icon={Package} label={t('Shipments')} onSelect={() => go('/warehouse/shipments')} />
             </CommandGroup>
           </CommandList>
         </Command>

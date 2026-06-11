@@ -377,5 +377,9 @@
   "Consumer OFF": "Verbraucher AUS",
   "Customs ON": "Zoll AN",
   "Customs OFF": "Zoll AUS",
-  "Configure field visibility independently": "Konfiguriere Feld-Sichtbarkeit unabhängig"
+  "Configure field visibility independently": "Konfiguriere Feld-Sichtbarkeit unabhängig",
+  "Failed to load products": "Produkte konnten nicht geladen werden",
+  "Failed to load batches": "Chargen konnten nicht geladen werden",
+  "Logo file must be under 500 KB": "Logo-Datei muss kleiner als 500 KB sein",
+  "Error saving settings": "Fehler beim Speichern der Einstellungen"
 }

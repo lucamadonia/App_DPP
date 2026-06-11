@@ -377,5 +377,9 @@
   "Consumer OFF": "Consumer OFF",
   "Customs ON": "Customs ON",
   "Customs OFF": "Customs OFF",
-  "Configure field visibility independently": "Configure field visibility independently"
+  "Configure field visibility independently": "Configure field visibility independently",
+  "Failed to load products": "Failed to load products",
+  "Failed to load batches": "Failed to load batches",
+  "Logo file must be under 500 KB": "Logo file must be under 500 KB",
+  "Error saving settings": "Error saving settings"
 }

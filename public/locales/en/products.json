@@ -792,5 +792,12 @@
   "pictograms.tryDifferentFilter": "Try adjusting your search or filters",
   "pictograms.myPictograms": "My Pictograms",
   "pictograms.builtIn": "Built-in",
-  "pictograms.managePictograms": "Manage Pictograms"
+  "pictograms.managePictograms": "Manage Pictograms",
+  "Delete batch?": "Delete batch?",
+  "Are you sure you want to delete this batch?": "Are you sure you want to delete this batch?",
+  "Batch deleted": "Batch deleted",
+  "Error deleting batch: {{error}}": "Error deleting batch: {{error}}",
+  "Batch not found": "Batch not found",
+  "The batch does not exist or you do not have access.": "The batch does not exist or you do not have access.",
+  "Failed to create supplier": "Failed to create supplier"
 }

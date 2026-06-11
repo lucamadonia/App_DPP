@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mail, Copy, Check, Send, X, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import type { FeedbackIdeaInvite } from '@/types/feedback';
 import { toast } from 'sonner';
 
 export function FeedbackInvitesPage() {
+  const { t } = useTranslation('warehouse');
   const [invites, setInvites] = useState<FeedbackIdeaInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -32,7 +34,7 @@ export function FeedbackInvitesPage() {
 
   async function handleCancel(id: string) {
     await cancelIdeaInvite(id);
-    toast.success('Einladung widerrufen');
+    toast.success(t('Invitation revoked'));
     reload();
   }
 
@@ -141,6 +143,7 @@ function NewInviteDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation('warehouse');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -164,7 +167,7 @@ function NewInviteDialog({
     try {
       const res = await createIdeaInvite({ partnerName: name.trim(), partnerEmail: email.trim() });
       setCreatedUrl(res.inviteUrl);
-      toast.success('Einladung erstellt');
+      toast.success(t('Invitation created'));
       onCreated();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));

@@ -149,5 +149,18 @@
   "No matching entries": "No matching entries",
   "Page {{page}} of {{total}}": "Page {{page}} of {{total}}",
   "{{n}} entries": "{{n}} entries",
-  "Previous": "Previous"
+  "Previous": "Previous",
+
+  "Search customers or switch pages...": "Search customers or switch pages...",
+  "Navigation": "Navigation",
+  "DPP": "DPP",
+  "Warehouse": "Warehouse",
+  "Commerce": "Commerce",
+  "CRM": "CRM",
+  "Feedback": "Feedback",
+  "Billing": "Billing",
+  "Shipments": "Shipments",
+  "At-risk customers": "At-risk customers",
+  "Top customers": "Top customers",
+  "Requires an upgrade": "Requires an upgrade"
 }

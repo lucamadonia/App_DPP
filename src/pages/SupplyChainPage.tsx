@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Plus,
   LayoutGrid,
@@ -40,6 +41,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type ViewMode = 'cards' | 'table' | 'timeline';
 
@@ -64,6 +75,7 @@ export function SupplyChainPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [editingEntry, setEditingEntry] = useState<SupplyChainEntry | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -200,17 +212,23 @@ export function SupplyChainPage() {
     setIsLoading(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('Are you sure you want to delete this entry?'))) return;
+  const handleDelete = (id: string) => {
+    setEntryToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!entryToDelete) return;
     setIsLoading(true);
     try {
-      const result = await deleteSupplyChainEntry(id);
+      const result = await deleteSupplyChainEntry(entryToDelete);
       if (!result.success) throw new Error('Deletion failed');
       handleRefresh();
     } catch (error) {
       console.error('Error deleting:', error);
+      toast.error(t('Error deleting'));
     }
     setIsLoading(false);
+    setEntryToDelete(null);
   };
 
   const isEmpty = supplyChainEntries.length === 0 && !isLoading;
@@ -393,6 +411,32 @@ export function SupplyChainPage() {
         onSave={handleSave}
         isLoading={isLoading}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!entryToDelete}
+        onOpenChange={(open) => {
+          if (!open) setEntryToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Delete entry?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('Are you sure you want to delete this entry?')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('Delete', { ns: 'common' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

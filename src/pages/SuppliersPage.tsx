@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import {
@@ -63,6 +64,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -209,6 +220,9 @@ export function SuppliersPage() {
   const [selectedSupplierForApproval, setSelectedSupplierForApproval] = useState<Supplier | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+
+  // Delete supplier confirmation state
+  const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -487,33 +501,38 @@ export function SuppliersPage() {
       setSupplierDialogOpen(false);
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Error saving');
+      toast.error(t('Error saving'));
     }
     setIsLoading(false);
   };
 
   // Delete supplier
-  const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Really delete this supplier? All product assignments will also be removed.')) return;
+  const handleDeleteSupplier = (id: string) => {
+    setSupplierToDelete(id);
+  };
+
+  const confirmDeleteSupplier = async () => {
+    if (!supplierToDelete) return;
     setIsLoading(true);
     try {
-      const result = await deleteSupplier(id);
+      const result = await deleteSupplier(supplierToDelete);
       if (!result.success) throw new Error('Deletion failed');
       await loadData();
-      if (detailSupplier?.id === id) {
+      if (detailSupplier?.id === supplierToDelete) {
         setDetailSupplier(null);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error deleting');
+      toast.error(t('Error deleting'));
     }
     setIsLoading(false);
+    setSupplierToDelete(null);
   };
 
   // Generate supplier invitation
   const handleGenerateInvitation = async () => {
     if (!invitationEmail) {
-      alert(t('Email is required'));
+      toast.error(t('Email is required'));
       return;
     }
     setIsGeneratingInvitation(true);
@@ -525,11 +544,16 @@ export function SuppliersPage() {
       });
       setGeneratedInvitationLink(result.invitationUrl);
       // Copy to clipboard
-      await navigator.clipboard.writeText(result.invitationUrl);
-      alert(t('Link copied to clipboard!'));
+      try {
+        await navigator.clipboard.writeText(result.invitationUrl);
+        toast.success(t('Link copied to clipboard!'));
+      } catch (clipboardError) {
+        console.error('Clipboard write failed:', clipboardError);
+        toast.error(t('Could not copy link to clipboard'));
+      }
     } catch (error) {
       console.error('Error generating invitation:', error);
-      alert(t('Error generating invitation'));
+      toast.error(t('Error generating invitation'));
     }
     setIsGeneratingInvitation(false);
   };
@@ -549,13 +573,13 @@ export function SuppliersPage() {
     setIsProcessingApproval(true);
     try {
       await approveSupplier(selectedSupplierForApproval.id);
-      alert(t('Supplier approved successfully'));
+      toast.success(t('Supplier approved successfully'));
       await loadData();
       setApproveDialogOpen(false);
       setSelectedSupplierForApproval(null);
     } catch (error) {
       console.error('Error approving supplier:', error);
-      alert(t('Error approving supplier'));
+      toast.error(t('Error approving supplier'));
     }
     setIsProcessingApproval(false);
   };
@@ -566,14 +590,14 @@ export function SuppliersPage() {
     setIsProcessingApproval(true);
     try {
       await rejectSupplier(selectedSupplierForApproval.id, rejectionReason || undefined);
-      alert(t('Supplier rejected successfully'));
+      toast.success(t('Supplier rejected successfully'));
       await loadData();
       setRejectDialogOpen(false);
       setSelectedSupplierForApproval(null);
       setRejectionReason('');
     } catch (error) {
       console.error('Error rejecting supplier:', error);
-      alert(t('Error rejecting supplier'));
+      toast.error(t('Error rejecting supplier'));
     }
     setIsProcessingApproval(false);
   };
@@ -612,7 +636,7 @@ export function SuppliersPage() {
       setProductFormData(getEmptyProductForm());
     } catch (error) {
       console.error('Error:', error);
-      alert('Error assigning product');
+      toast.error(t('Error assigning product'));
     }
     setIsLoading(false);
   };
@@ -2305,7 +2329,7 @@ export function SuppliersPage() {
                                   return true;
                                 });
                                 if (!valid && editingTiers.length > 0) {
-                                  alert(t('Price tiers have gaps or invalid values'));
+                                  toast.error(t('Price tiers have gaps or invalid values'));
                                   return;
                                 }
                                 setSavingTiers(true);
@@ -2321,7 +2345,7 @@ export function SuppliersPage() {
                                   }
                                   setExpandedPriceTiers(null);
                                 } else {
-                                  alert(t('Failed to save tiers'));
+                                  toast.error(t('Failed to save tiers'));
                                 }
                               }}
                             >
@@ -2391,9 +2415,11 @@ export function SuppliersPage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(generatedInvitationLink);
-                      alert(t('Link copied to clipboard!'));
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(generatedInvitationLink)
+                        .then(() => toast.success(t('Link copied to clipboard!')))
+                        .catch(() => toast.error(t('Could not copy link to clipboard')));
                     }}
                   >
                     <Copy className="h-4 w-4" />
@@ -2537,6 +2563,33 @@ export function SuppliersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Supplier Confirmation Dialog */}
+      <AlertDialog
+        open={!!supplierToDelete}
+        onOpenChange={(open) => {
+          if (!open) setSupplierToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Delete supplier?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('Really delete this supplier? All product assignments will also be removed.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteSupplier}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('Delete', { ns: 'common' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

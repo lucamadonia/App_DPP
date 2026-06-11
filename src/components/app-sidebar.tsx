@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -75,6 +75,10 @@ export function AppSidebar() {
   const { resolvedTheme, toggleTheme } = useTheme();
   const { t } = useTranslation('common');
   const prefersReduced = useReducedMotion();
+  // Track which logo URL failed to load — automatically "resets" when branding.logo changes
+  const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null);
+  const logoSrc = branding.logo || '/trackbliss-logo.png';
+  const logoError = failedLogoSrc === logoSrc;
 
   type NavItem = {
     title: string;
@@ -314,7 +318,7 @@ export function AppSidebar() {
 
   const isActive = (url: string) => {
     if (url === '/') return location.pathname === '/';
-    return location.pathname.startsWith(url);
+    return location.pathname === url || location.pathname.startsWith(url + '/');
   };
 
   // Auto-expand collapsible sections that contain the active route
@@ -325,11 +329,21 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <Link to="/" className="flex items-center">
-          <img
-            src={branding.logo || '/trackbliss-logo.png'}
-            alt={branding.appName}
-            className="h-12 object-contain"
-          />
+          {logoError ? (
+            <div
+              aria-label={branding.appName}
+              className="flex h-12 w-12 items-center justify-center rounded-md bg-primary text-lg font-bold text-primary-foreground"
+            >
+              {(branding.appName || 'TB').slice(0, 2).toUpperCase()}
+            </div>
+          ) : (
+            <img
+              src={logoSrc}
+              alt={branding.appName}
+              className="h-12 object-contain"
+              onError={() => setFailedLogoSrc(logoSrc)}
+            />
+          )}
         </Link>
       </SidebarHeader>
 
@@ -340,18 +354,29 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
               {group.items.map((item) =>
-                item.items ? (
+                item.locked ? (
+                  // Locked module: never link to the module URL (would 403).
+                  // Instead, send the user to the upgrade/billing page.
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      onClick={() => navigate('/settings/billing')}
+                      className="opacity-60"
+                      title={t('Requires an upgrade')}
+                      aria-label={`${item.title} — ${t('Requires an upgrade')}`}
+                    >
+                      <item.icon className="h-4 w-4 transition-colors" />
+                      <span>{item.title}</span>
+                      <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : item.items ? (
                   <Collapsible key={item.title} defaultOpen={hasActiveChild(item.items)} className="group/collapsible">
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton>
                           <item.icon className="h-4 w-4 transition-colors" />
                           <span>{item.title}</span>
-                          {item.locked ? (
-                            <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
-                          ) : (
-                            <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-                          )}
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
@@ -383,10 +408,7 @@ export function AppSidebar() {
                       <Link to={item.url!}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                        {item.locked && (
-                          <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
-                        )}
-                        {!item.locked && item.badge && (
+                        {item.badge && (
                           <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-xs text-primary animate-pulse">
                             {item.badge}
                           </span>
@@ -514,7 +536,7 @@ export function AppSidebar() {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+              className="h-10 w-10 sm:h-8 sm:w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
               title={resolvedTheme === 'dark' ? t('Light Mode') : t('Dark Mode')}
               aria-label={resolvedTheme === 'dark' ? t('Switch to light mode') : t('Switch to dark mode')}
             >
@@ -524,7 +546,7 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               onClick={handleSignOut}
-              className="h-8 gap-1.5 px-2 text-sidebar-foreground/60 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/30"
+              className="h-10 sm:h-8 gap-1.5 px-2 text-sidebar-foreground/60 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/30"
               title={t('Sign Out')}
             >
               <LogOut className="h-4 w-4" />

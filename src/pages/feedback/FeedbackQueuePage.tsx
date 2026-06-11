@@ -20,8 +20,7 @@ import { getVariantColorHex } from '@/lib/variant-color';
 import { toast } from 'sonner';
 
 export function FeedbackQueuePage() {
-  const { t: _t } = useTranslation('warehouse');
-  void _t;
+  const { t } = useTranslation('warehouse');
 
   const [tab, setTab] = useState<FeedbackReviewStatus>('pending_review');
   const [reviews, setReviews] = useState<FeedbackReview[]>([]);
@@ -47,7 +46,7 @@ export function FeedbackQueuePage() {
   async function handleApprove(id: string) {
     try {
       await approveReview(id);
-      toast.success('Bewertung freigegeben');
+      toast.success(t('Review approved'));
       reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -57,7 +56,7 @@ export function FeedbackQueuePage() {
   async function handleReject(id: string) {
     try {
       await rejectReview(id);
-      toast.success('Bewertung abgelehnt');
+      toast.success(t('Review rejected'));
       reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));

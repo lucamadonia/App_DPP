@@ -3,6 +3,7 @@
  * mit Filtern, Expand-to-Diff und CSV-Export.
  */
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollText, Search, ChevronDown, ChevronRight, Download, RefreshCw,
   User as UserIcon, Clock, Globe, Monitor,
@@ -39,19 +40,22 @@ function toneForAction(action: string): string {
   return ACTION_TONE[action] || 'bg-slate-50 text-slate-700 border-slate-200';
 }
 
-function relativeTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(ms / 60000);
-  if (min < 1) return 'gerade eben';
-  if (min < 60) return `vor ${min} Min`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `vor ${hr} Std`;
-  const d = Math.floor(hr / 24);
-  if (d < 30) return `vor ${d} Tagen`;
-  return new Date(iso).toLocaleDateString('de-DE');
-}
-
 export function AdminAuditLogPage() {
+  const { t, i18n } = useTranslation('admin');
+  const dateLocale = i18n.language === 'de' ? 'de-DE' : 'en-US';
+
+  function relativeTime(iso: string): string {
+    const ms = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(ms / 60000);
+    if (min < 1) return t('just now');
+    if (min < 60) return t('{{n}} min ago', { n: min });
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return t('{{n}} h ago', { n: hr });
+    const d = Math.floor(hr / 24);
+    if (d < 30) return t('{{n}} days ago', { n: d });
+    return new Date(iso).toLocaleDateString(dateLocale);
+  }
+
   const [entries, setEntries] = useState<AdminAuditEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -112,7 +116,7 @@ export function AdminAuditLogPage() {
   }
 
   function handleExportCSV() {
-    const headers = ['Zeitpunkt', 'Admin', 'Action', 'Target-Typ', 'Target-Label', 'Target-ID', 'Grund', 'IP', 'Changes'];
+    const headers = [t('Timestamp'), t('Admin'), t('Action'), t('Target Type'), t('Target Label'), t('Target ID'), t('Reason'), 'IP', t('Changes')];
     const rows = filtered.map(e => [
       e.createdAt,
       e.adminEmail,
@@ -137,7 +141,7 @@ export function AdminAuditLogPage() {
     a.download = `audit-log_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} Einträge exportiert`);
+    toast.success(t('{{n}} entries exported', { n: filtered.length }));
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -148,20 +152,20 @@ export function AdminAuditLogPage() {
         <div className="flex items-center gap-2.5">
           <ScrollText className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-xl font-bold">Audit Log</h1>
+            <h1 className="text-xl font-bold">{t('Audit Log')}</h1>
             <p className="text-xs text-muted-foreground">
-              Alle Super-Admin-Aktionen werden hier protokolliert. {total} Einträge gesamt.
+              {t('All super admin actions are logged here. {{total}} entries total.', { total })}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="h-3.5 w-3.5 mr-1" />
-            CSV Export
+            {t('CSV Export')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => load(true)} disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-            Neu laden
+            {t('Reload')}
           </Button>
         </div>
       </div>
@@ -175,28 +179,28 @@ export function AdminAuditLogPage() {
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Suche: Admin-Mail, Action, Target, Grund"
+                placeholder={t('Search: admin email, action, target, reason')}
                 className="pl-8 h-9"
               />
             </div>
             <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder="Action" /></SelectTrigger>
+              <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder={t('Action')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle Actions</SelectItem>
+                <SelectItem value="all">{t('All Actions')}</SelectItem>
                 {allActions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={targetTypeFilter} onValueChange={(v) => { setTargetTypeFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Target-Typ" /></SelectTrigger>
+              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder={t('Target Type')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle Typen</SelectItem>
-                <SelectItem value="tenant">Tenant</SelectItem>
-                <SelectItem value="user">User</SelectItem>
-                <SelectItem value="coupon">Coupon</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
-                <SelectItem value="feature_flag">Feature Flag</SelectItem>
-                <SelectItem value="webhook">Webhook</SelectItem>
-                <SelectItem value="impersonation">Impersonation</SelectItem>
+                <SelectItem value="all">{t('All Types')}</SelectItem>
+                <SelectItem value="tenant">{t('Tenant')}</SelectItem>
+                <SelectItem value="user">{t('User')}</SelectItem>
+                <SelectItem value="coupon">{t('Coupon')}</SelectItem>
+                <SelectItem value="credit">{t('Credit')}</SelectItem>
+                <SelectItem value="feature_flag">{t('Feature Flag')}</SelectItem>
+                <SelectItem value="webhook">{t('Webhook')}</SelectItem>
+                <SelectItem value="impersonation">{t('Impersonation')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -212,7 +216,7 @@ export function AdminAuditLogPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground text-sm">
-              Keine Einträge gefunden
+              {t('No entries found')}
             </div>
           ) : (
             <ul className="divide-y">
@@ -260,9 +264,9 @@ export function AdminAuditLogPage() {
                   {expanded.has(e.id) && (
                     <div className="px-12 pb-4 space-y-2 bg-muted/30 border-t">
                       <div className="pt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                        <Meta label="Timestamp" value={new Date(e.createdAt).toLocaleString('de-DE')} />
-                        <Meta label="Admin ID" value={e.adminId || '—'} mono />
-                        <Meta label="Target ID" value={e.targetId || '—'} mono />
+                        <Meta label={t('Timestamp')} value={new Date(e.createdAt).toLocaleString(dateLocale)} />
+                        <Meta label={t('Admin ID')} value={e.adminId || '—'} mono />
+                        <Meta label={t('Target ID')} value={e.targetId || '—'} mono />
                         <Meta label="IP" value={e.ipAddress || '—'} />
                       </div>
                       {e.userAgent && (
@@ -277,7 +281,7 @@ export function AdminAuditLogPage() {
                       {e.changes && Object.keys(e.changes).length > 0 && (
                         <div>
                           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                            Änderungen
+                            {t('Changes')}
                           </div>
                           <pre className="rounded-md bg-background border p-2 text-[11px] font-mono overflow-x-auto">
                             {JSON.stringify(e.changes, null, 2)}
@@ -296,10 +300,10 @@ export function AdminAuditLogPage() {
       {/* Pagination */}
       {total > 0 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div>Seite {page} / {totalPages} · {total} Einträge</div>
+          <div>{t('Page {{page}} / {{pages}} · {{total}} entries', { page, pages: totalPages, total })}</div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Zurück</Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Weiter</Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>{t('Back')}</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>{t('Next')}</Button>
           </div>
         </div>
       )}

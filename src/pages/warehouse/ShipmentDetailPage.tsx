@@ -196,12 +196,20 @@ export function ShipmentDetailPage() {
 
   useEffect(() => {
     if (items.length === 0) return;
+    let cancelled = false;
     const productIds = items.map(i => i.productId);
-    sb.from('products').select('id, gtin').in('id', productIds).then((r: { data: Array<{id:string; gtin?:string}> | null }) => {
-      const map: Record<string, string> = {};
-      (r.data || []).forEach((p) => { if (p.gtin) map[p.id] = p.gtin; });
-      setBarcodeMap(map);
-    });
+    (async () => {
+      try {
+        const r = await sb.from('products').select('id, gtin').in('id', productIds);
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        ((r.data ?? []) as Array<{ id: string; gtin?: string }>).forEach((p) => { if (p.gtin) map[p.id] = p.gtin; });
+        setBarcodeMap(map);
+      } catch {
+        /* lookup failed — barcode map stays empty, labels simply omit barcodes */
+      }
+    })();
+    return () => { cancelled = true; };
   }, [items]);
 
   const applyStatusChange = async (newStatus: ShipmentStatus) => {

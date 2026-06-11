@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Calendar as CalendarIcon, Maximize2, Minimize2, RefreshCw, Sparkles, X } from 'lucide-react';
 import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useBilling } from '@/contexts/BillingContext';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -37,6 +38,10 @@ export function MegaDashboardPage() {
   const [now, setNow] = useState(() => new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  // Tracks the error state across the 30s auto-refresh so we only toast once
+  // per outage instead of every interval tick.
+  const loadErrorRef = useRef(false);
   // `null` means "today, follow the wall-clock". A non-null range pins the
   // dashboard to that window — single day if `from === to`, otherwise a span.
   const [range, setRange] = useState<{ from: Date; to: Date } | null>(null);
@@ -58,10 +63,16 @@ export function MegaDashboardPage() {
     try {
       const s = await getMegaDashboardSnapshot(range ?? undefined);
       setSnapshot(s);
+      loadErrorRef.current = false;
+      setLoadError(false);
+    } catch {
+      if (!loadErrorRef.current) toast.error(t('Failed to load data'));
+      loadErrorRef.current = true;
+      setLoadError(true);
     } finally {
       setRefreshing(false);
     }
-  }, [range]);
+  }, [range, t]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -363,7 +374,21 @@ export function MegaDashboardPage() {
             <MegaKpi block={snapshot.hero.conversionEstimate} hero accent="#F472B6" />
           </>
         )}
-        {!snapshot && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} hero />)}
+        {!snapshot && !loadError && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} hero />)}
+        {!snapshot && loadError && (
+          <div className="col-span-2 lg:col-span-4 rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+            <p className="text-sm text-white/70">{t('Failed to load data')}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-3 text-white/80 hover:bg-white/10 hover:text-white"
+              onClick={refresh}
+              disabled={refreshing}
+            >
+              {t('Retry', { ns: 'common' })}
+            </Button>
+          </div>
+        )}
       </section>
 
       {/* Main grid: stacks vertically on mobile, 3-column on lg+ */}
@@ -399,7 +424,7 @@ export function MegaDashboardPage() {
             <MegaKpi block={snapshot.footer.avgComplianceScore} accent="#60A5FA" />
           </>
         )}
-        {!snapshot && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)}
+        {!snapshot && !loadError && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)}
       </section>
 
       {/* Marquee footer */}

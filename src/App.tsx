@@ -266,7 +266,7 @@ function AppLayout() {
           {/* Gradient border-bottom line */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent" />
         </header>
-        <main className="flex-1 overflow-auto p-4 sm:p-6 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] md:pb-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-6">
           <AnimatedOutlet />
         </main>
         <MobileBottomNav />

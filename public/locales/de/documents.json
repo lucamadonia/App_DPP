@@ -176,5 +176,6 @@
   "Failed to delete version": "Version konnte nicht gelöscht werden.",
   "Version restored": "Version wiederhergestellt.",
   "Version deleted": "Version gelöscht.",
-  "v{{n}}": "v{{n}}"
+  "v{{n}}": "v{{n}}",
+  "AI classification failed": "KI-Klassifizierung fehlgeschlagen"
 }

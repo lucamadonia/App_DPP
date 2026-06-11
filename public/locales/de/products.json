@@ -792,5 +792,12 @@
   "pictograms.tryDifferentFilter": "Versuchen Sie, Ihre Suche oder Filter anzupassen",
   "pictograms.myPictograms": "Meine Piktogramme",
   "pictograms.builtIn": "Integriert",
-  "pictograms.managePictograms": "Piktogramme verwalten"
+  "pictograms.managePictograms": "Piktogramme verwalten",
+  "Delete batch?": "Charge löschen?",
+  "Are you sure you want to delete this batch?": "Sind Sie sicher, dass Sie diese Charge löschen möchten?",
+  "Batch deleted": "Charge gelöscht",
+  "Error deleting batch: {{error}}": "Fehler beim Löschen der Charge: {{error}}",
+  "Batch not found": "Charge nicht gefunden",
+  "The batch does not exist or you do not have access.": "Die Charge existiert nicht oder Sie haben keinen Zugriff.",
+  "Failed to create supplier": "Lieferant konnte nicht erstellt werden"
 }

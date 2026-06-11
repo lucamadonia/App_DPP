@@ -498,7 +498,7 @@ export function InventoryListPage() {
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => setWriteOffStocks([s])} className="text-red-600 focus:text-red-700 focus:bg-red-50">
         <MinusCircle className="mr-2 h-4 w-4" />
-        {t('Ware ausbuchen')}
+        {t('Write off stock')}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => navigate(`/products/${s.productId}`)}>
@@ -579,7 +579,7 @@ export function InventoryListPage() {
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => toggleOne(s.id)}
-            aria-label={t('Position auswählen')}
+            aria-label={t('Select item')}
           />
         </TableCell>
         <TableCell className="font-medium">
@@ -1120,7 +1120,7 @@ export function InventoryListPage() {
                     {selectedIds.size}
                   </Badge>
                   <span className="font-medium">
-                    {t('{{n}} Positionen ausgewählt', { n: selectedIds.size })}
+                    {t('{{n}} items selected', { n: selectedIds.size })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1130,7 +1130,7 @@ export function InventoryListPage() {
                     onClick={() => setSelectedIds(new Set())}
                   >
                     <X className="mr-1 h-3.5 w-3.5" />
-                    {t('Auswahl löschen')}
+                    {t('Clear selection')}
                   </Button>
                   <Button
                     size="sm"
@@ -1139,7 +1139,7 @@ export function InventoryListPage() {
                     disabled={selectedStocks.length === 0}
                   >
                     <MinusCircle className="mr-1 h-3.5 w-3.5" />
-                    {t('Ware ausbuchen ({{n}})', { n: selectedIds.size })}
+                    {t('Write off ({{n}})', { n: selectedIds.size })}
                   </Button>
                 </div>
               </div>
@@ -1152,7 +1152,7 @@ export function InventoryListPage() {
                       <Checkbox
                         checked={allOnPageSelected ? true : someOnPageSelected ? 'indeterminate' : false}
                         onCheckedChange={toggleAllOnPage}
-                        aria-label={t('Alle auswählen')}
+                        aria-label={t('Select all')}
                       />
                     </TableHead>
                     <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort('productName')}>
