@@ -5,7 +5,7 @@ import { ShoppingCart, TrendingDown, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ModuleCard } from './ModuleCard';
 import { useCommerceHealth, useCommerceSnapshot } from '@/hooks/queries';
-import { formatCurrency, formatNumber } from '@/lib/format';
+import { formatCurrency, formatCurrencyCompact, formatNumber } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import { relativeTime } from '@/lib/animations';
 import type { CommerceKpiBlock } from '@/types/commerce-channels';
@@ -28,15 +28,19 @@ function DeltaBadge({ deltaPct }: { deltaPct?: number }) {
 }
 
 function HeroKpi({ label, block, format }: { label: string; block: CommerceKpiBlock; format: (v: number) => string }) {
+  const formatted = format(block.value);
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 overflow-hidden">
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="text-2xl font-bold tabular-nums tracking-tight sm:text-3xl">
-          {format(block.value)}
+        <span
+          className="max-w-full truncate text-2xl font-bold tabular-nums tracking-tight sm:text-3xl"
+          title={formatted}
+        >
+          {formatted}
         </span>
         <DeltaBadge deltaPct={block.deltaPct} />
       </div>
-      <p className="truncate text-xs text-muted-foreground">{label}</p>
+      <p className="truncate text-xs text-muted-foreground" title={label}>{label}</p>
     </div>
   );
 }
@@ -102,7 +106,7 @@ export function CommerceModuleCard({ enabled, className }: { enabled: boolean; c
               <HeroKpi
                 label={t('Revenue today')}
                 block={snapshot.data.hero.revenueToday}
-                format={(v) => formatCurrency(v, 'EUR', locale)}
+                format={(v) => formatCurrencyCompact(v, 'EUR', locale)}
               />
               <HeroKpi
                 label={t('Orders today')}

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ModuleCard, MiniStat, MiniStatGrid } from './ModuleCard';
 import { MiniTrendChart } from './MiniTrendChart';
 import { useReturnsModuleStats } from '@/hooks/queries';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrencyCompact } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 
 export function ReturnsModuleCard({ enabled, className }: { enabled: boolean; className?: string }) {
@@ -49,7 +49,7 @@ export function ReturnsModuleCard({ enabled, className }: { enabled: boolean; cl
             />
             <MiniStat
               label={t('Refund volume')}
-              value={formatCurrency(data.returns.refundVolume, 'EUR', locale)}
+              value={formatCurrencyCompact(data.returns.refundVolume, 'EUR', locale)}
               animated={false}
             />
           </MiniStatGrid>

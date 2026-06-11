@@ -19,3 +19,16 @@ export function formatCurrency(amount: number, currency: string = 'EUR', locale:
     currency,
   }).format(amount);
 }
+
+/**
+ * Space-constrained currency for KPI tiles: no cents, compact notation
+ * (e.g. "12,3 Tsd. €") once values reach five digits.
+ */
+export function formatCurrencyCompact(amount: number, currency: string = 'EUR', locale: string = 'en'): string {
+  return new Intl.NumberFormat(LOCALE_MAP[locale] || locale, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: Math.abs(amount) >= 10_000 ? 1 : 0,
+    notation: Math.abs(amount) >= 10_000 ? 'compact' : 'standard',
+  }).format(amount);
+}
