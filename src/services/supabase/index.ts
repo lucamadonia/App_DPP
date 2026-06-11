@@ -603,6 +603,24 @@ export {
   getReturnDHLTracking,
 } from './dhl-carrier';
 
+// Carrier Integrations Hub
+export {
+  CARRIER_CATALOG,
+  getCarrierCatalogEntry,
+  getCarrierTrackingUrl,
+  listCarrierIntegrations,
+  saveCarrierIntegration,
+  disconnectCarrierIntegration,
+  testCarrierConnection,
+} from './carrier-integrations';
+export type {
+  CarrierCapabilities,
+  CarrierCredentialField,
+  CarrierCatalogEntry,
+  CarrierIntegrationStatus,
+  CarrierIntegrationView,
+} from './carrier-integrations';
+
 // Customer Portal
 export {
   getCustomerContext,

@@ -1,267 +1,189 @@
-import { useEffect, useState } from 'react';
+/**
+ * TransferListPage — stock transfers between warehouse locations.
+ *
+ * History rendered as a timeline (transfer_out/transfer_in pairs merged
+ * into single "From → To" entries), creation handled by the visual
+ * journey dialog (TransferCreateDialog).
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { ArrowRightLeft, Plus } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRightLeft, Plus, CalendarDays, Boxes, History } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { getTransactionHistory, createStockTransfer, getStockLevels } from '@/services/supabase/wh-stock';
-import { getActiveLocations } from '@/services/supabase/wh-locations';
-import { getProducts } from '@/services/supabase/products';
-import { getBatches } from '@/services/supabase/batches';
-import type { WhStockTransaction, WhLocation } from '@/types/warehouse';
+import { getTransactionHistory } from '@/services/supabase/wh-stock';
+import { TransferCreateDialog } from '@/components/warehouse/transfer-create-dialog';
+import { TransferTimeline, type TransferEntry } from '@/components/warehouse/transfer-timeline';
+import { relativeTime } from '@/lib/animations';
+import { blurIn, gridStagger, gridItem } from '@/lib/motion';
+import type { WhStockTransaction } from '@/types/warehouse';
 
-const TYPE_COLORS: Record<string, string> = {
-  transfer_out: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  transfer_in: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  goods_receipt: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  shipment: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  adjustment: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  damage: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  write_off: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  return_receipt: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
-  reservation: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-  release: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-};
+/**
+ * Merge transfer_out / transfer_in transaction pairs (linked via
+ * relatedTransactionId) into single timeline entries with both ends.
+ */
+function pairTransfers(txs: WhStockTransaction[]): TransferEntry[] {
+  const byId = new Map(txs.map((tx) => [tx.id, tx]));
+  const consumed = new Set<string>();
+  const entries: TransferEntry[] = [];
+
+  for (const tx of txs) {
+    if (consumed.has(tx.id)) continue;
+    consumed.add(tx.id);
+
+    const partner = tx.relatedTransactionId ? byId.get(tx.relatedTransactionId) : undefined;
+    if (partner && !consumed.has(partner.id)) consumed.add(partner.id);
+
+    const out = tx.type === 'transfer_out' ? tx : partner?.type === 'transfer_out' ? partner : undefined;
+    const inn = tx.type === 'transfer_in' ? tx : partner?.type === 'transfer_in' ? partner : undefined;
+    const base = out || inn;
+    if (!base) continue;
+
+    entries.push({
+      id: base.id,
+      transactionNumber: base.transactionNumber,
+      productName: base.productName || base.productId.slice(0, 8),
+      batchSerialNumber: base.batchSerialNumber,
+      quantity: Math.abs(base.quantity),
+      fromName: out?.locationName,
+      toName: inn?.locationName,
+      notes: base.notes,
+      createdAt: base.createdAt,
+    });
+  }
+
+  return entries;
+}
 
 export function TransferListPage() {
-  const { t } = useTranslation('warehouse');
+  const { t, i18n } = useTranslation('warehouse');
+  const prefersReduced = useReducedMotion();
+
   const [transactions, setTransactions] = useState<WhStockTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [locations, setLocations] = useState<WhLocation[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
-  const [batches, setBatches] = useState<{ id: string; serial_number: string }[]>([]);
-  const [saving, setSaving] = useState(false);
 
-  // Transfer form
-  const [fromLocationId, setFromLocationId] = useState('');
-  const [toLocationId, setToLocationId] = useState('');
-  const [productId, setProductId] = useState('');
-  const [batchId, setBatchId] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [maxAvailable, setMaxAvailable] = useState(0);
-  const [notes, setNotes] = useState('');
-
-  const load = async () => {
+  const load = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
+    setError(false);
     try {
       const data = await getTransactionHistory({ type: ['transfer_out', 'transfer_in'] });
       setTransactions(data);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const openDialog = async () => {
-    const [l, p] = await Promise.all([getActiveLocations(), getProducts()]);
-    setLocations(l);
-    setProducts(p.map((pr: { id: string; name: string }) => ({ id: pr.id, name: pr.name })));
-    setFromLocationId('');
-    setToLocationId('');
-    setProductId('');
-    setBatchId('');
-    setQuantity(1);
-    setMaxAvailable(0);
-    setNotes('');
-    setDialogOpen(true);
-  };
+  const entries = useMemo(() => pairTransfers(transactions), [transactions]);
 
-  useEffect(() => {
-    if (productId) {
-      getBatches(productId).then((b) =>
-        setBatches(b.map((batch: { id: string; serialNumber: string }) => ({
-          id: batch.id,
-          serial_number: batch.serialNumber,
-        })))
-      );
+  const stats = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const cutoff30d = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+
+    let today = 0;
+    let units30d = 0;
+    for (const e of entries) {
+      const d = new Date(e.createdAt);
+      if (d.toDateString() === todayStr) today++;
+      if (d.getTime() >= cutoff30d) units30d += e.quantity;
     }
-  }, [productId]);
-
-  // Look up available stock when source location + batch selected
-  useEffect(() => {
-    if (fromLocationId && batchId) {
-      getStockLevels({ locationId: fromLocationId, batchId }).then((stock) => {
-        setMaxAvailable(stock[0]?.quantityAvailable || 0);
-      });
-    }
-  }, [fromLocationId, batchId]);
-
-  const handleTransfer = async () => {
-    if (!fromLocationId || !toLocationId || !productId || !batchId || quantity <= 0) return;
-    if (fromLocationId === toLocationId) {
-      toast.error(t('Source and destination must differ'));
-      return;
-    }
-    setSaving(true);
-    try {
-      await createStockTransfer({
-        fromLocationId,
-        toLocationId,
-        productId,
-        batchId,
-        quantity,
-        notes: notes || undefined,
-      });
-      toast.success(t('Transfer completed'));
-      setDialogOpen(false);
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error');
-    } finally {
-      setSaving(false);
-    }
-  };
+    return { today, units30d, last: entries[0]?.createdAt };
+  }, [entries]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Stock Transfers')}</h1>
-        <Button onClick={openDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('New Transfer')}
-        </Button>
-      </div>
+      {/* Header */}
+      <motion.div
+        variants={prefersReduced ? undefined : blurIn}
+        initial={prefersReduced ? undefined : 'initial'}
+        animate={prefersReduced ? undefined : 'animate'}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+      >
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Stock Transfers')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('Move stock between locations')}</p>
+        </div>
+        <motion.div whileTap={prefersReduced ? undefined : { scale: 0.97 }} className="shrink-0">
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto h-11">
+            <Plus className="mr-2 h-4 w-4" />
+            {t('New Transfer')}
+          </Button>
+        </motion.div>
+      </motion.div>
 
+      {/* Stat chips */}
+      <motion.div
+        variants={prefersReduced ? undefined : gridStagger}
+        initial={prefersReduced ? undefined : 'initial'}
+        animate={prefersReduced ? undefined : 'animate'}
+        className="grid grid-cols-3 gap-2 sm:gap-3"
+      >
+        {[
+          {
+            icon: CalendarDays,
+            label: t('Transfers today'),
+            value: loading ? '–' : String(stats.today),
+            accent: 'text-primary bg-primary/10',
+          },
+          {
+            icon: Boxes,
+            label: t('Units moved (30d)'),
+            value: loading ? '–' : String(stats.units30d),
+            accent: 'text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-950',
+          },
+          {
+            icon: History,
+            label: t('Last transfer'),
+            value: loading ? '–' : stats.last ? relativeTime(stats.last, i18n.language) : '—',
+            accent: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-950',
+          },
+        ].map((stat) => (
+          <motion.div key={stat.label} variants={prefersReduced ? undefined : gridItem}>
+            <Card className="h-full">
+              <CardContent className="flex items-center gap-2.5 p-3 sm:p-4">
+                <div className={`hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.accent}`}>
+                  <stat.icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] sm:text-xs text-muted-foreground">{stat.label}</p>
+                  <p className="truncate text-sm sm:text-lg font-bold tabular-nums">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Timeline */}
       <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Transaction Number')}</TableHead>
-                  <TableHead>{t('Type')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('Product')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Location')}</TableHead>
-                  <TableHead className="text-right">{t('Quantity')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('Date')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      {t('Loading...', { ns: 'common' })}
-                    </TableCell>
-                  </TableRow>
-                ) : transactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      <ArrowRightLeft className="mx-auto h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
-                      {t('No transfers yet')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  transactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell className="font-mono text-[10px] sm:text-xs">{tx.transactionNumber}</TableCell>
-                      <TableCell>
-                        <Badge className={`${TYPE_COLORS[tx.type] || 'bg-gray-100 text-gray-800'} text-[10px] sm:text-xs`}>
-                          {t(tx.type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{tx.productName || tx.productId.slice(0, 8)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{tx.locationName || '—'}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
-                        <span className={tx.quantity > 0 ? 'text-green-600' : 'text-red-600'}>
-                          {tx.quantity > 0 ? '+' : ''}{tx.quantity}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground text-sm whitespace-nowrap">
-                        {new Date(tx.createdAt).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ArrowRightLeft className="h-4 w-4 text-primary" />
+            {t('Transfer History')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <TransferTimeline
+            entries={entries}
+            loading={loading}
+            error={error}
+            onRetry={() => load()}
+            onNewTransfer={() => setDialogOpen(true)}
+          />
         </CardContent>
       </Card>
 
-      {/* Transfer Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">{t('New Transfer')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 sm:space-y-4">
-            <div className="space-y-2">
-              <Label>{t('Product')}</Label>
-              <Select value={productId} onValueChange={(v) => { setProductId(v); setBatchId(''); }}>
-                <SelectTrigger><SelectValue placeholder={t('Select Product')} /></SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {productId && (
-              <div className="space-y-2">
-                <Label>{t('Batch')}</Label>
-                <Select value={batchId} onValueChange={setBatchId}>
-                  <SelectTrigger><SelectValue placeholder={t('Select Batch')} /></SelectTrigger>
-                  <SelectContent>
-                    {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.serial_number}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('From Location')}</Label>
-                <Select value={fromLocationId} onValueChange={setFromLocationId}>
-                  <SelectTrigger><SelectValue placeholder={t('Select Warehouse')} /></SelectTrigger>
-                  <SelectContent>
-                    {locations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('To Location')}</Label>
-                <Select value={toLocationId} onValueChange={setToLocationId}>
-                  <SelectTrigger><SelectValue placeholder={t('Select Warehouse')} /></SelectTrigger>
-                  <SelectContent>
-                    {locations.filter(l => l.id !== fromLocationId).map((l) => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Quantity')} {maxAvailable > 0 && `(max: ${maxAvailable})`}</Label>
-              <Input
-                type="number"
-                min={1}
-                max={maxAvailable || undefined}
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Notes')}</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
-            <Button
-              onClick={handleTransfer}
-              disabled={saving || !fromLocationId || !toLocationId || !productId || !batchId || quantity <= 0}
-            >
-              <ArrowRightLeft className="mr-2 h-4 w-4" />
-              {t('Transfer')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <TransferCreateDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCreated={() => load(false)}
+      />
     </div>
   );
 }

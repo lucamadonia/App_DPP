@@ -478,59 +478,79 @@ export async function createStockTransfer(params: {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData?.user?.id;
 
-  // Get source stock
-  const { data: sourceStock } = await supabase
+  // Get source stock. Since the per-bin constraint (migration
+  // 20260502_wh_stock_per_bin.sql) a batch can be split across multiple
+  // rows (one per bin) at the same location — `.single()` would throw
+  // "multiple rows returned" here. Load all rows and decrement greedily
+  // (largest bin first).
+  const { data: sourceRows, error: sourceError } = await supabase
     .from('wh_stock_levels')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('location_id', params.fromLocationId)
     .eq('batch_id', params.batchId)
-    .single();
+    .order('quantity_available', { ascending: false });
 
-  if (!sourceStock) throw new Error('Source stock not found');
-  if (sourceStock.quantity_available < params.quantity) {
+  if (sourceError) throw new Error(`Failed to load source stock: ${sourceError.message}`);
+  if (!sourceRows || sourceRows.length === 0) throw new Error('Source stock not found');
+
+  const sourceBefore = sourceRows.reduce((sum, r) => sum + (r.quantity_available || 0), 0);
+  if (sourceBefore < params.quantity) {
     throw new Error('Insufficient stock for transfer');
   }
 
-  // Reduce source
-  const sourceAfter = sourceStock.quantity_available - params.quantity;
-  await supabase
-    .from('wh_stock_levels')
-    .update({ quantity_available: sourceAfter })
-    .eq('id', sourceStock.id);
+  // Reduce source across bins
+  let remaining = params.quantity;
+  for (const row of sourceRows) {
+    if (remaining <= 0) break;
+    const take = Math.min(row.quantity_available || 0, remaining);
+    if (take <= 0) continue;
+    const { error: updateError } = await supabase
+      .from('wh_stock_levels')
+      .update({ quantity_available: row.quantity_available - take })
+      .eq('id', row.id);
+    if (updateError) throw new Error(`Failed to update source stock: ${updateError.message}`);
+    remaining -= take;
+  }
+  const sourceAfter = sourceBefore - params.quantity;
 
-  // Add to destination (upsert)
-  const { data: destStock } = await supabase
+  // Add to destination (upsert). Destination may also have multiple bin
+  // rows — merge into the un-binned row if present, otherwise the first.
+  const { data: destRows, error: destError } = await supabase
     .from('wh_stock_levels')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('location_id', params.toLocationId)
-    .eq('batch_id', params.batchId)
-    .maybeSingle();
+    .eq('batch_id', params.batchId);
 
-  const destBefore = destStock?.quantity_available || 0;
+  if (destError) throw new Error(`Failed to load destination stock: ${destError.message}`);
+
+  const destBefore = (destRows || []).reduce((sum, r) => sum + (r.quantity_available || 0), 0);
   const destAfter = destBefore + params.quantity;
+  const destTarget = (destRows || []).find((r) => r.bin_location == null) || (destRows || [])[0];
 
-  if (destStock) {
-    await supabase
+  if (destTarget) {
+    const { error: updateError } = await supabase
       .from('wh_stock_levels')
-      .update({ quantity_available: destAfter })
-      .eq('id', destStock.id);
+      .update({ quantity_available: (destTarget.quantity_available || 0) + params.quantity })
+      .eq('id', destTarget.id);
+    if (updateError) throw new Error(`Failed to update destination stock: ${updateError.message}`);
   } else {
-    await supabase.from('wh_stock_levels').insert({
+    const { error: insertError } = await supabase.from('wh_stock_levels').insert({
       tenant_id: tenantId,
       location_id: params.toLocationId,
       product_id: params.productId,
       batch_id: params.batchId,
       quantity_available: params.quantity,
     });
+    if (insertError) throw new Error(`Failed to create destination stock: ${insertError.message}`);
   }
 
   // Log both transactions with linked IDs
   const outId = crypto.randomUUID();
   const inId = crypto.randomUUID();
 
-  await supabase.from('wh_stock_transactions').insert([
+  const { error: txError } = await supabase.from('wh_stock_transactions').insert([
     {
       id: outId,
       tenant_id: tenantId,
@@ -540,7 +560,7 @@ export async function createStockTransfer(params: {
       product_id: params.productId,
       batch_id: params.batchId,
       quantity: -params.quantity,
-      quantity_before: sourceStock.quantity_available,
+      quantity_before: sourceBefore,
       quantity_after: sourceAfter,
       related_transaction_id: inId,
       notes: params.notes || null,
@@ -562,6 +582,12 @@ export async function createStockTransfer(params: {
       performed_by: userId,
     },
   ]);
+
+  // Stock has already moved at this point — surface a missing audit
+  // trail entry instead of silently swallowing it.
+  if (txError) {
+    console.error('Stock transfer applied but transaction log failed:', txError);
+  }
 }
 
 // ============================================
