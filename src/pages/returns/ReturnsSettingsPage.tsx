@@ -29,6 +29,7 @@ import {
   getCurrentTenant, getCannedResponses, saveCannedResponses,
 } from '@/services/supabase';
 import type { ReturnsHubSettings, RhReturnReason, RhCannedResponse } from '@/types/returns-hub';
+import { toast } from 'sonner';
 
 export function ReturnsSettingsPage() {
   const { t } = useTranslation('returns');
@@ -94,69 +95,105 @@ export function ReturnsSettingsPage() {
     load();
   }, []);
 
+  const showActionError = (err: unknown) => {
+    toast.error(`${t('Action failed')}: ${err instanceof Error ? err.message : String(err)}`);
+  };
+
   const handleSaveSettings = async () => {
     if (!settings) return;
     setSaving(true);
-    await updateReturnsHubSettings(settings);
-    setSaving(false);
+    try {
+      await updateReturnsHubSettings(settings);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddReason = async () => {
     if (!newCategory.trim()) return;
-    await createReturnReason({
-      category: newCategory.trim(),
-      subcategories: [],
-      followUpQuestions: [],
-      requiresPhotos: false,
-      sortOrder: reasons.length,
-      active: true,
-    });
-    setNewCategory('');
-    const r = await getReturnReasons();
-    setReasons(r);
+    try {
+      await createReturnReason({
+        category: newCategory.trim(),
+        subcategories: [],
+        followUpQuestions: [],
+        requiresPhotos: false,
+        sortOrder: reasons.length,
+        active: true,
+      });
+      setNewCategory('');
+      const r = await getReturnReasons();
+      setReasons(r);
+    } catch (err) {
+      showActionError(err);
+    }
   };
 
   const handleDeleteReason = async (id: string) => {
-    await deleteReturnReason(id);
-    const r = await getReturnReasons();
-    setReasons(r);
+    try {
+      await deleteReturnReason(id);
+      const r = await getReturnReasons();
+      setReasons(r);
+    } catch (err) {
+      showActionError(err);
+    }
   };
 
   const handleToggleReason = async (id: string, active: boolean) => {
-    await updateReturnReason(id, { active });
-    const r = await getReturnReasons();
-    setReasons(r);
+    try {
+      await updateReturnReason(id, { active });
+      const r = await getReturnReasons();
+      setReasons(r);
+    } catch (err) {
+      showActionError(err);
+    }
   };
 
   const handleSaveNotificationSettings = async () => {
     if (!settings) return;
     setSaving(true);
-    await updateReturnsHubSettings({ notifications: settings.notifications });
-    setSaving(false);
+    try {
+      await updateReturnsHubSettings({ notifications: settings.notifications });
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddCannedResponse = async () => {
     if (!newResponseTitle.trim() || !newResponseContent.trim()) return;
     setSavingResponses(true);
-    const newResponse: RhCannedResponse = {
-      id: crypto.randomUUID(),
-      title: newResponseTitle.trim(),
-      content: newResponseContent.trim(),
-    };
-    const updated = [...cannedResponses, newResponse];
-    await saveCannedResponses(updated);
-    setCannedResponses(updated);
-    setNewResponseTitle('');
-    setNewResponseContent('');
-    setSavingResponses(false);
+    try {
+      const newResponse: RhCannedResponse = {
+        id: crypto.randomUUID(),
+        title: newResponseTitle.trim(),
+        content: newResponseContent.trim(),
+      };
+      const updated = [...cannedResponses, newResponse];
+      await saveCannedResponses(updated);
+      setCannedResponses(updated);
+      setNewResponseTitle('');
+      setNewResponseContent('');
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSavingResponses(false);
+    }
   };
 
   const handleDeleteCannedResponse = async (id: string) => {
     setSavingResponses(true);
-    const updated = cannedResponses.filter((r) => r.id !== id);
-    await saveCannedResponses(updated);
-    setCannedResponses(updated);
-    setSavingResponses(false);
+    try {
+      const updated = cannedResponses.filter((r) => r.id !== id);
+      await saveCannedResponses(updated);
+      setCannedResponses(updated);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSavingResponses(false);
+    }
   };
 
   const handleOpenEditResponse = (response: RhCannedResponse) => {
@@ -168,28 +205,38 @@ export function ReturnsSettingsPage() {
   const handleSaveEditResponse = async () => {
     if (!editingResponse) return;
     setSavingResponses(true);
-    const updated = cannedResponses.map((r) =>
-      r.id === editingResponse.id
-        ? { ...r, title: editResponseTitle.trim(), content: editResponseContent.trim() }
-        : r
-    );
-    await saveCannedResponses(updated);
-    setCannedResponses(updated);
-    setEditingResponse(null);
-    setSavingResponses(false);
+    try {
+      const updated = cannedResponses.map((r) =>
+        r.id === editingResponse.id
+          ? { ...r, title: editResponseTitle.trim(), content: editResponseContent.trim() }
+          : r
+      );
+      await saveCannedResponses(updated);
+      setCannedResponses(updated);
+      setEditingResponse(null);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSavingResponses(false);
+    }
   };
 
   const handleSaveSlaDefaults = async () => {
     if (!settings) return;
     setSaving(true);
-    await updateReturnsHubSettings({
-      ...settings,
-      slaDefaults: {
-        firstResponseHours: parseInt(slaFirstResponseHours) || 4,
-        resolutionHours: parseInt(slaResolutionHours) || 24,
-      },
-    } as any);
-    setSaving(false);
+    try {
+      await updateReturnsHubSettings({
+        ...settings,
+        slaDefaults: {
+          firstResponseHours: parseInt(slaFirstResponseHours) || 4,
+          resolutionHours: parseInt(slaResolutionHours) || 24,
+        },
+      } as any);
+    } catch (err) {
+      showActionError(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const prefersReduced = useReducedMotion();
@@ -358,11 +405,16 @@ export function ReturnsSettingsPage() {
             onSave={async () => {
               if (!settings) return;
               setSaving(true);
-              await updateReturnsHubSettings({
-                ...settings,
-                autoGenerateLabel,
-              } as any);
-              setSaving(false);
+              try {
+                await updateReturnsHubSettings({
+                  ...settings,
+                  autoGenerateLabel,
+                } as any);
+              } catch (err) {
+                showActionError(err);
+              } finally {
+                setSaving(false);
+              }
             }}
           />
         </TabsContent>

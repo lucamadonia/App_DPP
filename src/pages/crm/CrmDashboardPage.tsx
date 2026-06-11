@@ -23,6 +23,7 @@ import {
   type HealthDistribution,
 } from '@/services/supabase/crm-analytics';
 import { LifecycleFunnel } from '@/components/crm/LifecycleFunnel';
+import { relativeTime } from '@/lib/animations';
 import { toast } from 'sonner';
 
 const SEGMENT_META: Record<string, { label: string; color: string }> = {
@@ -40,18 +41,8 @@ function fmtEuro(n: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
 }
 
-function relativeDaysAgo(iso?: string): string {
-  if (!iso) return '—';
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
-  if (days < 1) return 'heute';
-  if (days === 1) return 'gestern';
-  if (days < 30) return `vor ${days} Tagen`;
-  if (days < 365) return `vor ${Math.floor(days / 30)} Monaten`;
-  return `vor ${Math.floor(days / 365)} Jahren`;
-}
-
 export function CrmDashboardPage() {
-  const { t } = useTranslation('warehouse');
+  const { t, i18n } = useTranslation('warehouse');
   const [kpis, setKpis] = useState<CrmKPIs | null>(null);
   const [topCustomers, setTopCustomers] = useState<CrmCustomer[]>([]);
   const [atRisk, setAtRisk] = useState<CrmCustomer[]>([]);
@@ -229,7 +220,7 @@ export function CrmDashboardPage() {
                           {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || c.id.slice(0, 8)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {c.totalOrders} {t('Bestellungen')} · {relativeDaysAgo(c.lastOrderAt)}
+                          {c.totalOrders} {t('Bestellungen')} · {c.lastOrderAt ? relativeTime(c.lastOrderAt, i18n.language) : '—'}
                         </div>
                       </div>
                       <div className="text-right ml-3">
@@ -280,7 +271,7 @@ export function CrmDashboardPage() {
                           {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || c.id.slice(0, 8)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {t('Zuletzt')} {relativeDaysAgo(c.lastOrderAt)} · CLV {fmtEuro(c.totalSpent)}
+                          {t('Zuletzt')} {c.lastOrderAt ? relativeTime(c.lastOrderAt, i18n.language) : '—'} · CLV {fmtEuro(c.totalSpent)}
                         </div>
                       </div>
                       <Badge

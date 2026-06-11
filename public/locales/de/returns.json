@@ -1269,5 +1269,6 @@
   "Yes branch": "Ja-Zweig",
   "No branch": "Nein-Zweig",
   "Table view": "Tabellenansicht",
-  "Kanban view": "Kanban-Ansicht"
+  "Kanban view": "Kanban-Ansicht",
+  "Action failed": "Aktion fehlgeschlagen"
 }

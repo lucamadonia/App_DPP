@@ -6,25 +6,22 @@ import { TicketPriorityBadge } from './TicketPriorityBadge';
 import { TicketSLABadge } from './TicketSLABadge';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { MessageSquareText } from 'lucide-react';
-import type { RhTicket, TicketStatus } from '@/types/returns-hub';
+import { TICKET_STATUS_LABELS, type RhTicket, type TicketStatus } from '@/types/returns-hub';
 
 interface TicketKanbanBoardProps {
   tickets: RhTicket[];
   onStatusChange: (ticketId: string, status: TicketStatus) => void;
 }
 
-const columns: { status: TicketStatus; label: string; color: string }[] = [
-  { status: 'open', label: 'Open', color: 'border-t-blue-500' },
-  { status: 'in_progress', label: 'In Progress', color: 'border-t-yellow-500' },
-  { status: 'waiting', label: 'Waiting', color: 'border-t-purple-500' },
-  { status: 'resolved', label: 'Resolved', color: 'border-t-green-500' },
-  { status: 'closed', label: 'Closed', color: 'border-t-gray-400' },
+const columns: { status: TicketStatus; color: string }[] = [
+  { status: 'open', color: 'border-t-blue-500' },
+  { status: 'in_progress', color: 'border-t-yellow-500' },
+  { status: 'waiting', color: 'border-t-purple-500' },
+  { status: 'resolved', color: 'border-t-green-500' },
+  { status: 'closed', color: 'border-t-gray-400' },
 ];
 
 const allStatuses: TicketStatus[] = ['open', 'in_progress', 'waiting', 'resolved', 'closed'];
-const statusLabels: Record<TicketStatus, string> = {
-  open: 'Open', in_progress: 'In Progress', waiting: 'Waiting', resolved: 'Resolved', closed: 'Closed',
-};
 
 export function TicketKanbanBoard({ tickets, onStatusChange }: TicketKanbanBoardProps) {
   const { t } = useTranslation('returns');
@@ -36,14 +33,15 @@ export function TicketKanbanBoard({ tickets, onStatusChange }: TicketKanbanBoard
   tickets.forEach((tk, i) => ticketIndexMap.set(tk.id, i));
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      {columns.map((col) => {
+    <div className="overflow-x-auto lg:overflow-x-visible">
+      <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] lg:grid-flow-row lg:grid-cols-5 gap-4">
+        {columns.map((col) => {
         const colTickets = tickets.filter((tk) => tk.status === col.status);
         return (
           <div key={col.status} className="space-y-2">
             <div className={`border-t-4 ${col.color} rounded-t`}>
               <div className="flex items-center justify-between px-2 py-2">
-                <span className="text-sm font-medium">{t(col.label)}</span>
+                <span className="text-sm font-medium">{t(TICKET_STATUS_LABELS[col.status])}</span>
                 <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                   {colTickets.length}
                 </span>
@@ -87,7 +85,7 @@ export function TicketKanbanBoard({ tickets, onStatusChange }: TicketKanbanBoard
                           </SelectTrigger>
                           <SelectContent>
                             {allStatuses.filter(s => s !== ticket.status).map((s) => (
-                              <SelectItem key={s} value={s}>{t(statusLabels[s])}</SelectItem>
+                              <SelectItem key={s} value={s}>{t(TICKET_STATUS_LABELS[s])}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -105,7 +103,8 @@ export function TicketKanbanBoard({ tickets, onStatusChange }: TicketKanbanBoard
             </div>
           </div>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 }
