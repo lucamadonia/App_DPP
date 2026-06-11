@@ -72,28 +72,40 @@ export function AiHintsWidget({ className, maxPreview = 5 }: AiHintsWidgetProps)
   const [acknowledging, setAcknowledging] = useState<Set<string>>(new Set());
   const [detailDoc, setDetailDoc] = useState<DocWithHints | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const docs = await getDocumentsWithHints(true);
-    const mapped: DocWithHints[] = docs.map((d) => ({
-      doc: d,
-      hints: (d.hints || []) as DocumentHint[],
-    }));
-    // Sort: danger first, then amount of hints, then newest
-    mapped.sort((a, b) => {
-      const aHasDanger = a.hints.some((h) => DANGER_TYPES.has(h.type));
-      const bHasDanger = b.hints.some((h) => DANGER_TYPES.has(h.type));
-      if (aHasDanger !== bHasDanger) return bHasDanger ? 1 : -1;
-      if (a.hints.length !== b.hints.length) return b.hints.length - a.hints.length;
-      return (b.doc.uploadedAt || '').localeCompare(a.doc.uploadedAt || '');
-    });
-    setItems(mapped);
-    setLoading(false);
-  }, []);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const load = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const docs = await getDocumentsWithHints(true);
+        if (cancelled) return;
+        const mapped: DocWithHints[] = docs.map((d) => ({
+          doc: d,
+          hints: (d.hints || []) as DocumentHint[],
+        }));
+        // Sort: danger first, then amount of hints, then newest
+        mapped.sort((a, b) => {
+          const aHasDanger = a.hints.some((h) => DANGER_TYPES.has(h.type));
+          const bHasDanger = b.hints.some((h) => DANGER_TYPES.has(h.type));
+          if (aHasDanger !== bHasDanger) return bHasDanger ? 1 : -1;
+          if (a.hints.length !== b.hints.length) return b.hints.length - a.hints.length;
+          return (b.doc.uploadedAt || '').localeCompare(a.doc.uploadedAt || '');
+        });
+        setItems(mapped);
+        setError(false);
+        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setError(true);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   async function handleAcknowledge(docId: string, hintId: string | null) {
     const key = `${docId}:${hintId ?? 'all'}`;
@@ -165,6 +177,30 @@ export function AiHintsWidget({ className, maxPreview = 5 }: AiHintsWidgetProps)
     );
   }
 
+  if (error) {
+    return (
+      <GlassCard className={cn('h-full', className)}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="size-5 text-muted-foreground" />
+            {t('AI hints')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="py-8 text-center">
+            <AlertTriangle className="mx-auto size-8 text-muted-foreground/40" />
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t('Failed to load AI hints')}
+            </p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+              {t('Try again', { ns: 'dashboard' })}
+            </Button>
+          </div>
+        </CardContent>
+      </GlassCard>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <GlassCard className={cn('h-full', className)}>
@@ -221,7 +257,7 @@ export function AiHintsWidget({ className, maxPreview = 5 }: AiHintsWidgetProps)
         </div>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        <p className="text-[10px] text-muted-foreground italic mb-1">
+        <p className="mb-1 hidden text-[10px] italic text-muted-foreground pointer-fine:block">
           {t('Tip: right-click a row for more actions')}
         </p>
         {preview.map(({ doc, hints }) => {

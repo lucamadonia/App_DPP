@@ -50,5 +50,12 @@
   "pending": "ausstehend",
   "more warnings": "weitere Warnungen",
   "Get Started": "Loslegen",
-  "{{count}} Batches": "{{count}} Chargen"
+  "{{count}} Batches": "{{count}} Chargen",
+  "Last 8 weeks": "Letzte 8 Wochen",
+  "Failed to load activity": "Aktivität konnte nicht geladen werden",
+  "Failed to load compliance data": "Compliance-Daten konnten nicht geladen werden",
+  "Try again": "Erneut versuchen",
+  "live": "Live",
+  "draft": "Entwurf",
+  "archived": "Archiviert"
 }

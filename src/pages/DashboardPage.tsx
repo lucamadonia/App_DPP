@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   ArrowRight,
+  ArrowUpRight,
   QrCode,
   Plus,
   Sparkles,
@@ -28,9 +29,9 @@ import { AnimatedList, AnimatedListItem } from '@/components/ui/animated-list';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProducts, useDocumentStats } from '@/hooks/queries';
-import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
 import { blurIn, gridStagger, gridItem, spring } from '@/lib/motion';
+import { relativeTime, sparklinePoints } from '@/lib/animations';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { ComplianceWidget } from '@/components/dashboard/ComplianceWidget';
@@ -43,11 +44,41 @@ function getGreetingKey(hour: number): string {
   return 'Good evening';
 }
 
-function getGreetingIcon(hour: number) {
-  if (hour < 6) return Moon;
-  if (hour < 12) return Sunrise;
-  if (hour < 18) return Sun;
-  return Moon;
+function GreetingTimeIcon({ hour, className }: { hour: number; className?: string }) {
+  if (hour < 6) return <Moon className={className} />;
+  if (hour < 12) return <Sunrise className={className} />;
+  if (hour < 18) return <Sun className={className} />;
+  return <Moon className={className} />;
+}
+
+const SPARK_W = 120;
+const SPARK_H = 36;
+
+function Sparkline({ data }: { data: number[] }) {
+  const points = sparklinePoints(data, SPARK_W, SPARK_H);
+  if (!points) return null;
+  return (
+    <svg
+      viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+      preserveAspectRatio="none"
+      className="h-8 w-full text-primary"
+      aria-hidden
+    >
+      <polygon
+        points={`2,${SPARK_H - 2} ${points} ${SPARK_W - 2},${SPARK_H - 2}`}
+        fill="currentColor"
+        opacity={0.12}
+      />
+      <polyline
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function DashboardPage() {
@@ -60,12 +91,30 @@ export function DashboardPage() {
   const isError = productsError || docsError;
   const prefersReduced = useReducedMotion();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Captured once per mount via lazy initializer so render stays pure.
+  const [now] = useState(() => new Date());
 
   const totalBatches = products.reduce((sum, p) => sum + (p.batchCount || 0), 0);
-  const hour = new Date().getHours();
-  const GreetingIcon = getGreetingIcon(hour);
+  const hour = now.getHours();
   const displayName = user?.name || user?.email?.split('@')[0] || '';
   const isNewUser = products.length === 0 && docStats.total === 0;
+  const dateLine = now.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  // Products created per week over the last 8 weeks (oldest → newest).
+  const weeks = 8;
+  const weeklyCounts = new Array<number>(weeks).fill(0);
+  const nowMs = now.getTime();
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  for (const p of products) {
+    if (!p.createdAt) continue;
+    const w = Math.floor((nowMs - new Date(p.createdAt).getTime()) / weekMs);
+    if (w >= 0 && w < weeks) weeklyCounts[weeks - 1 - w] += 1;
+  }
+  const hasTrend = weeklyCounts.some((c) => c > 0);
 
   const stats = [
     {
@@ -78,6 +127,7 @@ export function DashboardPage() {
       color: 'text-primary',
       bgColor: 'bg-primary/10',
       href: '/products',
+      sparkline: hasTrend,
     },
     {
       title: t('Documents', { ns: 'common' }),
@@ -123,79 +173,99 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Compliance reminder (EAR/LUCID monthly filings) */}
       <ComplianceReminderBanner />
 
-      {/* Personalized Greeting */}
-      <motion.div
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      {/* Hero band — branded atmosphere via tenant --primary */}
+      <motion.section
+        className="relative overflow-hidden rounded-2xl border bg-card p-5 sm:p-7"
         variants={prefersReduced ? undefined : blurIn}
         initial={prefersReduced ? false : 'initial'}
         animate="animate"
       >
-        <div>
-          <div className="flex items-center gap-2">
-            <GreetingIcon className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-20 -top-28 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
+          <div className="absolute -bottom-36 left-1/3 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+          <div
+            className="absolute inset-0 text-muted-foreground/20 opacity-40"
+            style={{
+              backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+            }}
+          />
+        </div>
+
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <GreetingTimeIcon hour={hour} className="h-3.5 w-3.5 text-primary" />
+              {dateLine}
+            </p>
+            <h1 className="mt-2 truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {displayName
                 ? t(getGreetingKey(hour) + ', {{name}}!', { name: displayName })
                 : t(getGreetingKey(hour) + '!')}
             </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">
+              {isNewUser
+                ? t('Get started by creating your first product')
+                : t('Here is your overview for today')}
+            </p>
           </div>
-          <p className="mt-1 text-muted-foreground">
-            {isNewUser
-              ? t('Get started by creating your first product')
-              : t('Here is your overview for today')}
-          </p>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+            <Button variant="outline" className="w-full sm:w-auto" asChild>
+              <Link to="/dpp/qr-generator">
+                <QrCode className="mr-2 h-4 w-4" />
+                {t('Generate QR')}
+              </Link>
+            </Button>
+            <Button className="w-full sm:w-auto" asChild>
+              <Link to="/products/new">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('New Product')}
+              </Link>
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link to="/dpp/qr-generator">
-              <QrCode className="mr-2 h-4 w-4" />
-              {t('Generate QR')}
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link to="/products/new">
-              <Package className="mr-2 h-4 w-4" />
-              {t('New Product')}
-            </Link>
-          </Button>
-        </div>
-      </motion.div>
+      </motion.section>
 
-      {/* Bento Stats Grid - first card spans 2 cols */}
+      {/* KPI grid */}
       <motion.div
-        className="grid gap-4 grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         variants={prefersReduced ? undefined : gridStagger}
         initial={prefersReduced ? false : 'initial'}
         animate="animate"
       >
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            variants={prefersReduced ? undefined : gridItem}
-            className={index === 0 ? 'col-span-2 lg:col-span-1' : ''}
-          >
-            <Link to={stat.href} className="block h-full group">
+        {stats.map((stat) => (
+          <motion.div key={stat.title} variants={prefersReduced ? undefined : gridItem}>
+            <Link to={stat.href} className="group block h-full">
               <GlassCard
                 enableTilt={!prefersReduced}
-                className={`h-full transition-all duration-200 hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-md ${index === 0 ? 'gradient-border-animated' : ''}`}
+                className="h-full transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted/30 hover:shadow-md"
               >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </CardTitle>
-                  <div className={`rounded-lg p-2 ${stat.bgColor}`}>
-                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <CardContent className="flex h-full flex-col p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className={`rounded-xl p-2 sm:p-2.5 ${stat.bgColor}`}>
+                      <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+                    </div>
+                    <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="mt-3 text-2xl font-bold tabular-nums sm:text-3xl">
                     <AnimatedCounter value={stat.value} />
                   </div>
-                  <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
+                  <p className="mt-0.5 truncate text-xs font-medium text-foreground sm:text-sm">
+                    {stat.title}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{stat.subtitle}</p>
+                  {stat.sparkline && (
+                    <div className="mt-auto pt-3">
+                      <Sparkline data={weeklyCounts} />
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {t('Last 8 weeks')}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </GlassCard>
             </Link>
@@ -223,7 +293,7 @@ export function DashboardPage() {
                   {t('Create your first Digital Product Passport in minutes. Add a product, upload documents, and generate QR codes.')}
                 </p>
               </div>
-              <Button size="lg" onClick={() => setShowOnboarding(true)}>
+              <Button size="lg" className="w-full sm:w-auto" onClick={() => setShowOnboarding(true)}>
                 <Sparkles className="mr-2 h-4 w-4" />
                 {t('Get Started')}
               </Button>
@@ -239,9 +309,9 @@ export function DashboardPage() {
         onComplete={() => setShowOnboarding(false)}
       />
 
-      {/* Bottom Bento Grid - 3 columns on large screens */}
+      {/* Bottom bento grid */}
       <motion.div
-        className="grid gap-6 lg:grid-cols-3"
+        className="grid gap-4 sm:gap-6 lg:grid-cols-3"
         variants={prefersReduced ? undefined : gridStagger}
         initial={prefersReduced ? false : 'initial'}
         animate="animate"
@@ -250,15 +320,17 @@ export function DashboardPage() {
         <motion.div variants={prefersReduced ? undefined : gridItem} className="lg:col-span-2">
           <GlassCard className="h-full">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-muted-foreground" />
                     {t('Recent Products')}
                   </CardTitle>
-                  <CardDescription>{t('Your most recently added products')}</CardDescription>
+                  <CardDescription className="hidden sm:block">
+                    {t('Your most recently added products')}
+                  </CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" className="shrink-0" asChild>
                   <Link to="/products">
                     {t('View All', { ns: 'common' })}
                     <ArrowRight className="ml-1 h-4 w-4" />
@@ -281,7 +353,7 @@ export function DashboardPage() {
                   </Button>
                 </div>
               ) : (
-                <AnimatedList className="space-y-3">
+                <AnimatedList className="space-y-2.5">
                   {recentProducts.map((product) => (
                     <AnimatedListItem key={product.id} itemKey={product.id}>
                       <motion.div
@@ -290,29 +362,41 @@ export function DashboardPage() {
                       >
                         <Link
                           to={`/products/${product.id}`}
-                          className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                          className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                         >
-                          <div className="space-y-1">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt=""
+                              loading="lazy"
+                              className="h-10 w-10 shrink-0 rounded-lg border object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 font-semibold text-primary">
+                              {(product.name || '?').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1 space-y-0.5">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium">{product.name}</p>
+                              <p className="truncate font-medium">{product.name}</p>
                               <Badge
                                 variant={product.status === 'live' ? 'default' : 'secondary'}
-                                className="text-xs"
+                                className="shrink-0 text-xs"
                               >
                                 {product.status === 'live' && (
                                   <CheckCircle2 className="mr-1 h-3 w-3" />
                                 )}
                                 {product.status === 'draft' && <Clock className="mr-1 h-3 w-3" />}
-                                {product.status || 'draft'}
+                                {t(product.status || 'draft')}
                               </Badge>
                             </div>
-                            <p className="font-mono text-xs text-muted-foreground">
+                            <p className="truncate font-mono text-xs text-muted-foreground">
                               GTIN: {product.gtin} · {t('{{count}} Batches', { count: product.batchCount || 0 })}
                             </p>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                             {product.createdAt
-                              ? formatDate(product.createdAt, locale)
+                              ? relativeTime(product.createdAt, locale)
                               : ''}
                           </span>
                         </Link>
@@ -352,21 +436,23 @@ export function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 grid-cols-2">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { to: '/products/new', icon: Package, label: t('Create Product') },
-                  { to: '/documents', icon: FileWarning, label: t('Documents', { ns: 'common' }) },
-                  { to: '/dpp/qr-generator', icon: QrCode, label: t('Create QR Code') },
-                  { to: '/regulations', icon: TrendingUp, label: t('Regulations', { ns: 'common' }) },
+                  { to: '/products/new', icon: Package, label: t('Create Product'), color: 'text-primary', bg: 'bg-primary/10' },
+                  { to: '/documents', icon: FileWarning, label: t('Documents', { ns: 'common' }), color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                  { to: '/dpp/qr-generator', icon: QrCode, label: t('Create QR Code'), color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+                  { to: '/regulations', icon: TrendingUp, label: t('Regulations', { ns: 'common' }), color: 'text-amber-600', bg: 'bg-amber-500/10' },
                 ].map((action) => (
                   <motion.div
                     key={action.to}
                     whileHover={prefersReduced ? undefined : { scale: 1.04, y: -2 }}
                     transition={spring.bouncy}
                   >
-                    <Button variant="outline" className="h-auto w-full flex-col gap-2 p-4 group" asChild>
+                    <Button variant="outline" className="group h-auto w-full flex-col gap-2 p-4" asChild>
                       <Link to={action.to}>
-                        <action.icon className="h-6 w-6 transition-transform group-hover:scale-110" />
+                        <span className={`rounded-lg p-2 ${action.bg}`}>
+                          <action.icon className={`h-5 w-5 transition-transform group-hover:scale-110 ${action.color}`} />
+                        </span>
                         <span className="text-xs">{action.label}</span>
                       </Link>
                     </Button>
