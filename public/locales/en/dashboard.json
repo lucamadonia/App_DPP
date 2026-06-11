@@ -57,5 +57,8 @@
   "Try again": "Try again",
   "live": "Live",
   "draft": "Draft",
-  "archived": "Archived"
+  "archived": "Archived",
+  "active": "Active",
+  "Commerce data synced": "Commerce data synced",
+  "Shopify inventory exported": "Shopify inventory exported"
 }

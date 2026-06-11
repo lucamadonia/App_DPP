@@ -54,9 +54,17 @@ function formatAction(entry: ActivityLogEntry, t: (key: string, options?: Record
   if (action.includes('deleted')) {
     return name ? t('Deleted "{{name}}"', { name }) : t('Deleted an item');
   }
+  // Integration jobs (commerce/shopify sync) log technical action ids.
+  if (action.includes('backfill')) {
+    return t('Commerce data synced');
+  }
+  if (action.includes('inventory')) {
+    return t('Shopify inventory exported');
+  }
 
-  // Fallback: use action directly
-  return action.replace(/_/g, ' ');
+  // Fallback: humanize "domain action.step" → "Domain action step"
+  const cleaned = action.replace(/[._]/g, ' ').replace(/\s+/g, ' ').trim();
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
 interface ActivityFeedProps {
