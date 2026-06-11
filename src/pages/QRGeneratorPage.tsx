@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
 import { blurIn, scaleIn, useReducedMotion } from '@/lib/motion';
@@ -52,6 +53,7 @@ import {
 } from '@/components/ui/accordion';
 import { getProducts, type ProductListItem } from '@/services/supabase';
 import { getBatches } from '@/services/supabase/batches';
+import { ErrorState } from '@/components/ui/state-feedback';
 import type { BatchListItem } from '@/types/product';
 import { useBranding } from '@/contexts/BrandingContext';
 import { validateDomain, validatePathPrefix, normalizeDomain } from '@/lib/domain-utils';
@@ -180,6 +182,8 @@ export function QRGeneratorPage() {
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<ProductListItem | null>(null);
   const [batches, setBatches] = useState<BatchListItem[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<BatchListItem | null>(null);
@@ -236,15 +240,22 @@ export function QRGeneratorPage() {
   useEffect(() => {
     async function loadProducts() {
       setIsLoading(true);
-      const productsData = await getProducts();
-      setProducts(productsData);
-      if (productsData.length > 0) {
-        setSelectedProduct(productsData[0]);
+      setLoadError(false);
+      try {
+        const productsData = await getProducts();
+        setProducts(productsData);
+        if (productsData.length > 0) {
+          setSelectedProduct(productsData[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load products:', error);
+        setLoadError(true);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadProducts();
-  }, []);
+  }, [reloadKey]);
 
   // Load batches when a product is selected
   useEffect(() => {
@@ -255,13 +266,19 @@ export function QRGeneratorPage() {
     }
     async function loadBatches() {
       setBatchesLoading(true);
-      const batchData = await getBatches(selectedProduct!.id);
-      setBatches(batchData);
-      setSelectedBatch(batchData.length > 0 ? batchData[0] : null);
-      setBatchesLoading(false);
+      try {
+        const batchData = await getBatches(selectedProduct!.id);
+        setBatches(batchData);
+        setSelectedBatch(batchData.length > 0 ? batchData[0] : null);
+      } catch (error) {
+        console.error('Failed to load batches:', error);
+        toast.error(t('Failed to load batches'));
+      } finally {
+        setBatchesLoading(false);
+      }
     }
     loadBatches();
-  }, [selectedProduct]);
+  }, [selectedProduct, t]);
 
   // Save QR visual settings to localStorage
   useEffect(() => {
@@ -613,7 +630,7 @@ export function QRGeneratorPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 512 * 1024) {
-      alert('Logo file must be under 500 KB');
+      toast.error(t('Logo file must be under 500 KB'));
       return;
     }
     const reader = new FileReader();
@@ -662,7 +679,7 @@ export function QRGeneratorPage() {
       setDomainSaved(true);
       setTimeout(() => setDomainSaved(false), 2000);
     } else {
-      alert('Error saving settings');
+      toast.error(t('Error saving settings'));
     }
 
     setIsSavingDomain(false);
@@ -673,6 +690,15 @@ export function QRGeneratorPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        title={t('Failed to load products')}
+        onRetry={() => setReloadKey((k) => k + 1)}
+      />
     );
   }
 

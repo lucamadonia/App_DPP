@@ -311,54 +311,59 @@ export function DocumentsPage() {
     setIsClassifying(true);
     setAiResult(null);
 
-    const outcome = await classifyDocument({
-      file: selectedFile,
-      products: aiProducts,
-    });
+    try {
+      const outcome = await classifyDocument({
+        file: selectedFile,
+        products: aiProducts,
+      });
 
-    setIsClassifying(false);
+      if (!outcome.ok) {
+        toast.error(outcome.error);
+        return;
+      }
 
-    if (!outcome.ok) {
-      toast.error(outcome.error);
-      return;
-    }
+      const { result } = outcome;
+      setAiResult(result);
 
-    const { result } = outcome;
-    setAiResult(result);
+      if (result.unclear) {
+        toast.warning(
+          result.unclearReason
+            ? t('AI could not classify: {{reason}}', { reason: result.unclearReason })
+            : t('AI could not classify this document — please fill in manually.')
+        );
+        return;
+      }
 
-    if (result.unclear) {
-      toast.warning(
-        result.unclearReason
-          ? t('AI could not classify: {{reason}}', { reason: result.unclearReason })
-          : t('AI could not classify this document — please fill in manually.')
+      // Apply AI suggestions to form fields
+      setNewDoc((prev) => ({
+        ...prev,
+        name: result.name || prev.name,
+        category: (result.category as Document['category']) || prev.category,
+        visibility: (result.visibility as VisibilityLevel) || prev.visibility,
+        validUntil: result.validUntil || prev.validUntil,
+        description: result.description || prev.description,
+      }));
+
+      // Apply product suggestion (only if it's in the user's product list)
+      if (
+        result.suggestedProductId &&
+        productOptions.some((p) => p.id === result.suggestedProductId)
+      ) {
+        setAssignmentType('product');
+        setAssignmentId(result.suggestedProductId);
+      }
+
+      toast.success(
+        t('AI classified this document ({{credits}} credits used)', {
+          credits: outcome.creditsCosted,
+        })
       );
-      return;
+    } catch (error) {
+      console.error('AI classification failed:', error);
+      toast.error(t('AI classification failed'));
+    } finally {
+      setIsClassifying(false);
     }
-
-    // Apply AI suggestions to form fields
-    setNewDoc((prev) => ({
-      ...prev,
-      name: result.name || prev.name,
-      category: (result.category as Document['category']) || prev.category,
-      visibility: (result.visibility as VisibilityLevel) || prev.visibility,
-      validUntil: result.validUntil || prev.validUntil,
-      description: result.description || prev.description,
-    }));
-
-    // Apply product suggestion (only if it's in the user's product list)
-    if (
-      result.suggestedProductId &&
-      productOptions.some((p) => p.id === result.suggestedProductId)
-    ) {
-      setAssignmentType('product');
-      setAssignmentId(result.suggestedProductId);
-    }
-
-    toast.success(
-      t('AI classified this document ({{credits}} credits used)', {
-        credits: outcome.creditsCosted,
-      })
-    );
   }
 
   // Create / upload document

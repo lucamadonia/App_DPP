@@ -824,5 +824,15 @@
   "Dark Band": "Dunkler Streifen",
   "Show Powered By": "Powered-By anzeigen",
 
-  "Components": "Komponenten"
+  "Components": "Komponenten",
+  "Error saving": "Fehler beim Speichern",
+  "Error deleting": "Fehler beim Löschen",
+  "Error assigning product": "Fehler beim Zuweisen des Produkts",
+  "Error generating invitation": "Fehler beim Erstellen der Einladung",
+  "Error approving supplier": "Fehler beim Genehmigen des Lieferanten",
+  "Error rejecting supplier": "Fehler beim Ablehnen des Lieferanten",
+  "Could not copy link to clipboard": "Link konnte nicht in die Zwischenablage kopiert werden",
+  "Delete supplier?": "Lieferant löschen?",
+  "Really delete this supplier? All product assignments will also be removed.": "Diesen Lieferanten wirklich löschen? Alle Produktzuordnungen werden ebenfalls entfernt.",
+  "Delete entry?": "Eintrag löschen?"
 }

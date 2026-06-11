@@ -176,5 +176,6 @@
   "Failed to delete version": "Failed to delete version.",
   "Version restored": "Version restored.",
   "Version deleted": "Version deleted.",
-  "v{{n}}": "v{{n}}"
+  "v{{n}}": "v{{n}}",
+  "AI classification failed": "AI classification failed"
 }

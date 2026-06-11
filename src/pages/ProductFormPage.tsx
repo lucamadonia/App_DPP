@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages, createSupplier, getCountries, createCategory, addSubcategoryToCategory } from '@/services/supabase';
 import { getCurrentTenant } from '@/services/supabase/tenants';
 import { getCurrentTenantId } from '@/lib/supabase';
@@ -187,6 +188,7 @@ export function ProductFormPage() {
   // Load product data in edit mode
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     setIsLoading(true);
     Promise.all([
       getProductById(id),
@@ -194,6 +196,7 @@ export function ProductFormPage() {
       getProductImages(id),
       getProductComponents(id),
     ]).then(([product, productSuppliers, images, existingComponents]) => {
+      if (cancelled) return;
       if (!product) {
         setSubmitError('Product not found.');
         setIsLoading(false);
@@ -322,10 +325,15 @@ export function ProductFormPage() {
         materials: c.componentProduct,
       })));
     }).catch(() => {
+      if (cancelled) return;
       setSubmitError('Error loading product.');
     }).finally(() => {
+      if (cancelled) return;
       setIsLoading(false);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const [formData, setFormData] = useState({
@@ -484,9 +492,12 @@ export function ProductFormPage() {
         setSuppliers(refreshed);
         setManufacturerSupplierId(result.id);
         updateField('manufacturer', quickCreateName.trim());
+      } else {
+        toast.error(t('Failed to create supplier'));
       }
     } catch (err) {
       console.error('Quick create supplier failed:', err);
+      toast.error(t('Failed to create supplier'));
     } finally {
       setIsQuickCreating(false);
       setQuickCreateOpen(false);
@@ -976,7 +987,16 @@ export function ProductFormPage() {
                 </Popover>
 
                 {/* Quick Create Supplier Dialog */}
-                <Dialog open={quickCreateOpen} onOpenChange={setQuickCreateOpen}>
+                <Dialog
+                  open={quickCreateOpen}
+                  onOpenChange={(open) => {
+                    setQuickCreateOpen(open);
+                    if (!open) {
+                      setQuickCreateName('');
+                      setQuickCreateCountry('');
+                    }
+                  }}
+                >
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>{t('Quick Create Supplier')}</DialogTitle>

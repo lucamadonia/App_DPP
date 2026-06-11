@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem, blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
@@ -62,6 +63,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { getProductImages, getProductComponents, getProductsContaining } from '@/services/supabase';
 import { useProduct, useProducts, useProductSuppliers, useBatches, useBatchCosts, useDeleteBatch } from '@/hooks/queries';
 import type { ProductComponent } from '@/types/product';
@@ -109,6 +120,7 @@ export function ProductPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
+  const [batchToDelete, setBatchToDelete] = useState<string | null>(null);
 
   // Ancillary data loaded via inline useQuery
   const { data: allProducts = [] } = useProducts();
@@ -147,11 +159,24 @@ export function ProductPage() {
 
   const error = productError ? 'Product not found' : (!id ? 'No product ID provided' : null);
 
-  const handleDeleteBatch = async (batchId: string) => {
-    if (!confirm('Are you sure you want to delete this batch?')) return;
-    const result = await deleteBatchMutation.mutateAsync(batchId);
-    if (!result.success) {
-      alert('Error deleting batch: ' + result.error);
+  const handleDeleteBatch = (batchId: string) => {
+    setBatchToDelete(batchId);
+  };
+
+  const confirmDeleteBatch = async () => {
+    if (!batchToDelete) return;
+    try {
+      const result = await deleteBatchMutation.mutateAsync(batchToDelete);
+      if (result.success) {
+        toast.success(t('Batch deleted'));
+      } else {
+        toast.error(t('Error deleting batch: {{error}}', { error: result.error ?? '' }));
+      }
+    } catch (err) {
+      console.error('Error deleting batch:', err);
+      toast.error(t('Error deleting batch: {{error}}', { error: '' }));
+    } finally {
+      setBatchToDelete(null);
     }
   };
 
@@ -216,7 +241,7 @@ export function ProductPage() {
               <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
               <Badge className="bg-success text-success-foreground">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
-                Live
+                {t('Live', { ns: 'common' })}
               </Badge>
               {product.productType === 'set' && (
                 <Badge variant="outline" className="border-primary text-primary">
@@ -565,7 +590,7 @@ export function ProductPage() {
                           <TableCell>
                             <Badge variant="secondary" className={status.className}>
                               <status.icon className="mr-1 h-3 w-3" />
-                              {status.label}
+                              {t(status.label, { ns: 'common' })}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1095,6 +1120,33 @@ export function ProductPage() {
           <AIComplianceCheckTab product={product} />
         </TabsContent>
       </Tabs>
+
+      {/* Delete Batch Confirmation Dialog */}
+      <AlertDialog
+        open={!!batchToDelete}
+        onOpenChange={(open) => {
+          if (!open) setBatchToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Delete batch?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('Are you sure you want to delete this batch?')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteBatch}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('Delete', { ns: 'common' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

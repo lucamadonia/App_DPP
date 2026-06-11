@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
@@ -28,6 +29,16 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -51,9 +62,11 @@ export function BatchDetailPage() {
   const { t: tW } = useTranslation('warehouse');
   const locale = useLocale();
   const { id: productId, batchId } = useParams<{ id: string; batchId: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [batch, setBatch] = useState<ProductBatch | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -74,12 +87,13 @@ export function BatchDetailPage() {
   }, [productId, batchId]);
 
   const handleDelete = async () => {
-    if (!batchId || !confirm('Are you sure you want to delete this batch?')) return;
+    if (!batchId) return;
     const result = await deleteBatch(batchId);
     if (result.success) {
-      window.location.href = `/products/${productId}?tab=batches`;
+      toast.success(t('Batch deleted'));
+      navigate(`/products/${productId}?tab=batches`);
     } else {
-      alert('Error deleting batch: ' + result.error);
+      toast.error(t('Error deleting batch: {{error}}', { error: result.error ?? '' }));
     }
   };
 
@@ -115,8 +129,8 @@ export function BatchDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Batch not found</h1>
-            <p className="text-muted-foreground">The batch does not exist or you do not have access.</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('Batch not found')}</h1>
+            <p className="text-muted-foreground">{t('The batch does not exist or you do not have access.')}</p>
           </div>
         </div>
       </div>
@@ -155,7 +169,7 @@ export function BatchDetailPage() {
               <h1 className="text-2xl font-bold text-foreground font-mono">{batch.serialNumber}</h1>
               <Badge variant="secondary" className={status.className}>
                 <status.icon className="mr-1 h-3 w-3" />
-                {status.label}
+                {t(status.label, { ns: 'common' })}
               </Badge>
               {hasOverrides && (
                 <Badge variant="outline" className="border-primary text-primary">
@@ -275,7 +289,7 @@ export function BatchDetailPage() {
                 <p className="text-sm text-muted-foreground">Status</p>
                 <Badge variant="secondary" className={status.className}>
                   <status.icon className="mr-1 h-3 w-3" />
-                  {status.label}
+                  {t(status.label, { ns: 'common' })}
                 </Badge>
               </div>
               <div>
@@ -744,13 +758,35 @@ export function BatchDetailPage() {
               <p className="font-medium">Delete this batch</p>
               <p className="text-sm text-muted-foreground">This action cannot be undone. The product itself will not be affected.</p>
             </div>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Batch
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('Delete batch?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('Are you sure you want to delete this batch?')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('Delete', { ns: 'common' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
