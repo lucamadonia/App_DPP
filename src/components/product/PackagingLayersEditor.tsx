@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,16 +36,25 @@ export function PackagingLayersEditor({ productId, readOnly = false }: Packaging
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadLayers();
-  }, [productId]);
-
-  const loadLayers = async () => {
+  const loadLayers = useCallback(async () => {
     setIsLoading(true);
     const data = await getProductPackaging(productId);
     setLayers(data);
     setIsLoading(false);
-  };
+  }, [productId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const data = await getProductPackaging(productId);
+      if (cancelled) return;
+      setLayers(data);
+      setIsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const handleAddLayer = async () => {
     // Find next available layer type

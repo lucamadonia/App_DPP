@@ -26,25 +26,29 @@ export function CustomerTicketDetailPage() {
   const navigate = useNavigate();
   const { t } = useTranslation('customer-portal');
   const { tenantSlug } = useCustomerPortal();
+  const prefersReduced = useReducedMotion();
 
   const [ticket, setTicket] = useState<RhTicket | null>(null);
   const [messages, setMessages] = useState<RhTicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
-  const loadData = async () => {
-    if (!id) return;
-    const [ticketData, messagesData] = await Promise.all([
-      getCustomerTicket(id),
-      getCustomerTicketMessages(id),
-    ]);
-    setTicket(ticketData);
-    setMessages(messagesData);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    loadData();
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const [ticketData, messagesData] = await Promise.all([
+        getCustomerTicket(id),
+        getCustomerTicketMessages(id),
+      ]);
+      if (cancelled) return;
+      setTicket(ticketData);
+      setMessages(messagesData);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   // Realtime subscription for new messages
@@ -119,7 +123,6 @@ export function CustomerTicketDetailPage() {
   }
 
   const isClosed = ticket.status === 'closed' || ticket.status === 'resolved';
-  const prefersReduced = useReducedMotion();
 
   return (
     <div className="space-y-3 sm:space-y-4 h-full flex flex-col px-4 sm:px-0">

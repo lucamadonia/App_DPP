@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     }
 
     // 4. Filter: if config exists, only enabled + published; otherwise all published
-    let filtered = (products || []).filter((p: any) => {
+    const filtered = (products || []).filter((p: any) => {
       if (hasConfig) {
         return enabledIds.has(p.id) && p.status === 'published';
       }

@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 type StarSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -43,6 +44,7 @@ export function StarRating({
   color,
   muted = false,
 }: Props) {
+  const { t } = useTranslation('warehouse');
   const interactive = !!onChange;
   const sizeCfg = SIZE_MAP[size];
 
@@ -50,7 +52,7 @@ export function StarRating({
     return (
       <div
         role="img"
-        aria-label={label || `${value} of 5 stars`}
+        aria-label={label || t('{{value}} of 5 stars', { value })}
         className={cn('inline-flex items-center', sizeCfg.gap, className)}
       >
         {[1, 2, 3, 4, 5].map(i => {
@@ -74,7 +76,7 @@ export function StarRating({
   return (
     <div
       role="radiogroup"
-      aria-label={label || 'Star rating'}
+      aria-label={label || t('Star rating')}
       className={cn('inline-flex items-center', sizeCfg.gap, className)}
     >
       {[1, 2, 3, 4, 5].map(i => {
@@ -86,7 +88,7 @@ export function StarRating({
             type="button"
             role="radio"
             aria-checked={isSelected}
-            aria-label={`${i} of 5 stars`}
+            aria-label={t('{{value}} of 5 stars', { value: i })}
             onClick={() => onChange?.(i as 1 | 2 | 3 | 4 | 5)}
             onKeyDown={e => {
               if (e.key === 'ArrowRight' && value < 5) {

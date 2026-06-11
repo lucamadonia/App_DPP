@@ -124,7 +124,7 @@ export function calculatePageBreaks(
         currentPage = { pageIndex: pages.length, sections: [], usedHeight: 0 };
       }
 
-      let availableHeight = pageContentHeight - currentPage.usedHeight - overhead;
+      const availableHeight = pageContentHeight - currentPage.usedHeight - overhead;
       let accumulatedHeight = 0;
       let endIndex = elementStartIndex;
 

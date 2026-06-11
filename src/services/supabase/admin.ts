@@ -102,6 +102,61 @@ export async function toggleModule(
 }
 
 // ============================================
+// TENANT HEALTH (direct reads, admin-only RLS)
+// ============================================
+
+export interface AdminTenantHealthRow {
+  id: string;
+  healthScore?: number;
+  status: string;
+  suspendedReason?: string;
+  suspendedAt?: string;
+}
+
+/**
+ * Health/status info for a set of tenants.
+ * Super-admin scoped: relies on admin-only RLS on `tenants` — no tenant filter.
+ */
+export async function getTenantsHealth(tenantIds: string[]): Promise<AdminTenantHealthRow[]> {
+  if (tenantIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, health_score, status, suspended_reason, suspended_at')
+    .in('id', tenantIds);
+
+  if (error) {
+    throw new Error(`Failed to load tenant health: ${error.message}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    healthScore: r.health_score ?? undefined,
+    status: r.status || 'active',
+    suspendedReason: r.suspended_reason ?? undefined,
+    suspendedAt: r.suspended_at ?? undefined,
+  }));
+}
+
+/**
+ * Health score of a single tenant (super-admin scoped, admin-only RLS).
+ */
+export async function getTenantHealthScore(tenantId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('health_score')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load tenant health score: ${error.message}`);
+  }
+
+  return data?.health_score ?? null;
+}
+
+// ============================================
 // USERS
 // ============================================
 

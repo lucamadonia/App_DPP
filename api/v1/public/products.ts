@@ -111,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 4. Filter products: if config exists, show enabled products (any status);
     //    without config, only show live products
-    let filtered = (products || []).filter((p: any) => {
+    const filtered = (products || []).filter((p: any) => {
       if (hasConfig) {
         return enabledIds.has(p.id) && p.status !== 'archived';
       }
@@ -146,7 +146,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 7. Get batches for these products (only live batches)
-    let batchMap: Record<string, any[]> = {};
+    const batchMap: Record<string, any[]> = {};
     if (productIds.length > 0) {
       const { data: batches } = await supabase
         .from('product_batches')
@@ -183,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 8. Get consumer-visible documents for these products
-    let docMap: Record<string, any[]> = {};
+    const docMap: Record<string, any[]> = {};
     if (productIds.length > 0) {
       const { data: docs } = await supabase
         .from('documents')

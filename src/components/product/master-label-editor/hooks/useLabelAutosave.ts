@@ -9,11 +9,23 @@ export function useLabelAutosave(
   const [status, setStatus] = useState<LabelSaveStatus>('saved');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveFnRef = useRef(saveFn);
-  saveFnRef.current = saveFn;
+
+  useEffect(() => {
+    saveFnRef.current = saveFn;
+  }, [saveFn]);
+
+  // Mark as unsaved during render when changes appear (guarded transition,
+  // see React docs: "Storing information from previous renders").
+  const [prevHasChanges, setPrevHasChanges] = useState(false);
+  if (hasChanges !== prevHasChanges) {
+    setPrevHasChanges(hasChanges);
+    if (hasChanges) {
+      setStatus('unsaved');
+    }
+  }
 
   useEffect(() => {
     if (!hasChanges) return;
-    setStatus('unsaved');
 
     if (timerRef.current) {
       clearTimeout(timerRef.current);

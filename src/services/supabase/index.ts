@@ -16,6 +16,7 @@ export {
   updateProduct,
   deleteProduct,
   getProductStats,
+  getExistingGtins,
   type ProductListItem,
 } from './products';
 
@@ -508,6 +509,17 @@ export {
   removeShipmentItem,
   getShipmentStats,
 } from './wh-shipments';
+
+// Warehouse - Packaging Types
+export {
+  getPackagingTypes,
+  createPackagingType,
+  updatePackagingType,
+  deletePackagingType,
+  setPackagingTypeActive,
+  type WhPackagingType,
+  type WhPackagingTypeInput,
+} from './wh-packaging-types';
 
 // Warehouse - Campaigns
 export {

@@ -129,12 +129,13 @@ function DonutChartMode({ materials, primaryColor, showLabels }: { materials: Ma
   const r = 60;
   const strokeWidth = 24;
 
-  let cumulativePercent = 0;
   const segments = materials.map((m, i) => {
+    const cumulativeBefore = materials
+      .slice(0, i)
+      .reduce((sum, prev) => sum + prev.percentage / (total || 1), 0);
     const percent = m.percentage / (total || 1);
-    const startAngle = cumulativePercent * 360;
-    cumulativePercent += percent;
-    const endAngle = cumulativePercent * 360;
+    const startAngle = cumulativeBefore * 360;
+    const endAngle = (cumulativeBefore + percent) * 360;
     const largeArc = endAngle - startAngle > 180 ? 1 : 0;
     const startRad = ((startAngle - 90) * Math.PI) / 180;
     const endRad = ((endAngle - 90) * Math.PI) / 180;

@@ -48,14 +48,8 @@ export function FloorMapInterior({
 }: FloorMapInteriorProps) {
   const { t } = useTranslation('warehouse');
   const pos = zone.mapPosition;
-  if (!pos) return null;
 
-  const furniture = zone.furniture ?? [];
-
-  const zoneX = pos.x * GRID_CELL;
-  const zoneY = pos.y * GRID_CELL;
-  const zoneW = pos.width * GRID_CELL;
-  const zoneH = pos.height * GRID_CELL;
+  const furniture = useMemo(() => zone.furniture ?? [], [zone.furniture]);
 
   // Filter stock to this zone
   const zoneStock = useMemo(
@@ -82,6 +76,13 @@ export function FloorMapInterior({
   const handleFurniturePointerLeave = useCallback(() => {
     onFurnitureHover(null);
   }, [onFurnitureHover]);
+
+  if (!pos) return null;
+
+  const zoneX = pos.x * GRID_CELL;
+  const zoneY = pos.y * GRID_CELL;
+  const zoneW = pos.width * GRID_CELL;
+  const zoneH = pos.height * GRID_CELL;
 
   return (
     <g transform={`translate(${zoneX}, ${zoneY})`}>

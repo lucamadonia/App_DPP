@@ -36,8 +36,7 @@ import {
   autoMapColumns,
   generateCSVTemplate,
 } from '@/lib/product-csv';
-import { importProducts } from '@/services/supabase/products';
-import { supabase } from '@/lib/supabase';
+import { importProducts, getExistingGtins } from '@/services/supabase/products';
 import type { Product } from '@/types/product';
 
 // ---------------------------------------------------------------------------
@@ -191,8 +190,7 @@ export function ImportProductsDialog({
     let existingGtins = new Set<string>();
     const gtinField = Object.entries(columnMapping).find(([, v]) => v === 'gtin');
     if (gtinField) {
-      const { data } = await supabase.from('products').select('gtin');
-      if (data) existingGtins = new Set(data.map((r) => r.gtin).filter(Boolean));
+      existingGtins = new Set(await getExistingGtins());
     }
 
     const results: RowValidation[] = rawRows.map((row, i) => {

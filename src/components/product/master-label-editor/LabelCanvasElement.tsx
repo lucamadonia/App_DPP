@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import DOMPurify from 'dompurify';
 import JsBarcode from 'jsbarcode';
 import type { LabelElement } from '@/types/master-label-editor';
 import type { MasterLabelData } from '@/types/master-label';
@@ -128,7 +129,7 @@ function InlineTextEditor({
         borderBottom: '1px dashed hsl(var(--primary) / 0.4)',
       }}
       // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: value }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
       // Auto-focus on mount
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}

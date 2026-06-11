@@ -11,36 +11,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { recordPackagingReceipt, adjustPackagingStock, updatePackagingTracking } from '@/services/supabase/wh-shipments';
+import {
+  getPackagingTypes,
+  createPackagingType,
+  updatePackagingType,
+  deletePackagingType,
+  setPackagingTypeActive,
+  type WhPackagingType,
+  type WhPackagingTypeInput,
+} from '@/services/supabase/wh-packaging-types';
 import { PackagingMaterialFields } from '@/components/compliance/PackagingMaterialFields';
 import type { LucidMaterial, MaterialSplitEntry } from '@/types/compliance';
 import { toast } from 'sonner';
 
-interface PackagingRow {
-  id: string;
-  name: string;
-  description: string | null;
-  tare_weight_grams: number;
-  inner_length_cm: number | null;
-  inner_width_cm: number | null;
-  inner_height_cm: number | null;
-  max_load_grams: number | null;
-  is_active: boolean;
-  is_default: boolean;
-  sort_order: number;
-  stock_tracked: boolean;
-  stock_on_hand: number;
-  stock_threshold: number;
-  last_restocked_at: string | null;
-  primary_material: LucidMaterial | null;
-  material_split: MaterialSplitEntry[] | null;
-}
-
-function stockTone(row: PackagingRow): { tone: string; label: string } {
-  if (!row.stock_tracked) return { tone: 'text-muted-foreground', label: '—' };
-  const qty = row.stock_on_hand ?? 0;
-  const thr = row.stock_threshold ?? 10;
+function stockTone(row: WhPackagingType): { tone: string; label: string } {
+  if (!row.stockTracked) return { tone: 'text-muted-foreground', label: '—' };
+  const qty = row.stockOnHand ?? 0;
+  const thr = row.stockThreshold ?? 10;
   if (qty <= 0) return { tone: 'text-red-700 bg-red-50 dark:bg-red-950/30', label: 'Leer' };
   if (qty <= thr) return { tone: 'text-amber-700 bg-amber-50 dark:bg-amber-950/30', label: 'Niedrig' };
   return { tone: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30', label: 'OK' };
@@ -83,57 +71,54 @@ const EMPTY: FormState = {
 
 export function PackagingTypesPage() {
   const { t } = useTranslation('warehouse');
-  const [rows, setRows] = useState<PackagingRow[]>([]);
+  const [rows, setRows] = useState<WhPackagingType[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
-  const [receiptTarget, setReceiptTarget] = useState<PackagingRow | null>(null);
+  const [receiptTarget, setReceiptTarget] = useState<WhPackagingType | null>(null);
   const [receiptQty, setReceiptQty] = useState('');
   const [receiptNotes, setReceiptNotes] = useState('');
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustTarget, setAdjustTarget] = useState<PackagingRow | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<WhPackagingType | null>(null);
   const [adjustQty, setAdjustQty] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    const tenantId = await getCurrentTenantId();
-    if (!tenantId) { setLoading(false); return; }
-    const { data, error } = await supabase
-      .from('wh_packaging_types')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('sort_order', { ascending: true });
-    if (error) { toast.error(error.message); setLoading(false); return; }
-    setRows((data || []) as PackagingRow[]);
-    setLoading(false);
+    try {
+      setRows(await getPackagingTypes());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   function openCreate() {
-    setForm({ ...EMPTY, sort_order: String((rows.at(-1)?.sort_order ?? 0) + 1) });
+    setForm({ ...EMPTY, sort_order: String((rows.at(-1)?.sortOrder ?? 0) + 1) });
     setDialogOpen(true);
   }
 
-  function openEdit(r: PackagingRow) {
+  function openEdit(r: WhPackagingType) {
     setForm({
       id: r.id,
       name: r.name,
       description: r.description ?? '',
-      tare_weight_grams: String(r.tare_weight_grams ?? 0),
-      inner_length_cm: r.inner_length_cm != null ? String(r.inner_length_cm) : '',
-      inner_width_cm: r.inner_width_cm != null ? String(r.inner_width_cm) : '',
-      inner_height_cm: r.inner_height_cm != null ? String(r.inner_height_cm) : '',
-      max_load_grams: r.max_load_grams != null ? String(r.max_load_grams) : '',
-      is_active: r.is_active,
-      is_default: r.is_default,
-      sort_order: String(r.sort_order ?? 0),
-      stock_tracked: r.stock_tracked ?? false,
-      stock_threshold: String(r.stock_threshold ?? 10),
-      primary_material: r.primary_material ?? null,
-      material_split: r.material_split ?? null,
+      tare_weight_grams: String(r.tareWeightGrams ?? 0),
+      inner_length_cm: r.innerLengthCm != null ? String(r.innerLengthCm) : '',
+      inner_width_cm: r.innerWidthCm != null ? String(r.innerWidthCm) : '',
+      inner_height_cm: r.innerHeightCm != null ? String(r.innerHeightCm) : '',
+      max_load_grams: r.maxLoadGrams != null ? String(r.maxLoadGrams) : '',
+      is_active: r.isActive,
+      is_default: r.isDefault,
+      sort_order: String(r.sortOrder ?? 0),
+      stock_tracked: r.stockTracked ?? false,
+      stock_threshold: String(r.stockThreshold ?? 10),
+      primary_material: r.primaryMaterial ?? null,
+      material_split: r.materialSplit ?? null,
     });
     setDialogOpen(true);
   }
@@ -142,37 +127,28 @@ export function PackagingTypesPage() {
     if (!form.name.trim()) { toast.error(t('Name required')); return; }
     setSaving(true);
     try {
-      const tenantId = await getCurrentTenantId();
-      if (!tenantId) throw new Error('No tenant');
-      const payload = {
-        tenant_id: tenantId,
+      const input: WhPackagingTypeInput = {
         name: form.name.trim(),
         description: form.description.trim() || null,
-        tare_weight_grams: parseInt(form.tare_weight_grams) || 0,
-        inner_length_cm: form.inner_length_cm ? parseFloat(form.inner_length_cm) : null,
-        inner_width_cm: form.inner_width_cm ? parseFloat(form.inner_width_cm) : null,
-        inner_height_cm: form.inner_height_cm ? parseFloat(form.inner_height_cm) : null,
-        max_load_grams: form.max_load_grams ? parseInt(form.max_load_grams) : null,
-        is_active: form.is_active,
-        is_default: form.is_default,
-        sort_order: parseInt(form.sort_order) || 0,
-        stock_tracked: form.stock_tracked,
-        stock_threshold: parseInt(form.stock_threshold) || 10,
-        primary_material: form.primary_material,
-        material_split: form.material_split,
+        tareWeightGrams: parseInt(form.tare_weight_grams) || 0,
+        innerLengthCm: form.inner_length_cm ? parseFloat(form.inner_length_cm) : null,
+        innerWidthCm: form.inner_width_cm ? parseFloat(form.inner_width_cm) : null,
+        innerHeightCm: form.inner_height_cm ? parseFloat(form.inner_height_cm) : null,
+        maxLoadGrams: form.max_load_grams ? parseInt(form.max_load_grams) : null,
+        isActive: form.is_active,
+        isDefault: form.is_default,
+        sortOrder: parseInt(form.sort_order) || 0,
+        stockTracked: form.stock_tracked,
+        stockThreshold: parseInt(form.stock_threshold) || 10,
+        primaryMaterial: form.primary_material,
+        materialSplit: form.material_split,
       };
 
-      if (form.is_default) {
-        await supabase.from('wh_packaging_types').update({ is_default: false }).eq('tenant_id', tenantId);
-      }
-
       if (form.id) {
-        const { error } = await supabase.from('wh_packaging_types').update(payload).eq('id', form.id);
-        if (error) throw error;
+        await updatePackagingType(form.id, input);
         toast.success(t('Updated'));
       } else {
-        const { error } = await supabase.from('wh_packaging_types').insert(payload);
-        if (error) throw error;
+        await createPackagingType(input);
         toast.success(t('Created'));
       }
       setDialogOpen(false);
@@ -185,28 +161,35 @@ export function PackagingTypesPage() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase.from('wh_packaging_types').delete().eq('id', id);
-    if (error) toast.error(error.message);
-    else { toast.success(t('Deleted')); await load(); }
-  }
-
-  async function handleToggleActive(r: PackagingRow) {
-    const { error } = await supabase.from('wh_packaging_types').update({ is_active: !r.is_active }).eq('id', r.id);
-    if (error) toast.error(error.message);
-    else await load();
-  }
-
-  async function handleToggleTracked(r: PackagingRow) {
     try {
-      await updatePackagingTracking(r.id, !r.stock_tracked, r.stock_threshold);
-      toast.success(r.stock_tracked ? t('Tracking deaktiviert') : t('Tracking aktiviert'));
+      await deletePackagingType(id);
+      toast.success(t('Deleted'));
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     }
   }
 
-  function openReceipt(r: PackagingRow) {
+  async function handleToggleActive(r: WhPackagingType) {
+    try {
+      await setPackagingTypeActive(r.id, !r.isActive);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleToggleTracked(r: WhPackagingType) {
+    try {
+      await updatePackagingTracking(r.id, !r.stockTracked, r.stockThreshold);
+      toast.success(r.stockTracked ? t('Tracking deaktiviert') : t('Tracking aktiviert'));
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  function openReceipt(r: WhPackagingType) {
     setReceiptTarget(r);
     setReceiptQty('');
     setReceiptNotes('');
@@ -227,9 +210,9 @@ export function PackagingTypesPage() {
     }
   }
 
-  function openAdjust(r: PackagingRow) {
+  function openAdjust(r: WhPackagingType) {
     setAdjustTarget(r);
-    setAdjustQty(String(r.stock_on_hand ?? 0));
+    setAdjustQty(String(r.stockOnHand ?? 0));
     setAdjustOpen(true);
   }
 
@@ -247,7 +230,7 @@ export function PackagingTypesPage() {
     }
   }
 
-  const lowStockRows = rows.filter(r => r.stock_tracked && (r.stock_on_hand ?? 0) <= (r.stock_threshold ?? 10));
+  const lowStockRows = rows.filter(r => r.stockTracked && (r.stockOnHand ?? 0) <= (r.stockThreshold ?? 10));
 
   return (
     <div className="px-4 py-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -283,7 +266,7 @@ export function PackagingTypesPage() {
                       <div key={r.id} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${st.tone}`}>
                         <Package className="h-3 w-3" />
                         <span className="font-medium">{r.name}</span>
-                        <span className="tabular-nums">{r.stock_on_hand} / {r.stock_threshold}</span>
+                        <span className="tabular-nums">{r.stockOnHand} / {r.stockThreshold}</span>
                         <Button size="sm" variant="ghost" className="h-auto py-0.5 px-2 text-xs" onClick={() => openReceipt(r)}>
                           <PackagePlus className="h-3 w-3 mr-1" />
                           {t('Nachbestellen')}
@@ -329,42 +312,42 @@ export function PackagingTypesPage() {
                   <TableRow key={r.id}>
                     <TableCell>
                       <div className="font-medium">{r.name}</div>
-                      {r.is_default && <Badge variant="secondary" className="mt-1 text-xs">{t('Default')}</Badge>}
+                      {r.isDefault && <Badge variant="secondary" className="mt-1 text-xs">{t('Default')}</Badge>}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground max-w-[240px] truncate">{r.description || '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.tare_weight_grams} g</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.tareWeightGrams} g</TableCell>
                     <TableCell className="hidden lg:table-cell text-right tabular-nums text-xs">
-                      {r.inner_length_cm && r.inner_width_cm && r.inner_height_cm
-                        ? `${r.inner_length_cm} × ${r.inner_width_cm} × ${r.inner_height_cm}`
+                      {r.innerLengthCm && r.innerWidthCm && r.innerHeightCm
+                        ? `${r.innerLengthCm} × ${r.innerWidthCm} × ${r.innerHeightCm}`
                         : '—'}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right tabular-nums">
-                      {r.max_load_grams ? `${r.max_load_grams} g` : '—'}
+                      {r.maxLoadGrams ? `${r.maxLoadGrams} g` : '—'}
                     </TableCell>
                     <TableCell className="text-right">
-                      {r.stock_tracked ? (
+                      {r.stockTracked ? (
                         <button
                           type="button"
                           onClick={() => openAdjust(r)}
                           className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold tabular-nums transition-colors hover:opacity-80 cursor-pointer ${st.tone}`}
                           title={t('Inventur-Korrektur')}
                         >
-                          {r.stock_on_hand}
-                          <span className="opacity-60">/ {r.stock_threshold}</span>
+                          {r.stockOnHand}
+                          <span className="opacity-60">/ {r.stockThreshold}</span>
                         </button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <Switch checked={r.stock_tracked} onCheckedChange={() => handleToggleTracked(r)} />
+                      <Switch checked={r.stockTracked} onCheckedChange={() => handleToggleTracked(r)} />
                     </TableCell>
                     <TableCell>
-                      <Switch checked={r.is_active} onCheckedChange={() => handleToggleActive(r)} />
+                      <Switch checked={r.isActive} onCheckedChange={() => handleToggleActive(r)} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {r.stock_tracked && (
+                        {r.stockTracked && (
                           <Button size="icon" variant="ghost" onClick={() => openReceipt(r)} aria-label={t('Wareneingang buchen')} title={t('Wareneingang buchen')}>
                             <PackagePlus className="h-4 w-4" />
                           </Button>
@@ -513,7 +496,7 @@ export function PackagingTypesPage() {
               <div className="rounded-lg bg-muted px-3 py-2 text-sm">
                 <div className="font-medium">{receiptTarget.name}</div>
                 <div className="text-xs text-muted-foreground tabular-nums">
-                  {t('Aktueller Bestand')}: {receiptTarget.stock_on_hand}
+                  {t('Aktueller Bestand')}: {receiptTarget.stockOnHand}
                 </div>
               </div>
               <div>
@@ -540,7 +523,7 @@ export function PackagingTypesPage() {
               </div>
               {receiptQty && parseInt(receiptQty) > 0 && (
                 <div className="text-sm text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg">
-                  {t('Neuer Bestand')}: <span className="font-semibold tabular-nums">{receiptTarget.stock_on_hand + parseInt(receiptQty)}</span>
+                  {t('Neuer Bestand')}: <span className="font-semibold tabular-nums">{receiptTarget.stockOnHand + parseInt(receiptQty)}</span>
                 </div>
               )}
             </div>
@@ -567,7 +550,7 @@ export function PackagingTypesPage() {
               <div className="rounded-lg bg-muted px-3 py-2 text-sm">
                 <div className="font-medium">{adjustTarget.name}</div>
                 <div className="text-xs text-muted-foreground tabular-nums">
-                  {t('Bisheriger Bestand')}: {adjustTarget.stock_on_hand}
+                  {t('Bisheriger Bestand')}: {adjustTarget.stockOnHand}
                 </div>
               </div>
               <div>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase, clearTenantIdCache } from '@/lib/supabase';
 import type { AuthUser } from '@/services/supabase/auth';
 import { getSession, signOut as authSignOut, onAuthStateChange } from '@/services/supabase/auth';
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  const loadTenantId = async (userId: string, retries = 5, delay = 200) => {
+  const loadTenantId = useCallback(async (userId: string, retries = 5, delay = 200) => {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const { data: profile } = await supabase
@@ -63,9 +63,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // After all retries, still no tenant_id
     console.error('Failed to load tenant_id after', retries, 'attempts');
     setTenantId(null);
-  };
+  }, []);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       const { user: sessionUser } = await getSession();
       setUser(sessionUser);
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(null);
       setTenantId(null);
     }
-  };
+  }, [loadTenantId]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -116,18 +116,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       unsubscribe();
       window.removeEventListener('session-expired', handleSessionExpired);
     };
-  }, []);
+  }, [refreshSession, loadTenantId]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await authSignOut();
     clearTenantIdCache(); // Clear tenant ID cache
     setUser(null);
     setTenantId(null);
     setIsSuperAdmin(false);
     setAdminRole(null);
-  };
+  }, []);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     user,
     isLoading,
     isAuthenticated: !!user,
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isInitializing,
     signOut,
     refreshSession,
-  };
+  }), [user, isLoading, tenantId, isSuperAdmin, adminRole, isInitializing, signOut, refreshSession]);
 
   return (
     <AuthContext.Provider value={value}>

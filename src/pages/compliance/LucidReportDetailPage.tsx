@@ -40,7 +40,7 @@ export function LucidReportDetailPage() {
     setReport(r);
     setLoading(false);
   }
-  useEffect(() => { if (reportMonth) reload(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [reportMonth]);
+  useEffect(() => { if (reportMonth) reload();   }, [reportMonth]);
 
   async function handleGenerate() {
     setBusy('generate');

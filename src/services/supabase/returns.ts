@@ -546,28 +546,16 @@ export async function publicCreateReturn(
     country: data.shippingAddress.country,
   } : null;
 
-  const { data: existingCustomer } = await supabase
-    .from('rh_customers')
-    .select('id, addresses')
-    .eq('tenant_id', tenant.id)
-    .eq('email', data.email)
-    .single();
+  // Look up existing customer via SECURITY DEFINER RPC — anon has no direct
+  // SELECT on rh_customers anymore (the RPC returns only the customer id).
+  const { data: existingCustomerId } = await supabase.rpc('public_lookup_customer', {
+    p_tenant_id: tenant.id,
+    p_email: data.email,
+  });
 
-  let customerId: string | null = null;
+  let customerId: string | null = (existingCustomerId as string | null) || null;
 
-  if (existingCustomer) {
-    customerId = existingCustomer.id;
-    if (addressEntry) {
-      const existingAddresses = Array.isArray(existingCustomer.addresses) ? existingCustomer.addresses : [];
-      await supabase
-        .from('rh_customers')
-        .update({
-          name: data.shippingAddress!.name,
-          addresses: [...existingAddresses, addressEntry],
-        })
-        .eq('id', existingCustomer.id);
-    }
-  } else {
+  if (!customerId) {
     const newCustomerId = crypto.randomUUID();
     const { error: custErr } = await supabase.from('rh_customers').insert({
       id: newCustomerId,

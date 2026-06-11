@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FileText,
@@ -67,16 +67,25 @@ export function ProductDocumentsTab({ productId }: Props) {
     validUntil: '',
   });
 
-  useEffect(() => {
-    loadDocuments();
-  }, [productId]);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     setIsLoading(true);
     const docs = await getDocuments();
     setDocuments(docs.filter(d => d.product_id === productId));
     setIsLoading(false);
-  };
+  }, [productId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const docs = await getDocuments();
+      if (cancelled) return;
+      setDocuments(docs.filter(d => d.product_id === productId));
+      setIsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

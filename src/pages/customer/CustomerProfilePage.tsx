@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Loader2, Save, Plus, Trash2, MapPin } from 'lucide-react';
@@ -20,6 +20,7 @@ import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 export function CustomerProfilePage() {
   const { t } = useTranslation('customer-portal');
   const { customerProfile, refreshProfile } = useCustomerPortal();
+  const prefersReduced = useReducedMotion();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -46,16 +47,19 @@ export function CustomerProfilePage() {
   const [addrPostalCode, setAddrPostalCode] = useState('');
   const [addrCountry, setAddrCountry] = useState('');
 
-  useEffect(() => {
-    if (customerProfile) {
-      setFirstName(customerProfile.firstName || '');
-      setLastName(customerProfile.lastName || '');
-      setPhone(customerProfile.phone || '');
-      setCompany(customerProfile.company || '');
-      setAddresses(customerProfile.addresses || []);
-      setCommPrefs(customerProfile.communicationPreferences || { email: true, sms: false, marketing: false });
-    }
-  }, [customerProfile]);
+  // Seed form state from the profile during render (see React docs:
+  // "Storing information from previous renders") — re-seeds when the
+  // profile object reference changes (e.g. after refreshProfile()).
+  const [seededProfile, setSeededProfile] = useState<typeof customerProfile>(null);
+  if (customerProfile && customerProfile !== seededProfile) {
+    setSeededProfile(customerProfile);
+    setFirstName(customerProfile.firstName || '');
+    setLastName(customerProfile.lastName || '');
+    setPhone(customerProfile.phone || '');
+    setCompany(customerProfile.company || '');
+    setAddresses(customerProfile.addresses || []);
+    setCommPrefs(customerProfile.communicationPreferences || { email: true, sms: false, marketing: false });
+  }
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -159,8 +163,6 @@ export function CustomerProfilePage() {
       </div>
     );
   }
-
-  const prefersReduced = useReducedMotion();
 
   return (
     <motion.div

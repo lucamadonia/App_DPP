@@ -50,5 +50,12 @@
   "pending": "pending",
   "more warnings": "more warnings",
   "Get Started": "Get Started",
-  "{{count}} Batches": "{{count}} Batches"
+  "{{count}} Batches": "{{count}} Batches",
+  "Last 8 weeks": "Last 8 weeks",
+  "Failed to load activity": "Failed to load activity",
+  "Failed to load compliance data": "Failed to load compliance data",
+  "Try again": "Try again",
+  "live": "Live",
+  "draft": "Draft",
+  "archived": "Archived"
 }

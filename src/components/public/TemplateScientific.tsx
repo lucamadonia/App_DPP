@@ -561,11 +561,33 @@ function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) 
 function ScientificCustomsView({ data }: ViewProps) {
   const { product, isFieldVisible, t, locale, styles, design } = data;
 
-  let sectionNumber = 0;
-  const nextSection = () => {
-    sectionNumber += 1;
-    return sectionNumber;
-  };
+  // Compute section numbers purely (no mutable counter during render).
+  const supportRes = product.supportResources;
+  const hasSupportSection = Boolean(
+    isFieldVisible('supportResources') && supportRes && (
+      supportRes.instructions || supportRes.assemblyGuide ||
+      (supportRes.videos && supportRes.videos.length > 0) ||
+      (supportRes.faq && supportRes.faq.length > 0) ||
+      supportRes.warranty || supportRes.repairInfo ||
+      (supportRes.spareParts && supportRes.spareParts.length > 0)
+    ),
+  );
+  const sectionVisibility: Array<[string, boolean]> = [
+    ['description', Boolean(isFieldVisible('description') && product.description)],
+    ['customs', true],
+    ['materials', Boolean(isFieldVisible('materials') && product.materials.length > 0)],
+    ['carbonFootprint', Boolean(isFieldVisible('carbonFootprint') && product.carbonFootprint)],
+    ['recyclability', isFieldVisible('recyclability')],
+    ['certifications', Boolean(isFieldVisible('certifications') && product.certifications.length > 0)],
+    ['supplyChain', Boolean(isFieldVisible('supplyChainFull') && product.supplyChain.length > 0)],
+    ['support', hasSupportSection],
+    ['references', true],
+  ];
+  const sectionNumbers = Object.fromEntries(
+    sectionVisibility
+      .filter(([, visible]) => visible)
+      .map(([key], index) => [key, index + 1]),
+  ) as Record<string, number>;
 
   return (
     <div className="max-w-4xl mx-auto px-3 py-6 sm:px-4 sm:py-8 space-y-6 sm:space-y-8">
@@ -627,7 +649,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {isFieldVisible('description') && product.description && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-3">
-            {nextSection()}. {t('Description')}
+            {sectionNumbers.description}. {t('Description')}
           </h2>
           <SafeHtml html={product.description} className="text-gray-700 leading-relaxed max-w-none" />
         </section>
@@ -636,7 +658,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {/* Customs Data */}
       <section>
         <h2 className="text-lg font-bold text-gray-900 mb-4">
-          {nextSection()}. {t('Customs Data')}
+          {sectionNumbers.customs}. {t('Customs Data')}
         </h2>
         <div className="grid gap-8 md:grid-cols-2">
           <div>
@@ -708,7 +730,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {isFieldVisible('materials') && product.materials.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {t('Material Composition')}
+            {sectionNumbers.materials}. {t('Material Composition')}
           </h2>
           <p className="text-sm text-gray-600 mb-3">{t('Materials used and their origins')}</p>
           <div className="overflow-x-auto">
@@ -740,7 +762,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {isFieldVisible('carbonFootprint') && product.carbonFootprint && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {t('Carbon Footprint')}
+            {sectionNumbers.carbonFootprint}. {t('Carbon Footprint')}
           </h2>
           <p className="text-sm text-gray-600 mb-3">{t('Climate impact across the product lifecycle')}</p>
           <div className="overflow-x-auto">
@@ -778,7 +800,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {isFieldVisible('recyclability') && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {t('Recycling & Disposal')}
+            {sectionNumbers.recyclability}. {t('Recycling & Disposal')}
           </h2>
           <p className="text-sm text-gray-600 mb-3">{t('Guide for environmentally friendly disposal')}</p>
           <div className="overflow-x-auto">
@@ -810,7 +832,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {isFieldVisible('certifications') && product.certifications.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {t('Certifications')}
+            {sectionNumbers.certifications}. {t('Certifications')}
           </h2>
           <p className="text-sm text-gray-600 mb-3">{t('Verified quality and sustainability standards')}</p>
           <div className="overflow-x-auto">
@@ -842,7 +864,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {isFieldVisible('supplyChainFull') && product.supplyChain.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {nextSection()}. {t('Full Supply Chain')}
+            {sectionNumbers.supplyChain}. {t('Full Supply Chain')}
           </h2>
           <p className="text-sm text-gray-600 mb-3">{t('The journey of your product from raw material to you')}</p>
           <div className="overflow-x-auto">
@@ -890,7 +912,7 @@ function ScientificCustomsView({ data }: ViewProps) {
         return (
           <section>
             <h2 className="text-lg font-bold text-gray-900 mb-4">
-              {nextSection()}. {t('Support & Service')}
+              {sectionNumbers.support}. {t('Support & Service')}
             </h2>
             <p className="text-sm text-gray-600 mb-3">{t('Customer support and product resources')}</p>
             <div className="space-y-6">
@@ -1065,7 +1087,7 @@ function ScientificCustomsView({ data }: ViewProps) {
       {/* References / Footer */}
       <footer className="border-t-2 border-gray-300 pt-6">
         <h2 className="text-lg font-bold text-gray-900 mb-3">
-          {nextSection()}. {t('References')}
+          {sectionNumbers.references}. {t('References')}
         </h2>
         <div className="text-sm text-gray-600 space-y-1">
           <p>[1] {t('Digital Product Passport')} &mdash; GTIN: {product.gtin}</p>

@@ -52,8 +52,9 @@ export function LandingTeam() {
             style={{ transitionDelay: '200ms' }}
           >
             <img
-              src="/team-collaboration.png"
+              src="/team-collaboration.webp"
               alt={t('team.collaboration.alt')}
+              loading="lazy"
               className="w-full aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/10 to-transparent" />
@@ -80,8 +81,9 @@ export function LandingTeam() {
             style={{ transitionDelay: '400ms' }}
           >
             <img
-              src="/team-operations.png"
+              src="/team-operations.webp"
               alt={t('team.operations.alt')}
+              loading="lazy"
               className="w-full aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/10 to-transparent" />

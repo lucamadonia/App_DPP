@@ -32,9 +32,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
   getAdminTenant, updateTenantPlan, toggleModule,
-  adjustCredits, setMonthlyAllowance, updateUserRole,
+  adjustCredits, setMonthlyAllowance, updateUserRole, getTenantHealthScore,
 } from '@/services/supabase/admin';
-import { supabase } from '@/lib/supabase';
 import type { AdminTenantDetail } from '@/types/admin';
 import type { BillingPlan, ModuleId } from '@/types/billing';
 import { formatDate } from '@/lib/format';
@@ -77,12 +76,12 @@ export function AdminTenantDetailPage() {
     if (!tenantId) return;
     setIsLoading(true);
     try {
-      const [t, healthRow] = await Promise.all([
+      const [t, healthScore] = await Promise.all([
         getAdminTenant(tenantId),
-        supabase.from('tenants').select('health_score').eq('id', tenantId).maybeSingle(),
+        getTenantHealthScore(tenantId).catch(() => null),
       ]);
       setTenant(t);
-      setTenantHealth(healthRow.data?.health_score ?? null);
+      setTenantHealth(healthScore);
     } catch (err) {
       console.error('Failed to load tenant:', err);
     } finally {

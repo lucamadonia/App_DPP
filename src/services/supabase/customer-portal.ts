@@ -921,15 +921,15 @@ export async function createPublicProductTicket(params: {
   // 1. Find or create customer
   let customerId: string;
 
-  const { data: existingCustomer } = await supabaseAnon
-    .from('rh_customers')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('email', email.toLowerCase())
-    .maybeSingle();
+  // SECURITY DEFINER RPC — anon has no direct SELECT on rh_customers anymore
+  // (the RPC returns only the customer id for an exact tenant+email match).
+  const { data: existingCustomerId } = await supabaseAnon.rpc('public_lookup_customer', {
+    p_tenant_id: tenantId,
+    p_email: email.toLowerCase(),
+  });
 
-  if (existingCustomer) {
-    customerId = existingCustomer.id;
+  if (existingCustomerId) {
+    customerId = existingCustomerId as string;
   } else {
     // Create new customer — generate ID client-side to avoid chaining .select() after .insert()
     customerId = crypto.randomUUID();
@@ -1073,15 +1073,15 @@ export async function createPublicReturnTicket(params: {
   const normalizedEmail = email.trim().toLowerCase();
   let customerId: string;
 
-  const { data: existingCustomer } = await supabaseAnon
-    .from('rh_customers')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('email', normalizedEmail)
-    .single();
+  // SECURITY DEFINER RPC — anon has no direct SELECT on rh_customers anymore
+  // (the RPC returns only the customer id for an exact tenant+email match).
+  const { data: existingCustomerId } = await supabaseAnon.rpc('public_lookup_customer', {
+    p_tenant_id: tenantId,
+    p_email: normalizedEmail,
+  });
 
-  if (existingCustomer) {
-    customerId = existingCustomer.id;
+  if (existingCustomerId) {
+    customerId = existingCustomerId as string;
   } else {
     // Create new customer record — generate ID client-side to avoid chaining .select() after .insert()
     customerId = crypto.randomUUID();

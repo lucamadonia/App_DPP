@@ -7,6 +7,7 @@
  *     → SMTP (noreply@trackbliss.eu) delivers, row updated to status='sent'
  */
 import { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Mail, Send, X, Eye, FileEdit, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -280,7 +281,7 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
               </div>
               <div
                 className="p-6 text-sm leading-relaxed prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: previewHtml || '<em class="text-muted-foreground">Noch kein Inhalt</em>' }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) || '<em class="text-muted-foreground">Noch kein Inhalt</em>' }}
               />
             </div>
           )}

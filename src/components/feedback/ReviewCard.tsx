@@ -1,4 +1,6 @@
 import { Star, BadgeCheck, Quote } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StarRating } from './StarRating';
@@ -32,6 +34,7 @@ interface Props {
  * + "Verified" badge to communicate authenticity at a glance.
  */
 export function ReviewCard({ review, variant = 'standard', className, accentColor }: Props) {
+  const { t } = useTranslation('warehouse');
   const variantHex = review.variantTitle ? getVariantColorHex(review.variantTitle) : null;
   const showQuote = variant === 'featured' && (review.comment?.length ?? 0) > 40;
 
@@ -80,7 +83,7 @@ export function ReviewCard({ review, variant = 'standard', className, accentColo
             className="shrink-0 gap-1 text-[10px] bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-700"
           >
             <BadgeCheck className="h-3 w-3" />
-            Verifiziert
+            {t('Verified')}
           </Badge>
         </div>
 
@@ -125,7 +128,7 @@ export function ReviewCard({ review, variant = 'standard', className, accentColo
           <span className="font-medium text-foreground/80">{review.reviewerDisplayName}</span>
           {review.reviewerCity && <span>·</span>}
           {review.reviewerCity && <span>{review.reviewerCity}</span>}
-          <span className="ml-auto">{formatRelativeDate(review.createdAt)}</span>
+          <span className="ml-auto">{formatRelativeDate(review.createdAt, t)}</span>
         </div>
 
         {/* Reply */}
@@ -143,14 +146,14 @@ export function ReviewCard({ review, variant = 'standard', className, accentColo
   );
 }
 
-function formatRelativeDate(iso: string): string {
+function formatRelativeDate(iso: string, t: TFunction<'warehouse'>): string {
   const d = new Date(iso);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'heute';
-  if (diffDays === 1) return 'gestern';
-  if (diffDays < 7) return `vor ${diffDays} Tagen`;
-  if (diffDays < 30) return `vor ${Math.floor(diffDays / 7)} Wochen`;
-  if (diffDays < 365) return `vor ${Math.floor(diffDays / 30)} Monaten`;
+  if (diffDays === 0) return t('today');
+  if (diffDays === 1) return t('yesterday');
+  if (diffDays < 7) return t('{{count}} days ago', { count: diffDays });
+  if (diffDays < 30) return t('{{count}} weeks ago', { count: Math.floor(diffDays / 7) });
+  if (diffDays < 365) return t('{{count}} months ago', { count: Math.floor(diffDays / 30) });
   return d.toLocaleDateString();
 }

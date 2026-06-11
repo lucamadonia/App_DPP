@@ -20,9 +20,8 @@ import { Button } from '@/components/ui/button';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { TenantHealthGauge } from '@/components/admin/TenantHealthGauge';
 import {
-  getPlatformStats, listAdminTenants, listAuditLog,
+  getPlatformStats, listAdminTenants, listAuditLog, getTenantsHealth,
 } from '@/services/supabase/admin';
-import { supabase } from '@/lib/supabase';
 import type { PlatformStats, AdminTenant } from '@/types/admin';
 import type { AdminAuditEntry } from '@/types/admin-extended';
 import { formatDate } from '@/lib/format';
@@ -74,20 +73,17 @@ export function AdminDashboardPage() {
         ]);
         setStats(s);
 
-        // Enrich tenants with health_score + status directly from DB (admin-only RLS ok)
+        // Enrich tenants with health_score + status (admin service, admin-only RLS)
         const ids = tenantList.map(t => t.id);
-        const { data: healthRows } = ids.length
-          ? await supabase.from('tenants').select('id, health_score, status, suspended_reason').in('id', ids)
-          : { data: [] };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const healthMap = new Map((healthRows || []).map((r: any) => [r.id, r]));
+        const healthRows = await getTenantsHealth(ids).catch(() => []);
+        const healthMap = new Map(healthRows.map(r => [r.id, r]));
         const enriched = tenantList.map(t => {
           const h = healthMap.get(t.id);
           return {
             ...t,
-            healthScore: h?.health_score ?? undefined,
+            healthScore: h?.healthScore,
             status: h?.status ?? 'active',
-            suspendedReason: h?.suspended_reason ?? undefined,
+            suspendedReason: h?.suspendedReason,
           };
         });
         setAllTenants(enriched);
