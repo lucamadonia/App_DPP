@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Plus, Pencil, Trash2, Check, X, PackagePlus, AlertTriangle, Package } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Box, Boxes, Plus, Pencil, Trash2, Check, X, PackagePlus, AlertTriangle, Package, LayoutGrid, Table as TableIcon, Scale } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
+import { KPIGrid, type KPIItem } from '@/components/ui/kpi-grid';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { EmptyState } from '@/components/ui/state-feedback';
 import { recordPackagingReceipt, adjustPackagingStock, updatePackagingTracking } from '@/services/supabase/wh-shipments';
 import {
   getPackagingTypes,
@@ -21,9 +26,16 @@ import {
   type WhPackagingType,
   type WhPackagingTypeInput,
 } from '@/services/supabase/wh-packaging-types';
+import { getPackagingUsage } from '@/services/supabase/wh-packaging-usage';
 import { PackagingMaterialFields } from '@/components/compliance/PackagingMaterialFields';
+import { PackagingTypeCard, PackagingTypeCardSkeleton } from '@/components/warehouse/packaging-type-card';
+import { blurIn, gridStagger, useMotionVariants } from '@/lib/motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { LucidMaterial, MaterialSplitEntry } from '@/types/compliance';
 import { toast } from 'sonner';
+
+const VIEW_STORAGE_KEY = 'wh-packaging-types-view';
+type ViewMode = 'table' | 'cards';
 
 function stockTone(row: WhPackagingType): { tone: string; label: string } {
   if (!row.stockTracked) return { tone: 'text-muted-foreground', label: '—' };
@@ -71,8 +83,18 @@ const EMPTY: FormState = {
 
 export function PackagingTypesPage() {
   const { t } = useTranslation('warehouse');
+  const isMobile = useIsMobile();
+  const headerVariants = useMotionVariants(blurIn);
+  const cardsContainerVariants = useMotionVariants(gridStagger);
   const [rows, setRows] = useState<WhPackagingType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (stored === 'table' || stored === 'cards') return stored;
+    return 'cards';
+  });
+  const [usageKg, setUsageKg] = useState<number | null>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -96,6 +118,33 @@ export function PackagingTypesPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Persist view mode (desktop only — mobile always renders cards)
+  useEffect(() => {
+    localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
+  }, [viewMode]);
+
+  // Consumed outer-packaging kg over the last 30 days (KPI)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const to = new Date();
+        to.setHours(23, 59, 59, 999);
+        const from = new Date();
+        from.setDate(from.getDate() - 30);
+        from.setHours(0, 0, 0, 0);
+        const result = await getPackagingUsage({ from: from.toISOString(), to: to.toISOString() });
+        if (!cancelled) setUsageKg(result.totals.outerKg);
+      } catch (e) {
+        console.error('Failed to load packaging usage:', e);
+        if (!cancelled) setUsageKg(null);
+      } finally {
+        if (!cancelled) setUsageLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function openCreate() {
     setForm({ ...EMPTY, sort_order: String((rows.at(-1)?.sortOrder ?? 0) + 1) });
@@ -231,27 +280,102 @@ export function PackagingTypesPage() {
   }
 
   const lowStockRows = rows.filter(r => r.stockTracked && (r.stockOnHand ?? 0) <= (r.stockThreshold ?? 10));
+  const activeCount = rows.filter(r => r.isActive).length;
+  const trackedRows = rows.filter(r => r.stockTracked);
+  const totalStock = trackedRows.reduce((sum, r) => sum + (r.stockOnHand ?? 0), 0);
+  const showCards = isMobile || viewMode === 'cards';
+
+  const kpiSkeleton = <ShimmerSkeleton className="h-7 w-14" />;
+  const kpiItems: KPIItem[] = [
+    {
+      id: 'active-types',
+      label: t('Active types'),
+      icon: <Box className="h-4 w-4" />,
+      value: loading ? kpiSkeleton : <AnimatedCounter value={activeCount} />,
+      sublabel: loading ? undefined : t('of {{total}} total', { total: rows.length }),
+    },
+    {
+      id: 'total-stock',
+      label: t('Total stock'),
+      icon: <Boxes className="h-4 w-4" />,
+      value: loading ? kpiSkeleton : <AnimatedCounter value={totalStock} />,
+      sublabel: loading ? undefined : t('{{n}} tracked', { n: trackedRows.length }),
+    },
+    {
+      id: 'low-stock',
+      label: t('Below threshold'),
+      icon: <AlertTriangle className="h-4 w-4" />,
+      value: loading ? kpiSkeleton : <AnimatedCounter value={lowStockRows.length} />,
+      accentClassName: !loading && lowStockRows.length > 0 ? 'text-amber-600 dark:text-amber-500' : undefined,
+    },
+    {
+      id: 'usage-30d',
+      label: t('Consumed kg (30 days)'),
+      icon: <Scale className="h-4 w-4" />,
+      value: usageLoading
+        ? kpiSkeleton
+        : usageKg == null
+          ? '—'
+          : <AnimatedCounter value={usageKg} decimals={1} suffix=" kg" />,
+      sublabel: t('Outer packaging (tare)'),
+    },
+  ];
+
+  const viewToggle = (
+    <div className="hidden md:flex items-center border rounded-md">
+      <Button
+        variant={viewMode === 'cards' ? 'default' : 'ghost'}
+        size="icon"
+        className="h-9 w-9 rounded-r-none"
+        onClick={() => setViewMode('cards')}
+        title={t('Card View')}
+        aria-label={t('Card View')}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </Button>
+      <Button
+        variant={viewMode === 'table' ? 'default' : 'ghost'}
+        size="icon"
+        className="h-9 w-9 rounded-l-none"
+        onClick={() => setViewMode('table')}
+        title={t('Table View')}
+        aria-label={t('Table View')}
+      >
+        <TableIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
   return (
     <div className="px-4 py-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Box className="h-5 w-5 sm:h-6 sm:w-6" />
-          <div>
+      <motion.div
+        variants={headerVariants}
+        initial="initial"
+        animate="animate"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+      >
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Box className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+          <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold">{t('Umverpackung')}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {t('Kartons und Versandumschläge, die beim Shipment als Umverpackung zusätzlich zum Produktgewicht addiert werden.')}
             </p>
           </div>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('Neue Umverpackung')}
-        </Button>
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {viewToggle}
+          <Button onClick={openCreate} className="min-h-11 sm:min-h-9">
+            <Plus className="mr-2 h-4 w-4" />
+            {t('Neue Umverpackung')}
+          </Button>
+        </div>
+      </motion.div>
+
+      <KPIGrid items={kpiItems} cols={{ base: 2, lg: 4 }} compact />
 
       {lowStockRows.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900">
+        <Card className="border-amber-300 bg-amber-50/80 backdrop-blur-md dark:bg-amber-950/40 dark:border-amber-900 max-sm:sticky max-sm:top-2 max-sm:z-30 max-sm:shadow-lg">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -267,7 +391,7 @@ export function PackagingTypesPage() {
                         <Package className="h-3 w-3" />
                         <span className="font-medium">{r.name}</span>
                         <span className="tabular-nums">{r.stockOnHand} / {r.stockThreshold}</span>
-                        <Button size="sm" variant="ghost" className="h-auto py-0.5 px-2 text-xs" onClick={() => openReceipt(r)}>
+                        <Button size="sm" variant="ghost" className="h-auto min-h-8 py-0.5 px-2 text-xs" onClick={() => openReceipt(r)}>
                           <PackagePlus className="h-3 w-3 mr-1" />
                           {t('Nachbestellen')}
                         </Button>
@@ -281,6 +405,46 @@ export function PackagingTypesPage() {
         </Card>
       )}
 
+      {showCards ? (
+        loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <PackagingTypeCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <Card>
+            <CardContent>
+              <EmptyState
+                icon={Box}
+                title={t('Keine Umverpackungen angelegt')}
+                description={t('Create cartons and mailers — their tare weight is added to shipments automatically.')}
+                actionLabel={t('Create first packaging type')}
+                onAction={openCreate}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <motion.div
+            variants={cardsContainerVariants}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"
+          >
+            {rows.map(r => (
+              <PackagingTypeCard
+                key={r.id}
+                row={r}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                onReceipt={openReceipt}
+                onAdjust={openAdjust}
+                onToggleActive={handleToggleActive}
+              />
+            ))}
+          </motion.div>
+        )
+      ) : (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('Alle Typen')}</CardTitle>
@@ -384,6 +548,7 @@ export function PackagingTypesPage() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
