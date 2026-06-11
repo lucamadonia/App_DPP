@@ -67,7 +67,7 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
     : 0;
   const usageColor = usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-yellow-500' : 'bg-green-500';
 
-  const SaveButton = () => (
+  const saveButton = (
     <div className="flex justify-end">
       <Button onClick={onSave} disabled={saving}>
         {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
@@ -221,7 +221,7 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
             <Switch checked={portal.enableMagicLink} onCheckedChange={(v) => updatePortal({ enableMagicLink: v })} />
           </div>
 
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 
@@ -249,7 +249,7 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
             </div>
           ))}
 
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 
@@ -289,7 +289,7 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
             <Switch checked={portal.showGettingStartedGuide} onCheckedChange={(v) => updatePortal({ showGettingStartedGuide: v })} />
           </div>
 
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 

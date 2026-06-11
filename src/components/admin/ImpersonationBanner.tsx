@@ -17,10 +17,11 @@ function formatCountdown(ms: number): string {
 }
 
 export function ImpersonationBanner() {
-  const [session, setSession] = useState<ImpersonationSession | null>(getImpersonation());
-  const [remaining, setRemaining] = useState<number>(
-    session ? Math.max(0, new Date(session.expiresAt).getTime() - Date.now()) : 0,
-  );
+  const [session, setSession] = useState<ImpersonationSession | null>(() => getImpersonation());
+  const [remaining, setRemaining] = useState<number>(() => {
+    const s = getImpersonation();
+    return s ? Math.max(0, new Date(s.expiresAt).getTime() - Date.now()) : 0;
+  });
 
   useEffect(() => {
     function refresh() {

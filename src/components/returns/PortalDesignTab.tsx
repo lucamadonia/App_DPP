@@ -86,7 +86,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
     updateBranding({ footerLinks: updated });
   };
 
-  const SaveButton = () => (
+  const saveButton = (
     <div className="flex justify-end">
       <Button onClick={onSave} disabled={saving}>
         {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
@@ -139,7 +139,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
             </div>
           </div>
 
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 
@@ -244,7 +244,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
             </div>
           )}
 
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 
@@ -282,7 +282,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
               <ColorField label={t('Sidebar Text Color')} value={portal.branding.sidebarTextColor} onChange={(v) => updateBranding({ sidebarTextColor: v })} />
             </div>
 
-            <SaveButton />
+            {saveButton}
           </CardContent>
         </Card>
       )}
@@ -362,7 +362,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
               />
             </div>
 
-            <SaveButton />
+            {saveButton}
           </CardContent>
         </Card>
       )}
@@ -431,7 +431,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
             ))}
           </div>
 
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 
@@ -450,7 +450,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
               placeholder={t('Welcome to our customer portal...')}
             />
           </div>
-          <SaveButton />
+          {saveButton}
         </CardContent>
       </Card>
 
@@ -472,7 +472,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
             <p className="text-xs text-muted-foreground">
               {t('Available CSS variables: --portal-primary, --portal-secondary, --portal-accent, --portal-radius')}
             </p>
-            <SaveButton />
+            {saveButton}
           </CardContent>
         </Card>
       )}

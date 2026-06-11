@@ -10,6 +10,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   useCallback,
   type ReactNode,
@@ -134,16 +135,16 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
   const [hostWhitelabel, setHostWhitelabel] = useState<HostWhitelabel | null>(null);
 
   // Resolve branding — host whitelabel overrides tenant-branding overrides defaults
-  const branding: ResolvedBranding = {
+  const branding: ResolvedBranding = useMemo(() => ({
     appName: hostWhitelabel?.appName || rawBranding?.appName || defaultBranding.appName,
     primaryColor: hostWhitelabel?.primaryColor || rawBranding?.primaryColor || defaultBranding.primaryColor,
     logo: hostWhitelabel?.logoUrl || rawBranding?.logo || null,
     favicon: hostWhitelabel?.faviconUrl || rawBranding?.favicon || defaultBranding.favicon,
     poweredByText: rawBranding?.poweredByText || defaultBranding.poweredByText,
-  };
+  }), [hostWhitelabel, rawBranding]);
 
   // Resolve QR code settings with fallback values
-  const qrCodeSettings: ResolvedQRCodeSettings = {
+  const qrCodeSettings: ResolvedQRCodeSettings = useMemo(() => ({
     customDomain: rawQRCodeSettings?.customDomain || DEFAULT_QR_CODE_SETTINGS.customDomain,
     pathPrefix: rawQRCodeSettings?.pathPrefix || DEFAULT_QR_CODE_SETTINGS.pathPrefix,
     useHttps: rawQRCodeSettings?.useHttps ?? DEFAULT_QR_CODE_SETTINGS.useHttps,
@@ -153,7 +154,7 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
     dppTemplate: rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplate,
     dppTemplateCustomer: rawQRCodeSettings?.dppTemplateCustomer || rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplateCustomer,
     dppTemplateCustoms: rawQRCodeSettings?.dppTemplateCustoms || rawQRCodeSettings?.dppTemplate || DEFAULT_QR_CODE_SETTINGS.dppTemplateCustoms,
-  };
+  }), [rawQRCodeSettings]);
 
   // Load branding from database
   const loadBranding = useCallback(async () => {
@@ -297,7 +298,7 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
     []
   );
 
-  const value: BrandingContextType = {
+  const value: BrandingContextType = useMemo(() => ({
     branding,
     qrCodeSettings,
     rawBranding,
@@ -308,7 +309,18 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
     updateQRCodeSettings,
     updateDPPDesign,
     refreshBranding: loadBranding,
-  };
+  }), [
+    branding,
+    qrCodeSettings,
+    rawBranding,
+    rawQRCodeSettings,
+    rawDPPDesign,
+    isLoading,
+    updateBranding,
+    updateQRCodeSettings,
+    updateDPPDesign,
+    loadBranding,
+  ]);
 
   return (
     <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>
