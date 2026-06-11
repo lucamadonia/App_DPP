@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, ClipboardCheck, Loader2 } from 'lucide-react';
+import { MapPin, ClipboardCheck, Loader2, AlertCircle } from 'lucide-react';
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { WhLocation } from '@/types/warehouse';
 
@@ -14,22 +14,31 @@ export function StocktakeLocationSheet({ open, onSelect, onClose }: StocktakeLoc
   const { t } = useTranslation('warehouse');
   const [locations, setLocations] = useState<WhLocation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     (async () => {
       setLoading(true);
+      setLoadError(null);
       const tenantId = await getCurrentTenantId();
       if (!tenantId) {
         setLoading(false);
         return;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('wh_locations')
         .select('id, name, code, type, is_active, zones')
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('name');
+
+      if (error) {
+        setLoadError(error.message);
+        setLocations([]);
+        setLoading(false);
+        return;
+      }
 
       setLocations(
         (data || []).map((r: Record<string, unknown>) => ({
@@ -73,6 +82,12 @@ export function StocktakeLocationSheet({ open, onSelect, onClose }: StocktakeLoc
           <div className="flex items-center gap-2 text-sm text-slate-500 py-8 justify-center">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t('Loading locations')}...
+          </div>
+        ) : loadError ? (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-center">
+            <AlertCircle className="h-6 w-6 text-rose-400 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-rose-400">{t('Failed to load locations')}</p>
+            <p className="text-xs text-rose-400/70 mt-1 break-words">{loadError}</p>
           </div>
         ) : locations.length === 0 ? (
           <div className="text-center text-sm text-slate-500 py-8">
