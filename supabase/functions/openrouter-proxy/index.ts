@@ -90,32 +90,25 @@ const ALLOWED_MODELS = new Set([
   'anthropic/claude-opus-4',
 ]);
 
-// Decode a JWT payload WITHOUT signature verification.
-// We trust this because Supabase Gateway (verify_jwt=true) already
-// verified the signature before forwarding to this function.
-// This avoids algorithm-compatibility issues (HS256 vs ES256) in the
-// supabase-js client across Supabase JWT-key migrations.
-interface JwtPayload {
-  sub?: string;
-  email?: string;
-  aud?: string | string[];
-  exp?: number;
-  role?: string;
-}
+// Server-side minimum credit cost per operation. The client sends the
+// requested creditCost, but it can never undercut these minimums — a
+// tampered client sending creditCost=0 still pays at least the floor.
+// Keys match the operationLabel values the app sends; everything else
+// falls back to the global minimum of 1.
+const GLOBAL_MIN_CREDIT_COST = 1;
+const MAX_CREDIT_COST = 20;
+const MIN_CREDIT_COST_BY_OPERATION: Record<string, number> = {
+  'AI analysis': 1,
+  'Warehouse AI Chat': 1,
+  // compliance-check phases / chat / document classification all cost >= 1
+};
 
-function decodeJwtPayload(token: string): JwtPayload | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    // Base64-url decode
-    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    // Pad
-    while (payload.length % 4) payload += '=';
-    const decoded = atob(payload);
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
+function resolveCreditCost(requested: unknown, operationLabel: string): number {
+  const floor = MIN_CREDIT_COST_BY_OPERATION[operationLabel] ?? GLOBAL_MIN_CREDIT_COST;
+  const req = typeof requested === 'number' && Number.isFinite(requested)
+    ? Math.floor(requested)
+    : floor;
+  return Math.min(MAX_CREDIT_COST, Math.max(req, floor, GLOBAL_MIN_CREDIT_COST));
 }
 
 Deno.serve(async (req) => {
@@ -128,7 +121,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Verify JWT auth (manual decode; Gateway already validated signature)
+    // 1. Verify JWT auth explicitly against the Auth server.
+    // supabase.auth.getUser(token) validates the token server-side (Auth
+    // /user endpoint), so it is robust across Supabase JWT-key migrations
+    // (HS256 vs ES256) AND rejects revoked/forged tokens — unlike a local
+    // payload decode.
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Missing authorization header' }, 401);
@@ -136,23 +133,18 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const token = authHeader.replace('Bearer ', '').trim();
-    const payload = decodeJwtPayload(token);
 
-    if (!payload?.sub) {
-      return jsonResponse({ error: 'Invalid token (no sub claim)' }, 401);
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return jsonResponse({ error: 'Unauthorized (invalid or expired token)' }, 401);
     }
 
     // Reject anon/service tokens that don't represent a real user
-    if (payload.role !== 'authenticated') {
+    if (userData.user.aud !== 'authenticated' && userData.user.role !== 'authenticated') {
       return jsonResponse({ error: 'Unauthorized (not an authenticated user token)' }, 401);
     }
 
-    // Optional: explicit expiry check (Gateway does this but extra safety)
-    if (payload.exp && Date.now() / 1000 > payload.exp) {
-      return jsonResponse({ error: 'Token expired' }, 401);
-    }
-
-    const user = { id: payload.sub, email: payload.email };
+    const user = { id: userData.user.id, email: userData.user.email };
 
     // 2. Rate limiting
     if (!checkRateLimit(user.id)) {
@@ -183,11 +175,16 @@ Deno.serve(async (req) => {
       messages,
       maxTokens = 2000,
       temperature = 0.3,
-      creditCost = 1,
+      creditCost: requestedCreditCost,
       operationLabel = 'AI analysis',
       responseFormat = 'stream',
       model: modelOverride,
     } = body;
+
+    // Server-side authoritative credit cost — clamps the client-supplied
+    // value to the per-operation minimum (>= 1) so a tampered client can
+    // never request a free or discounted AI call.
+    const creditCost = resolveCreditCost(requestedCreditCost, operationLabel);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return jsonResponse({ error: 'messages array is required and must not be empty' }, 400);
@@ -255,8 +252,8 @@ Deno.serve(async (req) => {
 
     const isJsonMode = responseFormat === 'json';
 
-    // 5. Credit check and consumption
-    if (creditCost > 0) {
+    // 5. Credit check and consumption (creditCost is always >= 1 here)
+    {
       const { data: credits } = await supabase
         .from('billing_credits')
         .select('*')

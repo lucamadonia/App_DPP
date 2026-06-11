@@ -21,6 +21,11 @@ export interface DomainResolutionResult {
 export async function resolveTenantByDomain(
   hostname: string
 ): Promise<DomainResolutionResult | null> {
+  // Input validation: hostnames only contain letters, digits, dots and
+  // hyphens (max 255 chars per RFC 1035). Anything else is rejected before
+  // it reaches the JSONB path filter.
+  if (!hostname || !/^[a-z0-9.-]{1,255}$/i.test(hostname)) return null;
+
   const { data, error } = await supabase
     .from('tenants')
     .select('id, name, slug, settings')
