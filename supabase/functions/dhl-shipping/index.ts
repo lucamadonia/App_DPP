@@ -438,6 +438,11 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
   }
   const labelFormat = settings.labelFormat || 'PDF_A4';
   const weightKg = effectiveWeightGrams / 1000;
+  // International products require an endorsement (what DHL does with an
+  // undeliverable parcel). Default to returning it to the sender.
+  const intlServices = DHL_INTERNATIONAL_PRODUCTS.includes(product)
+    ? { services: { endorsement: 'RETURN' } }
+    : {};
 
   const dhlOrder = {
     profile: 'STANDARD_GRUPPENPROFIL',
@@ -446,6 +451,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
         product,
         billingNumber,
         refNo: shipment.shipment_number,
+        ...intlServices,
         shipper: {
           name1: settings.shipper.name1,
           name2: settings.shipper.name2 || undefined,
