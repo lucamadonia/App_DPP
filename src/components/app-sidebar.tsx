@@ -112,6 +112,7 @@ export function AppSidebar() {
             { title: t('Outstanding Goods Receipts', { ns: 'warehouse' }), url: '/warehouse/outstanding-receipts' },
             { title: t('Stocktake', { ns: 'warehouse' }), url: '/warehouse/stocktake' },
             { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
+            { title: t('Shipping Rates', { ns: 'warehouse' }), url: '/warehouse/shipping-rates' },
             { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
             { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
             { title: t('Bewegungen & Auswertung', { ns: 'warehouse' }), url: '/warehouse/movements' },
@@ -260,6 +261,7 @@ export function AppSidebar() {
           icon: BookOpen,
           items: [
             { title: t('Checklists'), url: '/checklists' },
+            { title: t('Market Entry', { ns: 'compliance' }), url: '/market-entry' },
             { title: t('Requirements Calculator'), url: '/requirements-calculator' },
             { title: t('News'), url: '/news' },
           ],

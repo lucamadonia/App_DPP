@@ -125,6 +125,7 @@ const AdminMasterDataPage = lazy(() => import('@/pages/admin/AdminMasterDataPage
 const TrainingGuidePage = lazy(() => import('@/pages/TrainingGuidePage').then(m => ({ default: m.TrainingGuidePage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
+const MarketEntryPage = lazy(() => import('@/pages/MarketEntryPage').then(m => ({ default: m.MarketEntryPage })));
 const PictogramsPage = lazy(() => import('@/pages/PictogramsPage').then(m => ({ default: m.PictogramsPage })));
 
 // Warehouse & Fulfillment
@@ -152,6 +153,7 @@ const FeedbackSettingsPage = lazy(() => import('@/pages/feedback/FeedbackSetting
 const ShopifyIntegrationPage = lazy(() => import('@/pages/warehouse/ShopifyIntegrationPage').then(m => ({ default: m.ShopifyIntegrationPage })));
 const DHLIntegrationPage = lazy(() => import('@/pages/warehouse/DHLIntegrationPage').then(m => ({ default: m.DHLIntegrationPage })));
 const IntegrationsHubPage = lazy(() => import('@/pages/warehouse/IntegrationsHubPage').then(m => ({ default: m.IntegrationsHubPage })));
+const ShippingRatesPage = lazy(() => import('@/pages/warehouse/ShippingRatesPage').then(m => ({ default: m.ShippingRatesPage })));
 const LocationDetailPage = lazy(() => import('@/pages/warehouse/LocationDetailPage').then(m => ({ default: m.LocationDetailPage })));
 const ContactDetailPage = lazy(() => import('@/pages/warehouse/ContactDetailPage').then(m => ({ default: m.ContactDetailPage })));
 const AILogisticsHubPage = lazy(() => import('@/pages/warehouse/AILogisticsHubPage').then(m => ({ default: m.AILogisticsHubPage })));
@@ -523,6 +525,7 @@ function NormalAppRoutes() {
           <Route path="checklists" element={<ChecklistPage />} />
           <Route path="checklists/:country" element={<ChecklistPage />} />
           <Route path="requirements-calculator" element={<RequirementsCalculatorPage />} />
+          <Route path="market-entry" element={<MarketEntryPage />} />
 
           {/* Warehouse & Fulfillment */}
           <Route path="warehouse" element={<WarehouseDashboardPage />} />
@@ -554,6 +557,7 @@ function NormalAppRoutes() {
           <Route path="warehouse/settings" element={<WarehouseSettingsPage />} />
           <Route path="warehouse/reports" element={<ShipmentReportsPage />} />
           <Route path="warehouse/inventory-drift" element={<InventoryDriftPage />} />
+          <Route path="warehouse/shipping-rates" element={<ShippingRatesPage />} />
           <Route path="warehouse/integrations" element={<IntegrationsHubPage />} />
           <Route path="warehouse/integrations/shopify" element={<ShopifyIntegrationPage />} />
           <Route path="warehouse/integrations/dhl" element={<DHLIntegrationPage />} />
