@@ -446,6 +446,22 @@ export {
   publicMarkDataRequestInProgress,
 } from './supplier-data-portal';
 
+// Market Entry Requirements
+export {
+  getMarketEntryRequirements,
+  getMarketEntryCountries,
+  MARKET_ENTRY_TYPE_ORDER,
+} from './market-entry';
+export type {
+  MarketEntryCategory,
+  MarketEntryRequirementType,
+  MarketEntryPriority,
+  MarketEntryRequirement,
+  MarketEntryResult,
+  MarketEntryCountriesResult,
+  MarketEntryLink,
+} from './market-entry';
+
 // Tenant Pictograms
 export {
   getTenantPictograms,

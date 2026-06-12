@@ -235,12 +235,18 @@ export function IntegrationsHubPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <Plug className="h-5 w-5 text-primary" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Integrations')}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {t('Connect carriers and commerce platforms in one place.')}
           </p>
         </div>
+        <Button asChild variant="outline" size="sm" className="min-h-[44px] sm:min-h-9 shrink-0">
+          <Link to="/warehouse/shipping-rates">
+            {t('Price comparison')}
+            <ArrowRight className="h-4 w-4 ml-1.5" />
+          </Link>
+        </Button>
       </motion.div>
 
       {/* Carriers */}
