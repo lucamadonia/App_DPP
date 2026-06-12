@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "seed:checklists": "node scripts/generate-checklist-seed.mjs && node scripts/seed-checklist-templates.mjs --json supabase/seed-checklists-full.json"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

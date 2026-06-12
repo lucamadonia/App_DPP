@@ -378,5 +378,11 @@
   "Deepen the curated results with a tailored AI analysis for your product.": "Vertiefe die kuratierten Ergebnisse mit einer maßgeschneiderten AI-Analyse für dein Produkt.",
   "Deepen with AI": "Mit AI vertiefen",
   "Uses 1 AI credit": "Verbraucht 1 AI-Credit",
-  "Open Country Checklist": "Länder-Checkliste öffnen"
+  "Open Country Checklist": "Länder-Checkliste öffnen",
+  "Generating PDF...": "PDF wird erstellt...",
+  "PDF export failed": "PDF-Export fehlgeschlagen",
+  "Generated": "Erstellt",
+  "In Progress": "In Bearbeitung",
+  "Completed": "Abgeschlossen",
+  "Not Applicable": "Nicht zutreffend"
 }

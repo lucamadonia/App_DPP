@@ -378,5 +378,11 @@
   "Deepen the curated results with a tailored AI analysis for your product.": "Deepen the curated results with a tailored AI analysis for your product.",
   "Deepen with AI": "Deepen with AI",
   "Uses 1 AI credit": "Uses 1 AI credit",
-  "Open Country Checklist": "Open Country Checklist"
+  "Open Country Checklist": "Open Country Checklist",
+  "Generating PDF...": "Generating PDF...",
+  "PDF export failed": "PDF export failed",
+  "Generated": "Generated",
+  "In Progress": "In Progress",
+  "Completed": "Completed",
+  "Not Applicable": "Not Applicable"
 }
