@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
@@ -8,9 +8,12 @@ import {
   Clock,
   Search,
   Globe,
+  AlertCircle,
+  RotateCw,
 } from 'lucide-react';
 import {
   blurIn,
+  fadeIn,
   staggerContainer,
   staggerItem,
   useReducedMotion,
@@ -56,6 +59,37 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
 };
 
+/** Whole days from now until the given date (negative = in the past). */
+function getDaysUntil(date: string): number {
+  return Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
+}
+
+function CountdownBadge({ effectiveDate }: { effectiveDate: string }) {
+  const { t } = useTranslation('compliance');
+  const days = getDaysUntil(effectiveDate);
+
+  if (days <= 0) {
+    return (
+      <Badge variant="outline" className="text-xs text-muted-foreground">
+        {t('In force')}
+      </Badge>
+    );
+  }
+
+  const colorClass =
+    days < 30
+      ? 'border-destructive/40 bg-destructive/10 text-destructive'
+      : days < 90
+        ? 'border-amber-300 bg-amber-100 text-amber-800'
+        : 'text-muted-foreground';
+
+  return (
+    <Badge variant="outline" className={`text-xs ${colorClass}`}>
+      {days === 1 ? t('in 1 day') : t('in {{days}} days', { days })}
+    </Badge>
+  );
+}
+
 export function NewsPage() {
   const { t } = useTranslation('compliance');
   const locale = useLocale();
@@ -63,16 +97,33 @@ export function NewsPage() {
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    getNews().then(data => {
-      setNews(data);
-      setIsLoading(false);
-    });
+  const loadNews = useCallback(() => {
+    getNews()
+      .then(data => {
+        setNews(data);
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error('Failed to load news:', error);
+        setLoadError(true);
+        setIsLoading(false);
+      });
   }, []);
+
+  useEffect(() => {
+    loadNews();
+  }, [loadNews]);
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setLoadError(false);
+    loadNews();
+  };
 
   const filteredNews = news.filter(item => {
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
@@ -126,6 +177,35 @@ export function NewsPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <MotionDiv {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Newspaper className="h-6 w-6" />
+            {t('Regulatory News')}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {t('Latest updates on EU regulations, standards, and deadlines')}
+          </p>
+        </MotionDiv>
+        <Card>
+          <CardContent className="text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-destructive/40 mb-4" />
+            <h3 className="text-lg font-medium">{t('Failed to load news')}</h3>
+            <p className="text-muted-foreground mt-1">
+              {t('Please check your connection and try again')}
+            </p>
+            <Button variant="outline" className="mt-4" onClick={handleRetry}>
+              <RotateCw className="mr-2 h-4 w-4" />
+              {t('Retry')}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -141,26 +221,29 @@ export function NewsPage() {
 
       {/* Upcoming Deadlines */}
       {upcomingDeadlines.length > 0 && (
-        <Card className="border-warning">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-warning" />
-              {t('Upcoming Deadlines')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              {upcomingDeadlines.map(item => (
-                <div key={item.id} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-warning/5 border border-warning/20">
-                  <Calendar className="h-3 w-3 text-warning" />
-                  <span className="font-medium">{formatDate(item.effectiveDate!, locale)}</span>
-                  <span className="text-muted-foreground">-</span>
-                  <span>{item.title}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <MotionDiv {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}>
+          <Card className="border-warning">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-warning" />
+                {t('Upcoming Deadlines')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {upcomingDeadlines.map(item => (
+                  <div key={item.id} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-warning/5 border border-warning/20">
+                    <Calendar className="h-3 w-3 text-warning" />
+                    <span className="font-medium">{formatDate(item.effectiveDate!, locale)}</span>
+                    <CountdownBadge effectiveDate={item.effectiveDate!} />
+                    <span className="text-muted-foreground">-</span>
+                    <span>{item.title}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </MotionDiv>
       )}
 
       {/* Filters */}
@@ -262,9 +345,10 @@ export function NewsPage() {
 
                     <div className="flex flex-wrap items-center gap-3">
                       {item.effectiveDate && (
-                        <span className="text-xs flex items-center gap-1 text-warning">
+                        <span className="text-xs flex items-center gap-1.5 text-warning">
                           <Calendar className="h-3 w-3" />
                           {t('Effective')}: {formatDate(item.effectiveDate, locale)}
+                          <CountdownBadge effectiveDate={item.effectiveDate} />
                         </span>
                       )}
                       {item.countries.length > 0 && (
