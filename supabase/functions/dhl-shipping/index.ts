@@ -185,6 +185,90 @@ function getDHLHeaders(settings: any): Record<string, string> {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Product routing helpers                                                     */
+/*                                                                              */
+/*  DHL embeds the product code in positions 11–12 of the billing number, so    */
+/*  every product needs its own activated participation (Teilnahme) and thus    */
+/*  its own billing number. Pick the right one per product.                     */
+/* -------------------------------------------------------------------------- */
+
+// International products (need the V53-style "Ausland" billing number).
+const DHL_INTERNATIONAL_PRODUCTS = ['V53WPAK', 'V54EPAK', 'V66WPI'];
+// DHL Kleinpaket (V62KP) — successor to Warenpost national (V62WP). Both share
+// the "62" procedure and use the dedicated Kleinpaket billing number.
+const DHL_KLEINPAKET_PRODUCTS = ['V62KP', 'V62WP'];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function billingNumberForProduct(product: string, settings: any): string {
+  if (DHL_INTERNATIONAL_PRODUCTS.includes(product)) return settings.billingNumberInternational || '';
+  if (DHL_KLEINPAKET_PRODUCTS.includes(product)) return settings.billingNumberKleinpaket || '';
+  return settings.billingNumber || '';
+}
+
+function missingBillingNumberMessage(product: string): string {
+  if (DHL_INTERNATIONAL_PRODUCTS.includes(product)) {
+    return 'No international DHL billing number configured. Open Warehouse → DHL Integration and add the international billing number (format: EKP + 53 + Teilnahme). It must be activated in your DHL business contract.';
+  }
+  if (DHL_KLEINPAKET_PRODUCTS.includes(product)) {
+    return 'No Kleinpaket billing number configured. Open Warehouse → DHL Integration and add the DHL Kleinpaket billing number (format: EKP + 62 + Teilnahme). It must be activated in your DHL business contract.';
+  }
+  return 'No DHL billing number configured. Open Warehouse → DHL Integration and add the domestic billing number (format: EKP + 01 + Teilnahme).';
+}
+
+/** Conservative default package dimensions per product (mm). DHL Kleinpaket has
+ *  a hard envelope of max L 35.3 × W 25 × H 8 cm, so the generic 30×20×10 cm box
+ *  used for parcels would be rejected on the height. Keep well inside the limit. */
+function dimsForProduct(product: string): { uom: string; length: number; width: number; height: number } {
+  if (DHL_KLEINPAKET_PRODUCTS.includes(product)) {
+    return { uom: 'mm', length: 200, width: 150, height: 50 };
+  }
+  return { uom: 'mm', length: 300, width: 200, height: 100 };
+}
+
+// DHL Kleinpaket physical envelope (cm) and weight (g).
+const KLEINPAKET_MAX_SIDES_CM = [35.3, 25, 8]; // sorted descending
+const KLEINPAKET_MAX_WEIGHT_G = 1000;
+
+/** Decide whether a domestic shipment fits the DHL Kleinpaket envelope
+ *  (max 35.3 × 25 × 8 cm, max 1 kg). Conservative by design: only returns true
+ *  when the size can be positively confirmed from a single product's dimensions.
+ *  Unknown dims, multi-item shipments, or overweight → false, so we never ship an
+ *  oversize parcel as Kleinpaket (which DHL would reject or surcharge). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function isKleinpaketEligible(supabase: any, shipmentId: string, weightGrams: number): Promise<boolean> {
+  // Hard weight limit first — cheapest check.
+  if (!weightGrams || weightGrams > KLEINPAKET_MAX_WEIGHT_G) return false;
+
+  const { data: items } = await supabase
+    .from('wh_shipment_items')
+    .select('quantity, product_id')
+    .eq('shipment_id', shipmentId);
+
+  // Reliable sizing is only possible for a single unit of a single product.
+  if (!items || items.length !== 1 || !items[0].product_id) return false;
+  const totalUnits = items.reduce((s: number, it: { quantity?: number }) => s + (it.quantity || 1), 0);
+  if (totalUnits !== 1) return false;
+
+  const { data: product } = await supabase
+    .from('products')
+    .select('packaging_height_cm, packaging_width_cm, packaging_depth_cm, product_height_cm, product_width_cm, product_depth_cm')
+    .eq('id', items[0].product_id)
+    .single();
+  if (!product) return false;
+
+  // Prefer packaging (the actual shipped box) dims; fall back to bare product dims.
+  const h = product.packaging_height_cm ?? product.product_height_cm;
+  const w = product.packaging_width_cm ?? product.product_width_cm;
+  const d = product.packaging_depth_cm ?? product.product_depth_cm;
+  if (h == null || w == null || d == null) return false;
+
+  // A box fits if each sorted side is within the matching sorted limit
+  // (comparing largest-to-largest allows any rotation of the package).
+  const sides = [Number(h), Number(w), Number(d)].sort((a, b) => b - a);
+  return sides.every((s, i) => s > 0 && s <= KLEINPAKET_MAX_SIDES_CM[i]);
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Action: save_credentials                                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -210,6 +294,7 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
     password: params.password || '',
     billingNumber: params.billingNumber || '',
     billingNumberInternational: params.billingNumberInternational || '',
+    billingNumberKleinpaket: params.billingNumberKleinpaket || '',
     defaultProduct: params.defaultProduct || 'V01PAK',
     labelFormat: params.labelFormat || 'PDF_A4',
     shipper: params.shipper || {},
@@ -328,20 +413,29 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
   const consigneeCountry = mapCountryToISO3(shipment.shipping_country);
   const isInternational = shipperCountry !== consigneeCountry;
   const configuredProduct = settings.defaultProduct || 'V01PAK';
-  const autoProduct = isInternational && configuredProduct === 'V01PAK' ? 'V53WPAK' : configuredProduct;
-  const product = (params.product as string) || autoProduct;
-  // DHL embeds the product code in positions 11-12 of the billing number, so
-  // each product requires its own activated participation. Pick the right
-  // billing number for the product. If the international one is missing for
-  // an international shipment we fail fast with a clear message instead of
-  // letting DHL return its opaque "product unknown" fault.
-  const isV53 = product === 'V53WPAK' || product === 'V54EPAK' || product === 'V66WPI' || product === 'V62WP';
-  if (isV53 && !settings.billingNumberInternational) {
-    return json({
-      error: 'No international DHL billing number configured. Open Warehouse → DHL Integration and add the V53WPAK billing number (format: EKP + 53 + Teilnahme). It must be activated in your DHL business contract.',
-    });
+  let autoProduct: string;
+  if (isInternational) {
+    // National defaults (V01PAK parcel, V62KP Kleinpaket) can't cross borders —
+    // auto-upgrade to Paket International for foreign destinations.
+    autoProduct = (configuredProduct === 'V01PAK' || configuredProduct === 'V62KP') ? 'V53WPAK' : configuredProduct;
+  } else if (settings.billingNumberKleinpaket && (configuredProduct === 'V01PAK' || configuredProduct === 'V62KP')) {
+    // Domestic + Kleinpaket activated: auto-detect whether the package fits the
+    // Kleinpaket envelope (≤ 35.3×25×8 cm, ≤ 1 kg). Fits → cheaper Kleinpaket,
+    // else → standard parcel. Never silently ship oversize as Kleinpaket.
+    const fits = await isKleinpaketEligible(supabase, shipmentId, effectiveWeightGrams);
+    autoProduct = fits ? 'V62KP' : 'V01PAK';
+  } else {
+    autoProduct = configuredProduct;
   }
-  const billingNumber = isV53 ? settings.billingNumberInternational : settings.billingNumber;
+  // An explicit caller-supplied product always wins over auto-detection.
+  const product = (params.product as string) || autoProduct;
+  // Each product needs its own activated participation (Teilnahme) → own billing
+  // number. Resolve it and fail fast with a clear message if it's missing,
+  // instead of letting DHL return its opaque "product unknown" fault.
+  const billingNumber = billingNumberForProduct(product, settings);
+  if (!billingNumber) {
+    return json({ error: missingBillingNumberMessage(product) });
+  }
   const labelFormat = settings.labelFormat || 'PDF_A4';
   const weightKg = effectiveWeightGrams / 1000;
 
@@ -373,7 +467,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
           phone: shipment.recipient_phone || undefined,
         },
         details: {
-          dim: { uom: 'mm', height: 100, length: 300, width: 200 },
+          dim: dimsForProduct(product),
           weight: { uom: 'kg', value: weightKg },
         },
       },
@@ -477,6 +571,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     success: true,
     trackingNumber,
     shipmentNumber: trackingNumber,
+    product,
     labelUrl: signedUrl || labelUrl,
     labelStoragePath: storagePath,
     validationMessages: item.validationMessages || [],
@@ -513,13 +608,14 @@ async function handleValidateAddress(supabase: any, tenantId: string, params?: R
   const consigneeCountry = mapCountryToISO3(country);
   const isInternational = shipperCountry !== consigneeCountry;
   const configuredProduct = settings.defaultProduct || 'V01PAK';
-  const autoProduct = isInternational && configuredProduct === 'V01PAK' ? 'V53WPAK' : configuredProduct;
+  const autoProduct = isInternational && (configuredProduct === 'V01PAK' || configuredProduct === 'V62KP')
+    ? 'V53WPAK'
+    : configuredProduct;
   const product = (params?.product as string) || autoProduct;
-  const isV53 = product === 'V53WPAK' || product === 'V54EPAK' || product === 'V66WPI' || product === 'V62WP';
-  const billingNumber = isV53 ? settings.billingNumberInternational : settings.billingNumber;
+  const billingNumber = billingNumberForProduct(product, settings);
   if (!billingNumber) {
-    // No international billing number — surface as configuration hint but don't block.
-    return json({ valid: true, configured: false, messages: ['Skipped: no DHL billing number for this destination'] });
+    // No billing number for this product — surface as configuration hint but don't block.
+    return json({ valid: true, configured: false, messages: ['Skipped: no DHL billing number for this product/destination'] });
   }
 
   // Minimal-but-valid order payload — DHL still enforces shape checks.
@@ -545,7 +641,7 @@ async function handleValidateAddress(supabase: any, tenantId: string, params?: R
           country: consigneeCountry,
         },
         details: {
-          dim: { uom: 'mm', height: 100, length: 300, width: 200 },
+          dim: dimsForProduct(product),
           weight: { uom: 'kg', value: Math.max(0.1, Number(params?.weightKg) || 1) },
         },
       },
@@ -1407,13 +1503,16 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
     // ---- DHL Parcel DE Shipping v2 (inverted sender/receiver for returns) ----
     const product = settings.defaultProduct || 'V01PAK';
     const labelFormat = settings.labelFormat || 'PDF_A4';
+    // Returns ship domestically (customer → warehouse). Use the product's own
+    // billing number, falling back to the domestic one so existing flows keep working.
+    const billingNumber = billingNumberForProduct(product, settings) || settings.billingNumber;
 
     const dhlOrder = {
       profile: 'STANDARD_GRUPPENPROFIL',
       shipments: [
         {
           product,
-          billingNumber: settings.billingNumber,
+          billingNumber,
           refNo: ret.return_number,
           // For returns: customer is the shipper, warehouse is the consignee
           shipper: {
@@ -1436,7 +1535,7 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
             phone: settings.shipper.phone || undefined,
           },
           details: {
-            dim: { uom: 'mm', height: 100, length: 300, width: 200 },
+            dim: dimsForProduct(product),
             weight: { uom: 'kg', value: 1.0 },
           },
         },

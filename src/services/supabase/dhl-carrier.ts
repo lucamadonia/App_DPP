@@ -86,6 +86,7 @@ export async function getDHLSettings(): Promise<DHLSettingsPublic | null> {
     sandbox: dhl.sandbox ?? true,
     billingNumber: dhl.billingNumber || '',
     billingNumberInternational: dhl.billingNumberInternational || '',
+    billingNumberKleinpaket: dhl.billingNumberKleinpaket || '',
     defaultProduct: dhl.defaultProduct || 'V01PAK',
     labelFormat: dhl.labelFormat || 'PDF_A4',
     shipper: dhl.shipper || {},
@@ -105,6 +106,7 @@ export async function saveDHLCredentials(creds: {
   password: string;
   billingNumber: string;
   billingNumberInternational?: string;
+  billingNumberKleinpaket?: string;
   defaultProduct: string;
   labelFormat: string;
   shipper: Record<string, unknown>;

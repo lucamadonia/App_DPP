@@ -36,6 +36,7 @@ export function DHLIntegrationPage() {
   const [password, setPassword] = useState('');
   const [billingNumber, setBillingNumber] = useState('');
   const [billingNumberInternational, setBillingNumberInternational] = useState('');
+  const [billingNumberKleinpaket, setBillingNumberKleinpaket] = useState('');
   const [defaultProduct, setDefaultProduct] = useState<DHLParcelProduct>('V01PAK');
   const [labelFormat, setLabelFormat] = useState<DHLLabelFormat>('PDF_A4');
 
@@ -58,6 +59,7 @@ export function DHLIntegrationPage() {
         setSandbox(s.sandbox);
         setBillingNumber(s.billingNumber);
         setBillingNumberInternational(s.billingNumberInternational || '');
+        setBillingNumberKleinpaket(s.billingNumberKleinpaket || '');
         setDefaultProduct(s.defaultProduct);
         setLabelFormat(s.labelFormat);
         if (s.shipper) {
@@ -93,6 +95,7 @@ export function DHLIntegrationPage() {
         password,
         billingNumber,
         billingNumberInternational: billingNumberInternational || undefined,
+        billingNumberKleinpaket: billingNumberKleinpaket || undefined,
         defaultProduct,
         labelFormat,
         shipper: {
@@ -289,6 +292,21 @@ export function DHLIntegrationPage() {
             />
             <p className="text-xs text-muted-foreground mt-1">
               {t('Required for shipments outside the home country. Format: EKP(10) + 53 + Teilnahme(2). Must be activated in your DHL business contract.')}
+            </p>
+          </div>
+
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              {t('Kleinpaket Billing Number')} <span className="opacity-70">({t('Optional')} — V62KP)</span>
+            </Label>
+            <Input
+              value={billingNumberKleinpaket}
+              onChange={(e) => setBillingNumberKleinpaket(e.target.value)}
+              placeholder="33333333336201"
+              maxLength={14}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('DHL Kleinpaket billing number (successor to Warenpost national). Format: EKP(10) + 62 + Teilnahme(2). Used automatically when a shipment fits the Kleinpaket envelope (max 35.3 × 25 × 8 cm, 1 kg).')}
             </p>
           </div>
 
