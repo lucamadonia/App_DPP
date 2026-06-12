@@ -2,7 +2,7 @@
  * DHL Parcel DE Shipping API v2 — Types
  */
 
-export type DHLParcelProduct = 'V01PAK' | 'V53WPAK' | 'V54EPAK' | 'V62WP' | 'V66WPI';
+export type DHLParcelProduct = 'V01PAK' | 'V62KP' | 'V53WPAK' | 'V54EPAK' | 'V62WP' | 'V66WPI';
 export type DHLLabelFormat = 'PDF_A4' | 'PDF_910-300-700';
 
 export interface DHLSettings {
@@ -17,6 +17,9 @@ export interface DHLSettings {
   /** Optional billing number for DHL Paket International (V53WPAK). Required
    *  if you ship outside the home country. Format: EKP(10) + "53" + Teilnahme(2). */
   billingNumberInternational?: string;
+  /** Optional billing number for DHL Kleinpaket (V62KP), the successor to
+   *  Warenpost national. Required to ship Kleinpaket. Format: EKP(10) + "62" + Teilnahme(2). */
+  billingNumberKleinpaket?: string;
   defaultProduct: DHLParcelProduct;
   labelFormat: DHLLabelFormat;
   shipper: DHLAddress;
@@ -29,6 +32,7 @@ export interface DHLSettingsPublic {
   sandbox: boolean;
   billingNumber: string;
   billingNumberInternational?: string;
+  billingNumberKleinpaket?: string;
   defaultProduct: DHLParcelProduct;
   labelFormat: DHLLabelFormat;
   shipper: DHLAddress;
@@ -53,6 +57,9 @@ export interface DHLLabelResponse {
   labelPdf: string; // base64
   shipmentNumber: string;
   labelUrl: string; // signed storage URL
+  /** The DHL product the label was actually created with (after auto-detection,
+   *  e.g. 'V62KP' when the package fit the Kleinpaket envelope). */
+  product?: DHLParcelProduct;
   validationMessages?: { property: string; message: string; state: 'Warning' | 'Error' }[];
 }
 
@@ -75,14 +82,19 @@ export interface CarrierLabelData {
 
 export const DHL_PRODUCT_LABELS: Record<DHLParcelProduct, string> = {
   V01PAK: 'Paket National',
+  V62KP: 'Kleinpaket',
   V53WPAK: 'Paket International',
   V54EPAK: 'Europaket',
-  V62WP: 'Warenpost',
+  V62WP: 'Warenpost (discontinued)',
   V66WPI: 'Warenpost International',
 };
 
+// Selectable products. V62WP (Warenpost national) is intentionally omitted —
+// DHL replaced it with V62KP (Kleinpaket) on 2025-01-01 and deactivated the
+// automatic V62WP→V62KP conversion on 2026-05-31. V62WP stays in the type union
+// only so historical carrier_label_data still type-checks.
 export const DHL_PRODUCTS: DHLParcelProduct[] = [
-  'V01PAK', 'V53WPAK', 'V54EPAK', 'V62WP', 'V66WPI',
+  'V01PAK', 'V62KP', 'V53WPAK', 'V54EPAK', 'V66WPI',
 ];
 
 /** DHL Parcel DE Returns API settings */

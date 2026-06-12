@@ -15,6 +15,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { createDHLLabel, cancelDHLLabel, getDHLSettings } from '@/services/supabase/dhl-carrier';
+import { DHL_PRODUCT_LABELS } from '@/types/dhl';
+import type { DHLParcelProduct } from '@/types/dhl';
 import type { WhShipment } from '@/types/warehouse';
 
 interface DHLLabelActionsProps {
@@ -71,7 +73,11 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
     try {
       const override = grams !== shipment.totalWeightGrams ? grams : undefined;
       const result = await createDHLLabel(shipment.id, undefined, override);
-      toast.success(t('Label Created Successfully'));
+      // Surface which product the system auto-selected (e.g. Kleinpaket when it fit).
+      const productName = result.product
+        ? t(DHL_PRODUCT_LABELS[result.product as DHLParcelProduct] ?? result.product)
+        : '';
+      toast.success(productName ? t('Label created — {{product}}', { product: productName }) : t('Label Created Successfully'));
       if (result.validationMessages?.length) {
         result.validationMessages.forEach(msg => {
           if (msg.state === 'Warning') toast.warning(msg.message);
