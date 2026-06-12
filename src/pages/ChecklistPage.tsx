@@ -37,7 +37,9 @@ import {
   XCircle,
   Minus,
   Factory,
+  Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   getChecklistTemplates,
   getChecklistProgress,
@@ -174,6 +176,8 @@ export function ChecklistPage() {
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [, setIsSaving] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Checklist data from Supabase
   const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>({});
@@ -288,6 +292,119 @@ export function ChecklistPage() {
 
   const criticalItems = checklist.filter(i => i.priority === 'critical' && getItemStatus(i) !== 'completed');
 
+  const countryOptions = [
+    { code: 'DE', name: t('Germany'), flag: '🇩🇪' },
+    { code: 'FR', name: t('France'), flag: '🇫🇷' },
+    { code: 'AT', name: t('Austria'), flag: '🇦🇹' },
+    { code: 'IT', name: t('Italy'), flag: '🇮🇹' },
+    { code: 'ES', name: t('Spain'), flag: '🇪🇸' },
+    { code: 'NL', name: t('Netherlands'), flag: '🇳🇱' },
+    { code: 'GB', name: t('United Kingdom'), flag: '🇬🇧' },
+    { code: 'US', name: t('United States'), flag: '🇺🇸' },
+    { code: 'CH', name: t('Switzerland'), flag: '🇨🇭' },
+    { code: 'PL', name: t('Poland'), flag: '🇵🇱' },
+    { code: 'CZ', name: t('Czech Republic'), flag: '🇨🇿' },
+    { code: 'SE', name: t('Sweden'), flag: '🇸🇪' },
+    { code: 'DK', name: t('Denmark'), flag: '🇩🇰' },
+    { code: 'BE', name: t('Belgium'), flag: '🇧🇪' },
+    { code: 'PT', name: t('Portugal'), flag: '🇵🇹' },
+    { code: 'IE', name: t('Ireland'), flag: '🇮🇪' },
+  ];
+
+  const categoryOptions = [
+    { id: 'electronics', name: t('Electronics'), icon: '💻' },
+    { id: 'textiles', name: t('Textiles'), icon: '👕' },
+    { id: 'batteries', name: t('Batteries'), icon: '🔋' },
+    { id: 'furniture', name: t('Furniture'), icon: '🛋️' },
+    { id: 'toys', name: t('Toys'), icon: '🧸' },
+    { id: 'packaging', name: t('Packaging'), icon: '📦' },
+    { id: 'cosmetics', name: t('Cosmetics'), icon: '💄' },
+    { id: 'food', name: t('Food'), icon: '🍎' },
+    { id: 'construction', name: t('Construction Materials'), icon: '🧱' },
+    { id: 'machinery', name: t('Machinery'), icon: '⚙️' },
+    { id: 'medical_devices', name: t('Medical Devices'), icon: '🏥' },
+    { id: 'automotive', name: t('Automotive'), icon: '🚗' },
+    { id: 'chemicals', name: t('Chemical Products'), icon: '🧪' },
+    { id: 'food_supplements', name: t('Food Supplements'), icon: '💊' },
+    { id: 'pet_products', name: t('Pet Products'), icon: '🐾' },
+  ];
+
+  const handlePrint = () => {
+    setIsPrinting(true);
+    document.body.classList.add('print-checklist');
+    // Give the browser a frame to apply the print-only styles before
+    // opening the (blocking) print dialog.
+    window.requestAnimationFrame(() => {
+      try {
+        window.print();
+      } finally {
+        document.body.classList.remove('print-checklist');
+        setIsPrinting(false);
+      }
+    });
+  };
+
+  const handleExportPDF = async () => {
+    if (checklist.length === 0 || isExporting) return;
+    setIsExporting(true);
+    try {
+      // Lazy import keeps @react-pdf/renderer out of the initial bundle
+      const { generateChecklistPDF } = await import('@/components/compliance/ChecklistPDF');
+      const country = countryOptions.find(c => c.code === selectedCountry);
+      const category = categoryOptions.find(c => c.id === selectedCategory);
+
+      await generateChecklistPDF({
+        countryCode: selectedCountry,
+        categoryKey: selectedCategory,
+        countryName: country?.name ?? selectedCountry,
+        categoryName: category?.name ?? selectedCategory,
+        progressPercent: progress,
+        items: checklist.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          category: item.category,
+          mandatory: item.mandatory,
+          priority: item.priority,
+          status: getItemStatus(item),
+          legalBasis: item.legalBasis,
+          authority: item.authority,
+          deadline: item.deadline,
+        })),
+        labels: {
+          title: t('Compliance Checklist'),
+          progress: t('Compliance Progress'),
+          progressSummary: t('{{completed}} of {{total}} mandatory items completed', {
+            completed: completedMandatory.length,
+            total: mandatoryItems.length,
+          }),
+          generated: t('Generated'),
+          required: t('Required'),
+          legalBasis: t('Legal Basis'),
+          authority: t('Responsible Authority'),
+          deadline: t('Deadline'),
+          priorities: {
+            critical: t('Critical'),
+            high: t('High'),
+            medium: t('Medium'),
+            low: t('Low'),
+          },
+          statuses: {
+            pending: t('Pending'),
+            in_progress: t('In Progress'),
+            completed: t('Completed'),
+            not_applicable: t('Not Applicable'),
+          },
+        },
+      });
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      toast.error(t('PDF export failed'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -351,7 +468,7 @@ export function ChecklistPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <div className="space-y-6 checklist-print-area">
         {/* Header */}
         <MotionDiv
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -363,44 +480,43 @@ export function ChecklistPage() {
               {t('Comprehensive, interactive checklist for country-specific requirements')}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Printer className="mr-2 h-4 w-4" />
+          <div className="flex gap-2 checklist-print-hide">
+            <Button
+              variant="outline"
+              onClick={handlePrint}
+              disabled={isPrinting || checklist.length === 0}
+            >
+              {isPrinting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Printer className="mr-2 h-4 w-4" />
+              )}
               {t('Print', { ns: 'common' })}
             </Button>
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              {t('PDF Export')}
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={isExporting || checklist.length === 0}
+            >
+              {isExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isExporting ? t('Generating PDF...') : t('PDF Export')}
             </Button>
           </div>
         </MotionDiv>
 
         {/* Selection */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 checklist-print-hide">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">{t('Select Country')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { code: 'DE', name: t('Germany'), flag: '🇩🇪' },
-                  { code: 'FR', name: t('France'), flag: '🇫🇷' },
-                  { code: 'AT', name: t('Austria'), flag: '🇦🇹' },
-                  { code: 'IT', name: t('Italy'), flag: '🇮🇹' },
-                  { code: 'ES', name: t('Spain'), flag: '🇪🇸' },
-                  { code: 'NL', name: t('Netherlands'), flag: '🇳🇱' },
-                  { code: 'GB', name: t('United Kingdom'), flag: '🇬🇧' },
-                  { code: 'US', name: t('United States'), flag: '🇺🇸' },
-                  { code: 'CH', name: t('Switzerland'), flag: '🇨🇭' },
-                  { code: 'PL', name: t('Poland'), flag: '🇵🇱' },
-                  { code: 'CZ', name: t('Czech Republic'), flag: '🇨🇿' },
-                  { code: 'SE', name: t('Sweden'), flag: '🇸🇪' },
-                  { code: 'DK', name: t('Denmark'), flag: '🇩🇰' },
-                  { code: 'BE', name: t('Belgium'), flag: '🇧🇪' },
-                  { code: 'PT', name: t('Portugal'), flag: '🇵🇹' },
-                  { code: 'IE', name: t('Ireland'), flag: '🇮🇪' },
-                ].map((country) => (
+                {countryOptions.map((country) => (
                   <Button
                     key={country.code}
                     variant={selectedCountry === country.code ? 'default' : 'outline'}
@@ -420,23 +536,7 @@ export function ChecklistPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'electronics', name: t('Electronics'), icon: '💻' },
-                  { id: 'textiles', name: t('Textiles'), icon: '👕' },
-                  { id: 'batteries', name: t('Batteries'), icon: '🔋' },
-                  { id: 'furniture', name: t('Furniture'), icon: '🛋️' },
-                  { id: 'toys', name: t('Toys'), icon: '🧸' },
-                  { id: 'packaging', name: t('Packaging'), icon: '📦' },
-                  { id: 'cosmetics', name: t('Cosmetics'), icon: '💄' },
-                  { id: 'food', name: t('Food'), icon: '🍎' },
-                  { id: 'construction', name: t('Construction Materials'), icon: '🧱' },
-                  { id: 'machinery', name: t('Machinery'), icon: '⚙️' },
-                  { id: 'medical_devices', name: t('Medical Devices'), icon: '🏥' },
-                  { id: 'automotive', name: t('Automotive'), icon: '🚗' },
-                  { id: 'chemicals', name: t('Chemical Products'), icon: '🧪' },
-                  { id: 'food_supplements', name: t('Food Supplements'), icon: '💊' },
-                  { id: 'pet_products', name: t('Pet Products'), icon: '🐾' },
-                ].map((cat) => (
+                {categoryOptions.map((cat) => (
                   <Button
                     key={cat.id}
                     variant={selectedCategory === cat.id ? 'default' : 'outline'}
@@ -523,7 +623,7 @@ export function ChecklistPage() {
         </Card>
 
         {/* Filter */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 checklist-print-hide">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -568,7 +668,11 @@ export function ChecklistPage() {
             const CategoryIcon = categoryIcons[category] || Shield;
 
             return (
-              <MotionDiv key={category} {...(!prefersReduced && { variants: staggerItem })}>
+              <MotionDiv
+                key={category}
+                className="checklist-print-group"
+                {...(!prefersReduced && { variants: staggerItem })}
+              >
               <Collapsible defaultOpen>
                 <Card>
                   <CollapsibleTrigger className="w-full">

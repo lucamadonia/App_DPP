@@ -969,3 +969,38 @@ html, body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Compliance checklist print view ─────────────────────────────────────
+   ChecklistPage adds `print-checklist` to <body> before window.print().
+   Everything except the checklist content (`.checklist-print-area`) is
+   hidden — navigation, sidebar, header, buttons, and filters. */
+@media print {
+  body.print-checklist {
+    background: #fff !important;
+  }
+  /* Hide the whole app, then re-show the checklist print area */
+  body.print-checklist #root * {
+    visibility: hidden;
+  }
+  body.print-checklist .checklist-print-area,
+  body.print-checklist .checklist-print-area * {
+    visibility: visible;
+  }
+  body.print-checklist .checklist-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 1rem;
+  }
+  /* Interactive controls inside the print area (buttons, filters, pickers) */
+  body.print-checklist .checklist-print-hide {
+    display: none !important;
+  }
+  /* Keep checklist groups together on one page where possible */
+  body.print-checklist .checklist-print-group {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

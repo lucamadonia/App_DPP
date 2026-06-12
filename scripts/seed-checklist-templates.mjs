@@ -1,13 +1,22 @@
 /**
  * Seed Checklist Templates via Supabase REST API
  *
- * This script deletes all existing checklist_templates and re-inserts
- * them from either an SQL file, a JSON file, or the embedded sample data.
+ * UPSERT mode (default): rows are upserted on the unique key
+ * (country_code, category_key, title) via PostgREST
+ * `?on_conflict=...` + `Prefer: resolution=merge-duplicates`.
+ * Existing row UUIDs are preserved, so checklist_progress references
+ * (tenant progress check marks) survive re-seeding.
+ * Requires migration 20260612c_checklist_templates_unique.sql.
+ *
+ * RESET mode (--reset): deletes ALL existing checklist_templates first,
+ * then inserts. WARNING: this orphans existing checklist_progress
+ * references — only use it when a full wipe is intended.
  *
  * Usage:
  *   node scripts/seed-checklist-templates.mjs
  *   node scripts/seed-checklist-templates.mjs --json path/to/templates.json
  *   node scripts/seed-checklist-templates.mjs --sql  path/to/seed.sql
+ *   node scripts/seed-checklist-templates.mjs --json file.json --reset
  *
  * Environment variables (read from .env in project root if present):
  *   SUPABASE_URL               – e.g. https://xyzabc.supabase.co
@@ -512,6 +521,7 @@ async function main() {
   const args = process.argv.slice(2);
   const jsonIdx = args.indexOf('--json');
   const sqlIdx = args.indexOf('--sql');
+  const resetFlag = args.includes('--reset');
 
   if (jsonIdx !== -1 && args[jsonIdx + 1]) {
     templates = loadTemplatesFromJSON(args[jsonIdx + 1]);
@@ -531,55 +541,90 @@ async function main() {
     templates = SAMPLE_TEMPLATES;
   }
 
-  console.log(`Total templates to insert: ${templates.length}\n`);
+  console.log(`Total templates to seed: ${templates.length}\n`);
 
   // ------------------------------------------------------------------
-  // 2. DELETE existing checklist_templates
+  // 2. Optional reset (--reset only): DELETE existing checklist_templates.
+  //    Default is UPSERT, which keeps existing row UUIDs intact so
+  //    checklist_progress references survive.
   // ------------------------------------------------------------------
-  console.log('[1/2] Deleting existing checklist_templates ...');
-  try {
-    // PostgREST requires a filter for DELETE; using a truthy condition to match all rows.
-    await supabaseRequest('checklist_templates?id=not.is.null', {
-      method: 'DELETE',
-    });
-    console.log('       Deleted all existing rows.\n');
-  } catch (err) {
-    console.error('       Failed to delete existing templates:', err.message);
-    console.error('       Aborting.');
-    process.exit(1);
+  if (resetFlag) {
+    console.log('[1/2] --reset: deleting ALL existing checklist_templates ...');
+    console.log('       WARNING: this orphans existing checklist_progress references!');
+    try {
+      // PostgREST requires a filter for DELETE; using a truthy condition to match all rows.
+      await supabaseRequest('checklist_templates?id=not.is.null', {
+        method: 'DELETE',
+      });
+      console.log('       Deleted all existing rows.\n');
+    } catch (err) {
+      console.error('       Failed to delete existing templates:', err.message);
+      console.error('       Aborting.');
+      process.exit(1);
+    }
+  } else {
+    console.log('[1/2] Upsert mode (default) – existing rows are updated in place,');
+    console.log('       UUIDs and checklist_progress references are preserved.\n');
   }
 
   // ------------------------------------------------------------------
-  // 3. INSERT in batches
+  // 3. UPSERT in batches
   // ------------------------------------------------------------------
-  console.log(`[2/2] Inserting ${templates.length} templates in batches of ${BATCH_SIZE} ...`);
+
+  // 3a. Dedupe the payload on the conflict key – Postgres rejects an
+  //     upsert that touches the same row twice in a single statement
+  //     ("ON CONFLICT DO UPDATE command cannot affect row a second time").
+  const byConflictKey = new Map();
+  for (const t of templates) {
+    const key = `${t.country_code}|${t.category_key}|${t.title}`;
+    if (byConflictKey.has(key)) {
+      console.warn(`       WARN duplicate input row (kept last): ${key}`);
+    }
+    byConflictKey.set(key, t);
+  }
+  const deduped = [...byConflictKey.values()];
+
+  // 3b. Normalise rows to a uniform column set – PostgREST bulk payloads
+  //     require identical keys on every object. Strip server-managed fields.
+  const allKeys = new Set();
+  for (const t of deduped) {
+    for (const k of Object.keys(t)) {
+      if (k !== 'id' && k !== 'created_at' && k !== 'updated_at') allKeys.add(k);
+    }
+  }
+  const columns = [...allKeys];
+  const rows = deduped.map(t => {
+    const row = {};
+    for (const col of columns) row[col] = t[col] !== undefined ? t[col] : null;
+    return row;
+  });
+
+  console.log(`[2/2] Upserting ${rows.length} templates in batches of ${BATCH_SIZE} ...`);
+  console.log('       on_conflict=country_code,category_key,title  (merge-duplicates)');
 
   let insertedCount = 0;
-  const totalBatches = Math.ceil(templates.length / BATCH_SIZE);
+  const totalBatches = Math.ceil(rows.length / BATCH_SIZE);
 
-  for (let i = 0; i < templates.length; i += BATCH_SIZE) {
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const batch = templates.slice(i, i + BATCH_SIZE);
-
-    // Strip auto-generated / server-managed fields before inserting
-    const cleanBatch = batch.map(t => {
-      const { id, created_at, updated_at, ...rest } = t;
-      return rest;
-    });
+    const batch = rows.slice(i, i + BATCH_SIZE);
 
     try {
-      await supabaseRequest('checklist_templates', {
-        method: 'POST',
-        body: JSON.stringify(cleanBatch),
-        headers: {
-          'Prefer': 'return=minimal',
-        },
-      });
+      await supabaseRequest(
+        'checklist_templates?on_conflict=country_code,category_key,title',
+        {
+          method: 'POST',
+          body: JSON.stringify(batch),
+          headers: {
+            'Prefer': 'resolution=merge-duplicates,return=minimal',
+          },
+        }
+      );
       insertedCount += batch.length;
-      console.log(`       Batch ${batchNum}/${totalBatches} – inserted ${batch.length} row(s)  (total: ${insertedCount})`);
+      console.log(`       Batch ${batchNum}/${totalBatches} – upserted ${batch.length} row(s)  (total: ${insertedCount})`);
     } catch (err) {
       console.error(`       Batch ${batchNum}/${totalBatches} FAILED: ${err.message}`);
-      console.error(`       Rows ${i + 1}..${i + batch.length} were NOT inserted.`);
+      console.error(`       Rows ${i + 1}..${i + batch.length} were NOT upserted.`);
     }
   }
 
@@ -614,13 +659,13 @@ async function main() {
   console.log('');
   console.log('='.repeat(60));
   console.log(
-    insertedCount === templates.length
+    insertedCount === rows.length
       ? `  Done – ${insertedCount} template(s) seeded successfully.`
-      : `  Done – ${insertedCount}/${templates.length} template(s) seeded (some batches failed).`
+      : `  Done – ${insertedCount}/${rows.length} template(s) seeded (some batches failed).`
   );
   console.log('='.repeat(60));
 
-  if (insertedCount < templates.length) {
+  if (insertedCount < rows.length) {
     process.exit(1);
   }
 }
