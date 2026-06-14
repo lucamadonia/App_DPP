@@ -191,7 +191,7 @@ export function PublicFeedbackPage() {
   // ---------- SUBMITTED ----------
   if (status === 'submitted') {
     return (
-      <PublicShell tenantName={data?.tenant_name} logoUrl={branding?.logoUrl || branding?.logo}>
+      <PublicShell tenantName={data?.tenant_name} logoUrl={branding?.logoUrl || branding?.logo} accent={primaryColor}>
         <SuccessState customerName={data?.customer_name} tenantName={data?.tenant_name} tenantSlug={data?.tenant_slug} />
       </PublicShell>
     );
@@ -573,11 +573,16 @@ function PublicShell({ children, tenantName, logoUrl, accent, hideHeader }: Shel
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" style={pageStyle}>
       {!hideHeader && (
         <header className="px-4 pt-6 pb-1 flex items-center justify-center">
-          <img
-            src={logoUrl || FAMBLISS_LOGO}
-            alt={tenantName || 'Feedback'}
-            className="h-10 max-w-[180px] object-contain"
-          />
+          <span
+            className="inline-flex items-center justify-center rounded-2xl px-5 py-3 shadow-md ring-1 ring-black/10"
+            style={accent ? { backgroundImage: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 70%, #000))` } : undefined}
+          >
+            <img
+              src={logoUrl || FAMBLISS_LOGO}
+              alt={tenantName || 'Feedback'}
+              className="h-9 max-w-[160px] object-contain"
+            />
+          </span>
         </header>
       )}
       {children}
@@ -647,8 +652,12 @@ function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: 
 
       {/* Content */}
       <div className="relative px-5 pt-9 pb-20 text-center">
-        {/* Logo pill */}
-        <div className="mx-auto mb-5 inline-flex items-center justify-center rounded-2xl bg-white/75 px-4 py-2.5 shadow-sm ring-1 ring-black/5 backdrop-blur animate-feedback-rise">
+        {/* Logo pill — accent backing so white *and* dark tenant logos stay
+            legible (a plain white pill makes white logos disappear). */}
+        <div
+          className="mx-auto mb-5 inline-flex items-center justify-center rounded-2xl px-5 py-3 shadow-md ring-1 ring-black/10 animate-feedback-rise"
+          style={{ backgroundImage: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 70%, #000))` }}
+        >
           <img src={logoUrl || FAMBLISS_LOGO} alt={tenantName} className="h-9 max-w-[160px] object-contain" />
         </div>
 
