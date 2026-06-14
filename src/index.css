@@ -1004,3 +1004,30 @@ html, body {
     page-break-inside: avoid;
   }
 }
+
+/* ---- Feedback hero (universal, brand-adaptive) ---- */
+@keyframes feedback-twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.1); }
+}
+@keyframes feedback-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-9px) rotate(3deg); }
+}
+@keyframes feedback-blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(14px, -10px) scale(1.06); }
+}
+@keyframes feedback-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-feedback-twinkle { animation: feedback-twinkle 3.2s ease-in-out infinite; }
+.animate-feedback-float   { animation: feedback-float 7s ease-in-out infinite; }
+.animate-feedback-blob    { animation: feedback-blob-drift 12s ease-in-out infinite; }
+.animate-feedback-rise    { animation: feedback-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-feedback-twinkle,
+  .animate-feedback-float,
+  .animate-feedback-blob { animation: none; }
+}

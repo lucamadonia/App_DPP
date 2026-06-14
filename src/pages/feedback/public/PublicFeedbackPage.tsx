@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, AlertCircle, Sparkles, Heart, Lightbulb, Baby, Plus, Minus } from 'lucide-react';
+import { Check, AlertCircle, Sparkles, Heart, Lightbulb, Baby, Plus, Minus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -203,24 +203,18 @@ export function PublicFeedbackPage() {
 
   // ---------- READY / SUBMITTING ----------
   return (
-    <PublicShell tenantName={data.tenant_name} logoUrl={branding?.logoUrl || branding?.logo}>
-      {/* HERO */}
-      <div className="px-4 pt-8 pb-2 text-center">
-        <Badge variant="outline" className="mb-3 gap-1 bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200">
-          <Sparkles className="h-3 w-3" />
-          Verifizierte Bewertung
-        </Badge>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-          Hallo {firstName}!
-        </h1>
-        <p className="mt-2 text-muted-foreground text-sm sm:text-base">
-          Wie war {variantCount === 1 ? 'dein Produkt' : 'deine Bestellung'} von {data.tenant_name}?
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">Tippe auf die Sterne — eine kurze Bewertung reicht aus.</p>
-      </div>
+    <PublicShell tenantName={data.tenant_name} accent={primaryColor} hideHeader>
+      {/* HERO — universal, brand-adaptive */}
+      <FeedbackHero
+        firstName={firstName}
+        variantCount={variantCount}
+        tenantName={data.tenant_name}
+        logoUrl={branding?.logoUrl || branding?.logo}
+        accent={primaryColor}
+      />
 
       {/* VARIANT CARDS */}
-      <div className="px-4 max-w-2xl mx-auto space-y-3 mt-4">
+      <div className="px-4 max-w-2xl mx-auto space-y-4 -mt-8 relative z-10">
         {data.items.map(item => {
           const r = ratings.find(x => x.request_id === item.request_id);
           if (!r) return null;
@@ -230,25 +224,46 @@ export function PublicFeedbackPage() {
           return (
             <Card
               key={item.request_id}
-              className={`overflow-hidden transition-all duration-300 ${
-                hasRating ? 'ring-2 ring-offset-2 shadow-lg' : ''
+              className={`overflow-hidden rounded-2xl border-border/60 shadow-sm transition-all duration-300 ${
+                hasRating ? 'ring-2 ring-offset-2 shadow-xl' : 'hover:shadow-md'
               }`}
               style={hasRating ? { borderColor: primaryColor, '--tw-ring-color': primaryColor } as React.CSSProperties : undefined}
             >
-              <CardContent className="p-5 sm:p-6 space-y-4">
-                {/* Product header */}
-                <div className="flex items-start gap-3">
-                  {item.product_image && (
-                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden bg-muted shrink-0 ring-1 ring-border">
-                      <img
-                        src={item.product_image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+              {/* Product image header — full-bleed, name overlaid on a soft scrim */}
+              {item.product_image && (
+                <div className="relative h-44 sm:h-52 w-full overflow-hidden bg-muted">
+                  <img
+                    src={item.product_image}
+                    alt={item.product_name}
+                    className="h-full w-full object-cover transition-transform duration-700 ease-out hover:scale-[1.04]"
+                  />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+                  {item.variant_title && (
+                    <Badge
+                      variant="outline"
+                      className="absolute left-3 top-3 gap-1.5 px-2.5 py-1 font-semibold border-0 bg-white/85 text-foreground shadow-sm backdrop-blur"
+                    >
+                      {variantHex && (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block h-3 w-3 rounded-full border border-black/15 shadow-sm"
+                          style={{ backgroundColor: variantHex }}
+                        />
+                      )}
+                      {item.variant_title}
+                    </Badge>
                   )}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <h2 className="font-semibold text-base sm:text-lg leading-tight break-words">
+                  <h2 className="absolute inset-x-0 bottom-0 px-4 pb-3 text-left text-lg sm:text-xl font-bold leading-tight text-white drop-shadow">
+                    {item.product_name}
+                  </h2>
+                </div>
+              )}
+
+              <CardContent className="p-5 sm:p-6 space-y-4">
+                {/* Title block when there is no image header */}
+                {!item.product_image && (
+                  <div className="space-y-1.5 text-center">
+                    <h2 className="font-semibold text-lg leading-tight break-words">
                       {item.product_name}
                     </h2>
                     {item.variant_title && (
@@ -267,7 +282,7 @@ export function PublicFeedbackPage() {
                       </Badge>
                     )}
                   </div>
-                </div>
+                )}
 
                 {/* Stars — the centerpiece */}
                 <div className="flex justify-center py-2">
@@ -539,24 +554,153 @@ interface ShellProps {
   children: React.ReactNode;
   tenantName?: string;
   logoUrl?: string;
+  /** Tenant primary color — used for a faint page-background tint. */
+  accent?: string;
+  /** Hide the slim logo header (the hero band carries the logo itself). */
+  hideHeader?: boolean;
 }
 
-function PublicShell({ children, tenantName, logoUrl }: ShellProps) {
+function PublicShell({ children, tenantName, logoUrl, accent, hideHeader }: ShellProps) {
   useEffect(() => {
     if (tenantName) document.title = `Feedback · ${tenantName}`;
   }, [tenantName]);
 
+  const pageStyle = accent
+    ? { backgroundColor: `color-mix(in srgb, ${accent} 4%, #fafaf9)` }
+    : undefined;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <header className="px-4 pt-6 pb-1 flex items-center justify-center">
-        <img
-          src={logoUrl || FAMBLISS_LOGO}
-          alt={tenantName || 'Fambliss'}
-          className="h-10 max-w-[180px] object-contain"
-        />
-      </header>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" style={pageStyle}>
+      {!hideHeader && (
+        <header className="px-4 pt-6 pb-1 flex items-center justify-center">
+          <img
+            src={logoUrl || FAMBLISS_LOGO}
+            alt={tenantName || 'Feedback'}
+            className="h-10 max-w-[180px] object-contain"
+          />
+        </header>
+      )}
       {children}
     </div>
+  );
+}
+
+/** Decorative sparkles scattered around the hero's negative space (avoids the
+ *  center where the greeting sits). Positions are percentages. */
+const HERO_SPARKLES: { left: string; top: string; size: string; opacity: number; delay: string; icon: 'star' | 'sparkle' }[] = [
+  { left: '12%', top: '30%', size: 'h-3.5 w-3.5', opacity: 0.55, delay: '0s', icon: 'sparkle' },
+  { left: '83%', top: '20%', size: 'h-4 w-4', opacity: 0.7, delay: '0.7s', icon: 'star' },
+  { left: '24%', top: '64%', size: 'h-2.5 w-2.5', opacity: 0.45, delay: '1.3s', icon: 'star' },
+  { left: '72%', top: '60%', size: 'h-3.5 w-3.5', opacity: 0.6, delay: '1.9s', icon: 'sparkle' },
+  { left: '92%', top: '48%', size: 'h-2.5 w-2.5', opacity: 0.4, delay: '2.5s', icon: 'star' },
+  { left: '7%', top: '52%', size: 'h-3 w-3', opacity: 0.5, delay: '1.0s', icon: 'star' },
+];
+
+interface HeroProps {
+  firstName: string;
+  variantCount: number;
+  tenantName: string;
+  logoUrl?: string;
+  accent: string;
+}
+
+/**
+ * Universal, brand-adaptive hero band. Everything recolors from the tenant's
+ * `accent` (primaryColor) via color-mix — no industry-specific imagery, so it
+ * fits any tenant. Layered radial gradient mesh + drifting soft blobs +
+ * twinkling review-stars, with a curved bottom edge the cards rise into.
+ */
+function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: HeroProps) {
+  const tint = (p: number) => `color-mix(in srgb, ${accent} ${p}%, transparent)`;
+
+  return (
+    <section className="relative overflow-hidden">
+      {/* Gradient mesh background */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          backgroundColor: `color-mix(in srgb, ${accent} 8%, #fdfdfc)`,
+          backgroundImage: [
+            `radial-gradient(60% 70% at 12% -10%, ${tint(36)}, transparent 70%)`,
+            `radial-gradient(55% 60% at 100% 6%, ${tint(22)}, transparent 65%)`,
+            `radial-gradient(75% 60% at 50% 122%, ${tint(28)}, transparent 60%)`,
+          ].join(','),
+        }}
+      />
+      {/* Drifting soft blobs */}
+      <div aria-hidden className="absolute -left-12 top-8 h-40 w-40 rounded-full blur-3xl animate-feedback-blob" style={{ background: tint(34) }} />
+      <div aria-hidden className="absolute -right-10 top-24 h-32 w-32 rounded-full blur-3xl animate-feedback-blob" style={{ background: tint(24), animationDelay: '4s' }} />
+
+      {/* Twinkling stars / sparkles */}
+      {HERO_SPARKLES.map((s, i) => {
+        const Icon = s.icon === 'star' ? Star : Sparkles;
+        return (
+          <Icon
+            key={i}
+            aria-hidden
+            className={`absolute ${s.size} ${s.icon === 'star' ? 'fill-current' : ''} animate-feedback-twinkle animate-feedback-float`}
+            style={{ left: s.left, top: s.top, color: accent, opacity: s.opacity, animationDelay: s.delay }}
+          />
+        );
+      })}
+
+      {/* Content */}
+      <div className="relative px-5 pt-9 pb-20 text-center">
+        {/* Logo pill */}
+        <div className="mx-auto mb-5 inline-flex items-center justify-center rounded-2xl bg-white/75 px-4 py-2.5 shadow-sm ring-1 ring-black/5 backdrop-blur animate-feedback-rise">
+          <img src={logoUrl || FAMBLISS_LOGO} alt={tenantName} className="h-9 max-w-[160px] object-contain" />
+        </div>
+
+        {/* Verified badge */}
+        <div className="animate-feedback-rise" style={{ animationDelay: '0.05s' }}>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-sm"
+            style={{ backgroundColor: 'rgba(255,255,255,0.7)', color: accent }}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Verifizierte Bewertung
+          </span>
+        </div>
+
+        <h1
+          className="mt-4 text-3xl sm:text-4xl font-bold tracking-tight animate-feedback-rise"
+          style={{ animationDelay: '0.1s' }}
+        >
+          Hallo {firstName}!
+        </h1>
+        <p
+          className="mt-2.5 mx-auto max-w-md text-[15px] sm:text-base text-foreground/70 animate-feedback-rise"
+          style={{ animationDelay: '0.16s' }}
+        >
+          Wie war {variantCount === 1 ? 'dein Produkt' : 'deine Bestellung'} von{' '}
+          <span className="font-semibold text-foreground">{tenantName}</span>?
+        </p>
+
+        {/* Star hint chip */}
+        <div
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/65 px-4 py-2 shadow-sm ring-1 ring-black/5 backdrop-blur animate-feedback-rise"
+          style={{ animationDelay: '0.22s' }}
+        >
+          <span className="inline-flex items-center gap-0.5">
+            {[0, 1, 2, 3, 4].map(i => (
+              <Star key={i} className="h-3.5 w-3.5 fill-current" style={{ color: accent }} />
+            ))}
+          </span>
+          <span className="text-xs font-medium text-foreground/75">Tippe auf die Sterne</span>
+        </div>
+      </div>
+
+      {/* Curved bottom edge — cards rise into it */}
+      <svg
+        aria-hidden
+        viewBox="0 0 1440 80"
+        preserveAspectRatio="none"
+        className="absolute inset-x-0 bottom-0 h-10 w-full"
+      >
+        <path d="M0,80 L0,40 Q720,90 1440,40 L1440,80 Z" fill={`color-mix(in srgb, ${accent} 4%, #fafaf9)`} />
+      </svg>
+    </section>
   );
 }
 
