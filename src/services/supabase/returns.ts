@@ -269,10 +269,14 @@ export async function updateReturnStatus(
   if (eventType) {
     const ret = await getReturn(id);
     if (ret) {
-      const email = (ret.metadata as Record<string, unknown>)?.email as string;
+      const retMeta = ret.metadata as Record<string, unknown>;
+      const email = retMeta?.email as string;
+      const customerName = (retMeta?.customerName as string) || undefined;
       if (email) {
         triggerEmailNotification(eventType, {
           recipientEmail: email,
+          customerName,
+          firstName: customerName ? customerName.split(' ')[0] : undefined,
           returnNumber: ret.returnNumber,
           status,
           reason: comment || ret.reasonText || '',
@@ -417,6 +421,8 @@ export async function publicCancelReturn(
   // Trigger email notification
   triggerPublicEmailNotification(ret.tenant_id, 'return_cancelled', {
     recipientEmail: email,
+    customerName: (meta?.customerName as string) || undefined,
+    firstName: (meta?.customerName as string)?.split(' ')[0],
     returnNumber,
     status: 'CANCELLED',
     reason,
@@ -573,8 +579,11 @@ export async function publicCreateReturn(
   }
 
   // Trigger confirmation email via public notification
+  const confirmName = data.shippingAddress?.name || undefined;
   triggerPublicEmailNotification(tenant.id, 'return_confirmed', {
     recipientEmail: data.email,
+    customerName: confirmName,
+    firstName: confirmName ? confirmName.split(' ')[0] : undefined,
     returnNumber: rn,
     reason: data.reasonText || data.reasonCategory || '',
     returnId: ret.id,
