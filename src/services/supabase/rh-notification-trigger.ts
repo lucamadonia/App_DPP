@@ -5,7 +5,6 @@
  * The actual email sending is handled by the Supabase Edge Function via DB webhook.
  */
 import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
-import { invokeEdgeFunction } from '@/lib/edge-function';
 import type { RhNotificationEventType } from '@/types/returns-hub';
 import type { EmailDesignConfig } from '@/components/returns/email-editor/emailEditorTypes';
 import { renderEmailHtml } from '@/components/returns/email-editor/emailHtmlRenderer';
@@ -51,170 +50,25 @@ export interface NotificationContext {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// Phase D — Family-Joy Mail-Hub cutover
+// Mail delivery — SINGLE path: DB trigger → notify-dispatch (server-side).
 //
-// When VITE_MAIL_HUB_VIA_FAMILY_JOY=true the notification trigger routes
-// the event through the mail-hub-forward Edge Function (which signs the
-// payload server-side with MAIL_HUB_SECRET and POSTs it to the Family-Joy
-// mail-event-receiver) instead of invoking the local send-email function.
-// The local rh_notifications row is still written as a *mirror* so the
-// admin UIs in Trackbliss (e.g. /returns/notifications) keep working
-// without code changes. On forwarding failure we fall back to the legacy
-// local send-email pipeline so customers always get a mail eventually.
+// Each notification is INSERTed into rh_notifications below. An AFTER INSERT
+// trigger (migration 20260602b_rh_notifications_dispatch_trigger.sql) calls
+// the notify-dispatch Edge Function server-to-server, which routes per tenant
+// (Fambliss → Family-Joy mail-event-receiver; every other tenant → local
+// send-email / tenant SMTP), signs with the server-only HMAC secret, and
+// flips the row status to sent/failed.
 //
-// SECURITY: the HMAC secret and the receiver URL live ONLY server-side
-// (Supabase secrets MAIL_HUB_SECRET + MAIL_HUB_URL on the mail-hub-forward
-// function). The client-side env vars only steer ROUTING, never secrets:
-//   VITE_MAIL_HUB_VIA_FAMILY_JOY=true        (global cutover flag)
-//   VITE_MAIL_HUB_TENANT_IDS=<uuid,uuid,...> (Fambliss tenant allowlist)
-//
-// To activate:
-//   1) Deploy Family-Joy mail-event-receiver (see family-joy/docs/MAIL-HUB-DEPLOY.md)
-//   2) Deploy mail-hub-forward + set Supabase secrets:
-//      supabase secrets set MAIL_HUB_SECRET=<MAIL_EVENT_RECEIVER_SECRET from Family-Joy>
-//      supabase secrets set MAIL_HUB_URL=https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
-//      supabase functions deploy mail-hub-forward
-//   3) Add to App_DPP/.env (or Vercel env): VITE_MAIL_HUB_VIA_FAMILY_JOY=true
-//   4) Re-enable Phase-1 shipment templates: node scripts/disable-shipment-templates.mjs (flip to enable=true)
+// DO NOT also send from the client here. A previous client-side forward
+// (sendNotificationEmail → mail-hub-forward) ran IN ADDITION to the trigger,
+// so every client-initiated mail was dispatched twice — once by the client
+// (region hard-coded 'dach') and once by notify-dispatch (region derived from
+// the recipient TLD, e.g. 'intl'). The Family-Joy receiver dedups on
+// source_event_id, but its check is read-before-write (the mail_events row is
+// only written after the SMTP send), so two simultaneous POSTs both passed the
+// check and both sent. Keeping delivery on the single server-side path removes
+// the race entirely. The receiver dedup remains a safety net for other sources.
 // ────────────────────────────────────────────────────────────────────
-
-const MAIL_HUB_ENABLED = (import.meta.env.VITE_MAIL_HUB_VIA_FAMILY_JOY || '') === 'true';
-
-// SaaS multi-tenant safety: the Family-Joy hub is Fambliss' OWN mail system
-// (Fambliss-branded mailbox/sender). Only Fambliss-owned tenants may route
-// through it — every other tenant must send the normal Trackbliss way
-// (platform send-email with the neutral trackbliss sender, or the tenant's
-// own SMTP via tenant_smtp_config). The allowlist is configurable via
-// VITE_MAIL_HUB_TENANT_IDS (comma-separated tenant UUIDs); it defaults to the
-// known Fambliss tenant so the existing cutover keeps working without an env
-// change. An unrecognized tenant ALWAYS falls back to the local pipeline.
-const DEFAULT_FAMBLISS_TENANT_ID = '522f6254-f73c-4a26-b1e9-662035194bc5'; // MYFAMBLISS GmbH
-const MAIL_HUB_TENANT_IDS = (import.meta.env.VITE_MAIL_HUB_TENANT_IDS || DEFAULT_FAMBLISS_TENANT_ID)
-  .split(',')
-  .map((s: string) => s.trim().toLowerCase())
-  .filter(Boolean);
-
-/**
- * Whether a given tenant's mail should route through the Family-Joy hub.
- * Requires both the global cutover flag AND tenant membership in the allowlist.
- */
-function mailHubAllowsTenant(tenantId: unknown): boolean {
-  if (!MAIL_HUB_ENABLED || MAIL_HUB_TENANT_IDS.length === 0) return false;
-  const tid = typeof tenantId === 'string' ? tenantId.trim().toLowerCase() : '';
-  return tid.length > 0 && MAIL_HUB_TENANT_IDS.includes(tid);
-}
-
-/**
- * Forward an event to Family-Joy via the mail-hub-forward Edge Function.
- * The HMAC-SHA256 signature is computed SERVER-SIDE inside that function
- * (Supabase secret MAIL_HUB_SECRET) — the browser never sees the secret.
- * Returns true when the receiver accepted the event, false otherwise so
- * the caller can decide to fall back to the local send-email pipe.
- */
-async function postToFamilyJoy(
-  input: {
-    eventType: RhNotificationEventType;
-    sourceEventId: string;
-    recipientEmail: string;
-    language?: string;
-    context: Record<string, unknown>;
-    metadata?: Record<string, unknown>;
-  },
-  client?: typeof supabase,
-): Promise<boolean> {
-  if (!MAIL_HUB_ENABLED) return false;
-  const body = {
-    eventType: input.eventType,
-    source: 'trackbliss',
-    sourceEventId: input.sourceEventId,
-    recipientEmail: input.recipientEmail,
-    language: input.language || 'de',
-    userType: 'customer',
-    context: input.context,
-    metadata: input.metadata,
-  };
-  try {
-    if (client && client !== supabase) {
-      // Public (anon) context — use direct invoke (no session refresh needed)
-      const { data, error } = await client.functions.invoke('mail-hub-forward', { body });
-      if (error) {
-        console.warn('[mail-hub] forward invoke failed, will fall back to local pipeline:', error);
-        return false;
-      }
-      return (data as { ok?: boolean } | null)?.ok === true;
-    }
-    // Authenticated context — use wrapper with session refresh
-    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>('mail-hub-forward', body);
-    if (error) {
-      console.warn('[mail-hub] forward invoke failed, will fall back to local pipeline:', error);
-      return false;
-    }
-    return data?.ok === true;
-  } catch (err) {
-    console.warn('[mail-hub] forward failed, will fall back to local pipeline:', err);
-    return false;
-  }
-}
-
-/**
- * Directly invoke the send-email Edge Function after creating a notification record.
- * This bypasses the need for a Database Webhook (which isn't configured).
- * Accepts an optional client parameter for public (anon) context.
- */
-async function sendNotificationEmail(
-  notificationRecord: Record<string, unknown>,
-  client?: typeof supabase
-) {
-  // Phase D — when the mail-hub is enabled FOR THIS TENANT, the Family-Joy
-  // receiver is the source of truth for the actual SMTP send. We still wrote a
-  // row into rh_notifications above (so Trackbliss admin UIs stay populated),
-  // but we forward to Family-Joy instead of invoking Trackbliss's send-email.
-  // Non-Fambliss tenants skip this entirely and use the normal Trackbliss path.
-  if (mailHubAllowsTenant(notificationRecord.tenant_id)) {
-    const ok = await postToFamilyJoy(
-      {
-        eventType: notificationRecord.template as RhNotificationEventType,
-        sourceEventId: `trackbliss:rh_notif:${notificationRecord.id}`,
-        recipientEmail: notificationRecord.recipient_email as string,
-        language: (notificationRecord.metadata as { locale?: string } | undefined)?.locale,
-        context: {
-          // Pass through the rendered subject + content so the receiver can
-          // skip its own template lookup if the same trigger_event happens
-          // to be missing in Family-Joy. The receiver still prefers its own
-          // template lookup when present (Phase C imports cover this).
-          renderedSubject: notificationRecord.subject,
-          renderedBody: notificationRecord.content,
-        },
-        metadata: {
-          shipment_id: notificationRecord.wh_shipment_id,
-          return_id: notificationRecord.return_id,
-          ticket_id: notificationRecord.ticket_id,
-          customer_id: notificationRecord.customer_id,
-          ...(notificationRecord.metadata as Record<string, unknown> | null),
-        },
-      },
-      client,
-    );
-    if (ok) return;
-    // If Family-Joy is down we keep the customer journey safe by silently
-    // falling through to the legacy local send-email pipeline.
-    console.warn('[mail-hub] forward failed, using local fallback');
-  }
-
-  try {
-    if (client && client !== supabase) {
-      // Public (anon) context — use direct invoke (no session refresh needed)
-      await client.functions.invoke('send-email', {
-        body: { record: notificationRecord },
-      });
-    } else {
-      // Authenticated context — use wrapper with session refresh
-      await invokeEdgeFunction('send-email', { record: notificationRecord });
-    }
-  } catch (err) {
-    console.warn('Direct send-email invocation failed:', err);
-  }
-}
 
 /**
  * Deduplication: check if the same email (eventType + recipient + entity) was
@@ -384,9 +238,8 @@ export async function triggerEmailNotification(
       return { success: false, error: error.message };
     }
 
-    // Directly invoke Edge Function (no DB webhook configured)
-    sendNotificationEmail({ ...notificationPayload, id: data.id });
-
+    // Delivery is handled server-side by the rh_notifications AFTER INSERT
+    // trigger → notify-dispatch (see top-of-file note). No client send here.
     return { success: true, notificationId: data.id };
   } catch (err) {
     console.error('triggerEmailNotification error:', err);
@@ -464,7 +317,7 @@ export async function triggerPublicEmailNotification(
       },
     };
 
-    const { data, error } = await supabaseAnon
+    const { error } = await supabaseAnon
       .from('rh_notifications')
       .insert(notificationPayload)
       .select('id')
@@ -475,9 +328,7 @@ export async function triggerPublicEmailNotification(
       return { success: false, error: error.message };
     }
 
-    // Directly invoke Edge Function with anon client (no DB webhook configured)
-    sendNotificationEmail({ ...notificationPayload, id: data?.id }, supabaseAnon);
-
+    // Delivery handled server-side by the AFTER INSERT trigger → notify-dispatch.
     return { success: true };
   } catch (err) {
     console.error('triggerPublicEmailNotification error:', err);
@@ -582,10 +433,7 @@ export async function sendCustomShipmentEmail(params: {
       return { success: false, error: error.message };
     }
 
-    // Fire-and-forget: forwards to Family-Joy when the mail-hub is enabled,
-    // otherwise invokes the local send-email function.
-    sendNotificationEmail({ ...notificationPayload, id: data.id });
-
+    // Delivery handled server-side by the AFTER INSERT trigger → notify-dispatch.
     return { success: true, notificationId: data.id };
   } catch (err) {
     console.error('sendCustomShipmentEmail error:', err);
@@ -670,7 +518,7 @@ export async function sendCustomFeedbackEmail(params: {
       return { success: false, error: error.message };
     }
 
-    sendNotificationEmail({ ...notificationPayload, id: data.id });
+    // Delivery handled server-side by the AFTER INSERT trigger → notify-dispatch.
     return { success: true, notificationId: data.id };
   } catch (err) {
     console.error('sendCustomFeedbackEmail error:', err);
