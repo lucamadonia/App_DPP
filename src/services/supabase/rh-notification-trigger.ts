@@ -113,6 +113,17 @@ async function isDuplicate(
 /** Sensible defaults for Fambliss branding/footer vars so the hand-coded
  *  shipment templates always have non-empty values for legal links, even
  *  when the caller didn't bother to pass them. Tenants can override per-call. */
+/** Base URL of the public app that serves the return-tracking page. Matches the
+ *  convention used by the shipment mails (see wh-shipments.ts). The route
+ *  `/returns/track/:returnNumber` auto-loads the return (email optional). */
+const RETURN_TRACKING_BASE = 'https://dpp-app.fambliss.eu';
+
+/** Build the customer-facing return-tracking URL for the {{trackingUrl}} button. */
+function buildReturnTrackingUrl(returnNumber?: string): string {
+  if (!returnNumber) return '';
+  return `${RETURN_TRACKING_BASE}/returns/track/${encodeURIComponent(returnNumber)}`;
+}
+
 const DEFAULT_BRAND_VARS = {
   shopUrl:        'https://shop.fambliss.de',
   journalUrl:     'https://shop.fambliss.de/blogs/news',
@@ -197,8 +208,13 @@ export async function triggerEmailNotification(
     const settings = await getReturnsHubSettings();
     const emailLocale = settings.notifications?.emailLocale || 'en';
 
-    // Localize the reason label for this locale before rendering.
-    const lctx: NotificationContext = { ...ctx, reason: resolveDisplayReason(ctx, emailLocale) };
+    // Localize the reason label and default the tracking-button URL (so the
+    // "Retoure verfolgen" button isn't a dead href="") before rendering.
+    const lctx: NotificationContext = {
+      ...ctx,
+      reason: resolveDisplayReason(ctx, emailLocale),
+      trackingUrl: ctx.trackingUrl || buildReturnTrackingUrl(ctx.returnNumber),
+    };
 
     // Render subject (locale-aware) and body
     const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
@@ -295,8 +311,13 @@ export async function triggerPublicEmailNotification(
     const rhSettings = (tenant?.settings as any)?.returnsHub;
     const emailLocale = rhSettings?.notifications?.emailLocale || 'en';
 
-    // Localize the reason label for this locale before rendering.
-    const lctx: NotificationContext = { ...ctx, reason: resolveDisplayReason(ctx, emailLocale) };
+    // Localize the reason label and default the tracking-button URL (so the
+    // "Retoure verfolgen" button isn't a dead href="") before rendering.
+    const lctx: NotificationContext = {
+      ...ctx,
+      reason: resolveDisplayReason(ctx, emailLocale),
+      trackingUrl: ctx.trackingUrl || buildReturnTrackingUrl(ctx.returnNumber),
+    };
 
     // Render subject (locale-aware) and body
     const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
