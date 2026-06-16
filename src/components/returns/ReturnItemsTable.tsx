@@ -68,6 +68,15 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
     defective: 'bg-red-100 text-red-800',
   };
 
+  // Footer totals: prefer explicit refund amounts, else estimate from
+  // qty × unit price. Show nothing if we have no monetary data at all.
+  const totalQuantity = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
+  const hasExplicitRefund = items.some((i) => i.refundAmount != null);
+  const lineValues = items
+    .map((i) => (i.refundAmount != null ? i.refundAmount : i.unitPrice != null ? i.unitPrice * (i.quantity || 1) : null))
+    .filter((v): v is number => v != null);
+  const totalValue = lineValues.length ? lineValues.reduce((a, b) => a + b, 0) : null;
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -84,7 +93,14 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
+          {items.map((item) => {
+            // Effective value per line: explicit refund, else qty × unit price.
+            const lineValue = item.refundAmount != null
+              ? item.refundAmount
+              : item.unitPrice != null
+                ? item.unitPrice * (item.quantity || 1)
+                : null;
+            return (
             <tr key={item.id} className="border-b last:border-0">
               <td className="py-2">
                 <div>
@@ -112,7 +128,11 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
                 <PhotoThumbnails paths={item.photos} />
               </td>
               <td className="py-2 text-right font-medium">
-                {item.refundAmount != null ? `€${item.refundAmount.toFixed(2)}` : '—'}
+                {item.refundAmount != null
+                  ? `€${item.refundAmount.toFixed(2)}`
+                  : lineValue != null
+                    ? <span className="text-muted-foreground font-normal">≈ €{lineValue.toFixed(2)}</span>
+                    : '—'}
               </td>
               {!readonly && (
                 <td className="py-2">
@@ -129,8 +149,23 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
                 </td>
               )}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
+        {totalValue != null && (
+          <tfoot>
+            <tr className="border-t-2">
+              <td className="pt-2 font-medium" colSpan={2}>{t('Total')}</td>
+              <td className="pt-2 text-center font-medium">{totalQuantity}</td>
+              <td className="pt-2" />
+              <td className="pt-2" colSpan={2} />
+              <td className="pt-2 text-right font-semibold">
+                {hasExplicitRefund ? '' : '≈ '}€{totalValue.toFixed(2)}
+              </td>
+              {!readonly && <td className="pt-2" />}
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );

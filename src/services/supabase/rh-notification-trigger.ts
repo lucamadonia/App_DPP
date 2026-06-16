@@ -10,6 +10,7 @@ import type { EmailDesignConfig } from '@/components/returns/email-editor/emailE
 import { renderEmailHtml } from '@/components/returns/email-editor/emailHtmlRenderer';
 import { getReturnsHubSettings } from './rh-settings';
 import { getRhEmailTemplate, getRhEmailTemplateByTenantId } from './rh-email-templates';
+import { getReturnReasonLabel, isReasonCategory } from '@/lib/return-reasons';
 
 export interface NotificationContext {
   recipientEmail: string;
@@ -17,7 +18,10 @@ export interface NotificationContext {
   firstName?: string;
   returnNumber?: string;
   status?: string;
+  /** Free-text reason OR a canonical reason-category slug (e.g. "other"). */
   reason?: string;
+  /** Canonical reason-category slug, used when `reason` carries free text. */
+  reasonCategory?: string;
   refundAmount?: string;
   ticketNumber?: string;
   subject?: string;
@@ -161,6 +165,19 @@ function renderTemplate(template: string, ctx: NotificationContext): string {
 }
 
 /**
+ * Resolve the human-readable reason shown in mails. Callers historically pass
+ * the raw category slug (e.g. "other") in `ctx.reason`, which rendered as a
+ * bare "Reason: other". We now: keep genuine free text as-is, map a known slug
+ * to its localized label, and otherwise fall back to `ctx.reasonCategory`.
+ */
+function resolveDisplayReason(ctx: NotificationContext, locale: string): string {
+  const raw = (ctx.reason || '').trim();
+  if (raw && !isReasonCategory(raw)) return raw; // genuine free-text reason
+  const category = raw || ctx.reasonCategory;
+  return getReturnReasonLabel(category, locale);
+}
+
+/**
  * Trigger an email notification (authenticated context).
  * Checks if email is enabled and template exists/is enabled before creating.
  */
@@ -180,20 +197,23 @@ export async function triggerEmailNotification(
     const settings = await getReturnsHubSettings();
     const emailLocale = settings.notifications?.emailLocale || 'en';
 
+    // Localize the reason label for this locale before rendering.
+    const lctx: NotificationContext = { ...ctx, reason: resolveDisplayReason(ctx, emailLocale) };
+
     // Render subject (locale-aware) and body
     const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
     const localeContent = designConfig?.locales?.[emailLocale];
     const subjectToRender = localeContent?.subjectTemplate || template.subjectTemplate;
-    const renderedSubject = renderTemplate(subjectToRender, ctx);
+    const renderedSubject = renderTemplate(subjectToRender, lctx);
 
     // Prefer rendering from designConfig with locale, fall back to stored htmlTemplate, then bodyTemplate
     let renderedBody: string;
     if (designConfig?.blocks?.length) {
-      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), ctx);
+      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), lctx);
     } else if (template.htmlTemplate) {
-      renderedBody = renderTemplate(template.htmlTemplate, ctx);
+      renderedBody = renderTemplate(template.htmlTemplate, lctx);
     } else {
-      renderedBody = renderTemplate(template.bodyTemplate, ctx);
+      renderedBody = renderTemplate(template.bodyTemplate, lctx);
     }
 
     // Create notification record and invoke send-email Edge Function directly
@@ -275,19 +295,22 @@ export async function triggerPublicEmailNotification(
     const rhSettings = (tenant?.settings as any)?.returnsHub;
     const emailLocale = rhSettings?.notifications?.emailLocale || 'en';
 
+    // Localize the reason label for this locale before rendering.
+    const lctx: NotificationContext = { ...ctx, reason: resolveDisplayReason(ctx, emailLocale) };
+
     // Render subject (locale-aware) and body
     const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
     const localeContent = designConfig?.locales?.[emailLocale];
     const subjectToRender = localeContent?.subjectTemplate || template.subjectTemplate;
-    const renderedSubject = renderTemplate(subjectToRender, ctx);
+    const renderedSubject = renderTemplate(subjectToRender, lctx);
 
     let renderedBody: string;
     if (designConfig?.blocks?.length) {
-      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), ctx);
+      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), lctx);
     } else if (template.htmlTemplate) {
-      renderedBody = renderTemplate(template.htmlTemplate, ctx);
+      renderedBody = renderTemplate(template.htmlTemplate, lctx);
     } else {
-      renderedBody = renderTemplate(template.bodyTemplate, ctx);
+      renderedBody = renderTemplate(template.bodyTemplate, lctx);
     }
 
     // Dedup: 60s for returns/tickets, 365d for shipment/engagement events
