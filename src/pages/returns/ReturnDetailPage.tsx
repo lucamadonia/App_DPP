@@ -25,6 +25,7 @@ import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { ReturnShippingCard } from '@/components/returns/ReturnShippingCard';
 import { relativeTime } from '@/lib/animations';
+import { getReturnReasonLabel } from '@/lib/return-reasons';
 import { pageVariants, pageTransition, useReducedMotion } from '@/lib/motion';
 import {
   getReturn, getReturnItems, getReturnTimeline,
@@ -36,6 +37,75 @@ import type { Profile } from '@/services/supabase/profiles';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+// ============================================
+// SHIPMENT CONTEXT
+// ============================================
+
+interface ShipmentRef {
+  id: string;
+  shipmentNumber?: string;
+  trackingNumber?: string;
+  orderReference?: string;
+  trackingToken?: string;
+}
+
+/**
+ * Public portal returns store their item rows with only name/qty/condition —
+ * SKU and unit price are not copied from the order. Resolve the underlying
+ * wh_shipments row (via the shipment_number stashed in metadata) and backfill
+ * each item's unit price from wh_shipment_items (matched by product_id), so the
+ * operator can see prices and a refund estimate instead of a wall of "—".
+ */
+async function enrichItemsFromShipment(
+  ret: RhReturn | null,
+  items: RhReturnItem[],
+): Promise<{ items: RhReturnItem[]; shipment: ShipmentRef | null }> {
+  const meta = (ret?.metadata as Record<string, unknown> | null) || null;
+  const shipmentNumber = meta?.shipment_number as string | undefined;
+  if (!shipmentNumber) return { items, shipment: null };
+
+  try {
+    const { data: shipment } = await supabase
+      .from('wh_shipments')
+      .select('id, shipment_number, tracking_number, order_reference, tracking_token')
+      .eq('shipment_number', shipmentNumber)
+      .maybeSingle();
+    if (!shipment) return { items, shipment: null };
+
+    const ref: ShipmentRef = {
+      id: shipment.id,
+      shipmentNumber: shipment.shipment_number || undefined,
+      trackingNumber: shipment.tracking_number || undefined,
+      orderReference: shipment.order_reference || undefined,
+      trackingToken: shipment.tracking_token || undefined,
+    };
+
+    const needsPrice = items.some((i) => i.unitPrice == null && i.productId);
+    if (!needsPrice) return { items, shipment: ref };
+
+    const { data: shipItems } = await supabase
+      .from('wh_shipment_items')
+      .select('product_id, unit_price')
+      .eq('shipment_id', shipment.id);
+
+    const priceByProduct = new Map<string, number>();
+    for (const si of shipItems || []) {
+      if (si.product_id != null && si.unit_price != null) {
+        priceByProduct.set(si.product_id, Number(si.unit_price));
+      }
+    }
+
+    const merged = items.map((i) =>
+      i.unitPrice == null && i.productId && priceByProduct.has(i.productId)
+        ? { ...i, unitPrice: priceByProduct.get(i.productId)! }
+        : i,
+    );
+    return { items: merged, shipment: ref };
+  } catch {
+    return { items, shipment: null };
+  }
+}
 
 // ============================================
 // WORKFLOW STAGE DEFINITIONS
@@ -80,6 +150,8 @@ export function ReturnDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  // Underlying shipment/order this return refers to (resolved from metadata).
+  const [shipmentInfo, setShipmentInfo] = useState<ShipmentRef | null>(null);
 
   // UI state
   const [activeTab, setActiveTab] = useState('registered');
@@ -136,9 +208,14 @@ export function ReturnDetailPage() {
         getProfiles(),
       ]);
       setReturnData(ret);
-      setItems(itms);
       setTimeline(tl);
       setProfiles(profs);
+
+      // Resolve the originating shipment/order so the operator can see the full
+      // context, and backfill item unit prices the portal didn't capture.
+      const { items: enrichedItems, shipment } = await enrichItemsFromShipment(ret, itms);
+      setItems(enrichedItems);
+      setShipmentInfo(shipment);
       if (ret?.refundAmount) setRefundAmount(ret.refundAmount.toString());
       if (ret?.refundMethod) setRefundMethod(ret.refundMethod);
       if (ret?.inspectionResult) {
@@ -607,6 +684,7 @@ export function ReturnDetailPage() {
               <RegisteredTab
                 returnData={returnData}
                 items={items}
+                shipmentInfo={shipmentInfo}
                 activeStageIndex={activeStageIndex}
                 actionLoading={actionLoading}
                 onApprove={() => handleStatusChange('APPROVED', t('Return approved'))}
@@ -913,6 +991,7 @@ function CustomerInfoCard({ returnData, t }: { returnData: RhReturn; t: (k: stri
 }
 
 function ReturnInfoSummary({ returnData, t }: { returnData: RhReturn; t: (k: string, opts?: Record<string, unknown>) => string }) {
+  const { i18n } = useTranslation('returns');
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -925,7 +1004,7 @@ function ReturnInfoSummary({ returnData, t }: { returnData: RhReturn; t: (k: str
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">{t('Reason Category')}</span>
-          <span>{returnData.reasonCategory || '—'}</span>
+          <span>{returnData.reasonCategory ? getReturnReasonLabel(returnData.reasonCategory, i18n.language) : '—'}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">{t('Reason Subcategory')}</span>
@@ -950,10 +1029,51 @@ function CompletedBanner({ label, t }: { label: string; t: (k: string) => string
   );
 }
 
+// ---- Shipment / order reference ----
+function ShipmentRefCard({ shipmentInfo, returnData, t }: { shipmentInfo: ShipmentRef | null; returnData: RhReturn; t: (k: string, opts?: Record<string, unknown>) => string }) {
+  const orderId = returnData.orderId;
+  if (!shipmentInfo && !orderId) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Truck className="h-4 w-4" />
+          {t('Order & Shipment')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {orderId && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t('Order ID')}</span>
+            <span className="font-medium">{orderId}</span>
+          </div>
+        )}
+        {shipmentInfo?.shipmentNumber && (
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">{t('Shipment')}</span>
+            <Link to={`/warehouse/shipments/${shipmentInfo.id}`} className="text-primary hover:underline flex items-center gap-1 font-mono text-xs">
+              {shipmentInfo.shipmentNumber}
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
+        )}
+        {shipmentInfo?.trackingNumber && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t('Tracking Number')}</span>
+            <span className="font-mono text-xs">{shipmentInfo.trackingNumber}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ---- REGISTERED ----
 interface RegisteredTabProps {
   returnData: RhReturn;
   items: RhReturnItem[];
+  shipmentInfo: ShipmentRef | null;
   activeStageIndex: number;
   actionLoading: boolean;
   onApprove: () => void;
@@ -961,7 +1081,7 @@ interface RegisteredTabProps {
   t: (k: string, opts?: Record<string, unknown>) => string;
 }
 
-function RegisteredTab({ returnData, items, activeStageIndex, actionLoading, onApprove, onReject, t }: RegisteredTabProps) {
+function RegisteredTab({ returnData, items, shipmentInfo, activeStageIndex, actionLoading, onApprove, onReject, t }: RegisteredTabProps) {
   const isPast = activeStageIndex > 0;
 
   return (
@@ -972,15 +1092,18 @@ function RegisteredTab({ returnData, items, activeStageIndex, actionLoading, onA
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ReturnInfoSummary returnData={returnData} t={t} />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t('Items')} ({items.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReturnItemsTable items={items} readonly />
-          </CardContent>
-        </Card>
+        <ShipmentRefCard shipmentInfo={shipmentInfo} returnData={returnData} t={t} />
       </div>
+
+      {/* Items — full width so SKU/price/refund columns aren't cramped */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">{t('Returned Items')} ({items.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReturnItemsTable items={items} readonly />
+        </CardContent>
+      </Card>
 
       {/* Actions — only when this is the active step */}
       {!isPast && ['CREATED', 'PENDING_APPROVAL'].includes(returnData.status) && (

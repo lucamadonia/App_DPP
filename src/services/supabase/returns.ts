@@ -585,7 +585,11 @@ export async function publicCreateReturn(
     customerName: confirmName,
     firstName: confirmName ? confirmName.split(' ')[0] : undefined,
     returnNumber: rn,
-    reason: data.reasonText || data.reasonCategory || '',
+    // Free text (if any) goes in `reason`; the category is localized to a
+    // readable label by the notification trigger so the mail never shows a
+    // bare slug like "Reason: other".
+    reason: data.reasonText || undefined,
+    reasonCategory: data.reasonCategory,
     returnId: ret.id,
   }).catch((err) => console.error('Public notification trigger failed:', err));
 

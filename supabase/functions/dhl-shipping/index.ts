@@ -1418,8 +1418,14 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
   const returnsApiSettings = tenantData?.settings?.warehouse?.dhl?.returnsApi;
   const useReturnsApi = returnsApiSettings?.enabled && returnsApiSettings?.receiverId;
 
-  let trackingNumber: string;
-  let labelUrl: string;
+  let trackingNumber = '';
+  let labelUrl = '';
+  // Set once a label PDF has actually been produced + stored. If the Returns
+  // API is configured but rejects the request (e.g. the GK account/API key is
+  // not entitled for the Returns API → 403 "Access to the resource is not
+  // allowed"), we leave this false and fall through to the Shipping v2 path
+  // (inverted sender/receiver) so the operator still gets a usable label.
+  let labelHandled = false;
 
   if (useReturnsApi) {
     // ---- DHL Parcel DE Returns API ----
@@ -1443,22 +1449,29 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
       returnDocumentType: 'SHIPMENT_LABEL',
     };
 
-    const resp = await fetch(`${returnsBaseUrl}/returns`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(returnPayload),
-    });
-
-    const respBody = await resp.json();
-
-    if (!resp.ok) {
-      const errMsg = respBody?.detail || respBody?.title || respBody?.statusText || `DHL Returns API error ${resp.status}`;
-      return json({ error: errMsg }, resp.status >= 500 ? 502 : 400);
+    let respBody: any = null;
+    let respOk = false;
+    try {
+      const resp = await fetch(`${returnsBaseUrl}/returns`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(returnPayload),
+      });
+      respBody = await resp.json();
+      respOk = resp.ok;
+      if (!resp.ok) {
+        const errMsg = respBody?.detail || respBody?.title || respBody?.statusText || `DHL Returns API error ${resp.status}`;
+        console.warn(`[dhl-shipping] Returns API failed (${resp.status}: ${errMsg}) — falling back to Shipping v2.`);
+      }
+    } catch (returnsErr) {
+      console.warn('[dhl-shipping] Returns API call threw — falling back to Shipping v2:', returnsErr);
     }
 
-    trackingNumber = respBody.shipmentNo || respBody.shipmentNumber || '';
-    const labelDataBase64 = respBody.labelData || '';
-    labelUrl = respBody.labelUrl || '';
+    const labelDataBase64 = respOk ? (respBody?.labelData || '') : '';
+    if (respOk) {
+      trackingNumber = respBody.shipmentNo || respBody.shipmentNumber || '';
+      labelUrl = respBody.labelUrl || '';
+    }
 
     // Store base64 label PDF
     if (labelDataBase64) {
@@ -1501,12 +1514,17 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
           })
           .eq('id', returnId)
           .eq('tenant_id', tenantId);
+        labelHandled = true;
       } catch (storageErr) {
         console.error('Failed to store return label PDF:', storageErr);
       }
     }
-  } else {
+  }
+
+  if (!labelHandled) {
     // ---- DHL Parcel DE Shipping v2 (inverted sender/receiver for returns) ----
+    // Reached either when the Returns API is not configured, or when it was
+    // configured but failed (e.g. 403 not entitled) and we fell back here.
     const product = settings.defaultProduct || 'V01PAK';
     const labelFormat = settings.labelFormat || 'PDF_A4';
     // Returns ship domestically (customer → warehouse). Use the product's own
