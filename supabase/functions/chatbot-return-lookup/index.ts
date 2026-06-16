@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
         created_at,
         updated_at,
         metadata,
+        carrier_label_data,
         rh_customers ( email, first_name, last_name )
       `)
       .eq('tenant_id', tenant.id)
@@ -142,6 +143,11 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(3);
 
+    // 4b. Mint FRESH download links for the label + QR (the stored signed URLs
+    //     expire after ~7 days; regenerate from the storage path so the bot can
+    //     always hand out a working link if a label was already created).
+    const links = await resolveLabelLinks(supabase, ret);
+
     // 5. Build AI-friendly response
     const statusLabel = STATUS_LABELS_DE[ret.status] || ret.status;
     const customerName = [customer?.first_name, customer?.last_name]
@@ -150,7 +156,7 @@ Deno.serve(async (req) => {
       || (typeof metadata.customerName === 'string' ? metadata.customerName : '')
       || 'Kunde';
 
-    const summary = buildSummary(ret, statusLabel, customerName);
+    const summary = buildSummary(ret, statusLabel, customerName, links);
 
     return jsonResponse({
       found: true,
@@ -163,7 +169,10 @@ Deno.serve(async (req) => {
         reason: ret.reason_category || null,
         desired_solution: ret.desired_solution || null,
         tracking_number: ret.tracking_number || null,
-        label_url: ret.label_url || null,
+        label_url: links.labelUrl,
+        qr_url: links.qrUrl,
+        qr_link: links.qrLink,
+        return_id: links.returnId,
         refund_amount: ret.refund_amount,
         refund_method: ret.refund_method || null,
         refunded_at: ret.refunded_at,
@@ -183,15 +192,45 @@ Deno.serve(async (req) => {
   }
 });
 
-function buildSummary(ret: any, statusLabel: string, customerName: string): string {
+interface LabelLinks { labelUrl: string | null; qrUrl: string | null; qrLink: string | null; returnId: string | null; }
+
+/**
+ * Produce fresh, working download links for an existing return label + QR code.
+ * The signed URLs stored on the return expire after ~7 days, so we re-sign from
+ * the storage paths (valid 24h) whenever the bot answers. Returns nulls if no
+ * label has been created yet.
+ */
+async function resolveLabelLinks(supabase: any, ret: any): Promise<LabelLinks> {
+  const cld = ret.carrier_label_data || {};
+  const out: LabelLinks = { labelUrl: ret.label_url || null, qrUrl: null, qrLink: cld.qrLink || null, returnId: cld.dhlReturnId || null };
+  const sign = async (path?: string) => {
+    if (!path) return null;
+    const { data } = await supabase.storage.from('documents').createSignedUrl(path, 60 * 60 * 24);
+    return data?.signedUrl || null;
+  };
+  try {
+    const freshLabel = await sign(cld.labelStoragePath);
+    if (freshLabel) out.labelUrl = freshLabel;
+    out.qrUrl = await sign(cld.qrStoragePath);
+  } catch (e) {
+    console.warn('resolveLabelLinks: failed to sign storage paths', e);
+  }
+  return out;
+}
+
+function buildSummary(ret: any, statusLabel: string, customerName: string, links: LabelLinks): string {
   const parts: string[] = [];
   parts.push(`Retoure ${ret.return_number} (${customerName}): ${statusLabel}.`);
 
   if (ret.tracking_number) {
     parts.push(`Tracking-Nummer: ${ret.tracking_number}.`);
   }
-  if (ret.label_url && ['APPROVED', 'LABEL_GENERATED'].includes(ret.status)) {
-    parts.push(`Versandlabel ist verfügbar.`);
+  // Hand out the actual download links if a label was already created.
+  if (links.labelUrl) {
+    parts.push(`Retourenlabel (PDF) zum Herunterladen: ${links.labelUrl}`);
+  }
+  if (links.qrUrl) {
+    parts.push(`QR-Code für die Mobile Retoure (ohne Drucker in der DHL-Filiale scannen lassen): ${links.qrUrl}${links.returnId ? ` (Retouren-ID: ${links.returnId})` : ''}`);
   }
   if (ret.refund_amount && ret.status === 'REFUND_COMPLETED') {
     parts.push(`Erstattung über ${ret.refund_amount} EUR wurde abgeschlossen.`);

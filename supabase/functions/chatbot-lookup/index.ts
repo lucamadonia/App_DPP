@@ -166,6 +166,32 @@ Deno.serve(async (req) => {
 // Return lookup
 // ============================================================================
 
+/**
+ * Produce fresh download links for an existing return label + QR code. Stored
+ * signed URLs expire after ~7 days, so we re-sign from the storage paths (24h).
+ * Returns nulls when no label has been created yet.
+ */
+async function resolveReturnLabelLinks(
+  supabase: any,
+  ret: any,
+): Promise<{ labelUrl: string | null; qrUrl: string | null; qrLink: string | null; returnId: string | null }> {
+  const cld = ret.carrier_label_data || {};
+  const out = { labelUrl: ret.label_url || null, qrUrl: null as string | null, qrLink: cld.qrLink || null, returnId: cld.dhlReturnId || null };
+  const sign = async (path?: string) => {
+    if (!path) return null;
+    const { data } = await supabase.storage.from('documents').createSignedUrl(path, 60 * 60 * 24);
+    return data?.signedUrl || null;
+  };
+  try {
+    const freshLabel = await sign(cld.labelStoragePath);
+    if (freshLabel) out.labelUrl = freshLabel;
+    out.qrUrl = await sign(cld.qrStoragePath);
+  } catch (e) {
+    console.warn('resolveReturnLabelLinks: failed to sign storage paths', e);
+  }
+  return out;
+}
+
 async function handleReturnLookup(
   supabase: any,
   tenantId: string,
@@ -178,7 +204,7 @@ async function handleReturnLookup(
       id, return_number, status, reason_category, reason_text,
       desired_solution, tracking_number, label_url,
       refund_amount, refund_method, refunded_at,
-      created_at, updated_at, metadata,
+      created_at, updated_at, metadata, carrier_label_data,
       rh_customers ( email, first_name, last_name )
     `)
     .eq('tenant_id', tenantId)
@@ -218,8 +244,13 @@ async function handleReturnLookup(
     || (typeof metadata.customerName === 'string' ? metadata.customerName : '')
     || 'Kunde';
 
+  // Fresh download links for label + QR (stored signed URLs expire ~7d).
+  const links = await resolveReturnLabelLinks(supabase, ret);
+
   const parts = [`Retoure ${ret.return_number} (${customerName}): ${statusLabel}.`];
   if (ret.tracking_number) parts.push(`Tracking: ${ret.tracking_number}.`);
+  if (links.labelUrl) parts.push(`Retourenlabel (PDF) zum Herunterladen: ${links.labelUrl}`);
+  if (links.qrUrl) parts.push(`QR-Code für die Mobile Retoure (in der DHL-Filiale scannen lassen, kein Drucker nötig): ${links.qrUrl}${links.returnId ? ` (Retouren-ID: ${links.returnId})` : ''}`);
   if (ret.refund_amount && ret.status === 'REFUND_COMPLETED') {
     parts.push(`Erstattung über ${ret.refund_amount} EUR abgeschlossen.`);
   } else if (ret.refund_amount && ret.status === 'REFUND_PROCESSING') {
@@ -238,7 +269,10 @@ async function handleReturnLookup(
       reason: ret.reason_category,
       desired_solution: ret.desired_solution,
       tracking_number: ret.tracking_number,
-      label_url: ret.label_url,
+      label_url: links.labelUrl,
+      qr_url: links.qrUrl,
+      qr_link: links.qrLink,
+      return_id: links.returnId,
       refund_amount: ret.refund_amount,
       refunded_at: ret.refunded_at,
       created_at: ret.created_at,
