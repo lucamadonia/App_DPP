@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Search, SearchX, Download, MessageSquare, Package, Ban, Tag, Printer, MapPin } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, SearchX, Download, MessageSquare, Package, Ban, Tag, Printer, MapPin, QrCode, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -402,6 +402,54 @@ export function PublicReturnTrackingPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Mobile return — QR code (no printer needed) */}
+                {returnData.carrierLabelData?.qrUrl && (
+                  <div className="rounded-xl border border-indigo-200 bg-white/70 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-5 w-5 text-indigo-600" />
+                      <span className="text-sm font-semibold text-indigo-900">{t('No printer? Use the QR code')}</span>
+                    </div>
+                    {/* Instruction: download OR screenshot, then have it scanned at DHL */}
+                    <ol className="list-decimal pl-5 space-y-1 text-xs text-indigo-700/90">
+                      <li>{t('Download the QR code or take a screenshot of it.')}</li>
+                      <li>{t('Show it on your phone at any DHL parcel shop or Packstation — staff scan it and print the label for you.')}</li>
+                      <li>{t('Hand in your securely packed parcel. No printer needed.')}</li>
+                    </ol>
+                    <div className="flex items-start gap-4 flex-wrap">
+                      <img
+                        src={returnData.carrierLabelData.qrUrl}
+                        alt={t('Return QR code')}
+                        className="h-36 w-36 rounded-lg border bg-white p-2"
+                      />
+                      <div className="space-y-2">
+                        {returnData.carrierLabelData.dhlReturnId && (
+                          <div className="text-xs">
+                            <span className="text-indigo-600 font-medium">{t('Return ID')}: </span>
+                            <span className="font-mono select-all">{returnData.carrierLabelData.dhlReturnId}</span>
+                            <p className="text-indigo-600/70">{t('If the QR code cannot be scanned, this number can be entered manually.')}</p>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" className="gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50" asChild>
+                            <a href={returnData.carrierLabelData.qrUrl} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-3.5 w-3.5" />
+                              {t('Download QR code')}
+                            </a>
+                          </Button>
+                          {returnData.carrierLabelData.qrLink && (
+                            <Button variant="outline" size="sm" className="gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50" asChild>
+                              <a href={returnData.carrierLabelData.qrLink} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                {t('Open in Post & DHL app')}
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
