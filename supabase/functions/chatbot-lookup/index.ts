@@ -178,8 +178,8 @@ async function handleReturnLookup(
       id, return_number, status, reason_category, reason_text,
       desired_solution, tracking_number, label_url,
       refund_amount, refund_method, refunded_at,
-      created_at, updated_at,
-      rh_customers!inner ( email, first_name, last_name )
+      created_at, updated_at, metadata,
+      rh_customers ( email, first_name, last_name )
     `)
     .eq('tenant_id', tenantId)
     .eq('return_number', returnNumber)
@@ -193,8 +193,12 @@ async function handleReturnLookup(
     }, 200);
   }
 
+  // LEFT join + metadata fallback: portal returns may have no linked customer
+  // (customer_id null); their email lives in metadata.email.
   const customer = Array.isArray(ret.rh_customers) ? ret.rh_customers[0] : ret.rh_customers;
-  if ((customer?.email || '').toLowerCase() !== email) {
+  const metadata = (ret.metadata || {}) as Record<string, unknown>;
+  const metadataEmail = (typeof metadata.email === 'string' ? metadata.email : '').toLowerCase();
+  if ((customer?.email || '').toLowerCase() !== email && metadataEmail !== email) {
     return jsonResponse({
       found: false,
       type: 'return',
@@ -210,7 +214,9 @@ async function handleReturnLookup(
     .limit(3);
 
   const statusLabel = RETURN_STATUS_LABELS[ret.status] || ret.status;
-  const customerName = [customer?.first_name, customer?.last_name].filter(Boolean).join(' ') || 'Kunde';
+  const customerName = [customer?.first_name, customer?.last_name].filter(Boolean).join(' ')
+    || (typeof metadata.customerName === 'string' ? metadata.customerName : '')
+    || 'Kunde';
 
   const parts = [`Retoure ${ret.return_number} (${customerName}): ${statusLabel}.`];
   if (ret.tracking_number) parts.push(`Tracking: ${ret.tracking_number}.`);
@@ -388,8 +394,8 @@ async function handleTicketLookup(
     .from('rh_tickets')
     .select(`
       id, ticket_number, status, priority, category, subject,
-      created_at, updated_at, resolved_at,
-      rh_customers!inner ( email, first_name, last_name )
+      created_at, updated_at, resolved_at, metadata,
+      rh_customers ( email, first_name, last_name )
     `)
     .eq('tenant_id', tenantId)
     .eq('ticket_number', ticketNumber)
@@ -403,8 +409,11 @@ async function handleTicketLookup(
     }, 200);
   }
 
+  // LEFT join + metadata fallback (some tickets have no linked customer row).
   const customer = Array.isArray(ticket.rh_customers) ? ticket.rh_customers[0] : ticket.rh_customers;
-  if ((customer?.email || '').toLowerCase() !== email) {
+  const ticketMeta = (ticket.metadata || {}) as Record<string, unknown>;
+  const ticketMetaEmail = (typeof ticketMeta.email === 'string' ? ticketMeta.email : '').toLowerCase();
+  if ((customer?.email || '').toLowerCase() !== email && ticketMetaEmail !== email) {
     return jsonResponse({
       found: false,
       type: 'ticket',

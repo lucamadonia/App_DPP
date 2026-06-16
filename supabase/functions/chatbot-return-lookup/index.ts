@@ -75,7 +75,11 @@ Deno.serve(async (req) => {
       }, 404);
     }
 
-    // 2. Look up return with customer join, filtered by tenant
+    // 2. Look up return with customer join, filtered by tenant.
+    //    LEFT join (not !inner): public-portal returns may have no linked
+    //    rh_customers row (customer_id stays null when linking failed); their
+    //    email lives only in metadata.email. An inner join would silently drop
+    //    those returns and report "not found".
     const { data: ret, error: returnError } = await supabase
       .from('rh_returns')
       .select(`
@@ -92,7 +96,8 @@ Deno.serve(async (req) => {
         refunded_at,
         created_at,
         updated_at,
-        rh_customers!inner ( email, first_name, last_name )
+        metadata,
+        rh_customers ( email, first_name, last_name )
       `)
       .eq('tenant_id', tenant.id)
       .eq('return_number', returnNumber)
@@ -110,13 +115,18 @@ Deno.serve(async (req) => {
       }, 200);
     }
 
-    // 3. Verify email matches (identity check — prevents leak across customers)
+    // 3. Verify email matches (identity check — prevents leak across customers).
+    //    Accept either the linked customer's email OR the email captured in
+    //    metadata at registration, since portal returns often only have the
+    //    latter (customer_id null).
     const customer = Array.isArray(ret.rh_customers)
       ? ret.rh_customers[0]
       : ret.rh_customers;
+    const metadata = (ret.metadata || {}) as Record<string, unknown>;
+    const metadataEmail = (typeof metadata.email === 'string' ? metadata.email : '').toLowerCase();
     const customerEmail = (customer?.email || '').toLowerCase();
 
-    if (customerEmail !== email) {
+    if (customerEmail !== email && metadataEmail !== email) {
       // Same error as "not found" — don't reveal that the return exists with a different email
       return jsonResponse({
         found: false,
@@ -136,7 +146,9 @@ Deno.serve(async (req) => {
     const statusLabel = STATUS_LABELS_DE[ret.status] || ret.status;
     const customerName = [customer?.first_name, customer?.last_name]
       .filter(Boolean)
-      .join(' ') || 'Kunde';
+      .join(' ')
+      || (typeof metadata.customerName === 'string' ? metadata.customerName : '')
+      || 'Kunde';
 
     const summary = buildSummary(ret, statusLabel, customerName);
 
