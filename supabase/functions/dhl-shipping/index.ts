@@ -12,8 +12,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '
 
 const DHL_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/shipping/v2';
 const DHL_PROD_URL = 'https://api-eu.dhl.com/parcel/de/shipping/v2';
-const DHL_RETURNS_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/returns/v1';
-const DHL_RETURNS_PROD_URL = 'https://api-eu.dhl.com/parcel/de/returns/v1';
+// DHL Parcel DE Returns API v1 — the new harmonized path. (The old
+// cig.dhl.de / parcel/de/returns/v1 path is wrong and returns 401
+// "Access to the resource is not allowed".) Endpoints: GET /locations,
+// POST /orders?labelType=SHIPMENT_LABEL|QR_LABEL|BOTH.
+const DHL_RETURNS_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/shipping/returns/v1';
+const DHL_RETURNS_PROD_URL = 'https://api-eu.dhl.com/parcel/de/shipping/returns/v1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1416,108 +1420,150 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
     .single();
 
   const returnsApiSettings = tenantData?.settings?.warehouse?.dhl?.returnsApi;
-  const useReturnsApi = returnsApiSettings?.enabled && returnsApiSettings?.receiverId;
+  // Use the Returns API by default (it's the correct product for returns);
+  // only skip it if explicitly disabled. This survives the settings UI
+  // accidentally dropping the returnsApi block, and if the Returns call fails
+  // we still fall back to Shipping v2. The receiverId is resolved dynamically
+  // from GET /locations, so a stale/missing configured value doesn't matter.
+  const useReturnsApi = returnsApiSettings?.enabled !== false;
 
   let trackingNumber = '';
   let labelUrl = '';
   // Set once a label PDF has actually been produced + stored. If the Returns
-  // API is configured but rejects the request (e.g. the GK account/API key is
-  // not entitled for the Returns API → 403 "Access to the resource is not
-  // allowed"), we leave this false and fall through to the Shipping v2 path
-  // (inverted sender/receiver) so the operator still gets a usable label.
+  // API path fails for any reason, we leave this false and fall through to the
+  // Shipping v2 path so the operator still gets a usable label.
   let labelHandled = false;
 
   if (useReturnsApi) {
-    // ---- DHL Parcel DE Returns API ----
+    // ---- DHL Parcel DE Returns API v1 (/parcel/de/shipping/returns/v1) ----
     const returnsBaseUrl = getDHLReturnsBaseUrl(settings);
     const headers = getDHLHeaders(settings);
+    const senderCountryIso3 = mapCountryToISO3((senderAddress.country as string) || 'DE').toLowerCase();
 
-    const returnPayload = {
-      receiverId: returnsApiSettings.receiverId,
-      customerReference: ret.return_number,
-      shipmentReference: ret.order_id || ret.return_number,
-      shipper: {
-        name1: senderAddress.name1 as string,
-        name2: (senderAddress.name2 as string) || undefined,
-        addressStreet: senderAddress.addressStreet as string,
-        postalCode: senderAddress.postalCode as string,
-        city: senderAddress.city as string,
-        country: mapCountryToISO3((senderAddress.country as string) || 'DE'),
-        email: (senderAddress.email as string) || undefined,
-      },
-      itemWeight: { uom: 'kg', value: 1.0 },
-      returnDocumentType: 'SHIPMENT_LABEL',
-    };
-
-    let respBody: any = null;
-    let respOk = false;
     try {
-      const resp = await fetch(`${returnsBaseUrl}/returns`, {
+      // Resolve a usable receiverId via GET /locations. Only receivers that
+      // have a billingNumber can create labels (others are "Selbstzahler").
+      let receiverId = (returnsApiSettings?.receiverId as string) || undefined;
+      try {
+        const locResp = await fetch(`${returnsBaseUrl}/locations`, { method: 'GET', headers });
+        if (locResp.ok) {
+          const locBody = await locResp.json();
+          const arr = Array.isArray(locBody)
+            ? locBody
+            : (locBody.receiverLocations || locBody.locations || locBody.receivers || locBody.items || []);
+          const list = (Array.isArray(arr) ? arr : [])
+            .map((x: any) => ({
+              receiverId: x.receiverId ?? x.id ?? x.name,
+              billingNumber: x.billingNumber ?? null,
+              country: String(x.countryCode ?? x.country ?? '').toLowerCase(),
+            }))
+            .filter((x: any) => x.receiverId && x.billingNumber);
+          const match = list.find((x: any) => x.country === senderCountryIso3)
+            || list.find((x: any) => String(x.receiverId).toLowerCase() === senderCountryIso3)
+            || list[0];
+          if (match?.receiverId) receiverId = match.receiverId;
+        } else {
+          console.warn(`[dhl-shipping] Returns /locations returned ${locResp.status}`);
+        }
+      } catch (locErr) {
+        console.warn('[dhl-shipping] Returns /locations lookup failed:', locErr);
+      }
+
+      if (!receiverId) throw new Error('No DHL return receiverId available');
+
+      // The Returns API wants street and house number in separate fields.
+      const rawStreet = ((senderAddress.addressStreet as string) || '').trim();
+      const houseMatch = rawStreet.match(/^(.*?)[\s,]+(\S*\d\S*)$/);
+      const addressStreet = houseMatch ? houseMatch[1].trim() : rawStreet;
+      const addressHouse = houseMatch ? houseMatch[2].trim() : ((senderAddress.addressHouse as string) || '');
+
+      const orderPayload: Record<string, unknown> = {
+        receiverId,
+        customerReference: ret.return_number,
+        shipmentReference: ret.order_id || ret.return_number,
+        shipper: {
+          name1: senderAddress.name1 as string,
+          name2: (senderAddress.name2 as string) || undefined,
+          addressStreet,
+          addressHouse: addressHouse || undefined,
+          postalCode: senderAddress.postalCode as string,
+          city: senderAddress.city as string,
+          email: (senderAddress.email as string) || undefined,
+        },
+      };
+
+      // labelType=BOTH → PDF label + (for German senders, if the receiver
+      // supports mobile returns) a QR code for drop-off without a printer.
+      const resp = await fetch(`${returnsBaseUrl}/orders?labelType=BOTH`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(returnPayload),
+        body: JSON.stringify(orderPayload),
       });
-      respBody = await resp.json();
-      respOk = resp.ok;
+      const respBody: any = await resp.json().catch(() => null);
+
       if (!resp.ok) {
-        const errMsg = respBody?.detail || respBody?.title || respBody?.statusText || `DHL Returns API error ${resp.status}`;
-        console.warn(`[dhl-shipping] Returns API failed (${resp.status}: ${errMsg}) — falling back to Shipping v2.`);
+        const errMsg = respBody?.detail || respBody?.title || `DHL Returns API error ${resp.status}`;
+        console.warn(`[dhl-shipping] Returns API /orders failed (${resp.status}: ${errMsg}) — falling back to Shipping v2.`);
+      } else {
+        trackingNumber = respBody?.shipmentNo || respBody?.shipmentNumber || '';
+        const labelB64 = respBody?.label?.b64 || '';
+        const qrB64 = respBody?.qrLabel?.b64 || '';
+        const qrLink = respBody?.qrLink || null;
+
+        if (labelB64) {
+          const toBytes = (b64: string) => {
+            const s = atob(b64);
+            const a = new Uint8Array(s.length);
+            for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+            return a;
+          };
+
+          const storagePath = `${tenantId}/return-labels/${returnId}.pdf`;
+          await supabase.storage.from('documents').upload(storagePath, toBytes(labelB64), { contentType: 'application/pdf', upsert: true });
+          const { data: signedData } = await supabase.storage.from('documents').createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+          labelUrl = signedData?.signedUrl || '';
+
+          // QR mobile-return label — only present when DHL issues one.
+          let qrStoragePath: string | undefined;
+          let qrUrl: string | undefined;
+          if (qrB64) {
+            qrStoragePath = `${tenantId}/return-labels/${returnId}-qr.png`;
+            await supabase.storage.from('documents').upload(qrStoragePath, toBytes(qrB64), { contentType: 'image/png', upsert: true });
+            const { data: qrSigned } = await supabase.storage.from('documents').createSignedUrl(qrStoragePath, 60 * 60 * 24 * 7);
+            qrUrl = qrSigned?.signedUrl || undefined;
+          }
+
+          const carrierLabelData = {
+            carrier: 'DHL',
+            dhlShipmentNumber: trackingNumber,
+            // Returns-ID for manual entry if the QR can't be scanned (RET + shipmentNo).
+            dhlReturnId: trackingNumber ? `RET${trackingNumber}` : undefined,
+            dhlProduct: 'RETOURE',
+            labelFormat: 'PDF',
+            labelStoragePath: storagePath,
+            qrStoragePath,
+            qrUrl,
+            qrLink,
+            createdAt: new Date().toISOString(),
+            apiType: 'returns',
+          };
+
+          await supabase
+            .from('rh_returns')
+            .update({
+              tracking_number: trackingNumber,
+              label_url: labelUrl,
+              label_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              carrier_label_data: carrierLabelData,
+              status: 'LABEL_GENERATED',
+            })
+            .eq('id', returnId)
+            .eq('tenant_id', tenantId);
+          labelHandled = true;
+        }
       }
     } catch (returnsErr) {
-      console.warn('[dhl-shipping] Returns API call threw — falling back to Shipping v2:', returnsErr);
-    }
-
-    const labelDataBase64 = respOk ? (respBody?.labelData || '') : '';
-    if (respOk) {
-      trackingNumber = respBody.shipmentNo || respBody.shipmentNumber || '';
-      labelUrl = respBody.labelUrl || '';
-    }
-
-    // Store base64 label PDF
-    if (labelDataBase64) {
-      try {
-        const binaryStr = atob(labelDataBase64);
-        const bytes = new Uint8Array(binaryStr.length);
-        for (let i = 0; i < binaryStr.length; i++) {
-          bytes[i] = binaryStr.charCodeAt(i);
-        }
-        const storagePath = `${tenantId}/return-labels/${returnId}.pdf`;
-
-        await supabase.storage
-          .from('documents')
-          .upload(storagePath, bytes, { contentType: 'application/pdf', upsert: true });
-
-        const { data: signedData } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
-        labelUrl = signedData?.signedUrl || labelUrl;
-
-        // Store the carrier label data
-        const carrierLabelData = {
-          carrier: 'DHL',
-          dhlShipmentNumber: trackingNumber,
-          dhlProduct: 'RETOURE',
-          labelFormat: 'PDF',
-          labelStoragePath: storagePath,
-          createdAt: new Date().toISOString(),
-          apiType: 'returns',
-        };
-
-        await supabase
-          .from('rh_returns')
-          .update({
-            tracking_number: trackingNumber,
-            label_url: labelUrl,
-            label_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            carrier_label_data: carrierLabelData,
-            status: 'LABEL_GENERATED',
-          })
-          .eq('id', returnId)
-          .eq('tenant_id', tenantId);
-        labelHandled = true;
-      } catch (storageErr) {
-        console.error('Failed to store return label PDF:', storageErr);
-      }
+      console.warn('[dhl-shipping] Returns API path threw — falling back to Shipping v2:', returnsErr);
     }
   }
 

@@ -78,6 +78,15 @@ export interface CarrierLabelData {
   labelStoragePath?: string;
   createdAt: string;
   cancelledAt?: string;
+  /** Which DHL API produced the label: 'returns' (real DHL Retoure) or 'shipping_v2' (fallback). */
+  apiType?: 'returns' | 'shipping_v2';
+  /** Returns-ID for manual entry if the QR can't be scanned (RET + shipment no). */
+  dhlReturnId?: string;
+  /** Mobile-return QR code (PNG) — present only when DHL issues one. */
+  qrStoragePath?: string;
+  qrUrl?: string;
+  /** Deep link to load the QR into the Post & DHL app (national returns). */
+  qrLink?: string;
 }
 
 export const DHL_PRODUCT_LABELS: Record<DHLParcelProduct, string> = {

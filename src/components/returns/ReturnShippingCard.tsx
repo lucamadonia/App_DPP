@@ -15,6 +15,7 @@ import {
   MapPin,
   RefreshCw,
   Tag,
+  QrCode,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -318,6 +319,50 @@ export function ReturnShippingCard({ returnData, onUpdate }: ReturnShippingCardP
                   </Button>
                 )}
               </div>
+
+              {/* Mobile return — QR code (only present when DHL issues one) */}
+              {returnData.carrierLabelData?.qrUrl && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <QrCode className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{t('Mobile Return (QR code)')}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t('The customer can show this QR code at a DHL parcel shop — no printer needed.')}
+                  </p>
+                  <div className="flex items-start gap-3 flex-wrap">
+                    <img
+                      src={returnData.carrierLabelData.qrUrl}
+                      alt={t('Mobile Return (QR code)')}
+                      className="h-28 w-28 rounded border bg-white p-1"
+                    />
+                    <div className="space-y-2 text-xs">
+                      {returnData.carrierLabelData.dhlReturnId && (
+                        <div>
+                          <p className="text-muted-foreground">{t('Return ID (for manual entry)')}</p>
+                          <p className="font-mono text-sm select-all">{returnData.carrierLabelData.dhlReturnId}</p>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                          <a href={returnData.carrierLabelData.qrUrl} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-3.5 w-3.5" />
+                            {t('Download QR code')}
+                          </a>
+                        </Button>
+                        {returnData.carrierLabelData.qrLink && (
+                          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                            <a href={returnData.carrierLabelData.qrLink} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              {t('Open in Post & DHL app')}
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
