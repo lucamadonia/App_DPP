@@ -1199,11 +1199,17 @@ async function pollReturnsTrackingForTenant(supabase: any, tenantId: string) {
 
   const { data: returns } = await supabase
     .from('rh_returns')
-    .select('id, return_number, tracking_number, status, tracking_polled_at')
+    .select('id, return_number, tracking_number, status, tracking_polled_at, metadata, customer_id')
     .eq('tenant_id', tenantId)
     .not('tracking_number', 'is', null)
     .in('status', ['LABEL_GENERATED', 'SHIPPED'])
     .order('tracking_polled_at', { ascending: true, nullsFirst: true });
+
+  // Notification sender/locale (for the branded status mails on status change).
+  const { data: tenantRow } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
+  const rhNotif = tenantRow?.settings?.returnsHub?.notifications || {};
+  const senderName = rhNotif.senderName || '';
+  const emailLocale = rhNotif.emailLocale === 'en' ? 'en' : 'de';
 
   const results = { tenantId, total: returns?.length ?? 0, delivered: 0, shipped: 0, noChange: 0, errors: 0 };
   const now = new Date().toISOString();
@@ -1260,6 +1266,38 @@ async function pollReturnsTrackingForTenant(supabase: any, tenantId: string) {
             : 'Rücksendung ist unterwegs (via DHL-Tracking)',
           actor_type: 'system',
         });
+
+        // Branded customer mail on status change. We insert a custom_message
+        // notification with an inner HTML fragment; the dispatch trigger sends
+        // it (the Family-Joy receiver wraps it in the full Fambliss brand shell
+        // — logo, card, footer; the local path sends the styled fragment).
+        try {
+          const meta = (r.metadata || {}) as Record<string, unknown>;
+          let toEmail = (typeof meta.email === 'string' ? meta.email : '').trim();
+          let toName = (typeof meta.customerName === 'string' ? meta.customerName : '').trim();
+          if (!toEmail && r.customer_id) {
+            const { data: c } = await supabase.from('rh_customers').select('email, name, first_name, last_name').eq('id', r.customer_id).maybeSingle();
+            toEmail = (c?.email || '').trim();
+            toName = (c?.name || [c?.first_name, c?.last_name].filter(Boolean).join(' ') || '').trim();
+          }
+          if (toEmail) {
+            const trackingUrl = `https://dpp-app.fambliss.eu/returns/track/${encodeURIComponent(r.return_number)}`;
+            const mail = buildReturnStatusMail(newStatus, toName, r.return_number, trackingUrl, emailLocale);
+            await supabase.from('rh_notifications').insert({
+              tenant_id: tenantId,
+              return_id: r.id,
+              channel: 'email',
+              template: 'custom_message',
+              recipient_email: toEmail,
+              subject: mail.subject,
+              content: mail.html,
+              status: 'pending',
+              metadata: { senderName, isHtml: true, custom: true, locale: emailLocale, kind: `return_${newStatus.toLowerCase()}` },
+            });
+          }
+        } catch (mailErr) {
+          console.warn(`[dhl-shipping] returns-poll mail insert failed for ${r.return_number}:`, mailErr);
+        }
       }
     } catch (e) {
       results.errors++;
@@ -1290,6 +1328,42 @@ async function handlePollReturnsTrackingCron(supabase: any, _authHeader: string 
   }
 
   return json({ success: true, ...summary });
+}
+
+/**
+ * Branded status mail for the returns-tracking cron. Returns { subject, html }
+ * where html is an INNER fragment (greeting + body + CTA) in the Fambliss
+ * palette — the Family-Joy receiver wraps it in the full brand shell (logo,
+ * card, footer); the local send-email path sends the styled fragment as-is.
+ */
+function buildReturnStatusMail(status: string, name: string, returnNumber: string, trackingUrl: string, locale: string) {
+  const de = locale !== 'en';
+  const esc = (s: string) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const greetName = name ? (de ? `Hallo ${esc(name)},` : `Hi ${esc(name)},`) : (de ? 'Hallo,' : 'Hi,');
+
+  let subject: string;
+  let body: string;
+  if (status === 'DELIVERED') {
+    subject = de ? 'Wir haben deine Rücksendung erhalten' : 'We have received your return';
+    body = de
+      ? `deine Rücksendung <strong>${esc(returnNumber)}</strong> ist bei uns eingegangen und wird jetzt geprüft. Sobald die Prüfung abgeschlossen ist, kümmern wir uns um deine Erstattung.`
+      : `your return <strong>${esc(returnNumber)}</strong> has arrived at our warehouse and is now being checked. As soon as the inspection is complete we'll process your refund.`;
+  } else {
+    subject = de ? 'Deine Rücksendung ist unterwegs' : 'Your return is on its way';
+    body = de
+      ? `deine Rücksendung <strong>${esc(returnNumber)}</strong> ist auf dem Weg zu uns. Wir melden uns, sobald sie bei uns eingegangen ist.`
+      : `your return <strong>${esc(returnNumber)}</strong> is on its way to us. We'll let you know as soon as it arrives.`;
+  }
+  const cta = de ? 'Retoure verfolgen' : 'Track return';
+
+  const html =
+    `<p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:#2d3a28">${greetName}</p>` +
+    `<div style="font-size:16px;line-height:1.6;color:#6b6e64">${body}</div>` +
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 4px"><tr><td bgcolor="#2d3a28" style="border-radius:9999px">` +
+    `<a href="${esc(trackingUrl)}" target="_blank" rel="noopener" style="display:inline-block;padding:15px 40px;color:#f5f4ef;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase">${esc(cta)}</a>` +
+    `</td></tr></table>`;
+
+  return { subject, html };
 }
 
 /* -------------------------------------------------------------------------- */
