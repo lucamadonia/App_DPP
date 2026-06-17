@@ -74,6 +74,15 @@ Deno.serve(async (req) => {
       return await handlePollAllTenantsCron(cronSupabase, req.headers.get('Authorization'));
     }
 
+    // --- Cron-mode: poll DHL tracking for return parcels across all tenants. ---
+    if (action === 'poll_returns_tracking_cron') {
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        return json({ error: 'Server misconfigured' });
+      }
+      const cronSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      return await handlePollReturnsTrackingCron(cronSupabase, req.headers.get('Authorization'));
+    }
+
     // --- Auth ---
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'Missing authorization' }, 401);
@@ -1162,6 +1171,113 @@ async function handlePollAllTenantsCron(supabase: any, _authHeader: string | nul
   const summary = { tenantsScanned: tenantsWithDHL.length, perTenant: [] as unknown[] };
   for (const tenant of tenantsWithDHL) {
     const res = await pollTrackingForTenant(supabase, tenant.id);
+    const body = await res.json();
+    summary.perTenant.push({ tenantId: tenant.id, tenantName: tenant.name, result: body.data });
+  }
+
+  return json({ success: true, ...summary });
+}
+
+/** Poll DHL tracking for a tenant's RETURN parcels and persist status —
+ *  the return-side mirror of pollTrackingForTenant. Advances LABEL_GENERATED →
+ *  SHIPPED (in transit) and → DELIVERED, writing a timeline entry on change. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function pollReturnsTrackingForTenant(supabase: any, tenantId: string) {
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.apiKey) return json({ tenantId, skipped: true, reason: 'DHL not configured' });
+
+  const trackingBase = settings.sandbox
+    ? 'https://api-sandbox.dhl.com/track/shipments'
+    : 'https://api-eu.dhl.com/track/shipments';
+
+  const { data: returns } = await supabase
+    .from('rh_returns')
+    .select('id, return_number, tracking_number, status, tracking_polled_at')
+    .eq('tenant_id', tenantId)
+    .not('tracking_number', 'is', null)
+    .in('status', ['LABEL_GENERATED', 'SHIPPED'])
+    .order('tracking_polled_at', { ascending: true, nullsFirst: true });
+
+  const results = { tenantId, total: returns?.length ?? 0, delivered: 0, shipped: 0, noChange: 0, errors: 0 };
+  const now = new Date().toISOString();
+
+  for (const r of (returns || [])) {
+    try {
+      const resp = await fetch(`${trackingBase}?trackingNumber=${encodeURIComponent(r.tracking_number)}`, {
+        headers: { 'DHL-API-Key': settings.apiKey },
+      });
+      if (!resp.ok) {
+        if (resp.status === 404) {
+          await supabase.from('rh_returns').update({ tracking_polled_at: now }).eq('id', r.id);
+          results.noChange++;
+          continue;
+        }
+        results.errors++;
+        continue;
+      }
+      const data = await resp.json();
+      const shipmentData = data?.shipments?.[0];
+      if (!shipmentData) { results.noChange++; continue; }
+
+      const statusCode = shipmentData.status?.statusCode || shipmentData.status?.status;
+      const events = shipmentData.events || [];
+      const latestEvent = events[0] || shipmentData.status || {};
+
+      const patch: Record<string, unknown> = {
+        tracking_last_status: statusCode || null,
+        tracking_last_description: latestEvent.description || latestEvent.status || null,
+        tracking_last_event_at: latestEvent.timestamp || null,
+        tracking_last_location: latestEvent.location?.address?.addressLocality || null,
+        tracking_polled_at: now,
+        tracking_history: events,
+      };
+
+      let newStatus: string | null = null;
+      if (statusCode === 'delivered') {
+        if (r.status !== 'DELIVERED') { patch.status = 'DELIVERED'; newStatus = 'DELIVERED'; results.delivered++; } else results.noChange++;
+      } else if (statusCode === 'transit' || statusCode === 'in_transit' || statusCode === 'out_for_delivery') {
+        if (r.status === 'LABEL_GENERATED') { patch.status = 'SHIPPED'; newStatus = 'SHIPPED'; results.shipped++; } else results.noChange++;
+      } else {
+        results.noChange++;
+      }
+
+      await supabase.from('rh_returns').update(patch).eq('id', r.id);
+
+      if (newStatus) {
+        await supabase.from('rh_return_timeline').insert({
+          return_id: r.id,
+          tenant_id: tenantId,
+          status: newStatus,
+          comment: newStatus === 'DELIVERED'
+            ? 'Rücksendung beim Lager eingegangen (via DHL-Tracking)'
+            : 'Rücksendung ist unterwegs (via DHL-Tracking)',
+          actor_type: 'system',
+        });
+      }
+    } catch (e) {
+      results.errors++;
+      console.warn(`[dhl-shipping] returns-poll error for ${r.return_number}:`, e);
+    }
+  }
+
+  return json({ success: true, data: results });
+}
+
+/** Cron-mode: poll return tracking for ALL tenants with DHL configured. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handlePollReturnsTrackingCron(supabase: any, _authHeader: string | null) {
+  const { data: tenants } = await supabase
+    .from('tenants')
+    .select('id, name, settings')
+    .not('settings', 'is', null);
+
+  const tenantsWithDHL = (tenants || []).filter((t: { settings?: { warehouse?: { dhl?: { apiKey?: string; enabled?: boolean } } } }) =>
+    t.settings?.warehouse?.dhl?.apiKey && t.settings.warehouse.dhl.enabled !== false
+  );
+
+  const summary = { tenantsScanned: tenantsWithDHL.length, perTenant: [] as unknown[] };
+  for (const tenant of tenantsWithDHL) {
+    const res = await pollReturnsTrackingForTenant(supabase, tenant.id);
     const body = await res.json();
     summary.perTenant.push({ tenantId: tenant.id, tenantName: tenant.name, result: body.data });
   }
