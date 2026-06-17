@@ -192,6 +192,40 @@ export async function getReturnDHLTracking(trackingNumber: string): Promise<DHLT
  * Get DHL tracking events publicly (no auth required).
  * Requires both trackingNumber and returnNumber for validation.
  */
+/**
+ * Public: let a customer create (or re-choose the format of) their own return
+ * label from the portal. Validated server-side by return number + email.
+ * labelType: 'SHIPMENT_LABEL' (PDF) | 'QR_LABEL' (mobile QR) | 'BOTH'.
+ */
+export async function publicCreateReturnLabel(
+  returnNumber: string,
+  email: string,
+  labelType: 'SHIPMENT_LABEL' | 'QR_LABEL' | 'BOTH'
+): Promise<{ success: boolean; error?: string }> {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dhl-shipping`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        action: 'public_create_return_label',
+        params: { return_number: returnNumber, email, labelType },
+      }),
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok || data?.error) {
+      return { success: false, error: data?.error || `Request failed (${resp.status})` };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Network error' };
+  }
+}
+
 export async function getPublicDHLTracking(
   trackingNumber: string,
   returnNumber: string

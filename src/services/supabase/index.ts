@@ -614,6 +614,7 @@ export {
   cancelDHLLabel,
   getDHLTracking,
   getPublicDHLTracking,
+  publicCreateReturnLabel,
   createReturnLabel,
   cancelReturnLabel,
   getReturnDHLTracking,

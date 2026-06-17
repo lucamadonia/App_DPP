@@ -56,6 +56,15 @@ Deno.serve(async (req) => {
       return await handlePublicShipmentTracking(params);
     }
 
+    // --- Public: customer creates/chooses their own return label (no auth;
+    //     validated by return_number + email). Lets the portal offer QR / PDF
+    //     / both as buttons. ---
+    if (action === 'public_create_return_label') {
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: 'Server misconfigured' });
+      const pubSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      return await handlePublicCreateReturnLabel(pubSupabase, params);
+    }
+
     // --- Cron-mode: poll all tenants. Requires Authorization: Bearer <SERVICE_ROLE_KEY> ---
     if (action === 'poll_all_tenants_cron') {
       if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -1333,9 +1342,64 @@ function getDHLReturnsBaseUrl(settings: any): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Public: a customer creates (or re-chooses the format of) their own return
+ * label from the portal. Validated by return_number + email — no auth. Allows
+ * QR / PDF / both via labelType. If a label already exists, it's cleared first
+ * so the customer can switch format (the abandoned DHL label is free/unused).
+ */
+async function handlePublicCreateReturnLabel(supabase: any, params?: Record<string, unknown>) {
+  const returnNumber = String(params?.return_number || params?.returnNumber || '').trim();
+  const email = String(params?.email || '').trim().toLowerCase();
+  const ALLOWED = ['SHIPMENT_LABEL', 'QR_LABEL', 'BOTH'];
+  const labelType = ALLOWED.includes(String(params?.labelType || '')) ? String(params!.labelType) : 'BOTH';
+  if (!returnNumber || !email) return json({ error: 'Bitte Retourennummer und E-Mail angeben.' }, 400);
+
+  const { data: ret } = await supabase
+    .from('rh_returns')
+    .select('id, tenant_id, status, metadata, customer_id, tracking_number')
+    .eq('return_number', returnNumber)
+    .maybeSingle();
+
+  // Generic "not found" for any mismatch — never reveal a return exists.
+  const notFound = () => json({ found: false, error: 'Keine Retoure unter dieser Nummer/E-Mail gefunden.' }, 200);
+  if (!ret) return notFound();
+
+  // Identity check: metadata.email or the linked customer's email.
+  const meta = (ret.metadata || {}) as Record<string, unknown>;
+  let ok = typeof meta.email === 'string' && meta.email.toLowerCase() === email;
+  if (!ok && ret.customer_id) {
+    const { data: c } = await supabase.from('rh_customers').select('email').eq('id', ret.customer_id).maybeSingle();
+    if (c?.email && String(c.email).toLowerCase() === email) ok = true;
+  }
+  if (!ok) return notFound();
+
+  if (!['APPROVED', 'LABEL_GENERATED'].includes(ret.status)) {
+    return json({ error: 'Das Label kann erst erstellt werden, sobald die Retoure genehmigt wurde.' }, 400);
+  }
+
+  // Clear any existing label so handleCreateReturnLabel can regenerate in the
+  // newly chosen format (lets the customer switch between QR/PDF/both).
+  if (ret.tracking_number) {
+    await supabase
+      .from('rh_returns')
+      .update({ tracking_number: null, label_url: null, carrier_label_data: null })
+      .eq('id', ret.id)
+      .eq('tenant_id', ret.tenant_id);
+  }
+
+  return await handleCreateReturnLabel(supabase, ret.tenant_id, { returnId: ret.id, labelType });
+}
+
 async function handleCreateReturnLabel(supabase: any, tenantId: string, params?: Record<string, unknown>) {
   if (!params?.returnId) return json({ error: 'Missing returnId' }, 400);
   const returnId = params.returnId as string;
+
+  // Which document(s) the customer/operator wants: PDF, QR, or both.
+  const ALLOWED_LABEL_TYPES = ['SHIPMENT_LABEL', 'QR_LABEL', 'BOTH'];
+  const labelType = ALLOWED_LABEL_TYPES.includes(String(params?.labelType || ''))
+    ? String(params!.labelType)
+    : 'BOTH';
 
   // 1. Load DHL settings
   const settings = await getDHLSettings(supabase, tenantId);
@@ -1492,9 +1556,10 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
         },
       };
 
-      // labelType=BOTH → PDF label + (for German senders, if the receiver
-      // supports mobile returns) a QR code for drop-off without a printer.
-      const resp = await fetch(`${returnsBaseUrl}/orders?labelType=BOTH`, {
+      // labelType drives which documents DHL returns: SHIPMENT_LABEL (PDF),
+      // QR_LABEL (mobile QR), or BOTH. QR is only issued for German senders
+      // whose receiver supports mobile returns.
+      const resp = await fetch(`${returnsBaseUrl}/orders?labelType=${labelType}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(orderPayload),
@@ -1510,7 +1575,8 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
         const qrB64 = respBody?.qrLabel?.b64 || '';
         const qrLink = respBody?.qrLink || null;
 
-        if (labelB64) {
+        // Success if DHL returned a PDF and/or a QR (QR_LABEL gives QR only).
+        if (labelB64 || qrB64) {
           const toBytes = (b64: string) => {
             const s = atob(b64);
             const a = new Uint8Array(s.length);
@@ -1518,12 +1584,16 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
             return a;
           };
 
-          const storagePath = `${tenantId}/return-labels/${returnId}.pdf`;
-          await supabase.storage.from('documents').upload(storagePath, toBytes(labelB64), { contentType: 'application/pdf', upsert: true });
-          const { data: signedData } = await supabase.storage.from('documents').createSignedUrl(storagePath, 60 * 60 * 24 * 7);
-          labelUrl = signedData?.signedUrl || '';
+          // PDF label (absent when the customer chose QR_LABEL only).
+          let storagePath: string | undefined;
+          if (labelB64) {
+            storagePath = `${tenantId}/return-labels/${returnId}.pdf`;
+            await supabase.storage.from('documents').upload(storagePath, toBytes(labelB64), { contentType: 'application/pdf', upsert: true });
+            const { data: signedData } = await supabase.storage.from('documents').createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+            labelUrl = signedData?.signedUrl || '';
+          }
 
-          // QR mobile-return label — only present when DHL issues one.
+          // QR mobile-return label — present for QR_LABEL/BOTH when the receiver supports it.
           let qrStoragePath: string | undefined;
           let qrUrl: string | undefined;
           if (qrB64) {
@@ -1540,6 +1610,7 @@ async function handleCreateReturnLabel(supabase: any, tenantId: string, params?:
             dhlReturnId: trackingNumber ? `RET${trackingNumber}` : undefined,
             dhlProduct: 'RETOURE',
             labelFormat: 'PDF',
+            labelType,
             labelStoragePath: storagePath,
             qrStoragePath,
             qrUrl,

@@ -14,7 +14,7 @@ import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
 import { ShipmentTracker } from '@/components/returns/public/ShipmentTracker';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
-import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding, publicCancelReturn } from '@/services/supabase';
+import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding, publicCancelReturn, publicCreateReturnLabel } from '@/services/supabase';
 import { supabaseAnon } from '@/lib/supabase';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
 import type { RhReturn, RhReturnTimeline as TimelineType, CustomerPortalBrandingOverrides } from '@/types/returns-hub';
@@ -51,6 +51,9 @@ export function PublicReturnTrackingPage() {
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
   const [branding, setBranding] = useState<CustomerPortalBrandingOverrides | null>(null);
+  // Customer-driven label choice (QR / PDF / both)
+  const [labelGenLoading, setLabelGenLoading] = useState<string | null>(null);
+  const [labelGenError, setLabelGenError] = useState('');
 
   // Auto-search if returnNumber is in URL
   useEffect(() => {
@@ -127,6 +130,28 @@ export function PublicReturnTrackingPage() {
       setError(t('Return not found. Please check your return number and try again.'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Customer picks the label format (QR / PDF / both); generates it live.
+  const handleChooseLabel = async (type: 'SHIPMENT_LABEL' | 'QR_LABEL' | 'BOTH') => {
+    if (!returnData) return;
+    const e = email.trim();
+    if (!e) {
+      setLabelGenError(t('Please enter your email to confirm, then choose again.'));
+      return;
+    }
+    setLabelGenError('');
+    setLabelGenLoading(type);
+    try {
+      const res = await publicCreateReturnLabel(returnData.returnNumber, e, type);
+      if (!res.success) {
+        setLabelGenError(res.error || t('Could not create the label. Please try again.'));
+      } else {
+        await handleSearch(returnData.returnNumber);
+      }
+    } finally {
+      setLabelGenLoading(null);
     }
   };
 
@@ -343,8 +368,49 @@ export function PublicReturnTrackingPage() {
         </CardContent>
       </Card>
 
+      {/* Label format chooser — customer decides QR / PDF / both, generated live */}
+      {['APPROVED', 'LABEL_GENERATED'].includes(returnData.status) && (
+        <Card className="border-indigo-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              {t('How would you like your return label?')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('Choose your preferred option — you can change it anytime.')}
+            </p>
+            {!email.trim() && (
+              <div className="space-y-1 max-w-xs">
+                <Label className="text-xs">{t('Your email (for confirmation)')}</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <Button variant="outline" disabled={!!labelGenLoading} onClick={() => handleChooseLabel('SHIPMENT_LABEL')} className="h-auto py-3 flex flex-col gap-1">
+                {labelGenLoading === 'SHIPMENT_LABEL' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Printer className="h-5 w-5" />}
+                <span className="text-sm font-medium">{t('Shipping label (PDF)')}</span>
+                <span className="text-xs text-muted-foreground">{t('Print at home')}</span>
+              </Button>
+              <Button variant="outline" disabled={!!labelGenLoading} onClick={() => handleChooseLabel('QR_LABEL')} className="h-auto py-3 flex flex-col gap-1">
+                {labelGenLoading === 'QR_LABEL' ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
+                <span className="text-sm font-medium">{t('QR code')}</span>
+                <span className="text-xs text-muted-foreground">{t('No printer — scan at DHL')}</span>
+              </Button>
+              <Button variant="outline" disabled={!!labelGenLoading} onClick={() => handleChooseLabel('BOTH')} className="h-auto py-3 flex flex-col gap-1">
+                {labelGenLoading === 'BOTH' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Package className="h-5 w-5" />}
+                <span className="text-sm font-medium">{t('Both')}</span>
+                <span className="text-xs text-muted-foreground">{t('Label + QR code')}</span>
+              </Button>
+            </div>
+            {labelGenError && <p className="text-sm text-destructive">{labelGenError}</p>}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Label Ready Banner */}
-      {returnData.status === 'LABEL_GENERATED' && returnData.labelUrl && (
+      {returnData.status === 'LABEL_GENERATED' && (returnData.labelUrl || returnData.carrierLabelData?.qrUrl) && (
         <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200 overflow-hidden">
           <CardContent className="pt-6 pb-6">
             <div className="flex items-start gap-4">
@@ -353,6 +419,9 @@ export function PublicReturnTrackingPage() {
               </div>
               <div className="flex-1 space-y-4">
                 <h3 className="text-lg font-semibold text-indigo-900">{t('Your shipping label is ready!')}</h3>
+                <p className="text-sm text-indigo-700/90">
+                  {t('Both options are ready — print the label at home, or show the QR code at a DHL parcel shop. Use whichever suits you.')}
+                </p>
 
                 {/* 3-Step Instructions */}
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -373,13 +442,15 @@ export function PublicReturnTrackingPage() {
                   </div>
                 </div>
 
-                {/* Download Button */}
-                <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2" asChild>
-                  <a href={returnData.labelUrl} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-5 w-5" />
-                    {t('Download Shipping Label (PDF)')}
-                  </a>
-                </Button>
+                {/* Download Button (only when a PDF label exists) */}
+                {returnData.labelUrl && (
+                  <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2" asChild>
+                    <a href={returnData.labelUrl} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-5 w-5" />
+                      {t('Download Shipping Label (PDF)')}
+                    </a>
+                  </Button>
+                )}
 
                 {/* Tracking Number + Expiry */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-indigo-700/80">
