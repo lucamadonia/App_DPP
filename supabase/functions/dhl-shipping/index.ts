@@ -307,8 +307,13 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
 
   const currentSettings = tenant?.settings || {};
   const warehouse = currentSettings.warehouse || {};
+  const currentDhl = warehouse.dhl || {};
 
   const dhlSettings = {
+    // Preserve any existing sub-config the credentials form doesn't manage —
+    // most importantly returnsApi (receiverId/enabled). Previously this object
+    // was rebuilt from scratch, silently wiping returnsApi on every save.
+    ...currentDhl,
     enabled: params.enabled ?? true,
     sandbox: params.sandbox ?? true,
     apiKey: params.apiKey || '',
@@ -321,6 +326,8 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
     labelFormat: params.labelFormat || 'PDF_A4',
     shipper: params.shipper || {},
     connectedAt: params.apiKey ? new Date().toISOString() : undefined,
+    // Allow updating returnsApi explicitly when the form sends it.
+    ...(params.returnsApi ? { returnsApi: params.returnsApi } : {}),
   };
 
   const { error } = await supabase
