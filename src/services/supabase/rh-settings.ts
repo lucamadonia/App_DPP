@@ -80,7 +80,9 @@ const DEFAULT_SETTINGS: ReturnsHubSettings = {
   notifications: {
     emailEnabled: false,
     senderName: '',
-    emailLocale: 'en',
+    // 'de' — DACH-Tenant; 'en'-Default schickte deutschen Kunden englische
+    // Mails, sobald Settings nicht lesbar waren (return_confirmed 15.06.2026).
+    emailLocale: 'de',
   },
   customerPortal: DEFAULT_CUSTOMER_PORTAL_SETTINGS,
 };

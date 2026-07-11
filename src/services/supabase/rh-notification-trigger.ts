@@ -204,9 +204,11 @@ export async function triggerEmailNotification(
       return { success: true, skipped: true };
     }
 
-    // Resolve email locale from settings
+    // Resolve email locale from settings. Fallback 'de' — der Fambliss-Tenant
+    // ist DACH; ein 'en'-Fallback schickte deutschen Kunden englische Mails,
+    // sobald die Settings nicht lesbar waren (Realfall return_confirmed 15.06.).
     const settings = await getReturnsHubSettings();
-    const emailLocale = settings.notifications?.emailLocale || 'en';
+    const emailLocale = settings.notifications?.emailLocale || 'de';
 
     // Localize the reason label and default the tracking-button URL (so the
     // "Retoure verfolgen" button isn't a dead href="") before rendering.
@@ -300,7 +302,13 @@ export async function triggerPublicEmailNotification(
       return { success: true, skipped: true };
     }
 
-    // Resolve email locale from settings
+    // Resolve email locale from settings. WICHTIG: Der anon-Read auf
+    // tenants.settings kann an der (2026-06 verschärften) RLS scheitern —
+    // dann ist rhSettings undefined und der Fallback greift. Fallback MUSS
+    // 'de' sein (DACH-Tenant): mit 'en' bekamen deutsche Kunden die
+    // englische return_confirmed-Mail (Realfall 15.06.2026). Sauberer wäre
+    // eine SECURITY-DEFINER-RPC, die nur emailLocale liefert — bewusst
+    // aufgeschoben, der 'de'-Default deckt den Tenant korrekt ab.
     const { data: tenant } = await supabaseAnon
       .from('tenants')
       .select('settings')
@@ -309,7 +317,7 @@ export async function triggerPublicEmailNotification(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rhSettings = (tenant?.settings as any)?.returnsHub;
-    const emailLocale = rhSettings?.notifications?.emailLocale || 'en';
+    const emailLocale = rhSettings?.notifications?.emailLocale || 'de';
 
     // Localize the reason label and default the tracking-button URL (so the
     // "Retoure verfolgen" button isn't a dead href="") before rendering.

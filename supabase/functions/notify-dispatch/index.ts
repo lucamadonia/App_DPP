@@ -195,6 +195,10 @@ interface FamilyJoyPayload {
 }
 
 async function postToFamilyJoy(input: FamilyJoyPayload): Promise<boolean> {
+  // Bewusst KEIN region-Feld: der mail-event-receiver löst die Region seit
+  // Juli 2026 selbst über shop_customers.region auf (aus dem Adressland des
+  // Shopify-Mirrors — genauer als jede Ableitung aus locale oder Email-TLD).
+  // Ein hier geratener Hint würde diese DB-Auflösung nur überschreiben.
   const body = JSON.stringify({
     eventType: input.eventType,
     source: 'trackbliss',
