@@ -780,9 +780,13 @@ async function sendTrackingMagicLinkEmail(supabase: any, tenantId: string, shipm
     totalItems: shipment.total_items ?? 1,
   });
 
-  // Insert into rh_notifications (channel=email, status=pending) — the
-  // Database Webhook OR our direct invoke below will hand this off to send-email.
-  const { data: notif, error: notifErr } = await supabase
+  // Insert into rh_notifications (channel=email, status=pending). Der Versand
+  // läuft AUSSCHLIESSLICH über den AFTER-INSERT-Trigger → notify-dispatch
+  // (20260602b_rh_notifications_dispatch_trigger.sql). Der frühere zusätzliche
+  // Direct-Invoke von send-email war ein zweiter Versandpfad → Doppel-Mails.
+  // metadata.locale mitgeben, damit der Sprach-Tag im email_send_log zur
+  // tatsächlich gerenderten Sprache passt.
+  const { error: notifErr } = await supabase
     .from('rh_notifications')
     .insert({
       tenant_id: tenantId,
@@ -792,18 +796,14 @@ async function sendTrackingMagicLinkEmail(supabase: any, tenantId: string, shipm
       recipient_email: shipment.recipient_email,
       subject,
       content: html,
-      metadata: { isHtml: true, senderName: tenantName, shipmentId, trackingToken: shipment.tracking_token },
+      metadata: { isHtml: true, senderName: tenantName, shipmentId, trackingToken: shipment.tracking_token, locale },
     })
     .select()
     .single();
 
-  if (notifErr || !notif) {
+  if (notifErr) {
     console.error('Failed to insert tracking notification:', notifErr?.message);
-    return;
   }
-
-  // Direct invoke so we don't depend on a database webhook being configured.
-  await supabase.functions.invoke('send-email', { body: { record: notif } });
 }
 
 interface TrackingEmailParams {
