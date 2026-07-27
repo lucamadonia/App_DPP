@@ -57,6 +57,7 @@ const PublicReturnPortalPage = lazy(() => import('@/pages/returns/public/PublicR
 const PublicReturnRegisterPage = lazy(() => import('@/pages/returns/public/PublicReturnRegisterPage').then(m => ({ default: m.PublicReturnRegisterPage })));
 const PublicReturnTrackingPage = lazy(() => import('@/pages/returns/public/PublicReturnTrackingPage').then(m => ({ default: m.PublicReturnTrackingPage })));
 const PublicSupportPage = lazy(() => import('@/pages/returns/public/PublicSupportPage').then(m => ({ default: m.PublicSupportPage })));
+const PublicWiderrufPage = lazy(() => import('@/pages/returns/public/PublicWiderrufPage').then(m => ({ default: m.PublicWiderrufPage })));
 
 // Embed Layout (iframe)
 const EmbedLayout = lazy(() => import('@/pages/returns/public/EmbedLayout').then(m => ({ default: m.EmbedLayout })));
@@ -384,6 +385,7 @@ function NormalAppRoutes() {
           <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
           <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
           <Route path="returns/support/:tenantSlug" element={<PublicSupportPage />} />
+          <Route path="widerruf/:tenantSlug" element={<PublicWiderrufPage />} />
         </Route>
 
         {/* Standalone tracking page (loads branding dynamically) */}
@@ -395,6 +397,7 @@ function NormalAppRoutes() {
           <Route path="embed/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
           <Route path="embed/track/:tenantSlug" element={<PublicReturnTrackingPage />} />
           <Route path="embed/support/:tenantSlug" element={<PublicSupportPage />} />
+          <Route path="embed/widerruf/:tenantSlug" element={<PublicWiderrufPage />} />
           <Route path="embed/transparency/:tenantSlug" element={<TransparencyPage />} />
         </Route>
 

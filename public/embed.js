@@ -7,7 +7,7 @@
  *   <script>
  *     Trackbliss.embed({
  *       tenant: 'my-tenant-slug',
- *       type: 'portal',           // 'portal' | 'register' | 'track' | 'support'
+ *       type: 'portal',           // 'portal' | 'register' | 'track' | 'support' | 'widerruf'
  *       selector: '#trackbliss-returns',
  *       lang: 'de',               // optional, defaults to browser language
  *     });
