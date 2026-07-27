@@ -9,8 +9,10 @@
   Platzhalter (alle required):
     {{customerName}}        : Anrede-Name (Fallback "liebe Familie")
     {{firstName}}           : Vorname
-    {{shipmentNumber}}      : Sendungsnummer
-    {{trackingNumber}}      : DHL Tracking (noch leer)
+    {{orderNumber}}         : Bestellnummer (Shopify), z. B. #1055
+    {{shipmentNumber}}      : interne Auftragsnummer (SHP-...)
+    {{trackingNumber}}      : DHL Tracking (leer, solange kein Label erstellt ist)
+    {{trackingHtml}}        : vorgerenderter DHL-Nummer-Block; leer ohne Label
     {{trackingUrl}}         : DHL Tracking-Link (noch leer)
     {{itemCount}}           : Anzahl Artikel in dieser Sendung
     {{shopUrl}}             : https://shop.fambliss.de
@@ -30,7 +32,7 @@
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
-<title>Wir packen deine Bestellung {{shipmentNumber}}</title>
+<title>Wir packen deine Bestellung {{orderNumber}}</title>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <!--[if !mso]><!--><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Grandstander:wght@400;500;600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet"><!--<![endif]-->
 <style>
@@ -108,11 +110,13 @@
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="info-card-bg" style="background-color:#F5F3EF;border-radius:16px;">
             <tr>
               <td style="padding:24px 28px;">
-                <div class="text-muted" style="font-family:'Nunito','Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:14px;color:#9E8F72;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Sendungsnummer</div>
-                <div class="text-default" style="font-family:'Grandstander',Georgia,serif;font-size:20px;font-weight:500;color:#2E3128;line-height:26px;">{{shipmentNumber}}</div>
+                <div class="text-muted" style="font-family:'Nunito','Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:14px;color:#9E8F72;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Bestellnummer</div>
+                <div class="text-default" style="font-family:'Grandstander',Georgia,serif;font-size:20px;font-weight:500;color:#2E3128;line-height:26px;">{{orderNumber}}</div>
+                <div class="text-muted" style="font-family:'Nunito','Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:15px;color:#9E8F72;margin-top:4px;">Auftrag {{shipmentNumber}}</div>
                 <div class="hairline" style="height:1px;line-height:1px;background-color:#E0DDD4;font-size:1px;margin:16px 0;">&nbsp;</div>
                 <div class="text-muted" style="font-family:'Nunito','Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:14px;color:#9E8F72;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Artikel in dieser Sendung</div>
                 <div class="text-default" style="font-family:'Grandstander',Georgia,serif;font-size:20px;font-weight:500;color:#2E3128;line-height:26px;">{{itemCount}} Artikel</div>
+                {{trackingHtml}}
               </td>
             </tr>
           </table>
@@ -163,7 +167,7 @@
             <a href="{{termsUrl}}" class="text-muted" style="color:#6B7060;text-decoration:underline;">AGB</a>
           </div>
           <div style="font-size:11px;line-height:18px;color:#8E9483;">
-            Du erhältst diese E-Mail als Service-Nachricht zu deiner Bestellung {{shipmentNumber}}.<br>
+            Du erhältst diese E-Mail als Service-Nachricht zu deiner Bestellung {{orderNumber}}.<br>
             <a href="{{unsubscribeUrl}}" style="color:#6B7060;text-decoration:underline;">Werbemails abbestellen</a>
           </div>
         </div>
