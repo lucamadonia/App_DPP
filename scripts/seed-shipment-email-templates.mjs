@@ -27,7 +27,7 @@ const TENANT_ID = '522f6254-f73c-4a26-b1e9-662035194bc5';
 const TEMPLATES_DIR = path.resolve(__dirname, '..', 'supabase/functions/send-email/templates/shipment');
 
 const TEMPLATES = [
-  { file: 'shipment-packed.html',     event: 'shipment_packed',     name: 'Sendung wird verpackt',     subject: 'Wir packen deine Bestellung {{shipmentNumber}}',           sort: 100, requiresPhotos: false },
+  { file: 'shipment-packed.html',     event: 'shipment_packed',     name: 'Sendung wird verpackt',     subject: 'Wir packen deine Bestellung {{orderNumber}}',           sort: 100, requiresPhotos: false },
   { file: 'shipment-shipped.html',    event: 'shipment_shipped',    name: 'Sendung versendet',         subject: 'Dein Paket ist unterwegs',                                  sort: 110 },
   { file: 'shipment-delivered.html',  event: 'shipment_delivered',  name: 'Sendung zugestellt',        subject: 'Dein Paket ist da, {{customerName}}',                       sort: 120 },
   { file: 'engagement-day-1.html',    event: 'engagement_day_1',    name: 'Engagement Tag 1',          subject: 'Erste kleine Schritte mit euren Fambliss-Produkten',        sort: 130 },

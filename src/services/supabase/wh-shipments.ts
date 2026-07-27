@@ -1023,8 +1023,15 @@ async function fireShipmentEmail(shipment: any, eventType: 'shipment_packed' | '
       customerName: shipment.recipient_name || undefined,
       firstName,
       shipmentId: shipment.id,
+      // Kundenseitige Bestellnummer; die interne SHP-Nummer steht klein daneben.
+      orderNumber: (shipment.order_reference || '').replace(/^Shopify\s+/, '') || undefined,
       shipmentNumber: shipment.shipment_number,
       trackingNumber: shipment.tracking_number || undefined,
+      // Nur zeigen, wenn wirklich eine DHL-Nummer existiert - sonst stuende in
+      // der Mail ein leeres Feld "Sendungsnummer".
+      trackingHtml: shipment.tracking_number
+        ? `<div style="font-family:'Nunito','Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:20px;color:#6B7060;margin-top:14px;">Sendungsnummer (DHL): <strong style="color:#2E3128;">${shipment.tracking_number}</strong></div>`
+        : '',
       trackingUrl,
       itemCount: itemCount || undefined,
       feedbackUrl,

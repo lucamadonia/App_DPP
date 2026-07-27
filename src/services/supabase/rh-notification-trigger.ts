@@ -31,12 +31,18 @@ export interface NotificationContext {
   customerId?: string;
   // Shipment lifecycle + engagement mails
   shipmentId?: string;
+  /** Kundenseitige Bestellnummer (Shopify), z. B. "#1055". */
+  orderNumber?: string;
+  /** Interne Trackbliss-Auftragsnummer (SHP-...) - nur als Support-Referenz. */
   shipmentNumber?: string;
   trackingNumber?: string;
   itemCount?: number;
   /** Pre-rendered HTML for per-product tile blocks. Built by the caller from
    *  wh_shipment_items joined to products.onboarding_steps/tutorial_url. */
   productsHtml?: string;
+  /** Vorgerenderter DHL-Nummer-Block. Leer, solange kein Label existiert -
+   *  der Renderer kennt keine Bedingungen, also entscheidet der Aufrufer. */
+  trackingHtml?: string;
   heroImageUrl?: string;
   tutorialUrl?: string;
   reviewUrl?: string;
@@ -132,7 +138,8 @@ const DEFAULT_BRAND_VARS = {
   privacyUrl:     'https://shop.fambliss.de/pages/datenschutz',
   termsUrl:       'https://shop.fambliss.de/pages/agb',
   unsubscribeUrl: 'https://shop.fambliss.de/pages/abmelden',
-  hrbNumber:      'HRB 99999',
+  // Ohne "HRB"-Prefix: die Templates schreiben "Handelsregister Freiburg HRB {{hrbNumber}}".
+  hrbNumber:      '734371',
 } as const;
 
 function renderTemplate(template: string, ctx: NotificationContext): string {
@@ -147,10 +154,12 @@ function renderTemplate(template: string, ctx: NotificationContext): string {
     .replace(/\{\{ticketNumber\}\}/g,  ctx.ticketNumber || '')
     .replace(/\{\{subject\}\}/g,       ctx.subject || '')
     .replace(/\{\{trackingUrl\}\}/g,   ctx.trackingUrl || '')
+    .replace(/\{\{orderNumber\}\}/g, ctx.orderNumber || ctx.shipmentNumber || '')
     .replace(/\{\{shipmentNumber\}\}/g, ctx.shipmentNumber || '')
     .replace(/\{\{trackingNumber\}\}/g, ctx.trackingNumber || '')
     .replace(/\{\{itemCount\}\}/g,     ctx.itemCount != null ? String(ctx.itemCount) : '')
     .replace(/\{\{productsHtml\}\}/g,  ctx.productsHtml || '')
+    .replace(/\{\{trackingHtml\}\}/g,  ctx.trackingHtml || '')
     .replace(/\{\{hero_image_url\}\}/g, ctx.heroImageUrl || '')
     .replace(/\{\{heroImageUrl\}\}/g,  ctx.heroImageUrl || '')
     .replace(/\{\{tutorialUrl\}\}/g,   ctx.tutorialUrl || '')
