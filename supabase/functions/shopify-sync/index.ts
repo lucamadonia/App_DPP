@@ -30,6 +30,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildShipmentItems, loadShopifyMappings } from '../_shared/shopify-order-items.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -92,6 +93,10 @@ Deno.serve(async (req) => {
     // Decode the JWT payload (no signature check — we trust this comes from the
     // platform's own scheduler hitting our function URL) and accept any token
     // whose `role` claim is `service_role`.
+    // IMPORTANT: this try/catch must wrap ONLY the JWT decode. Wrapping the
+    // dispatch too would swallow any handler exception and fall through to user
+    // auth, reporting a misleading 401 instead of the real error.
+    let isServiceRole = false;
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
@@ -99,14 +104,23 @@ Deno.serve(async (req) => {
         const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
         const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
         const claim = JSON.parse(atob(padded));
-        if (claim.role === 'service_role') {
-          const peek = await req.clone().json().catch(() => ({} as Record<string, unknown>));
-          if (peek.action === 'cron_sync_all_tenants') {
-            return await handleCronSyncAllTenants(supabase);
-          }
-        }
+        isServiceRole = claim.role === 'service_role';
       }
-    } catch (_e) { /* fall through to user auth */ }
+    } catch (_e) { /* not a decodable JWT — fall through to user auth */ }
+
+    if (isServiceRole) {
+      const peek = await req.clone().json().catch(() => ({} as Record<string, unknown>));
+      if (peek.action === 'cron_sync_all_tenants') {
+        return await handleCronSyncAllTenants(supabase);
+      }
+      // Repair tooling runs with the service role and has no user session,
+      // so it passes tenantId itself.
+      if (peek.action === 'resync_order') {
+        const p = (peek.params || {}) as Record<string, unknown>;
+        if (!p.tenantId) return json({ error: 'resync_order via service role requires params.tenantId' }, 400);
+        return await handleResyncOrder(supabase, String(p.tenantId), null, p);
+      }
+    }
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
@@ -166,6 +180,8 @@ Deno.serve(async (req) => {
         return await handleCreateRefund(supabase, tenantId, user.id, params);
       case 'fetch_unmapped_variants':
         return await handleFetchUnmappedVariants(supabase, tenantId);
+      case 'resync_order':
+        return await handleResyncOrder(supabase, tenantId, user.id, params);
       case 'register_webhooks':
         return await handleRegisterWebhooks(supabase, tenantId);
       case 'list_webhooks':
@@ -346,8 +362,8 @@ function parseNextCursor(linkHeader: string | null): string | null {
 }
 
 // deno-lint-ignore no-explicit-any
-async function createSyncLog(supabase: any, tenantId: string, syncType: string, direction: string, triggeredBy: string, triggerType = 'manual') {
-  const { data } = await supabase
+async function createSyncLog(supabase: any, tenantId: string, syncType: string, direction: string, triggeredBy: string | null, triggerType = 'manual') {
+  const { data, error } = await supabase
     .from('shopify_sync_log')
     .insert({
       tenant_id: tenantId,
@@ -355,10 +371,14 @@ async function createSyncLog(supabase: any, tenantId: string, syncType: string, 
       direction,
       status: 'running',
       trigger_type: triggerType,
-      triggered_by: triggeredBy,
+      // Service-role callers (cron, repair tooling) have no user id. An empty
+      // string is not a valid UUID and made the insert fail silently, leaving
+      // the caller to crash later on a null sync log.
+      triggered_by: triggeredBy || null,
     })
     .select()
     .single();
+  if (error) throw new Error(`createSyncLog failed: ${error.message}`);
   return data;
 }
 
@@ -530,6 +550,8 @@ interface SyncOrderParams {
   fulfillmentStatus?: 'unfulfilled' | 'partial' | 'shipped' | 'any';
   maxPages?: number;
   sinceId?: number;
+  /** Restrict the sync to a single order, e.g. '#1054'. Used by resync_order. */
+  name?: string;
 }
 
 function buildOrdersQuery(config: { syncConfig: Record<string, unknown> }, params: SyncOrderParams) {
@@ -547,6 +569,7 @@ function buildOrdersQuery(config: { syncConfig: Record<string, unknown> }, param
   if (params.createdAtMin) q.set('created_at_min', params.createdAtMin);
   if (params.createdAtMax) q.set('created_at_max', params.createdAtMax);
   if (params.sinceId) q.set('since_id', String(params.sinceId));
+  if (params.name) q.set('name', params.name);
   return q.toString();
 }
 
@@ -628,7 +651,7 @@ async function handleCronSyncAllTenants(supabase: any) {
 }
 
 // deno-lint-ignore no-explicit-any
-async function handleSyncOrders(supabase: any, tenantId: string, userId: string, params?: Record<string, unknown>) {
+async function handleSyncOrders(supabase: any, tenantId: string, userId: string | null, params?: Record<string, unknown>) {
   const config = await getShopifyConfig(supabase, tenantId);
   const p: SyncOrderParams = (params || {}) as SyncOrderParams;
   const backfill = p.backfill === true;
@@ -639,20 +662,16 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
   const errors: unknown[] = [];
 
   try {
-    // Preload mappings + locations + auto-batch candidates
-    const { data: productMaps } = await supabase
-      .from('shopify_product_map')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true);
+    // Preload mappings + locations + auto-batch candidates.
+    // loadShopifyMappings also pulls shopify_bundle_map/_components so Set
+    // variants explode into their individual components on import.
+    const { productMaps, variantMap, bundleMap } = await loadShopifyMappings(supabase, tenantId);
 
     const { data: locationMaps } = await supabase
       .from('shopify_location_map')
       .select('*')
       .eq('tenant_id', tenantId);
 
-    // deno-lint-ignore no-explicit-any
-    const variantMap = new Map<number, any>((productMaps || []).map((m: any) => [m.shopify_variant_id, m]));
     // deno-lint-ignore no-explicit-any
     const primaryLocation = (locationMaps || []).find((l: any) => l.is_primary);
 
@@ -701,53 +720,40 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
             customerRowId = await upsertShopifyCustomer(supabase, tenantId, order.customer, order);
           }
 
-          // Build line items from mappings (with FEFO auto-batch resolution)
-          // deno-lint-ignore no-explicit-any
-          const items: any[] = [];
-          // deno-lint-ignore no-explicit-any
-          for (const li of (order.line_items || [])) {
-            const mapping = variantMap.get(li.variant_id);
-            if (!mapping) {
-              unmappedEncountered.set(li.variant_id, {
-                type: 'unmapped_variant',
-                shopifyVariantId: li.variant_id,
-                shopifyProductId: li.product_id,
-                shopifyProductTitle: li.title,
-                shopifyVariantTitle: li.variant_title,
-                sku: li.sku,
-                orderName: order.name,
-                firstSeenAt: new Date().toISOString(),
-              });
-              continue;
-            }
-            if (!primaryLocation?.location_id) continue;
+          // Build line items: Set variants explode into their components,
+          // plain variants resolve 1:1 as before, unmapped lines are reported
+          // rather than silently dropped.
+          const { items, warnings } = await buildShipmentItems(
+            supabase,
+            tenantId,
+            primaryLocation?.location_id || null,
+            order,
+            { variantMap, bundleMap },
+            resolveAutoBatch,
+          );
 
-            let batchId = mapping.batch_id || null;
-            let itemNote: string | null = null;
-            if (!batchId && mapping.auto_batch) {
-              const picked = await resolveAutoBatch(supabase, tenantId, mapping.product_id, primaryLocation.location_id);
-              batchId = picked.batchId;
-              if (batchId && !picked.stockBacked) {
-                itemNote = 'auto-batch ohne Stock-Check (FIFO-Fallback)';
-              }
-            }
-
-            items.push({
-              tenant_id: tenantId,
-              product_id: mapping.product_id,
-              batch_id: batchId,
-              location_id: primaryLocation.location_id,
-              quantity: li.fulfillable_quantity || li.quantity,
-              unit_price: parseFloat(li.price) || null,
-              currency: order.currency || 'EUR',
-              notes: itemNote,
+          for (const w of warnings) {
+            if (w.type !== 'unmapped_variant') continue;
+            unmappedEncountered.set(w.shopifyVariantId as number, {
+              type: 'unmapped_variant',
+              shopifyVariantId: w.shopifyVariantId,
+              shopifyProductId: w.shopifyProductId,
+              shopifyProductTitle: w.shopifyProductTitle,
+              shopifyVariantTitle: w.shopifyVariantTitle,
+              sku: w.sku,
+              orderName: order.name,
+              firstSeenAt: w.detectedAt,
             });
           }
 
+          // No early `continue` on an empty item list any more: an order whose
+          // lines all failed to resolve must still become a visible shipment
+          // carrying its warnings, otherwise it disappears without trace (the
+          // exact failure mode that lost Shopify order #1054). Such orders are
+          // counted as created (they are) — the gap is reported via
+          // import_warnings on the shipment and via errors[] in the sync log.
           if (items.length === 0) {
-            counts.skipped++;
-            counts.processed++;
-            continue;
+            console.warn(`No line items resolved for ${orderRef} — creating shipment with warnings anyway`);
           }
 
           // Address + recipient
@@ -798,6 +804,7 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
               customer_id: customerRowId,
               priority: 'normal',
               notes: order.note || null,
+              import_warnings: warnings,
             })
             .select()
             .single();
@@ -809,11 +816,13 @@ async function handleSyncOrders(supabase: any, tenantId: string, userId: string,
             continue;
           }
 
-          const shipmentItems = items.map((i: Record<string, unknown>) => ({ ...i, shipment_id: shipment.id }));
-          const { error: itemsErr } = await supabase.from('wh_shipment_items').insert(shipmentItems);
-          if (itemsErr) {
-            errors.push({ entity: orderRef, type: 'shipment_items_insert_failed', message: itemsErr.message });
-            console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
+          if (items.length > 0) {
+            const shipmentItems = items.map((i) => ({ ...i, shipment_id: shipment.id }));
+            const { error: itemsErr } = await supabase.from('wh_shipment_items').insert(shipmentItems);
+            if (itemsErr) {
+              errors.push({ entity: orderRef, type: 'shipment_items_insert_failed', message: itemsErr.message });
+              console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
+            }
           }
 
           // Compute total_weight_grams from batch.gross_weight (fallback products.gross_weight)
@@ -2095,6 +2104,195 @@ async function handleCreateRefund(supabase: any, tenantId: string, userId: strin
 // ============================================
 // UNMAPPED VARIANTS
 // ============================================
+
+/**
+ * Re-resolve one Shopify order's line items against the CURRENT mappings and
+ * top up the existing shipment with whatever is missing.
+ *
+ * Why a dedicated action instead of just re-running sync_orders: wh_shipments
+ * has a partial UNIQUE index on shopify_order_id and both import paths return
+ * early when a shipment already exists, so a re-import is a no-op for an order
+ * that was imported incompletely. That is precisely the state Shopify order
+ * #1055 was left in — 1 of 9 positions, because the Set variant was unmapped.
+ *
+ * Only ever adds or increases; never deletes and never decreases, so a picker's
+ * quantity_picked and the existing stock reservations are preserved.
+ */
+// deno-lint-ignore no-explicit-any
+async function handleResyncOrder(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  tenantId: string,
+  userId: string | null,
+  params?: Record<string, unknown>,
+) {
+  const orderName = params?.orderName ? String(params.orderName) : null;
+  const shopifyOrderId = params?.shopifyOrderId ? String(params.shopifyOrderId) : null;
+  if (!orderName && !shopifyOrderId) {
+    return json({ error: 'orderName or shopifyOrderId required' }, 400);
+  }
+
+  const config = await getShopifyConfig(supabase, tenantId);
+
+  // 1. Pull the order from Shopify
+  let order: Record<string, unknown> | null = null;
+  if (shopifyOrderId) {
+    const { body } = await shopifyApi(
+      config.shopDomain, config.accessToken, config.apiVersion,
+      `orders/${shopifyOrderId}.json`,
+    );
+    order = body?.order || null;
+  } else {
+    const name = orderName!.startsWith('#') ? orderName! : `#${orderName}`;
+    const { body } = await shopifyApi(
+      config.shopDomain, config.accessToken, config.apiVersion,
+      `orders.json?name=${encodeURIComponent(name)}&status=any&limit=1`,
+    );
+    order = body?.orders?.[0] || null;
+  }
+  if (!order) return json({ error: `Order not found in Shopify: ${orderName || shopifyOrderId}` }, 404);
+
+  const orderRef = `Shopify ${order.name}`;
+
+  // 2. Find the existing shipment (by id, falling back to the order reference)
+  const { data: shipment } = await supabase
+    .from('wh_shipments')
+    .select('id, shipment_number, status, source_location_id')
+    .eq('tenant_id', tenantId)
+    .or(`shopify_order_id.eq.${order.id},order_reference.eq.${orderRef}`)
+    .maybeSingle();
+
+  // 3. No shipment at all (the #1054 case) — the normal create path handles it,
+  //    narrowed to this single order via the `name` filter.
+  if (!shipment) {
+    return await handleSyncOrders(supabase, tenantId, userId, {
+      name: String(order.name),
+      status: 'any',
+      financialStatus: 'any',
+      fulfillmentStatus: 'any',
+      maxPages: 1,
+    });
+  }
+
+  // 4. Guard: never rewrite contents once a label exists — the printed label and
+  //    the parcel would desync. Mirrors updateShipmentItem's own guard.
+  const RESYNCABLE = ['draft', 'picking', 'packed'];
+  if (!RESYNCABLE.includes(shipment.status)) {
+    return json({
+      error: `Shipment ${shipment.shipment_number} is '${shipment.status}' — only ${RESYNCABLE.join(', ')} can be re-synced`,
+    }, 409);
+  }
+
+  // 5. Resolve what the shipment SHOULD contain, with today's mappings
+  const { variantMap, bundleMap } = await loadShopifyMappings(supabase, tenantId);
+  const { data: locationMaps } = await supabase
+    .from('shopify_location_map').select('*').eq('tenant_id', tenantId);
+  // deno-lint-ignore no-explicit-any
+  const primaryLocation = (locationMaps || []).find((l: any) => l.is_primary);
+  const locationId = shipment.source_location_id || primaryLocation?.location_id || null;
+
+  const { items: desired, warnings } = await buildShipmentItems(
+    supabase, tenantId, locationId, order, { variantMap, bundleMap }, resolveAutoBatch,
+  );
+
+  // 6. Diff against what is already there, keyed on the physical identity of a
+  //    position. Set components and a standalone line of the same product stay
+  //    separate rows, so bundle_group is part of the key.
+  const { data: existing } = await supabase
+    .from('wh_shipment_items')
+    .select('id, product_id, batch_id, location_id, quantity, bundle_group')
+    .eq('shipment_id', shipment.id);
+
+  const keyOf = (i: { product_id: string; batch_id: string | null; location_id: string; bundle_group?: string | null }) =>
+    `${i.product_id}|${i.batch_id ?? 'null'}|${i.location_id}|${i.bundle_group ?? 'null'}`;
+
+  const existingByKey = new Map<string, { id: string; quantity: number }>();
+  for (const e of existing || []) existingByKey.set(keyOf(e), { id: e.id, quantity: e.quantity });
+
+  // Collapse desired rows that share a key so repeated components add up.
+  const desiredByKey = new Map<string, typeof desired[number]>();
+  for (const d of desired) {
+    const k = keyOf(d);
+    const prev = desiredByKey.get(k);
+    if (prev) prev.quantity += d.quantity;
+    else desiredByKey.set(k, { ...d });
+  }
+
+  const reservationWarnings: string[] = [];
+  let added = 0;
+  let updated = 0;
+
+  for (const [k, d] of desiredByKey) {
+    const hit = existingByKey.get(k);
+    if (!hit) {
+      const { data: ins, error: insErr } = await supabase
+        .from('wh_shipment_items')
+        .insert({ ...d, shipment_id: shipment.id })
+        .select('id')
+        .single();
+      if (insErr) {
+        console.error(`resync_order: insert failed for ${orderRef}:`, insErr.message);
+        continue;
+      }
+      added++;
+      if (d.batch_id) {
+        await reserveStockForItem(
+          supabase, tenantId, d.location_id, d.product_id, d.batch_id,
+          d.quantity, shipment.id, orderRef, reservationWarnings,
+        );
+      }
+      void ins;
+    } else if (hit.quantity < d.quantity) {
+      const delta = d.quantity - hit.quantity;
+      await supabase.from('wh_shipment_items').update({ quantity: d.quantity }).eq('id', hit.id);
+      updated++;
+      if (d.batch_id) {
+        await reserveStockForItem(
+          supabase, tenantId, d.location_id, d.product_id, d.batch_id,
+          delta, shipment.id, orderRef, reservationWarnings,
+        );
+      }
+    }
+  }
+
+  // 7. Refresh derived fields
+  const { data: finalItems } = await supabase
+    .from('wh_shipment_items').select('quantity').eq('shipment_id', shipment.id);
+  const totalItems = (finalItems || []).reduce((s: number, i: { quantity: number }) => s + (i.quantity || 0), 0);
+
+  await supabase
+    .from('wh_shipments')
+    .update({ total_items: totalItems, import_warnings: warnings })
+    .eq('id', shipment.id);
+
+  await updateShipmentWeight(supabase, tenantId, shipment.id);
+
+  await supabase.from('shopify_sync_log').insert({
+    tenant_id: tenantId,
+    sync_type: 'orders',
+    direction: 'import',
+    status: warnings.length ? 'partial' : 'completed',
+    total_count: 1,
+    processed_count: 1,
+    updated_count: added + updated,
+    errors: warnings,
+    trigger_type: 'manual',
+    triggered_by: userId,
+    completed_at: new Date().toISOString(),
+  });
+
+  return json({
+    success: true,
+    data: {
+      shipmentNumber: shipment.shipment_number,
+      itemsAdded: added,
+      itemsUpdated: updated,
+      totalItems,
+      warnings,
+      reservationWarnings,
+    },
+  });
+}
 
 // deno-lint-ignore no-explicit-any
 async function handleFetchUnmappedVariants(supabase: any, tenantId: string) {

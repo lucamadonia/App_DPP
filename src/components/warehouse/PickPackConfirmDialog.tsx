@@ -91,11 +91,18 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
     const parsed = parseBarcode(code);
     const candidates = new Set<string>(parsed.gtinCandidates);
     candidates.add(code);
-    // Find item whose product barcode matches any candidate form
-    const match = items.find(it => {
+    // Find items whose product barcode matches any candidate form.
+    // A shipment can legitimately hold SEVERAL rows for the same product — a Set
+    // component plus the same article ordered standalone, or two batches of one
+    // product (Magnetwand beige/rose). Matching on product GTIN alone cannot tell
+    // them apart, so always advance the first row that still needs units;
+    // otherwise the first row fills up and every further scan of that barcode is
+    // reported as a duplicate, leaving the remaining rows impossible to scan.
+    const matches = items.filter(it => {
       const bc = productBarcodeMap?.[it.productId];
       return bc && candidates.has(bc);
     });
+    const match = matches.find(it => (confirmed[it.id] || 0) < it.quantity) ?? matches[0];
     if (!match) {
       // Unknown code — show prominent banner with override option
       setScanAlert({ kind: 'unknown', scannedCode: code, override: false });
@@ -320,6 +327,11 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
                       {item.isGift && (
                         <Badge variant="secondary" className="gap-1 bg-pink-100 text-pink-800 hover:bg-pink-100 dark:bg-pink-900/30 dark:text-pink-200">
                           <Gift className="h-3 w-3" /> {t('Beigabe')}
+                        </Badge>
+                      )}
+                      {item.bundleLabel && (
+                        <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-100">
+                          <Package className="h-3 w-3" /> {item.bundleLabel}
                         </Badge>
                       )}
                     </div>

@@ -14,6 +14,7 @@ import type {
   ShopifyIntegrationSettings,
   ShopifySyncConfig,
   ShopifyProductMap,
+  ShopifyBundleMap,
   ShopifyLocationMap,
   ShopifySyncLog,
   ShopifySyncResponse,
@@ -214,9 +215,10 @@ export async function disconnectShopify(): Promise<void> {
     .update({ settings: rest })
     .eq('id', tenantId);
 
-  // Clean up mapping tables
+  // Clean up mapping tables (bundle components cascade via bundle_id)
   await supabase.from('shopify_product_map').delete().eq('tenant_id', tenantId);
   await supabase.from('shopify_location_map').delete().eq('tenant_id', tenantId);
+  await supabase.from('shopify_bundle_map').delete().eq('tenant_id', tenantId);
 }
 
 // ============================================
@@ -303,6 +305,157 @@ export async function updateShopifyProductMap(
 export async function deleteShopifyProductMap(id: string): Promise<void> {
   const { error } = await supabase.from('shopify_product_map').delete().eq('id', id);
   if (error) throw new Error(`Failed to delete product map: ${error.message}`);
+}
+
+// ============================================
+// BUNDLES / SETS
+// ============================================
+//
+// A Shopify "Set" arrives as ONE line item but ships as several articles. These
+// definitions let the order import explode it into individual, scannable
+// positions instead of dropping it (which is what used to happen — an unmapped
+// variant was silently skipped and a Set-only order produced no shipment).
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformBundle(row: any): ShopifyBundleMap {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const components = (row.shopify_bundle_components || []) as any[];
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    shopifyProductId: Number(row.shopify_product_id),
+    shopifyVariantId: Number(row.shopify_variant_id),
+    shopifyProductTitle: row.shopify_product_title || undefined,
+    shopifyVariantTitle: row.shopify_variant_title || undefined,
+    shopifySku: row.shopify_sku || undefined,
+    shopifyBarcode: row.shopify_barcode || undefined,
+    isActive: row.is_active !== false,
+    notes: row.notes || undefined,
+    lastSyncedAt: row.last_synced_at || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    components: components
+      .map((c) => ({
+        id: c.id,
+        bundleId: c.bundle_id,
+        componentProductId: c.component_product_id,
+        componentBatchId: c.component_batch_id || undefined,
+        quantity: c.quantity ?? 1,
+        autoBatch: c.auto_batch !== false,
+        sortOrder: c.sort_order ?? 0,
+        productName: c.products?.name || undefined,
+        batchSerialNumber: c.product_batches?.serial_number || undefined,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+  };
+}
+
+export async function getShopifyBundles(): Promise<ShopifyBundleMap[]> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return [];
+
+  const { data, error } = await supabase
+    .from('shopify_bundle_map')
+    .select('*, shopify_bundle_components(*, products(name), product_batches(serial_number))')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('Failed to load bundles:', error); return []; }
+  return (data || []).map(transformBundle);
+}
+
+export interface ShopifyBundleComponentInput {
+  componentProductId: string;
+  componentBatchId?: string | null;
+  quantity: number;
+  autoBatch?: boolean;
+}
+
+/**
+ * Create or update a Set and replace its component list in one call.
+ * Component rows are replaced wholesale so the saved state always matches
+ * exactly what the editor showed.
+ */
+export async function saveShopifyBundle(input: {
+  id?: string;
+  shopifyProductId: number;
+  shopifyVariantId: number;
+  shopifyProductTitle?: string;
+  shopifyVariantTitle?: string;
+  shopifySku?: string;
+  shopifyBarcode?: string;
+  isActive?: boolean;
+  components: ShopifyBundleComponentInput[];
+}): Promise<string> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  const { data: bundle, error: bundleErr } = await supabase
+    .from('shopify_bundle_map')
+    .upsert({
+      tenant_id: tenantId,
+      shopify_product_id: input.shopifyProductId,
+      shopify_variant_id: input.shopifyVariantId,
+      shopify_product_title: input.shopifyProductTitle || null,
+      shopify_variant_title: input.shopifyVariantTitle || null,
+      shopify_sku: input.shopifySku || null,
+      shopify_barcode: input.shopifyBarcode || null,
+      is_active: input.isActive !== false,
+      last_synced_at: new Date().toISOString(),
+    }, { onConflict: 'tenant_id,shopify_variant_id' })
+    .select('id')
+    .single();
+
+  if (bundleErr) throw new Error(`Failed to save Set: ${bundleErr.message}`);
+
+  await supabase.from('shopify_bundle_components').delete().eq('bundle_id', bundle.id);
+
+  if (input.components.length > 0) {
+    const rows = input.components.map((c, i) => ({
+      tenant_id: tenantId,
+      bundle_id: bundle.id,
+      component_product_id: c.componentProductId,
+      component_batch_id: c.componentBatchId || null,
+      quantity: c.quantity || 1,
+      auto_batch: c.autoBatch !== false,
+      sort_order: i,
+    }));
+    const { error: compErr } = await supabase.from('shopify_bundle_components').insert(rows);
+    if (compErr) throw new Error(`Failed to save Set components: ${compErr.message}`);
+  }
+
+  return bundle.id as string;
+}
+
+export async function setShopifyBundleActive(id: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from('shopify_bundle_map').update({ is_active: isActive }).eq('id', id);
+  if (error) throw new Error(`Failed to update Set: ${error.message}`);
+}
+
+export async function deleteShopifyBundle(id: string): Promise<void> {
+  // Components cascade via the bundle_id FK.
+  const { error } = await supabase.from('shopify_bundle_map').delete().eq('id', id);
+  if (error) throw new Error(`Failed to delete Set: ${error.message}`);
+}
+
+/**
+ * Re-resolve an order's line items against the current mappings and add whatever
+ * is missing to its existing shipment. Only ever adds or increases, so picked
+ * quantities and existing stock reservations survive.
+ */
+export async function resyncShopifyOrder(orderName: string): Promise<{
+  shipmentNumber?: string;
+  itemsAdded?: number;
+  itemsUpdated?: number;
+  totalItems?: number;
+}> {
+  const res = await callEdgeFunction('resync_order', { orderName });
+  return (res.data || {}) as {
+    shipmentNumber?: string;
+    itemsAdded?: number;
+    itemsUpdated?: number;
+    totalItems?: number;
+  };
 }
 
 /**

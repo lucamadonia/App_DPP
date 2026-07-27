@@ -28,6 +28,11 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  buildShipmentItems,
+  loadShopifyMappings,
+  type ImportWarning,
+} from '../_shared/shopify-order-items.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -282,6 +287,42 @@ async function resolveAutoBatch(
 }
 
 /**
+ * Record import gaps in shopify_sync_log so the existing fetch_unmapped_variants
+ * action (and the Shopify integration UI) can surface them.
+ *
+ * Previously only the manual sync path logged unmapped variants; live webhook
+ * orders logged nothing, which is why the Set variants never showed up anywhere
+ * after they were created in Shopify.
+ *
+ * Best-effort: never let logging break order import.
+ */
+// deno-lint-ignore no-explicit-any
+async function logImportWarnings(
+  supabase: any,
+  tenantId: string,
+  orderRef: string,
+  warnings: ImportWarning[],
+) {
+  if (!warnings.length) return;
+  try {
+    await supabase.from('shopify_sync_log').insert({
+      tenant_id: tenantId,
+      sync_type: 'orders',
+      direction: 'import',
+      status: 'partial',
+      total_count: 1,
+      processed_count: 1,
+      failed_count: warnings.filter((w) => w.type === 'unmapped_variant').length,
+      errors: warnings.map((w) => ({ ...w, orderName: orderRef })),
+      trigger_type: 'webhook',
+      completed_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error(`Failed to log import warnings for ${orderRef}:`, err);
+  }
+}
+
+/**
  * Sum items' gross_weight × qty + smart packaging tare and persist both
  * total_weight_grams and packaging_type_id on wh_shipments.
  */
@@ -393,19 +434,15 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
     return;
   }
 
-  const { data: productMaps } = await supabase
-    .from('shopify_product_map')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('is_active', true);
+  // Loads shopify_product_map AND shopify_bundle_map/_components. Set variants
+  // resolve to their individual components; plain variants behave as before.
+  const { productMaps, variantMap, bundleMap } = await loadShopifyMappings(supabase, tenantId);
 
   const { data: locationMaps } = await supabase
     .from('shopify_location_map')
     .select('*')
     .eq('tenant_id', tenantId);
 
-  // deno-lint-ignore no-explicit-any
-  const variantMap = new Map<number, any>((productMaps || []).map((m: any) => [m.shopify_variant_id, m]));
   // deno-lint-ignore no-explicit-any
   const primaryLocation = (locationMaps || []).find((l: any) => l.is_primary);
 
@@ -417,42 +454,22 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
     ? await upsertShopifyCustomer(supabase, tenantId, order.customer, order)
     : null;
 
-  // deno-lint-ignore no-explicit-any
-  const items: any[] = [];
-  // deno-lint-ignore no-explicit-any
-  for (const li of (order.line_items || [])) {
-    const mapping = variantMap.get(li.variant_id);
-    if (!mapping) continue;
-    const locationId = primaryLocation?.location_id;
-    if (!locationId) continue;
+  const { items, warnings } = await buildShipmentItems(
+    supabase,
+    tenantId,
+    primaryLocation?.location_id || null,
+    order,
+    { variantMap, bundleMap },
+    resolveAutoBatch,
+  );
 
-    let batchId = mapping.batch_id || null;
-    let itemNote: string | null = null;
-    if (!batchId && mapping.auto_batch) {
-      const picked = await resolveAutoBatch(supabase, tenantId, mapping.product_id, locationId);
-      batchId = picked.batchId;
-      // If we fell back to a batch without stock, mark the item so the UI can
-      // show a warning badge — picker should manually confirm before pick.
-      if (batchId && !picked.stockBacked) {
-        itemNote = 'auto-batch ohne Stock-Check (FIFO-Fallback)';
-      }
-    }
-
-    items.push({
-      tenant_id: tenantId,
-      product_id: mapping.product_id,
-      batch_id: batchId,
-      location_id: locationId,
-      quantity: li.fulfillable_quantity || li.quantity,
-      unit_price: parseFloat(li.price) || null,
-      currency: order.currency || 'EUR',
-      notes: itemNote,
-    });
-  }
-
+  // NOTE: deliberately no `if (items.length === 0) return` here any more.
+  // That early exit is exactly why Shopify order #1054 (a Set-only order, and
+  // the Set variant was unmapped) never produced a shipment at all — the order
+  // vanished with nothing but a console.log. An empty draft carrying a visible
+  // warning is a work item; a missing shipment is invisible.
   if (items.length === 0) {
-    console.log(`No mapped variants found for ${orderRef}, skipping`);
-    return;
+    console.warn(`No line items resolved for ${orderRef} — creating shipment with warnings anyway`);
   }
 
   const addr = order.shipping_address || order.billing_address || {};
@@ -484,6 +501,7 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
       customer_id: customerRowId,
       priority: 'normal',
       notes: order.note || null,
+      import_warnings: warnings,
     })
     .select()
     .single();
@@ -493,12 +511,19 @@ async function handleOrderCreated(supabase: any, tenantId: string, order: any) {
     throw new Error(shipErr.message);
   }
 
-  const shipmentItems = items.map((i: Record<string, unknown>) => ({ ...i, shipment_id: shipment.id }));
-  const { error: itemsErr } = await supabase.from('wh_shipment_items').insert(shipmentItems);
-  if (itemsErr) {
-    console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
-    throw new Error(`wh_shipment_items insert failed: ${itemsErr.message}`);
+  if (items.length > 0) {
+    const shipmentItems = items.map((i) => ({ ...i, shipment_id: shipment.id }));
+    const { error: itemsErr } = await supabase.from('wh_shipment_items').insert(shipmentItems);
+    if (itemsErr) {
+      console.error(`Failed to insert shipment items for ${orderRef}:`, itemsErr.message);
+      throw new Error(`wh_shipment_items insert failed: ${itemsErr.message}`);
+    }
   }
+
+  // Surface import gaps in shopify_sync_log too. The manual sync path already
+  // collected unmapped variants there, but the webhook path wrote nothing — so
+  // the existing fetch_unmapped_variants action never saw live-order gaps.
+  await logImportWarnings(supabase, tenantId, orderRef, warnings);
 
   await updateShipmentWeight(supabase, tenantId, shipment.id);
 

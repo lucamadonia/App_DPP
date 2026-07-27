@@ -18,6 +18,7 @@ import type {
 import { DEFAULT_SHOPIFY_SYNC_CONFIG } from '@/types/shopify';
 import { ShopifyConnectionCard } from '@/components/warehouse/shopify/ShopifyConnectionCard';
 import { ShopifyProductMappingTable } from '@/components/warehouse/shopify/ShopifyProductMappingTable';
+import { ShopifyBundleManager } from '@/components/warehouse/shopify/ShopifyBundleManager';
 import { ShopifyLocationMappingTable } from '@/components/warehouse/shopify/ShopifyLocationMappingTable';
 import { ShopifySyncConfigCard } from '@/components/warehouse/shopify/ShopifySyncConfigCard';
 import { ShopifySyncDashboard } from '@/components/warehouse/shopify/ShopifySyncDashboard';
@@ -118,8 +119,11 @@ export function ShopifyIntegrationPage() {
           <ShopifyConnectionCard settings={settings} onRefresh={loadAll} />
         </TabsContent>
 
-        <TabsContent value="products">
+        <TabsContent value="products" className="space-y-4">
           <ShopifyProductMappingTable maps={productMaps} onRefresh={loadAll} />
+          {/* Sets are a 1:N mapping and live in their own table — a variant
+              belongs either here or in the 1:1 mapping above, never both. */}
+          <ShopifyBundleManager />
         </TabsContent>
 
         <TabsContent value="locations">

@@ -551,6 +551,32 @@ export const CARRIER_OPTIONS = [
   'Deutsche Post', 'TNT', 'DB Schenker',
 ] as const;
 
+/**
+ * A Shopify line item that could not be turned into a shipment position.
+ *
+ * These used to be dropped silently, which meant a Set-only order produced no
+ * shipment at all and simply disappeared. They are now recorded on the shipment
+ * so the gap is visible and actionable in the UI.
+ */
+export interface ShipmentImportWarning {
+  type:
+    | 'unmapped_variant'
+    | 'no_primary_location'
+    | 'bundle_without_components'
+    | 'auto_batch_fallback'
+    | 'bundle_component_no_batch';
+  shopifyVariantId?: number;
+  shopifyProductId?: number;
+  shopifyProductTitle?: string;
+  shopifyVariantTitle?: string;
+  sku?: string | null;
+  quantity?: number;
+  productId?: string;
+  message?: string;
+  /** ISO-8601 UTC */
+  detectedAt: string;
+}
+
 export interface WhShipment {
   id: string;
   tenantId: string;
@@ -602,6 +628,12 @@ export interface WhShipment {
   packagingTareGrams?: number;
   priority: ShipmentPriority;
   notes?: string;
+  /**
+   * Shopify line items the import could not turn into positions (unmapped
+   * variant, Set without components, …). Undefined when the import was clean.
+   * Deliberately separate from `notes`, which is user-editable free text.
+   */
+  importWarnings?: ShipmentImportWarning[];
   internalNotes?: string;
   carrierLabelData?: CarrierLabelData;
   packedBy?: string;
@@ -660,6 +692,13 @@ export interface WhShipmentItem {
   isGift: boolean;
   /** Optional text shown next to the gift badge (e.g. "Geburtstagsgeschenk", "Goodie zur Bestellung"). */
   giftNote?: string;
+  /**
+   * Shopify line item id this position was exploded from, when it came out of a
+   * Set. Two identical Sets in one order therefore stay distinguishable.
+   */
+  bundleGroup?: string;
+  /** Human-readable Set name, e.g. "Das Routine-System — Komplett-Set (Beige)". */
+  bundleLabel?: string;
   createdAt: string;
   // Joined
   productName?: string;
