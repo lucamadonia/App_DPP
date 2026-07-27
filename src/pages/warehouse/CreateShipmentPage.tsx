@@ -8,9 +8,12 @@ import {
   Plus, Trash2, Check, Search, User, Package, Truck, ClipboardCheck,
   ArrowLeft, ArrowRight, Mail, Phone, Pencil, CreditCard, FileText,
   Building2, Users, Warehouse, Sparkles, MapPin, Calendar,
-  Scale, Loader2, Zap, AlertTriangle, Globe,
+  Scale, Loader2, Zap, AlertTriangle, Globe, PackagePlus,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -26,6 +29,7 @@ import { getBatches } from '@/services/supabase/batches';
 import { getActiveLocations } from '@/services/supabase/wh-locations';
 import { getPackagingTypes } from '@/services/supabase/wh-packaging-types';
 import { getStockLevels } from '@/services/supabase/wh-stock';
+import { getShopifyBundles } from '@/services/supabase/shopify-integration';
 import { searchRecipients, type RecipientSearchResult } from '@/services/supabase/wh-contacts';
 import { validateAddress, normalizePostalCode } from '@/lib/address-validation';
 import { validateAddressWithDHL, type DHLAddressValidationResult } from '@/services/supabase/dhl-carrier';
@@ -38,6 +42,7 @@ import { SampleMetaFields } from '@/components/warehouse/SampleMetaFields';
 import type { WhLocation, WhShipmentItemInput, RecipientType, ShipmentPriority, SampleShipmentMeta } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
 import type { BatchListItem } from '@/types/product';
+import type { ShopifyBundleMap } from '@/types/shopify';
 import type { Country } from '@/types/database';
 
 /* -------------------------------------------------------------------------- */
@@ -300,6 +305,10 @@ export function CreateShipmentPage() {
 
   // Step 2: Items
   const [items, setItems] = useState<ItemRow[]>([]);
+  // Set definitions, so a manually created shipment can pull in a whole Set at
+  // once instead of retyping its components (Shopify orders resolve on import).
+  const [bundles, setBundles] = useState<ShopifyBundleMap[]>([]);
+  const [bundlePickerOpen, setBundlePickerOpen] = useState(false);
   const [products, setProducts] = useState<Array<{
     id: string;
     name: string;
@@ -395,6 +404,11 @@ export function CreateShipmentPage() {
       setLocations(l);
       setCountries(c);
     })();
+    // Best-effort: without the Shopify module there simply are no Sets, and the
+    // "Insert Set" button stays hidden.
+    getShopifyBundles()
+      .then(b => setBundles(b.filter(x => x.isActive && x.components.length > 0)))
+      .catch(() => setBundles([]));
   }, []);
 
   // ─── Auto-fill weight from item dimensions × weights ─────────
@@ -488,6 +502,46 @@ export function CreateShipmentPage() {
   };
 
   const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
+
+  /**
+   * Append every component of a Set as its own item row.
+   *
+   * Same principle as the Shopify import: a Set is never one position — it is
+   * the articles it consists of, each individually pickable and scannable.
+   * A pinned component_batch_id wins (that is what tells the beige wall panel
+   * from the rose one); otherwise the batch stays empty and is chosen like on
+   * any other manually added row.
+   */
+  const insertBundle = async (bundle: ShopifyBundleMap) => {
+    const defaultLocation = locations[0];
+    const rows: ItemRow[] = await Promise.all(bundle.components.map(async (c) => {
+      const batches = await getBatches(c.componentProductId).catch(() => [] as BatchListItem[]);
+      const batch = c.componentBatchId ? batches.find(b => b.id === c.componentBatchId) : undefined;
+      return {
+        productId: c.componentProductId,
+        productName: c.productName || products.find(p => p.id === c.componentProductId)?.name || '',
+        batchId: batch?.id || '',
+        batchSerial: batch?.serialNumber || '',
+        locationId: defaultLocation?.id || '',
+        locationName: defaultLocation?.name || '',
+        quantity: c.quantity,
+        maxAvailable: 0,
+        batchOptions: batches,
+        loadingBatches: false,
+      };
+    }));
+
+    // Availability for the rows that already have both batch and location.
+    await Promise.all(rows.map(async (r) => {
+      if (!r.batchId || !r.locationId) return;
+      const stock = await getStockLevels({ batchId: r.batchId, locationId: r.locationId }).catch(() => []);
+      r.maxAvailable = stock[0]?.quantityAvailable || 0;
+    }));
+
+    setItems(prev => [...prev, ...rows]);
+    setBundlePickerOpen(false);
+    toast.success(t('{{count}} component(s) added', { count: rows.length }));
+  };
 
   const updateItem = async (idx: number, field: string, value: string | number) => {
     const updated = [...items];
@@ -1277,14 +1331,61 @@ export function CreateShipmentPage() {
               })}
             </AnimatePresence>
 
-            <button
-              type="button"
-              onClick={addItem}
-              className="w-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 py-4 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all flex items-center justify-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {t('Add Item')}
-            </button>
+            <div className={bundles.length > 0 ? 'grid gap-3 sm:grid-cols-2' : ''}>
+              <button
+                type="button"
+                onClick={addItem}
+                className="w-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 py-4 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                {t('Add Item')}
+              </button>
+
+              {/* Only offered when Sets are actually defined. */}
+              {bundles.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setBundlePickerOpen(true)}
+                  className="w-full rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-800 py-4 text-sm font-semibold text-amber-700 dark:text-amber-400 hover:border-amber-500 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  {t('Insert Set')}
+                </button>
+              )}
+            </div>
+
+            <Dialog open={bundlePickerOpen} onOpenChange={setBundlePickerOpen}>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{t('Insert Set')}</DialogTitle>
+                  <DialogDescription>
+                    {t('All components are added as separate positions, so each one can be picked and scanned individually.')}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {bundles.map(b => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => void insertBundle(b)}
+                      className="w-full text-left rounded-xl border p-3 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
+                    >
+                      <div className="font-medium text-sm break-words">{b.shopifyProductTitle}</div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        {b.shopifyVariantTitle} · {b.components.length} {t('Components')}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {b.components.map(c => (
+                          <span key={c.id} className="text-[11px] rounded bg-muted px-1.5 py-0.5">
+                            {c.quantity}× {c.productName}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
           </Section>
 
           {/* Live totals summary — visible while building the item list */}

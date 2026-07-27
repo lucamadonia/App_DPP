@@ -1809,5 +1809,8 @@
   "Re-import from Shopify": "Erneut aus Shopify importieren",
   "Open Shopify mapping": "Shopify-Zuordnung öffnen",
   "Re-import complete": "Erneuter Import abgeschlossen",
-  "{{added}} position(s) added, {{updated}} updated": "{{added}} Position(en) ergänzt, {{updated}} aktualisiert"
+  "{{added}} position(s) added, {{updated}} updated": "{{added}} Position(en) ergänzt, {{updated}} aktualisiert",
+  "Insert Set": "Set einfügen",
+  "All components are added as separate positions, so each one can be picked and scanned individually.": "Alle Komponenten werden als eigene Positionen angelegt, damit jede einzeln kommissioniert und gescannt werden kann.",
+  "{{count}} component(s) added": "{{count}} Komponente(n) hinzugefügt"
 }
