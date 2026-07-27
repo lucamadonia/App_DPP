@@ -1809,5 +1809,8 @@
   "Re-import from Shopify": "Re-import from Shopify",
   "Open Shopify mapping": "Open Shopify mapping",
   "Re-import complete": "Re-import complete",
-  "{{added}} position(s) added, {{updated}} updated": "{{added}} position(s) added, {{updated}} updated"
+  "{{added}} position(s) added, {{updated}} updated": "{{added}} position(s) added, {{updated}} updated",
+  "Insert Set": "Insert Set",
+  "All components are added as separate positions, so each one can be picked and scanned individually.": "All components are added as separate positions, so each one can be picked and scanned individually.",
+  "{{count}} component(s) added": "{{count}} component(s) added"
 }
