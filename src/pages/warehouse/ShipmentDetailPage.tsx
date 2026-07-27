@@ -6,6 +6,7 @@ import {
   ArrowLeft, Package, Truck, User, MapPin, ExternalLink, Copy,
   Check, X, Pencil, FileText, Clock, Weight, DollarSign,
   AlertTriangle, Camera, Gift, RotateCcw, Heart, Link as LinkIcon, Send, Merge, Mail,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,6 +149,7 @@ export function ShipmentDetailPage() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
 
   // Home country (DHL shipper). Used to detect international shipments and
   // ballpark postage. Falls back to DE when DHL isn't configured.
@@ -184,6 +186,31 @@ export function ShipmentDetailPage() {
     if (s?.sampleMeta) {
       const posts = await getContentPosts({ shipmentId: id });
       setContentPosts(posts);
+    }
+  };
+
+  /**
+   * Re-resolve the Shopify order's line items against the current mappings and
+   * add whatever is missing. A plain re-import cannot do this: shopify_order_id
+   * is unique and the import bails out once a shipment exists.
+   */
+  const handleResyncOrder = async () => {
+    if (!shipment?.orderReference) return;
+    setResyncing(true);
+    try {
+      const { resyncShopifyOrder } = await import('@/services/supabase/shopify-integration');
+      const res = await resyncShopifyOrder(shipment.orderReference.replace('Shopify ', ''));
+      toast.success(t('Re-import complete'), {
+        description: t('{{added}} position(s) added, {{updated}} updated', {
+          added: res.itemsAdded ?? 0,
+          updated: res.itemsUpdated ?? 0,
+        }),
+      });
+      await reloadShipment();
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setResyncing(false);
     }
   };
 
@@ -1059,6 +1086,45 @@ export function ShipmentDetailPage() {
 
       {/* Tab: Items */}
       {activeTab === 'items' && (
+        <>
+        {/* Line items the Shopify import could not turn into positions. These
+            used to be dropped silently, so an order could look complete (or not
+            appear at all) while articles were missing from the parcel. */}
+        {shipment.importWarnings && shipment.importWarnings.length > 0 && (
+          <Card className="mb-4 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-700 dark:text-amber-300 mt-0.5 shrink-0" />
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    {t('{{count}} line item(s) could not be mapped', { count: shipment.importWarnings.length })}
+                  </p>
+                  <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
+                    {shipment.importWarnings.map((w, i) => (
+                      <li key={i}>
+                        {w.quantity ? `${w.quantity}× ` : ''}
+                        {w.shopifyProductTitle || t('Unknown product')}
+                        {w.shopifyVariantTitle ? ` (${w.shopifyVariantTitle})` : ''}
+                        {w.message ? ` — ${w.message}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => void handleResyncOrder()} disabled={resyncing}>
+                  {resyncing
+                    ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    : <RotateCcw className="h-3.5 w-3.5 mr-1" />}
+                  {t('Re-import from Shopify')}
+                </Button>
+                <Button size="sm" variant="ghost" asChild>
+                  <Link to="/warehouse/integrations/shopify">{t('Open Shopify mapping')}</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -1117,6 +1183,11 @@ export function ShipmentDetailPage() {
                                 {item.isGift && (
                                   <Badge variant="outline" className="text-[10px] gap-1 text-pink-700 border-pink-300 bg-pink-50 dark:bg-pink-900/20">
                                     <Gift className="h-3 w-3" /> {t('Beigabe')}
+                                  </Badge>
+                                )}
+                                {item.bundleLabel && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 text-amber-800 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200">
+                                    <Package className="h-3 w-3" /> {item.bundleLabel}
                                   </Badge>
                                 )}
                               </div>
@@ -1186,6 +1257,7 @@ export function ShipmentDetailPage() {
             </div>
           </CardContent>
         </Card>
+        </>
       )}
 
       {/* Tab: Content (influencer shipments) */}

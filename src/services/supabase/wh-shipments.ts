@@ -92,6 +92,11 @@ function transformShipment(row: any): WhShipment {
     packagingTareGrams: row.wh_packaging_types?.tare_weight_grams ?? undefined,
     priority: row.priority || 'normal',
     notes: row.notes || undefined,
+    // Line items the Shopify import could not resolve. Kept out of `notes`
+    // because that column is user-editable and already carries the order note.
+    importWarnings: Array.isArray(row.import_warnings) && row.import_warnings.length
+      ? row.import_warnings
+      : undefined,
     internalNotes: row.internal_notes || undefined,
     carrierLabelData: row.carrier_label_data || undefined,
     packedBy: row.packed_by || undefined,
@@ -131,6 +136,10 @@ function transformShipmentItem(row: any): WhShipmentItem {
     notes: row.notes || undefined,
     isGift: !!row.is_gift,
     giftNote: row.gift_note || undefined,
+    // Set provenance — populated when a Shopify bundle line item was exploded
+    // into its individual positions on import.
+    bundleGroup: row.bundle_group || undefined,
+    bundleLabel: row.bundle_label || undefined,
     createdAt: row.created_at,
     productName: row.products?.name || undefined,
     batchSerialNumber: row.product_batches?.serial_number || undefined,

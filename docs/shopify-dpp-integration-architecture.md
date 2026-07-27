@@ -160,6 +160,49 @@ Stand: 2026-04-22, nach Implementierung von Phase 0–4.
 └──────────────────────────────────────────────┘
 ```
 
+### 2b. Sets / Bundles (seit 2026-07-27)
+
+Shopify liefert ein "Set" als **eine** Line-Item-Zeile. Die drei Fambliss-Sets sind
+**keine nativen Shopify-Bundles** (`productVariantComponents` leer,
+`requiresComponents=false`, kein SKU/Barcode, `tracked=false`) — es gibt also
+nichts, woraus Shopify die Bestandteile ableiten könnte.
+
+Auflösung pro Line Item in `_shared/shopify-order-items.ts::resolveLineItem()`,
+genutzt von **beiden** Import-Pfaden:
+
+```
+1. shopify_bundle_map  → eine wh_shipment_items-Zeile PRO KOMPONENTE
+                         quantity = Komponente × Line-Item-Menge
+                         bundle_group = Shopify-Line-Item-ID
+                         bundle_label = "<Set-Titel> (<Variante>)"
+                         unit_price   = Line-Total anteilig (Cent-genau, Rest
+                                        auf die erste Komponente)
+2. shopify_product_map → eine Zeile (unverändertes 1:1-Verhalten)
+3. keins von beiden    → 0 Zeilen + ImportWarning (NIE stilles Verwerfen)
+```
+
+**Wichtig — vorher wurden unauflösbare Zeilen kommentarlos verworfen**
+(`if (!mapping) continue;`), und bei 0 auflösbaren Zeilen wurde gar kein
+Versandauftrag angelegt. Genau so verschwand Order #1054 vollständig und #1055
+kam mit einer statt vier Positionen an. Jetzt entsteht der Versandauftrag immer,
+und die Lücke steht in `wh_shipments.import_warnings` + `shopify_sync_log`.
+
+Set-Komponente und derselbe Artikel als Einzelposition bleiben **getrennte
+Zeilen**, damit der Packer die Set-Zugehörigkeit sieht. Damit beide Zeilen
+scanbar sind, wählt `PickPackConfirmDialog::handleScan` unter allen GTIN-Treffern
+die erste **noch nicht vollständig bestätigte** Zeile (vorher `items.find()` →
+immer die erste, alle weiteren Zeilen unscannbar).
+
+Pflege im UI: `/warehouse/integrations/shopify` → Tab **Product Mapping** →
+Karte *Sets / Bundles*. Eine Variante gehört entweder in `shopify_product_map`
+**oder** in `shopify_bundle_map`, nie in beide.
+
+Nachträgliche Reparatur einer unvollständig importierten Bestellung:
+Action `resync_order` (Button im Warnbanner der Sendung). Ein normaler
+Re-Import hilft nicht — `shopify_order_id` ist UNIQUE und beide Import-Pfade
+steigen aus, sobald ein Versandauftrag existiert. `resync_order` ergänzt nur,
+löscht nie, und ist auf `draft`/`picking`/`packed` beschränkt.
+
 **Einstieg in diesen Flow manuell, ohne Webhook** (historische Orders oder wenn Webhooks noch nicht registriert sind):
 
 ```
@@ -309,6 +352,25 @@ rh_returns
 
 shopify_product_map
 └─ auto_batch                BOOLEAN                       ← FEFO-Auto-Selection bei Import
+
+shopify_bundle_map           (NEW 2026-07-27 — Sets)
+├─ shopify_variant_id        BIGINT  UNIQUE(tenant_id,…)   ← die Set-Variante
+├─ shopify_product_title / shopify_variant_title  TEXT     ← Anzeige + bundle_label
+└─ is_active                 BOOLEAN                       ← Kill-Switch pro Set
+
+shopify_bundle_components    (NEW 2026-07-27)
+├─ bundle_id                 UUID → shopify_bundle_map     ON DELETE CASCADE
+├─ component_product_id      UUID → products               ON DELETE RESTRICT
+├─ component_batch_id        UUID → product_batches        ← löst Beige/Rosa
+├─ quantity, auto_batch, sort_order
+└─ UNIQUE(bundle_id, component_product_id, component_batch_id)
+
+wh_shipments
+└─ import_warnings           JSONB DEFAULT '[]'            ← nicht auflösbare Zeilen
+
+wh_shipment_items
+├─ bundle_group              TEXT                          ← Shopify-Line-Item-ID
+└─ bundle_label              TEXT                          ← z. B. "Rundum-Set (Beige)"
 
 shopify_sync_log
 └─ metadata                  JSONB                         ← Cursor-State für Recovery

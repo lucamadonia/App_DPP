@@ -98,6 +98,49 @@ export interface ShopifyProductMap {
   batchSerialNumber?: string;
 }
 
+/**
+ * A Shopify variant that is a Set / bundle: it ships as several physical
+ * articles even though Shopify sends it as one line item.
+ *
+ * Kept separate from ShopifyProductMap on purpose — that table is 1 variant to
+ * 1 product and also drives the inventory export, which a 1:N relaxation would
+ * break. A variant should appear in exactly one of the two tables.
+ */
+export interface ShopifyBundleMap {
+  id: string;
+  tenantId: string;
+  shopifyProductId: number;
+  shopifyVariantId: number;
+  shopifyProductTitle?: string;
+  shopifyVariantTitle?: string;
+  shopifySku?: string;
+  shopifyBarcode?: string;
+  isActive: boolean;
+  notes?: string;
+  lastSyncedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  components: ShopifyBundleComponent[];
+}
+
+export interface ShopifyBundleComponent {
+  id: string;
+  bundleId: string;
+  componentProductId: string;
+  /**
+   * Pinned batch. Required whenever the batch carries the variant, e.g. the
+   * Magnetwand is one product with a beige and a rose batch and the Set's
+   * colour decides which one ships. Null means "resolve by FEFO at import".
+   */
+  componentBatchId?: string;
+  quantity: number;
+  autoBatch: boolean;
+  sortOrder: number;
+  // Joined
+  productName?: string;
+  batchSerialNumber?: string;
+}
+
 export interface ShopifyLocationMap {
   id: string;
   tenantId: string;
@@ -294,7 +337,10 @@ export type ShopifySyncAction =
   | 'register_webhooks'
   | 'list_webhooks'
   | 'delete_webhooks'
-  | 'test_webhook';
+  | 'test_webhook'
+  // Re-resolve one order's line items against the current mappings and top up
+  // the existing shipment (a plain re-import is a no-op once a shipment exists).
+  | 'resync_order';
 
 export interface ShopifySyncRequest {
   action: ShopifySyncAction;

@@ -7,9 +7,23 @@
  * Usage:
  *   node scripts/deploy-edge-function.mjs <slug>
  *   node scripts/deploy-edge-function.mjs shopify-sync
+ *   node scripts/deploy-edge-function.mjs shopify-webhook --no-verify-jwt
  *
  * Reads SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_REF from .env.
  * The function source is read from supabase/functions/<slug>/.
+ *
+ * Two behaviours worth knowing about:
+ *
+ * 1. verify_jwt is PRESERVED from the already-deployed function unless you pass
+ *    --verify-jwt / --no-verify-jwt. It used to be hardcoded to true, which
+ *    silently broke public functions on redeploy — shopify-webhook, send-email,
+ *    stripe-webhook and auth-email-hook all run with verify_jwt=false and do
+ *    their own signature verification.
+ *
+ * 2. If any source file imports from '../_shared/', the upload is re-based to
+ *    supabase/functions/ so the shared module travels with the function and the
+ *    relative import still resolves. Without this the shared file is never
+ *    uploaded and the function fails to boot.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -60,7 +74,8 @@ async function main() {
     process.exit(2);
   }
 
-  const fnDir = join('supabase', 'functions', slug);
+  const functionsRoot = join('supabase', 'functions');
+  const fnDir = join(functionsRoot, slug);
   let files;
   try {
     files = listFiles(fnDir);
@@ -73,14 +88,49 @@ async function main() {
     process.exit(2);
   }
 
+  // If the function imports from ../_shared/, re-base the upload one level up so
+  // the shared module is included and the relative import still resolves.
+  const usesShared = files.some(f =>
+    /\.(ts|js|mjs)$/.test(f.rel) && readFileSync(f.path, 'utf8').includes('../_shared/')
+  );
+  if (usesShared) {
+    files = [
+      ...listFiles(fnDir, functionsRoot),
+      ...listFiles(join(functionsRoot, '_shared'), functionsRoot),
+    ];
+    console.log('  (function imports ../_shared/ — including shared modules in the upload)');
+  }
+
   // Find entrypoint — prefer index.ts at the function root
-  const entry = files.find(f => f.rel === 'index.ts') || files[0];
+  const entryRel = usesShared ? `${slug}/index.ts` : 'index.ts';
+  const entry = files.find(f => f.rel === entryRel) || files[0];
+
+  // Preserve verify_jwt from the deployed function unless explicitly overridden.
+  // Hardcoding true here silently breaks every public function on redeploy.
+  let verifyJwt;
+  if (process.argv.includes('--no-verify-jwt')) verifyJwt = false;
+  else if (process.argv.includes('--verify-jwt')) verifyJwt = true;
+  else {
+    try {
+      const cur = await fetch(
+        `https://api.supabase.com/v1/projects/${ref}/functions/${slug}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (cur.ok) verifyJwt = (await cur.json()).verify_jwt;
+    } catch { /* fall through to the default below */ }
+    if (verifyJwt === undefined) {
+      verifyJwt = true;
+      console.log('  (no deployed version found — defaulting to verify_jwt=true)');
+    } else {
+      console.log(`  (preserving verify_jwt=${verifyJwt} from the deployed version)`);
+    }
+  }
 
   // Build multipart body manually (Node 18+ has FormData)
   const form = new FormData();
   form.append('metadata', JSON.stringify({
     name: slug,
-    verify_jwt: true,
+    verify_jwt: verifyJwt,
     entrypoint_path: entry.rel,
   }));
   for (const f of files) {
