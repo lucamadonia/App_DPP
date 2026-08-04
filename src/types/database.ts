@@ -254,6 +254,12 @@ export interface WarehouseSettings {
     requireAtPicking: boolean;
     /** Require per-item scan/confirm dialog before transitioning to `packed`. Default: true. */
     requireAtPacking: boolean;
+    /**
+     * Render a position with quantity N as N individually tickable rows instead
+     * of one row with a counter. Default: true — a packer ticks one line per
+     * item that goes into the box, which is what stops "only 1 of 2 shipped".
+     */
+    explodeQuantities?: boolean;
   };
 }
 

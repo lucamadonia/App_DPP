@@ -38,7 +38,10 @@ interface QuickActionDef {
 
 const QUICK_ACTIONS: Partial<Record<ShipmentStatus, QuickActionDef>> = {
   draft: { labelKey: 'Start picking', icon: PackageSearch, kind: 'status', nextStatus: 'picking' },
-  picking: { labelKey: 'Mark as packed', icon: Package, kind: 'status', nextStatus: 'packed' },
+  // 'navigate', nicht 'status': ein direkter Statuswechsel wuerde den
+  // Pick/Pack-Dialog ueberspringen und die Sendung mit quantity_packed = 0 auf
+  // 'packed' setzen - niemand haette die Positionen je gezaehlt.
+  picking: { labelKey: 'Mark as packed', icon: Package, kind: 'navigate' },
   packed: { labelKey: 'Create label', icon: Tag, kind: 'navigate' },
   label_created: { labelKey: 'Mark as shipped', icon: Send, kind: 'status', nextStatus: 'shipped' },
   shipped: { labelKey: 'Track', icon: ExternalLink, kind: 'track' },
@@ -96,6 +99,13 @@ export function ShipmentQuickAction({ shipment, onChanged, size = 'table' }: Shi
     } catch (err) {
       if (err instanceof ShipmentStatusError && err.code === 'CARRIER_REQUIRED') {
         toast.error(t('Set a carrier first (open the shipment)'));
+      } else if (err instanceof ShipmentStatusError && err.code === 'QUANTITY_INCOMPLETE') {
+        // The part-shipment confirmation lives on the detail page — sending from
+        // the list would mean acknowledging a gap the user cannot even see here.
+        toast.error(t('Fewer units packed than ordered'), {
+          description: t('Open the shipment to review and confirm.'),
+          action: { label: t('Open'), onClick: () => navigate(`/warehouse/shipments/${shipment.id}`) },
+        });
       } else {
         toast.error(err instanceof Error ? err.message : String(err));
       }

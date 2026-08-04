@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { confirmItemPick, confirmItemPack } from '@/services/supabase/wh-shipments';
 import type { WhShipmentItem } from '@/types/warehouse';
 import { AddShipmentItemDialog } from '@/components/warehouse/AddShipmentItemDialog';
+import { QuantityStepper } from '@/components/warehouse/QuantityStepper';
 import { parseBarcode } from '@/lib/barcode-parser';
 import { getVariantColorHex } from '@/lib/variant-color';
 import { toast } from 'sonner';
@@ -30,6 +31,12 @@ interface Props {
   sourceLocationId?: string;
   /** Called after a new position was added so the parent can refetch items. */
   onItemsChanged?: () => void;
+  /**
+   * Render a position with quantity N as N individually tickable rows.
+   * Comes from the tenant setting; defaults to true because ticking one line
+   * per item is what prevents "only 1 of 2 actually packed".
+   */
+  explodeQuantities?: boolean;
 }
 
 /**
@@ -39,7 +46,7 @@ interface Props {
  * onConfirmed() ausgelöst — typischerweise ruft dann die parent
  * updateShipmentStatus().
  */
-export function PickPackConfirmDialog({ open, onOpenChange, mode, items, productBarcodeMap, onConfirmed, shipmentId, sourceLocationId, onItemsChanged }: Props) {
+export function PickPackConfirmDialog({ open, onOpenChange, mode, items, productBarcodeMap, onConfirmed, shipmentId, sourceLocationId, onItemsChanged, explodeQuantities = true }: Props) {
   const { t } = useTranslation('warehouse');
   // Map item.id → confirmed quantity
   const [confirmed, setConfirmed] = useState<Record<string, number>>({});
@@ -74,6 +81,11 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
       ...c,
       [item.id]: (c[item.id] || 0) >= item.quantity ? 0 : item.quantity,
     }));
+  }
+
+  /** Set the confirmed count of a position to an exact number of units. */
+  function setItemQty(item: WhShipmentItem, value: number) {
+    setConfirmed(c => ({ ...c, [item.id]: Math.max(0, Math.min(item.quantity, value)) }));
   }
 
   function incrementItem(item: WhShipmentItem) {
@@ -223,8 +235,9 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
                     }
                   >
                     {scanAlert.kind === 'duplicate'
-                      ? t('{{name}} steht nur 1× auf der Sendung und wurde bereits bestätigt.', {
+                      ? t('{{name}} ist mit {{total}}× vollständig bestätigt.', {
                           name: scanAlert.matchedItem.productName || '?',
+                          total: scanAlert.matchedItem.quantity,
                         })
                       : t('Kein Produkt mit GTIN {{gtin}} in dieser Sendung.', {
                           gtin: scanAlert.scannedCode,
@@ -294,17 +307,39 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
           {items.map(item => {
             const qty = confirmed[item.id] || 0;
             const full = qty >= item.quantity;
+            const isMulti = item.quantity > 1;
             return (
               <div key={item.id} className={`p-3 ${full ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
                 <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={full}
-                    onCheckedChange={() => toggleFullItem(item)}
-                    aria-label={t('Vollständig bestätigen')}
-                    className="mt-1 shrink-0"
-                  />
+                  {/* Multi-quantity positions get NO one-click tick — that single
+                      click is exactly how "2 ordered, 1 shipped" happened. They
+                      are confirmed unit by unit below. */}
+                  {isMulti ? (
+                    <span
+                      aria-hidden="true"
+                      className={`mt-0.5 shrink-0 inline-flex h-6 min-w-6 px-1.5 items-center justify-center rounded-md text-xs font-bold tabular-nums ${
+                        full
+                          ? 'bg-green-600 text-white'
+                          : 'bg-amber-500 text-white'
+                      }`}
+                    >
+                      {item.quantity}×
+                    </span>
+                  ) : (
+                    <Checkbox
+                      checked={full}
+                      onCheckedChange={() => toggleFullItem(item)}
+                      aria-label={t('Vollständig bestätigen')}
+                      className="mt-1 shrink-0"
+                    />
+                  )}
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="font-medium text-sm leading-tight break-words flex flex-wrap items-center gap-1.5">
+                      {isMulti && (
+                        <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-bold tabular-nums">
+                          {t('{{count}}× benötigt', { count: item.quantity })}
+                        </Badge>
+                      )}
                       {item.productName || item.productId.slice(0, 8)}
                       {item.variantTitle && (() => {
                         const hex = getVariantColorHex(item.variantTitle);
@@ -350,11 +385,53 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
                       <span className="text-muted-foreground">/</span>
                       <span className="font-semibold">{item.quantity}</span>
                     </div>
-                    {!full && qty < item.quantity && (
+                    {!isMulti && !full && (
                       <Button size="sm" variant="ghost" onClick={() => incrementItem(item)} className="h-7 px-2">+1</Button>
                     )}
                   </div>
                 </div>
+
+                {/* Unit-by-unit confirmation for multi-quantity positions. */}
+                {isMulti && explodeQuantities && (
+                  <div className="mt-2 ml-9 space-y-1">
+                    {Array.from({ length: item.quantity }, (_, i) => {
+                      const done = qty > i;
+                      return (
+                        <label
+                          key={i}
+                          className={`flex items-center gap-2 rounded-md border px-2 py-2 cursor-pointer text-sm ${
+                            done
+                              ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
+                              : 'border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10'
+                          }`}
+                        >
+                          <Checkbox
+                            checked={done}
+                            // Tick up to this unit, or untick this one and all after it.
+                            onCheckedChange={() => setItemQty(item, done ? i : i + 1)}
+                            aria-label={t('Stück {{n}} von {{total}}', { n: i + 1, total: item.quantity })}
+                          />
+                          <span className={done ? 'text-green-800 dark:text-green-200' : 'text-amber-900 dark:text-amber-200'}>
+                            {t('Stück {{n}} von {{total}}', { n: i + 1, total: item.quantity })}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isMulti && !explodeQuantities && (
+                  <div className="mt-2 ml-9">
+                    <QuantityStepper
+                      value={qty}
+                      onChange={(v) => setItemQty(item, v)}
+                      min={0}
+                      max={item.quantity}
+                      variant={full ? 'green' : 'orange'}
+                      label={t('Bestätigte Stück')}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -378,9 +455,14 @@ export function PickPackConfirmDialog({ open, onOpenChange, mode, items, product
           <span className="text-muted-foreground">
             {t('Gesamt')}: <span className="font-semibold tabular-nums">{totalConfirmedQty} / {totalRequiredQty}</span>
           </span>
-          {allConfirmed && (
+          {allConfirmed ? (
             <span className="flex items-center gap-1 text-green-700 font-medium">
               <Check className="h-4 w-4" /> {t('Alle Positionen vollständig')}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-amber-700 dark:text-amber-400 font-medium">
+              <AlertTriangle className="h-4 w-4" />
+              {t('Noch {{count}} Stück offen', { count: totalRequiredQty - totalConfirmedQty })}
             </span>
           )}
         </div>

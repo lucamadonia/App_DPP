@@ -9,6 +9,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -150,6 +153,12 @@ export function ShipmentDetailPage() {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [resyncing, setResyncing] = useState(false);
+  // Part-shipment confirmation: set when updateShipmentStatus reports that
+  // fewer units were packed than ordered.
+  const [partialShortfall, setPartialShortfall] = useState<
+    Array<{ productName: string; packed: number; required: number }> | null
+  >(null);
+  const [partialStatus, setPartialStatus] = useState<ShipmentStatus | null>(null);
 
   // Home country (DHL shipper). Used to detect international shipments and
   // ballpark postage. Falls back to DE when DHL isn't configured.
@@ -263,11 +272,11 @@ export function ShipmentDetailPage() {
     return () => { cancelled = true; };
   }, [items]);
 
-  const applyStatusChange = async (newStatus: ShipmentStatus) => {
+  const applyStatusChange = async (newStatus: ShipmentStatus, allowPartial = false) => {
     if (!id) return;
     setStatusUpdating(true);
     try {
-      const updated = await updateShipmentStatus(id, newStatus);
+      const updated = await updateShipmentStatus(id, newStatus, { allowPartial });
       setShipment(updated);
       await reloadShipment();
       toast.success(t('Status updated successfully'));
@@ -278,6 +287,10 @@ export function ShipmentDetailPage() {
           description: t('Bitte zuerst einen Spediteur in der Versand-Karte auswählen.'),
           action: { label: t('Spediteur setzen'), onClick: () => startEditing('shipping') },
         });
+      } else if (err instanceof ShipmentStatusError && err.code === 'QUANTITY_INCOMPLETE') {
+        // Part shipments are allowed, but must be acknowledged explicitly.
+        setPartialShortfall(err.shortfall || []);
+        setPartialStatus(newStatus);
       } else if (err instanceof ShipmentStatusError && err.code === 'STATUS_LOCKED') {
         toast.error(t('Status gelockt — bitte erst zurück auf Verpackt'));
       } else {
@@ -310,8 +323,13 @@ export function ShipmentDetailPage() {
 
     // For picking and packed, require item-by-item confirmation first — unless
     // the tenant has explicitly disabled the dialog for that step in settings.
+    //
+    // The opt-out never applies when a position needs more than one unit:
+    // skipping the dialog writes the full quantity blindly, which is exactly how
+    // "2 ordered, 1 shipped" slipped through unnoticed.
+    const hasMultiQty = items.some(i => i.quantity > 1);
     if (newStatus === 'picking' && items.length > 0) {
-      if (whSettings.pickPackConfirm?.requireAtPicking ?? true) {
+      if ((whSettings.pickPackConfirm?.requireAtPicking ?? true) || hasMultiQty) {
         setPendingStatus(newStatus);
         setPickDialogOpen(true);
         return;
@@ -326,7 +344,7 @@ export function ShipmentDetailPage() {
       return;
     }
     if (newStatus === 'packed' && items.length > 0) {
-      if (whSettings.pickPackConfirm?.requireAtPacking ?? true) {
+      if ((whSettings.pickPackConfirm?.requireAtPacking ?? true) || hasMultiQty) {
         setPendingStatus(newStatus);
         setPackDialogOpen(true);
         return;
@@ -1207,7 +1225,18 @@ export function ShipmentDetailPage() {
                               <Link to={`/warehouse/locations/${item.locationId}`} className="hover:underline">{item.locationName}</Link>
                             ) : '—'}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">{item.quantity}</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {item.quantity > 1 ? (
+                              // Visible on phones too — the pick/pack progress
+                              // columns next to it are hidden below `sm`, which is
+                              // exactly the device a packer uses.
+                              <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-bold tabular-nums">
+                                {item.quantity}×
+                              </Badge>
+                            ) : (
+                              item.quantity
+                            )}
+                          </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <div className="flex items-center gap-2 min-w-[80px]">
                               <Progress value={pickPct} className="h-1.5 flex-1" />
@@ -1468,6 +1497,47 @@ export function ShipmentDetailPage() {
         onSaved={reloadShipment}
       />
 
+      {/* Part shipment: fewer units packed than ordered. Deliberate under-
+          delivery stays possible, an oversight does not slip through silently. */}
+      <Dialog open={!!partialShortfall} onOpenChange={(v) => { if (!v) { setPartialShortfall(null); setPartialStatus(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              {t('Weniger verpackt als bestellt')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('Diese Positionen sind unvollständig. Beim Versenden wird nur die verpackte Menge abgebucht, der Rest geht zurück in den Bestand.')}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-1.5 text-sm">
+            {(partialShortfall || []).map((sf, i) => (
+              <li key={i} className="flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+                <span className="min-w-0 break-words">{sf.productName}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-amber-900 dark:text-amber-200">
+                  {sf.packed} / {sf.required}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPartialShortfall(null); setPartialStatus(null); }}>
+              {t('Cancel', { ns: 'common' })}
+            </Button>
+            <Button
+              onClick={() => {
+                const next = partialStatus;
+                setPartialShortfall(null);
+                setPartialStatus(null);
+                if (next) void applyStatusChange(next, true);
+              }}
+            >
+              {t('Trotzdem versenden')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <PickPackConfirmDialog
         open={pickDialogOpen}
         onOpenChange={setPickDialogOpen}
@@ -1476,6 +1546,7 @@ export function ShipmentDetailPage() {
         productBarcodeMap={barcodeMap}
         shipmentId={id}
         sourceLocationId={shipment?.sourceLocationId}
+        explodeQuantities={whSettings.pickPackConfirm?.explodeQuantities ?? true}
         onItemsChanged={reloadShipment}
         onConfirmed={() => {
           if (pendingStatus) applyStatusChange(pendingStatus);
@@ -1490,6 +1561,7 @@ export function ShipmentDetailPage() {
         productBarcodeMap={barcodeMap}
         shipmentId={id}
         sourceLocationId={shipment?.sourceLocationId}
+        explodeQuantities={whSettings.pickPackConfirm?.explodeQuantities ?? true}
         onItemsChanged={reloadShipment}
         onConfirmed={() => {
           if (pendingStatus) applyStatusChange(pendingStatus);
