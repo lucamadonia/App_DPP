@@ -22,7 +22,7 @@ export function WarehouseSettingsPage() {
   const limits = billing.entitlements?.limits;
 
   const [whSettings, setWhSettings] = useState<WarehouseSettings>(DEFAULT_WAREHOUSE_SETTINGS);
-  const [savingToggle, setSavingToggle] = useState<'picking' | 'packing' | null>(null);
+  const [savingToggle, setSavingToggle] = useState<'picking' | 'packing' | 'explode' | null>(null);
 
   useEffect(() => {
     getWarehouseSettings().then(setWhSettings).catch(() => {
@@ -30,13 +30,14 @@ export function WarehouseSettingsPage() {
     });
   }, []);
 
-  async function toggleConfirm(which: 'picking' | 'packing', value: boolean) {
+  async function toggleConfirm(which: 'picking' | 'packing' | 'explode', value: boolean) {
     const prev = whSettings;
     const next: WarehouseSettings = {
       ...whSettings,
       pickPackConfirm: {
         requireAtPicking: which === 'picking' ? value : whSettings.pickPackConfirm?.requireAtPicking ?? true,
         requireAtPacking: which === 'packing' ? value : whSettings.pickPackConfirm?.requireAtPacking ?? true,
+        explodeQuantities: which === 'explode' ? value : whSettings.pickPackConfirm?.explodeQuantities ?? true,
       },
     };
     setWhSettings(next);
@@ -193,6 +194,21 @@ export function WarehouseSettingsPage() {
                 onCheckedChange={(v) => toggleConfirm('packing', v)}
                 disabled={savingToggle === 'packing'}
                 aria-label={t('Confirmation when packing')}
+              />
+            </div>
+
+            <div className="flex items-start justify-between gap-4 py-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{t('List multiples as separate lines')}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('A position with quantity 3 is shown as three lines to tick off one by one, instead of one line with a counter.')}
+                </p>
+              </div>
+              <Switch
+                checked={whSettings.pickPackConfirm?.explodeQuantities ?? true}
+                onCheckedChange={(v) => toggleConfirm('explode', v)}
+                disabled={savingToggle === 'explode'}
+                aria-label={t('List multiples as separate lines')}
               />
             </div>
           </div>

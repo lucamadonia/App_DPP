@@ -23,10 +23,17 @@ import { SHIPMENT_STATUS_ORDER } from '@/types/warehouse';
  */
 export class ShipmentStatusError extends Error {
   /** Stable code so the UI can react (e.g. open the carrier picker). */
-  code: 'CARRIER_REQUIRED' | 'NO_TENANT' | 'NOT_FOUND' | 'STATUS_LOCKED' | 'INSUFFICIENT_STOCK';
-  constructor(code: ShipmentStatusError['code'], message: string) {
+  code: 'CARRIER_REQUIRED' | 'NO_TENANT' | 'NOT_FOUND' | 'STATUS_LOCKED' | 'INSUFFICIENT_STOCK' | 'QUANTITY_INCOMPLETE';
+  /** Populated for QUANTITY_INCOMPLETE so the UI can name the affected positions. */
+  shortfall?: Array<{ productName: string; packed: number; required: number }>;
+  constructor(
+    code: ShipmentStatusError['code'],
+    message: string,
+    shortfall?: ShipmentStatusError['shortfall'],
+  ) {
     super(message);
     this.code = code;
+    this.shortfall = shortfall;
     this.name = 'ShipmentStatusError';
   }
 }
@@ -746,7 +753,18 @@ export async function updateShipment(id: string, updates: Partial<{
  *
  * Returns the updated shipment. Same-status calls are a no-op.
  */
-export async function updateShipmentStatus(id: string, status: ShipmentStatus): Promise<WhShipment> {
+export async function updateShipmentStatus(
+  id: string,
+  status: ShipmentStatus,
+  opts?: {
+    /**
+     * Ship even though less was packed than ordered (deliberate part shipment).
+     * Without it the transition to `shipped` throws QUANTITY_INCOMPLETE so the
+     * user has to acknowledge the gap first.
+     */
+    allowPartial?: boolean;
+  },
+): Promise<WhShipment> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) throw new ShipmentStatusError('NO_TENANT', 'No tenant');
 
@@ -767,6 +785,27 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
       'CARRIER_REQUIRED',
       'Carrier must be set before advancing to this status',
     );
+  }
+
+  // 2b. Quantity guard — the packer may have ticked off fewer units than
+  //     ordered. Warn rather than block: part shipments are legitimate, but
+  //     they must be a conscious decision, not an oversight.
+  if (status === 'shipped' && !opts?.allowPartial) {
+    const itemsForCheck = await getShipmentItems(id);
+    const shortfall = itemsForCheck
+      .filter(i => (i.quantityPacked || 0) < i.quantity)
+      .map(i => ({
+        productName: i.productName || i.productId.slice(0, 8),
+        packed: i.quantityPacked || 0,
+        required: i.quantity,
+      }));
+    if (shortfall.length > 0) {
+      throw new ShipmentStatusError(
+        'QUANTITY_INCOMPLETE',
+        'Fewer units packed than ordered',
+        shortfall,
+      );
+    }
   }
 
   // 3. Build the patch for wh_shipments.
@@ -845,10 +884,20 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
         .maybeSingle();
       if (!stock) continue;
 
+      // Book what physically left the building, not what was ordered.
+      // quantity_packed === 0 means "never confirmed" (dialog skipped) — fall
+      // back to the ordered quantity, otherwise nothing would be booked at all.
+      const packed = item.quantityPacked || 0;
+      const shippedQty = packed > 0 ? Math.min(packed, item.quantity) : item.quantity;
+      // The full quantity was reserved at import. On a part shipment the
+      // remainder must go back to available, or it stays blocked forever.
+      const remainder = Math.max(0, item.quantity - shippedQty);
+
       await supabase
         .from('wh_stock_levels')
         .update({
           quantity_reserved: Math.max(0, stock.quantity_reserved - item.quantity),
+          quantity_available: stock.quantity_available + remainder,
         })
         .eq('id', stock.id);
 
@@ -859,12 +908,29 @@ export async function updateShipmentStatus(id: string, status: ShipmentStatus): 
         location_id: item.locationId,
         product_id: item.productId,
         batch_id: item.batchId,
-        quantity: -item.quantity,
+        quantity: -shippedQty,
         quantity_before: stock.quantity_available + stock.quantity_reserved,
-        quantity_after: stock.quantity_available + stock.quantity_reserved - item.quantity,
+        quantity_after: stock.quantity_available + stock.quantity_reserved - shippedQty,
         shipment_id: id,
         performed_by: userId,
       });
+
+      if (remainder > 0) {
+        await supabase.from('wh_stock_transactions').insert({
+          tenant_id: tenantId,
+          transaction_number: generateTransactionNumber(),
+          type: 'release',
+          location_id: item.locationId,
+          product_id: item.productId,
+          batch_id: item.batchId,
+          quantity: remainder,
+          quantity_before: stock.quantity_available,
+          quantity_after: stock.quantity_available + remainder,
+          shipment_id: id,
+          performed_by: userId,
+          notes: `Teillieferung: ${shippedQty} von ${item.quantity} versendet, ${remainder} wieder freigegeben`,
+        });
+      }
     }
   }
 

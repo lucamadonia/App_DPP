@@ -13,6 +13,7 @@ export const DEFAULT_WAREHOUSE_SETTINGS: WarehouseSettings = {
   pickPackConfirm: {
     requireAtPicking: true,
     requireAtPacking: true,
+    explodeQuantities: true,
   },
 };
 

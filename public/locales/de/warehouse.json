@@ -1812,5 +1812,18 @@
   "{{added}} position(s) added, {{updated}} updated": "{{added}} Position(en) ergänzt, {{updated}} aktualisiert",
   "Insert Set": "Set einfügen",
   "All components are added as separate positions, so each one can be picked and scanned individually.": "Alle Komponenten werden als eigene Positionen angelegt, damit jede einzeln kommissioniert und gescannt werden kann.",
-  "{{count}} component(s) added": "{{count}} Komponente(n) hinzugefügt"
+  "{{count}} component(s) added": "{{count}} Komponente(n) hinzugefügt",
+  "List multiples as separate lines": "Mehrfachmengen als Einzelzeilen",
+  "A position with quantity 3 is shown as three lines to tick off one by one, instead of one line with a counter.": "Eine Position mit Menge 3 wird als drei einzeln abhakbare Zeilen dargestellt statt als eine Zeile mit Zähler.",
+  "{{count}}× benötigt": "{{count}}× benötigt",
+  "Stück {{n}} von {{total}}": "Stück {{n}} von {{total}}",
+  "Bestätigte Stück": "Bestätigte Stück",
+  "Noch {{count}} Stück offen": "Noch {{count}} Stück offen",
+  "{{name}} ist mit {{total}}× vollständig bestätigt.": "{{name}} ist mit {{total}}× vollständig bestätigt.",
+  "Weniger verpackt als bestellt": "Weniger verpackt als bestellt",
+  "Diese Positionen sind unvollständig. Beim Versenden wird nur die verpackte Menge abgebucht, der Rest geht zurück in den Bestand.": "Diese Positionen sind unvollständig. Beim Versenden wird nur die verpackte Menge abgebucht, der Rest geht zurück in den Bestand.",
+  "Trotzdem versenden": "Trotzdem versenden",
+  "Fewer units packed than ordered": "Weniger Stück verpackt als bestellt",
+  "Open the shipment to review and confirm.": "Sendung öffnen, prüfen und bestätigen.",
+  "Open": "Öffnen"
 }
