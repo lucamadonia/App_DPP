@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -9,7 +11,11 @@ import {
   Globe,
   Settings,
   CreditCard,
+  Sparkles,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { isNative } from '@/lib/platform';
+import { resetOnboarding } from '@/pages/onboarding/onboarding-state';
 import { useTrainingGuideProgress } from '@/hooks/useTrainingGuideProgress';
 import type { ChapterId } from '@/hooks/useTrainingGuideProgress';
 import { GuideProgress } from '@/components/training-guide/GuideProgress';
@@ -202,6 +208,14 @@ const CHAPTERS: ChapterConfig[] = [
 
 export function TrainingGuidePage() {
   const { completed, toggleChapter, isCompleted, stats } = useTrainingGuideProgress();
+  const { t } = useTranslation('common');
+  const navigate = useNavigate();
+
+  // Clearing the flag first means closing the tour mid-way does not silently
+  // re-mark it as done — the user gets it offered again next launch.
+  const replayIntroTour = () => {
+    void resetOnboarding().finally(() => navigate('/onboarding'));
+  };
 
   return (
     <div className="-m-4 sm:-m-6">
@@ -212,6 +226,15 @@ export function TrainingGuidePage() {
         percentage={stats.percentage}
       />
       <ChapterNavigation completed={completed} />
+
+      {isNative() && (
+        <div className="px-4 pt-4 sm:px-6">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={replayIntroTour}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            {t('Replay the intro tour')}
+          </Button>
+        </div>
+      )}
 
       <div>
         {CHAPTERS.map((chapter, index) => (
