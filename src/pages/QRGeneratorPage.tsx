@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
-import { blurIn, scaleIn, useReducedMotion } from '@/lib/motion';
+import { scaleIn, useReducedMotion } from '@/lib/motion';
 import {
   Download,
   Copy,
@@ -58,6 +58,7 @@ import type { BatchListItem } from '@/types/product';
 import { useBranding } from '@/contexts/BrandingContext';
 import { validateDomain, validatePathPrefix, normalizeDomain } from '@/lib/domain-utils';
 import { getPublicBaseUrl } from '@/lib/platform';
+import { PageContainer } from '@/components/layout/page-container';
 
 // QR Code Settings Interface (local state only for visual settings)
 interface QRSettings {
@@ -704,26 +705,19 @@ export function QRGeneratorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('QR Code Generator')}</h1>
-          <p className="text-muted-foreground">
-            {t('Create QR codes for your Digital Product Passports with your own domain')}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setActiveTab('domain')}>
-            <Globe className="mr-2 h-4 w-4" />
-            {t('Domain Settings')}
-          </Button>
-        </div>
-      </MotionDiv>
-
+    <PageContainer
+      size="full"
+      padding={false}
+      title={t('QR Code Generator')}
+      description={t('Create QR codes for your Digital Product Passports with your own domain')}
+      actions={
+        <Button variant="outline" onClick={() => setActiveTab('domain')}>
+          <Globe className="mr-2 h-4 w-4" />
+          {t('Domain Settings')}
+        </Button>
+      }
+    >
+      <div className="space-y-6">
       {products.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -1730,7 +1724,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
       </Card>
       </>
       )}
-
-    </div>
+      </div>
+    </PageContainer>
   );
 }

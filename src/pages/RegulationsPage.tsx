@@ -22,7 +22,6 @@ import {
 import {
   gridStagger,
   gridItem,
-  blurIn,
   staggerContainer,
   staggerItem,
   useReducedMotion,
@@ -64,6 +63,7 @@ import {
   type ResponsiveTableColumn,
 } from '@/components/ui/responsive-table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { PageContainer } from '@/components/layout/page-container';
 
 const categoryIcons: Record<string, React.ElementType> = {
   environment: Leaf,
@@ -292,19 +292,13 @@ export function RegulationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Regulations & Compliance')}</h1>
-          <p className="text-muted-foreground">
-            {t('Comprehensive overview of EU and national regulations, pictograms, and recent developments')}
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      title={t('Regulations & Compliance')}
+      description={t('Comprehensive overview of EU and national regulations, pictograms, and recent developments')}
+      actions={
+        <>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             {t('Export', { ns: 'common' })}
@@ -313,9 +307,10 @@ export function RegulationsPage() {
             <Printer className="mr-2 h-4 w-4" />
             {t('Print', { ns: 'common' })}
           </Button>
-        </div>
-      </MotionDiv>
-
+        </>
+      }
+    >
+      <div className="space-y-6">
       {/* Quick Stats */}
       <MotionDiv
         className="grid gap-4 md:grid-cols-4"
@@ -832,6 +827,7 @@ export function RegulationsPage() {
         </TabsContent>
 
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

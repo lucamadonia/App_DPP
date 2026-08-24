@@ -8,6 +8,20 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
+    # Vite inlines these at build time. Without them `createClient('', '')`
+    # throws "supabaseUrl is required" while the module is still loading, so the
+    # app never boots and every smoke test fails on a blank page rather than on
+    # anything to do with layout.
+    #
+    # Placeholders are enough here: these tests assert layout, not data. If the
+    # repo secrets are set they win — and the anon key is public by design (it
+    # ships in the client bundle, guarded by RLS), so using the real one leaks
+    # nothing.
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -46,3 +60,22 @@ jobs:
       # no raw env(safe-area-*) outside index.css.
       - name: Native invariants
         run: npm run check:native
+
+      # WebKit specifically, not Chromium: the iOS app runs in a WKWebView, so
+      # this is the engine that actually ships. Asserts that no public route
+      # scrolls horizontally at 375px and that tap targets clear 44px — the one
+      # thing about mobile layout that is objectively checkable without a human
+      # looking at a screenshot.
+      - name: Install WebKit for Playwright
+        run: npx playwright install --with-deps webkit
+
+      - name: Mobile smoke tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

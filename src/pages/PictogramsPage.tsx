@@ -70,6 +70,7 @@ import {
   TENANT_PICTOGRAM_QUOTA,
 } from '@/services/supabase/tenant-pictograms';
 import type { TenantPictogram } from '@/types/database';
+import { PageContainer } from '@/components/layout/page-container';
 
 // ---------------------------------------------------------------------------
 // Category styling — each category gets a color + icon for visual distinction
@@ -350,19 +351,14 @@ export function PictogramsPage() {
   // -------------------------------------------------------------------------
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t('pictograms.title', 'Pictogram Database')}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t('pictograms.subtitle', 'Upload and manage pictograms for your product labels')}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
+      <PageContainer
+        size="full"
+        padding={false}
+        onRefresh={loadData}
+        title={t('pictograms.title', 'Pictogram Database')}
+        description={t('pictograms.subtitle', 'Upload and manage pictograms for your product labels')}
+        actions={
+          <span className="flex items-center gap-3">
             {/* Compact storage indicator */}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -399,9 +395,10 @@ export function PictogramsPage() {
               <Upload className="mr-2 h-4 w-4" />
               {t('pictograms.upload', 'Upload Pictogram')}
             </Button>
-          </div>
-        </div>
-
+          </span>
+        }
+      >
+        <div className="space-y-6">
         {/* Mobile storage bar */}
         <div className="sm:hidden">
           <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5 bg-card">
@@ -1055,7 +1052,8 @@ export function PictogramsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+        </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }

@@ -412,13 +412,18 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     placeholder="********"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-10"
+                    className="pl-9 pr-12"
                     required
                   />
+                  {/* A raw <button>, so the coarse-pointer rule in index.css that sizes
+                      [data-slot="button"] to 44px does not reach it — the hit area would
+                      otherwise be just the 16px icon. Sized explicitly instead, with the
+                      input's right padding widened to match so text never runs underneath. */}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? t('Hide password') : t('Show password')}
+                    className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

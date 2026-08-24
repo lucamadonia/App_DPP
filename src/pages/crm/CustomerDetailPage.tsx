@@ -17,6 +17,7 @@ import { NotesSection } from '@/components/crm/NotesSection';
 import { SendEmailDialog } from '@/components/crm/SendEmailDialog';
 import { toast } from 'sonner';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { PageContainer } from '@/components/layout/page-container';
 
 const SEGMENT_TONE: Record<string, string> = {
   champion:    'bg-purple-100 text-purple-900 border-purple-300',
@@ -101,17 +102,19 @@ export function CustomerDetailPage() {
   const nextAction = suggestNextAction(customer);
 
   return (
-    <div className="px-4 py-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Back + Title */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/crm/customers"><ArrowLeft className="h-4 w-4 mr-1" />{t('Zurück')}</Link>
-        </Button>
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+    <PageContainer
+      size="full"
+      padding={false}
+      className="px-4 py-4 sm:p-6"
+      onRefresh={handleRefresh}
+      title={
+        <span className="flex min-w-0 items-center gap-2">
           <User className="h-5 w-5 shrink-0" />
-          <h1 className="text-xl sm:text-2xl font-bold truncate">{fullName}</h1>
-        </div>
-        <div className="flex gap-2">
+          <span className="truncate">{fullName}</span>
+        </span>
+      }
+      actions={
+        <>
           <Button size="sm" onClick={() => setEmailDialogOpen(true)} disabled={!customer.email}>
             <Send className="mr-1 h-4 w-4" />
             {t('E-Mail senden')}
@@ -127,9 +130,15 @@ export function CustomerDetailPage() {
               </a>
             </Button>
           )}
-        </div>
-      </div>
+        </>
+      }
+    >
+      {/* Back link — sits above the title now that PageContainer owns the header row */}
+      <Button variant="ghost" size="sm" asChild className="-mt-2 mb-3">
+        <Link to="/crm/customers"><ArrowLeft className="h-4 w-4 mr-1" />{t('Zurück')}</Link>
+      </Button>
 
+      <div className="space-y-4 sm:space-y-6">
       {/* Badges-Row */}
       <div className="flex flex-wrap gap-2 items-center">
         {customer.rfmSegment && (
@@ -261,7 +270,8 @@ export function CustomerDetailPage() {
         customer={customer}
         onSent={() => load()}
       />
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

@@ -45,11 +45,12 @@ import {
   AgePill,
   getAgeTier,
 } from '@/components/warehouse/OutstandingReceiptCard';
-import { gridStagger, gridItem, blurIn, useMotionVariants, useReducedMotion } from '@/lib/motion';
+import { gridStagger, gridItem, useMotionVariants, useReducedMotion } from '@/lib/motion';
 import { getOutstandingBatches } from '@/services/supabase/batches';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { OutstandingBatch } from '@/services/supabase/batches';
+import { PageContainer } from '@/components/layout/page-container';
 
 type ReceiptFilter = 'all' | 'zero' | 'partial';
 
@@ -164,7 +165,6 @@ export function OutstandingReceiptsPage() {
   // Motion variants (no-op when prefers-reduced-motion)
   const containerVariants = useMotionVariants(gridStagger);
   const itemVariants = useMotionVariants(gridItem);
-  const headerVariants = useMotionVariants(blurIn);
 
   // -------------------------------------------------------------------------
   // Toolbar filter content (inline on desktop, bottom drawer on mobile)
@@ -359,189 +359,188 @@ export function OutstandingReceiptsPage() {
     'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md h-full';
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div variants={headerVariants} initial="initial" animate="animate">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-          {t('Outstanding Goods Receipts')}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t('Batches with units that the supplier ordered but the warehouse has not yet received in full.')}
-        </p>
-      </motion.div>
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={load}
+      title={t('Outstanding Goods Receipts')}
+      description={t('Batches with units that the supplier ordered but the warehouse has not yet received in full.')}
+    >
+      <div className="space-y-4 sm:space-y-6">
 
-      {/* KPI Cards */}
-      <motion.div
-        variants={containerVariants}
-        initial="initial"
-        animate="animate"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
-      >
-        <motion.div variants={itemVariants}>
-          <Card className={kpiCardClass}>
-            <CardContent className="pt-4 pb-3 px-4 space-y-1">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <PackageOpen className="h-3.5 w-3.5" />
-                {t('Open batches')}
-              </div>
-              <div className="text-2xl font-bold">
-                {loading ? (
-                  <ShimmerSkeleton className="h-7 w-16" />
-                ) : (
-                  <AnimatedCounter value={kpis.openBatches} />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <Card className={kpiCardClass}>
-            <CardContent className="pt-4 pb-3 px-4 space-y-1">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Boxes className="h-3.5 w-3.5" />
-                {t('Outstanding units')}
-              </div>
-              <div className="text-2xl font-bold">
-                {loading ? (
-                  <ShimmerSkeleton className="h-7 w-16" />
-                ) : (
-                  <AnimatedCounter value={kpis.totalOutstanding} />
-                )}
-              </div>
-              {!loading && kpis.totalOrdered > 0 && (
-                <div className="text-xs text-muted-foreground tabular-nums">
-                  {kpis.totalReceived.toLocaleString()} / {kpis.totalOrdered.toLocaleString()}{' '}
-                  {t('received')}
+        {/* KPI Cards */}
+        <motion.div
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+        >
+          <motion.div variants={itemVariants}>
+            <Card className={kpiCardClass}>
+              <CardContent className="pt-4 pb-3 px-4 space-y-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <PackageOpen className="h-3.5 w-3.5" />
+                  {t('Open batches')}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <Card className={kpiCardClass}>
-            <CardContent className="pt-4 pb-3 px-4 space-y-1">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                {t('Overall progress')}
-              </div>
-              <div className="text-2xl font-bold">
-                {loading ? (
-                  <ShimmerSkeleton className="h-7 w-16" />
-                ) : (
-                  <AnimatedCounter value={kpis.overallPercent} suffix="%" />
-                )}
-              </div>
-              {!loading && <Progress value={kpis.overallPercent} className="h-1.5 mt-2" />}
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <Card className={kpiCardClass}>
-            <CardContent className="pt-4 pb-3 px-4 space-y-1">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock
-                  className={cn(
-                    'h-3.5 w-3.5',
-                    oldestTier === 'overdue' && 'text-red-500',
-                    oldestTier === 'aging' && 'text-amber-500'
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <ShimmerSkeleton className="h-7 w-16" />
+                  ) : (
+                    <AnimatedCounter value={kpis.openBatches} />
                   )}
-                />
-                {t('Oldest open')}
-              </div>
-              <div
-                className={cn(
-                  'text-2xl font-bold',
-                  !loading && oldestTier === 'overdue' && 'text-red-600 dark:text-red-400',
-                  !loading && oldestTier === 'aging' && 'text-amber-600 dark:text-amber-400'
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className={kpiCardClass}>
+              <CardContent className="pt-4 pb-3 px-4 space-y-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Boxes className="h-3.5 w-3.5" />
+                  {t('Outstanding units')}
+                </div>
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <ShimmerSkeleton className="h-7 w-16" />
+                  ) : (
+                    <AnimatedCounter value={kpis.totalOutstanding} />
+                  )}
+                </div>
+                {!loading && kpis.totalOrdered > 0 && (
+                  <div className="text-xs text-muted-foreground tabular-nums">
+                    {kpis.totalReceived.toLocaleString()} / {kpis.totalOrdered.toLocaleString()}{' '}
+                    {t('received')}
+                  </div>
                 )}
-              >
-                {loading ? (
-                  <ShimmerSkeleton className="h-7 w-16" />
-                ) : (
-                  <AnimatedCounter value={kpis.oldestDays} suffix={` ${t('days')}`} />
-                )}
-              </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className={kpiCardClass}>
+              <CardContent className="pt-4 pb-3 px-4 space-y-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  {t('Overall progress')}
+                </div>
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <ShimmerSkeleton className="h-7 w-16" />
+                  ) : (
+                    <AnimatedCounter value={kpis.overallPercent} suffix="%" />
+                  )}
+                </div>
+                {!loading && <Progress value={kpis.overallPercent} className="h-1.5 mt-2" />}
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className={kpiCardClass}>
+              <CardContent className="pt-4 pb-3 px-4 space-y-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock
+                    className={cn(
+                      'h-3.5 w-3.5',
+                      oldestTier === 'overdue' && 'text-red-500',
+                      oldestTier === 'aging' && 'text-amber-500'
+                    )}
+                  />
+                  {t('Oldest open')}
+                </div>
+                <div
+                  className={cn(
+                    'text-2xl font-bold',
+                    !loading && oldestTier === 'overdue' && 'text-red-600 dark:text-red-400',
+                    !loading && oldestTier === 'aging' && 'text-amber-600 dark:text-amber-400'
+                  )}
+                >
+                  {loading ? (
+                    <ShimmerSkeleton className="h-7 w-16" />
+                  ) : (
+                    <AnimatedCounter value={kpis.oldestDays} suffix={` ${t('days')}`} />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+
+        {/* Toolbar: search + filters + reload */}
+        <ListToolbar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t('Search by product, GTIN, batch, supplier…'),
+          }}
+          filters={filtersNode}
+          activeFilterCount={activeFilterCount}
+          actions={
+            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+              <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+              <span className="hidden sm:inline">{t('Reload')}</span>
+            </Button>
+          }
+        />
+
+        {/* Error panel */}
+        {error && !loading ? (
+          <Card className="border-destructive/40">
+            <CardContent className="py-10 flex flex-col items-center gap-3 text-center">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <p className="font-medium">{t('Failed to load outstanding receipts')}</p>
+              <Button variant="outline" size="sm" className="h-11 md:h-9" onClick={load}>
+                <RefreshCw className="h-4 w-4" />
+                {t('Try again')}
+              </Button>
             </CardContent>
           </Card>
-        </motion.div>
-      </motion.div>
-
-      {/* Toolbar: search + filters + reload */}
-      <ListToolbar
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: t('Search by product, GTIN, batch, supplier…'),
-        }}
-        filters={filtersNode}
-        activeFilterCount={activeFilterCount}
-        actions={
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            <span className="hidden sm:inline">{t('Reload')}</span>
-          </Button>
-        }
-      />
-
-      {/* Error panel */}
-      {error && !loading ? (
-        <Card className="border-destructive/40">
-          <CardContent className="py-10 flex flex-col items-center gap-3 text-center">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
-            <p className="font-medium">{t('Failed to load outstanding receipts')}</p>
-            <Button variant="outline" size="sm" className="h-11 md:h-9" onClick={load}>
-              <RefreshCw className="h-4 w-4" />
-              {t('Try again')}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : isMobile ? (
-        /* Mobile: card list */
-        loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <ShimmerSkeleton className="h-4 w-36" />
-                    <ShimmerSkeleton className="h-6 w-24 rounded-full" />
-                  </div>
-                  <ShimmerSkeleton className="h-3 w-28" />
-                  <ShimmerSkeleton className="h-1.5 w-full" />
-                  <ShimmerSkeleton className="h-3 w-40" />
-                  <ShimmerSkeleton className="h-11 w-full rounded-md" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : sorted.length === 0 ? (
-          <div className="py-12 text-center">{emptyStateNode}</div>
+        ) : isMobile ? (
+          /* Mobile: card list */
+          loading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <ShimmerSkeleton className="h-4 w-36" />
+                      <ShimmerSkeleton className="h-6 w-24 rounded-full" />
+                    </div>
+                    <ShimmerSkeleton className="h-3 w-28" />
+                    <ShimmerSkeleton className="h-1.5 w-full" />
+                    <ShimmerSkeleton className="h-3 w-40" />
+                    <ShimmerSkeleton className="h-11 w-full rounded-md" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : sorted.length === 0 ? (
+            <div className="py-12 text-center">{emptyStateNode}</div>
+          ) : (
+            <motion.div
+              variants={containerVariants}
+              initial="initial"
+              animate="animate"
+              className="space-y-3"
+            >
+              {sorted.map(row => (
+                <motion.div key={row.batchId} variants={itemVariants}>
+                  <OutstandingReceiptCard row={row} locale={locale} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )
         ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="initial"
-            animate="animate"
-            className="space-y-3"
-          >
-            {sorted.map(row => (
-              <motion.div key={row.batchId} variants={itemVariants}>
-                <OutstandingReceiptCard row={row} locale={locale} />
-              </motion.div>
-            ))}
-          </motion.div>
-        )
-      ) : (
-        /* Desktop: sortable table */
-        <ResponsiveTable
-          data={sorted}
-          columns={columns}
-          rowKey={row => row.batchId}
-          sort={sort}
-          onSortChange={setSort}
-          loading={loading}
-          emptyState={emptyStateNode}
-        />
-      )}
-    </div>
+          /* Desktop: sortable table */
+          <ResponsiveTable
+            data={sorted}
+            columns={columns}
+            rowKey={row => row.batchId}
+            sort={sort}
+            onSortChange={setSort}
+            loading={loading}
+            emptyState={emptyStateNode}
+          />
+        )}
+      </div>
+    </PageContainer>
   );
 }

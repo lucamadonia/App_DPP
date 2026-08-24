@@ -58,7 +58,6 @@
   "Used": "Μεταχειρισμένο",
   "Damaged": "Κατεστραμμένο",
   "Defective": "Ελαττωματικό",
-  "Condition": "Κατάσταση",
 
   "Open Returns": "Ανοιχτές Επιστροφές",
   "Received Today": "Ελήφθησαν Σήμερα",
@@ -948,7 +947,7 @@
   "Export JSON": "Εξαγωγή JSON",
   "Import JSON": "Εισαγωγή JSON",
   "Update Field": "Ενημέρωση Πεδίου",
-  "Condition": "Συνθήκη",
+  "Condition": "Κατάσταση",
   "Delay": "Καθυστέρηση",
   "Action": "Ενέργεια",
 

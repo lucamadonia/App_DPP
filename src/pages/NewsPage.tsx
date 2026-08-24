@@ -12,7 +12,6 @@ import {
   RotateCw,
 } from 'lucide-react';
 import {
-  blurIn,
   fadeIn,
   staggerContainer,
   staggerItem,
@@ -29,6 +28,7 @@ import { getNews } from '@/services/supabase';
 import type { NewsItem } from '@/types/database';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import { PageContainer } from '@/components/layout/page-container';
 
 const CATEGORIES = [
   { value: 'all', label: 'All' },
@@ -103,7 +103,7 @@ export function NewsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadNews = useCallback(() => {
-    getNews()
+    return getNews()
       .then(data => {
         setNews(data);
         setIsLoading(false);
@@ -179,16 +179,18 @@ export function NewsPage() {
 
   if (loadError) {
     return (
-      <div className="space-y-6">
-        <MotionDiv {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+      <PageContainer
+        size="full"
+        padding={false}
+        onRefresh={loadNews}
+        title={
+          <span className="flex items-center gap-2">
             <Newspaper className="h-6 w-6" />
             {t('Regulatory News')}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('Latest updates on EU regulations, standards, and deadlines')}
-          </p>
-        </MotionDiv>
+          </span>
+        }
+        description={t('Latest updates on EU regulations, standards, and deadlines')}
+      >
         <Card>
           <CardContent className="text-center py-12">
             <AlertCircle className="mx-auto h-12 w-12 text-destructive/40 mb-4" />
@@ -202,200 +204,203 @@ export function NewsPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={loadNews}
+      title={
+        <span className="flex items-center gap-2">
           <Newspaper className="h-6 w-6" />
           {t('Regulatory News')}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {t('Latest updates on EU regulations, standards, and deadlines')}
-        </p>
-      </MotionDiv>
+        </span>
+      }
+      description={t('Latest updates on EU regulations, standards, and deadlines')}
+    >
+      <div className="space-y-6">
 
-      {/* Upcoming Deadlines */}
-      {upcomingDeadlines.length > 0 && (
-        <MotionDiv {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}>
-          <Card className="border-warning">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-warning" />
-                {t('Upcoming Deadlines')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                {upcomingDeadlines.map(item => (
-                  <div key={item.id} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-warning/5 border border-warning/20">
-                    <Calendar className="h-3 w-3 text-warning" />
-                    <span className="font-medium">{formatDate(item.effectiveDate!, locale)}</span>
-                    <CountdownBadge effectiveDate={item.effectiveDate!} />
-                    <span className="text-muted-foreground">-</span>
-                    <span>{item.title}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </MotionDiv>
-      )}
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('Search news...')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="sm:w-[180px]">
-            <SelectValue placeholder={t('Category')} />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map(cat => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {t(cat.label)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="sm:w-[150px]">
-            <SelectValue placeholder={t('Priority')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('All Priorities')}</SelectItem>
-            <SelectItem value="high">{t('High')}</SelectItem>
-            <SelectItem value="medium">{t('Medium')}</SelectItem>
-            <SelectItem value="low">{t('Low')}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Category chips */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map(cat => (
-          <Badge
-            key={cat.value}
-            variant={categoryFilter === cat.value ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => setCategoryFilter(cat.value)}
-          >
-            {t(cat.label)}
-          </Badge>
-        ))}
-      </div>
-
-      {/* News cards */}
-      <MotionDiv
-        className="space-y-4"
-        {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
-      >
-        {filteredNews.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Newspaper className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium">{t('No news found')}</h3>
-              <p className="text-muted-foreground mt-1">
-                {t('Try adjusting your filters')}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredNews.map(item => (
-            <GlassCard key={item.id} className="hover:shadow-md transition-shadow" {...(!prefersReduced && { variants: staggerItem })}>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {item.imageUrl && (
-                    <div className="sm:w-48 flex-shrink-0">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
+        {/* Upcoming Deadlines */}
+        {upcomingDeadlines.length > 0 && (
+          <MotionDiv {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}>
+            <Card className="border-warning">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-warning" />
+                  {t('Upcoming Deadlines')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3">
+                  {upcomingDeadlines.map(item => (
+                    <div key={item.id} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-warning/5 border border-warning/20">
+                      <Calendar className="h-3 w-3 text-warning" />
+                      <span className="font-medium">{formatDate(item.effectiveDate!, locale)}</span>
+                      <CountdownBadge effectiveDate={item.effectiveDate!} />
+                      <span className="text-muted-foreground">-</span>
+                      <span>{item.title}</span>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className={CATEGORY_COLORS[item.category] || ''}>
-                          {t(item.category.charAt(0).toUpperCase() + item.category.slice(1))}
-                        </Badge>
-                        <Badge className={PRIORITY_COLORS[item.priority]}>
-                          {t(item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}
-                        </Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {formatDate(item.publishedAt, locale)}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-semibold mb-1">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3">{item.summary}</p>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      {item.effectiveDate && (
-                        <span className="text-xs flex items-center gap-1.5 text-warning">
-                          <Calendar className="h-3 w-3" />
-                          {t('Effective')}: {formatDate(item.effectiveDate, locale)}
-                          <CountdownBadge effectiveDate={item.effectiveDate} />
-                        </span>
-                      )}
-                      {item.countries.length > 0 && (
-                        <span className="text-xs flex items-center gap-1 text-muted-foreground">
-                          <Globe className="h-3 w-3" />
-                          {item.countries.join(', ')}
-                        </span>
-                      )}
-                      {item.source && (
-                        <span className="text-xs text-muted-foreground">
-                          {t('Source')}: {item.source}
-                        </span>
-                      )}
-                    </div>
-
-                    {item.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {item.tags.map(tag => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    {item.link && (
-                      <Button variant="link" className="p-0 h-auto mt-2" asChild>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-1 h-3 w-3" />
-                          {t('Read more')}
-                        </a>
-                      </Button>
-                    )}
-                  </div>
+                  ))}
                 </div>
               </CardContent>
-            </GlassCard>
-          ))
+            </Card>
+          </MotionDiv>
         )}
-      </MotionDiv>
 
-      <p className="text-sm text-muted-foreground text-center">
-        {t('Showing {{count}} of {{total}} news items', {
-          count: filteredNews.length,
-          total: news.length,
-        })}
-      </p>
-    </div>
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t('Search news...')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="sm:w-[180px]">
+              <SelectValue placeholder={t('Category')} />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map(cat => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {t(cat.label)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="sm:w-[150px]">
+              <SelectValue placeholder={t('Priority')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('All Priorities')}</SelectItem>
+              <SelectItem value="high">{t('High')}</SelectItem>
+              <SelectItem value="medium">{t('Medium')}</SelectItem>
+              <SelectItem value="low">{t('Low')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Category chips */}
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map(cat => (
+            <Badge
+              key={cat.value}
+              variant={categoryFilter === cat.value ? 'default' : 'outline'}
+              className="cursor-pointer"
+              onClick={() => setCategoryFilter(cat.value)}
+            >
+              {t(cat.label)}
+            </Badge>
+          ))}
+        </div>
+
+        {/* News cards */}
+        <MotionDiv
+          className="space-y-4"
+          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+        >
+          {filteredNews.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Newspaper className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium">{t('No news found')}</h3>
+                <p className="text-muted-foreground mt-1">
+                  {t('Try adjusting your filters')}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredNews.map(item => (
+              <GlassCard key={item.id} className="hover:shadow-md transition-shadow" {...(!prefersReduced && { variants: staggerItem })}>
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {item.imageUrl && (
+                      <div className="sm:w-48 flex-shrink-0">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className={CATEGORY_COLORS[item.category] || ''}>
+                            {t(item.category.charAt(0).toUpperCase() + item.category.slice(1))}
+                          </Badge>
+                          <Badge className={PRIORITY_COLORS[item.priority]}>
+                            {t(item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {formatDate(item.publishedAt, locale)}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-semibold mb-1">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">{item.summary}</p>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        {item.effectiveDate && (
+                          <span className="text-xs flex items-center gap-1.5 text-warning">
+                            <Calendar className="h-3 w-3" />
+                            {t('Effective')}: {formatDate(item.effectiveDate, locale)}
+                            <CountdownBadge effectiveDate={item.effectiveDate} />
+                          </span>
+                        )}
+                        {item.countries.length > 0 && (
+                          <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                            <Globe className="h-3 w-3" />
+                            {item.countries.join(', ')}
+                          </span>
+                        )}
+                        {item.source && (
+                          <span className="text-xs text-muted-foreground">
+                            {t('Source')}: {item.source}
+                          </span>
+                        )}
+                      </div>
+
+                      {item.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {item.tags.map(tag => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.link && (
+                        <Button variant="link" className="p-0 h-auto mt-2" asChild>
+                          <a href={item.link} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            {t('Read more')}
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </GlassCard>
+            ))
+          )}
+        </MotionDiv>
+
+        <p className="text-sm text-muted-foreground text-center">
+          {t('Showing {{count}} of {{total}} news items', {
+            count: filteredNews.length,
+            total: news.length,
+          })}
+        </p>
+      </div>
+    </PageContainer>
   );
 }

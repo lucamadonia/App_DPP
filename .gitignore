@@ -51,3 +51,9 @@ android/app/src/main/res/xml/config.xml
 ios/App/App/public/
 ios/App/App/config.xml
 ios/App/Pods/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

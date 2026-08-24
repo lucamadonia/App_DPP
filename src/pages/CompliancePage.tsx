@@ -17,7 +17,6 @@ import { useLocale } from '@/hooks/use-locale';
 import {
   gridStagger,
   gridItem,
-  blurIn,
   staggerContainer,
   staggerItem,
   spring,
@@ -40,6 +39,7 @@ import {
 } from '@/services/supabase';
 import { getActivityLog } from '@/services/supabase/activity-log';
 import type { ActivityLogEntry } from '@/types/database';
+import { PageContainer } from '@/components/layout/page-container';
 
 const statusConfig = {
   compliant: {
@@ -123,19 +123,14 @@ export function CompliancePage() {
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Compliance & Audit')}</h1>
-          <p className="text-muted-foreground">
-            {t('Audit protocols and compliance overview')}
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={loadData}
+      title={t('Compliance & Audit')}
+      description={t('Audit protocols and compliance overview')}
+      actions={
+        <>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             {t('Export Report')}
@@ -144,9 +139,10 @@ export function CompliancePage() {
             <FileText className="mr-2 h-4 w-4" />
             {t('EU-Registry Export')}
           </Button>
-        </div>
-      </MotionDiv>
-
+        </>
+      }
+    >
+      <div className="space-y-6">
       {/* Stats */}
       <MotionDiv
         className="grid gap-4 md:grid-cols-4"
@@ -393,6 +389,7 @@ export function CompliancePage() {
         </TabsContent>
         </AnimatePresence>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

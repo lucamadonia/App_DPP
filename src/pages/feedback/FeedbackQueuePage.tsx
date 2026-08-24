@@ -18,6 +18,7 @@ import type { FeedbackReview, FeedbackReviewStatus } from '@/types/feedback';
 import { getFeedbackPhotoPublicUrl } from '@/services/supabase/feedback-public';
 import { getVariantColorHex } from '@/lib/variant-color';
 import { toast } from 'sonner';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function FeedbackQueuePage() {
   const { t } = useTranslation('warehouse');
@@ -64,17 +65,19 @@ export function FeedbackQueuePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={reload}
+      title={
+        <span className="flex items-center gap-2">
           <MessageCircleHeart className="h-6 w-6" />
           Feedback
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Verifizierte Kundenbewertungen prüfen und freigeben.
-        </p>
-      </div>
-
+        </span>
+      }
+      description="Verifizierte Kundenbewertungen prüfen und freigeben."
+    >
+      <div className="space-y-4 sm:space-y-6">
       {/* KPIs */}
       {stats && (
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
@@ -130,7 +133,8 @@ export function FeedbackQueuePage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

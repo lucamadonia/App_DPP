@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageContainer } from '@/components/layout/page-container';
 import { AIAnalysisCard } from '@/components/ai/AIAnalysisCard';
 import { CountrySelectGrid } from '@/components/market-entry/CountrySelectGrid';
 import { CategoryFeatureStep } from '@/components/market-entry/CategoryFeatureStep';
@@ -163,20 +163,21 @@ export function MarketEntryPage() {
     : { variants: blurIn, initial: 'initial', animate: 'animate' };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('Market Entry Check')}
-        description={t('What do you need to sell your products in another country?')}
-        actions={
-          selectedCountry ? (
-            <Button variant="outline" onClick={handleResetCountry} className="h-11 gap-1.5 sm:h-9">
-              <RefreshCcw className="h-4 w-4" />
-              {t('Start over')}
-            </Button>
-          ) : undefined
-        }
-      />
-
+    <PageContainer
+      size="full"
+      padding={false}
+      title={t('Market Entry Check')}
+      description={t('What do you need to sell your products in another country?')}
+      actions={
+        selectedCountry ? (
+          <Button variant="outline" onClick={handleResetCountry} className="h-11 gap-1.5 sm:h-9">
+            <RefreshCcw className="h-4 w-4" />
+            {t('Start over')}
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="space-y-6">
       {/* Step 1: Country */}
       <Card>
         <CardHeader className="pb-4">
@@ -396,6 +397,7 @@ export function MarketEntryPage() {
           </MotionDiv>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

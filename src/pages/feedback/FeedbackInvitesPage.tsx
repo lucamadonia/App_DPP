@@ -15,6 +15,7 @@ import {
 import type { FeedbackIdeaInvite } from '@/types/feedback';
 import { toast } from 'sonner';
 import { getPublicBaseUrl } from '@/lib/platform';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function FeedbackInvitesPage() {
   const { t } = useTranslation('warehouse');
@@ -40,24 +41,25 @@ export function FeedbackInvitesPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Mail className="h-6 w-6" />
-            Partner-Einladungen
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Versende personalisierte Links an Influencer und Beta-Tester. Jeder Link erlaubt
-            Einreichung von Ideen und Voten auf dem Ideen-Board.
-          </p>
-        </div>
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={reload}
+      title={
+        <span className="flex items-center gap-2">
+          <Mail className="h-6 w-6" />
+          Partner-Einladungen
+        </span>
+      }
+      description="Versende personalisierte Links an Influencer und Beta-Tester. Jeder Link erlaubt Einreichung von Ideen und Voten auf dem Ideen-Board."
+      actions={
         <Button onClick={() => setOpen(true)} className="gap-2">
           <Send className="h-4 w-4" />
           Neuen Partner einladen
         </Button>
-      </div>
-
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
       <div className="space-y-3">
         {loading ? (
           <>
@@ -76,7 +78,8 @@ export function FeedbackInvitesPage() {
       </div>
 
       <NewInviteDialog open={open} onOpenChange={setOpen} onCreated={reload} />
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

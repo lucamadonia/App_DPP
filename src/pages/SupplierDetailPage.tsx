@@ -67,6 +67,7 @@ import {
   StarRating,
 } from '@/components/suppliers/SupplierBadges';
 import { SupplierDocumentsTab } from '@/components/suppliers/SupplierDocumentsTab';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function SupplierDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -335,42 +336,32 @@ export function SupplierDetailPage() {
   ];
 
   return (
-    <div className="space-y-6 p-1">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mt-0.5 shrink-0"
-            onClick={() => navigate('/suppliers')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold">{supplier.name}</h1>
-              <SupplierStatusBadge status={supplier.status} />
-              <SupplierRiskBadge level={supplier.risk_level} />
-              {supplier.verified && (
-                <Badge className="bg-blue-100 text-blue-800 gap-1">
-                  <BadgeCheck className="h-3 w-3" />
-                  {t('Verified')}
-                </Badge>
-              )}
-              <SupplierComplianceBadge status={supplier.compliance_status} />
-            </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {[
-                supplier.code,
-                supplier.legal_form,
-                supplier.supplier_type && t(supplier.supplier_type.charAt(0).toUpperCase() + supplier.supplier_type.slice(1).replace('_', ' ')),
-                supplier.city && `${supplier.city}, ${countryName}`,
-              ].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
+    <PageContainer
+      size="full"
+      padding={false}
+      className="p-1"
+      title={
+        <span className="flex flex-wrap items-center gap-2">
+          {supplier.name}
+          <SupplierStatusBadge status={supplier.status} />
+          <SupplierRiskBadge level={supplier.risk_level} />
+          {supplier.verified && (
+            <Badge className="bg-blue-100 text-blue-800 gap-1">
+              <BadgeCheck className="h-3 w-3" />
+              {t('Verified')}
+            </Badge>
+          )}
+          <SupplierComplianceBadge status={supplier.compliance_status} />
+        </span>
+      }
+      description={[
+        supplier.code,
+        supplier.legal_form,
+        supplier.supplier_type && t(supplier.supplier_type.charAt(0).toUpperCase() + supplier.supplier_type.slice(1).replace('_', ' ')),
+        supplier.city && `${supplier.city}, ${countryName}`,
+      ].filter(Boolean).join(' · ')}
+      actions={
+        <span className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => navigate('/suppliers')}>
             <Pencil className="h-4 w-4 mr-1" />
             {t('Edit Supplier')}
@@ -387,9 +378,21 @@ export function SupplierDetailPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </div>
+        </span>
+      }
+    >
+      {/* Back link — PageContainer owns the header row, so this sits above it */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-mt-2 mb-3"
+        onClick={() => navigate('/suppliers')}
+      >
+        <ArrowLeft className="h-4 w-4 mr-1" />
+        {t('Back', { ns: 'common' })}
+      </Button>
 
+      <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {kpiCards.map((kpi, idx) => (
@@ -898,7 +901,8 @@ export function SupplierDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

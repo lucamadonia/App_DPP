@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/accordion';
 import { getCategories } from '@/services/supabase/master-data';
 import type { Category } from '@/types/database';
+import { PageContainer } from '@/components/layout/page-container';
 
 // Fallback data in case the API is unreachable
 const fallbackCategories: Category[] = [
@@ -439,23 +440,21 @@ export function ProductCategoriesPage() {
   const totalSubcategories = categories.reduce((acc, cat) => acc + (cat.subcategories?.length || 0), 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Product Categories')}</h1>
-          <p className="text-muted-foreground">
-            {t('{{count}} main categories with {{subCount}} subcategories', { count: categories.length, subCount: totalSubcategories })}
-          </p>
-        </div>
+    <PageContainer
+      size="full"
+      padding={false}
+      title={t('Product Categories')}
+      description={t('{{count}} main categories with {{subCount}} subcategories', { count: categories.length, subCount: totalSubcategories })}
+      actions={
         <Link to="/requirements-calculator">
           <Button>
             <Zap className="mr-2 h-4 w-4" />
             {t('Requirements Calculator')}
           </Button>
         </Link>
-      </div>
-
+      }
+    >
+      <div className="space-y-6">
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -639,6 +638,7 @@ export function ProductCategoriesPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </PageContainer>
   );
 }
