@@ -75,7 +75,7 @@ interface LabelCanvasElementProps {
   onDuplicate: () => void;
   onDelete: () => void;
   // @dnd-kit props (used by SortableLabelElement)
-  dragListeners?: Record<string, Function>;
+  dragListeners?: Record<string, (...args: unknown[]) => void>;
   isDragging?: boolean;
   // Inline edit callback (optional — provided by SortableLabelElement)
   onContentChange?: (content: string) => void;
@@ -128,10 +128,11 @@ function InlineTextEditor({
         minHeight: '1em',
         borderBottom: '1px dashed hsl(var(--primary) / 0.4)',
       }}
-      // eslint-disable-next-line react/no-danger
+      // Sanitised through DOMPurify immediately above — the editor stores
+      // inline formatting as HTML, so it has to be set as HTML.
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
-      // Auto-focus on mount
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      // Focusable on purpose: this is a contentEditable surface, so it has
+      // to take focus for typing to reach it.
       tabIndex={0}
       autoFocus
     />

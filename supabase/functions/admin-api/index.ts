@@ -1479,7 +1479,7 @@ async function setTenantSubdomain(
       } else if (add.status === 409) {
         vercelMessages.push(`In Vercel bereits vorhanden: ${clean}.trackbliss.eu`);
       } else {
-        // eslint-disable-next-line no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errMsg = ((add.data as any)?.error?.message) || add.error || `Status ${add.status}`;
         throw new Error(`Vercel-API-Fehler: ${errMsg}`);
       }

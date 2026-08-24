@@ -9,6 +9,7 @@
  *   node scripts/db-migrate.mjs --status       # Show migration status
  *   node scripts/db-migrate.mjs --force        # Re-apply all (ignore tracking)
  *   node scripts/db-migrate.mjs --file <name>  # Apply a specific file from supabase/
+ *   node scripts/db-migrate.mjs --mark <name>  # Record as applied WITHOUT running it
  *
  * Requires in .env:
  *   SUPABASE_ACCESS_TOKEN=sbp_...
@@ -192,6 +193,39 @@ async function applyFile(filename) {
   console.log('');
 }
 
+/**
+ * Record a migration as applied WITHOUT running it.
+ *
+ * For migrations that reached the database another way - typically pasted into
+ * the SQL editor - and are therefore live but absent from _migrations. Without
+ * this the only options are to leave them listed as pending forever, or to
+ * re-run them; and re-running is not safe in general. A migration that does
+ * DROP CONSTRAINT / ADD CONSTRAINT briefly removes referential integrity on a
+ * live table, and one without IF NOT EXISTS simply fails.
+ *
+ * Verify the objects actually exist before reaching for this. Marking a
+ * migration that never ran hides it permanently.
+ */
+async function markFiles(names) {
+  await ensureMigrationsTable();
+  const applied = await getAppliedMigrations();
+  const known = getMigrationFiles();
+
+  for (const name of names) {
+    if (!known.includes(name)) {
+      console.error(`  ✗ ${name} — no such file in supabase/migrations/`);
+      process.exitCode = 1;
+      continue;
+    }
+    if (applied.has(name)) {
+      console.log(`  · ${name} — already recorded`);
+      continue;
+    }
+    await markApplied(name);
+    console.log(`  ✓ ${name} — recorded as applied (not executed)`);
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
@@ -200,6 +234,13 @@ if (args.includes('--status')) {
   showStatus();
 } else if (args.includes('--force')) {
   applyMigrations(true);
+} else if (args.includes('--mark')) {
+  const names = args.slice(args.indexOf('--mark') + 1).filter((a) => !a.startsWith('--'));
+  if (!names.length) {
+    console.error('Usage: --mark <filename.sql> [more.sql ...]');
+    process.exit(1);
+  }
+  markFiles(names);
 } else if (args.includes('--file')) {
   const idx = args.indexOf('--file');
   const filename = args[idx + 1];

@@ -31,14 +31,6 @@ app.get('/', async (c) => {
   const tenantId = c.get('tenantId');
   const { search, status, limit = '50', offset = '0' } = c.req.query();
 
-  const query = db
-    .select()
-    .from(products)
-    .where(eq(products.tenantId, tenantId))
-    .orderBy(desc(products.updatedAt))
-    .limit(parseInt(limit))
-    .offset(parseInt(offset));
-
   // Filter anwenden
   const conditions = [eq(products.tenantId, tenantId)];
 

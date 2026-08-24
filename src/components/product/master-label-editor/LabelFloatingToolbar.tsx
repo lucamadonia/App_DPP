@@ -6,7 +6,7 @@ interface LabelFloatingToolbarProps {
   onDuplicate: () => void;
   onDelete: () => void;
   /** @dnd-kit drag listeners for the grip handle */
-  dragListeners?: Record<string, Function>;
+  dragListeners?: Record<string, (...args: unknown[]) => void>;
 }
 
 export function LabelFloatingToolbar({ onMoveUp, onMoveDown, onDuplicate, onDelete, dragListeners }: LabelFloatingToolbarProps) {

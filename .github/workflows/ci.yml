@@ -43,20 +43,20 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Informational, deliberately NOT blocking.
+      # Blocking, with a ratchet.
       #
-      # `eslint .` reports 463 problems (436 errors) on an untouched checkout of
-      # this branch's base commit — measured in an isolated worktree, not
-      # assumed: src/ 230, supabase/ 213, scripts/ 3. The supabase ones are Deno
-      # edge functions linted with the browser/node config, so most of those are
-      # a config artefact rather than real defects.
+      # Every rule that reports a real defect is an error and the build fails on
+      # it. What remains are 410 warnings of two kinds, both genuine debt rather
+      # than breakage: missing type annotations (@typescript-eslint/no-explicit-any,
+      # largely on third-party Shopify and DHL payloads) and React Compiler
+      # diagnostics such as setState-inside-an-effect. Each of those needs a
+      # per-call-site judgement that changes runtime behaviour, so they are paid
+      # down deliberately, not swept through in bulk on a live app.
       #
-      # Gating on that would mean a permanently red pipeline, which just teaches
-      # people to ignore it. Burn the baseline down — starting by excluding
-      # supabase/functions from the eslint config — then make this blocking.
+      # --max-warnings pins the count. Adding one more is a build failure, so the
+      # number can only go down. Lower it whenever you fix a batch.
       - name: Lint
-        run: npm run lint
-        continue-on-error: true
+        run: npx eslint . --max-warnings 410
 
       - name: Unit tests
         run: npm run test:run

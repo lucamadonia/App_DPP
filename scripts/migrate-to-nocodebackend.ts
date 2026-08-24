@@ -35,7 +35,7 @@ async function insertMany(table: string, records: any[]) {
       await ncbFetch(`insert/${table}`, record);
       success++;
       process.stdout.write(`\r   ✓ ${success}/${records.length} importiert`);
-    } catch (error) {
+    } catch (_error) {
       failed++;
       console.error(`\n   ✗ Fehler bei:`, record.name || record.title || record.id);
     }

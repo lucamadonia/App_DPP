@@ -81,13 +81,17 @@ export function GlassCard({
         'backdrop-blur-xl bg-[rgba(var(--card-rgb),0.7)]',
         'shadow-[0_0_20px_rgba(59,130,246,0.06),0_8px_32px_rgba(0,0,0,0.06)]',
         'transition-shadow duration-300',
-        enableGlow && 'hover:shadow-[0_0_30px_rgba(59,130,246,0.15),0_12px_40px_rgba(0,0,0,0.1)]',
+        enableGlow && 'hover:shadow-[0_0_30px_var(--glass-glow),0_12px_40px_rgba(0,0,0,0.1)]',
         className,
       )}
       style={{
         ...(enableTilt
           ? { rotateX, rotateY, transformPerspective: 800 }
           : {}),
+        // Read by the hover:shadow class above. A Tailwind arbitrary value is
+        // compiled at build time and cannot take a runtime prop, so the colour
+        // travels as a custom property instead.
+        ...(enableGlow ? ({ '--glass-glow': glowColor } as React.CSSProperties) : {}),
         ...extraStyle,
       }}
       onMouseMove={handleMouseMove}

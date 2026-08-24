@@ -405,7 +405,7 @@ async function handleSubscriptionDeleted(
 async function handleTrialWillEnd(
   supabase: ReturnType<typeof createClient>,
   subscription: Stripe.Subscription,
-  stripeEventId: string,
+  _stripeEventId: string,
 ) {
   const customerId = subscription.customer as string;
 
