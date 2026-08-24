@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
+import { DeleteAccountCard } from '@/components/account/DeleteAccountCard';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { updateCustomerProfile } from '@/services/supabase/customer-portal';
 import { supabase } from '@/lib/supabase';
@@ -19,8 +21,15 @@ import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 
 export function CustomerProfilePage() {
   const { t } = useTranslation('customer-portal');
-  const { customerProfile, refreshProfile } = useCustomerPortal();
+  const { customerProfile, refreshProfile, tenantSlug } = useCustomerPortal();
   const prefersReduced = useReducedMotion();
+
+  // Custom-domain portals are slug-free (`/portal/...`); slug portals are
+  // `/customer/:tenantSlug/...`. Derive the login path from the live URL so
+  // account deletion lands on the right one.
+  const portalLoginPath = window.location.pathname.startsWith('/portal')
+    ? '/portal/login'
+    : `/customer/${tenantSlug}/login`;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -300,6 +309,17 @@ export function CustomerProfilePage() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saved ? t('Saved!') : t('Save Changes')}
         </Button>
+      </motion.div>
+
+      {/*
+        Danger Zone — in-app account deletion (App Store guideline 5.1.1(v)).
+        Separated from the Save button above: on mobile both are `w-full`, so
+        without this the destructive control sits directly under the primary
+        action.
+      */}
+      <motion.div variants={prefersReduced ? undefined : staggerItem} className="pt-4">
+        <Separator className="mb-8" />
+        <DeleteAccountCard redirectTo={portalLoginPath} />
       </motion.div>
 
       {/* Password Dialog */}

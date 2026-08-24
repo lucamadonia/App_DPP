@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { getCampaigns, deleteCampaign, updateCampaign } from '@/services/supabase/wh-campaigns';
 import { CAMPAIGN_STATUS_COLORS } from '@/lib/warehouse-constants';
 import { CampaignKanbanBoard } from '@/components/warehouse/influencer/CampaignKanbanBoard';
@@ -80,6 +80,113 @@ export function CampaignListPage() {
       maximumFractionDigits: 0,
     }).format(budget);
   };
+
+  // Real table on md+, stacked cards below — the raw <Table> forced pinch-zoom
+  // scrolling on a phone.
+  const columns: ResponsiveTableColumn<WhCampaign>[] = [
+    {
+      id: 'name',
+      header: t('Name'),
+      mobilePriority: 'title',
+      cell: (campaign) => (
+        <span className="font-medium block max-w-[180px] sm:max-w-none truncate">{campaign.name}</span>
+      ),
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (campaign) => (
+        <Badge className={`${CAMPAIGN_STATUS_COLORS[campaign.status]} border-0`}>
+          {t(campaign.status)}
+        </Badge>
+      ),
+    },
+    {
+      id: 'products',
+      header: t('Products'),
+      hideBelow: 'sm',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Products'),
+      cell: (campaign) => <span className="font-mono text-sm">{campaign.productIds.length}</span>,
+    },
+    {
+      id: 'budget',
+      header: t('Budget'),
+      hideBelow: 'sm',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Budget'),
+      cell: (campaign) => (
+        <span className="text-sm">{formatBudget(campaign.budget, campaign.currency)}</span>
+      ),
+    },
+    {
+      id: 'startDate',
+      header: t('Start Date'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Start Date'),
+      cell: (campaign) =>
+        campaign.startDate ? (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            {formatDate(campaign.startDate)}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      id: 'endDate',
+      header: t('End Date'),
+      hideBelow: 'lg',
+      cell: (campaign) => (
+        <span className="text-sm text-muted-foreground">{formatDate(campaign.endDate)}</span>
+      ),
+    },
+    {
+      id: 'tags',
+      header: t('Tags'),
+      hideBelow: 'lg',
+      cell: (campaign) =>
+        campaign.tags.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            {campaign.tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                <Tag className="mr-0.5 h-2.5 w-2.5" />
+                {tag}
+              </Badge>
+            ))}
+            {campaign.tags.length > 3 && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                +{campaign.tags.length - 3}
+              </Badge>
+            )}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-12 sm:w-16',
+      mobilePriority: 'meta',
+      cell: (campaign) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => handleDelete(campaign.id, e)}
+          className="text-destructive"
+          title={t('Delete Campaign')}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      ),
+    },
+  ];
 
   const statusTabs: { key: StatusTab; label: string }[] = [
     { key: 'all', label: t('All') },
@@ -159,101 +266,27 @@ export function CampaignListPage() {
       ) : viewMode === 'calendar' ? (
         <CampaignCalendarView campaigns={campaigns} />
       ) : (
-        /* List View (existing table) */
+        /* List View */
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Name')}</TableHead>
-                    <TableHead>{t('Status')}</TableHead>
-                    <TableHead className="hidden sm:table-cell text-right">{t('Products')}</TableHead>
-                    <TableHead className="hidden sm:table-cell text-right">{t('Budget')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Start Date')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('End Date')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('Tags')}</TableHead>
-                    <TableHead className="w-12 sm:w-16" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                        {t('Loading...', { ns: 'common' })}
-                      </TableCell>
-                    </TableRow>
-                  ) : campaigns.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                        <Megaphone className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                        <p>{t('No campaigns yet')}</p>
-                        <p className="text-xs mt-1">{t('Create your first campaign to start tracking influencer collaborations')}</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    campaigns.map((campaign) => (
-                      <TableRow
-                        key={campaign.id}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors duration-150"
-                        onClick={() => navigate(`/warehouse/campaigns/${campaign.id}`)}
-                      >
-                        <TableCell className="font-medium max-w-[180px] sm:max-w-none truncate">{campaign.name}</TableCell>
-                        <TableCell>
-                          <Badge className={`${CAMPAIGN_STATUS_COLORS[campaign.status]} border-0`}>
-                            {t(campaign.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-right font-mono text-sm">
-                          {campaign.productIds.length}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-right text-sm">
-                          {formatBudget(campaign.budget, campaign.currency)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                          {campaign.startDate ? (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(campaign.startDate)}
-                            </span>
-                          ) : '—'}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDate(campaign.endDate)}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {campaign.tags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {campaign.tags.slice(0, 3).map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
-                                  <Tag className="mr-0.5 h-2.5 w-2.5" />
-                                  {tag}
-                                </Badge>
-                              ))}
-                              {campaign.tags.length > 3 && (
-                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                  +{campaign.tags.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          ) : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => handleDelete(campaign.id, e)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={campaigns}
+              columns={columns}
+              rowKey={(campaign) => campaign.id}
+              onRowClick={(campaign) => navigate(`/warehouse/campaigns/${campaign.id}`)}
+              loading={loading}
+              loadingRows={6}
+              className="border-0 bg-transparent rounded-none"
+              emptyState={
+                <div className="text-muted-foreground">
+                  <Megaphone className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                  <p>{t('No campaigns yet')}</p>
+                  <p className="text-xs mt-1">
+                    {t('Create your first campaign to start tracking influencer collaborations')}
+                  </p>
+                </div>
+              }
+            />
           </CardContent>
         </Card>
       )}

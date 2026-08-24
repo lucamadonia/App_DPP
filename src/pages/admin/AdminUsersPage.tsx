@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -26,11 +26,15 @@ import {
 import type { AdminUser, AdminTenant } from '@/types/admin';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+
+const ROLE_LABELS: Record<string, string> = { admin: 'Admin', manager: 'Manager', user: 'User' };
 
 export function AdminUsersPage() {
   const { t } = useTranslation('admin');
   const locale = useLocale();
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,6 +127,74 @@ export function AdminUsersPage() {
     toast.success('Reset-Link kopiert');
   }
 
+  const columns: ResponsiveTableColumn<AdminUser>[] = [
+    {
+      id: 'name',
+      header: t('Name'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (user) => (
+        <>
+          {user.fullName || '-'}
+          {user.isSuperAdmin && <Shield className="inline ml-1 h-3 w-3 text-violet-500" />}
+        </>
+      ),
+    },
+    {
+      id: 'email',
+      header: t('Email'),
+      mobilePriority: 'subtitle',
+      cell: (user) => user.email,
+    },
+    {
+      id: 'tenant',
+      header: t('Tenant'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Tenant'),
+      // Mobile cards are a single tap target -> plain text instead of a nested link.
+      cell: (user) => (isMobile ? (
+        user.tenantName
+      ) : (
+        <Link to={`/admin/tenants/${user.tenantId}`} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>
+          {user.tenantName}
+        </Link>
+      )),
+    },
+    {
+      id: 'role',
+      header: t('Role'),
+      mobilePriority: 'badge',
+      // Role is edited in the detail sheet on mobile (no nested control inside the card button).
+      cell: (user) => (isMobile ? (
+        <Badge variant="outline" className="text-[10px] h-5 px-2">{t(ROLE_LABELS[user.role] ?? user.role)}</Badge>
+      ) : (
+        <Select
+          value={user.role}
+          onValueChange={(v) => { handleRoleChange(user.id, v); }}
+        >
+          <SelectTrigger className="w-28 h-7" onClick={(e) => e.stopPropagation()}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">{t('Admin')}</SelectItem>
+            <SelectItem value="manager">{t('Manager')}</SelectItem>
+            <SelectItem value="user">{t('User')}</SelectItem>
+          </SelectContent>
+        </Select>
+      )),
+    },
+    {
+      id: 'lastLogin',
+      header: t('Last Login'),
+      className: 'hidden lg:table-cell text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Last Login'),
+      cell: (user) => (user.lastSignInAt ? formatDate(user.lastSignInAt, locale) : t('Never')),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -180,60 +252,14 @@ export function AdminUsersPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Name')}</TableHead>
-                    <TableHead>{t('Email')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('Tenant')}</TableHead>
-                    <TableHead>{t('Role')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('Last Login')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((user) => (
-                    <TableRow key={user.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openUserDetail(user)}>
-                      <TableCell className="font-medium">
-                        {user.fullName || '-'}
-                        {user.isSuperAdmin && <Shield className="inline ml-1 h-3 w-3 text-violet-500" />}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Link to={`/admin/tenants/${user.tenantId}`} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>
-                          {user.tenantName}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={user.role}
-                          onValueChange={(v) => { handleRoleChange(user.id, v); }}
-                        >
-                          <SelectTrigger className="w-28 h-7" onClick={(e) => e.stopPropagation()}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">{t('Admin')}</SelectItem>
-                            <SelectItem value="manager">{t('Manager')}</SelectItem>
-                            <SelectItem value="user">{t('User')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground">
-                        {user.lastSignInAt ? formatDate(user.lastSignInAt, locale) : t('Never')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filtered.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        {t('No users found')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={filtered}
+              columns={columns}
+              rowKey={(user) => user.id}
+              onRowClick={openUserDetail}
+              className="border-0 bg-transparent rounded-none"
+              emptyState={<span className="text-muted-foreground">{t('No users found')}</span>}
+            />
           )}
         </CardContent>
       </Card>

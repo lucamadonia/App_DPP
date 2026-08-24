@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Camera, CameraOff, SwitchCamera, Zap, ZapOff, RefreshCw } from 'lucide-react';
 import type { Html5Qrcode as Html5QrcodeType } from 'html5-qrcode';
+import { isNative } from '@/lib/platform';
 
 interface CameraScannerViewProps {
   enabled: boolean;
@@ -45,7 +46,11 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
     if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
       scannerRef.current = null;
       setIsStarting(false);
-      setError(t('Camera API not available. Open this page in Safari (HTTPS) — not inside an app webview.'));
+      setError(
+        isNative()
+          ? t('Camera access is blocked. Allow camera access for Trackbliss in your device settings.')
+          : t('Camera API not available. Open this page in Safari (HTTPS) — not inside an app webview.')
+      );
       return;
     }
 
@@ -98,7 +103,11 @@ export function CameraScannerView({ enabled, onScan, onClose }: CameraScannerVie
       } else if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
         setError(t('This device does not have a back camera that matches the request.'));
       } else if (name === 'SecurityError' || /secure context|https/i.test(rawMsg)) {
-        setError(t('Camera API not available. Open this page in Safari (HTTPS) — not inside an app webview.'));
+        setError(
+        isNative()
+          ? t('Camera access is blocked. Allow camera access for Trackbliss in your device settings.')
+          : t('Camera API not available. Open this page in Safari (HTTPS) — not inside an app webview.')
+      );
       } else {
         setError(`${name || 'Error'}: ${rawMsg || t('Camera not available')}`);
       }

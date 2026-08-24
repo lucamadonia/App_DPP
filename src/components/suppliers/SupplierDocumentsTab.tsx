@@ -22,15 +22,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select,
   SelectContent,
@@ -167,6 +163,79 @@ export function SupplierDocumentsTab({ supplierId }: SupplierDocumentsTabProps) 
     }
   };
 
+  const columns: ResponsiveTableColumn<Document>[] = [
+    {
+      id: 'name',
+      header: t('File Name'),
+      mobilePriority: 'title',
+      cell: doc => (
+        <div className="flex items-center gap-2">
+          {getTypeIcon(doc.type)}
+          <span className="font-medium truncate max-w-[200px]">{doc.name}</span>
+        </div>
+      ),
+    },
+    {
+      id: 'category',
+      header: t('Category'),
+      hideBelow: 'md',
+      mobilePriority: 'subtitle',
+      cell: doc => <Badge variant="outline">{t(doc.category)}</Badge>,
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: doc => getStatusBadge(doc.status),
+    },
+    {
+      id: 'validUntil',
+      header: t('Valid Until'),
+      className: 'text-sm text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Valid Until'),
+      cell: doc => (doc.validUntil ? formatDate(doc.validUntil, locale) : '-'),
+    },
+    {
+      id: 'uploaded',
+      header: t('Uploaded'),
+      className: 'text-sm text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Uploaded'),
+      cell: doc => formatDate(doc.uploadedAt, locale),
+    },
+    {
+      id: 'actions',
+      header: t('Actions'),
+      className: 'w-[100px]',
+      mobilePriority: 'meta',
+      cell: doc => (
+        <div className="flex items-center gap-1">
+          {doc.url && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => window.open(doc.url, '_blank')}
+            >
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => handleDelete(doc.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -219,62 +288,11 @@ export function SupplierDocumentsTab({ supplierId }: SupplierDocumentsTabProps) 
           <p className="text-sm mt-1">{t('Upload your first document for this supplier.')}</p>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('File Name')}</TableHead>
-              <TableHead>{t('Category')}</TableHead>
-              <TableHead>{t('Status')}</TableHead>
-              <TableHead>{t('Valid Until')}</TableHead>
-              <TableHead>{t('Uploaded')}</TableHead>
-              <TableHead className="w-[100px]">{t('Actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredDocs.map(doc => (
-              <TableRow key={doc.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getTypeIcon(doc.type)}
-                    <span className="font-medium truncate max-w-[200px]">{doc.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{t(doc.category)}</Badge>
-                </TableCell>
-                <TableCell>{getStatusBadge(doc.status)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {doc.validUntil ? formatDate(doc.validUntil, locale) : '-'}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatDate(doc.uploadedAt, locale)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    {doc.url && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => window.open(doc.url, '_blank')}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(doc.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <ResponsiveTable
+          data={filteredDocs}
+          columns={columns}
+          rowKey={doc => doc.id}
+        />
       )}
 
       {/* Upload Dialog */}

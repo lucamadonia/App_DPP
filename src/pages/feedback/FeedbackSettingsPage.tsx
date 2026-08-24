@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { FeedbackSettings, FeedbackWidgetMode } from '@/types/feedback';
 import { toast } from 'sonner';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 export function FeedbackSettingsPage() {
   const { t } = useTranslation('warehouse');
@@ -281,7 +282,7 @@ function ToggleRow({
 
 function EmbedSnippetCard({ tenantSlug, mode }: { tenantSlug: string; mode: FeedbackWidgetMode }) {
   const [copied, setCopied] = useState(false);
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dpp-app.fambliss.eu';
+  const origin = getPublicBaseUrl();
   const snippet = `<!-- Trackbliss Feedback Widget -->
 <div id="trackbliss-feedback"
      data-tenant="${tenantSlug || 'YOUR-TENANT-SLUG'}"

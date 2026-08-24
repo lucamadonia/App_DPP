@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';

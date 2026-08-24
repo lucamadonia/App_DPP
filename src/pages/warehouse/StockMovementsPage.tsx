@@ -23,6 +23,7 @@ import {
   rangeToDates, prevRangeToDates, computeCategoryStats, computeFlowTotals, findTopCategory,
   type MovementCategory, type RangePreset,
 } from '@/components/warehouse/movement-categories';
+import { PageContainer } from '@/components/layout/page-container';
 import { MovementKpiStrip, DeltaBadge } from '@/components/warehouse/movement-kpi-strip';
 import { CategoryTab, RecipientTab, ProductTab, AuditLogTab } from '@/components/warehouse/movement-tabs';
 
@@ -90,6 +91,21 @@ export function StockMovementsPage() {
     })();
     return () => { cancelled = true; };
   }, [range, reloadKey]);
+
+  // Pull-to-refresh: same fetch as the range effect, but without dropping the
+  // list back to the skeleton — the indicator already signals the reload.
+  const refreshMovements = useCallback(async () => {
+    const { from } = rangeToDates(range);
+    const prev = prevRangeToDates(range);
+    const [current, previous] = await Promise.all([
+      getTransactionHistory({ dateFrom: from }),
+      prev
+        ? getTransactionHistory({ dateFrom: prev.from, dateTo: prev.to })
+        : Promise.resolve<WhStockTransaction[]>([]),
+    ]);
+    setTxns(current);
+    setPrevTxns(previous);
+  }, [range]);
 
   // Resolve shipment recipients for any transaction that has shipmentId set.
   // We batch the lookup so a 200-row activity stream still uses 1 query.
@@ -308,23 +324,25 @@ export function StockMovementsPage() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Activity className="h-5 w-5 sm:h-6 sm:w-6" />
-            {t('Bewegungen & Auswertung')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {t('Wo ist mein Bestand hingegangen? Versand, Influencer, Spenden, Bruch — alles auf einen Blick.')}
-          </p>
-        </div>
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={refreshMovements}
+      title={
+        <span className="flex items-center gap-2">
+          <Activity className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
+          {t('Bewegungen & Auswertung')}
+        </span>
+      }
+      description={t('Wo ist mein Bestand hingegangen? Versand, Influencer, Spenden, Bruch — alles auf einen Blick.')}
+      actions={
         <Button variant="outline" onClick={exportCSV} disabled={filtered.length === 0} className="min-h-[44px] sm:min-h-9">
           <Download className="mr-1 h-4 w-4" />
           {t('CSV exportieren')}
         </Button>
-      </div>
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
 
       {/* KPI strip — Σ Abgänge / Σ Zugänge / Netto / aktivste Kategorie */}
       {!error && (
@@ -619,6 +637,7 @@ export function StockMovementsPage() {
           </Card>
         </>
       )}
-    </div>
+      </div>
+    </PageContainer>
   );
 }

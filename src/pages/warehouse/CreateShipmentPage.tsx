@@ -13,7 +13,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -937,7 +937,7 @@ export function CreateShipmentPage() {
             subtitle={t('How urgent is this shipment?')}
             gradient="from-amber-500 to-rose-500"
           >
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {PRIORITY_PILLS.map((p) => {
                 const isSelected = priority === p.value;
                 return (
@@ -1460,7 +1460,7 @@ export function CreateShipmentPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Service Level')}</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { v: 'standard', label: 'Standard' },
                   { v: 'express', label: 'Express' },

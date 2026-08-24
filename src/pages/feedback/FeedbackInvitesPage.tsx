@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/adaptive-dialog';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
   getIdeaInvites,
@@ -14,6 +14,7 @@ import {
 } from '@/services/supabase/feedback-ideas';
 import type { FeedbackIdeaInvite } from '@/types/feedback';
 import { toast } from 'sonner';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 export function FeedbackInvitesPage() {
   const { t } = useTranslation('warehouse');
@@ -81,7 +82,7 @@ export function FeedbackInvitesPage() {
 
 function InviteRow({ invite, onCancel }: { invite: FeedbackIdeaInvite; onCancel: () => void }) {
   const [copied, setCopied] = useState(false);
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const origin = getPublicBaseUrl();
   const url = `${origin}/ideas/submit/${invite.token}`;
 
   async function copy() {

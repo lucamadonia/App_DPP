@@ -8,6 +8,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { isNative } from './platform';
+import { capacitorAuthStorage } from './native-storage';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -28,7 +30,18 @@ export const supabase = createClient<any>(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true,
+      // PKCE only on native: the authorization code comes back through a deep
+      // link and is exchanged in-app. Web deliberately stays on the implicit
+      // flow (supabase-js default) — PKCE requires the code verifier from the
+      // initiating browser, which breaks magic links and password resets that
+      // the user opens in a different browser than they requested them from.
+      flowType: isNative() ? 'pkce' : 'implicit',
+      // On web supabase-js parses the callback fragment itself. On native the
+      // callback arrives via `appUrlOpen` (see src/lib/deep-links.ts), so
+      // automatic URL detection must be off or it races the deep-link handler.
+      detectSessionInUrl: !isNative(),
+      // See native-storage.ts — WKWebView localStorage is evictable.
+      ...(isNative() ? { storage: capacitorAuthStorage } : {}),
     },
   }
 );

@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
 import { LocationCard } from '@/components/warehouse/location-card';
 import { getLocations, createLocation, getLocationStats } from '@/services/supabase/wh-locations';
 import { gridStagger, blurIn } from '@/lib/motion';

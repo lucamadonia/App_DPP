@@ -5,7 +5,7 @@ import { Loader2, Settings2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
   getRhEmailTemplates, upsertRhEmailTemplate, seedDefaultEmailTemplates,
 } from '@/services/supabase';
@@ -438,7 +438,7 @@ export function EmailTemplateEditorPage() {
   const selectedBlock = selectedBlockIndex !== null ? blocks[selectedBlockIndex] : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -mx-2 sm:-m-6 overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] -mx-2 sm:-m-6 overflow-hidden">
       {/* Glassmorphism toolbar */}
       <EditorToolbar
         templateName={editingTemplate.name || editingTemplate.eventType}

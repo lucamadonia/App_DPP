@@ -61,7 +61,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';

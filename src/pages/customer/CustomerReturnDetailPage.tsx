@@ -6,7 +6,7 @@ import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';

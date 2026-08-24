@@ -228,7 +228,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
               {t('ml.editor.backToSimple')}
             </Button>
           </div>
-          <div className="border rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+          <div className="border rounded-lg overflow-hidden" style={{ height: 'calc(100dvh - 280px)', minHeight: '500px' }}>
             <MasterLabelEditorPage
               data={labelData}
               product={product}

@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { approveSupplier, rejectSupplier } from '@/services/supabase';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';

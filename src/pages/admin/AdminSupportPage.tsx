@@ -102,7 +102,7 @@ export function AdminSupportPage() {
       </div>
 
       {/* Counts */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
         <StatCard icon={<Inbox className="h-4 w-4 text-emerald-600" />} label="Offen" value={counts.open} />
         <StatCard icon={<Clock className="h-4 w-4 text-amber-600" />} label="Wartend" value={counts.pending} />
         <StatCard icon={<AlertTriangle className="h-4 w-4 text-red-600" />} label="Dringend" value={counts.urgent} />

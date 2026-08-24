@@ -109,26 +109,28 @@ function ScientificConsumerView({ data, product, tenantId }: ConsumerViewProps) 
           {num}. {t('Packaging Materials')}
         </h2>
         {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b-2">
-                <th className="py-2 text-left font-semibold">{t('Material')}</th>
-                <th className="py-2 text-right font-semibold">{t('Share')}</th>
-                <th className="py-2 text-center font-semibold">{t('Recyclable')}</th>
-                {isFieldVisible('materialOrigins') && <th className="py-2 text-left font-semibold">{t('Origin')}</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {packagingMats.map((m, i) => (
-                <tr key={i} className="border-b">
-                  <td className="py-2">{m.name}</td>
-                  <td className="py-2 text-right font-mono">{m.percentage}%</td>
-                  <td className="py-2 text-center">{m.recyclable ? '\u2713' : '\u2717'}</td>
-                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '\u2014'}</td>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b-2">
+                  <th className="py-2 text-left font-semibold">{t('Material')}</th>
+                  <th className="py-2 text-right font-semibold">{t('Share')}</th>
+                  <th className="py-2 text-center font-semibold">{t('Recyclable')}</th>
+                  {isFieldVisible('materialOrigins') && <th className="py-2 text-left font-semibold">{t('Origin')}</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {packagingMats.map((m, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="py-2">{m.name}</td>
+                    <td className="py-2 text-right font-mono">{m.percentage}%</td>
+                    <td className="py-2 text-center">{m.recyclable ? '\u2713' : '\u2717'}</td>
+                    {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '\u2014'}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
           <p className="mt-3 text-sm"><strong>{t('Packaging recyclable')}:</strong> {product.recyclability.packagingRecyclablePercentage}%</p>

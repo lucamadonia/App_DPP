@@ -33,6 +33,7 @@ import {
   resetBranding,
   DEFAULT_BRANDING,
 } from '@/lib/dynamic-theme';
+import { isNative } from '@/lib/platform';
 
 // Branding with defaults applied
 interface ResolvedBranding {
@@ -116,11 +117,16 @@ interface HostWhitelabel {
 // Detects whether the current host is a whitelabel domain (not the default
 // trackbliss.eu / dpp-app.fambliss.eu / localhost).
 function isWhitelabelCandidateHost(host: string): boolean {
+  // Native builds resolve branding from the signed-in tenant, never from the
+  // WebView hostname (which is `localhost` / `capacitor://localhost`).
+  if (isNative()) return false;
   const h = host.toLowerCase();
   if (h === 'localhost' || h.startsWith('localhost:')) return false;
   if (h === 'dpp-app.fambliss.eu') return false;
   if (h === 'trackbliss.eu') return false;
   if (h === 'www.trackbliss.eu') return false;
+  if (h === 'trackbliss.com') return false;
+  if (h === 'www.trackbliss.com') return false;
   // Everything else *could* be a whitelabel match — either a subdomain of
   // trackbliss.eu (e.g. fambliss.trackbliss.eu) or a custom domain
   return true;

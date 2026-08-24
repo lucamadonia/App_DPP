@@ -44,6 +44,8 @@ import { SupplyChainTimeline } from '@/components/supply-chain/SupplyChainTimeli
 import { SupplyChainDialog } from '@/components/supply-chain/SupplyChainDialog';
 import { SupplyChainEmptyState } from '@/components/supply-chain/SupplyChainEmptyState';
 import { SupplyChainStepRow } from '@/components/supply-chain/SupplyChainStepRow';
+import { PageContainer } from '@/components/layout/page-container';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { SupplyChainJourney } from '@/components/supply-chain/SupplyChainJourney';
 import { SupplyChainStationSheet } from '@/components/supply-chain/SupplyChainStationSheet';
 
@@ -71,6 +73,7 @@ type ViewMode = 'journey' | 'cards' | 'table' | 'timeline';
 
 export function SupplyChainPage() {
   const { t } = useTranslation('settings');
+  const isMobile = useIsMobile();
   const prefersReduced = useReducedMotion();
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [isLoading, setIsLoading] = useState(false);
@@ -290,21 +293,20 @@ export function SupplyChainPage() {
     selectedProductId === 'all' ? t('All Products') : getProductName(selectedProductId);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Supply Chain')}</h1>
-          <p className="text-muted-foreground">{t('Supply chain transparency and traceability')}</p>
-        </div>
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={handleRefresh}
+      title={t('Supply Chain')}
+      description={t('Supply chain transparency and traceability')}
+      actions={
         <Button onClick={() => openCreateDialog()} className="h-11">
           <Plus className="mr-2 h-4 w-4" />
           {t('New Entry')}
         </Button>
-      </MotionDiv>
+      }
+    >
+      <div className="space-y-6">
 
       {/* Prominent product switcher */}
       <MotionDiv
@@ -479,7 +481,27 @@ export function SupplyChainPage() {
                   )}
                 </div>
               ) : activeView === 'table' ? (
-                /* Table View */
+                /* Table View — 13 columns are unusable on a phone, so below `md`
+                   we render SupplyChainStepRow's own compact card variant. */
+                isMobile ? (
+                  <div className="space-y-2">
+                    {filteredEntries.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">{t('No entries found')}</div>
+                    ) : (
+                      filteredEntries.map(entry => (
+                        <SupplyChainStepRow
+                          key={entry.id}
+                          entry={entry}
+                          productName={getProductName(entry.product_id)}
+                          supplierName={getSupplierName(entry) || undefined}
+                          onEdit={openEditDialog}
+                          onDelete={handleDelete}
+                          compact
+                        />
+                      ))
+                    )}
+                  </div>
+                ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -521,6 +543,7 @@ export function SupplyChainPage() {
                     </TableBody>
                   </Table>
                 </div>
+                )
               ) : (
                 /* Timeline View */
                 <SupplyChainTimeline
@@ -601,6 +624,7 @@ export function SupplyChainPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

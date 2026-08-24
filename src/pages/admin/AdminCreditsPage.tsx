@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { listAdminTenants, adjustCredits, setMonthlyAllowance } from '@/services/supabase/admin';
 import type { AdminTenant } from '@/types/admin';
 
@@ -86,6 +86,83 @@ export function AdminCreditsPage() {
     }
   };
 
+  const columns: ResponsiveTableColumn<AdminTenant>[] = [
+    {
+      id: 'tenant',
+      header: t('Tenant'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (tenant) => tenant.name,
+    },
+    {
+      id: 'plan',
+      header: t('Plan'),
+      mobilePriority: 'badge',
+      cell: (tenant) => (
+        <Badge className={PLAN_COLORS[tenant.plan] || ''} variant="secondary">
+          {tenant.plan}
+        </Badge>
+      ),
+    },
+    {
+      id: 'monthly',
+      header: t('Monthly'),
+      className: 'text-right tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: t('Monthly'),
+      cell: (tenant) => tenant.monthlyAllowance,
+    },
+    {
+      id: 'monthlyUsed',
+      header: t('Monthly Used'),
+      className: 'text-right tabular-nums',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Monthly Used'),
+      cell: (tenant) => tenant.monthlyUsed,
+    },
+    {
+      id: 'purchased',
+      header: t('Purchased'),
+      className: 'text-right tabular-nums',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Purchased'),
+      cell: (tenant) => tenant.purchasedBalance,
+    },
+    {
+      id: 'total',
+      header: t('Total'),
+      className: 'text-right tabular-nums font-medium',
+      mobilePriority: 'meta',
+      mobileLabel: t('Total'),
+      cell: (tenant) => tenant.monthlyAllowance - tenant.monthlyUsed + tenant.purchasedBalance,
+    },
+    {
+      id: 'actions',
+      header: t('Actions'),
+      mobilePriority: 'meta',
+      cell: (tenant) => (
+        <span className="inline-flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { setAdjustTenant(tenant); setCreditAmount(0); setCreditReason(''); }}
+          >
+            {t('Adjust Credits')}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setAllowanceTenant(tenant); setNewAllowance(tenant.monthlyAllowance); }}
+          >
+            {t('Set Allowance')}
+          </Button>
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -121,66 +198,13 @@ export function AdminCreditsPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Tenant')}</TableHead>
-                    <TableHead>{t('Plan')}</TableHead>
-                    <TableHead className="text-right">{t('Monthly')}</TableHead>
-                    <TableHead className="hidden sm:table-cell text-right">{t('Monthly Used')}</TableHead>
-                    <TableHead className="hidden md:table-cell text-right">{t('Purchased')}</TableHead>
-                    <TableHead className="text-right">{t('Total')}</TableHead>
-                    <TableHead>{t('Actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((tenant) => {
-                    const monthlyRemaining = tenant.monthlyAllowance - tenant.monthlyUsed;
-                    const total = monthlyRemaining + tenant.purchasedBalance;
-                    return (
-                      <TableRow key={tenant.id}>
-                        <TableCell className="font-medium">{tenant.name}</TableCell>
-                        <TableCell>
-                          <Badge className={PLAN_COLORS[tenant.plan] || ''} variant="secondary">
-                            {tenant.plan}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{tenant.monthlyAllowance}</TableCell>
-                        <TableCell className="hidden sm:table-cell text-right tabular-nums">{tenant.monthlyUsed}</TableCell>
-                        <TableCell className="hidden md:table-cell text-right tabular-nums">{tenant.purchasedBalance}</TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">{total}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => { setAdjustTenant(tenant); setCreditAmount(0); setCreditReason(''); }}
-                            >
-                              {t('Adjust Credits')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => { setAllowanceTenant(tenant); setNewAllowance(tenant.monthlyAllowance); }}
-                            >
-                              {t('Set Allowance')}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {filtered.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        {t('No credit data')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={filtered}
+              columns={columns}
+              rowKey={(tenant) => tenant.id}
+              className="border-0 bg-transparent rounded-none"
+              emptyState={<span className="text-muted-foreground">{t('No credit data')}</span>}
+            />
           )}
         </CardContent>
       </Card>

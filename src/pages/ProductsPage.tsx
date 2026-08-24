@@ -72,6 +72,7 @@ import { useBilling } from '@/hooks/use-billing';
 import { UpgradePrompt } from '@/components/billing';
 import { ProductsSkeleton } from '@/components/skeletons/ProductsSkeleton';
 import { ErrorState, EmptyState } from '@/components/ui/state-feedback';
+import { PageContainer } from '@/components/layout/page-container';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -318,21 +319,14 @@ export function ProductsPage() {
     entitlements.limits.maxProducts !== Infinity;
 
   return (
-    <div className="space-y-6">
-      {/* ---- Header ---- */}
-      <MotionDiv
-        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        {...motionProps(blurIn)}
-      >
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {t('Products')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('Manage your products and their Digital Product Passports')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={() => refetchProducts()}
+      title={t('Products')}
+      description={t('Manage your products and their Digital Product Passports')}
+      actions={
+        <>
           <Button variant="outline" onClick={() => setImportOpen(true)} size="sm">
             <Upload className="mr-1.5 h-4 w-4" />
             {t('Import')}
@@ -350,9 +344,10 @@ export function ProductsPage() {
               </Link>
             </Button>
           )}
-        </div>
-      </MotionDiv>
-
+        </>
+      }
+    >
+      <div className="space-y-6">
       {quotaReached && (
         <UpgradePrompt
           variant="quota"
@@ -441,7 +436,7 @@ export function ProductsPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -833,6 +828,7 @@ export function ProductsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

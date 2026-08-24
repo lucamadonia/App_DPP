@@ -11,11 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import { EmptyState, ErrorState } from '@/components/ui/state-feedback';
-import { ResponsiveTable, type ResponsiveTableColumn, type SortState } from '@/components/ui/responsive-table';
+import { ResponsiveTable, FooterRow, FooterCell, type ResponsiveTableColumn, type SortState } from '@/components/ui/responsive-table';
 import { PackagingUsageTab } from '@/components/warehouse/PackagingUsageTab';
 import { ReportKpiStrip } from '@/components/warehouse/report-kpi-strip';
 import { ReportCharts, RevealSection } from '@/components/warehouse/report-charts';
@@ -533,6 +532,69 @@ function AdHocPivot({ shipments, homeCountry }: { shipments: WhShipment[]; homeC
   // Translate row labels for enum-like dimensions (status/priority keys exist in i18n)
   const rowLabel = (r: string) => (rowDim === 'status' || rowDim === 'priority' ? t(r) : r);
 
+  // The pivot renders through ResponsiveTable so a phone gets one card per row
+  // instead of a horizontally scrolled matrix. The Σ line goes through `footer`
+  // rather than riding along in `data`: a totals row inside the row list would
+  // be sorted like data the day anyone makes these columns sortable, and it
+  // would inflate the row count meanwhile.
+  const pivotColumns: ResponsiveTableColumn<string>[] = [
+    {
+      id: '__dim',
+      header: dimLabel(rowDim),
+      mobilePriority: 'title',
+      cell: (r) => <span className="font-medium">{rowLabel(r)}</span>,
+    },
+    ...matrix.cols.map((c) => ({
+      id: c,
+      header: c,
+      className: 'text-right',
+      mobilePriority: 'meta' as const,
+      mobileLabel: c,
+      cell: (r: string) => <span className="tabular-nums">{matrix.cells[`${r}|${c}`] || 0}</span>,
+    })),
+    {
+      id: '__total',
+      header: 'Σ',
+      className: 'text-right font-bold',
+      mobilePriority: 'badge',
+      cell: (r) => <span className="tabular-nums font-bold">{matrix.rowTotals[r]}</span>,
+    },
+  ];
+
+  // `<tfoot>` carries `[&_tr]:border-t`, and that descendant selector outranks a
+  // `border-t-2` class on the row — the divider would quietly drop to 1px. An
+  // inline width beats both and keeps the desktop rule exactly as it was.
+  const pivotFooter = (
+    <FooterRow className="font-bold" style={{ borderTopWidth: '2px' }}>
+      <FooterCell>Σ</FooterCell>
+      {matrix.cols.map((c) => (
+        <FooterCell key={c} className="text-right tabular-nums">
+          {matrix.colTotals[c]}
+        </FooterCell>
+      ))}
+      <FooterCell className="text-right tabular-nums">{matrix.grandTotal}</FooterCell>
+    </FooterRow>
+  );
+
+  // Below `md` the cards are not a table, so a bare <tr> would render as loose
+  // text — the totals need their own shape there.
+  const pivotMobileFooter = (
+    <div className="rounded-lg border-2 bg-muted/30 px-4 py-3">
+      <div className="flex items-center justify-between gap-2 text-sm font-bold">
+        <span>Σ</span>
+        <span className="tabular-nums">{matrix.grandTotal}</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {matrix.cols.map((c) => (
+          <span key={c} className="inline-flex items-center gap-1">
+            <span className="opacity-70">{c}:</span>
+            <span className="text-foreground/80 tabular-nums">{matrix.colTotals[c]}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <RevealSection>
       <Card>
@@ -580,39 +642,13 @@ function AdHocPivot({ shipments, homeCountry }: { shipments: WhShipment[]; homeC
               description={t('Try a wider date range or create new shipments.')}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{dimLabel(rowDim)}</TableHead>
-                    {matrix.cols.map(c => (
-                      <TableHead key={c} className="text-right">{c}</TableHead>
-                    ))}
-                    <TableHead className="text-right font-bold">Σ</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {matrix.rows.map(r => (
-                    <TableRow key={r}>
-                      <TableCell className="font-medium">{rowLabel(r)}</TableCell>
-                      {matrix.cols.map(c => (
-                        <TableCell key={c} className="text-right tabular-nums">
-                          {matrix.cells[`${r}|${c}`] || 0}
-                        </TableCell>
-                      ))}
-                      <TableCell className="text-right tabular-nums font-bold">{matrix.rowTotals[r]}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="border-t-2 font-bold">
-                    <TableCell>Σ</TableCell>
-                    {matrix.cols.map(c => (
-                      <TableCell key={c} className="text-right tabular-nums">{matrix.colTotals[c]}</TableCell>
-                    ))}
-                    <TableCell className="text-right tabular-nums">{matrix.grandTotal}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={matrix.rows}
+              columns={pivotColumns}
+              rowKey={(r) => r}
+              footer={pivotFooter}
+              mobileFooter={pivotMobileFooter}
+            />
           )}
         </CardContent>
       </Card>

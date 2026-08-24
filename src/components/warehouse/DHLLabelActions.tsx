@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { createDHLLabel, cancelDHLLabel, getDHLSettings } from '@/services/supabase/dhl-carrier';
 import { DHL_PRODUCT_LABELS } from '@/types/dhl';
 import type { DHLParcelProduct } from '@/types/dhl';

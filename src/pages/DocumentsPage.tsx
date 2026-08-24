@@ -50,7 +50,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -96,8 +96,8 @@ import { DocumentDetailDialog } from '@/components/documents/DocumentDetailDialo
 import { UploadNewVersionDialog } from '@/components/documents/UploadNewVersionDialog';
 import type { DocumentFolder } from '@/types/database';
 
-import { motion } from 'framer-motion';
-import { blurIn, useReducedMotion } from '@/lib/motion';
+import { useReducedMotion } from '@/lib/motion';
+import { PageContainer } from '@/components/layout/page-container';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import type { VisibilityLevel } from '@/types/visibility';
@@ -135,7 +135,6 @@ export function DocumentsPage() {
   const locale = useLocale();
   const isMobile = useIsMobile();
   const prefersReduced = useReducedMotion();
-  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -539,19 +538,14 @@ export function DocumentsPage() {
   );
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Documents & Certificates')}</h1>
-          <p className="text-muted-foreground">
-            {t('Manage all documents for your products')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={() => refreshData()}
+      title={t('Documents & Certificates')}
+      description={t('Manage all documents for your products')}
+      actions={
+        <>
           <Button variant="outline" onClick={() => setIsBulkDialogOpen(true)}>
             <UploadCloud className="mr-2 h-4 w-4" />
             {t('Bulk Upload')}
@@ -560,8 +554,10 @@ export function DocumentsPage() {
             <Plus className="mr-2 h-4 w-4" />
             {t('Add Document')}
           </Button>
-        </div>
-      </MotionDiv>
+        </>
+      }
+    >
+      <div className="space-y-4">
 
       {/* Main layout: Sidebar + Content */}
       <div className="flex gap-0 rounded-lg border bg-card overflow-hidden" style={{ minHeight: '600px' }}>
@@ -1234,6 +1230,7 @@ export function DocumentsPage() {
           refreshData();
         }}
       />
-    </div>
+      </div>
+    </PageContainer>
   );
 }

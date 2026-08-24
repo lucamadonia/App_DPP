@@ -572,6 +572,9 @@
   "ml.fieldGroup.compliance": "Konformität",
 
   "ml.editor.tabCheck": "Check",
+  "ml.editor.mobileElements": "Elemente",
+  "ml.editor.mobileElementsHint": "Element antippen, um es dem Etikett hinzuzufügen",
+  "ml.editor.mobileSettings": "Einstellungen & Vorschau",
   "ml.editor.valueColor": "Wertfarbe",
   "ml.editor.labelColor": "Labelfarbe",
   "ml.editor.lineHeight": "Zeilenhöhe",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { ExternalLink, FileText } from 'lucide-react';
 import { Instagram, Music2, Youtube, Twitter, Pin, Globe } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -46,6 +46,74 @@ export function TopContentTable({ className }: TopContentTableProps) {
       .finally(() => setLoading(false));
   }, []);
 
+  const platformIcon = (post: WhContentPost) => {
+    const cfg = SOCIAL_PLATFORM_CONFIG[post.platform];
+    const PIcon = cfg ? PLATFORM_ICONS[cfg.icon] || Globe : Globe;
+    return <PIcon className={`h-4 w-4 ${cfg?.color || 'text-gray-500'}`} />;
+  };
+
+  const postLink = (post: WhContentPost) => (
+    <a
+      href={post.postUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-xs text-blue-600 hover:underline truncate max-w-[100px] sm:max-w-[140px]"
+    >
+      <ExternalLink className="h-3 w-3 shrink-0" />
+      <span className="truncate">{post.postUrl.replace(/^https?:\/\//, '').slice(0, 30)}</span>
+    </a>
+  );
+
+  const columns: ResponsiveTableColumn<WhContentPost>[] = [
+    {
+      id: 'platform',
+      header: t('Platform'),
+      className: 'w-10',
+      cell: platformIcon,
+    },
+    {
+      id: 'post',
+      header: t('Post'),
+      mobilePriority: 'title',
+      cell: postLink,
+    },
+    {
+      id: 'views',
+      header: t('Views'),
+      className: 'text-right text-xs',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Views'),
+      cell: post => formatCompact(post.views ?? 0),
+    },
+    {
+      id: 'likes',
+      header: t('Likes'),
+      className: 'text-right text-xs',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Likes'),
+      cell: post => formatCompact(post.likes ?? 0),
+    },
+    {
+      id: 'comments',
+      header: t('Comments'),
+      className: 'text-right text-xs',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Comments'),
+      cell: post => formatCompact(post.comments ?? 0),
+    },
+    {
+      id: 'total',
+      header: t('Total'),
+      className: 'text-right text-xs font-medium',
+      mobilePriority: 'meta',
+      mobileLabel: t('Total'),
+      cell: post => formatCompact((post.views ?? 0) + (post.likes ?? 0) + (post.comments ?? 0)),
+    },
+  ];
+
   if (!loading && posts.length === 0) {
     return (
       <Card className={className}>
@@ -68,58 +136,19 @@ export function TopContentTable({ className }: TopContentTableProps) {
         <CardTitle className="text-sm sm:text-base">{t('Top Performing Content')}</CardTitle>
       </CardHeader>
       <CardContent className="px-3 sm:px-6">
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-8 rounded bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">{t('Platform')}</TableHead>
-                  <TableHead>{t('Post')}</TableHead>
-                  <TableHead className="hidden sm:table-cell text-right">{t('Views')}</TableHead>
-                  <TableHead className="hidden md:table-cell text-right">{t('Likes')}</TableHead>
-                  <TableHead className="hidden md:table-cell text-right">{t('Comments')}</TableHead>
-                  <TableHead className="text-right">{t('Total')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {posts.map((post) => {
-                  const cfg = SOCIAL_PLATFORM_CONFIG[post.platform];
-                  const PIcon = cfg ? PLATFORM_ICONS[cfg.icon] || Globe : Globe;
-                  const total = (post.views ?? 0) + (post.likes ?? 0) + (post.comments ?? 0);
-
-                  return (
-                    <TableRow key={post.id}>
-                      <TableCell>
-                        <PIcon className={`h-4 w-4 ${cfg?.color || 'text-gray-500'}`} />
-                      </TableCell>
-                      <TableCell>
-                        <a
-                          href={post.postUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-blue-600 hover:underline truncate max-w-[100px] sm:max-w-[140px]"
-                        >
-                          <ExternalLink className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{post.postUrl.replace(/^https?:\/\//, '').slice(0, 30)}</span>
-                        </a>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-right text-xs">{formatCompact(post.views ?? 0)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-right text-xs">{formatCompact(post.likes ?? 0)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-right text-xs">{formatCompact(post.comments ?? 0)}</TableCell>
-                      <TableCell className="text-right text-xs font-medium">{formatCompact(total)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <ResponsiveTable
+          data={posts}
+          columns={columns}
+          rowKey={post => post.id}
+          loading={loading}
+          loadingRows={5}
+          mobileCardTitle={post => (
+            <span className="flex items-center gap-1.5">
+              {platformIcon(post)}
+              {postLink(post)}
+            </span>
+          )}
+        />
       </CardContent>
     </Card>
   );

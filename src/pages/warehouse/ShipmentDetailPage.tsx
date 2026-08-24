@@ -11,12 +11,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { Progress } from '@/components/ui/progress';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
@@ -55,6 +55,7 @@ import { RequestFeedbackButton } from '@/components/feedback/RequestFeedbackButt
 import { useBillingOptional } from '@/hooks/use-billing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase as sb } from '@/lib/supabase';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 const CARRIER_REQUIRED_FOR: ShipmentStatus[] = ['label_created', 'shipped', 'in_transit', 'delivered'];
 
@@ -500,6 +501,179 @@ export function ShipmentDetailPage() {
     { key: 'items' as const, label: `${t('Items')} (${items.length})` },
     ...(hasSampleMeta ? [{ key: 'content' as const, label: `${t('Content')} (${contentPosts.length})` }] : []),
     { key: 'activity' as const, label: t('Activity') },
+  ];
+
+  // Items list: unchanged table on md+, one card per item below — a packer on a
+  // phone previously had to pinch-zoom a seven-column table.
+  const itemColumns: ResponsiveTableColumn<WhShipmentItem>[] = [
+    {
+      id: 'product',
+      header: t('Product'),
+      mobilePriority: 'title',
+      cell: (item) => (
+        <div className="flex flex-col gap-1 min-w-0">
+          <Link
+            to={`/products/${item.productId}`}
+            className="font-medium text-primary hover:underline text-xs sm:text-sm break-words"
+          >
+            {item.productName || item.productId.slice(0, 8)}
+          </Link>
+          <div className="flex flex-wrap gap-1">
+            {item.variantTitle && (() => {
+              const hex = getVariantColorHex(item.variantTitle);
+              return (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] gap-1 font-semibold border-2 bg-violet-50 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-100 dark:border-violet-700"
+                >
+                  {hex && (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-2.5 w-2.5 rounded-full border border-black/20 shadow-sm shrink-0"
+                      style={{ backgroundColor: hex }}
+                    />
+                  )}
+                  {item.variantTitle}
+                </Badge>
+              );
+            })()}
+            {!item.batchId && (
+              <Badge variant="outline" className="text-[10px] gap-1 text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                <AlertTriangle className="h-3 w-3" /> {t('Charge fehlt')}
+              </Badge>
+            )}
+            {item.isGift && (
+              <Badge variant="outline" className="text-[10px] gap-1 text-pink-700 border-pink-300 bg-pink-50 dark:bg-pink-900/20">
+                <Gift className="h-3 w-3" /> {t('Beigabe')}
+              </Badge>
+            )}
+            {item.bundleLabel && (
+              <Badge variant="outline" className="text-[10px] gap-1 text-amber-800 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200">
+                <Package className="h-3 w-3" /> {item.bundleLabel}
+              </Badge>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'batch',
+      header: t('Batch'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Batch'),
+      cell: (item) =>
+        item.batchId ? (
+          <Link to={`/products/${item.productId}/batches/${item.batchId}`} className="hover:underline">
+            {item.batchSerialNumber || item.batchId.slice(0, 8)}
+          </Link>
+        ) : (
+          <span className="text-muted-foreground text-xs">{t('No batch assigned')}</span>
+        ),
+    },
+    {
+      id: 'location',
+      header: t('Location'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Location'),
+      cell: (item) =>
+        item.locationName ? (
+          <Link to={`/warehouse/locations/${item.locationId}`} className="hover:underline">
+            {item.locationName}
+          </Link>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      id: 'quantity',
+      header: t('Quantity'),
+      className: 'text-right',
+      // Deliberately a badge on mobile too: a multi-quantity line is the one
+      // thing a packer must not miss, and pick/pack progress is hidden there.
+      mobilePriority: 'badge',
+      cell: (item) => (
+        <span className="tabular-nums font-medium">
+          {item.quantity > 1 ? (
+            <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-bold tabular-nums">
+              {item.quantity}×
+            </Badge>
+          ) : (
+            item.quantity
+          )}
+        </span>
+      ),
+    },
+    {
+      id: 'picking',
+      header: t('picking'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('picking'),
+      cell: (item) => {
+        const pickPct = item.quantity > 0 ? Math.round((item.quantityPicked / item.quantity) * 100) : 0;
+        return (
+          <div className="flex items-center gap-2 min-w-[80px]">
+            <Progress value={pickPct} className="h-1.5 flex-1" />
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {item.quantityPicked}/{item.quantity}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'packed',
+      header: t('packed'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('packed'),
+      cell: (item) => {
+        const packPct = item.quantity > 0 ? Math.round((item.quantityPacked / item.quantity) * 100) : 0;
+        return (
+          <div className="flex items-center gap-2 min-w-[80px]">
+            <Progress value={packPct} className="h-1.5 flex-1" />
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {item.quantityPacked}/{item.quantity}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'edit',
+      header: '',
+      className: 'w-12 text-right',
+      mobilePriority: 'meta',
+      cell: (item) =>
+        canEditItems ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setEditItem(item)}
+            aria-label={t('Charge bearbeiten')}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-40 pointer-events-none" disabled>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs max-w-xs">{t('Status gelockt — bitte erst zurück auf Verpackt')}</div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ),
+    },
   ];
 
   return (
@@ -969,7 +1143,7 @@ export function ShipmentDetailPage() {
                         size="sm"
                         className="h-7 px-2 text-xs"
                         onClick={() => {
-                          const url = `${window.location.origin}/t/${shipment.trackingToken}`;
+                          const url = `${getPublicBaseUrl()}/t/${shipment.trackingToken}`;
                           navigator.clipboard.writeText(url);
                           toast.success(t('Link copied'));
                         }}
@@ -978,7 +1152,7 @@ export function ShipmentDetailPage() {
                         {t('Copy', { ns: 'common' })}
                       </Button>
                       <a
-                        href={`${window.location.origin}/t/${shipment.trackingToken}`}
+                        href={`${getPublicBaseUrl()}/t/${shipment.trackingToken}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -990,7 +1164,7 @@ export function ShipmentDetailPage() {
                       {shipment.recipientEmail && (
                         <a
                           href={`mailto:${shipment.recipientEmail}?subject=${encodeURIComponent(`${shipment.shipmentNumber} — Sendungsverfolgung`)}&body=${encodeURIComponent(
-                            `Hallo,\n\nhier ist der Live-Tracking-Link zu deinem Paket:\n${window.location.origin}/t/${shipment.trackingToken}\n\nViele Grüße`,
+                            `Hallo,\n\nhier ist der Live-Tracking-Link zu deinem Paket:\n${getPublicBaseUrl()}/t/${shipment.trackingToken}\n\nViele Grüße`,
                           )}`}
                         >
                           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
@@ -1145,145 +1319,13 @@ export function ShipmentDetailPage() {
         )}
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Product')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Batch')}</TableHead>
-                    <TableHead className="hidden lg:table-cell">{t('Location')}</TableHead>
-                    <TableHead className="text-right">{t('Quantity')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('picking')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('packed')}</TableHead>
-                    <TableHead className="w-12 text-right"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">{t('No results found')}</TableCell>
-                    </TableRow>
-                  ) : (
-                    items.map((item) => {
-                      const pickPct = item.quantity > 0 ? Math.round((item.quantityPicked / item.quantity) * 100) : 0;
-                      const packPct = item.quantity > 0 ? Math.round((item.quantityPacked / item.quantity) * 100) : 0;
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="flex flex-col gap-1 min-w-0">
-                              <Link to={`/products/${item.productId}`} className="font-medium text-primary hover:underline text-xs sm:text-sm break-words">
-                                {item.productName || item.productId.slice(0, 8)}
-                              </Link>
-                              <div className="flex flex-wrap gap-1">
-                                {item.variantTitle && (() => {
-                                  const hex = getVariantColorHex(item.variantTitle);
-                                  return (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[10px] gap-1 font-semibold border-2 bg-violet-50 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-100 dark:border-violet-700"
-                                    >
-                                      {hex && (
-                                        <span
-                                          aria-hidden="true"
-                                          className="inline-block h-2.5 w-2.5 rounded-full border border-black/20 shadow-sm shrink-0"
-                                          style={{ backgroundColor: hex }}
-                                        />
-                                      )}
-                                      {item.variantTitle}
-                                    </Badge>
-                                  );
-                                })()}
-                                {!item.batchId && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
-                                    <AlertTriangle className="h-3 w-3" /> {t('Charge fehlt')}
-                                  </Badge>
-                                )}
-                                {item.isGift && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 text-pink-700 border-pink-300 bg-pink-50 dark:bg-pink-900/20">
-                                    <Gift className="h-3 w-3" /> {t('Beigabe')}
-                                  </Badge>
-                                )}
-                                {item.bundleLabel && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 text-amber-800 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200">
-                                    <Package className="h-3 w-3" /> {item.bundleLabel}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {item.batchId ? (
-                              <Link to={`/products/${item.productId}/batches/${item.batchId}`} className="hover:underline">
-                                {item.batchSerialNumber || item.batchId.slice(0, 8)}
-                              </Link>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">{t('No batch assigned')}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {item.locationName ? (
-                              <Link to={`/warehouse/locations/${item.locationId}`} className="hover:underline">{item.locationName}</Link>
-                            ) : '—'}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
-                            {item.quantity > 1 ? (
-                              // Visible on phones too — the pick/pack progress
-                              // columns next to it are hidden below `sm`, which is
-                              // exactly the device a packer uses.
-                              <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-bold tabular-nums">
-                                {item.quantity}×
-                              </Badge>
-                            ) : (
-                              item.quantity
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <div className="flex items-center gap-2 min-w-[80px]">
-                              <Progress value={pickPct} className="h-1.5 flex-1" />
-                              <span className="text-xs tabular-nums text-muted-foreground">{item.quantityPicked}/{item.quantity}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <div className="flex items-center gap-2 min-w-[80px]">
-                              <Progress value={packPct} className="h-1.5 flex-1" />
-                              <span className="text-xs tabular-nums text-muted-foreground">{item.quantityPacked}/{item.quantity}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {canEditItems ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setEditItem(item)}
-                                aria-label={t('Charge bearbeiten')}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            ) : (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span tabIndex={0}>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-40 pointer-events-none" disabled>
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs max-w-xs">{t('Status gelockt — bitte erst zurück auf Verpackt')}</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={items}
+              columns={itemColumns}
+              rowKey={(item) => item.id}
+              className="border-0 bg-transparent rounded-none"
+              emptyState={<span className="text-muted-foreground">{t('No results found')}</span>}
+            />
           </CardContent>
         </Card>
         </>

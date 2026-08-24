@@ -7,16 +7,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import type { AutoMapResult } from '@/types/shopify';
+
+/** result.details carries no id, so the list index becomes the row key. */
+type AutoMapDetailRow = AutoMapResult['details'][number] & { rowIndex: number };
 
 interface Props {
   result: AutoMapResult;
@@ -25,6 +24,65 @@ interface Props {
 
 export function ShopifyAutoMapDialog({ result, onClose }: Props) {
   const { t } = useTranslation('warehouse');
+
+  const columns: ResponsiveTableColumn<AutoMapDetailRow>[] = [
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: d => (
+        <>
+          {d.status === 'mapped' && (
+            <Badge className="bg-green-500/10 text-green-600 border-green-200">
+              <Check className="mr-1 h-3 w-3" />{t('mapped')}
+            </Badge>
+          )}
+          {d.status === 'skipped_no_match' && (
+            <Badge variant="secondary">
+              <X className="mr-1 h-3 w-3" />{t('skipped_no_match')}
+            </Badge>
+          )}
+          {d.status === 'skipped_already_mapped' && (
+            <Badge variant="outline">
+              <Minus className="mr-1 h-3 w-3" />{t('skipped_already_mapped')}
+            </Badge>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'product',
+      header: t('Shopify Products'),
+      className: 'font-medium text-xs sm:text-sm',
+      mobilePriority: 'title',
+      cell: d => d.shopifyProductTitle,
+    },
+    {
+      id: 'variant',
+      header: t('Variant'),
+      className: 'text-xs sm:text-sm',
+      hideBelow: 'md',
+      mobilePriority: 'subtitle',
+      cell: d => d.shopifyVariantTitle,
+    },
+    {
+      id: 'barcode',
+      header: t('Barcode'),
+      className: 'text-xs font-mono',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Barcode'),
+      cell: d => d.shopifyBarcode || '—',
+    },
+    {
+      id: 'matched',
+      header: t('Trackbliss Product'),
+      className: 'text-xs sm:text-sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Trackbliss Product'),
+      cell: d => d.matchedProductName || '—',
+    },
+  ];
 
   return (
     <Dialog open onOpenChange={() => onClose()}>
@@ -39,46 +97,11 @@ export function ShopifyAutoMapDialog({ result, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-x-auto -mx-3 sm:-mx-6 px-3 sm:px-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('Status')}</TableHead>
-                <TableHead>{t('Shopify Products')}</TableHead>
-                <TableHead className="hidden md:table-cell">{t('Variant')}</TableHead>
-                <TableHead className="hidden lg:table-cell">{t('Barcode')}</TableHead>
-                <TableHead>{t('Trackbliss Product')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.details.map((d, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    {d.status === 'mapped' && (
-                      <Badge className="bg-green-500/10 text-green-600 border-green-200">
-                        <Check className="mr-1 h-3 w-3" />{t('mapped')}
-                      </Badge>
-                    )}
-                    {d.status === 'skipped_no_match' && (
-                      <Badge variant="secondary">
-                        <X className="mr-1 h-3 w-3" />{t('skipped_no_match')}
-                      </Badge>
-                    )}
-                    {d.status === 'skipped_already_mapped' && (
-                      <Badge variant="outline">
-                        <Minus className="mr-1 h-3 w-3" />{t('skipped_already_mapped')}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium text-xs sm:text-sm">{d.shopifyProductTitle}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs sm:text-sm">{d.shopifyVariantTitle}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-xs font-mono">{d.shopifyBarcode || '—'}</TableCell>
-                  <TableCell className="text-xs sm:text-sm">{d.matchedProductName || '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <ResponsiveTable
+          data={result.details.map((d, rowIndex) => ({ ...d, rowIndex }))}
+          columns={columns}
+          rowKey={d => String(d.rowIndex)}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -7,7 +7,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSampleShipments, getSampleDashboardStats, getOverdueSamples, updateSampleStatus, updateContentStatus } from '@/services/supabase/wh-samples';
 import { getContentPosts } from '@/services/supabase/wh-content';
@@ -159,6 +159,185 @@ export function SampleDashboardPage() {
     return contentPosts.find(p => p.shipmentId === shipmentId);
   };
 
+  // -- Table columns ----------------------------------------------------------
+  // Both tables render through ResponsiveTable: unchanged table on md+, one card
+  // per sample below. Selection stays a normal column so the CheckSquare/Square
+  // affordance is preserved rather than swapped for the built-in Checkbox.
+  const activeColumns: ResponsiveTableColumn<WhShipment>[] = [
+    {
+      id: 'select',
+      className: 'w-10',
+      mobilePriority: 'badge',
+      header: (
+        <button onClick={toggleSelectAll} className="p-1 hover:bg-muted rounded">
+          {selectedIds.size === activeSamples.length && activeSamples.length > 0
+            ? <CheckSquare className="h-4 w-4" />
+            : <Square className="h-4 w-4 text-muted-foreground" />}
+        </button>
+      ),
+      cell: (s) => (
+        <button onClick={() => toggleSelect(s.id)} className="p-1 hover:bg-muted rounded">
+          {selectedIds.has(s.id)
+            ? <CheckSquare className="h-4 w-4 text-primary" />
+            : <Square className="h-4 w-4 text-muted-foreground" />}
+        </button>
+      ),
+    },
+    {
+      id: 'shipmentNumber',
+      header: t('Shipment Number'),
+      mobilePriority: 'title',
+      cell: (s) => (
+        <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
+          {s.shipmentNumber}
+        </Link>
+      ),
+    },
+    {
+      id: 'recipient',
+      header: t('Recipient'),
+      hideBelow: 'sm',
+      mobilePriority: 'subtitle',
+      cell: (s) => <span className="text-sm">{s.recipientName}</span>,
+    },
+    {
+      id: 'sampleType',
+      header: t('Sample Type'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Sample Type'),
+      cell: (s) =>
+        s.sampleMeta?.sampleType ? (
+          <Badge variant="outline" className="text-xs">
+            {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
+          </Badge>
+        ) : null,
+    },
+    {
+      id: 'sampleStatus',
+      header: t('Sample Status'),
+      mobilePriority: 'badge',
+      cell: (s) =>
+        s.sampleMeta?.sampleStatus ? <SampleStatusBadge status={s.sampleMeta.sampleStatus} /> : null,
+    },
+    {
+      id: 'contentStatus',
+      header: t('Content Status'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Content Status'),
+      cell: (s) =>
+        s.sampleMeta?.contentStatus ? <ContentStatusBadge status={s.sampleMeta.contentStatus} /> : null,
+    },
+    {
+      id: 'returnDeadline',
+      header: t('Return Deadline'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Return Deadline'),
+      cell: (s) => <DeadlineCountdownBadge deadline={s.sampleMeta?.returnDeadline} />,
+    },
+    {
+      id: 'contentDeadline',
+      header: t('Content Deadline'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Content Deadline'),
+      cell: (s) => <DeadlineCountdownBadge deadline={s.sampleMeta?.contentDeadline} />,
+    },
+    {
+      id: 'content',
+      header: t('Content'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Content'),
+      cell: (s) => {
+        const contentPost = getContentLink(s.id);
+        return contentPost ? (
+          <a
+            href={contentPost.postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary hover:underline truncate max-w-[120px] block"
+          >
+            {contentPost.platform}
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        );
+      },
+    },
+  ];
+
+  const overdueColumns: ResponsiveTableColumn<WhShipment>[] = [
+    {
+      id: 'shipmentNumber',
+      header: t('Shipment Number'),
+      mobilePriority: 'title',
+      cell: (s) => (
+        <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
+          {s.shipmentNumber}
+        </Link>
+      ),
+    },
+    {
+      id: 'recipient',
+      header: t('Recipient'),
+      hideBelow: 'sm',
+      mobilePriority: 'subtitle',
+      cell: (s) => <span className="text-sm">{s.recipientName}</span>,
+    },
+    {
+      id: 'sampleStatus',
+      header: t('Sample Status'),
+      mobilePriority: 'badge',
+      cell: (s) =>
+        s.sampleMeta?.sampleStatus ? <SampleStatusBadge status={s.sampleMeta.sampleStatus} /> : null,
+    },
+    {
+      id: 'contentStatus',
+      header: t('Content Status'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Content Status'),
+      cell: (s) =>
+        s.sampleMeta?.contentStatus ? <ContentStatusBadge status={s.sampleMeta.contentStatus} /> : null,
+    },
+    {
+      id: 'returnDeadline',
+      header: t('Return Deadline'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Return Deadline'),
+      cell: (s) => <DeadlineCountdownBadge deadline={s.sampleMeta?.returnDeadline} />,
+    },
+    {
+      id: 'contentDeadline',
+      header: t('Content Deadline'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Content Deadline'),
+      cell: (s) => <DeadlineCountdownBadge deadline={s.sampleMeta?.contentDeadline} />,
+    },
+    {
+      id: 'overdue',
+      header: t('Overdue'),
+      className: 'text-right',
+      mobilePriority: 'badge',
+      cell: (s) => {
+        const maxOverdue = Math.max(
+          daysOverdue(s.sampleMeta?.returnDeadline),
+          daysOverdue(s.sampleMeta?.contentDeadline),
+        );
+        return (
+          <Badge variant="destructive" className="text-xs">
+            {maxOverdue} {t('days overdue')}
+          </Badge>
+        );
+      },
+    },
+  ];
+
   // -- Loading ----------------------------------------------------------------
   if (loading) {
     return (
@@ -284,102 +463,19 @@ export function SampleDashboardPage() {
           )}
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <button onClick={toggleSelectAll} className="p-1 hover:bg-muted rounded">
-                      {selectedIds.size === activeSamples.length && activeSamples.length > 0
-                        ? <CheckSquare className="h-4 w-4" />
-                        : <Square className="h-4 w-4 text-muted-foreground" />
-                      }
-                    </button>
-                  </TableHead>
-                  <TableHead>{t('Shipment Number')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('Recipient')}</TableHead>
-                  <TableHead className="hidden lg:table-cell">{t('Sample Type')}</TableHead>
-                  <TableHead>{t('Sample Status')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Content Status')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Return Deadline')}</TableHead>
-                  <TableHead className="hidden lg:table-cell">{t('Content Deadline')}</TableHead>
-                  <TableHead className="hidden lg:table-cell">{t('Content')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activeSamples.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                      <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                      {t('No active samples')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  activeSamples.map((s) => {
-                    const contentPost = getContentLink(s.id);
-                    return (
-                      <TableRow key={s.id} className={selectedIds.has(s.id) ? 'bg-primary/5' : ''}>
-                        <TableCell>
-                          <button onClick={() => toggleSelect(s.id)} className="p-1 hover:bg-muted rounded">
-                            {selectedIds.has(s.id)
-                              ? <CheckSquare className="h-4 w-4 text-primary" />
-                              : <Square className="h-4 w-4 text-muted-foreground" />
-                            }
-                          </button>
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            to={`/warehouse/shipments/${s.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {s.shipmentNumber}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm">{s.recipientName}</TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {s.sampleMeta?.sampleType && (
-                            <Badge variant="outline" className="text-xs">
-                              {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {s.sampleMeta?.sampleStatus && (
-                            <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {s.sampleMeta?.contentStatus && (
-                            <ContentStatusBadge status={s.sampleMeta.contentStatus} />
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <DeadlineCountdownBadge deadline={s.sampleMeta?.returnDeadline} />
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <DeadlineCountdownBadge deadline={s.sampleMeta?.contentDeadline} />
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {contentPost ? (
-                            <a
-                              href={contentPost.postUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline truncate max-w-[120px] block"
-                            >
-                              {contentPost.platform}
-                            </a>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <ResponsiveTable
+            data={activeSamples}
+            columns={activeColumns}
+            rowKey={(s) => s.id}
+            className="border-0 bg-transparent rounded-none"
+            rowClassName={(s) => (selectedIds.has(s.id) ? 'bg-primary/5' : undefined)}
+            emptyState={
+              <div className="text-muted-foreground">
+                <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                {t('No active samples')}
+              </div>
+            }
+          />
         </CardContent>
       </Card>
 
@@ -392,73 +488,19 @@ export function SampleDashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Shipment Number')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('Recipient')}</TableHead>
-                  <TableHead>{t('Sample Status')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Content Status')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Return Deadline')}</TableHead>
-                  <TableHead className="hidden lg:table-cell">{t('Content Deadline')}</TableHead>
-                  <TableHead className="text-right">{t('Overdue')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overdueSamples.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                      <CheckCircle className="mx-auto h-8 w-8 mb-2 opacity-50 text-green-500" />
-                      {t('No overdue samples')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  overdueSamples.map((s) => {
-                    const meta = s.sampleMeta;
-                    const returnDays = daysOverdue(meta?.returnDeadline);
-                    const contentDays = daysOverdue(meta?.contentDeadline);
-                    const maxOverdue = Math.max(returnDays, contentDays);
-
-                    return (
-                      <TableRow key={s.id} className="bg-red-50/50 dark:bg-red-950/10">
-                        <TableCell>
-                          <Link
-                            to={`/warehouse/shipments/${s.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {s.shipmentNumber}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm">{s.recipientName}</TableCell>
-                        <TableCell>
-                          {meta?.sampleStatus && (
-                            <SampleStatusBadge status={meta.sampleStatus} />
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {meta?.contentStatus && (
-                            <ContentStatusBadge status={meta.contentStatus} />
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <DeadlineCountdownBadge deadline={meta?.returnDeadline} />
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <DeadlineCountdownBadge deadline={meta?.contentDeadline} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="destructive" className="text-xs">
-                            {maxOverdue} {t('days overdue')}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <ResponsiveTable
+            data={overdueSamples}
+            columns={overdueColumns}
+            rowKey={(s) => s.id}
+            className="border-0 bg-transparent rounded-none"
+            rowClassName={() => 'bg-red-50/50 dark:bg-red-950/10'}
+            emptyState={
+              <div className="text-muted-foreground">
+                <CheckCircle className="mx-auto h-8 w-8 mb-2 opacity-50 text-green-500" />
+                {t('No overdue samples')}
+              </div>
+            }
+          />
         </CardContent>
       </Card>
     </div>

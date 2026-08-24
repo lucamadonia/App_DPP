@@ -19,14 +19,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -34,7 +34,9 @@ import {
   getAdminTenant, updateTenantPlan, toggleModule,
   adjustCredits, setMonthlyAllowance, updateUserRole, getTenantHealthScore,
 } from '@/services/supabase/admin';
-import type { AdminTenantDetail } from '@/types/admin';
+import type {
+  AdminTenantDetail, AdminUser, AdminInvoice, AdminCreditTransaction,
+} from '@/types/admin';
 import type { BillingPlan, ModuleId } from '@/types/billing';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/hooks/use-locale';
@@ -201,6 +203,126 @@ export function AdminTenantDetailPage() {
 
   const totalCredits = (tenant.monthlyAllowance - tenant.monthlyUsed) + tenant.purchasedBalance;
 
+  const invoiceColumns: ResponsiveTableColumn<AdminInvoice>[] = [
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (inv) => (
+        <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>{inv.status}</Badge>
+      ),
+    },
+    {
+      id: 'amount',
+      header: t('Amount'),
+      className: 'text-right tabular-nums',
+      mobilePriority: 'title',
+      cell: (inv) => `€${(inv.amountPaid / 100).toFixed(2)}`,
+    },
+    {
+      id: 'created',
+      header: t('Created'),
+      mobilePriority: 'meta',
+      mobileLabel: t('Created'),
+      cell: (inv) => formatDate(inv.createdAt, locale),
+    },
+    {
+      id: 'pdf',
+      header: '',
+      mobilePriority: 'meta',
+      cell: (inv) => (inv.invoicePdfUrl ? (
+        <a href={inv.invoicePdfUrl} target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+        </a>
+      ) : null),
+    },
+  ];
+
+  const userColumns: ResponsiveTableColumn<AdminUser>[] = [
+    {
+      id: 'name',
+      header: t('Name'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (user) => (
+        <>
+          {user.fullName || '-'}
+          {user.isSuperAdmin && (
+            <Shield className="inline ml-1 h-3 w-3 text-violet-500" />
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'email',
+      header: t('Email'),
+      mobilePriority: 'subtitle',
+      cell: (user) => user.email,
+    },
+    {
+      id: 'role',
+      header: t('Role'),
+      mobilePriority: 'meta',
+      mobileLabel: t('Role'),
+      cell: (user) => (
+        <Select value={user.role} onValueChange={(v) => handleRoleChange(user.id, v)}>
+          <SelectTrigger className="w-28 h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">{t('Admin')}</SelectItem>
+            <SelectItem value="manager">{t('Manager')}</SelectItem>
+            <SelectItem value="user">{t('User')}</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      id: 'lastLogin',
+      header: t('Last Login'),
+      className: 'text-muted-foreground',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Last Login'),
+      cell: (user) => (user.lastSignInAt ? formatDate(user.lastSignInAt, locale) : t('Never')),
+    },
+  ];
+
+  const txColumns: ResponsiveTableColumn<AdminCreditTransaction>[] = [
+    {
+      id: 'type',
+      header: 'Type',
+      mobilePriority: 'badge',
+      cell: (tx) => <Badge variant="outline">{tx.type}</Badge>,
+    },
+    {
+      id: 'amount',
+      header: t('Amount'),
+      className: 'text-right tabular-nums font-medium',
+      mobilePriority: 'title',
+      cell: (tx) => (
+        <span className={tx.amount > 0 ? 'text-emerald-600' : 'text-red-600'}>
+          {tx.amount > 0 ? '+' : ''}{tx.amount}
+        </span>
+      ),
+    },
+    {
+      id: 'reason',
+      header: t('Reason'),
+      className: 'max-w-[200px] truncate',
+      mobilePriority: 'subtitle',
+      cell: (tx) => tx.description || tx.source,
+    },
+    {
+      id: 'created',
+      header: t('Created'),
+      className: 'text-muted-foreground',
+      mobilePriority: 'meta',
+      mobileLabel: t('Created'),
+      cell: (tx) => formatDate(tx.createdAt, locale),
+    },
+  ];
+
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
       {/* Hero Header */}
@@ -325,32 +447,12 @@ export function AdminTenantDetailPage() {
             <CardHeader><CardTitle className="text-base">{t('Invoices')}</CardTitle></CardHeader>
             <CardContent>
               {tenant.invoices.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Status')}</TableHead>
-                      <TableHead className="text-right">{t('Amount')}</TableHead>
-                      <TableHead>{t('Created')}</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tenant.invoices.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell><Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>{inv.status}</Badge></TableCell>
-                        <TableCell className="text-right tabular-nums">{'\u20AC'}{(inv.amountPaid / 100).toFixed(2)}</TableCell>
-                        <TableCell>{formatDate(inv.createdAt, locale)}</TableCell>
-                        <TableCell>
-                          {inv.invoicePdfUrl && (
-                            <a href={inv.invoicePdfUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                            </a>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ResponsiveTable
+                  data={tenant.invoices}
+                  columns={invoiceColumns}
+                  rowKey={(inv) => inv.id}
+                  className="border-0 bg-transparent rounded-none"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">{t('No invoices')}</p>
               )}
@@ -363,44 +465,13 @@ export function AdminTenantDetailPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">{t('Tenant Users')}</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Name')}</TableHead>
-                    <TableHead>{t('Email')}</TableHead>
-                    <TableHead>{t('Role')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('Last Login')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tenant.users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        {user.fullName || '-'}
-                        {user.isSuperAdmin && (
-                          <Shield className="inline ml-1 h-3 w-3 text-violet-500" />
-                        )}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Select value={user.role} onValueChange={(v) => handleRoleChange(user.id, v)}>
-                          <SelectTrigger className="w-28 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">{t('Admin')}</SelectItem>
-                            <SelectItem value="manager">{t('Manager')}</SelectItem>
-                            <SelectItem value="user">{t('User')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">
-                        {user.lastSignInAt ? formatDate(user.lastSignInAt, locale) : t('Never')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ResponsiveTable
+                data={tenant.users}
+                columns={userColumns}
+                rowKey={(user) => user.id}
+                className="border-0 bg-transparent rounded-none"
+                emptyState={<span className="text-sm text-muted-foreground">{t('No users found')}</span>}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -435,28 +506,12 @@ export function AdminTenantDetailPage() {
             <CardHeader><CardTitle className="text-base">{t('Transaction History')}</CardTitle></CardHeader>
             <CardContent>
               {tenant.creditTransactions.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">{t('Amount')}</TableHead>
-                      <TableHead>{t('Reason')}</TableHead>
-                      <TableHead>{t('Created')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tenant.creditTransactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell><Badge variant="outline">{tx.type}</Badge></TableCell>
-                        <TableCell className={`text-right tabular-nums font-medium ${tx.amount > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {tx.amount > 0 ? '+' : ''}{tx.amount}
-                        </TableCell>
-                        <TableCell className="max-w-[200px] truncate">{tx.description || tx.source}</TableCell>
-                        <TableCell className="text-muted-foreground">{formatDate(tx.createdAt, locale)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ResponsiveTable
+                  data={tenant.creditTransactions}
+                  columns={txColumns}
+                  rowKey={(tx) => tx.id}
+                  className="border-0 bg-transparent rounded-none"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">{t('No transactions')}</p>
               )}

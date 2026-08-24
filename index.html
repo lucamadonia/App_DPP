@@ -4,9 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <!-- Font preconnect for faster loading (non-blocking) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Native / installed-app chrome. The theme-color values match --background
+         in src/index.css so the status bar never differs from the page. -->
+    <meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trackbliss" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Fonts are self-hosted (public/fonts/), so there is nothing to preconnect
+         to. Preloading the two faces that render the first paint avoids a
+         flash of fallback type. -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2" />
 
     <title>Trackbliss — Digital Product Passport Platform | EU ESPR Compliance</title>
     <meta name="description" content="Create EU-compliant Digital Product Passports in minutes. AI-powered compliance checks for ESPR, REACH, GPSR. Supply chain transparency, QR codes & more. Start free." />
@@ -39,6 +51,32 @@
     <meta name="twitter:image" content="https://trackbliss.com/hero-website.png" />
   </head>
   <body>
+    <!-- Boot splash: painted before the JS bundle parses, so there is never a
+         white frame between the native Capacitor splash and React's first
+         commit. The colours track the OS theme and match --background in
+         src/index.css, so on the web this is invisible rather than a dark
+         flash. Removed by src/components/splash/AppSplash.tsx once React has
+         painted. -->
+    <style>
+      body { background: #F8FAFC; }
+      #boot-splash { background: #F8FAFC; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0F172A; }
+        #boot-splash { background: #0F172A; }
+      }
+    </style>
+    <div
+      id="boot-splash"
+      style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center"
+    >
+      <img
+        src="/trackbliss-logo.png"
+        alt=""
+        width="96"
+        height="96"
+        style="width:96px;height:96px;object-fit:contain"
+      />
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

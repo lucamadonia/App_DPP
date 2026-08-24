@@ -162,24 +162,24 @@ function SupplierDetailBody({
         </SheetHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="gap-1">
+          <TabsList className="flex w-full">
+            <TabsTrigger value="overview" className="gap-1 flex-1 min-w-0">
               <Info className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('Overview')}</span>
             </TabsTrigger>
-            <TabsTrigger value="contacts" className="gap-1">
+            <TabsTrigger value="contacts" className="gap-1 flex-1 min-w-0">
               <User className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('Contacts')}</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="gap-1">
+            <TabsTrigger value="products" className="gap-1 flex-1 min-w-0">
               <Package className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('Products')}</span>
             </TabsTrigger>
-            <TabsTrigger value="compliance" className="gap-1">
+            <TabsTrigger value="compliance" className="gap-1 flex-1 min-w-0">
               <Shield className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('Compliance')}</span>
             </TabsTrigger>
-            <TabsTrigger value="finance" className="gap-1">
+            <TabsTrigger value="finance" className="gap-1 flex-1 min-w-0">
               <CreditCard className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('Finance')}</span>
             </TabsTrigger>

@@ -26,21 +26,14 @@ import {
   TabsContent,
 } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -331,6 +324,132 @@ export function LocationDetailPage() {
           100,
         )
       : undefined;
+
+  // ------- Tab tables: unchanged table on md+, one card per row below -------
+  type BinRow = (typeof allBins)[number];
+  const binColumns: ResponsiveTableColumn<BinRow>[] = [
+    {
+      id: 'zone',
+      header: t('Zone'),
+      mobilePriority: 'subtitle',
+      cell: (b) => b.zoneName,
+    },
+    {
+      id: 'bin',
+      header: t('Bin Code'),
+      mobilePriority: 'title',
+      cell: (b) => <span className="font-mono">{b.bin}</span>,
+    },
+    {
+      id: 'stockCount',
+      header: t('Stock Count'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Stock Count'),
+      cell: (b) => <span className="tabular-nums">{b.stockCount}</span>,
+    },
+  ];
+
+  const stockColumns: ResponsiveTableColumn<WhStockLevel>[] = [
+    {
+      id: 'product',
+      header: t('Product'),
+      mobilePriority: 'title',
+      cell: (s) => (
+        <span className="font-medium">{s.productName || s.productId.slice(0, 8)}</span>
+      ),
+    },
+    {
+      id: 'batch',
+      header: t('Batch'),
+      hideBelow: 'sm',
+      mobilePriority: 'subtitle',
+      cell: (s) => s.batchSerialNumber || s.batchId.slice(0, 8),
+    },
+    {
+      id: 'bin',
+      header: t('Bin Location'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Bin Location'),
+      cell: (s) => formatBinLocation(s.binLocation, location),
+    },
+    {
+      id: 'available',
+      header: t('Available Quantity'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Available Quantity'),
+      cell: (s) => <span className="tabular-nums">{s.quantityAvailable.toLocaleString()}</span>,
+    },
+    {
+      id: 'reserved',
+      header: t('Reserved Quantity'),
+      hideBelow: 'sm',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Reserved Quantity'),
+      cell: (s) => <span className="tabular-nums">{s.quantityReserved.toLocaleString()}</span>,
+    },
+    {
+      id: 'reorderPoint',
+      header: t('Reorder Point'),
+      hideBelow: 'lg',
+      className: 'text-right',
+      cell: (s) => (
+        <span className="tabular-nums text-muted-foreground">
+          {s.reorderPoint != null ? s.reorderPoint.toLocaleString() : '—'}
+        </span>
+      ),
+    },
+  ];
+
+  const transactionColumns: ResponsiveTableColumn<WhStockTransaction>[] = [
+    {
+      id: 'type',
+      header: t('Type'),
+      mobilePriority: 'badge',
+      cell: (tx) => <Badge variant="outline">{t(tx.type)}</Badge>,
+    },
+    {
+      id: 'product',
+      header: t('Product'),
+      hideBelow: 'sm',
+      mobilePriority: 'title',
+      cell: (tx) => <span className="font-medium">{tx.productName || tx.productId.slice(0, 8)}</span>,
+    },
+    {
+      id: 'quantity',
+      header: t('Quantity'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Quantity'),
+      cell: (tx) => (
+        <span
+          className={`tabular-nums font-medium ${
+            tx.quantity >= 0
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-red-600 dark:text-red-400'
+          }`}
+        >
+          {tx.quantity >= 0 ? '+' : ''}
+          {tx.quantity.toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      id: 'date',
+      header: t('Date'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Date'),
+      cell: (tx) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {relativeTime(tx.createdAt, i18n.language)}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -661,41 +780,13 @@ export function LocationDetailPage() {
         <TabsContent value="bins" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Zone')}</TableHead>
-                      <TableHead>{t('Bin Code')}</TableHead>
-                      <TableHead className="text-right">
-                        {t('Stock Count')}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allBins.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={3}
-                          className="h-24 text-center text-muted-foreground"
-                        >
-                          {t('No bin locations')}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      allBins.map((b) => (
-                        <TableRow key={`${b.zoneName}-${b.bin}`}>
-                          <TableCell>{b.zoneName}</TableCell>
-                          <TableCell className="font-mono">{b.bin}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {b.stockCount}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <ResponsiveTable
+                data={allBins}
+                columns={binColumns}
+                rowKey={(b) => `${b.zoneName}-${b.bin}`}
+                className="border-0 bg-transparent rounded-none"
+                emptyState={<span className="text-muted-foreground">{t('No bin locations')}</span>}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -704,74 +795,23 @@ export function LocationDetailPage() {
         <TabsContent value="stock" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Product')}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('Batch')}</TableHead>
-                      <TableHead className="hidden md:table-cell">{t('Bin Location')}</TableHead>
-                      <TableHead className="text-right">
-                        {t('Available Quantity')}
-                      </TableHead>
-                      <TableHead className="text-right hidden sm:table-cell">
-                        {t('Reserved Quantity')}
-                      </TableHead>
-                      <TableHead className="text-right hidden lg:table-cell">
-                        {t('Reorder Point')}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stock.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          className="h-24 text-center text-muted-foreground"
-                        >
-                          <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                          {t('No stock data')}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      stock.map((s) => {
-                        const isLow =
-                          s.reorderPoint != null &&
-                          s.quantityAvailable <= s.reorderPoint;
-                        return (
-                          <TableRow
-                            key={s.id}
-                            className={
-                              isLow
-                                ? 'bg-orange-50/50 dark:bg-orange-950/10'
-                                : ''
-                            }
-                          >
-                            <TableCell className="font-medium">
-                              {s.productName || s.productId.slice(0, 8)}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              {s.batchSerialNumber || s.batchId.slice(0, 8)}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">{formatBinLocation(s.binLocation, location)}</TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {s.quantityAvailable.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums hidden sm:table-cell">
-                              {s.quantityReserved.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-muted-foreground hidden lg:table-cell">
-                              {s.reorderPoint != null
-                                ? s.reorderPoint.toLocaleString()
-                                : '\u2014'}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <ResponsiveTable
+                data={stock}
+                columns={stockColumns}
+                rowKey={(s) => s.id}
+                className="border-0 bg-transparent rounded-none"
+                rowClassName={(s) =>
+                  s.reorderPoint != null && s.quantityAvailable <= s.reorderPoint
+                    ? 'bg-orange-50/50 dark:bg-orange-950/10'
+                    : undefined
+                }
+                emptyState={
+                  <div className="text-muted-foreground">
+                    <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    {t('No stock data')}
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -780,55 +820,19 @@ export function LocationDetailPage() {
         <TabsContent value="activity" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Type')}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('Product')}</TableHead>
-                      <TableHead className="text-right">{t('Quantity')}</TableHead>
-                      <TableHead className="text-right">{t('Date')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="h-24 text-center text-muted-foreground"
-                        >
-                          <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                          {t('No activity yet')}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      transactions.map((tx) => (
-                        <TableRow key={tx.id} className="transition-colors">
-                          <TableCell>
-                            <Badge variant="outline">{t(tx.type)}</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium hidden sm:table-cell">
-                            {tx.productName || tx.productId.slice(0, 8)}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right tabular-nums font-medium ${
-                              tx.quantity >= 0
-                                ? 'text-green-600 dark:text-green-400'
-                                : 'text-red-600 dark:text-red-400'
-                            }`}
-                          >
-                            {tx.quantity >= 0 ? '+' : ''}
-                            {tx.quantity.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground whitespace-nowrap">
-                            {relativeTime(tx.createdAt, i18n.language)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <ResponsiveTable
+                data={transactions}
+                columns={transactionColumns}
+                rowKey={(tx) => tx.id}
+                className="border-0 bg-transparent rounded-none"
+                rowClassName={() => 'transition-colors'}
+                emptyState={
+                  <div className="text-muted-foreground">
+                    <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    {t('No activity yet')}
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>

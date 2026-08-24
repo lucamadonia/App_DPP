@@ -3,6 +3,7 @@ import {
   resolveTenantByDomain,
   type DomainResolutionResult,
 } from '@/services/supabase/domain-resolution';
+import { isNative } from '@/lib/platform';
 
 const KNOWN_HOSTS = [
   'localhost',
@@ -11,6 +12,8 @@ const KNOWN_HOSTS = [
   'dpp-app.fambliss.eu',
   'trackbliss.eu',
   'www.trackbliss.eu',
+  'trackbliss.com',
+  'www.trackbliss.com',
 ];
 
 const SESSION_CACHE_PREFIX = 'domain-resolution:';
@@ -21,7 +24,12 @@ export function useCustomDomainDetection(): {
   resolution: DomainResolutionResult | null;
   error: string | null;
 } {
-  const [isResolving, setIsResolving] = useState(true);
+  // Native builds are never a whitelabel custom domain. Inside a Capacitor
+  // WebView the hostname is `localhost` (or whatever `server.hostname` is set
+  // to) — resolving that as a tenant domain would fail and render
+  // DomainNotFoundPage, locking the user out of the app entirely.
+  const native = isNative();
+  const [isResolving, setIsResolving] = useState(!native);
   const [resolution, setResolution] = useState<DomainResolutionResult | null>(
     null
   );
@@ -29,6 +37,8 @@ export function useCustomDomainDetection(): {
   const [isCustomDomain, setIsCustomDomain] = useState(false);
 
   useEffect(() => {
+    if (native) return;
+
     const hostname = window.location.hostname;
 
     // Known hosts are never custom domains
@@ -82,7 +92,7 @@ export function useCustomDomainDetection(): {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [native]);
 
   return { isCustomDomain, isResolving, resolution, error };
 }

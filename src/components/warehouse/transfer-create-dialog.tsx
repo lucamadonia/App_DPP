@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/adaptive-dialog';
 import { QuantityStepper } from '@/components/warehouse/QuantityStepper';
 import { TransferJourney } from '@/components/warehouse/transfer-journey';
 import { createStockTransfer, getStockLevels } from '@/services/supabase/wh-stock';

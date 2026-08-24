@@ -230,5 +230,12 @@
   "Admin ID": "Admin-ID",
   "Page {{page}} / {{pages}} · {{total}} entries": "Seite {{page}} / {{pages}} · {{total}} Einträge",
   "Back": "Zurück",
-  "Next": "Weiter"
+  "Next": "Weiter",
+  "Code": "Code",
+  "Icon": "Icon",
+  "Symbol": "Symbol",
+  "Sort Order": "Sortierung",
+  "Mandatory": "Pflicht",
+  "Recyclable": "Recycelbar",
+  "Title": "Titel"
 }

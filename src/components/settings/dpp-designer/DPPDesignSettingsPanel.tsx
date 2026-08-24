@@ -108,8 +108,10 @@ export function DPPDesignSettingsPanel({
   const resolved = resolveDesign(designForm);
   const cl = resolved.customLayout;
 
+  // Layout-agnostic: the desktop column and the mobile Sheet each supply the
+  // width/height frame, so the same panel renders in both.
   return (
-    <div className="w-[420px] flex-shrink-0 border-r overflow-y-auto h-[calc(100vh-53px)]">
+    <div className="h-full overflow-y-auto">
       <Accordion type="multiple" defaultValue={['layout', 'content']} className="divide-y">
 
         {/* === LAYOUT & STRUCTURE === */}

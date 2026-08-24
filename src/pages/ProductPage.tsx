@@ -49,13 +49,9 @@ import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -222,6 +218,206 @@ export function ProductPage() {
   }
 
   const complianceScore = 95;
+
+  const batchColumns: ResponsiveTableColumn<(typeof batches)[number]>[] = [
+    {
+      id: 'serialNumber',
+      header: t('Serial Number'),
+      mobilePriority: 'title',
+      cell: batch => (
+        <Link
+          to={`/products/${id}/batches/${batch.id}`}
+          className="font-mono text-sm font-medium hover:text-primary hover:underline"
+        >
+          {batch.serialNumber}
+        </Link>
+      ),
+    },
+    {
+      id: 'batchNumber',
+      header: t('Batch Number'),
+      className: 'text-muted-foreground',
+      mobilePriority: 'subtitle',
+      cell: batch => batch.batchNumber || '-',
+    },
+    {
+      id: 'productionDate',
+      header: t('Production Date'),
+      className: 'text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Production Date'),
+      cell: batch => formatDate(batch.productionDate, locale),
+    },
+    {
+      id: 'supplier',
+      header: t('Supplier'),
+      className: 'text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Supplier'),
+      cell: batch => batch.supplierName || '-',
+    },
+    {
+      id: 'pricePerUnit',
+      header: t('Price/Unit'),
+      className: 'text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Price/Unit'),
+      cell: batch => (batch.pricePerUnit != null
+        ? formatCurrency(batch.pricePerUnit, batch.currency || 'EUR', locale)
+        : '-'),
+    },
+    {
+      id: 'totalPrice',
+      header: t('Total Price'),
+      className: 'font-medium',
+      mobilePriority: 'meta',
+      mobileLabel: t('Total Price'),
+      cell: batch => {
+        const batchTotal = (batch.pricePerUnit || 0) * (batch.quantity || 0);
+        return batchTotal > 0 ? formatCurrency(batchTotal, batch.currency || 'EUR', locale) : '-';
+      },
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: batch => {
+        const status = batchStatusConfig[batch.status];
+        return (
+          <Badge variant="secondary" className={status.className}>
+            <status.icon className="mr-1 h-3 w-3" />
+            {t(status.label, { ns: 'common' })}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'overrides',
+      header: t('Overrides'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Overrides'),
+      cell: batch => (batch.hasOverrides ? (
+        <Badge variant="outline" className="border-primary text-primary">
+          <Settings2 className="mr-1 h-3 w-3" />
+          Overrides
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-sm">{t('Inherited')}</span>
+      )),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-[50px]',
+      mobilePriority: 'meta',
+      cell: batch => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to={`/products/${id}/batches/${batch.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                {t('View')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={`/products/${id}/batches/${batch.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
+                {t('Edit')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href={`/p/${product.gtin}/${batch.serialNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                {t('Public DPP')}
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={`/dpp/qr-generator?product=${id}`}>
+                <QrCode className="mr-2 h-4 w-4" />
+                {t('QR Code')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={`/products/${id}/batches/new?duplicate=${batch.id}`}>
+                <Copy className="mr-2 h-4 w-4" />
+                {t('Duplicate')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => handleDeleteBatch(batch.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('Delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
+  const componentColumns: ResponsiveTableColumn<ProductComponent>[] = [
+    {
+      id: 'product',
+      header: t('Product'),
+      mobilePriority: 'title',
+      cell: comp => {
+        const cp = comp.componentProduct;
+        return (
+          <div className="flex items-center gap-3">
+            {cp?.imageUrl ? (
+              <img src={cp.imageUrl} alt={cp.name} className="h-8 w-8 rounded object-cover" loading="lazy" />
+            ) : (
+              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            <Link to={`/products/${comp.componentProductId}`} className="font-medium hover:underline">
+              {cp?.name || comp.componentProductId}
+            </Link>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'gtin',
+      header: t('GTIN'),
+      className: 'text-muted-foreground',
+      mobilePriority: 'subtitle',
+      cell: comp => comp.componentProduct?.gtin || '-',
+    },
+    {
+      id: 'category',
+      header: t('Category'),
+      className: 'text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Category'),
+      cell: comp => comp.componentProduct?.category || '-',
+    },
+    {
+      id: 'quantity',
+      header: t('Quantity'),
+      className: 'text-center',
+      mobilePriority: 'meta',
+      mobileLabel: t('Quantity'),
+      cell: comp => `${comp.quantity}×`,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -535,132 +731,12 @@ export function ProductPage() {
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Serial Number')}</TableHead>
-                      <TableHead>{t('Batch Number')}</TableHead>
-                      <TableHead>{t('Production Date')}</TableHead>
-                      <TableHead>{t('Supplier')}</TableHead>
-                      <TableHead>{t('Price/Unit')}</TableHead>
-                      <TableHead>{t('Total Price')}</TableHead>
-                      <TableHead>{t('Status')}</TableHead>
-                      <TableHead>{t('Overrides')}</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {batches.map((batch, index) => {
-                      const status = batchStatusConfig[batch.status];
-                      const batchTotal = (batch.pricePerUnit || 0) * (batch.quantity || 0);
-                      return (
-                        <TableRow
-                          key={batch.id}
-                          style={!prefersReduced ? {
-                            animation: `fadeSlideIn 0.3s ease-out ${index * 0.03}s both`,
-                          } : undefined}
-                        >
-                          <TableCell>
-                            <Link
-                              to={`/products/${id}/batches/${batch.id}`}
-                              className="font-mono text-sm font-medium hover:text-primary hover:underline"
-                            >
-                              {batch.serialNumber}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {batch.batchNumber || '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(batch.productionDate, locale)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {batch.supplierName || '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {batch.pricePerUnit != null
-                              ? formatCurrency(batch.pricePerUnit, batch.currency || 'EUR', locale)
-                              : '-'}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {batchTotal > 0
-                              ? formatCurrency(batchTotal, batch.currency || 'EUR', locale)
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className={status.className}>
-                              <status.icon className="mr-1 h-3 w-3" />
-                              {t(status.label, { ns: 'common' })}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {batch.hasOverrides ? (
-                              <Badge variant="outline" className="border-primary text-primary">
-                                <Settings2 className="mr-1 h-3 w-3" />
-                                Overrides
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">{t('Inherited')}</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/products/${id}/batches/${batch.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    {t('View')}
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/products/${id}/batches/${batch.id}/edit`}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    {t('Edit')}
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <a
-                                    href={`/p/${product.gtin}/${batch.serialNumber}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    {t('Public DPP')}
-                                  </a>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/dpp/qr-generator?product=${id}`}>
-                                    <QrCode className="mr-2 h-4 w-4" />
-                                    {t('QR Code')}
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/products/${id}/batches/new?duplicate=${batch.id}`}>
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    {t('Duplicate')}
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => handleDeleteBatch(batch.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  {t('Delete')}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <ResponsiveTable
+                  data={batches}
+                  columns={batchColumns}
+                  rowKey={batch => batch.id}
+                  className="border-0 bg-transparent rounded-none"
+                />
               )}
             </CardContent>
           </Card>
@@ -1073,42 +1149,12 @@ export function ProductPage() {
                 {components.length === 0 ? (
                   <p className="text-muted-foreground text-sm py-4 text-center">{t('No components added yet')}</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('Product')}</TableHead>
-                        <TableHead>{t('GTIN')}</TableHead>
-                        <TableHead>{t('Category')}</TableHead>
-                        <TableHead className="text-center">{t('Quantity')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {components.map(comp => {
-                        const cp = comp.componentProduct;
-                        return (
-                          <TableRow key={comp.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                {cp?.imageUrl ? (
-                                  <img src={cp.imageUrl} alt={cp.name} className="h-8 w-8 rounded object-cover" loading="lazy" />
-                                ) : (
-                                  <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                                    <Package className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                )}
-                                <Link to={`/products/${comp.componentProductId}`} className="font-medium hover:underline">
-                                  {cp?.name || comp.componentProductId}
-                                </Link>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">{cp?.gtin || '-'}</TableCell>
-                            <TableCell className="text-muted-foreground">{cp?.category || '-'}</TableCell>
-                            <TableCell className="text-center">{comp.quantity}×</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={components}
+                    columns={componentColumns}
+                    rowKey={comp => comp.id}
+                    className="border-0 bg-transparent rounded-none"
+                  />
                 )}
               </CardContent>
             </Card>

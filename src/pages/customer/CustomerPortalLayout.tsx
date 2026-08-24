@@ -167,7 +167,7 @@ function CustomerPortalContent() {
 
           {/* Sidebar (desktop) */}
           <aside
-            className="hidden md:block w-56 border-r shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto"
+            className="hidden md:block w-56 border-r shrink-0 sticky top-16 h-[calc(100dvh-4rem)] overflow-y-auto"
             style={{
               backgroundColor: branding.sidebarBackground,
               color: branding.sidebarTextColor,

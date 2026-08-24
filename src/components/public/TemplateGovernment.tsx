@@ -112,26 +112,28 @@ function GovernmentConsumerView({ data, product, tenantId }: ConsumerViewProps) 
         </div>
         <div className="p-6">
         {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-gray-400">
-                <th className="py-2 text-left font-bold text-xs uppercase tracking-wider text-gray-600">{t('Material')}</th>
-                <th className="py-2 text-right font-bold text-xs uppercase tracking-wider text-gray-600">{t('Share')}</th>
-                <th className="py-2 text-center font-bold text-xs uppercase tracking-wider text-gray-600">{t('Recyclable')}</th>
-                {isFieldVisible('materialOrigins') && <th className="py-2 text-left font-bold text-xs uppercase tracking-wider text-gray-600">{t('Origin')}</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {packagingMats.map((m, i) => (
-                <tr key={i} className="border-b last:border-0">
-                  <td className="py-2">{m.name}</td>
-                  <td className="py-2 text-right">{m.percentage}%</td>
-                  <td className="py-2 text-center">{m.recyclable ? t('Yes') : t('No')}</td>
-                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || 'â€”'}</td>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-400">
+                  <th className="py-2 text-left font-bold text-xs uppercase tracking-wider text-gray-600">{t('Material')}</th>
+                  <th className="py-2 text-right font-bold text-xs uppercase tracking-wider text-gray-600">{t('Share')}</th>
+                  <th className="py-2 text-center font-bold text-xs uppercase tracking-wider text-gray-600">{t('Recyclable')}</th>
+                  {isFieldVisible('materialOrigins') && <th className="py-2 text-left font-bold text-xs uppercase tracking-wider text-gray-600">{t('Origin')}</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {packagingMats.map((m, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    <td className="py-2">{m.name}</td>
+                    <td className="py-2 text-right">{m.percentage}%</td>
+                    <td className="py-2 text-center">{m.recyclable ? t('Yes') : t('No')}</td>
+                    {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || 'â€”'}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
           <div className="mt-3 pt-3 border-t flex items-center justify-between text-sm">

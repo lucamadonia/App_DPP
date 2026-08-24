@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -178,6 +178,76 @@ export function ContactDetailPage() {
   // ── Resolve type badge ───────────────────────────────────────────────
   const typeConfig = CONTACT_TYPE_CONFIG[contact.type] || CONTACT_TYPE_CONFIG.other;
   const typeLabel = locale.startsWith('de') ? typeConfig.labelDe : typeConfig.labelEn;
+
+  // ── Tab tables: real tables on md+, stacked cards below ──────────────
+  const shipmentColumns: ResponsiveTableColumn<WhShipment>[] = [
+    {
+      id: 'shipmentNumber',
+      header: t('Shipment Number'),
+      mobilePriority: 'title',
+      cell: (s) => (
+        <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
+          {s.shipmentNumber}
+        </Link>
+      ),
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (s) => <Badge className={SHIPMENT_STATUS_COLORS[s.status] || ''}>{t(s.status)}</Badge>,
+    },
+    {
+      id: 'carrier',
+      header: t('Carrier'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Carrier'),
+      cell: (s) => s.carrier || '—',
+    },
+    {
+      id: 'items',
+      header: t('Items'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Items'),
+      cell: (s) => s.totalItems,
+    },
+    {
+      id: 'date',
+      header: t('Date'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Date'),
+      cell: (s) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(s.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
+  ];
+
+  type TopProduct = ContactStats['topProducts'][number];
+  const topProductColumns: ResponsiveTableColumn<TopProduct>[] = [
+    {
+      id: 'product',
+      header: t('Product'),
+      mobilePriority: 'title',
+      cell: (p) => (
+        <Link to={`/products/${p.productId}`} className="font-medium text-primary hover:underline">
+          {p.productName}
+        </Link>
+      ),
+    },
+    {
+      id: 'quantity',
+      header: t('Quantity'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: t('Quantity'),
+      cell: (p) => <span className="font-mono">{p.totalQuantity}</span>,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -489,52 +559,18 @@ export function ContactDetailPage() {
         <TabsContent value="shipments" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Shipment Number')}</TableHead>
-                    <TableHead>{t('Status')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Carrier')}</TableHead>
-                    <TableHead className="text-right">{t('Items')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('Date')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shipments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                        <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                        {t('No shipments yet')}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    shipments.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>
-                          <Link
-                            to={`/warehouse/shipments/${s.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {s.shipmentNumber}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={SHIPMENT_STATUS_COLORS[s.status] || ''}>
-                            {t(s.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">{s.carrier || '—'}</TableCell>
-                        <TableCell className="text-right">{s.totalItems}</TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                          {new Date(s.createdAt).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              </div>
+              <ResponsiveTable
+                data={shipments}
+                columns={shipmentColumns}
+                rowKey={(s) => s.id}
+                className="border-0 bg-transparent rounded-none"
+                emptyState={
+                  <div className="text-muted-foreground">
+                    <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    {t('No shipments yet')}
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -546,40 +582,18 @@ export function ContactDetailPage() {
               <CardTitle className="text-base">{t('Top Products')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Product')}</TableHead>
-                    <TableHead className="text-right">{t('Quantity')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!stats?.topProducts?.length ? (
-                    <TableRow>
-                      <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                        <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                        {t('No products yet')}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    stats.topProducts.map((p) => (
-                      <TableRow key={p.productId}>
-                        <TableCell>
-                          <Link
-                            to={`/products/${p.productId}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {p.productName}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">{p.totalQuantity}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              </div>
+              <ResponsiveTable
+                data={stats?.topProducts ?? []}
+                columns={topProductColumns}
+                rowKey={(p) => p.productId}
+                className="border-0 bg-transparent rounded-none"
+                emptyState={
+                  <div className="text-muted-foreground">
+                    <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    {t('No products yet')}
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>

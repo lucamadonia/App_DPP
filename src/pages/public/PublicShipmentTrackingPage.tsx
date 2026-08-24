@@ -1155,7 +1155,7 @@ export function PublicShipmentTrackingPage() {
           </div>
 
           {/* Sticky footer — always visible above the iPhone home indicator */}
-          <DialogFooter className="gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t bg-background shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4">
+          <DialogFooter className="gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t bg-background shrink-0 pb-[max(0.75rem,var(--safe-bottom))] sm:pb-4">
             <Button
               variant="outline"
               onClick={() => setSupportOpen(false)}

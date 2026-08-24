@@ -31,6 +31,7 @@ import { getTransparencyConfig, saveTransparencyConfig } from '@/services/supaba
 import { getCurrentTenant } from '@/services/supabase/tenants';
 import type { TransparencyPageConfig, TransparencyProductEntry, TransparencyDesignSettings, TransparencyThemePreset, TransparencyFontFamily, TransparencyHeroStyle, TransparencyCardStyle, TransparencyColorScheme, TransparencyAccessControl } from '@/types/transparency';
 import { DEFAULT_TRANSPARENCY_DESIGN, TRANSPARENCY_THEME_PRESETS, DEFAULT_TRANSPARENCY_ACCESS_CONTROL } from '@/types/transparency';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 interface MergedProduct {
   product: ProductListItem;
@@ -724,14 +725,14 @@ export function TransparencyConfigPage() {
               <div className="flex gap-2">
                 <Input
                   readOnly
-                  value={`${window.location.origin}/transparency/${tenantSlug}`}
+                  value={`${getPublicBaseUrl()}/transparency/${tenantSlug}`}
                   className="font-mono text-xs"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/transparency/${tenantSlug}`);
+                    navigator.clipboard.writeText(`${getPublicBaseUrl()}/transparency/${tenantSlug}`);
                     toast.success('URL copied');
                   }}
                 >
@@ -754,7 +755,7 @@ export function TransparencyConfigPage() {
               <Label>Embed Code</Label>
               <div className="relative">
                 <pre className="rounded-lg border bg-muted/30 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all text-muted-foreground">
-                  {`<iframe\n  src="${window.location.origin}/embed/transparency/${tenantSlug}?lang=de"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none; border-radius:12px;"\n></iframe>`}
+                  {`<iframe\n  src="${getPublicBaseUrl()}/embed/transparency/${tenantSlug}?lang=de"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none; border-radius:12px;"\n></iframe>`}
                 </pre>
                 <Button
                   variant="outline"
@@ -762,7 +763,7 @@ export function TransparencyConfigPage() {
                   className="absolute top-2 right-2"
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `<iframe src="${window.location.origin}/embed/transparency/${tenantSlug}?lang=de" width="100%" height="800" frameborder="0" style="border:none; border-radius:12px;"></iframe>`
+                      `<iframe src="${getPublicBaseUrl()}/embed/transparency/${tenantSlug}?lang=de" width="100%" height="800" frameborder="0" style="border:none; border-radius:12px;"></iframe>`
                     );
                     toast.success('Embed code copied');
                   }}
@@ -779,14 +780,14 @@ export function TransparencyConfigPage() {
               <div className="flex gap-2">
                 <Input
                   readOnly
-                  value={`${window.location.origin}/api/v1/public/products?tenant=${tenantSlug}`}
+                  value={`${getPublicBaseUrl()}/api/v1/public/products?tenant=${tenantSlug}`}
                   className="font-mono text-xs"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/api/v1/public/products?tenant=${tenantSlug}`);
+                    navigator.clipboard.writeText(`${getPublicBaseUrl()}/api/v1/public/products?tenant=${tenantSlug}`);
                     toast.success('API URL copied');
                   }}
                 >

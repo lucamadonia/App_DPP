@@ -104,7 +104,7 @@ export function FloorMapZoneDetail({
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-120px)]">
+        <ScrollArea className="h-[calc(100dvh-120px)]">
           <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
             {/* Stock Summary */}
             <section>

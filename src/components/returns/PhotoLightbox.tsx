@@ -20,7 +20,7 @@ export function PhotoLightbox({ photos, initialIndex = 0, open, onOpenChange }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 bg-black/95 border-none">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl p-0 bg-black/95 border-none">
         <div className="relative flex items-center justify-center min-h-[400px]">
           <Button
             variant="ghost"

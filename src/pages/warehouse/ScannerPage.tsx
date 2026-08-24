@@ -14,13 +14,13 @@ import {
   ScanBarcode,
   Zap,
   AlertCircle,
-  CheckCircle2,
   Loader2,
   PackagePlus,
   X as XIcon,
 } from 'lucide-react';
 import { parseBarcode } from '@/lib/barcode-parser';
 import { playSuccessBeep, playErrorBeep, triggerHaptic } from '@/lib/scan-audio';
+import { SuccessBurst } from '@/components/ui/success-burst';
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner';
 import { useScanSession } from '@/hooks/use-scan-session';
 import {
@@ -530,7 +530,12 @@ export function ScannerPage() {
           {/* Success state */}
           {scanState === 'success' && (
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center animate-scan-success">
-              <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-400 mb-3" />
+              {/* A drawn checkmark rather than a static icon: this is the
+                  highest-frequency success moment in the app — a picker
+                  confirms hundreds of scans a shift. Compositor-only
+                  (pathLength/scale/opacity), and it collapses to a static mark
+                  under reduced motion. */}
+              <SuccessBurst show className="mx-auto mb-3" size={48} />
               <p className="text-sm text-emerald-400 font-semibold">
                 {mode === 'in' ? t('Receipt confirmed') : t('Pick confirmed')}
               </p>

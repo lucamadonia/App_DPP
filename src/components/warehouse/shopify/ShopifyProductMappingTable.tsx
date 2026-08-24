@@ -5,13 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   deleteShopifyProductMap,
   updateShopifyProductMap,
@@ -89,6 +85,91 @@ export function ShopifyProductMappingTable({ maps, onRefresh }: Props) {
     }
   }
 
+  const columns: ResponsiveTableColumn<ShopifyProductMap>[] = [
+    {
+      id: 'shopifyProduct',
+      header: t('Shopify Products'),
+      className: 'font-medium text-xs sm:text-sm',
+      mobilePriority: 'title',
+      cell: map => map.shopifyProductTitle || `#${map.shopifyProductId}`,
+    },
+    {
+      id: 'variant',
+      header: t('Variant'),
+      className: 'text-xs sm:text-sm',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Variant'),
+      cell: map => map.shopifyVariantTitle || '—',
+    },
+    {
+      id: 'sku',
+      header: t('SKU'),
+      className: 'text-xs font-mono',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('SKU'),
+      cell: map => map.shopifySku || '—',
+    },
+    {
+      id: 'tbProduct',
+      header: t('Trackbliss Product'),
+      className: 'text-xs sm:text-sm',
+      mobilePriority: 'subtitle',
+      cell: map => map.productName || map.productId,
+    },
+    {
+      id: 'tbBatch',
+      header: t('Trackbliss Batch'),
+      className: 'text-xs sm:text-sm',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Trackbliss Batch'),
+      cell: map => map.batchSerialNumber || '—',
+    },
+    {
+      id: 'direction',
+      header: t('Sync Direction'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      cell: map => (
+        <Select
+          value={map.syncDirection}
+          onValueChange={v => handleDirectionChange(map.id, v as ShopifySyncDirection)}
+        >
+          <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="both">{t('both')}</SelectItem>
+            <SelectItem value="import_only">{t('import_only')}</SelectItem>
+            <SelectItem value="export_only">{t('export_only')}</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      id: 'lastSynced',
+      header: t('Last Synced'),
+      className: 'text-xs text-muted-foreground whitespace-nowrap',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Last Synced'),
+      cell: map => (map.lastSyncedAt ? new Date(map.lastSyncedAt).toLocaleString() : t('Never')),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-10',
+      mobilePriority: 'meta',
+      cell: map => (
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(map.id)}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -105,62 +186,16 @@ export function ShopifyProductMappingTable({ maps, onRefresh }: Props) {
         )}
       </div>
 
-      {maps.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
-          {t('No product mappings')}
-        </div>
-      ) : (
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('Shopify Products')}</TableHead>
-                <TableHead className="hidden md:table-cell">{t('Variant')}</TableHead>
-                <TableHead className="hidden lg:table-cell">{t('SKU')}</TableHead>
-                <TableHead>{t('Trackbliss Product')}</TableHead>
-                <TableHead className="hidden lg:table-cell">{t('Trackbliss Batch')}</TableHead>
-                <TableHead className="hidden sm:table-cell">{t('Sync Direction')}</TableHead>
-                <TableHead className="hidden md:table-cell">{t('Last Synced')}</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {maps.map(map => (
-                <TableRow key={map.id}>
-                  <TableCell className="font-medium text-xs sm:text-sm">{map.shopifyProductTitle || `#${map.shopifyProductId}`}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs sm:text-sm">{map.shopifyVariantTitle || '—'}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-xs font-mono">{map.shopifySku || '—'}</TableCell>
-                  <TableCell className="text-xs sm:text-sm">{map.productName || map.productId}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-xs sm:text-sm">{map.batchSerialNumber || '—'}</TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Select
-                      value={map.syncDirection}
-                      onValueChange={v => handleDirectionChange(map.id, v as ShopifySyncDirection)}
-                    >
-                      <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="both">{t('both')}</SelectItem>
-                        <SelectItem value="import_only">{t('import_only')}</SelectItem>
-                        <SelectItem value="export_only">{t('export_only')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground whitespace-nowrap">
-                    {map.lastSyncedAt ? new Date(map.lastSyncedAt).toLocaleString() : t('Never')}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(map.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <ResponsiveTable
+        data={maps}
+        columns={columns}
+        rowKey={map => map.id}
+        emptyState={
+          <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
+            {t('No product mappings')}
+          </div>
+        }
+      />
 
       {showPicker && (
         <ShopifyProductPicker

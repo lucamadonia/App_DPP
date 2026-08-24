@@ -11,6 +11,7 @@
  */
 
 import { supabaseAnon } from '@/lib/supabase';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 export interface PublicShipmentSummary {
   id: string;
@@ -455,6 +456,6 @@ export async function lookupShipmentWithItemsByOrderAndEmail(
  * Used by the admin shipment detail page.
  */
 export function buildTrackingUrl(token: string, origin?: string): string {
-  const base = origin || (typeof window !== 'undefined' ? window.location.origin : '');
+  const base = origin || (getPublicBaseUrl());
   return `${base}/t/${token}`;
 }

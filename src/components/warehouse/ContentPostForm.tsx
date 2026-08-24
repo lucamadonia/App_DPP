@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { createContentPost, updateContentPost } from '@/services/supabase/wh-content';
 import type { WhContentPost, WhContentPostInput, SocialPlatform } from '@/types/warehouse';
 

@@ -5,13 +5,12 @@ import { Users, Search, TrendingUp, RefreshCw, ExternalLink, Download, Tag as Ta
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { Label } from '@/components/ui/label';
-import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { PageContainer } from '@/components/layout/page-container';
 import { HealthGauge } from '@/components/crm/HealthGauge';
 import { CreateCustomerDialog } from '@/components/crm/CreateCustomerDialog';
 import {
@@ -154,19 +153,112 @@ export function CustomerListPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  return (
-    <div className="px-4 py-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">{t('Kunden')}</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {total.toLocaleString('de-DE')} {t('Kunden gesamt')}
-            </p>
+  const columns: ResponsiveTableColumn<CrmCustomer>[] = [
+    {
+      id: 'customer',
+      header: t('Kunde'),
+      mobilePriority: 'title',
+      cell: c => (
+        <Link to={`/crm/customers/${c.id}`} className="block">
+          <div className="font-medium text-primary hover:underline">
+            {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || c.id.slice(0, 8)}
           </div>
-        </div>
-        <div className="flex gap-2 flex-wrap">
+          {c.email && <div className="text-xs text-muted-foreground truncate max-w-xs">{c.email}</div>}
+          {c.company && <div className="text-xs text-muted-foreground">{c.company}</div>}
+        </Link>
+      ),
+    },
+    {
+      id: 'segment',
+      header: t('Segment'),
+      hideBelow: 'md',
+      mobilePriority: 'badge',
+      cell: c => (c.rfmSegment ? (
+        <Badge variant="outline" className={segmentTone(c.rfmSegment)}>{segmentLabel(c.rfmSegment)}</Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      )),
+    },
+    {
+      id: 'health',
+      header: t('Health'),
+      className: 'text-center',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Health'),
+      cell: c => <HealthGauge score={c.healthScore} size={40} strokeWidth={5} showLabel={false} />,
+    },
+    {
+      id: 'orders',
+      header: t('Bestellungen'),
+      className: 'text-right tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: t('Bestellungen'),
+      cell: c => c.totalOrders,
+    },
+    {
+      id: 'clv',
+      header: t('CLV'),
+      className: 'text-right tabular-nums font-semibold',
+      mobilePriority: 'meta',
+      mobileLabel: t('CLV'),
+      cell: c => (
+        <>
+          {fmtEuro(c.totalSpent)}
+          {c.rfmSegment === 'champion' && <TrendingUp className="h-3 w-3 inline ml-1 text-purple-600" />}
+        </>
+      ),
+    },
+    {
+      id: 'aov',
+      header: t('Ø Bestellwert'),
+      className: 'text-right tabular-nums text-muted-foreground',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Ø Bestellwert'),
+      cell: c => (c.avgOrderValue > 0 ? fmtEuro(c.avgOrderValue) : '—'),
+    },
+    {
+      id: 'lastOrder',
+      header: t('Letzte Bestellung'),
+      className: 'text-sm text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Letzte Bestellung'),
+      cell: c => relativeDaysAgo(c.lastOrderAt),
+    },
+    {
+      id: 'shopify',
+      header: t('Shopify'),
+      hideBelow: 'xl',
+      mobilePriority: 'meta',
+      mobileLabel: t('Shopify'),
+      cell: c => (c.shopifyCustomerId ? (
+        <Badge variant="outline" className="text-xs gap-1">
+          <ExternalLink className="h-3 w-3" />
+          {c.shopifyCustomerId}
+        </Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      )),
+    },
+  ];
+
+  return (
+    <PageContainer
+      size="full"
+      padding={false}
+      className="px-4 py-4 sm:p-6"
+      onRefresh={load}
+      title={
+        <span className="flex items-center gap-2 sm:gap-3">
+          <Users className="h-5 w-5 shrink-0 sm:h-6 sm:w-6 text-primary" />
+          {t('Kunden')}
+        </span>
+      }
+      description={`${total.toLocaleString('de-DE')} ${t('Kunden gesamt')}`}
+      actions={
+        <>
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             {t('CSV Export')}
@@ -179,8 +271,10 @@ export function CustomerListPage() {
             <UserPlus className="mr-2 h-4 w-4" />
             {t('Neuer Kunde')}
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
 
       <CreateCustomerDialog
         open={createOpen}
@@ -250,101 +344,14 @@ export function CustomerListPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={data.length > 0 && selected.size === data.length}
-                      onCheckedChange={toggleAll}
-                      aria-label={t('Alle auswählen')}
-                    />
-                  </TableHead>
-                  <TableHead>{t('Kunde')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Segment')}</TableHead>
-                  <TableHead className="text-center hidden md:table-cell">{t('Health')}</TableHead>
-                  <TableHead className="text-right">{t('Bestellungen')}</TableHead>
-                  <TableHead className="text-right">{t('CLV')}</TableHead>
-                  <TableHead className="hidden sm:table-cell text-right">{t('Ø Bestellwert')}</TableHead>
-                  <TableHead className="hidden lg:table-cell">{t('Letzte Bestellung')}</TableHead>
-                  <TableHead className="hidden xl:table-cell">{t('Shopify')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={9}><ShimmerSkeleton className="h-8" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                      {t('Keine Kunden gefunden')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  data.map(c => (
-                    <TableRow key={c.id} className={`hover:bg-muted/50 ${selected.has(c.id) ? 'bg-primary/5' : ''}`}>
-                      <TableCell className="w-10">
-                        <Checkbox
-                          checked={selected.has(c.id)}
-                          onCheckedChange={() => toggleOne(c.id)}
-                          aria-label={t('Kunde auswählen')}
-                          onClick={e => e.stopPropagation()}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/crm/customers/${c.id}`} className="block">
-                          <div className="font-medium text-primary hover:underline">
-                            {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || c.id.slice(0, 8)}
-                          </div>
-                          {c.email && <div className="text-xs text-muted-foreground truncate max-w-xs">{c.email}</div>}
-                          {c.company && <div className="text-xs text-muted-foreground">{c.company}</div>}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {c.rfmSegment ? (
-                          <Badge variant="outline" className={segmentTone(c.rfmSegment)}>{segmentLabel(c.rfmSegment)}</Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-center">
-                        <HealthGauge score={c.healthScore} size={40} strokeWidth={5} showLabel={false} />
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{c.totalOrders}</TableCell>
-                      <TableCell className="text-right tabular-nums font-semibold">
-                        {fmtEuro(c.totalSpent)}
-                        {c.rfmSegment === 'champion' && <TrendingUp className="h-3 w-3 inline ml-1 text-purple-600" />}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-right tabular-nums text-muted-foreground">
-                        {c.avgOrderValue > 0 ? fmtEuro(c.avgOrderValue) : '—'}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                        {relativeDaysAgo(c.lastOrderAt)}
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell">
-                        {c.shopifyCustomerId ? (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <ExternalLink className="h-3 w-3" />
-                            {c.shopifyCustomerId}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <ResponsiveTable
+        data={data}
+        columns={columns}
+        rowKey={c => c.id}
+        selection={{ selectedIds: selected, onToggle: toggleOne, onToggleAll: toggleAll }}
+        loading={loading}
+        emptyState={<span className="text-muted-foreground">{t('Keine Kunden gefunden')}</span>}
+      />
 
       {total > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
@@ -389,6 +396,7 @@ export function CustomerListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

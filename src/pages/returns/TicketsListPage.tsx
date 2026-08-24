@@ -15,11 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
 import {
   getRhTickets, createRhTicket, addRhTicketMessage, getRhCustomers,
   getTicketStats, bulkUpdateTickets, updateRhTicket,
 } from '@/services/supabase';
+import { PageContainer } from '@/components/layout/page-container';
 import { TicketKPICards } from '@/components/returns/TicketKPICards';
 import { TicketPriorityBadge } from '@/components/returns/TicketPriorityBadge';
 import { TicketSLABadge } from '@/components/returns/TicketSLABadge';
@@ -250,14 +251,14 @@ export function TicketsListPage() {
   }
 
   return (
-    <Wrapper className="space-y-6" {...wrapperProps as any}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('Ticket List')}</h1>
-          <p className="text-muted-foreground">{result.total} {t('Tickets')}</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={load}
+      title={t('Ticket List')}
+      description={`${result.total} ${t('Tickets')}`}
+      actions={
+        <>
           <Button variant="outline" size="sm" onClick={handleExportCsv}>
             <Download className="h-4 w-4 mr-1" />
             {t('Export Tickets CSV')}
@@ -266,8 +267,10 @@ export function TicketsListPage() {
             <Plus className="h-4 w-4 mr-2" />
             {t('New Ticket')}
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
+      <Wrapper className="space-y-6" {...wrapperProps as any}>
 
       {/* KPI Cards */}
       {loading ? <SkeletonKPICards count={4} /> : <TicketKPICards stats={stats} />}
@@ -645,6 +648,7 @@ export function TicketsListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Wrapper>
+      </Wrapper>
+    </PageContainer>
   );
 }

@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { createPublicReturnTicket } from '@/services/supabase';
 import { ReturnsPortalContext } from '@/pages/returns/public/ReturnsPortalLayout';
 

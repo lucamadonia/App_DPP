@@ -18,14 +18,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { TenantHealthGauge } from '@/components/admin/TenantHealthGauge';
 import { ConfirmWithReasonDialog } from '@/components/admin/ConfirmWithReasonDialog';
 import {
@@ -186,6 +184,143 @@ export function AdminTenantsPage() {
     toast.success(t('{{n}} Tenants als CSV exportiert', { n: rows.length }));
   }
 
+  const columns: ResponsiveTableColumn<TenantRow>[] = [
+    {
+      id: 'tenant',
+      header: t('Tenant'),
+      mobilePriority: 'title',
+      cell: (tn) => (
+        <Link to={`/admin/tenants/${tn.id}`} className="block group">
+          <div className="font-medium group-hover:text-primary transition-colors">{tn.name}</div>
+          <div className="text-[11px] text-muted-foreground font-mono">{tn.slug}</div>
+        </Link>
+      ),
+    },
+    {
+      id: 'plan',
+      header: t('Plan'),
+      hideBelow: 'md',
+      mobilePriority: 'badge',
+      cell: (tn) => (
+        <Badge variant="outline" className={`${PLAN_COLORS[tn.plan] || ''} text-[10px] h-5 px-2`}>
+          {tn.plan}
+        </Badge>
+      ),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      hideBelow: 'md',
+      mobilePriority: 'badge',
+      cell: (tn) => (
+        <Badge variant="outline" className={`${STATUS_TONE[tn.status] || ''} text-[10px] h-5 px-2 gap-1`}>
+          <CircleDot className="h-2 w-2" />
+          {tn.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'health',
+      header: 'Health',
+      className: 'text-center',
+      mobilePriority: 'meta',
+      mobileLabel: 'Health',
+      cell: (tn) => (
+        <span className="inline-flex">
+          <TenantHealthGauge score={tn.healthScore} size={36} strokeWidth={4} showLabel={false} />
+        </span>
+      ),
+    },
+    {
+      id: 'users',
+      header: 'Users',
+      className: 'text-right tabular-nums',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: 'Users',
+      cell: (tn) => tn.userCount,
+    },
+    {
+      id: 'products',
+      header: 'Produkte',
+      className: 'text-right tabular-nums',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: 'Produkte',
+      cell: (tn) => tn.productCount,
+    },
+    {
+      id: 'modules',
+      header: t('Module'),
+      hideBelow: 'xl',
+      mobilePriority: 'subtitle',
+      cell: (tn) => (
+        <div className="flex flex-wrap gap-1">
+          {(tn.activeModules || []).slice(0, 2).map(m => (
+            <Badge key={m} variant="secondary" className="text-[10px] h-5 px-1.5">{m.replace(/_/g, ' ')}</Badge>
+          ))}
+          {(tn.activeModules || []).length > 2 && (
+            <Badge variant="outline" className="text-[10px] h-5 px-1.5">+{tn.activeModules.length - 2}</Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'createdAt',
+      header: t('Angelegt'),
+      className: 'text-xs text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Angelegt'),
+      cell: (tn) => formatDate(tn.createdAt, locale),
+    },
+    {
+      id: 'actions',
+      header: t('Aktionen'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      cell: (tn) => (
+        <span className="inline-flex justify-end gap-0.5">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => setImpersonateTargetId(tn.id)}
+            title={t('Impersonate')}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          {tn.status === 'active' ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => setSuspendTargetId(tn.id)}
+              title={t('Sperren')}
+            >
+              <Ban className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+              onClick={() => setReactivateTargetId(tn.id)}
+              title={t('Reaktivieren')}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button size="icon" variant="ghost" className="h-7 w-7" asChild title={t('Öffnen')}>
+            <Link to={`/admin/tenants/${tn.id}`}>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="p-4 sm:p-6 space-y-4 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -275,127 +410,16 @@ export function AdminTenantsPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8">
-                  <Checkbox
-                    checked={filtered.length > 0 && selected.size === filtered.length}
-                    onCheckedChange={toggleAll}
-                    aria-label={t('Alle auswählen')}
-                  />
-                </TableHead>
-                <TableHead>{t('Tenant')}</TableHead>
-                <TableHead className="hidden md:table-cell">{t('Plan')}</TableHead>
-                <TableHead className="hidden md:table-cell">Status</TableHead>
-                <TableHead className="text-center">Health</TableHead>
-                <TableHead className="text-right hidden sm:table-cell">Users</TableHead>
-                <TableHead className="text-right hidden lg:table-cell">Produkte</TableHead>
-                <TableHead className="hidden xl:table-cell">{t('Module')}</TableHead>
-                <TableHead className="hidden lg:table-cell">{t('Angelegt')}</TableHead>
-                <TableHead className="text-right">{t('Aktionen')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                [...Array(4)].map((_, i) => (
-                  <TableRow key={i}><TableCell colSpan={10}><ShimmerSkeleton className="h-10" /></TableCell></TableRow>
-                ))
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
-                    {t('Keine Tenants gefunden')}
-                  </TableCell>
-                </TableRow>
-              ) : filtered.map((tn) => (
-                <TableRow key={tn.id} className={selected.has(tn.id) ? 'bg-primary/5' : ''}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.has(tn.id)}
-                      onCheckedChange={() => toggleOne(tn.id)}
-                      onClick={e => e.stopPropagation()}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Link to={`/admin/tenants/${tn.id}`} className="block group">
-                      <div className="font-medium group-hover:text-primary transition-colors">{tn.name}</div>
-                      <div className="text-[11px] text-muted-foreground font-mono">{tn.slug}</div>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Badge variant="outline" className={`${PLAN_COLORS[tn.plan] || ''} text-[10px] h-5 px-2`}>
-                      {tn.plan}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Badge variant="outline" className={`${STATUS_TONE[tn.status] || ''} text-[10px] h-5 px-2 gap-1`}>
-                      <CircleDot className="h-2 w-2" />
-                      {tn.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="inline-flex">
-                      <TenantHealthGauge score={tn.healthScore} size={36} strokeWidth={4} showLabel={false} />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums hidden sm:table-cell">{tn.userCount}</TableCell>
-                  <TableCell className="text-right tabular-nums hidden lg:table-cell">{tn.productCount}</TableCell>
-                  <TableCell className="hidden xl:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {(tn.activeModules || []).slice(0, 2).map(m => (
-                        <Badge key={m} variant="secondary" className="text-[10px] h-5 px-1.5">{m.replace(/_/g, ' ')}</Badge>
-                      ))}
-                      {(tn.activeModules || []).length > 2 && (
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5">+{tn.activeModules.length - 2}</Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                    {formatDate(tn.createdAt, locale)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-0.5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => setImpersonateTargetId(tn.id)}
-                        title={t('Impersonate')}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      {tn.status === 'active' ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => setSuspendTargetId(tn.id)}
-                          title={t('Sperren')}
-                        >
-                          <Ban className="h-3.5 w-3.5" />
-                        </Button>
-                      ) : (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          onClick={() => setReactivateTargetId(tn.id)}
-                          title={t('Reaktivieren')}
-                        >
-                          <UserPlus className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      <Button size="icon" variant="ghost" className="h-7 w-7" asChild title={t('Öffnen')}>
-                        <Link to={`/admin/tenants/${tn.id}`}>
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ResponsiveTable
+            data={filtered}
+            columns={columns}
+            rowKey={(tn) => tn.id}
+            selection={{ selectedIds: selected, onToggle: toggleOne, onToggleAll: toggleAll }}
+            loading={loading}
+            loadingRows={4}
+            className="border-0 bg-transparent rounded-none"
+            emptyState={<span className="text-muted-foreground">{t('Keine Tenants gefunden')}</span>}
+          />
         </CardContent>
       </Card>
 

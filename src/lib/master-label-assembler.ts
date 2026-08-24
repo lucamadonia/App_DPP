@@ -15,6 +15,7 @@ import {
   CERT_PATTERNS,
   PACKAGING_MATERIAL_CODES,
 } from './master-label-constants';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // ---------------------------------------------------------------------------
 // Product Group Detection
@@ -240,7 +241,7 @@ export function buildDppUrl(
   serialNumber: string,
   qrSettings?: { resolverFormat?: string; customBaseUrl?: string },
 ): string {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = getPublicBaseUrl();
 
   if (qrSettings?.customBaseUrl) {
     return `${qrSettings.customBaseUrl}/01/${gtin}/21/${serialNumber}`;

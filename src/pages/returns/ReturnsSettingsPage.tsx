@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { PortalDesignTab } from '@/components/returns/PortalDesignTab';

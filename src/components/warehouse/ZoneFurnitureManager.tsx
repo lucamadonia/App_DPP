@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
   Collapsible,
   CollapsibleContent,

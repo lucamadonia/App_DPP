@@ -6,6 +6,7 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { FeedbackRequest, FeedbackRequestFilter } from '@/types/feedback';
 import { getShipment, getShipmentItems } from './wh-shipments';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transform(row: any): FeedbackRequest {
@@ -169,7 +170,7 @@ export async function createFeedbackRequestsForShipment(
   // The verified link is injected as a "Jetzt bewerten" CTA button.
   let emailsSent = 0;
   if (firstToken && !options.silent) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dpp-app.fambliss.eu';
+    const origin = getPublicBaseUrl();
     const feedbackUrl = `${origin}/feedback/${firstToken}`;
     const custom = options.email?.mode === 'custom' ? options.email : null;
     try {
@@ -244,7 +245,7 @@ export async function resendFeedbackRequest(id: string): Promise<{ success: bool
     const mod = await import('./rh-notification-trigger');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const trigger = (mod as any).triggerPublicEmailNotification;
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin = getPublicBaseUrl();
     await trigger(req.tenant_id, 'feedback_reminder', {
       customerName: req.customer_name,
       customerEmail: req.customer_email,

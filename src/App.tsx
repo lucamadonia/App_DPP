@@ -1,22 +1,16 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence } from 'framer-motion';
 import { Toaster } from 'sonner';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
-import { Separator } from '@/components/ui/separator';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
+import { OnboardingGate } from '@/pages/onboarding/OnboardingGate';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { BrandingProvider, useBranding } from '@/contexts/BrandingContext';
+import { BrandingProvider } from '@/contexts/BrandingContext';
 import { BillingProvider } from '@/contexts/BillingContext';
 import { queryClient } from '@/lib/query-client';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -26,6 +20,14 @@ import { CustomDomainPortal } from '@/components/CustomDomainPortal';
 import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
 import { PageTransition } from '@/components/ui/page-transition';
 import './index.css';
+import { isNative } from '@/lib/platform';
+import { initDeepLinks } from '@/lib/deep-links';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useMotionBudget } from '@/hooks/use-motion-budget';
+import { AppHeader } from '@/components/layout/app-header';
+import { SwipeBackLayer } from '@/components/layout/swipe-back-layer';
+import { initNativeShell } from '@/lib/native-init';
+import { AppSplash } from '@/components/splash/AppSplash';
 
 // --- Lazy page imports (code-split per route) ---
 
@@ -124,6 +126,7 @@ const AdminCreditsPage = lazy(() => import('@/pages/admin/AdminCreditsPage').the
 const AdminCouponsPage = lazy(() => import('@/pages/admin/AdminCouponsPage').then(m => ({ default: m.AdminCouponsPage })));
 const AdminMasterDataPage = lazy(() => import('@/pages/admin/AdminMasterDataPage').then(m => ({ default: m.AdminMasterDataPage })));
 const TrainingGuidePage = lazy(() => import('@/pages/TrainingGuidePage').then(m => ({ default: m.TrainingGuidePage })));
+const OnboardingPage = lazy(() => import('@/pages/onboarding/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
 const MarketEntryPage = lazy(() => import('@/pages/MarketEntryPage').then(m => ({ default: m.MarketEntryPage })));
@@ -234,6 +237,26 @@ function ProtectedRoute() {
 
 function AnimatedOutlet() {
   const location = useLocation();
+  const isMobile = useIsMobile();
+
+  // Mobile uses `popLayout` so the outgoing and incoming pages overlap — that
+  // overlap is what makes the push/pop read as a native stack. It requires a
+  // positioned wrapper, because the exiting page is taken out of flow.
+  //
+  // Desktop keeps `wait`: the blur-in crossfade has nothing to overlap, and
+  // sequential mode avoids a transient double scrollbar on wide layouts.
+  if (isMobile) {
+    return (
+      <div className="relative isolate min-h-full">
+        <AnimatePresence mode="popLayout" initial={false} custom={location.pathname}>
+          <PageTransition key={location.pathname} className="min-h-full">
+            <Outlet />
+          </PageTransition>
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
     <AnimatePresence mode="wait" initial={false}>
       <PageTransition key={location.pathname}>
@@ -244,38 +267,25 @@ function AnimatedOutlet() {
 }
 
 function AppLayout() {
-  const { branding } = useBranding();
-  const { t } = useTranslation('common');
+  // The palette used to be reachable only via Cmd/Ctrl+K, i.e. not at all on a
+  // touch device. Lifting its state here lets the header expose a real button.
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
         <ImpersonationBanner />
-        <header className="relative flex h-14 shrink-0 items-center gap-2 bg-background px-4">
-          <SidebarTrigger
-            className="-ml-1 size-10 touch-target md:size-8"
-            aria-label={t('Open menu')}
-          />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="truncate max-w-[60vw] sm:max-w-none">
-                  {branding.appName}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          {/* Gradient border-bottom line */}
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent" />
-        </header>
-        <main className="flex-1 overflow-auto p-4 sm:p-6 pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-6">
-          <AnimatedOutlet />
+        <AppHeader onSearch={() => setPaletteOpen(true)} />
+        <main className="flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app">
+          <SwipeBackLayer>
+            <AnimatedOutlet />
+          </SwipeBackLayer>
         </main>
         <MobileBottomNav />
+        <OnboardingGate />
         <Suspense fallback={null}>
-          <CommandPalette />
+          <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         </Suspense>
       </SidebarInset>
     </SidebarProvider>
@@ -297,6 +307,14 @@ function PlaceholderPage({ title }: { title: string }) {
 function CustomDomainGate() {
   const { t } = useTranslation('common');
   const { isCustomDomain, isResolving, resolution } = useCustomDomainDetection();
+
+  // Custom-domain white-labeling is a web-only feature. In the native shell the
+  // hostname is `localhost`, so resolving it as a tenant domain would fall
+  // through to DomainNotFoundPage — a hard white-screen lockout. Short-circuit
+  // before any hostname is ever inspected.
+  if (isNative()) {
+    return <NormalAppRoutes />;
+  }
 
   if (isResolving) {
     return (
@@ -335,9 +353,20 @@ function LoadingSpinner() {
   );
 }
 
+/**
+ * Registers the native deep-link listener (Universal Links / App Links).
+ * Must live inside the Router so it can navigate. No-op on web.
+ */
+function DeepLinkHandler() {
+  const navigate = useNavigate();
+  useEffect(() => initDeepLinks((path) => navigate(path, { replace: true })), [navigate]);
+  return null;
+}
+
 function NormalAppRoutes() {
   return (
     <BrowserRouter>
+      <DeepLinkHandler />
       <Suspense fallback={<LoadingSpinner />}>
       <Routes>
         {/* Landing Page */}
@@ -586,6 +615,9 @@ function NormalAppRoutes() {
           {/* Help */}
           <Route path="help" element={<TrainingGuidePage />} />
 
+          {/* First-run intro tour (native only — the page redirects on web) */}
+          <Route path="onboarding" element={<OnboardingPage />} />
+
           {/* Security / MFA */}
           <Route path="security/mfa" element={<SecurityMfaPage />} />
         </Route>
@@ -601,13 +633,31 @@ function ThemeInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Owns the native shell lifecycle (keyboard insets today) and gates the branded
+ * splash on auth initialisation. Sits inside the providers so it can read them.
+ */
+function AppShellBootstrap() {
+  const { isInitializing } = useAuth();
+  // Publishes data-motion / data-perf on <html> so CSS and every motion
+  // component agree on one budget for the whole session.
+  useMotionBudget();
+  useEffect(() => initNativeShell(), []);
+
+  return (
+    <AppSplash ready={!isInitializing}>
+      <CustomDomainGate />
+    </AppSplash>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeInitializer>
         <AuthProvider>
           <BrandingProvider>
-            <CustomDomainGate />
+            <AppShellBootstrap />
             <Toaster
               position="top-right"
               richColors

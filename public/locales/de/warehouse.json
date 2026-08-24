@@ -1825,5 +1825,6 @@
   "Trotzdem versenden": "Trotzdem versenden",
   "Fewer units packed than ordered": "Weniger Stück verpackt als bestellt",
   "Open the shipment to review and confirm.": "Sendung öffnen, prüfen und bestätigen.",
-  "Open": "Öffnen"
+  "Open": "Öffnen",
+  "Camera access is blocked. Allow camera access for Trackbliss in your device settings.": "Kamerazugriff ist blockiert. Erlaube Trackbliss den Kamerazugriff in den Geräteeinstellungen."
 }

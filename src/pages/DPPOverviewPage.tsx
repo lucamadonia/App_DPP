@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -21,7 +21,6 @@ import {
 import {
   gridStagger,
   gridItem,
-  blurIn,
   useReducedMotion,
 } from '@/lib/motion';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -30,13 +29,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { PageContainer } from '@/components/layout/page-container';
 import { getAllBatches } from '@/services/supabase/batches';
 import type { BatchListItem } from '@/types/product';
 
@@ -93,6 +89,11 @@ export function DPPOverviewPage() {
     loadBatches();
   }, []);
 
+  // Pull-to-refresh: same fetch, without flipping back to the skeleton.
+  const refreshBatches = useCallback(async () => {
+    setDpps(await getAllBatches());
+  }, []);
+
   const filteredDpps = dpps.filter((dpp) => {
     const matchesSearch =
       dpp.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -102,6 +103,120 @@ export function DPPOverviewPage() {
     const matchesStatus = !statusFilter || dpp.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const columns: ResponsiveTableColumn<DPPBatchItem>[] = [
+    {
+      id: 'product',
+      header: t('Product', { ns: 'products' }),
+      mobilePriority: 'title',
+      cell: (dpp) => (
+        <Link
+          to={`/products/${dpp.productId}`}
+          className="font-medium hover:text-primary hover:underline"
+        >
+          {dpp.productName}
+        </Link>
+      ),
+    },
+    {
+      id: 'gtin',
+      header: t('GTIN', { ns: 'products' }),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('GTIN', { ns: 'products' }),
+      cell: (dpp) => <code className="font-mono text-sm">{dpp.gtin}</code>,
+    },
+    {
+      id: 'serial',
+      header: t('Serial Number'),
+      mobilePriority: 'subtitle',
+      cell: (dpp) => (
+        <Link
+          to={`/products/${dpp.productId}/batches/${dpp.id}`}
+          className="font-mono text-sm hover:text-primary hover:underline"
+        >
+          {dpp.serialNumber}
+        </Link>
+      ),
+    },
+    {
+      id: 'batch',
+      header: t('Batch'),
+      className: 'text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Batch'),
+      cell: (dpp) => dpp.batchNumber || '-',
+    },
+    {
+      id: 'status',
+      header: t('Status', { ns: 'common' }),
+      mobilePriority: 'badge',
+      cell: (dpp) => {
+        const status = statusConfig[dpp.status];
+        return (
+          <Badge variant="secondary" className={status.className}>
+            <status.icon className="mr-1 h-3 w-3" />
+            {status.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'created',
+      header: t('Created'),
+      className: 'text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Created'),
+      cell: (dpp) => formatDate(dpp.createdAt, locale),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-[50px]',
+      mobilePriority: 'meta',
+      cell: (dpp) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to={`/products/${dpp.productId}/batches/${dpp.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                {t('Batch Details')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={`/products/${dpp.productId}`}>
+                <Layers className="mr-2 h-4 w-4" />
+                {t('Product', { ns: 'products' })}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/dpp/qr-generator">
+                <QrCode className="mr-2 h-4 w-4" />
+                {t('QR-Code')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href={`/p/${dpp.gtin}/${dpp.serialNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                {t('Public View')}
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   const stats = {
     total: dpps.length,
@@ -144,19 +259,14 @@ export function DPPOverviewPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Digital Product Passports')}</h1>
-          <p className="text-muted-foreground">
-            {t('Overview of all DPPs by batch')}
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={refreshBatches}
+      title={t('Digital Product Passports')}
+      description={t('Overview of all DPPs by batch')}
+      actions={
+        <>
           <Button variant="outline" asChild>
             <Link to="/dpp/qr-generator">
               <QrCode className="mr-2 h-4 w-4" />
@@ -168,8 +278,10 @@ export function DPPOverviewPage() {
               {t('Create New DPP')}
             </Link>
           </Button>
-        </div>
-      </MotionDiv>
+        </>
+      }
+    >
+      <div className="space-y-6">
 
       {/* Stats */}
       <MotionDiv
@@ -273,119 +385,28 @@ export function DPPOverviewPage() {
       </Card>
 
       {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {filteredDpps.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium">{t('No DPPs found')}</h3>
-              <p className="text-muted-foreground mt-1">
-                {dpps.length === 0
-                  ? t('Create a product and add batches to generate DPPs.')
-                  : t('No batches match your search criteria.')}
-              </p>
-              {dpps.length === 0 && (
-                <Button className="mt-4" asChild>
-                  <Link to="/products/new">{t('Create First Product')}</Link>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Product', { ns: 'products' })}</TableHead>
-                  <TableHead>{t('GTIN', { ns: 'products' })}</TableHead>
-                  <TableHead>{t('Serial Number')}</TableHead>
-                  <TableHead>{t('Batch')}</TableHead>
-                  <TableHead>{t('Status', { ns: 'common' })}</TableHead>
-                  <TableHead>{t('Created')}</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDpps.map((dpp) => {
-                  const status = statusConfig[dpp.status];
-                  return (
-                    <TableRow key={dpp.id}>
-                      <TableCell>
-                        <Link
-                          to={`/products/${dpp.productId}`}
-                          className="font-medium hover:text-primary hover:underline"
-                        >
-                          {dpp.productName}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <code className="font-mono text-sm">{dpp.gtin}</code>
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          to={`/products/${dpp.productId}/batches/${dpp.id}`}
-                          className="font-mono text-sm hover:text-primary hover:underline"
-                        >
-                          {dpp.serialNumber}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {dpp.batchNumber || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={status.className}>
-                          <status.icon className="mr-1 h-3 w-3" />
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(dpp.createdAt, locale)}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/products/${dpp.productId}/batches/${dpp.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                {t('Batch Details')}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/products/${dpp.productId}`}>
-                                <Layers className="mr-2 h-4 w-4" />
-                                {t('Product', { ns: 'products' })}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to="/dpp/qr-generator">
-                                <QrCode className="mr-2 h-4 w-4" />
-                                {t('QR-Code')}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a
-                                href={`/p/${dpp.gtin}/${dpp.serialNumber}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                {t('Public View')}
-                              </a>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      <ResponsiveTable
+        data={filteredDpps}
+        columns={columns}
+        rowKey={(dpp) => dpp.id}
+        emptyState={
+          <div className="flex flex-col items-center justify-center text-center">
+            <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
+            <h3 className="text-lg font-medium">{t('No DPPs found')}</h3>
+            <p className="text-muted-foreground mt-1">
+              {dpps.length === 0
+                ? t('Create a product and add batches to generate DPPs.')
+                : t('No batches match your search criteria.')}
+            </p>
+            {dpps.length === 0 && (
+              <Button className="mt-4" asChild>
+                <Link to="/products/new">{t('Create First Product')}</Link>
+              </Button>
+            )}
+          </div>
+        }
+      />
+      </div>
+    </PageContainer>
   );
 }

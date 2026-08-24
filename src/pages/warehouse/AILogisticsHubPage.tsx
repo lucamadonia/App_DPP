@@ -267,7 +267,7 @@ export function AILogisticsHubPage() {
 
   if (!selectedExpert) {
     return (
-      <div className="relative min-h-[calc(100vh-4rem)]">
+      <div className="relative min-h-[calc(100dvh-4rem)]">
         <HubBackdrop variant="hero" />
 
         <div className="relative container mx-auto max-w-6xl px-4 py-8 sm:py-12 lg:py-16 space-y-10 sm:space-y-12">
@@ -374,7 +374,7 @@ export function AILogisticsHubPage() {
   const cfg = expertConfig[selectedExpert];
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="relative flex flex-col h-[calc(100dvh-4rem)] overflow-hidden">
       <HubBackdrop variant="chat" />
 
       {/* Chat Header - Command Bar */}

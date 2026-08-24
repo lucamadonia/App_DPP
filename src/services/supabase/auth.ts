@@ -10,6 +10,7 @@
 import { supabase } from '@/lib/supabase';
 import i18n from '@/i18n';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
+import { getAuthOrigin, isNative } from '@/lib/platform';
 
 // Short locale code ('de' | 'en' | 'el') for auth-email-hook template selection.
 function currentLocale(): string {
@@ -110,10 +111,33 @@ export async function signUpWithEmail(
  * Sign in with Google OAuth
  */
 export async function signInWithGoogle(redirectTo?: string): Promise<{ error: AuthError | null }> {
+  const target = redirectTo || `${getAuthOrigin()}/auth/callback`;
+
+  // Native: Google refuses to render its consent screen inside an embedded
+  // WebView (`disallowed_useragent`), so the authorization URL must be opened
+  // in the system browser. The result comes back through a Universal/App Link
+  // and is handled by the `appUrlOpen` listener in src/lib/deep-links.ts.
+  if (isNative()) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: target,
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error) return { error };
+    if (!data?.url) {
+      return { error: new Error('No authorization URL returned') as AuthError };
+    }
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: data.url, presentationStyle: 'popover' });
+    return { error: null };
+  }
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: redirectTo || `${window.location.origin}/auth/callback`,
+      redirectTo: target,
     },
   });
 
@@ -127,7 +151,7 @@ export async function sendMagicLink(email: string): Promise<{ error: AuthError |
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      emailRedirectTo: `${getAuthOrigin()}/auth/callback`,
       data: {
         locale: currentLocale(),
       },
@@ -167,7 +191,7 @@ export async function signOut(): Promise<{ error: AuthError | null }> {
  */
 export async function sendPasswordReset(email: string): Promise<{ error: AuthError | null }> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/reset-password`,
+    redirectTo: `${getAuthOrigin()}/auth/reset-password`,
   });
 
   return { error };
@@ -238,6 +262,25 @@ export function onAuthStateChange(
  * Handle OAuth callback (exchange code for session)
  */
 export async function handleAuthCallback(): Promise<AuthResult> {
+  // On web, supabase-js has already parsed the callback URL (detectSessionInUrl)
+  // by the time this runs, so getSession() is enough. On native detection is off
+  // and the PKCE code may still be sitting in the URL — exchange it explicitly.
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error) {
+        return {
+          user: transformUser(data.session?.user || null),
+          session: data.session,
+          error: null,
+        };
+      }
+      // Fall through to getSession() — the code may already have been consumed.
+    }
+  }
+
   const { data, error } = await supabase.auth.getSession();
 
   return {
@@ -245,4 +288,120 @@ export async function handleAuthCallback(): Promise<AuthResult> {
     session: data.session,
     error,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Account deletion (Apple App Store guideline 5.1.1(v))
+//
+// Two distinct kinds of account can be signed in through this client:
+//   - a tenant user  → row in `profiles`
+//   - a portal customer → row in `rh_customer_profiles`
+// The account type is derived from the session, never passed in by the caller.
+// ---------------------------------------------------------------------------
+
+export type DeletableAccountType = 'admin' | 'customer';
+
+export type AccountDeletionBlockedReason = 'last_admin' | 'no_account';
+
+export interface AccountDeletionEligibility {
+  /**
+   * `null` when a valid session exists but neither profile row does — an
+   * account left half-deleted by an earlier failure. Still deletable; see the
+   * "Case 3" branch in the `delete-account` edge function.
+   */
+  accountType: DeletableAccountType | null;
+  /** Email of the signed-in user — the string the confirmation gate expects. */
+  email: string;
+  canDelete: boolean;
+  blockedReason: AccountDeletionBlockedReason | null;
+}
+
+/**
+ * Determine whether the signed-in account may delete itself.
+ *
+ * A tenant's last remaining admin is refused: deleting them would leave the
+ * tenant (products, passports, returns) without anyone able to administer it.
+ * `getAdminCount()` returns 0 when the tenant cannot be resolved, so `<= 1`
+ * also covers "could not verify" — we block rather than guess.
+ */
+export async function getAccountDeletionEligibility(): Promise<AccountDeletionEligibility> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { accountType: null, email: '', canDelete: false, blockedReason: 'no_account' };
+  }
+
+  const email = user.email || '';
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile) {
+    if (profile.role === 'admin') {
+      const { getAdminCount } = await import('./profiles');
+      const adminCount = await getAdminCount();
+      if (adminCount <= 1) {
+        return { accountType: 'admin', email, canDelete: false, blockedReason: 'last_admin' };
+      }
+    }
+    return { accountType: 'admin', email, canDelete: true, blockedReason: null };
+  }
+
+  const { data: customerProfile } = await supabase
+    .from('rh_customer_profiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (customerProfile) {
+    return { accountType: 'customer', email, canDelete: true, blockedReason: null };
+  }
+
+  // Valid session, no profile row of either kind: a deletion that failed
+  // partway through. Deletion must stay available, otherwise the auth user is
+  // stranded forever with no way to clear it.
+  return { accountType: null, email, canDelete: true, blockedReason: null };
+}
+
+/**
+ * Request permanent deletion of the signed-in account.
+ *
+ * `confirmEmail` is the address the user typed into the confirmation gate. It
+ * is checked here and re-checked server-side against the JWT; no user id is
+ * ever sent, so the edge function can only ever delete the caller.
+ *
+ * On success the local session is signed out — the auth user no longer exists.
+ *
+ * Errors are returned as stable codes where the UI needs to explain them
+ * ('last_admin', 'no_account', 'email_mismatch'); anything else is the raw
+ * message from the edge function.
+ */
+export async function requestAccountDeletion(
+  confirmEmail: string
+): Promise<{ success: boolean; error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'no_account' };
+
+  if (confirmEmail.trim().toLowerCase() !== (user.email || '').toLowerCase()) {
+    return { success: false, error: 'email_mismatch' };
+  }
+
+  const eligibility = await getAccountDeletionEligibility();
+  if (!eligibility.canDelete) {
+    return { success: false, error: eligibility.blockedReason || 'not_eligible' };
+  }
+
+  const { invokeEdgeFunction } = await import('@/lib/edge-function');
+  const { data, error } = await invokeEdgeFunction<{ success?: boolean; error?: string }>(
+    'delete-account',
+    { confirmEmail: confirmEmail.trim() }
+  );
+
+  if (error) return { success: false, error: error.message };
+  if (!data?.success) return { success: false, error: data?.error || 'delete_failed' };
+
+  await supabase.auth.signOut();
+  return { success: true };
 }

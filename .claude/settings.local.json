@@ -55,5 +55,9 @@
       "WebFetch(domain:deno.land)",
       "Bash(npx vite build)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ],
+  "enableAllProjectMcpServers": true
 }

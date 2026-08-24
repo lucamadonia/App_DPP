@@ -382,7 +382,7 @@ export function DPPVisibilitySettingsPageV3() {
 
       {/* Mobile: Sticky Bottom Save Bar (safe-area aware) */}
       {isMobile && hasChanges && (
-        <div className="sticky bottom-0 z-50 border-t bg-background/95 backdrop-blur-sm p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <div className="sticky bottom-0 z-50 border-t bg-background/95 backdrop-blur-sm p-3 pb-[calc(var(--safe-bottom)+0.75rem)]">
           <Button
             onClick={handleSave}
             disabled={isSaving}

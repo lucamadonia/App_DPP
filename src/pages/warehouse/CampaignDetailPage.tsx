@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -134,6 +134,68 @@ export function CampaignDetailPage() {
     { label: 'Returns Pending', value: animatedReturnsPending, icon: RotateCcw, color: 'orange' },
     { label: 'Total Views', value: animatedViews, icon: Eye, color: 'purple', format: true },
     { label: 'Total Engagement', value: animatedEngagement, icon: Heart, color: 'pink', format: true },
+  ];
+
+  // Real table on md+, stacked cards below — the raw <Table> forced pinch-zoom
+  // scrolling on a phone.
+  const shipmentColumns: ResponsiveTableColumn<WhShipment>[] = [
+    {
+      id: 'shipmentNumber',
+      header: t('Shipment Number'),
+      mobilePriority: 'title',
+      cell: (s) => (
+        <Link to={`/warehouse/shipments/${s.id}`} className="font-medium text-primary hover:underline">
+          {s.shipmentNumber}
+        </Link>
+      ),
+    },
+    {
+      id: 'recipient',
+      header: t('Recipient'),
+      mobilePriority: 'subtitle',
+      cell: (s) => <span className="text-sm">{s.recipientName}</span>,
+    },
+    {
+      id: 'sampleType',
+      header: t('Sample Type'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Sample Type'),
+      cell: (s) =>
+        s.sampleMeta?.sampleType ? (
+          <Badge variant="outline" className="text-xs">
+            {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
+          </Badge>
+        ) : null,
+    },
+    {
+      id: 'sampleStatus',
+      header: t('Sample Status'),
+      mobilePriority: 'badge',
+      cell: (s) =>
+        s.sampleMeta?.sampleStatus ? <SampleStatusBadge status={s.sampleMeta.sampleStatus} /> : null,
+    },
+    {
+      id: 'contentStatus',
+      header: t('Content Status'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Content Status'),
+      cell: (s) =>
+        s.sampleMeta?.contentStatus ? <ContentStatusBadge status={s.sampleMeta.contentStatus} /> : null,
+    },
+    {
+      id: 'date',
+      header: t('Date'),
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Date'),
+      cell: (s) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(s.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
   ];
 
   return (
@@ -352,64 +414,18 @@ export function CampaignDetailPage() {
               <CardTitle className="text-base">{t('Sample Shipments')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Shipment Number')}</TableHead>
-                      <TableHead>{t('Recipient')}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('Sample Type')}</TableHead>
-                      <TableHead>{t('Sample Status')}</TableHead>
-                      <TableHead className="hidden md:table-cell">{t('Content Status')}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('Date')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shipments.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                          <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                          {t('No shipments yet')}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      shipments.map((s) => (
-                        <TableRow key={s.id}>
-                          <TableCell>
-                            <Link
-                              to={`/warehouse/shipments/${s.id}`}
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {s.shipmentNumber}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-sm">{s.recipientName}</TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            {s.sampleMeta?.sampleType && (
-                              <Badge variant="outline" className="text-xs">
-                                {t(s.sampleMeta.sampleType === 'gift' ? 'Gift' : 'Loan')}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {s.sampleMeta?.sampleStatus && (
-                              <SampleStatusBadge status={s.sampleMeta.sampleStatus} />
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {s.sampleMeta?.contentStatus && (
-                              <ContentStatusBadge status={s.sampleMeta.contentStatus} />
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                            {new Date(s.createdAt).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <ResponsiveTable
+                data={shipments}
+                columns={shipmentColumns}
+                rowKey={(s) => s.id}
+                className="border-0 bg-transparent rounded-none"
+                emptyState={
+                  <div className="text-muted-foreground">
+                    <Truck className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    {t('No shipments yet')}
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>

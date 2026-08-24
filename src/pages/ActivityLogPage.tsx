@@ -31,12 +31,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import { getActivityLogPaginated } from '@/services/supabase/activity-log';
 import type { PaginatedActivityLog } from '@/services/supabase/activity-log';
+import type { ActivityLogEntry } from '@/types/database';
 import { formatDate } from '@/lib/format';
+import { PageContainer } from '@/components/layout/page-container';
 
 const ACTION_BADGES: Record<string, { className: string; icon?: typeof ArrowUpRight }> = {
   'shopify.inventory_export':           { className: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: ArrowUpRight },
@@ -129,23 +130,112 @@ export function ActivityLogPage() {
 
   const hasFilters = !!(search || actionFilter || entityTypeFilter || userFilter || dateFrom || dateTo);
 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-            <History className="h-5 w-5 sm:h-6 sm:w-6" />
-            {t('Activity Log')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('Complete audit trail — every change in the system, who made it, and what values were touched.')}
-          </p>
+  const columns: ResponsiveTableColumn<ActivityLogEntry>[] = [
+    {
+      id: 'expand',
+      header: '',
+      className: 'w-8 px-2',
+      cell: entry => (expanded.has(entry.id)
+        ? <ChevronUp className="h-3.5 w-3.5" />
+        : <ChevronDown className="h-3.5 w-3.5" />),
+    },
+    {
+      id: 'when',
+      header: t('When'),
+      className: 'text-xs whitespace-nowrap',
+      mobilePriority: 'meta',
+      mobileLabel: t('When'),
+      cell: entry => (
+        <>
+          <div>{formatDate(entry.createdAt, locale)}</div>
+          <div className="text-muted-foreground">{new Date(entry.createdAt).toLocaleTimeString()}</div>
+        </>
+      ),
+    },
+    {
+      id: 'who',
+      header: t('Who'),
+      className: 'text-xs',
+      mobilePriority: 'meta',
+      mobileLabel: t('Who'),
+      cell: entry => (entry.userId ? (
+        <span className="inline-flex items-center gap-1.5">
+          <User className="h-3.5 w-3.5" />
+          {entry.actorEmail || entry.userId.slice(0, 8)}
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground italic">
+          <Bot className="h-3.5 w-3.5" /> {t('System')}
+        </span>
+      )),
+    },
+    {
+      id: 'action',
+      header: t('Action'),
+      mobilePriority: 'title',
+      cell: entry => {
+        const cfg = actionBadge(entry.action);
+        const Icon = cfg.icon;
+        return (
+          <Badge variant="outline" className={cfg.className + ' text-xs whitespace-nowrap'}>
+            {Icon && <Icon className="h-3 w-3 mr-1" />}
+            {entry.action}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'entity',
+      header: t('Entity'),
+      className: 'text-xs font-mono text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Entity'),
+      cell: entry => (
+        <>
+          {entry.entityType}
+          {entry.entityId && <div className="text-[10px]">{entry.entityId.slice(0, 8)}…</div>}
+        </>
+      ),
+    },
+    {
+      id: 'summary',
+      header: t('Summary'),
+      className: 'text-xs',
+      mobilePriority: 'subtitle',
+      cell: entry => (
+        <div className="max-w-md">
+          <div className="truncate">{renderSummary(entry, t)}</div>
+          {expanded.has(entry.id) && (
+            <pre className="mt-2 rounded bg-muted/20 px-3 py-2 text-xs font-mono whitespace-pre-wrap break-all">
+              {JSON.stringify(entry.details, null, 2)}
+            </pre>
+          )}
         </div>
+      ),
+    },
+  ];
+
+  return (
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={load}
+      title={
+        <span className="flex items-center gap-2">
+          <History className="h-5 w-5 sm:h-6 sm:w-6" />
+          {t('Activity Log')}
+        </span>
+      }
+      description={t('Complete audit trail — every change in the system, who made it, and what values were touched.')}
+      actions={
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           {t('Reload')}
         </Button>
-      </div>
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
 
       {/* Filters */}
       <Card>
@@ -226,58 +316,20 @@ export function ActivityLogPage() {
       </Card>
 
       {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8" />
-                  <TableHead>{t('When')}</TableHead>
-                  <TableHead>{t('Who')}</TableHead>
-                  <TableHead>{t('Action')}</TableHead>
-                  <TableHead>{t('Entity')}</TableHead>
-                  <TableHead>{t('Summary')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && Array.from({ length: 8 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={6}><ShimmerSkeleton className="h-6 w-full" /></TableCell>
-                  </TableRow>
-                ))}
-
-                {!loading && (data?.data.length ?? 0) === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                      <AlertTriangle className="h-6 w-6 mx-auto mb-2" />
-                      {t('No matching entries')}
-                    </TableCell>
-                  </TableRow>
-                )}
-
-                {!loading && data?.data.map(entry => {
-                  const isExpanded = expanded.has(entry.id);
-                  const cfg = actionBadge(entry.action);
-                  const Icon = cfg.icon;
-                  return (
-                    <RowFragment
-                      key={entry.id}
-                      entry={entry}
-                      cfg={cfg}
-                      Icon={Icon}
-                      isExpanded={isExpanded}
-                      onToggle={() => toggleExpand(entry.id)}
-                      locale={locale}
-                      t={t}
-                    />
-                  );
-                })}
-              </TableBody>
-            </Table>
+      <ResponsiveTable
+        data={data?.data ?? []}
+        columns={columns}
+        rowKey={entry => entry.id}
+        onRowClick={entry => toggleExpand(entry.id)}
+        loading={loading}
+        loadingRows={8}
+        emptyState={
+          <div className="text-muted-foreground">
+            <AlertTriangle className="h-6 w-6 mx-auto mb-2" />
+            {t('No matching entries')}
           </div>
-        </CardContent>
-      </Card>
+        }
+      />
 
       {/* Pagination */}
       {data && data.total > 0 && (
@@ -297,74 +349,8 @@ export function ActivityLogPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ============================================
-// Row + expanded detail
-// ============================================
-
-interface RowProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  entry: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cfg: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Icon?: any;
-  isExpanded: boolean;
-  onToggle: () => void;
-  locale: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: any;
-}
-
-function RowFragment({ entry, cfg, Icon, isExpanded, onToggle, locale, t }: RowProps) {
-  const summary = renderSummary(entry, t);
-  return (
-    <>
-      <TableRow className="cursor-pointer hover:bg-muted/40" onClick={onToggle}>
-        <TableCell className="px-2">
-          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </TableCell>
-        <TableCell className="text-xs whitespace-nowrap">
-          <div>{formatDate(entry.createdAt, locale)}</div>
-          <div className="text-muted-foreground">{new Date(entry.createdAt).toLocaleTimeString()}</div>
-        </TableCell>
-        <TableCell className="text-xs">
-          {entry.userId ? (
-            <span className="inline-flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5" />
-              {entry.actorEmail || entry.userId.slice(0, 8)}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-muted-foreground italic">
-              <Bot className="h-3.5 w-3.5" /> {t('System')}
-            </span>
-          )}
-        </TableCell>
-        <TableCell>
-          <Badge variant="outline" className={cfg.className + ' text-xs whitespace-nowrap'}>
-            {Icon && <Icon className="h-3 w-3 mr-1" />}
-            {entry.action}
-          </Badge>
-        </TableCell>
-        <TableCell className="text-xs font-mono text-muted-foreground">
-          {entry.entityType}
-          {entry.entityId && <div className="text-[10px]">{entry.entityId.slice(0, 8)}…</div>}
-        </TableCell>
-        <TableCell className="text-xs max-w-md truncate">{summary}</TableCell>
-      </TableRow>
-      {isExpanded && (
-        <TableRow>
-          <TableCell colSpan={6} className="bg-muted/20 px-4 py-3">
-            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
-              {JSON.stringify(entry.details, null, 2)}
-            </pre>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+      </div>
+    </PageContainer>
   );
 }
 

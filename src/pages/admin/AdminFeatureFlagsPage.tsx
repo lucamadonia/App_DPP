@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { listFeatureFlags, upsertFeatureFlag, deleteFeatureFlag } from '@/services/supabase/admin';
 import type { FeatureFlag } from '@/types/admin-extended';
 import { toast } from 'sonner';

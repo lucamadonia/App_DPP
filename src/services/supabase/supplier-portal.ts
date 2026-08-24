@@ -11,6 +11,7 @@ import type {
   SupplierPortalSettings,
 } from '@/types/supplier-portal';
 import { DEFAULT_SUPPLIER_PORTAL_SETTINGS } from '@/types/supplier-portal';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // Transform database row to SupplierInvitation
 function transformInvitation(row: any): SupplierInvitation {
@@ -97,7 +98,7 @@ export async function createSupplierInvitation(params: {
   if (error) throw error;
 
   const invitation = transformInvitation(data);
-  const invitationUrl = `${window.location.origin}/suppliers/register/${invitation.invitationCode}`;
+  const invitationUrl = `${getPublicBaseUrl()}/suppliers/register/${invitation.invitationCode}`;
 
   return { invitation, invitationUrl };
 }

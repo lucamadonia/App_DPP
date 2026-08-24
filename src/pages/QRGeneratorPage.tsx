@@ -57,6 +57,7 @@ import { ErrorState } from '@/components/ui/state-feedback';
 import type { BatchListItem } from '@/types/product';
 import { useBranding } from '@/contexts/BrandingContext';
 import { validateDomain, validatePathPrefix, normalizeDomain } from '@/lib/domain-utils';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // QR Code Settings Interface (local state only for visual settings)
 interface QRSettings {
@@ -292,7 +293,7 @@ export function QRGeneratorPage() {
 
     // Local public pages
     if (localDomainSettings.resolver === 'local') {
-      return `${window.location.origin}/p/${gtin}/${serial}${customsSuffix}`;
+      return `${getPublicBaseUrl()}/p/${gtin}/${serial}${customsSuffix}`;
     }
 
     if (localDomainSettings.resolver === 'gs1') {
@@ -305,7 +306,7 @@ export function QRGeneratorPage() {
       return `${protocol}://${domain}${prefix}/p/${gtin}/${serial}${customsSuffix}`;
     }
 
-    return `${window.location.origin}/p/${gtin}/${serial}${customsSuffix}`;
+    return `${getPublicBaseUrl()}/p/${gtin}/${serial}${customsSuffix}`;
   };
 
   // Resolved serial number from selected batch (or fallback to product.serial for legacy)
@@ -313,7 +314,7 @@ export function QRGeneratorPage() {
   const activeGtin = selectedProduct?.gtin || '';
 
   // Local preview URLs
-  const localPreviewUrl = (activeGtin && activeSerial) ? `${window.location.origin}/p/${activeGtin}/${activeSerial}` : '';
+  const localPreviewUrl = (activeGtin && activeSerial) ? `${getPublicBaseUrl()}/p/${activeGtin}/${activeSerial}` : '';
   const localCustomsUrl = localPreviewUrl ? `${localPreviewUrl}/customs` : '';
 
   const dppUrl = (activeGtin && activeSerial) ? generateDPPUrl(activeGtin, activeSerial) : '';
@@ -1075,7 +1076,7 @@ export function QRGeneratorPage() {
                       <Settings className="h-4 w-4" />
                       {t('Size')}
                     </h3>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[128, 256, 512, 1024].map((size) => (
                         <Button
                           key={size}
@@ -1398,7 +1399,7 @@ export function QRGeneratorPage() {
                             {t('Uses the built-in public DPP pages of this application')}
                           </p>
                           <p className="text-xs font-mono mt-1 text-muted-foreground">
-                            {window.location.origin}/p/GTIN/SERIAL
+                            {getPublicBaseUrl()}/p/GTIN/SERIAL
                           </p>
                         </div>
                       </label>

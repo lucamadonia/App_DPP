@@ -1,0 +1,182 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**Trackbliss** — React SPA for managing EU ESPR 2024/1781 Digital Product Passports (DPPs). Multi-tenant SaaS with Supabase backend, AI compliance analysis via Claude Sonnet 4, integrated Returns Hub (tickets + customer portal), warehouse + shipping module with smart packing engine, white-label custom domains, and DPP design system. UI in German + English. Production at https://dpp-app.fambliss.eu (Vercel auto-deploy on push to main).
+
+## Commands
+
+```bash
+npm run dev          # Vite dev server
+npm run build        # tsc -b && vite build
+npm run lint         # ESLint (flat config)
+npx tsc --noEmit     # Type-check only
+
+# Migrations (require SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_REF in .env)
+node scripts/db-migrate.mjs              # Apply all pending migrations
+node scripts/db-migrate.mjs --status     # Show migration status
+node scripts/db-migrate.mjs --file X.sql # Apply one specific migration
+
+# Seeds (require SUPABASE_SERVICE_ROLE_KEY)
+node scripts/seed-countries.mjs
+node scripts/seed-checklist-templates.mjs
+node scripts/seed-eu-regulations.mjs
+node scripts/seed-news.mjs
+node scripts/setup-storage.mjs
+```
+
+The migration runner uses the Supabase **Management API** (`POST /v1/projects/{ref}/database/query`) because the REST/PostgREST endpoint cannot execute DDL. Applied migrations are tracked in a `_migrations` table.
+
+## Tech Stack
+
+React 19 · TypeScript · Vite 7 · Tailwind 4 · shadcn/ui (New York style) · React Router 7 · Supabase (Postgres + Auth + Storage + RLS + Edge Functions) · `@tanstack/react-query` · `framer-motion` · `@react-pdf/renderer` · `jsbarcode` · `qrcode` · `cmdk` · `html5-qrcode` · Lucide icons · OpenRouter (Claude Sonnet 4) for AI. Hosting: Vercel.
+
+## High-Level Architecture
+
+### Context hierarchy (`App.tsx`)
+
+```
+BrowserRouter
+  AuthProvider                      — session + tenantId from profiles table
+    BillingProvider                 — entitlements, quotas, AI credits (loads on auth)
+      BrandingProvider              — runtime theming via CSS vars + favicon + title
+        CustomDomainGate            — checks hostname; swaps to slug-free routing
+          CustomDomainPortal        — when hostname is a tenant's custom domain
+          DomainNotFoundPage        — custom domain not resolved
+          NormalAppRoutes           — standard /login, /p/…, /returns/…, /customer/…, etc.
+            ProtectedRoute          — inline guard (not HOC); redirects unauth to /login
+              AppLayout             — sidebar + header for authenticated pages
+```
+
+`CustomDomainGate` reads `window.location.hostname`, checks a `KNOWN_HOSTS` allowlist, otherwise queries `tenants.settings.returnsHub.portalDomain.customDomain` (anon RLS) to resolve the tenant. Result cached in sessionStorage.
+
+### Multi-tenant isolation
+
+Every tenant-scoped DB call **must** call `getCurrentTenantId()` (from `src/lib/supabase.ts`) first. This reads `tenant_id` from `profiles` (linked to `auth.users`). All tenant tables enforce RLS policies checking `tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())`.
+
+### Service layer convention
+
+- All DB/Storage access goes through `src/services/supabase/*`. Never call `supabase.from(...)` directly in components.
+- Each service has a `transform*()` function at the boundary converting `snake_case` DB rows to `camelCase` TS objects (and the reverse on writes).
+- Quota/billing enforcement uses **`await import('./billing')`** dynamic imports inside 12+ services (`products.ts`, `batches.ts`, `documents.ts`, `returns.ts`, `rh-tickets.ts`, etc.) to break the circular dependency that would exist if `billing.ts` loaded them at module top level.
+
+### Subsystems (most are self-contained — read the relevant service + component folder)
+
+| Subsystem | Entry | DB prefix | Key files |
+|---|---|---|---|
+| AI Compliance Check | `/products/:id` → AI tab | `ai_compliance_checks` | `services/openrouter/*`, `hooks/use-compliance-check.ts`, `components/compliance-check/*` |
+| DPP Design System | `/settings/branding` | `tenants.settings.dppDesign` | `lib/dpp-design-*.ts`, `components/public/Template*.tsx` (11 variants) |
+| Custom Domains | `/settings/branding` | `tenants.settings.returnsHub.portalDomain` | `hooks/useCustomDomainDetection.ts`, `components/CustomDomainPortal.tsx`, `supabase/functions/manage-vercel-domain` |
+| Returns Hub | `/returns/*` | `rh_*` | `services/supabase/rh-*.ts`, `components/returns/*` |
+| Email Editor v2 | `/returns/email-templates` | `rh_email_templates` | `components/returns/email-editor/*` (9 block types, 15 templates) |
+| Workflow Engine | `/returns/workflows/:id/builder` | `rh_workflow_rules` | `services/supabase/rh-workflow-engine.ts` (graph-walking, 21 actions, 13 operators) |
+| Visibility V2 | `/dpp/visibility` | `visibility_settings` | `types/visibility.ts` (36 fields, 9 categories, 3 tiers: consumer/customs/internal) |
+| Supplier Portal | `/suppliers/register/:code` | `supplier_invitations` | `components/suppliers/public/*` |
+| Billing (Stripe) | `/settings/billing` | `billing_*` | `services/supabase/billing.ts`, `components/billing/*`, `supabase/functions/stripe-webhook` |
+| Warehouse | `/warehouse/*` | `wh_*` | `services/supabase/wh-*.ts`, `pages/warehouse/*` |
+| Smart Packing | Step 3 of Create Shipment | — | `lib/smart-packing.ts`, `lib/smart-packing-data.ts`, `components/warehouse/shipments/SmartPackingCard.tsx` |
+| Document Versioning | `/documents` row actions | `document_versions` | `services/supabase/documents.ts`, `components/documents/DocumentVersionHistory.tsx`, `UploadNewVersionDialog.tsx` |
+| Warehouse Scanner | `/warehouse/scanner` | — | `components/warehouse/scanner/CameraScannerView.tsx`, `lib/barcode-parser.ts`, `hooks/use-barcode-scanner.ts` |
+| Master Label Editor | `/products/:id/labels` | — | `components/product/master-label-editor/*`, `lib/master-label-pdf-renderer.tsx` |
+
+### Edge Functions (`supabase/functions/*`)
+
+| Function | Trigger | Secrets needed |
+|---|---|---|
+| `send-email` | INSERT on `rh_notifications` (channel=email, status=pending) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` |
+| `manage-vercel-domain` | HTTP from client (JWT + admin role) | `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` |
+| `create-checkout-session` | HTTP from client (JWT) | `STRIPE_SECRET_KEY` |
+| `create-portal-session` | HTTP from client (JWT) | `STRIPE_SECRET_KEY` |
+| `stripe-webhook` | Stripe webhook | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
+
+### Storage buckets (`supabase/storage.sql`)
+
+| Bucket | Public | Max size | Path pattern |
+|---|---|---|---|
+| `documents` | No | 50 MB | `{tenantId}/{timestamp}-{rnd}.{ext}` |
+| `product-images` | Yes | 10 MB | `{tenantId}/{productId}-{timestamp}.{ext}` |
+| `branding` | Yes | 2 MB | `{tenantId}/{filename}` |
+| `return-photos` | No | 50 MB | `{tenantId}/{filename}` |
+
+RLS on all buckets checks `(storage.foldername(name))[1] = tenant_id::text` — so the first path segment **must** be the tenant ID.
+
+## Smart Packing Assistant (carrier rule engine)
+
+`lib/smart-packing.ts` + `lib/smart-packing-data.ts` encode the rules from `Kurier_Verpackungsregeln_Europa_v2.xlsx`:
+
+- ~40 carrier services across 23 EU carriers (DHL, Hermes, DPD, GLS, UPS, FedEx, Royal Mail, PostNL, Colissimo, …) with per-service max weight, max dimensions, min label size, price-from values.
+- 7 girth formulas (`l_plus_2b_2h`, `l_plus_2_bh`, `longest_plus_2bh`, `sum_3`, `perimeter_only`, `l_plus_girth`, `none`).
+- 27 country zones with ISO-2, VAT, currency, eurozone flag, duties flag, country-specific hints (Canaries as 3rd country, UK Brexit/UKCA, NO VOEC, CH verzollungsgebühr, IT Codice Fiscale, ES Balearen, …).
+- ~32 origin→dest routes × 5 weight tiers × 5 carriers (EUR/CHF/GBP) with linear interpolation for any weight between 2 and 30 kg.
+- Customs forms (CN22 <2 kg + <€368, CN23 otherwise, EUR.1 above €10.300 preferential threshold, Commercial/Proforma Invoice).
+- Incoterms 2020 with contextual tags (b2c / b2b / third_country / high_value).
+- Transit times for 20 destinations from DE.
+- Surcharges: oversize, heavy >25 kg, Saturday, timed slot, age check, COD, customs clearance, fuel %, peak season (Nov–Jan), island, address correction.
+- PPWR deadlines 2026/2028/2029/2030.
+
+`SmartPackingCard.tsx` consumes this. The card **computes weight from items itself** (sum of `grossWeight × quantity` + 400 g packaging tare) if the form `packageWeightKg` prop is 0, and includes an auto-detected unit-mismatch warning if any single item > 50 kg/unit (catches g↔kg confusion).
+
+## Document versioning
+
+Migration `20260418_document_versions.sql` adds a `document_versions` table. The `documents` row always represents the **current** version; `document_versions` is the immutable history. Each `uploadDocumentVersion()`:
+
+1. Uploads new file to storage (`{tenantId}/{ts}-{rnd}.{ext}`).
+2. Inserts a new `document_versions` row with `version_number = MAX + 1`.
+3. Updates the `documents` row's `storage_path`, `size`, `type`, `uploaded_at`, `uploaded_by` to point at the new file.
+
+`restoreDocumentVersion()` reuses the old blob path (no copy); `deleteDocument()` must collect storage paths from all versions before deleting, because `ON DELETE CASCADE` removes only DB rows, not storage blobs.
+
+## Conventions & Gotchas
+
+- **Weight units**: Product `gross_weight` / `net_weight` are stored in **grams**. Convert `/1000` at the boundary when feeding into smart-packing (which works in kg). This has caused real bugs; see `CreateShipmentPage.tsx:resolvedItems` and `wh-stock.ts:transformStockLevel`.
+- **Component identity**: Don't define wrapper components (e.g., a `Section` layout component) **inside** another function component. React re-creates them on every render → entire subtree unmounts → inputs lose focus on every keystroke. Define them at module scope. Caused a real bug on the recipient search in `CreateShipmentPage`.
+- **iOS Safari camera**: `getUserMedia` must be called synchronously from the user gesture window. `CameraScannerView` warms up with `navigator.mediaDevices.getUserMedia` in the same tick as the click handler, THEN hands off to `html5-qrcode`. Don't use `{ facingMode: { exact: 'environment' } }` — iOS rejects it. Use `{ ideal: 'environment' }` for warm-up; pass plain string `{ facingMode: 'environment' }` to html5-qrcode (it rejects `{ ideal }`).
+- **Barcode rendering**: Master Label Editor uses `jsbarcode` in both the preview (renders as SVG into a `<svg ref>`) and the PDF export (paints onto offscreen canvas → PNG data URL → `<Image src>` in `@react-pdf/renderer`). Invalid formats (e.g., non-numeric EAN-13) show an inline error rather than produce an unscannable code.
+- **Auto-fill pattern**: In multi-step forms, auto-fill effects should only run when the target field is empty, so manual edits are never overwritten. If the user clears the field, the auto-fill re-suggests. See `CreateShipmentPage.tsx:useEffect` for weight/carrier/cost/ETA.
+- **Tenant settings JSONB**: Branding, Returns Hub config, QR settings, DPP design, supplier portal, portal domain all live in `tenants.settings` (JSONB). Only billing lives in dedicated `billing_*` tables.
+- **Product dimensions with batch fallback**: When computing package dimensions, the convention is `product.productDepthCm ?? batch.productDepthCm` (and likewise for weight). Products set master values; batches can override per batch.
+- **GTIN search deep-link**: Scanner's "Product not found" prompt navigates to `/products/new?gtin=…`. `ProductFormPage` reads `useSearchParams()` to pre-fill the GTIN field.
+
+## i18n
+
+Namespaces loaded at runtime from `public/locales/{en,de}/{ns}.json` via `i18next-http-backend`. Key conventions:
+
+- Use the English text as the key: `t('Save')`, not `t('save_button')`.
+- Cross-namespace access: `t('Cancel', { ns: 'common' })`.
+- Interpolation: `t('Welcome {{name}}', { name })`.
+- When adding any UI string, update **both** `en` and `de` files in the same commit. There is no English fallback automation — missing German keys render the English literal.
+
+Namespaces: `common`, `auth`, `products`, `dpp`, `documents`, `dashboard`, `settings`, `compliance`, `returns`, `customer-portal`, `landing`, `supplier-portal`, `billing`, `legal`, `warehouse`.
+
+## Environment Variables
+
+```env
+# Frontend (Vite)
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_OPENROUTER_API_KEY=sk-or-...  # optional — AI compliance
+
+# Server-side scripts
+SUPABASE_SERVICE_ROLE_KEY=eyJ...   # seeds only
+SUPABASE_ACCESS_TOKEN=sbp_...       # migrations (Management API)
+SUPABASE_PROJECT_REF=xxxxxxxxxx
+
+# Edge Function secrets — set in Supabase dashboard
+SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM
+VERCEL_TOKEN / VERCEL_PROJECT_ID / VERCEL_TEAM_ID
+STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
+```
+
+## Routing quick-map
+
+| Path prefix | Auth | Layout |
+|---|---|---|
+| `/login`, `/landing`, `/auth/*` | None | Bare |
+| `/p/:gtin/:serial`, `/01/:gtin/21/:serial` | None | `PublicLayout` |
+| `/suppliers/register/:code` | None | Bare (invitation-validated) |
+| `/returns/portal/:slug`, `/returns/register/:slug`, `/returns/track` | None | Portal |
+| `/customer/:slug/*` | Separate customer auth | `CustomerPortalProvider` |
+| (any other custom-domain path) | Depends | `CustomDomainPortal` (slug-free) |
+| Everything else | `ProtectedRoute` | `AppLayout` (sidebar + header) |

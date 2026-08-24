@@ -564,7 +564,7 @@ export function BatchDetailPage() {
               {/* Container Fit */}
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">{tW('Container Fit')}</h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
                   {(Object.keys(CONTAINERS) as ContainerType[]).map((type) => {
                     const c = spaceInfo.containers[type];
                     return (

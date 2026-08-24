@@ -378,7 +378,7 @@ export function WorkflowBuilderPage() {
   // ---- Render ----
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+      <div className="flex items-center justify-center h-[calc(100dvh-8rem)]">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
           <p className="mt-4 text-muted-foreground">{t('Loading...')}</p>
@@ -392,7 +392,7 @@ export function WorkflowBuilderPage() {
     : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] -m-4 sm:-m-6">
+    <div className="flex flex-col h-[calc(100dvh-8rem)] -m-4 sm:-m-6">
       {/* Hidden file input for import */}
       <input
         ref={fileInputRef}

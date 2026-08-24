@@ -440,7 +440,7 @@ export function PublicFeedbackPage() {
           return (
             <div className="space-y-2">
               <p className="text-xs font-medium text-center">Wie soll dein Name veröffentlicht werden?</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
                 {OPTIONS.map(opt => (
                   <button
                     key={opt.value}
