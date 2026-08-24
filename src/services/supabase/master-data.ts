@@ -5,7 +5,31 @@
  * Keine RLS - diese Daten sind für alle Tenants lesbar
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAnon } from '@/lib/supabase';
+import {
+  hydrateMasterDataCache,
+  invalidatePersistedCache,
+  persistMasterDataEntry,
+} from './master-data-cache';
+
+/**
+ * Client used for the *global* master data reads below.
+ *
+ * countries, eu_regulations, national_regulations, pictograms,
+ * recycling_codes, checklist_templates and news_items have no RLS and no
+ * tenant_id, so the anon client returns byte-identical rows. Reading them as
+ * anon makes them immune to an expired or revoked session — which is precisely
+ * the guest-mode case, where a stale token would otherwise 401 every request.
+ *
+ * `getCategories` deliberately stays on the authenticated client: its RLS
+ * policy is `USING (tenant_id IS NULL OR tenant_id = <current tenant>)`, so
+ * anon would silently hide a tenant's own categories. Every write below stays
+ * on `supabase` too — those are admin operations and must carry the session.
+ *
+ * If any of these tables ever gains a tenant-scoped policy, move that one
+ * function back to `supabase`.
+ */
+const md = supabaseAnon;
 import type { Tables } from '@/types/supabase';
 import type {
   Category,
@@ -43,7 +67,28 @@ function getCached<T>(key: string): T | null {
 }
 
 function setCache<T>(key: string, data: T, ttl: number): void {
-  cache.set(key, { data, expiresAt: Date.now() + ttl });
+  const expiresAt = Date.now() + ttl;
+  cache.set(key, { data, expiresAt });
+  // Fire-and-forget mirror to Preferences so the cache survives a process kill
+  // instead of refetching hundreds of KB on every cold start. Never awaited —
+  // the read path must not wait on storage.
+  persistMasterDataEntry(key, data, expiresAt);
+}
+
+/**
+ * Load the persisted cache back into memory.
+ *
+ * Call once at boot, before the first master-data read. Entries past their TTL
+ * are discarded during hydration, so persistence extends the cache across
+ * launches without extending how long anything is considered fresh.
+ */
+export async function primeMasterDataCache(): Promise<number> {
+  const entries = await hydrateMasterDataCache();
+  for (const [key, entry] of entries) {
+    // Never clobber something this session already fetched.
+    if (!cache.has(key)) cache.set(key, entry);
+  }
+  return entries.length;
 }
 
 // ============================================
@@ -112,7 +157,7 @@ export async function getCountries(): Promise<Country[]> {
   const cached = getCached<Country[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
+  const { data, error } = await md
     .from('countries')
     .select('*')
     .order('name');
@@ -161,7 +206,7 @@ export async function getEURegulations(): Promise<EURegulation[]> {
   const cached = getCached<EURegulation[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
+  const { data, error } = await md
     .from('eu_regulations')
     .select('*')
     .order('effective_date');
@@ -203,7 +248,7 @@ export async function getNationalRegulations(countryCode?: string): Promise<Nati
   const cached = getCached<NationalRegulation[]>(cacheKey);
   if (cached) return cached;
 
-  let query = supabase
+  let query = md
     .from('national_regulations')
     .select('*')
     .order('effective_date');
@@ -249,7 +294,7 @@ export async function getPictograms(): Promise<Pictogram[]> {
   const cached = getCached<Pictogram[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
+  const { data, error } = await md
     .from('pictograms')
     .select('*')
     .order('name');
@@ -287,7 +332,7 @@ export async function getRecyclingCodes(): Promise<RecyclingCode[]> {
   const cached = getCached<RecyclingCode[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
+  const { data, error } = await md
     .from('recycling_codes')
     .select('*')
     .order('code');
@@ -345,7 +390,7 @@ export async function getChecklistTemplates(
   const cached = getCached<ChecklistTemplate[]>(cacheKey);
   if (cached) return cached;
 
-  let query = supabase
+  let query = md
     .from('checklist_templates')
     .select('*')
     .order('sort_order');
@@ -400,7 +445,7 @@ export async function getNews(): Promise<NewsItem[]> {
   const cached = getCached<NewsItem[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
+  const { data, error } = await md
     .from('news_items')
     .select('*')
     .order('published_at', { ascending: false });
@@ -728,6 +773,11 @@ export function invalidateCache(pattern?: string): void {
   } else {
     cache.clear();
   }
+  // The persisted mirror has to go too. Clearing only the in-memory Map would
+  // let an admin edit look applied for this session and then be resurrected
+  // from Preferences on the next cold start — a stale-data bug that would be
+  // very hard to reproduce.
+  void invalidatePersistedCache(pattern);
 }
 
 export async function preloadMasterData(): Promise<void> {

@@ -24,6 +24,33 @@ export function isNative(): boolean {
   return Capacitor.isNativePlatform();
 }
 
+/**
+ * Whether the native first-run surfaces (intro journey, guest mode) should mount.
+ *
+ * Deliberately NOT `isNative()`. That predicate decides auth redirect origins
+ * and the URLs baked into printed QR codes, so it must never be forceable from
+ * the client — a query param or localStorage switch on it would let any web
+ * visitor change where auth redirects point.
+ *
+ * This one gates a purely visual surface, and it is a BUILD-TIME flag: Vite
+ * inlines `import.meta.env.VITE_E2E_FIRST_RUN` statically, so in both shipping
+ * builds (Vercel and `build:native`, neither of which sets it) the comparison
+ * folds to false and the whole expression collapses to `isNative()` — there is
+ * no runtime switch a visitor could reach.
+ *
+ * To be precise about what this does NOT do: the lazily-imported guest chunks
+ * are still emitted by the bundler, because they are ordinary route modules.
+ * They are simply never fetched on the web, since `NativeOnly` redirects before
+ * the nested routes render. The saving is reachability, not bytes on the CDN.
+ *
+ * An `import.meta.env.DEV` guard would not work here: Playwright serves a
+ * production `vite preview` build, where DEV is false — so a DEV-only hatch is
+ * untestable in the exact harness that needs it.
+ */
+export function showsFirstRun(): boolean {
+  return isNative() || import.meta.env.VITE_E2E_FIRST_RUN === '1';
+}
+
 export function getPlatform(): AppPlatform {
   const p = Capacitor.getPlatform();
   return p === 'ios' || p === 'android' ? p : 'web';

@@ -1,0 +1,113 @@
+{
+  "_comment": "Reproducibility record for the first-run imagery. The 2K masters live in resources/first-run/ and are gitignored (16 large PNG/JPEGs would be ~80 MB of undeltifiable binary in git history forever). What makes a regeneration reproducible is this file, not the pixels.",
+  "model": "seedream-5-pro",
+  "aspectRatio": "9:16",
+  "styleAnchor": "journey-scan",
+  "assets": [
+    {
+      "slug": "journey-scan",
+      "creation": "Lwyw7aeswO",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "style anchor - warehouse aisle, handheld scanner on a carton"
+    },
+    {
+      "slug": "journey-passport",
+      "creation": "5jgjgDUKxe",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "gloved hand holding a product with a dot-matrix label"
+    },
+    {
+      "slug": "journey-compliance",
+      "creation": "BhChC0moQR",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "warehouse-edge desk, laptop and printed spec sheets"
+    },
+    {
+      "slug": "journey-returns",
+      "creation": "N2n2Y3W6D9",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "returns bench, opened parcel under an inspection lamp"
+    },
+    {
+      "slug": "journey-suppliers",
+      "creation": "mEHEk6ghJQ",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "night loading dock, lit pallet stack (regenerated: v1 had daylight sky)"
+    },
+    {
+      "slug": "journey-portal",
+      "creation": "rg7gJvZxtc",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "phone scanning a product in daylight"
+    },
+    {
+      "slug": "journey-insight",
+      "creation": "xSJS9FNjfW",
+      "width": 1080,
+      "height": 1920,
+      "capKB": 110,
+      "role": "lit workstation at the end of an aisle (regenerated: v1 was unreadable at thumbnail)"
+    },
+    {
+      "slug": "hub-requirements",
+      "creation": "dtamHfNXSL",
+      "width": 640,
+      "height": 480,
+      "capKB": 40,
+      "role": "clipboard of blank forms on a dark bench"
+    },
+    {
+      "slug": "hub-checklists",
+      "creation": "eIvtHE9dqL",
+      "width": 640,
+      "height": 480,
+      "capKB": 40,
+      "role": "unbranded product housing beside calipers"
+    },
+    {
+      "slug": "hub-qr",
+      "creation": "SyNPATIUb8",
+      "width": 640,
+      "height": 480,
+      "capKB": 40,
+      "role": "blank white label on a dark matte surface"
+    },
+    {
+      "slug": "hub-regulations",
+      "creation": "bxljObJ5Y2",
+      "width": 640,
+      "height": 480,
+      "capKB": 40,
+      "role": "closed hardbound tome with a ribbon bookmark"
+    },
+    {
+      "slug": "hub-lexicon",
+      "creation": "Td8XfU8VNR",
+      "width": 640,
+      "height": 480,
+      "capKB": 40,
+      "role": "embossed foil seal on a plain document"
+    },
+    {
+      "slug": "hub-tips",
+      "creation": "4RGZVBT9Aa",
+      "width": 640,
+      "height": 480,
+      "capKB": 40,
+      "role": "small brass compass, needle catching a highlight"
+    }
+  ],
+  "totalCapKB": 1100
+}

@@ -111,12 +111,18 @@ export function RegulationsPage() {
         const [
           countriesData,
           euRegsData,
+          nationalRegsData,
           pictogramsData,
           recyclingCodesData,
           newsData,
         ] = await Promise.all([
           getCountries(),
           getEURegulations(),
+          // Unfiltered: this used to be one request PER country, so opening the
+          // page fired ~40 sequential round trips on a phone. The table is
+          // small and RLS-free, so fetching it whole and grouping client-side
+          // is both simpler and dramatically faster.
+          getNationalRegulations(),
           getPictograms(),
           getRecyclingCodes(),
           getNews(),
@@ -129,27 +135,11 @@ export function RegulationsPage() {
         setRecyclingCodes(recyclingCodesData || []);
         setNews(newsData || []);
 
-        // Load national regulations for all countries
-        if (countriesData && countriesData.length > 0) {
-          const nationalRegsPromises = countriesData.map(async (country) => {
-            try {
-              const regs = await getNationalRegulations(country.code);
-              return { code: country.code, regulations: regs || [] };
-            } catch {
-              return { code: country.code, regulations: [] };
-            }
-          });
-
-          const nationalRegsResults = await Promise.all(nationalRegsPromises);
-          const nationalRegsMap: Record<string, NationalRegulation[]> = {};
-          nationalRegsResults.forEach(({ code, regulations }) => {
-            if (regulations.length > 0) {
-              nationalRegsMap[code] = regulations;
-            }
-          });
-
-          setCountryRegulations(nationalRegsMap);
+        const nationalRegsMap: Record<string, NationalRegulation[]> = {};
+        for (const reg of nationalRegsData || []) {
+          (nationalRegsMap[reg.country_code] ??= []).push(reg);
         }
+        setCountryRegulations(nationalRegsMap);
       } catch (error) {
         console.error('Error loading regulation data:', error);
       } finally {

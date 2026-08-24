@@ -47,9 +47,9 @@ import {
   ResponsiveTable,
   type ResponsiveTableColumn,
 } from '@/components/ui/responsive-table';
-import { requirementsDatabase, type Requirement } from '@/data/requirements-database';
-import { productCategories } from '@/data/product-categories';
-import { countries, packagingMaterials, wirelessTypes } from '@/data/calculator-options';
+import { getRequirementsDatabase, type Requirement } from '@/data/requirements-database';
+import { getProductCategories } from '@/data/product-categories';
+import { getCountries, getPackagingMaterials, wirelessTypes } from '@/data/calculator-options';
 import { isAIAvailable } from '@/services/openrouter';
 import type { ProductContext, RequirementSummary } from '@/services/openrouter/types';
 import { buildDeepAnalysisMessages } from '@/services/openrouter/prompts';
@@ -122,8 +122,27 @@ function useRequirementAnalysis() {
   return { analyses, startAnalysis, clearAnalysis };
 }
 
-export function RequirementsCalculatorPage() {
-  const { t } = useTranslation('compliance');
+export interface RequirementsCalculatorPageProps {
+  /**
+   * Overrides AI availability. Guest mode passes false: `streamCompletion`
+   * needs a Supabase session token to reach the Edge Function, so every AI
+   * control would fail with a 401 the moment it is pressed. Defaults to the
+   * runtime check, i.e. today's behaviour.
+   */
+  aiEnabled?: boolean;
+}
+
+export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculatorPageProps = {}) {
+  const { t, i18n } = useTranslation('compliance');
+
+  // These four datasets ship fully translated but the page used to import the
+  // hardcoded English exports, so a German user read English requirement names,
+  // categories, country names and packaging materials throughout.
+  const locale: 'en' | 'de' = i18n.language.startsWith('de') ? 'de' : 'en';
+  const requirementsDatabase = useMemo(() => getRequirementsDatabase(locale), [locale]);
+  const productCategories = useMemo(() => getProductCategories(locale), [locale]);
+  const countries = useMemo(() => getCountries(locale), [locale]);
+  const packagingMaterials = useMemo(() => getPackagingMaterials(locale), [locale]);
   const prefersReduced = useReducedMotion();
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
   const [productName, setProductName] = useState('');
@@ -143,7 +162,7 @@ export function RequirementsCalculatorPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  const aiAvailable = isAIAvailable();
+  const aiAvailable = aiEnabled ?? isAIAvailable();
   const { analyses, startAnalysis, clearAnalysis } = useRequirementAnalysis();
 
   const categoryInfo = productCategories.find(c => c.id === selectedCategory);

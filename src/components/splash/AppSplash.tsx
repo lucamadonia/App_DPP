@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { spring, timing } from '@/lib/motion';
+import { timing } from '@/lib/motion';
+import type { MotionBudget } from '@/hooks/use-motion-budget';
+import { SplashStage } from './SplashStage';
 import { hideNativeSplash, removeBootSplash } from '@/lib/native-init';
 import { isNative } from '@/lib/platform';
 import { useBranding } from '@/hooks/use-branding';
@@ -11,6 +13,13 @@ const MAX_VISIBLE_MS = 900;
 interface AppSplashProps {
   /** True once the app has everything it needs to render the first screen. */
   ready: boolean;
+  /**
+   * Passed in rather than read from useMotionBudget() here: AppShellBootstrap
+   * already calls that hook, and calling it again would spin up a second
+   * useDeviceMotion subscription during the most contended 500 ms of the app's
+   * life, for nothing.
+   */
+  budget: MotionBudget;
   children: React.ReactNode;
 }
 
@@ -25,7 +34,7 @@ interface AppSplashProps {
  *  3. Play the intro, but never block on it: as soon as `ready` flips and the
  *     minimum has elapsed, fade out.
  */
-export function AppSplash({ ready, children }: AppSplashProps) {
+export function AppSplash({ ready, budget, children }: AppSplashProps) {
   // The branded intro is a native-app moment. On the web it would add ~550ms
   // to every reload of an admin tool people refresh constantly, so there we
   // only tear down the boot splash and get out of the way.
@@ -78,22 +87,19 @@ export function AppSplash({ ready, children }: AppSplashProps) {
         {visible && (
           <motion.div
             key="app-splash"
-            className="fixed inset-0 z-[9998] flex items-center justify-center"
+            className="fixed inset-0 z-[9998] flex items-center justify-center overflow-hidden"
             style={{ background: '#0F172A' }}
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: timing.normal, ease: 'easeOut' }}
             onClick={() => setSkipped(true)}
           >
-            <motion.img
-              src={branding.logo || '/trackbliss-logo.png'}
-              alt=""
-              width={96}
-              height={96}
-              className="size-24 object-contain"
-              initial={prefersReduced ? false : { scale: 0.92, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={spring.gentle}
+            <SplashStage
+              logoSrc={branding.logo || '/trackbliss-logo.png'}
+              budget={budget}
+              // A white-label tenant's mark stands alone; stamping our wordmark
+              // under it would undo the point of white-labelling.
+              showWordmark={!branding.logo}
             />
           </motion.div>
         )}

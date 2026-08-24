@@ -2,7 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import QRCode from 'qrcode';
+import {
+  renderQrPng,
+  renderQrSvg,
+  type QrErrorCorrection,
+  type QrLogoOptions,
+  type QrTextOptions,
+} from '@/lib/qr-generator';
+import { saveOrShare } from '@/lib/download-file';
+import { isNative } from '@/lib/platform';
 import { scaleIn, useReducedMotion } from '@/lib/motion';
 import {
   Download,
@@ -91,91 +99,24 @@ const defaultQRSettings: QRSettings = {
   backgroundColor: '#FFFFFF',
 };
 
-// Helper: load an image element from URL
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-// Generate composite QR code with optional logo overlay and text
-async function generateCompositeQR(
+/**
+ * Adapter over the shared renderer.
+ *
+ * Kept with the original argument shape so the six call sites below did not
+ * have to change when the composition moved to src/lib/qr-generator.ts.
+ */
+function generateCompositeQR(
   data: string,
   qrOpts: {
     width: number;
     margin: number;
-    errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H';
+    errorCorrectionLevel: QrErrorCorrection;
     color: { dark: string; light: string };
   },
-  logo: { enabled: boolean; url: string; size: number },
-  text: { enabled: boolean; content: string; position: 'top' | 'bottom'; color: string }
+  logo: QrLogoOptions,
+  text: QrTextOptions
 ): Promise<string> {
-  const qrCanvas = document.createElement('canvas');
-  const ecLevel = logo.enabled ? 'H' : qrOpts.errorCorrectionLevel;
-  await QRCode.toCanvas(qrCanvas, data, {
-    width: qrOpts.width,
-    margin: qrOpts.margin,
-    color: qrOpts.color,
-    errorCorrectionLevel: ecLevel,
-  });
-
-  const qrW = qrCanvas.width;
-  const qrH = qrCanvas.height;
-
-  const fontSize = Math.max(11, Math.round(qrW * 0.05));
-  const textBlockH = text.enabled && text.content ? fontSize + 12 : 0;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = qrW;
-  canvas.height = qrH + textBlockH;
-  const ctx = canvas.getContext('2d')!;
-
-  ctx.fillStyle = qrOpts.color.light;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const qrY = text.enabled && text.position === 'top' ? textBlockH : 0;
-  ctx.drawImage(qrCanvas, 0, qrY);
-
-  if (logo.enabled && logo.url) {
-    try {
-      const img = await loadImage(logo.url);
-      const scale = logo.size / 100;
-      const logoW = qrW * scale;
-      const logoH = (img.naturalHeight / img.naturalWidth) * logoW;
-      const logoX = (qrW - logoW) / 2;
-      const logoY = qrY + (qrH - logoH) / 2;
-      const pad = Math.round(qrW * 0.02);
-
-      ctx.fillStyle = qrOpts.color.light;
-      ctx.fillRect(logoX - pad, logoY - pad, logoW + pad * 2, logoH + pad * 2);
-      ctx.drawImage(img, logoX, logoY, logoW, logoH);
-    } catch {
-      // Skip logo on load failure
-    }
-  }
-
-  if (text.enabled && text.content) {
-    ctx.font = `${fontSize}px "SF Mono", Consolas, "Liberation Mono", monospace`;
-    ctx.fillStyle = text.color;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const textY = text.position === 'top'
-      ? textBlockH / 2
-      : qrY + qrH + textBlockH / 2;
-
-    let label = text.content;
-    while (ctx.measureText(label).width > canvas.width - 12 && label.length > 3) {
-      label = label.slice(0, -4) + '\u2026';
-    }
-    ctx.fillText(label, canvas.width / 2, textY);
-  }
-
-  return canvas.toDataURL('image/png');
+  return renderQrPng({ data, ...qrOpts }, logo, text);
 }
 
 export function QRGeneratorPage() {
@@ -421,113 +362,19 @@ export function QRGeneratorPage() {
     };
 
     if (format === 'png') {
-      const dataUrl = await generateCompositeQR(targetUrl, qrOpts, logoOpts, textOpts);
-      const link = document.createElement('a');
-      link.download = `${filename}.png`;
-      link.href = dataUrl;
-      link.click();
-    } else if (format === 'svg') {
-      const ecLevel = qrSettings.logoEnabled ? 'H' : qrSettings.errorCorrection;
-      let svgString = await QRCode.toString(targetUrl, {
-        type: 'svg',
-        width: qrSettings.size,
-        margin: qrSettings.margin,
-        color: qrOpts.color,
-        errorCorrectionLevel: ecLevel,
+      const dataUrl = await renderQrPng({ data: targetUrl, ...qrOpts }, logoOpts, textOpts);
+      await saveOrShare({
+        content: dataUrl,
+        mime: 'image/png',
+        filename: `${filename}.png`,
       });
-
-      // Enhance SVG with logo and/or text
-      if ((logoOpts.enabled && logoOpts.url) || (textOpts.enabled && textOpts.content)) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(svgString, 'image/svg+xml');
-        const svg = doc.documentElement;
-        const svgW = parseFloat(svg.getAttribute('width') || String(qrSettings.size));
-        const svgH = parseFloat(svg.getAttribute('height') || String(qrSettings.size));
-
-        const fontSize = Math.max(11, Math.round(svgW * 0.05));
-        const textBlockH = textOpts.enabled && textOpts.content ? fontSize + 12 : 0;
-
-        if (textBlockH > 0) {
-          const newH = svgH + textBlockH;
-          svg.setAttribute('height', String(newH));
-          const vb = svg.getAttribute('viewBox');
-          if (vb) {
-            const parts = vb.split(' ');
-            parts[3] = String(parseFloat(parts[3]) + textBlockH);
-            svg.setAttribute('viewBox', parts.join(' '));
-          }
-
-          const bgRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          bgRect.setAttribute('x', '0');
-          bgRect.setAttribute('y', String(svgH));
-          bgRect.setAttribute('width', String(svgW));
-          bgRect.setAttribute('height', String(textBlockH));
-          bgRect.setAttribute('fill', qrOpts.color.light);
-          svg.appendChild(bgRect);
-
-          const textEl = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
-          textEl.setAttribute('x', String(svgW / 2));
-          textEl.setAttribute('y', String(svgH + textBlockH / 2));
-          textEl.setAttribute('text-anchor', 'middle');
-          textEl.setAttribute('dominant-baseline', 'central');
-          textEl.setAttribute('font-family', 'monospace');
-          textEl.setAttribute('font-size', String(fontSize));
-          textEl.setAttribute('fill', qrOpts.color.dark);
-          textEl.textContent = textOpts.content;
-          svg.appendChild(textEl);
-        }
-
-        if (logoOpts.enabled && logoOpts.url) {
-          try {
-            let logoDataUrl = logoOpts.url;
-            if (!logoOpts.url.startsWith('data:')) {
-              const img = await loadImage(logoOpts.url);
-              const tmpCanvas = document.createElement('canvas');
-              tmpCanvas.width = img.naturalWidth;
-              tmpCanvas.height = img.naturalHeight;
-              tmpCanvas.getContext('2d')!.drawImage(img, 0, 0);
-              logoDataUrl = tmpCanvas.toDataURL('image/png');
-            }
-
-            const scale = logoOpts.size / 100;
-            const logoW = svgW * scale;
-            const logoH = logoW;
-            const logoX = (svgW - logoW) / 2;
-            const logoY = (svgH - logoH) / 2;
-            const pad = Math.round(svgW * 0.02);
-
-            const logoBg = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            logoBg.setAttribute('x', String(logoX - pad));
-            logoBg.setAttribute('y', String(logoY - pad));
-            logoBg.setAttribute('width', String(logoW + pad * 2));
-            logoBg.setAttribute('height', String(logoH + pad * 2));
-            logoBg.setAttribute('rx', String(Math.round(pad)));
-            logoBg.setAttribute('fill', qrOpts.color.light);
-            svg.appendChild(logoBg);
-
-            const imgEl = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
-            imgEl.setAttribute('x', String(logoX));
-            imgEl.setAttribute('y', String(logoY));
-            imgEl.setAttribute('width', String(logoW));
-            imgEl.setAttribute('height', String(logoH));
-            imgEl.setAttribute('href', logoDataUrl);
-            imgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svg.appendChild(imgEl);
-          } catch {
-            // Skip logo on failure
-          }
-        }
-
-        svgString = new XMLSerializer().serializeToString(doc);
-      }
-
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${filename}.svg`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
+    } else if (format === 'svg') {
+      const svgString = await renderQrSvg({ data: targetUrl, ...qrOpts }, logoOpts, textOpts);
+      await saveOrShare({
+        content: svgString,
+        mime: 'image/svg+xml',
+        filename: `${filename}.svg`,
+      });
     }
   };
 
@@ -552,6 +399,16 @@ export function QRGeneratorPage() {
       url: effectiveLogoUrl,
       size: qrSettings.logoSize,
     };
+
+    // Web only, deliberately. This fires two downloads per batch with a 200 ms
+    // gap, which browsers handle but a WebView does not: `<a download>` is inert
+    // there, and routing each file through the share sheet instead would put a
+    // hundred sequential system dialogs in front of the user. Exporting a whole
+    // catalogue of labels is a desk job anyway.
+    if (isNative()) {
+      toast.error(t('Batch export is available in the browser version'));
+      return;
+    }
 
     for (const product of productsToExport) {
       const productBatches = await getBatches(product.id);

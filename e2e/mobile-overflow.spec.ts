@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { findOverflowingElements } from './helpers/overflow';
 
 /**
  * Horizontal-overflow regression net.
@@ -60,45 +61,6 @@ test.beforeEach(async ({ page }) => {
     })
   );
 });
-
-/**
- * Finds every element wider than the viewport.
- *
- * Reports the offenders rather than just failing: "something overflows" is not
- * actionable, you need to know which element. Ignores anything inside a
- * deliberate horizontal scroller (`overflow-x: auto/scroll`), since those are
- * meant to exceed their container.
- */
-async function findOverflowingElements(page: Page) {
-  return page.evaluate(() => {
-    const viewportWidth = document.documentElement.clientWidth;
-    const offenders: { tag: string; cls: string; width: number }[] = [];
-
-    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) {
-      const rect = el.getBoundingClientRect();
-      if (rect.width <= viewportWidth + 1) continue;
-
-      let parent: HTMLElement | null = el.parentElement;
-      let insideScroller = false;
-      while (parent && parent !== document.body) {
-        const overflowX = getComputedStyle(parent).overflowX;
-        if (overflowX === 'auto' || overflowX === 'scroll') {
-          insideScroller = true;
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      if (insideScroller) continue;
-
-      offenders.push({
-        tag: el.tagName.toLowerCase(),
-        cls: (el.className?.toString() ?? '').slice(0, 120),
-        width: Math.round(rect.width),
-      });
-    }
-    return { viewportWidth, offenders: offenders.slice(0, 8) };
-  });
-}
 
 for (const route of PUBLIC_ROUTES) {
   test(`${route.name} does not scroll horizontally`, async ({ page }) => {
