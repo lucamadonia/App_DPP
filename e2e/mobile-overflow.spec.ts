@@ -40,6 +40,28 @@ const PUBLIC_ROUTES = [
 ];
 
 /**
+ * Answers every Supabase call with an empty result set.
+ *
+ * CI has no real backend, and a placeholder URL makes WebKit reject the request
+ * outright ("due to access control checks"), which surfaces as an unhandled
+ * rejection — the pageerror assertion below then fails for a reason that has
+ * nothing to do with layout. Stubbing keeps these routes rendering their
+ * empty/not-found state, which is exactly what this suite means to measure, and
+ * removes the dependency on credentials entirely.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.route((url) => url.hostname.endsWith('supabase.co'), (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      // The browser still applies CORS to a fulfilled response.
+      headers: { 'access-control-allow-origin': '*' },
+      body: '[]',
+    })
+  );
+});
+
+/**
  * Finds every element wider than the viewport.
  *
  * Reports the offenders rather than just failing: "something overflows" is not
@@ -122,6 +144,32 @@ test('login form tap targets are large enough', async ({ page }) => {
   // wherever the pointer is emulated.
   const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
   test.skip(!coarse, 'This device profile does not emulate a coarse pointer.');
+
+  // Measure only once the entrance animation has settled. The page variants in
+  // src/lib/motion.ts animate scale 0.97 -> 1, and getBoundingClientRect reports
+  // the TRANSFORMED box — so mid-flight a correctly sized 44px button measures
+  // 44 * 0.97 = 42.7px. That is what CI was failing on: an animation frame, not
+  // a tap target that is too small.
+  // Wait for the entrance animation to finish, or the measurement lands on an
+  // animation frame: the page variants in src/lib/motion.ts animate scale
+  // 0.97 -> 1, and getBoundingClientRect reports the TRANSFORMED box, so a
+  // correctly sized 44px button reads 42.7px mid-flight.
+  //
+  // Neither document.getAnimations() nor "no ancestor has a transform" works as
+  // the signal: framer-motion drives springs from JS so they are not web
+  // animations, and some elements keep a transform permanently. Compare the two
+  // boxes directly instead — they only agree once nothing is scaling.
+  await page.waitForFunction(
+    () => {
+      const btn = document.querySelector('button');
+      if (!btn) return false;
+      const rendered = btn.getBoundingClientRect().height;
+      const layout = parseFloat(getComputedStyle(btn).height);
+      return Math.abs(rendered - layout) < 0.5;
+    },
+    undefined,
+    { timeout: 10_000 }
+  );
 
   // WCAG 2.5.5 asks for 44x44. The app enforces this with a coarse-pointer CSS
   // rule rather than per component, so it is worth verifying the selector
