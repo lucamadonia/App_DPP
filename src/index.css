@@ -1094,7 +1094,11 @@ html, body {
   [data-slot="dropdown-menu-trigger"],
   [role="menuitem"],
   [role="tab"] {
-    min-height: 2.75rem;
+    /* 44px, not 2.75rem: WCAG 2.5.5 specifies 44 CSS pixels. A rem only lands
+       on exactly 44 when the root font-size is exactly 16px — the CI smoke test
+       caught these rendering at 43.x, which is a fail, and on a browser with a
+       scaled root it would be further off. */
+    min-height: 44px;
   }
 
   /* Inputs below 16px make iOS zoom the viewport on focus. */

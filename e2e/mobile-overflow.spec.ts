@@ -119,9 +119,15 @@ test('login form tap targets are large enough', async ({ page }) => {
     )) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue; // hidden
+
+      // WCAG 2.5.5 exempts targets inside a sentence or block of text — a
+      // "Terms of Service" link mid-paragraph cannot be 44px tall without
+      // wrecking the line height. `display: inline` is the reliable signal.
+      if (getComputedStyle(el).display === 'inline') continue;
+
       if (r.height < 44) {
         bad.push(
-          `${el.tagName.toLowerCase()}"${el.textContent?.trim().slice(0, 30)}" ${Math.round(r.height)}px`
+          `${el.tagName.toLowerCase()}"${el.textContent?.trim().slice(0, 30)}" ${r.height.toFixed(1)}px`
         );
       }
     }
