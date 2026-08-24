@@ -136,6 +136,21 @@ test.describe('first-run journey', () => {
     // the default on iPhone SE.
     test.setTimeout(90_000);
 
+    // Claim eight cores before anything runs.
+    //
+    // useDeviceMotion treats <= 4 logical cores as low-end, which puts
+    // useMotionBudget into 'minimal' — and under 'minimal' useJourneyImages
+    // deliberately loads NO backdrops at all and sends every slide down the
+    // illustration path. GitHub runners have 2-4 cores, so without this the
+    // test measures a code path in which the assertion below can never be true,
+    // and reports a correctly behaving app as broken.
+    //
+    // Overriding is the right call rather than skipping: skipping would mean CI
+    // never checks the asset budget, which is the entire point of this test.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+    });
+
     const seen = new Map<string, number>();
     const bad: string[] = [];
     page.on('response', (res) => {
