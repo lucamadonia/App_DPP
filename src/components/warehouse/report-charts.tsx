@@ -11,7 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 import { cn } from '@/lib/utils';
 import { fmtEuro, type Analytics, type LeadStageKey } from './report-analytics';
@@ -79,6 +79,53 @@ export function ReportCharts({ analytics }: ReportChartsProps) {
     stage === 'createdToShipped' ? t('Created → Shipped') : t('Shipped → Delivered');
 
   const leadTimeData = analytics.leadTimeByStage.map(e => ({ ...e, label: stageLabel(e.stage) }));
+
+  const recipientColumns: ResponsiveTableColumn<Analytics['topRecipients'][number]>[] = [
+    {
+      id: 'recipient',
+      header: t('Recipient'),
+      mobilePriority: 'title',
+      cell: r => (
+        <>
+          <div className="text-sm font-medium">{r.name}</div>
+          {r.email && <div className="text-xs text-muted-foreground">{r.email}</div>}
+        </>
+      ),
+    },
+    {
+      // Desktop renders the email inside the recipient cell (above); this
+      // column is invisible there and only feeds the mobile card's subtitle.
+      id: 'email',
+      header: '',
+      className: 'hidden',
+      mobilePriority: 'subtitle',
+      cell: r => r.email || null,
+    },
+    {
+      id: 'count',
+      header: t('Shipments'),
+      className: 'text-right tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: t('Shipments'),
+      cell: r => r.count,
+    },
+    {
+      id: 'items',
+      header: t('Items'),
+      className: 'text-right tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: t('Items'),
+      cell: r => r.items,
+    },
+    {
+      id: 'cost',
+      header: t('Cost'),
+      className: 'text-right tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: t('Cost'),
+      cell: r => fmtEuro(r.cost),
+    },
+  ];
 
   return (
     <>
@@ -237,38 +284,15 @@ export function ReportCharts({ analytics }: ReportChartsProps) {
             <CardDescription>{t('By number of shipments')}</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Recipient')}</TableHead>
-                    <TableHead className="text-right">{t('Shipments')}</TableHead>
-                    <TableHead className="text-right">{t('Items')}</TableHead>
-                    <TableHead className="text-right">{t('Cost')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {analytics.topRecipients.slice(0, 10).map(r => (
-                    <TableRow key={r.email + r.name}>
-                      <TableCell>
-                        <div className="text-sm font-medium">{r.name}</div>
-                        {r.email && <div className="text-xs text-muted-foreground">{r.email}</div>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{r.count}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.items}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtEuro(r.cost)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {analytics.topRecipients.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
-                        {t('No data in range')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={analytics.topRecipients.slice(0, 10)}
+              columns={recipientColumns}
+              rowKey={r => r.email + r.name}
+              mobileCardTitle={r => r.name}
+              emptyState={
+                <span className="text-sm text-muted-foreground">{t('No data in range')}</span>
+              }
+            />
           </CardContent>
         </Card>
 

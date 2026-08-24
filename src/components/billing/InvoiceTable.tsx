@@ -7,13 +7,9 @@ import { Download, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import { cn } from '@/lib/utils';
 import type { BillingInvoice } from '@/types/billing';
 
@@ -35,69 +31,76 @@ export function InvoiceTable({ invoices, isLoading }: InvoiceTableProps) {
     );
   }
 
-  if (invoices.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
-        <p className="text-sm text-muted-foreground">{t('No invoices yet')}</p>
-      </div>
-    );
-  }
+  const columns: ResponsiveTableColumn<BillingInvoice>[] = [
+    {
+      id: 'date',
+      header: t('Date'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (invoice) => formatDate(invoice.createdAt),
+    },
+    {
+      id: 'amount',
+      header: t('Amount'),
+      className: 'tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: t('Amount'),
+      cell: (invoice) => formatAmount(invoice.amountPaid || invoice.amountDue, invoice.currency),
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (invoice) => <InvoiceStatusBadge status={invoice.status} />,
+    },
+    {
+      id: 'actions',
+      header: t('Actions'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      cell: (invoice) => (
+        <div className="flex items-center justify-end gap-1">
+          {invoice.stripePdfUrl && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              asChild
+            >
+              <a href={invoice.stripePdfUrl} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+          {invoice.stripeInvoiceUrl && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              asChild
+            >
+              <a href={invoice.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{t('Date')}</TableHead>
-          <TableHead>{t('Amount')}</TableHead>
-          <TableHead>{t('Status')}</TableHead>
-          <TableHead className="text-right">{t('Actions')}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {invoices.map((invoice) => (
-          <TableRow key={invoice.id}>
-            <TableCell className="font-medium">
-              {formatDate(invoice.createdAt)}
-            </TableCell>
-            <TableCell className="tabular-nums">
-              {formatAmount(invoice.amountPaid || invoice.amountDue, invoice.currency)}
-            </TableCell>
-            <TableCell>
-              <InvoiceStatusBadge status={invoice.status} />
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex items-center justify-end gap-1">
-                {invoice.stripePdfUrl && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    asChild
-                  >
-                    <a href={invoice.stripePdfUrl} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
-                {invoice.stripeInvoiceUrl && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    asChild
-                  >
-                    <a href={invoice.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <ResponsiveTable
+      data={invoices}
+      columns={columns}
+      rowKey={(invoice) => invoice.id}
+      emptyState={
+        <div className="flex flex-col items-center justify-center text-center">
+          <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">{t('No invoices yet')}</p>
+        </div>
+      }
+    />
   );
 }
 

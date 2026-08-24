@@ -47,7 +47,7 @@ export function ChangesTracker({ changes, onRevert }: ChangesTrackerProps) {
         </span>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-200px)]">
+      <ScrollArea className="h-[calc(100dvh-200px)]">
         <div className="space-y-2 pr-4">
           {changes.map((change, index) => {
             const Icon = change.level === 'consumer' ? Users : ShieldCheck;

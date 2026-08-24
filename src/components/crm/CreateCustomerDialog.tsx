@@ -8,7 +8,7 @@ import {
   UserPlus, Check, X, Mail, Phone, Building2, User as UserIcon,
   Tag as TagIcon, StickyNote, AtSign, Sparkles, ArrowRight, AlertCircle,
 } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

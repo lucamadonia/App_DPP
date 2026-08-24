@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
   Select,
   SelectContent,
@@ -120,10 +120,10 @@ export function SupplyChainDialog({
         </DialogHeader>
 
         <Tabs value={activeFormTab} onValueChange={setActiveFormTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basic">{t('Basic Data')}</TabsTrigger>
-            <TabsTrigger value="process">{t('Process')}</TabsTrigger>
-            <TabsTrigger value="logistics">{t('Logistics')}</TabsTrigger>
+          <TabsList className="flex w-full">
+            <TabsTrigger value="basic" className="flex-1 min-w-0">{t('Basic Data')}</TabsTrigger>
+            <TabsTrigger value="process" className="flex-1 min-w-0">{t('Process')}</TabsTrigger>
+            <TabsTrigger value="logistics" className="flex-1 min-w-0">{t('Logistics')}</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Basic Data */}
@@ -242,7 +242,7 @@ export function SupplyChainDialog({
           <TabsContent value="process" className="space-y-4 mt-4">
             <div>
               <Label>{t('Process Type (optional)')}</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 {Object.entries(PROCESS_TYPE_CONFIG).map(([key, config]) => {
                   const classes = getProcessTypeClasses(config.color);
                   const Icon = config.icon;
@@ -342,7 +342,7 @@ export function SupplyChainDialog({
           <TabsContent value="logistics" className="space-y-4 mt-4">
             <div>
               <Label>{t('Transport Mode (optional)')}</Label>
-              <div className="grid grid-cols-5 gap-2 mt-2">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
                 {Object.entries(TRANSPORT_CONFIG).map(([key, config]) => {
                   const Icon = config.icon;
                   const isSelected = formData.transport_mode === key;

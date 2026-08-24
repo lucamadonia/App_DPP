@@ -228,7 +228,7 @@ export function MobileRuleEditor({
   };
 
   return (
-    <div className="p-3 sm:p-4 pb-[calc(env(safe-area-inset-bottom)+6rem)] space-y-2">
+    <div className="p-3 sm:p-4 pb-[calc(var(--safe-bottom)+6rem)] space-y-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs text-muted-foreground">
           {t('Tap a step to edit. Add steps between existing ones.')}

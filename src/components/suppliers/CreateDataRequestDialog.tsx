@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { FieldGroupPicker } from './FieldGroupPicker';
 import { PRODUCT_FIELD_GROUPS, BATCH_FIELD_GROUPS, ALL_PRODUCT_FIELD_KEYS, ALL_BATCH_FIELD_KEYS } from '@/lib/supplier-data-fields';

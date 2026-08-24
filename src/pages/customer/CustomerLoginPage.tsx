@@ -219,7 +219,7 @@ export function CustomerLoginPage() {
   // Split layout
   if (loginStyle === 'split') {
     return (
-      <div className="min-h-[calc(100vh-8rem)] flex">
+      <div className="min-h-[calc(100dvh-8rem)] flex">
         {/* Left panel: background image or gradient */}
         <div
           className="hidden lg:flex w-1/2 relative items-center justify-center"
@@ -252,7 +252,7 @@ export function CustomerLoginPage() {
 
   // Centered layout (default)
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-4 py-12">
+    <div className="flex items-center justify-center min-h-[calc(100dvh-8rem)] px-4 py-12">
       <Card className="w-full max-w-md shadow-lg border-0 backdrop-blur-sm animate-fade-in-up" style={{ backgroundColor: branding.cardBackground }}>
         <CardContent className="pt-8 pb-8 px-6 sm:px-8">
           {magicLinkSent ? magicLinkScreen : loginForm}

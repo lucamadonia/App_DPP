@@ -19,8 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -135,6 +135,214 @@ export function UsersTab() {
 
   const pendingCount = invitations.length;
 
+  const userColumns: ResponsiveTableColumn<Profile>[] = [
+    {
+      id: 'user',
+      header: t('User'),
+      mobilePriority: 'title',
+      cell: (user) => {
+        const isCurrentUser = user.id === currentUser?.id;
+        const initials = (user.name || user.email)
+          .split(' ')
+          .map(n => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">
+                {user.name || t('Unknown')}
+                {isCurrentUser && (
+                  <span className="text-xs text-muted-foreground ml-1">({t('You')})</span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'role',
+      header: t('Role'),
+      mobilePriority: 'meta',
+      mobileLabel: t('Role'),
+      cell: (user) => (
+        <Select
+          value={user.role}
+          onValueChange={(v) => handleRoleChange(user.id, v)}
+          disabled={user.id === currentUser?.id}
+        >
+          <SelectTrigger className="w-[120px] h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">
+              <span className="flex items-center gap-1">
+                <Shield className="h-3 w-3" /> {t('Admin')}
+              </span>
+            </SelectItem>
+            <SelectItem value="editor">{t('Editor')}</SelectItem>
+            <SelectItem value="viewer">{t('Viewer')}</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (user) => (
+        <Badge
+          variant={user.status === 'active' ? 'outline' : 'secondary'}
+          className={user.status === 'active' ? 'text-success border-success' : ''}
+        >
+          {user.status === 'active' && <CheckCircle2 className="mr-1 h-3 w-3" />}
+          {user.status === 'inactive' && <XCircle className="mr-1 h-3 w-3" />}
+          {user.status === 'pending' && <Clock className="mr-1 h-3 w-3" />}
+          {t(user.status.charAt(0).toUpperCase() + user.status.slice(1))}
+        </Badge>
+      ),
+    },
+    {
+      id: 'lastLogin',
+      header: t('Last Login'),
+      className: 'text-muted-foreground text-sm',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Last Login'),
+      cell: (user) => (user.lastLogin ? formatDate(user.lastLogin, locale) : '-'),
+    },
+    {
+      id: 'actions',
+      header: t('Actions'),
+      className: 'w-[120px]',
+      mobilePriority: 'meta',
+      cell: (user) => {
+        if (user.id === currentUser?.id) return null;
+        return (
+          <div className="flex items-center gap-1">
+            {user.status === 'active' ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title={t('Deactivate User')}
+                onClick={() => setConfirmAction({
+                  type: 'deactivate',
+                  userId: user.id,
+                  userName: user.name || user.email,
+                })}
+              >
+                <UserX className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title={t('Reactivate User')}
+                onClick={() => setConfirmAction({
+                  type: 'reactivate',
+                  userId: user.id,
+                  userName: user.name || user.email,
+                })}
+              >
+                <UserCheck className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
+              title={t('Remove from Organization')}
+              onClick={() => setConfirmAction({
+                type: 'remove',
+                userId: user.id,
+                userName: user.name || user.email,
+              })}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const invitationColumns: ResponsiveTableColumn<Invitation>[] = [
+    {
+      id: 'email',
+      header: t('Email'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (inv) => inv.email,
+    },
+    {
+      id: 'role',
+      header: t('Role'),
+      mobilePriority: 'badge',
+      cell: (inv) => <Badge variant="outline">{t(inv.role.charAt(0).toUpperCase() + inv.role.slice(1))}</Badge>,
+    },
+    {
+      id: 'invited',
+      header: t('Invited'),
+      className: 'text-muted-foreground text-sm',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Invited'),
+      cell: (inv) => formatDate(inv.createdAt, locale),
+    },
+    {
+      id: 'expires',
+      header: t('Expires'),
+      className: 'text-muted-foreground text-sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Expires'),
+      cell: (inv) => formatDate(inv.expiresAt, locale),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-[120px]',
+      mobilePriority: 'meta',
+      cell: (inv) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title={t('Resend')}
+            onClick={async () => {
+              await resendInvitation(inv.id);
+              await loadData();
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive"
+            title={t('Cancel Invitation')}
+            onClick={async () => {
+              await cancelInvitation(inv.id);
+              await loadData();
+            }}
+          >
+            <XCircle className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -183,140 +391,17 @@ export function UsersTab() {
             </Select>
           </div>
 
-          {filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="mx-auto h-12 w-12 opacity-30 mb-2" />
-              <p>{t('No users found')}</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('User')}</TableHead>
-                  <TableHead>{t('Role')}</TableHead>
-                  <TableHead>{t('Status')}</TableHead>
-                  <TableHead>{t('Last Login')}</TableHead>
-                  <TableHead className="w-[120px]">{t('Actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => {
-                  const isCurrentUser = user.id === currentUser?.id;
-                  const initials = (user.name || user.email)
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2);
-
-                  return (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">
-                              {user.name || t('Unknown')}
-                              {isCurrentUser && (
-                                <span className="text-xs text-muted-foreground ml-1">({t('You')})</span>
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={user.role}
-                          onValueChange={(v) => handleRoleChange(user.id, v)}
-                          disabled={isCurrentUser}
-                        >
-                          <SelectTrigger className="w-[120px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">
-                              <span className="flex items-center gap-1">
-                                <Shield className="h-3 w-3" /> {t('Admin')}
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="editor">{t('Editor')}</SelectItem>
-                            <SelectItem value="viewer">{t('Viewer')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={user.status === 'active' ? 'outline' : 'secondary'}
-                          className={user.status === 'active' ? 'text-success border-success' : ''}
-                        >
-                          {user.status === 'active' && <CheckCircle2 className="mr-1 h-3 w-3" />}
-                          {user.status === 'inactive' && <XCircle className="mr-1 h-3 w-3" />}
-                          {user.status === 'pending' && <Clock className="mr-1 h-3 w-3" />}
-                          {t(user.status.charAt(0).toUpperCase() + user.status.slice(1))}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {user.lastLogin ? formatDate(user.lastLogin, locale) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {!isCurrentUser && (
-                          <div className="flex items-center gap-1">
-                            {user.status === 'active' ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                title={t('Deactivate User')}
-                                onClick={() => setConfirmAction({
-                                  type: 'deactivate',
-                                  userId: user.id,
-                                  userName: user.name || user.email,
-                                })}
-                              >
-                                <UserX className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                title={t('Reactivate User')}
-                                onClick={() => setConfirmAction({
-                                  type: 'reactivate',
-                                  userId: user.id,
-                                  userName: user.name || user.email,
-                                })}
-                              >
-                                <UserCheck className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              title={t('Remove from Organization')}
-                              onClick={() => setConfirmAction({
-                                type: 'remove',
-                                userId: user.id,
-                                userName: user.name || user.email,
-                              })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+          <ResponsiveTable
+            data={filteredUsers}
+            columns={userColumns}
+            rowKey={(user) => user.id}
+            emptyState={
+              <div className="text-muted-foreground">
+                <Users className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                <p>{t('No users found')}</p>
+              </div>
+            }
+          />
         </CardContent>
       </Card>
 
@@ -333,67 +418,14 @@ export function UsersTab() {
           <CardDescription>{t('Invitations that have not yet been accepted')}</CardDescription>
         </CardHeader>
         <CardContent>
-          {invitations.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              {t('No pending invitations')}
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Email')}</TableHead>
-                  <TableHead>{t('Role')}</TableHead>
-                  <TableHead>{t('Invited')}</TableHead>
-                  <TableHead>{t('Expires')}</TableHead>
-                  <TableHead className="w-[120px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invitations.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{t(inv.role.charAt(0).toUpperCase() + inv.role.slice(1))}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(inv.createdAt, locale)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(inv.expiresAt, locale)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title={t('Resend')}
-                          onClick={async () => {
-                            await resendInvitation(inv.id);
-                            await loadData();
-                          }}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          title={t('Cancel Invitation')}
-                          onClick={async () => {
-                            await cancelInvitation(inv.id);
-                            await loadData();
-                          }}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <ResponsiveTable
+            data={invitations}
+            columns={invitationColumns}
+            rowKey={(inv) => inv.id}
+            emptyState={
+              <p className="text-sm text-muted-foreground">{t('No pending invitations')}</p>
+            }
+          />
         </CardContent>
       </Card>
 

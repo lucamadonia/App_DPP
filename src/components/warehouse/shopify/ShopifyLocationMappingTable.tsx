@@ -6,13 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import {
   fetchShopifyLocations,
@@ -131,6 +127,73 @@ export function ShopifyLocationMappingTable({ maps, onRefresh }: Props) {
 
   const unmappedShopifyLocations = shopifyLocations.filter(l => !mappedShopifyLocIds.has(l.id));
 
+  const columns: ResponsiveTableColumn<ShopifyLocationMap>[] = [
+    {
+      id: 'shopifyLocation',
+      header: t('Shopify Location'),
+      className: 'font-medium text-xs sm:text-sm',
+      mobilePriority: 'title',
+      cell: map => map.shopifyLocationName || `#${map.shopifyLocationId}`,
+    },
+    {
+      id: 'whLocation',
+      header: t('Warehouse Location'),
+      className: 'text-xs sm:text-sm',
+      mobilePriority: 'subtitle',
+      cell: map => (
+        <>
+          {map.locationName || map.locationId}
+          {map.locationCode && <span className="text-xs text-muted-foreground ml-1">({map.locationCode})</span>}
+        </>
+      ),
+    },
+    {
+      id: 'syncInventory',
+      header: t('Sync Inventory'),
+      className: 'text-center',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Sync Inventory'),
+      cell: map => <Switch checked={map.syncInventory} onCheckedChange={v => handleToggle(map.id, 'syncInventory', v)} />,
+    },
+    {
+      id: 'syncOrders',
+      header: t('Sync Orders'),
+      className: 'text-center',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('Sync Orders'),
+      cell: map => <Switch checked={map.syncOrders} onCheckedChange={v => handleToggle(map.id, 'syncOrders', v)} />,
+    },
+    {
+      id: 'primary',
+      header: t('Primary'),
+      className: 'text-center',
+      hideBelow: 'md',
+      mobilePriority: 'badge',
+      cell: map => (map.isPrimary ? (
+        <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
+          <Star className="mr-1 h-3 w-3 fill-current" />{t('Primary')}
+        </Badge>
+      ) : (
+        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleSetPrimary(map.id)}>
+          {t('Primary')}
+        </Button>
+      )),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-10',
+      mobilePriority: 'meta',
+      cell: map => (
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(map.id)}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center gap-2">
@@ -171,59 +234,16 @@ export function ShopifyLocationMappingTable({ maps, onRefresh }: Props) {
         </div>
       )}
 
-      {maps.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
-          {t('No location mappings')}
-        </div>
-      ) : (
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('Shopify Location')}</TableHead>
-                <TableHead>{t('Warehouse Location')}</TableHead>
-                <TableHead className="text-center hidden sm:table-cell">{t('Sync Inventory')}</TableHead>
-                <TableHead className="text-center hidden sm:table-cell">{t('Sync Orders')}</TableHead>
-                <TableHead className="text-center hidden md:table-cell">{t('Primary')}</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {maps.map(map => (
-                <TableRow key={map.id}>
-                  <TableCell className="font-medium text-xs sm:text-sm">{map.shopifyLocationName || `#${map.shopifyLocationId}`}</TableCell>
-                  <TableCell className="text-xs sm:text-sm">
-                    {map.locationName || map.locationId}
-                    {map.locationCode && <span className="text-xs text-muted-foreground ml-1">({map.locationCode})</span>}
-                  </TableCell>
-                  <TableCell className="text-center hidden sm:table-cell">
-                    <Switch checked={map.syncInventory} onCheckedChange={v => handleToggle(map.id, 'syncInventory', v)} />
-                  </TableCell>
-                  <TableCell className="text-center hidden sm:table-cell">
-                    <Switch checked={map.syncOrders} onCheckedChange={v => handleToggle(map.id, 'syncOrders', v)} />
-                  </TableCell>
-                  <TableCell className="text-center hidden md:table-cell">
-                    {map.isPrimary ? (
-                      <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">
-                        <Star className="mr-1 h-3 w-3 fill-current" />{t('Primary')}
-                      </Badge>
-                    ) : (
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleSetPrimary(map.id)}>
-                        {t('Primary')}
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(map.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <ResponsiveTable
+        data={maps}
+        columns={columns}
+        rowKey={map => map.id}
+        emptyState={
+          <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
+            {t('No location mappings')}
+          </div>
+        }
+      />
 
       <p className="text-xs text-muted-foreground">{t('Primary Location Help')}</p>
     </div>

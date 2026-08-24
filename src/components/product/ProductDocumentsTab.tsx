@@ -20,14 +20,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { getDocuments, uploadDocument, deleteDocument, type Document } from '@/services/supabase';
 import { DOCUMENT_CATEGORIES } from '@/lib/document-categories';
 import { formatDate } from '@/lib/format';
@@ -126,6 +126,104 @@ export function ProductDocumentsTab({ productId }: Props) {
     ? documents
     : documents.filter(d => d.category === categoryFilter);
 
+  const columns: ResponsiveTableColumn<Document>[] = [
+    {
+      id: 'name',
+      header: t('Name'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (doc) => (
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          {doc.name}
+        </div>
+      ),
+    },
+    {
+      id: 'category',
+      header: t('Category'),
+      hideBelow: 'md',
+      mobilePriority: 'subtitle',
+      cell: (doc) => <Badge variant="outline">{t(doc.category)}</Badge>,
+    },
+    {
+      id: 'visibility',
+      header: t('Visibility'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Visibility'),
+      cell: (doc) => {
+        const vis = visibilityBadgeConfig[doc.visibility || 'internal'];
+        const VisIcon = vis.icon;
+        return (
+          <Badge variant="outline" className={vis.className}>
+            <VisIcon className="mr-1 h-3 w-3" />
+            {t(vis.label)}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (doc) => {
+        const status = statusConfig[doc.status];
+        return (
+          <div className="flex items-center gap-1">
+            <status.icon className={`h-4 w-4 ${status.className}`} />
+            <span className={`text-sm ${status.className}`}>
+              {t(status.label)}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'validUntil',
+      header: t('Valid Until'),
+      className: 'text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Valid Until'),
+      cell: (doc) => (doc.validUntil ? formatDate(doc.validUntil, locale) : '-'),
+    },
+    {
+      id: 'uploaded',
+      header: t('Uploaded'),
+      className: 'text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Uploaded'),
+      cell: (doc) => formatDate(doc.uploadedAt, locale),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-[100px]',
+      mobilePriority: 'meta',
+      cell: (doc) => (
+        <div className="flex items-center gap-1">
+          {doc.url && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+              <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive"
+            onClick={() => handleDelete(doc.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -184,87 +282,21 @@ export function ProductDocumentsTab({ productId }: Props) {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredDocs.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium">{t('No documents')}</h3>
-            <p className="text-muted-foreground mt-1">
-              {t('Upload documents to associate them with this product')}
-            </p>
-          </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('Name')}</TableHead>
-                <TableHead>{t('Category')}</TableHead>
-                <TableHead>{t('Visibility')}</TableHead>
-                <TableHead>{t('Status')}</TableHead>
-                <TableHead>{t('Valid Until')}</TableHead>
-                <TableHead>{t('Uploaded')}</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDocs.map((doc) => {
-                const status = statusConfig[doc.status];
-                const vis = visibilityBadgeConfig[doc.visibility || 'internal'];
-                const VisIcon = vis.icon;
-                return (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        {doc.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{t(doc.category)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={vis.className}>
-                        <VisIcon className="mr-1 h-3 w-3" />
-                        {t(vis.label)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <status.icon className={`h-4 w-4 ${status.className}`} />
-                        <span className={`text-sm ${status.className}`}>
-                          {t(status.label)}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {doc.validUntil ? formatDate(doc.validUntil, locale) : '-'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(doc.uploadedAt, locale)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {doc.url && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDelete(doc.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <ResponsiveTable
+            data={filteredDocs}
+            columns={columns}
+            rowKey={(doc) => doc.id}
+            emptyState={
+              <div>
+                <FileText className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium">{t('No documents')}</h3>
+                <p className="text-muted-foreground mt-1">
+                  {t('Upload documents to associate them with this product')}
+                </p>
+              </div>
+            }
+          />
         )}
       </CardContent>
 

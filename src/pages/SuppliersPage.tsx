@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { blurIn, useReducedMotion } from '@/lib/motion';
+import { useReducedMotion } from '@/lib/motion';
 import {
   getSuppliers, getProducts, getCountries, getSupplierSpendAnalysis,
   getSupplierProducts, deleteSupplier,
@@ -25,6 +25,7 @@ import { InvitationsPanel } from '@/components/suppliers/InvitationsPanel';
 import {
   PendingApprovalsPanel, ApprovalDialog, type ApprovalAction,
 } from '@/components/suppliers/PendingApprovalsPanel';
+import { PageContainer } from '@/components/layout/page-container';
 import type { Supplier, Country } from '@/types/database';
 
 /**
@@ -35,7 +36,6 @@ export function SuppliersPage() {
   const { t } = useTranslation('settings');
   const navigate = useNavigate();
   const prefersReduced = useReducedMotion();
-  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
 
   // Data state
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -156,33 +156,30 @@ export function SuppliersPage() {
   // --- Render -------------------------------------------------------------
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Suppliers')}</h1>
-          <p className="text-muted-foreground">
-            {t('Manage suppliers, rate them, and assign products')}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <motion.div whileTap={prefersReduced ? undefined : { scale: 0.97 }} className="flex-1 sm:flex-none">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={loadData}
+      title={t('Suppliers')}
+      description={t('Manage suppliers, rate them, and assign products')}
+      actions={
+        <>
+          <motion.div whileTap={prefersReduced ? undefined : { scale: 0.97 }}>
             <Button variant="outline" className="min-h-[44px] w-full sm:min-h-10 sm:w-auto" onClick={() => setInviteDialogOpen(true)}>
               <Mail className="mr-2 h-4 w-4" />
               {t('Invite Supplier')}
             </Button>
           </motion.div>
-          <motion.div whileTap={prefersReduced ? undefined : { scale: 0.97 }} className="flex-1 sm:flex-none">
+          <motion.div whileTap={prefersReduced ? undefined : { scale: 0.97 }}>
             <Button className="min-h-[44px] w-full sm:min-h-10 sm:w-auto" onClick={openCreateDialog}>
               <Plus className="mr-2 h-4 w-4" />
               {t('New Supplier')}
             </Button>
           </motion.div>
-        </div>
-      </MotionDiv>
+        </>
+      }
+    >
+      <div className="space-y-6">
 
       {/* Pending approvals action stream (prominent, on top) */}
       <PendingApprovalsPanel
@@ -286,6 +283,7 @@ export function SuppliersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

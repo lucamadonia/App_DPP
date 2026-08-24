@@ -2,7 +2,7 @@
  * Global Cmd+K / Ctrl+K command palette.
  * Jumps to customers by name/email/company and common app pages.
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -14,23 +14,36 @@ import {
 } from 'lucide-react';
 import { getCustomerList, type CrmCustomer } from '@/services/supabase/crm-analytics';
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+interface CommandPaletteProps {
+  /** Controlled visibility. Omit to let the palette own its state (Cmd+K only). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function CommandPalette({ open: openProp, onOpenChange }: CommandPaletteProps = {}) {
+  const isControlled = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? openProp : internalOpen;
   const [query, setQuery] = useState('');
   const [customers, setCustomers] = useState<CrmCustomer[]>([]);
   const navigate = useNavigate();
   const { t } = useTranslation('common');
 
+  const setOpen = useCallback((value: boolean) => {
+    if (!isControlled) setInternalOpen(value);
+    onOpenChange?.(value);
+  }, [isControlled, onOpenChange]);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen(o => !o);
+        setOpen(!open);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [open, setOpen]);
 
   // Load customers (first 200) when opened, filter client-side for speed
   useEffect(() => {
@@ -57,7 +70,7 @@ export function CommandPalette() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="p-0 overflow-hidden max-w-2xl">
+      <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
         <Command shouldFilter={false} className="rounded-lg">
           <div className="flex items-center gap-2 border-b px-3 py-2">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />

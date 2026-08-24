@@ -141,11 +141,13 @@ describe('Auth Service', () => {
       await signUpWithEmail('test@example.com', 'pass', 'My Name')
 
       // Assert
+      // `locale` is included so the confirmation mail is sent in the language
+      // the user signed up in (see currentLocale() in auth.ts).
       expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'pass',
         options: {
-          data: { name: 'My Name', full_name: 'My Name' },
+          data: { name: 'My Name', full_name: 'My Name', locale: expect.any(String) },
         },
       })
     })

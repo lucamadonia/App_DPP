@@ -101,7 +101,6 @@
   "Plan upgraded successfully": "Plan upgraded successfully!",
   "Module activated successfully": "Module activated successfully!",
   "Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products.": "Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products.",
-
   "Feature Comparison": "Feature Comparison",
   "Feature": "Feature",
   "Current": "Current",
@@ -115,7 +114,6 @@
   "Custom CSS": "Custom CSS",
   "Customs Visibility": "Customs Visibility",
   "Internal Visibility": "Internal Visibility",
-
   "Starting at": "Starting at",
   "View Plans & Activate": "View Plans & Activate",
   "Unlock this feature and more with {{plan}}": "Unlock this feature and more with {{plan}}",
@@ -127,10 +125,7 @@
   "Custom CSS support": "Custom CSS support",
   "100 AI Credits/month": "100 AI Credits/month",
   "25 Admin Users": "25 Admin Users",
-
   "Manage customer returns efficiently with automated workflows": "Manage customer returns efficiently with automated workflows",
-  "Advanced returns with tickets, workflows and 300 returns/month": "Advanced returns with tickets, workflows and 300 returns/month",
-  "Unlimited returns, webhooks, API access and full customization": "Unlimited returns, webhooks, API access and full customization",
   "Up to 50 returns per month": "Up to 50 returns per month",
   "Automated status tracking": "Automated status tracking",
   "Email notifications": "Email notifications",
@@ -155,7 +150,6 @@
   "DNS verification wizard": "DNS verification wizard",
   "Full white-labeling": "Full white-labeling",
   "SSL included": "SSL included",
-
   "Company Profile": "Company Profile",
   "Tell us about your company to personalize your experience": "Tell us about your company to personalize your experience",
   "Company Name": "Company Name",
@@ -197,5 +191,9 @@
   "{{count}} Shipments/month": "{{count}} Shipments/month",
   "Multi-Warehouse Transfers": "Multi-Warehouse Transfers",
   "Shipping Labels": "Shipping Labels",
-  "CSV Import/Export": "CSV Import/Export"
+  "CSV Import/Export": "CSV Import/Export",
+  "Plan & Credits": "Plan & Credits",
+  "Your current plan and AI credit balance": "Your current plan and AI credit balance",
+  "Current plan": "Current plan",
+  "Plan changes are managed by your administrator.": "Plan changes are managed by your administrator."
 }

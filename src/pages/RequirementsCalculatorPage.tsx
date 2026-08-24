@@ -45,13 +45,9 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import { requirementsDatabase, type Requirement } from '@/data/requirements-database';
 import { productCategories } from '@/data/product-categories';
 import { countries, packagingMaterials, wirelessTypes } from '@/data/calculator-options';
@@ -64,6 +60,14 @@ import { AIOverallAssessment } from '@/components/ai/AIOverallAssessment';
 import { AIActionPlan } from '@/components/ai/AIActionPlan';
 import { AIAdditionalReqs } from '@/components/ai/AIAdditionalReqs';
 import { AIChatPanel } from '@/components/ai/AIChatPanel';
+
+/** One row of the "All Required Documents" summary table. */
+interface DocumentChecklistRow {
+  id: string;
+  doc: string;
+  requirement: string;
+  priority: Requirement['priority'];
+}
 
 // Hook to manage per-requirement AI deep analysis state
 function useRequirementAnalysis() {
@@ -238,6 +242,36 @@ export function RequirementsCalculatorPage() {
   };
 
   const requirements = showResults ? calculateRequirements() : [];
+
+  const documentColumns: ResponsiveTableColumn<DocumentChecklistRow>[] = [
+    {
+      id: 'doc',
+      header: t('Document'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: item => item.doc,
+    },
+    {
+      id: 'requirement',
+      header: t('Requirement'),
+      mobilePriority: 'subtitle',
+      cell: item => item.requirement,
+    },
+    {
+      id: 'priority',
+      header: t('Priority'),
+      mobilePriority: 'badge',
+      cell: item => (
+        <Badge variant={
+          item.priority === 'critical' ? 'destructive' :
+          item.priority === 'high' ? 'default' : 'secondary'
+        }>
+          {item.priority === 'critical' ? 'Critical' :
+           item.priority === 'high' ? 'High' : 'Medium'}
+        </Badge>
+      ),
+    },
+  ];
 
   const criticalRequirements = requirements.filter(r => r.priority === 'critical');
   const highRequirements = requirements.filter(r => r.priority === 'high');
@@ -1021,38 +1055,18 @@ export function RequirementsCalculatorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Document')}</TableHead>
-                    <TableHead>{t('Requirement')}</TableHead>
-                    <TableHead>{t('Priority')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requirements.flatMap(req =>
-                    req.documents.map(doc => ({
-                      doc,
-                      requirement: req.name,
-                      priority: req.priority,
-                    }))
-                  ).map((item, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{item.doc}</TableCell>
-                      <TableCell>{item.requirement}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          item.priority === 'critical' ? 'destructive' :
-                          item.priority === 'high' ? 'default' : 'secondary'
-                        }>
-                          {item.priority === 'critical' ? 'Critical' :
-                           item.priority === 'high' ? 'High' : 'Medium'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ResponsiveTable
+                data={requirements.flatMap(req =>
+                  req.documents.map((doc, idx) => ({
+                    id: `${req.id}-${idx}`,
+                    doc,
+                    requirement: req.name,
+                    priority: req.priority,
+                  }))
+                )}
+                columns={documentColumns}
+                rowKey={item => item.id}
+              />
             </CardContent>
           </Card>
 

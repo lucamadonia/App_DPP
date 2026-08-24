@@ -34,7 +34,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +49,7 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 import { ListToolbar } from '@/components/ui/list-toolbar';
+import { PageContainer } from '@/components/layout/page-container';
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
 import { EmptyState, ErrorState } from '@/components/ui/state-feedback';
 import {
@@ -62,7 +63,7 @@ import { ShelfPicker, type ShelfPickerValue } from '@/components/warehouse/Shelf
 import { getActiveLocations } from '@/services/supabase/wh-locations';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { blurIn, gridStagger, gridItem, useMotionVariants } from '@/lib/motion';
+import { gridStagger, gridItem, useMotionVariants } from '@/lib/motion';
 import { WarehouseKPICard } from '@/components/warehouse/WarehouseKPICard';
 import { StockWriteOffDialog } from '@/components/warehouse/StockWriteOffDialog';
 import { InventoryCardGrid, type InventoryCardGroup } from '@/components/warehouse/inventory-card-grid';
@@ -151,7 +152,6 @@ export function InventoryListPage() {
   const isMobile = useIsMobile();
 
   // Motion variants (no-op when prefers-reduced-motion)
-  const headerVariants = useMotionVariants(blurIn);
   const kpiContainerVariants = useMotionVariants(gridStagger);
   const kpiItemVariants = useMotionVariants(gridItem);
 
@@ -883,14 +883,20 @@ export function InventoryListPage() {
   const moveBinSubmitDisabled = moveBinSaving || !moveBinNewBin || (moveBinNewBin === (moveBinTarget?.binLocation ?? ''));
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <motion.div variants={headerVariants} initial="initial" animate="animate">
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('Inventory')}</h1>
-        <p className="text-muted-foreground text-sm mt-0.5 tabular-nums">
-          {totalCount.toLocaleString()} {t('Items')}
-        </p>
-      </motion.div>
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={() => Promise.all([loadData(), loadStats()])}
+      title={
+        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          {t('Inventory')}
+        </span>
+      }
+      description={
+        <span className="tabular-nums">{totalCount.toLocaleString()} {t('Items')}</span>
+      }
+    >
+      <div className="space-y-6">
 
       {/* KPI Cards — global values via getWarehouseStats() (fix: were page-scoped) */}
       <motion.div
@@ -1273,6 +1279,7 @@ export function InventoryListPage() {
           clearSelection();
         }}
       />
-    </div>
+      </div>
+    </PageContainer>
   );
 }

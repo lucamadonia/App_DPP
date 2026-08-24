@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 interface LabelEditorLayoutProps {
   toolbar: ReactNode;
@@ -15,8 +17,8 @@ export function LabelEditorLayout({ toolbar, palette, canvas, rightPane }: Label
 
       {/* 3-column layout */}
       <div className="flex flex-1 min-h-0">
-        {/* Left: Element Palette */}
-        <div className="w-[150px] shrink-0 border-r bg-muted/30 overflow-y-auto">
+        {/* Left: Element Palette — hidden on mobile & tablet, visible on lg+ */}
+        <div className="hidden lg:block w-[150px] shrink-0 border-r bg-muted/30 overflow-y-auto">
           {palette}
         </div>
 
@@ -25,11 +27,66 @@ export function LabelEditorLayout({ toolbar, palette, canvas, rightPane }: Label
           {canvas}
         </div>
 
-        {/* Right: Settings Pane */}
-        <div className="w-[380px] shrink-0 border-l bg-background overflow-y-auto">
+        {/* Right: Settings Pane — hidden on mobile & tablet, visible on lg+ */}
+        <div className="hidden lg:block w-[380px] shrink-0 border-l bg-background overflow-y-auto">
           {rightPane}
         </div>
       </div>
     </div>
+  );
+}
+
+/** Wrapper that adds Sheet-based mobile panels around the LabelEditorLayout */
+export function ResponsiveLabelEditorLayout({
+  toolbar,
+  palette,
+  canvas,
+  rightPane,
+  showMobilePalette,
+  onMobilePaletteChange,
+  showMobileRightPane,
+  onMobileRightPaneChange,
+}: LabelEditorLayoutProps & {
+  showMobilePalette: boolean;
+  onMobilePaletteChange: (open: boolean) => void;
+  showMobileRightPane: boolean;
+  onMobileRightPaneChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation('products');
+
+  return (
+    <>
+      <LabelEditorLayout
+        toolbar={toolbar}
+        palette={palette}
+        canvas={canvas}
+        rightPane={rightPane}
+      />
+
+      {/* Mobile element palette sheet — left side */}
+      <Sheet open={showMobilePalette} onOpenChange={onMobilePaletteChange}>
+        <SheetContent side="left" className="w-[260px] sm:w-[300px] p-0 flex flex-col">
+          <SheetHeader className="px-4 pt-4 pb-2">
+            <SheetTitle className="text-sm">{t('ml.editor.mobileElements')}</SheetTitle>
+            <SheetDescription className="text-xs">{t('ml.editor.mobileElementsHint')}</SheetDescription>
+          </SheetHeader>
+          <div className="overflow-y-auto flex-1">
+            {palette}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile settings pane sheet — right side */}
+      <Sheet open={showMobileRightPane} onOpenChange={onMobileRightPaneChange}>
+        <SheetContent side="right" className="w-[340px] sm:w-[380px] p-0 flex flex-col">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{t('ml.editor.mobileSettings')}</SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto flex-1 pt-8">
+            {rightPane}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

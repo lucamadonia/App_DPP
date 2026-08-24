@@ -74,6 +74,36 @@ interface ResponsiveTableProps<T> {
   className?: string;
   /** Force mobile card layout regardless of viewport */
   forceMobileCards?: boolean;
+  /**
+   * Per-row class names, applied to the desktop `<TableRow>` AND the mobile card.
+   *
+   * Added because three separate migrations hit the same wall: tables whose rows
+   * carry conditional styling (selected, already-mapped, colour-coded) could not
+   * move to this component without losing it.
+   */
+  rowClassName?: (row: T, index: number) => string | undefined;
+  /**
+   * Per-row inline style, same targets as `rowClassName`. For things a class
+   * cannot express, e.g. a staggered `animationDelay` keyed to the row index.
+   */
+  rowStyle?: (row: T, index: number) => React.CSSProperties | undefined;
+  /**
+   * Footer content, e.g. a totals row.
+   *
+   * On desktop it renders inside a real `<tfoot>` so it stays column-aligned —
+   * pass `<TableRow>`/`<TableCell>` children (colSpan is fine). Below `md` it
+   * renders after the cards, where a table footer has no meaning; supply
+   * `mobileFooter` if the totals need a different shape there.
+   */
+  footer?: React.ReactNode;
+  /**
+   * Footer for the mobile card layout.
+   *
+   * Required whenever `footer` is used: there is no fallback, because `footer`
+   * contains table markup that cannot render inside a card list. Give the
+   * totals a card-shaped form here instead.
+   */
+  mobileFooter?: React.ReactNode;
 }
 
 const HIDE_BELOW_CLASSES: Record<string, string> = {
@@ -106,6 +136,10 @@ export function ResponsiveTable<T>({
   mobileCardTitle,
   className,
   forceMobileCards = false,
+  rowClassName,
+  rowStyle,
+  footer,
+  mobileFooter,
 }: ResponsiveTableProps<T>) {
   const isMobile = useIsMobile();
   const showCards = isMobile || forceMobileCards;
@@ -125,7 +159,7 @@ export function ResponsiveTable<T>({
   if (showCards) {
     return (
       <div className={cn('space-y-2', className)}>
-        {data.map((row) => (
+        {data.map((row, index) => (
           <MobileRowCard
             key={rowKey(row)}
             row={row}
@@ -135,8 +169,17 @@ export function ResponsiveTable<T>({
             rowHref={rowHref}
             selection={selection}
             mobileCardTitle={mobileCardTitle}
+            className={rowClassName?.(row, index)}
+            style={rowStyle?.(row, index)}
           />
         ))}
+        {/* Deliberately does NOT fall back to `footer`.
+            `footer` is table markup by contract (FooterRow/FooterCell, i.e.
+            <tr>/<td>); rendering it here would put orphaned table elements in a
+            <div>, which browsers strip to loose unstyled text. A card list has
+            no columns to align to anyway, so a totals row needs a different
+            shape — that is what `mobileFooter` is for. */}
+        {mobileFooter && <div className="pt-1">{mobileFooter}</div>}
       </div>
     );
   }
@@ -152,6 +195,9 @@ export function ResponsiveTable<T>({
       onSortChange={onSortChange}
       selection={selection}
       className={className}
+      rowClassName={rowClassName}
+      rowStyle={rowStyle}
+      footer={footer}
     />
   );
 }
@@ -166,6 +212,9 @@ function DesktopTable<T>({
   onSortChange,
   selection,
   className,
+  rowClassName,
+  rowStyle,
+  footer,
 }: Pick<
   ResponsiveTableProps<T>,
   | 'data'
@@ -177,6 +226,9 @@ function DesktopTable<T>({
   | 'onSortChange'
   | 'selection'
   | 'className'
+  | 'rowClassName'
+  | 'rowStyle'
+  | 'footer'
 >) {
   const allSelected =
     selection && data.length > 0 && data.every((row) => selection.selectedIds.has(rowKey(row)));
@@ -232,7 +284,7 @@ function DesktopTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row) => {
+          {data.map((row, index) => {
             const id = rowKey(row);
             const isSelected = selection?.selectedIds.has(id);
             const clickable = Boolean(onRowClick || rowHref);
@@ -240,7 +292,8 @@ function DesktopTable<T>({
               <TableRow
                 key={id}
                 data-state={isSelected ? 'selected' : undefined}
-                className={cn(clickable && 'cursor-pointer')}
+                className={cn(clickable && 'cursor-pointer', rowClassName?.(row, index))}
+                style={rowStyle?.(row, index)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {selection && (
@@ -267,6 +320,7 @@ function DesktopTable<T>({
             );
           })}
         </TableBody>
+        {footer && <tfoot className="[&_tr]:border-t">{footer}</tfoot>}
       </Table>
     </div>
   );
@@ -280,6 +334,8 @@ function MobileRowCard<T>({
   rowHref,
   selection,
   mobileCardTitle,
+  className,
+  style,
 }: {
   row: T;
   columns: ResponsiveTableColumn<T>[];
@@ -288,6 +344,10 @@ function MobileRowCard<T>({
   rowHref?: (row: T) => string;
   selection?: ResponsiveTableProps<T>['selection'];
   mobileCardTitle?: (row: T) => React.ReactNode;
+  /** From the parent's `rowClassName` — conditional per-row styling. */
+  className?: string;
+  /** From the parent's `rowStyle` — e.g. a staggered animationDelay. */
+  style?: React.CSSProperties;
 }) {
   const titleCol = columns.find((c) => c.mobilePriority === 'title');
   const subtitleCol = columns.find((c) => c.mobilePriority === 'subtitle');
@@ -303,8 +363,10 @@ function MobileRowCard<T>({
       className={cn(
         'gap-2 py-3 px-4 transition-colors',
         clickable && 'hover:bg-muted/50 cursor-pointer',
-        isSelected && 'ring-2 ring-primary'
+        isSelected && 'ring-2 ring-primary',
+        className
       )}
+      style={style}
     >
       <div className="flex items-start justify-between gap-3">
         {selection && (
@@ -443,3 +505,15 @@ export function LoadMoreFooter({
     </div>
   );
 }
+
+/**
+ * Re-exported so a `footer` can be built without importing `@/components/ui/table`.
+ *
+ * Without this, any table with a totals row still had to pull in the raw table
+ * primitives — which both defeats the point of migrating and keeps the file
+ * flagged by `npm run audit:mobile`. The alternative people reached for was
+ * appending a synthetic totals row to `data`, which is worse: it participates
+ * in sorting and selection, so a sortable table can put its own Σ row in the
+ * middle, and select-all picks it up.
+ */
+export { TableRow as FooterRow, TableCell as FooterCell } from '@/components/ui/table';

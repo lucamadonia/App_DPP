@@ -9,7 +9,7 @@
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { Mail, Send, X, Eye, FileEdit, Sparkles } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

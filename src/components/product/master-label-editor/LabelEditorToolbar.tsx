@@ -13,6 +13,8 @@ import {
   Factory,
   Building2,
   Package,
+  PanelLeft,
+  PanelRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -55,6 +57,12 @@ interface LabelEditorToolbarProps {
   onManufacturerOverride: (id: string | null) => void;
   importerOverrideId: string | null;
   onImporterOverride: (id: string | null) => void;
+  /** Mobile: show the sheet toggles for the two side panels (below lg) */
+  showMobileToggles?: boolean;
+  /** Mobile: open the element palette sheet */
+  onTogglePalette?: () => void;
+  /** Mobile: open the settings/preview sheet */
+  onToggleRightPane?: () => void;
 }
 
 const ZOOM_MIN = 50;
@@ -99,6 +107,9 @@ export function LabelEditorToolbar({
   onManufacturerOverride,
   importerOverrideId,
   onImporterOverride,
+  showMobileToggles = false,
+  onTogglePalette,
+  onToggleRightPane,
 }: LabelEditorToolbarProps) {
   const { t } = useTranslation('products');
   const liveBatches = batches.filter(b => b.status === 'live' || b.status === 'draft');
@@ -110,7 +121,7 @@ export function LabelEditorToolbar({
   const hasImporterTextField = product.importer && product.importer.trim() !== '';
 
   return (
-    <div className="h-12 shrink-0 border-b bg-background/80 backdrop-blur-sm flex items-center gap-2 px-3">
+    <div className="h-12 shrink-0 border-b bg-background/80 backdrop-blur-sm flex items-center gap-2 px-3 overflow-x-auto">
       {/* Back */}
       <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
         <ArrowLeft className="h-4 w-4" />
@@ -121,6 +132,32 @@ export function LabelEditorToolbar({
         <SaveStatusDot status={saveStatus} />
         <span className="text-sm font-medium truncate max-w-[140px]">{templateName}</span>
       </div>
+
+      {/* Mobile: element palette toggle */}
+      {showMobileToggles && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 shrink-0 lg:hidden"
+          onClick={onTogglePalette}
+          title={t('ml.editor.mobileElements')}
+        >
+          <PanelLeft className="h-3.5 w-3.5" />
+        </Button>
+      )}
+
+      {/* Mobile: settings & preview toggle */}
+      {showMobileToggles && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 shrink-0 lg:hidden"
+          onClick={onToggleRightPane}
+          title={t('ml.editor.mobileSettings')}
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+        </Button>
+      )}
 
       <div className="w-px h-5 bg-border mx-1" />
 

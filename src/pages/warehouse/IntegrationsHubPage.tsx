@@ -31,7 +31,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { gridStagger, gridItem, blurIn, useMotionVariants, useReducedMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';

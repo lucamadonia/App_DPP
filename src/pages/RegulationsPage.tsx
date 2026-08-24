@@ -60,13 +60,9 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -81,6 +77,12 @@ const categoryIcons: Record<string, React.ElementType> = {
   digital: Globe,
   trade: FileText,
 };
+
+/** One row of the "DPP Deadlines" table inside an EU regulation. */
+interface DppDeadlineRow {
+  product: string;
+  deadline: string;
+}
 
 export function RegulationsPage() {
   const { t } = useTranslation('compliance');
@@ -164,6 +166,86 @@ export function RegulationsPage() {
                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const dppDeadlineColumns: ResponsiveTableColumn<DppDeadlineRow>[] = [
+    {
+      id: 'product',
+      header: t('Product Category'),
+      mobilePriority: 'title',
+      cell: (row) => row.product,
+    },
+    {
+      id: 'deadline',
+      header: t('Deadline'),
+      mobilePriority: 'meta',
+      mobileLabel: t('Deadline'),
+      cell: (row) => formatDate(row.deadline, locale),
+    },
+    {
+      id: 'remaining',
+      header: t('Remaining'),
+      mobilePriority: 'badge',
+      cell: (row) => {
+        const daysRemaining = Math.ceil((new Date(row.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        return (
+          <Badge variant={daysRemaining < 365 ? 'destructive' : 'secondary'}>
+            {daysRemaining} {t('Days')}
+          </Badge>
+        );
+      },
+    },
+  ];
+
+  const recyclingCodeColumns: ResponsiveTableColumn<RecyclingCode>[] = [
+    {
+      id: 'code',
+      header: t('Code'),
+      className: 'font-mono',
+      mobilePriority: 'meta',
+      mobileLabel: t('Code'),
+      cell: (code) => code.code,
+    },
+    {
+      id: 'symbol',
+      header: t('Symbol'),
+      className: 'text-2xl',
+      hideBelow: 'md',
+      cell: (code) => code.symbol,
+    },
+    {
+      id: 'name',
+      header: t('Abbreviation'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (code) => code.name,
+    },
+    {
+      id: 'fullName',
+      header: t('Material Name'),
+      hideBelow: 'md',
+      mobilePriority: 'subtitle',
+      cell: (code) => code.fullName,
+    },
+    {
+      id: 'examples',
+      header: t('Examples'),
+      className: 'text-muted-foreground',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Examples'),
+      cell: (code) => code.examples,
+    },
+    {
+      id: 'recyclable',
+      header: t('Recyclable'),
+      mobilePriority: 'badge',
+      cell: (code) => (code.recyclable ? (
+        <Badge className="bg-success/10 text-success">{t('Yes')}</Badge>
+      ) : (
+        <Badge variant="secondary">{t('Limited')}</Badge>
+      )),
+    },
+  ];
 
   if (isLoading) {
     return (
@@ -303,18 +385,18 @@ export function RegulationsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="countries">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="countries" className="flex items-center gap-2">
+        <TabsList className="flex w-full">
+          <TabsTrigger value="countries" className="flex items-center gap-2 flex-shrink-0">
             <Globe className="h-4 w-4" />
-            {t('Countries')}
+            <span className="hidden sm:inline">{t('Countries')}</span>
           </TabsTrigger>
-          <TabsTrigger value="eu" className="flex items-center gap-2">
+          <TabsTrigger value="eu" className="flex items-center gap-2 flex-shrink-0">
             <Shield className="h-4 w-4" />
-            {t('EU Regulations')}
+            <span className="hidden sm:inline">{t('EU Regulations')}</span>
           </TabsTrigger>
-          <TabsTrigger value="pictograms" className="flex items-center gap-2">
+          <TabsTrigger value="pictograms" className="flex items-center gap-2 flex-shrink-0">
             <Tag className="h-4 w-4" />
-            {t('Pictograms')}
+            <span className="hidden sm:inline">{t('Pictograms')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -589,31 +671,11 @@ export function RegulationsPage() {
                           {Object.keys(reg.dppDeadlines).length > 0 && (
                             <div>
                               <p className="text-sm font-medium mb-2">{t('DPP Deadlines')}</p>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>{t('Product Category')}</TableHead>
-                                    <TableHead>{t('Deadline')}</TableHead>
-                                    <TableHead>{t('Remaining')}</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {Object.entries(reg.dppDeadlines).map(([product, deadline]) => {
-                                    const daysRemaining = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                                    return (
-                                      <TableRow key={product}>
-                                        <TableCell>{product}</TableCell>
-                                        <TableCell>{formatDate(deadline, locale)}</TableCell>
-                                        <TableCell>
-                                          <Badge variant={daysRemaining < 365 ? 'destructive' : 'secondary'}>
-                                            {daysRemaining} {t('Days')}
-                                          </Badge>
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
+                              <ResponsiveTable
+                                data={Object.entries(reg.dppDeadlines).map(([product, deadline]) => ({ product, deadline }))}
+                                columns={dppDeadlineColumns}
+                                rowKey={(row) => row.product}
+                              />
                             </div>
                           )}
                         </div>
@@ -759,36 +821,12 @@ export function RegulationsPage() {
               <CardDescription>{t('Material identification codes for packaging and products')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Code')}</TableHead>
-                    <TableHead>{t('Symbol')}</TableHead>
-                    <TableHead>{t('Abbreviation')}</TableHead>
-                    <TableHead>{t('Material Name')}</TableHead>
-                    <TableHead>{t('Examples')}</TableHead>
-                    <TableHead>{t('Recyclable')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recyclingCodes.map((code) => (
-                    <TableRow key={code.code}>
-                      <TableCell className="font-mono">{code.code}</TableCell>
-                      <TableCell className="text-2xl">{code.symbol}</TableCell>
-                      <TableCell className="font-medium">{code.name}</TableCell>
-                      <TableCell>{code.fullName}</TableCell>
-                      <TableCell className="text-muted-foreground">{code.examples}</TableCell>
-                      <TableCell>
-                        {code.recyclable ? (
-                          <Badge className="bg-success/10 text-success">{t('Yes')}</Badge>
-                        ) : (
-                          <Badge variant="secondary">{t('Limited')}</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ResponsiveTable
+                data={recyclingCodes}
+                columns={recyclingCodeColumns}
+                rowKey={(code) => code.code}
+                mobileCardTitle={(code) => <span>{code.symbol} {code.name}</span>}
+              />
             </CardContent>
           </Card>
         </TabsContent>

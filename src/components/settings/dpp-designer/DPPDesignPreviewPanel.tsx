@@ -35,8 +35,10 @@ export function DPPDesignPreviewPanel({
   const pageStyle = getPageStyle(resolved);
   const isDeviceFrame = viewport !== 'desktop';
 
+  // Below lg the settings pane is a Sheet, so the preview is the only pane and
+  // takes its height from the flex parent; lg+ keeps the original frame.
   return (
-    <div className="sticky top-[53px] h-[calc(100vh-53px)] overflow-y-auto bg-muted/30 p-4">
+    <div className="h-full lg:sticky lg:top-[53px] lg:h-[calc(100dvh-53px)] overflow-y-auto bg-muted/30 p-3 sm:p-4">
       <div
         className={`mx-auto transition-all duration-300 ${
           isDeviceFrame ? 'border-2 border-muted-foreground/20 rounded-xl shadow-lg' : ''
@@ -51,7 +53,7 @@ export function DPPDesignPreviewPanel({
           className="overflow-y-auto"
           style={{
             ...pageStyle,
-            maxHeight: isDeviceFrame ? 'calc(100vh - 120px)' : undefined,
+            maxHeight: isDeviceFrame ? 'calc(100dvh - 120px)' : undefined,
           }}
         >
           {loading ? (

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/hooks/use-locale';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { useStaggeredList } from '@/hooks/useStaggeredList';
 import { formatDate, formatCurrency } from '@/lib/format';
@@ -36,14 +37,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +83,7 @@ export function SupplierDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [showIban, setShowIban] = useState(false);
   const [expandedPriceTiers, setExpandedPriceTiers] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!id) return;
@@ -176,6 +175,127 @@ export function SupplierDetailPage() {
       </div>
     );
   }
+
+  /**
+   * Volume price tiers.
+   *
+   * Four columns on `sm+`. Below that the block is nested inside a mobile
+   * card's meta area, where four columns leave ~68px each — not enough for
+   * "Preis/Einheit" — so each tier collapses to a single quantity-range /
+   * price / saving line instead.
+   */
+  const renderPriceTiers = (sp: SupplierProductWithName) => {
+    const tiers = sp.price_tiers || [];
+    const savingFor = (tier: PriceTier) =>
+      sp.price_per_unit && tier.pricePerUnit < sp.price_per_unit
+        ? `-${(((sp.price_per_unit - tier.pricePerUnit) / sp.price_per_unit) * 100).toFixed(0)}%`
+        : '-';
+
+    return (
+      <div className="mt-2 rounded-md bg-muted/30 p-2 space-y-1">
+        <div className="hidden sm:grid sm:grid-cols-4 gap-2 text-[10px] uppercase text-muted-foreground">
+          <span>{t('From Qty')}</span>
+          <span>{t('To Qty')}</span>
+          <span>{t('Price/Unit')}</span>
+          <span>{t('Savings')}</span>
+        </div>
+        {tiers.map((tier: PriceTier, ti: number) => (
+          <div key={ti} className="hidden sm:grid sm:grid-cols-4 gap-2 text-xs">
+            <span>{tier.minQty}</span>
+            <span>{tier.maxQty ?? t('unlimited')}</span>
+            <span>{formatCurrency(tier.pricePerUnit, tier.currency || 'EUR', locale)}</span>
+            <span className="text-green-600">{savingFor(tier)}</span>
+          </div>
+        ))}
+        {tiers.map((tier: PriceTier, ti: number) => (
+          <div key={ti} className="sm:hidden flex items-baseline justify-between gap-2 text-xs">
+            <span className="text-muted-foreground whitespace-nowrap">
+              {tier.minQty}–{tier.maxQty ?? t('unlimited')}
+            </span>
+            <span className="flex items-baseline gap-1.5 min-w-0">
+              <span className="font-medium tabular-nums">
+                {formatCurrency(tier.pricePerUnit, tier.currency || 'EUR', locale)}
+              </span>
+              <span className="text-green-600">{savingFor(tier)}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const productColumns: ResponsiveTableColumn<SupplierProductWithName>[] = [
+    {
+      id: 'product',
+      header: t('Product'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: sp => (
+        <div className="flex items-center gap-2">
+          <span>{sp.product_name || sp.product_id}</span>
+          {sp.is_primary && (
+            <Badge className="bg-blue-100 text-blue-800 text-xs">{t('Primary Supplier')}</Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'role',
+      header: t('Role'),
+      mobilePriority: 'badge',
+      cell: sp => <Badge variant="outline">{t(sp.role.charAt(0).toUpperCase() + sp.role.slice(1))}</Badge>,
+    },
+    {
+      id: 'price',
+      header: t('Price/Unit'),
+      mobilePriority: 'meta',
+      mobileLabel: t('Price/Unit'),
+      cell: sp => (sp.price_per_unit ? formatCurrency(sp.price_per_unit, sp.currency || 'EUR', locale) : '-'),
+    },
+    {
+      id: 'delivery',
+      header: t('Delivery'),
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Delivery'),
+      cell: sp => (sp.lead_time_days ? `${sp.lead_time_days}d` : '-'),
+    },
+    {
+      id: 'minOrder',
+      header: t('Min. Order'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Min. Order'),
+      cell: sp => sp.min_order_quantity || '-',
+    },
+    {
+      id: 'volumePricing',
+      header: t('Volume Pricing'),
+      mobilePriority: 'meta',
+      cell: sp => {
+        if (!sp.price_tiers || sp.price_tiers.length === 0) {
+          return <span className="text-muted-foreground text-xs">-</span>;
+        }
+        // Mobile cards are a single click target, so no nested toggle button —
+        // the tiers are always shown there instead.
+        if (isMobile) return renderPriceTiers(sp);
+        return (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={(e) => { e.stopPropagation(); setExpandedPriceTiers(expandedPriceTiers === sp.id ? null : sp.id); }}
+            >
+              {sp.price_tiers.length} {t('Tiers')}
+              {expandedPriceTiers === sp.id ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+            </Button>
+            {expandedPriceTiers === sp.id && renderPriceTiers(sp)}
+          </>
+        );
+      },
+    },
+  ];
 
   const kpiCards = [
     {
@@ -292,14 +412,16 @@ export function SupplierDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">{t('Overview')}</TabsTrigger>
-          <TabsTrigger value="products">{t('Products')}</TabsTrigger>
-          <TabsTrigger value="documents">{t('Documents', { ns: 'common' })}</TabsTrigger>
-          <TabsTrigger value="finance">{t('Finance')}</TabsTrigger>
-          <TabsTrigger value="compliance">{t('Compliance')}</TabsTrigger>
-          <TabsTrigger value="contacts">{t('Contacts')}</TabsTrigger>
-        </TabsList>
+        <ScrollableTabs>
+          <TabsList className="flex w-full">
+            <TabsTrigger value="overview" className="flex-shrink-0">{t('Overview')}</TabsTrigger>
+            <TabsTrigger value="products" className="flex-shrink-0">{t('Products')}</TabsTrigger>
+            <TabsTrigger value="documents" className="flex-shrink-0">{t('Documents', { ns: 'common' })}</TabsTrigger>
+            <TabsTrigger value="finance" className="flex-shrink-0">{t('Finance')}</TabsTrigger>
+            <TabsTrigger value="compliance" className="flex-shrink-0">{t('Compliance')}</TabsTrigger>
+            <TabsTrigger value="contacts" className="flex-shrink-0">{t('Contacts')}</TabsTrigger>
+          </TabsList>
+        </ScrollableTabs>
 
         {/* Tab 1: Overview */}
         <TabsContent value="overview" className="mt-4">
@@ -479,90 +601,18 @@ export function SupplierDetailPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              {products.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  <p>{t('No products assigned')}</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Product')}</TableHead>
-                      <TableHead>{t('Role')}</TableHead>
-                      <TableHead>{t('Price/Unit')}</TableHead>
-                      <TableHead>{t('Delivery')}</TableHead>
-                      <TableHead>{t('Min. Order')}</TableHead>
-                      <TableHead>{t('Volume Pricing')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map(sp => (
-                      <>
-                        <TableRow key={sp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/products/${sp.product_id}`)}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <span>{sp.product_name || sp.product_id}</span>
-                              {sp.is_primary && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">{t('Primary Supplier')}</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell><Badge variant="outline">{t(sp.role.charAt(0).toUpperCase() + sp.role.slice(1))}</Badge></TableCell>
-                          <TableCell>{sp.price_per_unit ? formatCurrency(sp.price_per_unit, sp.currency || 'EUR', locale) : '-'}</TableCell>
-                          <TableCell>{sp.lead_time_days ? `${sp.lead_time_days}d` : '-'}</TableCell>
-                          <TableCell>{sp.min_order_quantity || '-'}</TableCell>
-                          <TableCell>
-                            {sp.price_tiers && sp.price_tiers.length > 0 ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={(e) => { e.stopPropagation(); setExpandedPriceTiers(expandedPriceTiers === sp.id ? null : sp.id); }}
-                              >
-                                {sp.price_tiers.length} {t('Tiers')}
-                                {expandedPriceTiers === sp.id ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
-                              </Button>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">-</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                        {expandedPriceTiers === sp.id && sp.price_tiers && (
-                          <TableRow key={`${sp.id}-tiers`}>
-                            <TableCell colSpan={6} className="bg-muted/30 px-8">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="text-xs">{t('From Qty')}</TableHead>
-                                    <TableHead className="text-xs">{t('To Qty')}</TableHead>
-                                    <TableHead className="text-xs">{t('Price/Unit')}</TableHead>
-                                    <TableHead className="text-xs">{t('Savings')}</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {sp.price_tiers.map((tier: PriceTier, ti: number) => (
-                                    <TableRow key={ti}>
-                                      <TableCell className="text-xs">{tier.minQty}</TableCell>
-                                      <TableCell className="text-xs">{tier.maxQty ?? t('unlimited')}</TableCell>
-                                      <TableCell className="text-xs">{formatCurrency(tier.pricePerUnit, tier.currency || 'EUR', locale)}</TableCell>
-                                      <TableCell className="text-xs text-green-600">
-                                        {sp.price_per_unit && tier.pricePerUnit < sp.price_per_unit
-                                          ? `-${(((sp.price_per_unit - tier.pricePerUnit) / sp.price_per_unit) * 100).toFixed(0)}%`
-                                          : '-'}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <ResponsiveTable
+                data={products}
+                columns={productColumns}
+                rowKey={sp => sp.id}
+                onRowClick={sp => navigate(`/products/${sp.product_id}`)}
+                emptyState={
+                  <div className="text-muted-foreground">
+                    <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                    <p>{t('No products assigned')}</p>
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -586,7 +636,7 @@ export function SupplierDetailPage() {
               <CardContent>
                 {spend ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="text-center p-3 bg-muted/50 rounded-lg">
                         <p className="text-xs text-muted-foreground">{t('Total')}</p>
                         <p className="text-lg font-bold">{formatCurrency(spend.totalSpend, spend.currency, locale)}</p>

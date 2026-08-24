@@ -181,7 +181,7 @@ export function MegaDashboardPage() {
 
   return (
     <motion.div
-      className="relative -mx-3 sm:-mx-6 -my-4 sm:-my-6 min-h-[calc(100vh-3.5rem)] bg-[#08070d] text-white safe-bottom"
+      className="relative -mx-3 sm:-mx-6 -my-4 sm:-my-6 min-h-[calc(100dvh-3.5rem)] bg-[#08070d] text-white safe-bottom"
       style={pullEnabled ? { y: rubberY } : undefined}
       onPanStart={pullEnabled ? handlePanStart : undefined}
       onPan={pullEnabled ? handlePan : undefined}

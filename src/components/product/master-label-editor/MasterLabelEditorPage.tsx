@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -17,7 +19,7 @@ import type { BatchListItem } from '@/types/product';
 import type { SupplierProduct } from '@/types/database';
 import { detectProductGroup } from '@/lib/master-label-assembler';
 import { LabelEditorProvider, useLabelEditor } from './LabelEditorContext';
-import { LabelEditorLayout } from './LabelEditorLayout';
+import { ResponsiveLabelEditorLayout } from './LabelEditorLayout';
 import { LabelEditorToolbar } from './LabelEditorToolbar';
 import { LabelElementPalette } from './LabelElementPalette';
 import { LabelCanvas } from './LabelCanvas';
@@ -63,6 +65,8 @@ export function MasterLabelEditorPage(props: MasterLabelEditorPageProps) {
 function MasterLabelEditorInner() {
   const { t } = useTranslation('products');
   const ctx = useLabelEditor();
+  const [showMobilePalette, setShowMobilePalette] = useState(false);
+  const [showMobileRightPane, setShowMobileRightPane] = useState(false);
 
   // Gallery view
   if (ctx.view === 'gallery') {
@@ -79,7 +83,11 @@ function MasterLabelEditorInner() {
   // Editor view
   return (
     <>
-      <LabelEditorLayout
+      <ResponsiveLabelEditorLayout
+        showMobilePalette={showMobilePalette}
+        onMobilePaletteChange={setShowMobilePalette}
+        showMobileRightPane={showMobileRightPane}
+        onMobileRightPaneChange={setShowMobileRightPane}
         toolbar={
           <LabelEditorToolbar
             templateName={ctx.activeTemplate?.name || t('ml.template.untitled')}
@@ -108,6 +116,9 @@ function MasterLabelEditorInner() {
             onManufacturerOverride={ctx.onManufacturerOverride}
             importerOverrideId={ctx.importerOverrideId}
             onImporterOverride={ctx.onImporterOverride}
+            showMobileToggles
+            onTogglePalette={() => setShowMobilePalette(true)}
+            onToggleRightPane={() => setShowMobileRightPane(true)}
           />
         }
         palette={
@@ -116,9 +127,13 @@ function MasterLabelEditorInner() {
             onClickAdd={(type) => {
               const firstVisible = ctx.design.sections.find(s => s.visible);
               if (firstVisible) ctx.addElement(type, firstVisible.id);
+              setShowMobilePalette(false);
             }}
             onFieldDragStart={() => {}}
-            onFieldClickAdd={(fieldKey) => ctx.addFieldElement(fieldKey)}
+            onFieldClickAdd={(fieldKey) => {
+              ctx.addFieldElement(fieldKey);
+              setShowMobilePalette(false);
+            }}
           />
         }
         canvas={
@@ -145,16 +160,18 @@ function MasterLabelEditorInner() {
         }
         rightPane={
           <Tabs value={ctx.rightPanelTab} onValueChange={(v) => ctx.setRightPanelTab(v as any)}>
-            <TabsList className="w-full grid grid-cols-5 h-9">
-              <TabsTrigger value="preview" className="text-xs">{t('ml.editor.tabPreview')}</TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs">{t('ml.editor.tabSettings')}</TabsTrigger>
-              <TabsTrigger value="design" className="text-xs">{t('ml.editor.tabDesign')}</TabsTrigger>
-              <TabsTrigger value="pictograms" className="text-xs">{t('ml.editor.tabPictograms')}</TabsTrigger>
-              <TabsTrigger value="check" className="text-xs gap-1">
-                <ShieldCheck className="h-3 w-3" />
-                {t('ml.editor.tabCheck')}
-              </TabsTrigger>
-            </TabsList>
+            <ScrollableTabs>
+              <TabsList className="flex w-full h-9">
+                <TabsTrigger value="preview" className="text-xs flex-shrink-0">{t('ml.editor.tabPreview')}</TabsTrigger>
+                <TabsTrigger value="settings" className="text-xs flex-shrink-0">{t('ml.editor.tabSettings')}</TabsTrigger>
+                <TabsTrigger value="design" className="text-xs flex-shrink-0">{t('ml.editor.tabDesign')}</TabsTrigger>
+                <TabsTrigger value="pictograms" className="text-xs flex-shrink-0">{t('ml.editor.tabPictograms')}</TabsTrigger>
+                <TabsTrigger value="check" className="text-xs gap-1 flex-shrink-0">
+                  <ShieldCheck className="h-3 w-3" />
+                  {t('ml.editor.tabCheck')}
+                </TabsTrigger>
+              </TabsList>
+            </ScrollableTabs>
 
             <TabsContent value="preview" className="mt-0">
               <div className="p-4 flex flex-col items-center gap-2">

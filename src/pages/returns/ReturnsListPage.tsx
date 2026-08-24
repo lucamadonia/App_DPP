@@ -17,6 +17,7 @@ import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { PaginationBar } from '@/components/returns/PaginationBar';
+import { PageContainer } from '@/components/layout/page-container';
 import { relativeTime } from '@/lib/animations';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, scaleIn, useReducedMotion } from '@/lib/motion';
 import { getReturns } from '@/services/supabase';
@@ -79,25 +80,26 @@ export function ReturnsListPage() {
   const wrapperProps = prefersReduced ? {} : { variants: pageVariants, initial: 'initial', animate: 'animate', transition: pageTransition };
 
   return (
-    <Wrapper className="space-y-6" {...wrapperProps as any}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('Returns')}</h1>
-          <p className="text-muted-foreground">
-            {t('Showing {{from}} to {{to}} of {{total}} returns', {
-              from: Math.min((page - 1) * 20 + 1, result.total),
-              to: Math.min(page * 20, result.total),
-              total: result.total,
-            })}
-          </p>
-        </div>
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={loadReturns}
+      title={t('Returns')}
+      description={t('Showing {{from}} to {{to}} of {{total}} returns', {
+        from: Math.min((page - 1) * 20 + 1, result.total),
+        to: Math.min(page * 20, result.total),
+        total: result.total,
+      })}
+      actions={
         <Link to="/returns/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             {t('New Return')}
           </Button>
         </Link>
-      </div>
+      }
+    >
+      <Wrapper className="space-y-6" {...wrapperProps as any}>
 
       <Card>
         <CardHeader className="pb-3">
@@ -326,6 +328,7 @@ export function ReturnsListPage() {
           )}
         </CardContent>
       </Card>
-    </Wrapper>
+      </Wrapper>
+    </PageContainer>
   );
 }

@@ -4,10 +4,11 @@ import { ArrowLeft, Download, Send, Recycle, Package, RefreshCw, Trash2, AlertCi
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { ComplianceStatusBadge } from '@/components/compliance/ComplianceStatusBadge';
 import { generateLucidReport, getLucidReportForMonth, submitLucidReport } from '@/services/supabase/compliance-lucid';
@@ -23,9 +24,16 @@ function fmtKg(g: number): string {
   return (g / 1000).toFixed(3).replace('.', ',');
 }
 
+/** One material x packaging pair, flattened out of the LUCID snapshot rows. */
+type PackagingRow = LucidAggregateRow['perPackaging'][number] & {
+  material: LucidAggregateRow['material'];
+  isFirstOfGroup: boolean;
+};
+
 export function LucidReportDetailPage() {
   const { yearMonth } = useParams<{ yearMonth: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const reportMonth = yearMonth ? `${yearMonth}-01` : '';
 
   const [report, setReport] = useState<ComplianceMonthlyReport | null>(null);
@@ -127,6 +135,128 @@ export function LucidReportDetailPage() {
   const editable = report.status === 'draft' || report.status === 'obsolete';
   const maxWeight = Math.max(...snap.rows.map(r => r.totalWeightGrams), 1);
 
+  // Material breakdown, flattened for ResponsiveTable (real table on md+, one
+  // card per material below). The Gesamt line rides along as a final synthetic
+  // row so it survives without a raw <Table> footer.
+  type MaterialRow =
+    | { kind: 'material'; key: string; material: (typeof LUCID_MATERIAL_ORDER)[number]; row?: LucidAggregateRow }
+    | { kind: 'total'; key: string };
+  const materialRows: MaterialRow[] = [
+    ...LUCID_MATERIAL_ORDER.map(m => {
+      const row = snap.rows.find(r => r.material === m);
+      return {
+        kind: 'material' as const,
+        key: m,
+        material: m,
+        row: row && row.totalWeightGrams > 0 ? row : undefined,
+      };
+    }),
+    { kind: 'total' as const, key: '__total' },
+  ];
+  const materialColumns: ResponsiveTableColumn<MaterialRow>[] = [
+    {
+      id: 'material',
+      header: 'Material',
+      mobilePriority: 'title',
+      cell: r =>
+        r.kind === 'total' ? (
+          'Gesamt'
+        ) : (
+          <span className={r.row ? 'font-medium' : undefined}>{LUCID_MATERIAL_NAMES_DE[r.material]}</span>
+        ),
+    },
+    {
+      id: 'kg',
+      header: 'kg',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: 'kg',
+      cell: r => {
+        if (r.kind === 'total') {
+          return <span className="tabular-nums">{fmtKg(snap.totalWeightGrams)}</span>;
+        }
+        if (!r.row) return '—';
+        return <span className="tabular-nums font-semibold">{fmtKg(r.row.totalWeightGrams)}</span>;
+      },
+    },
+    {
+      id: 'share',
+      header: 'Anteil',
+      hideBelow: 'sm',
+      cell: r => {
+        if (r.kind === 'total') return null;
+        if (!r.row) return '—';
+        return (
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-emerald-500"
+              style={{ width: `${(r.row.totalWeightGrams / maxWeight) * 100}%` }}
+            />
+          </div>
+        );
+      },
+    },
+    {
+      id: 'shipments',
+      header: 'Sendungen',
+      hideBelow: 'md',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: 'Sendungen',
+      cell: r => {
+        if (r.kind === 'total') return <span className="tabular-nums">{snap.shipmentCount}</span>;
+        if (!r.row) return '—';
+        return <span className="tabular-nums">{r.row.contributingShipmentCount}</span>;
+      },
+    },
+  ];
+
+  // Flattened material x packaging rows for the drill-down table.
+  const packagingRows: PackagingRow[] = snap.rows.flatMap(r =>
+    r.perPackaging.map((p, i) => ({ ...p, material: r.material, isFirstOfGroup: i === 0 }))
+  );
+
+  const packagingColumns: ResponsiveTableColumn<PackagingRow>[] = [
+    {
+      id: 'material',
+      header: 'Material',
+      mobilePriority: 'subtitle',
+      // Desktop groups visually (label only on the first row); each card repeats it.
+      cell: (row) => (isMobile || row.isFirstOfGroup ? LUCID_MATERIAL_NAMES_DE[row.material] : ''),
+    },
+    {
+      id: 'packaging',
+      header: 'Verpackung',
+      mobilePriority: 'title',
+      cell: (row) => row.packagingName,
+    },
+    {
+      id: 'consumed',
+      header: 'Stück verbraucht',
+      className: 'text-right tabular-nums',
+      mobilePriority: 'meta',
+      mobileLabel: 'Stück',
+      cell: (row) => row.consumedCount,
+    },
+    {
+      id: 'perUnit',
+      header: 'g pro Stück',
+      className: 'text-right tabular-nums',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: 'g/Stück',
+      cell: (row) => row.weightPerUnit,
+    },
+    {
+      id: 'total',
+      header: 'kg gesamt',
+      className: 'text-right tabular-nums font-semibold',
+      mobilePriority: 'meta',
+      mobileLabel: 'kg gesamt',
+      cell: (row) => fmtKg(row.weightContributionGrams),
+    },
+  ];
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-start gap-2 flex-wrap">
@@ -162,52 +292,19 @@ export function LucidReportDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead className="text-right">kg</TableHead>
-                  <TableHead className="hidden sm:table-cell">Anteil</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Sendungen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {LUCID_MATERIAL_ORDER.map((m) => {
-                  const row = snap.rows.find(r => r.material === m);
-                  if (!row || row.totalWeightGrams === 0) {
-                    return (
-                      <TableRow key={m} className="text-muted-foreground">
-                        <TableCell>{LUCID_MATERIAL_NAMES_DE[m]}</TableCell>
-                        <TableCell className="text-right">—</TableCell>
-                        <TableCell className="hidden sm:table-cell">—</TableCell>
-                        <TableCell className="text-right hidden md:table-cell">—</TableCell>
-                      </TableRow>
-                    );
-                  }
-                  const pct = (row.totalWeightGrams / maxWeight) * 100;
-                  return (
-                    <TableRow key={m}>
-                      <TableCell className="font-medium">{LUCID_MATERIAL_NAMES_DE[m]}</TableCell>
-                      <TableCell className="text-right tabular-nums font-semibold">{fmtKg(row.totalWeightGrams)}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums hidden md:table-cell">{row.contributingShipmentCount}</TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="border-t-2 font-bold bg-muted/30">
-                  <TableCell>Gesamt</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtKg(snap.totalWeightGrams)}</TableCell>
-                  <TableCell className="hidden sm:table-cell" />
-                  <TableCell className="text-right tabular-nums hidden md:table-cell">{snap.shipmentCount}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <ResponsiveTable
+            data={materialRows}
+            columns={materialColumns}
+            rowKey={r => r.key}
+            className="border-0 bg-transparent rounded-none"
+            rowClassName={r =>
+              r.kind === 'total'
+                ? 'border-t-2 font-bold bg-muted/30'
+                : r.row
+                  ? undefined
+                  : 'text-muted-foreground'
+            }
+          />
         </CardContent>
       </Card>
 
@@ -218,37 +315,17 @@ export function LucidReportDetailPage() {
           <CardDescription>Welche Verpackungs-Typen haben zu jedem Material beigetragen.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead>Verpackung</TableHead>
-                  <TableHead className="text-right">Stück verbraucht</TableHead>
-                  <TableHead className="text-right">g pro Stück</TableHead>
-                  <TableHead className="text-right">kg gesamt</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {snap.rows.flatMap(r => r.perPackaging.map((p, i) => (
-                  <TableRow key={`${r.material}-${p.packagingId}`}>
-                    <TableCell>{i === 0 ? LUCID_MATERIAL_NAMES_DE[r.material] : ''}</TableCell>
-                    <TableCell>{p.packagingName}</TableCell>
-                    <TableCell className="text-right tabular-nums">{p.consumedCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">{p.weightPerUnit}</TableCell>
-                    <TableCell className="text-right tabular-nums font-semibold">{fmtKg(p.weightContributionGrams)}</TableCell>
-                  </TableRow>
-                )))}
-                {snap.rows.every(r => r.perPackaging.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">
-                      Keine Verpackungs-Verbräuche in diesem Monat. Stelle sicher, dass Sendungen ein Packaging zugeordnet hatten und der Bestand getrackt war.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <ResponsiveTable
+            data={packagingRows}
+            columns={packagingColumns}
+            rowKey={(row) => `${row.material}-${row.packagingId}`}
+            className="border-0 bg-transparent rounded-none"
+            emptyState={
+              <span className="text-sm text-muted-foreground">
+                Keine Verpackungs-Verbräuche in diesem Monat. Stelle sicher, dass Sendungen ein Packaging zugeordnet hatten und der Bestand getrackt war.
+              </span>
+            }
+          />
         </CardContent>
       </Card>
 

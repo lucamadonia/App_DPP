@@ -73,7 +73,7 @@ function ReturnsTab({ t }: { t: (key: string) => string }) {
   return (
     <div className="space-y-4">
       {/* KPI Row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { key: 'open', value: '24', color: 'text-rose-400' },
           { key: 'today', value: '7', color: 'text-blue-400' },
@@ -154,7 +154,7 @@ function TicketsTab({ t }: { t: (key: string) => string }) {
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {columns.map((col) => (
         <div key={col.key}>
           <div className="flex items-center justify-between mb-2">

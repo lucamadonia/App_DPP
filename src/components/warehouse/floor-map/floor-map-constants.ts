@@ -98,7 +98,7 @@ export const HEATMAP_COLORS = [
 
 /** Canvas height presets */
 export const CANVAS_HEIGHT_NORMAL = 'clamp(400px, 65vh, 85vh)';
-export const CANVAS_HEIGHT_FULLSCREEN = '100vh';
+export const CANVAS_HEIGHT_FULLSCREEN = '100dvh';
 
 /** Bin dot fill-level colors */
 export const BIN_DOT_COLORS = {

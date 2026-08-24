@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { ComplianceStatusBadge } from '@/components/compliance/ComplianceStatusBadge';
 import { generateEarReport, getEarReportForMonth, submitEarReport } from '@/services/supabase/compliance-ear';
@@ -22,6 +22,37 @@ import { toast } from 'sonner';
 
 function fmtKg(g: number): string {
   return (g / 1000).toFixed(3).replace('.', ',');
+}
+
+/**
+ * One line of the category breakdown, flattened so it can go through
+ * ResponsiveTable (real table on md+, one card per line below).
+ *
+ * `empty` stands in for a category with no data, `total` for the Gesamt line —
+ * both were `colSpan` rows in the old raw <Table>. Blank cells reproduce the
+ * span exactly on desktop, since the table draws no vertical rules.
+ */
+type EarBreakdownRow =
+  | { kind: 'data'; key: string; category: EarCategory; showName: boolean; row: EarAggregateRow }
+  | { kind: 'empty'; key: string; category: EarCategory }
+  | { kind: 'total'; key: string };
+
+function buildEarBreakdownRows(snap: EarSnapshot): EarBreakdownRow[] {
+  const out = ([1, 2, 3, 4, 5, 6] as EarCategory[]).flatMap<EarBreakdownRow>(category => {
+    const rows = snap.rows.filter(r => r.category === category);
+    if (rows.length === 0) {
+      return [{ kind: 'empty', key: `${category}-empty`, category }];
+    }
+    return rows.map((row, i) => ({
+      kind: 'data' as const,
+      key: `${category}-${row.b2b}`,
+      category,
+      showName: i === 0,
+      row,
+    }));
+  });
+  out.push({ kind: 'total', key: '__total' });
+  return out;
 }
 
 export function EarReportDetailPage() {
@@ -165,6 +196,93 @@ export function EarReportDetailPage() {
   const snap = report.summary as EarSnapshot;
   const editable = report.status === 'draft' || report.status === 'obsolete';
 
+  const breakdownColumns: ResponsiveTableColumn<EarBreakdownRow>[] = [
+    {
+      id: 'category',
+      header: 'Kategorie',
+      mobilePriority: 'title',
+      cell: r => {
+        if (r.kind === 'total') return 'Gesamt';
+        const muted = r.kind === 'empty' || !r.showName;
+        return (
+          <span className={muted ? 'text-muted-foreground' : undefined}>
+            <span className="font-mono tabular-nums mr-2">{r.category}</span>
+            {(r.kind === 'empty' || r.showName) && EAR_CATEGORY_NAMES_DE[r.category]}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'market',
+      header: 'Markt',
+      mobilePriority: 'badge',
+      cell: r => {
+        if (r.kind === 'empty') return <span className="text-xs text-muted-foreground">—</span>;
+        if (r.kind === 'total') return null;
+        return (
+          <Badge
+            variant="outline"
+            className={
+              r.row.b2b
+                ? 'bg-purple-50 text-purple-800 border-purple-300'
+                : 'bg-blue-50 text-blue-800 border-blue-300'
+            }
+          >
+            {r.row.b2b ? 'B2B' : 'B2C'}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'units',
+      header: 'Stück',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: 'Stück',
+      cell: r => {
+        if (r.kind === 'empty') return null;
+        const v = r.kind === 'total' ? snap.totalUnits : r.row.unitCount;
+        return <span className="tabular-nums font-semibold">{v}</span>;
+      },
+    },
+    {
+      id: 'kg',
+      header: 'kg',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: 'kg',
+      cell: r => {
+        if (r.kind === 'empty') return null;
+        const v = r.kind === 'total' ? snap.totalWeightGrams : r.row.totalWeightGrams;
+        return <span className="tabular-nums">{fmtKg(v)}</span>;
+      },
+    },
+    {
+      id: 'withBattery',
+      header: 'mit Batterie',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: 'mit Batterie',
+      cell: r => {
+        if (r.kind === 'empty') return null;
+        const v = r.kind === 'total' ? snap.totalUnitsWithBattery : r.row.unitsWithBattery;
+        return <span className="tabular-nums">{v}</span>;
+      },
+    },
+    {
+      id: 'batteryKg',
+      header: 'Batterie kg',
+      className: 'text-right',
+      mobilePriority: 'meta',
+      mobileLabel: 'Batterie kg',
+      cell: r => {
+        if (r.kind === 'empty') return null;
+        const v = r.kind === 'total' ? snap.totalBatteryWeightGrams : r.row.batteryWeightGrams;
+        return <span className="tabular-nums">{fmtKg(v)}</span>;
+      },
+    },
+  ];
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-start gap-2 flex-wrap">
@@ -202,60 +320,19 @@ export function EarReportDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kategorie</TableHead>
-                  <TableHead>Markt</TableHead>
-                  <TableHead className="text-right">Stück</TableHead>
-                  <TableHead className="text-right">kg</TableHead>
-                  <TableHead className="text-right">mit Batterie</TableHead>
-                  <TableHead className="text-right">Batterie kg</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {([1, 2, 3, 4, 5, 6] as EarCategory[]).flatMap(cat => {
-                  const rows = snap.rows.filter(r => r.category === cat);
-                  if (rows.length === 0) {
-                    return [
-                      <TableRow key={`${cat}-empty`} className="text-muted-foreground">
-                        <TableCell>
-                          <span className="font-mono tabular-nums mr-2 text-muted-foreground">{cat}</span>
-                          {EAR_CATEGORY_NAMES_DE[cat]}
-                        </TableCell>
-                        <TableCell colSpan={5} className="text-xs text-muted-foreground">—</TableCell>
-                      </TableRow>,
-                    ];
-                  }
-                  return rows.map((row, i) => (
-                    <TableRow key={`${cat}-${row.b2b}`}>
-                      <TableCell className={i > 0 ? 'text-muted-foreground' : ''}>
-                        <span className="font-mono tabular-nums mr-2">{cat}</span>
-                        {i === 0 && EAR_CATEGORY_NAMES_DE[cat]}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={row.b2b ? 'bg-purple-50 text-purple-800 border-purple-300' : 'bg-blue-50 text-blue-800 border-blue-300'}>
-                          {row.b2b ? 'B2B' : 'B2C'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-semibold">{row.unitCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtKg(row.totalWeightGrams)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{row.unitsWithBattery}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtKg(row.batteryWeightGrams)}</TableCell>
-                    </TableRow>
-                  ));
-                })}
-                <TableRow className="border-t-2 font-bold bg-muted/30">
-                  <TableCell colSpan={2}>Gesamt</TableCell>
-                  <TableCell className="text-right tabular-nums">{snap.totalUnits}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtKg(snap.totalWeightGrams)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{snap.totalUnitsWithBattery}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtKg(snap.totalBatteryWeightGrams)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <ResponsiveTable
+            data={buildEarBreakdownRows(snap)}
+            columns={breakdownColumns}
+            rowKey={r => r.key}
+            className="border-0 bg-transparent rounded-none"
+            rowClassName={r =>
+              r.kind === 'total'
+                ? 'border-t-2 font-bold bg-muted/30'
+                : r.kind === 'empty'
+                  ? 'text-muted-foreground'
+                  : undefined
+            }
+          />
         </CardContent>
       </Card>
 

@@ -101,7 +101,6 @@
   "Plan upgraded successfully": "Plan erfolgreich geupgradet!",
   "Module activated successfully": "Modul erfolgreich aktiviert!",
   "Product limit reached ({{current}}/{{limit}}). Upgrade your plan to add more products.": "Produktlimit erreicht ({{current}}/{{limit}}). Upgraden Sie Ihren Plan, um mehr Produkte hinzuzufügen.",
-
   "Feature Comparison": "Funktionsvergleich",
   "Feature": "Funktion",
   "Current": "Aktuell",
@@ -115,7 +114,6 @@
   "Custom CSS": "Eigenes CSS",
   "Customs Visibility": "Zoll-Sichtbarkeit",
   "Internal Visibility": "Interne Sichtbarkeit",
-
   "Starting at": "Ab",
   "View Plans & Activate": "Pläne anzeigen & aktivieren",
   "Unlock this feature and more with {{plan}}": "Schalten Sie diese Funktion und mehr mit {{plan}} frei",
@@ -127,7 +125,6 @@
   "Custom CSS support": "Eigene CSS-Unterstützung",
   "100 AI Credits/month": "100 AI-Credits/Monat",
   "25 Admin Users": "25 Admin-Benutzer",
-
   "Manage customer returns efficiently with automated workflows": "Kundenretouren effizient mit automatisierten Workflows verwalten",
   "Up to 50 returns per month": "Bis zu 50 Retouren pro Monat",
   "Automated status tracking": "Automatische Statusverfolgung",
@@ -153,7 +150,6 @@
   "DNS verification wizard": "DNS-Verifizierungsassistent",
   "Full white-labeling": "Vollständiges White-Labeling",
   "SSL included": "SSL inklusive",
-
   "Company Profile": "Unternehmensprofil",
   "Tell us about your company to personalize your experience": "Erzählen Sie uns von Ihrem Unternehmen, um Ihr Erlebnis zu personalisieren",
   "Company Name": "Firmenname",
@@ -195,5 +191,9 @@
   "{{count}} Shipments/month": "{{count}} Sendungen/Monat",
   "Multi-Warehouse Transfers": "Multi-Lager-Umlagerungen",
   "Shipping Labels": "Versandetiketten",
-  "CSV Import/Export": "CSV Import/Export"
+  "CSV Import/Export": "CSV Import/Export",
+  "Plan & Credits": "Plan & Credits",
+  "Your current plan and AI credit balance": "Dein aktueller Plan und AI-Credit-Guthaben",
+  "Current plan": "Aktueller Plan",
+  "Plan changes are managed by your administrator.": "Planänderungen werden von deiner Administration verwaltet."
 }

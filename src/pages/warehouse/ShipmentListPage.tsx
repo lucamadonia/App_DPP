@@ -27,6 +27,7 @@ import { gridStagger, gridItem, spring, useReducedMotion } from '@/lib/motion';
 import {
   SHIPMENT_STATUS_COLORS, SHIPMENT_STATUS_ICONS, SHIPMENT_STATUS_ICON_COLORS, PRIORITY_COLORS,
 } from '@/lib/warehouse-constants';
+import { PageContainer } from '@/components/layout/page-container';
 import { SampleStatusBadge } from '@/components/warehouse/SampleStatusBadge';
 import { ShipmentQuickAction } from '@/components/warehouse/shipment-list-quick-action';
 import {
@@ -537,19 +538,21 @@ export function ShipmentListPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-2 sm:p-2.5">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={() => Promise.all([loadShipments(), loadCounts()])}
+      title={
+        <span className="flex items-center gap-2 sm:gap-3">
+          <span className="rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-2 sm:p-2.5">
             <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              {t('Shipments')}
-            </h1>
-          </div>
-        </div>
+          </span>
+          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            {t('Shipments')}
+          </span>
+        </span>
+      }
+      actions={
         <div className="flex gap-2 w-full sm:w-auto justify-end">
           {/* Desktop create button — mobile uses the FAB at the bottom instead */}
           <Button asChild className="hidden sm:inline-flex">
@@ -589,8 +592,9 @@ export function ShipmentListPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
       {/* KPI Cards — choreographed entrance */}
       <motion.div
         variants={prefersReduced ? undefined : gridStagger}
@@ -1010,6 +1014,7 @@ export function ShipmentListPage() {
           <Plus className="h-6 w-6" />
         </Link>
       </Button>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

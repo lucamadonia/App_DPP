@@ -572,6 +572,9 @@
   "ml.fieldGroup.compliance": "Compliance",
 
   "ml.editor.tabCheck": "Check",
+  "ml.editor.mobileElements": "Elements",
+  "ml.editor.mobileElementsHint": "Tap an element to add it to the label",
+  "ml.editor.mobileSettings": "Settings & Preview",
   "ml.editor.valueColor": "Value Color",
   "ml.editor.labelColor": "Label Color",
   "ml.editor.lineHeight": "Line Height",

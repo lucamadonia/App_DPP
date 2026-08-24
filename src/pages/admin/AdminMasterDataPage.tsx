@@ -11,10 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -213,6 +213,94 @@ export function AdminMasterDataPage() {
     { id: 'news' as const, label: t('News'), icon: Bell, count: news.length },
   ];
 
+  // ── Table columns (shared shape: ResponsiveTable renders cards below md) ──
+  const rowActions = (item: { id: string }) => (
+    <div className="flex gap-1">
+      <Button variant="ghost" size="icon" aria-label={t('Edit', { ns: 'common' })} onClick={() => openEditDialog(item)}><Pencil className="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" aria-label={t('Delete', { ns: 'common' })} onClick={() => handleDelete(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+    </div>
+  );
+
+  const actionsColumn = <T extends { id: string }>(): ResponsiveTableColumn<T> => ({
+    id: 'actions',
+    header: '',
+    className: 'w-[80px]',
+    mobilePriority: 'meta',
+    cell: rowActions,
+  });
+
+  const matches = (value: string | undefined | null) =>
+    !searchQuery || (value ?? '').toLowerCase().includes(searchQuery.toLowerCase());
+
+  const countryColumns: ResponsiveTableColumn<Country>[] = [
+    { id: 'flag', header: t('Countries'), cell: (c) => <span className="text-2xl">{c.flag}</span> },
+    { id: 'code', header: t('Code'), mobilePriority: 'badge', cell: (c) => <Badge variant="outline">{c.code}</Badge> },
+    { id: 'name', header: t('Name'), mobilePriority: 'title', cell: (c) => <span className="font-medium">{c.name}</span> },
+    actionsColumn<Country>(),
+  ];
+
+  const categoryColumns: ResponsiveTableColumn<Category>[] = [
+    { id: 'icon', header: t('Icon'), cell: (c) => <span className="text-2xl">{c.icon}</span> },
+    { id: 'name', header: t('Name'), mobilePriority: 'title', cell: (c) => <span className="font-medium">{c.name}</span> },
+    { id: 'sort', header: t('Sort Order'), hideBelow: 'md', mobilePriority: 'meta', mobileLabel: t('Sort Order'), cell: (c) => c.sort_order },
+    actionsColumn<Category>(),
+  ];
+
+  const regulationColumns: ResponsiveTableColumn<EURegulation>[] = [
+    { id: 'name', header: t('Name'), mobilePriority: 'title', cell: (r) => <span className="font-medium">{r.name}</span> },
+    { id: 'category', header: t('Category', { ns: 'common' }), hideBelow: 'md', mobilePriority: 'subtitle', cell: (r) => <Badge variant="outline">{r.category}</Badge> },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (r) => <Badge className={r.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>{r.status}</Badge>,
+    },
+    actionsColumn<EURegulation>(),
+  ];
+
+  const pictogramColumns: ResponsiveTableColumn<Pictogram>[] = [
+    { id: 'symbol', header: t('Symbol'), cell: (p) => <span className="text-2xl">{p.symbol}</span> },
+    { id: 'name', header: t('Name'), mobilePriority: 'title', cell: (p) => <span className="font-medium">{p.name}</span> },
+    { id: 'category', header: t('Category', { ns: 'common' }), hideBelow: 'md', mobilePriority: 'subtitle', cell: (p) => <Badge variant="outline">{p.category}</Badge> },
+    {
+      id: 'mandatory',
+      header: t('Mandatory'),
+      mobilePriority: 'badge',
+      cell: (p) => (p.mandatory ? <Badge>{t('Yes', { ns: 'common' })}</Badge> : <Badge variant="secondary">{t('No', { ns: 'common' })}</Badge>),
+    },
+    actionsColumn<Pictogram>(),
+  ];
+
+  const recyclingColumns: ResponsiveTableColumn<RecyclingCode>[] = [
+    { id: 'code', header: t('Code'), cell: (r) => <Badge variant="outline">{r.code}</Badge> },
+    { id: 'symbol', header: t('Symbol'), hideBelow: 'md', cell: (r) => <span className="text-2xl">{r.symbol}</span> },
+    { id: 'name', header: t('Name'), mobilePriority: 'title', cell: (r) => <span className="font-medium">{r.name}</span> },
+    {
+      id: 'recyclable',
+      header: t('Recyclable'),
+      mobilePriority: 'badge',
+      cell: (r) => (r.recyclable
+        ? <Badge className="bg-emerald-100 text-emerald-700">{t('Yes', { ns: 'common' })}</Badge>
+        : <Badge variant="secondary">{t('No', { ns: 'common' })}</Badge>),
+    },
+    actionsColumn<RecyclingCode>(),
+  ];
+
+  const newsColumns: ResponsiveTableColumn<NewsItem>[] = [
+    { id: 'title', header: t('Title'), mobilePriority: 'title', className: 'max-w-[300px]', cell: (n) => <span className="font-medium block truncate">{n.title}</span> },
+    { id: 'category', header: t('Category', { ns: 'common' }), hideBelow: 'md', mobilePriority: 'subtitle', cell: (n) => <Badge variant="outline">{n.category}</Badge> },
+    {
+      id: 'priority',
+      header: t('Priority', { ns: 'common' }),
+      mobilePriority: 'badge',
+      cell: (n) => <Badge className={n.priority === 'high' ? 'bg-red-100 text-red-700' : n.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-muted'}>{n.priority}</Badge>,
+    },
+    { id: 'published', header: t('Published', { ns: 'common' }), hideBelow: 'md', mobilePriority: 'meta', mobileLabel: t('Published', { ns: 'common' }), cell: (n) => n.publishedAt },
+    actionsColumn<NewsItem>(),
+  ];
+
+  const emptyState = <p className="text-sm text-muted-foreground">{t('No entries found')}</p>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -236,10 +324,10 @@ export function AdminMasterDataPage() {
         {/* Shared controls */}
         <Card className="mt-4">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-base">{tabConfig.find((t) => t.id === activeTab)?.label}</CardTitle>
               <div className="flex items-center gap-2">
-                <div className="relative w-56">
+                <div className="relative flex-1 sm:w-56 sm:flex-none">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder={t('Search tenants...').replace('tenants', '...')}
@@ -264,151 +352,61 @@ export function AdminMasterDataPage() {
               </div>
             ) : (
               <>
-                {/* Countries Table */}
                 {activeTab === 'countries' && (
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>{t('Countries')}</TableHead><TableHead>Code</TableHead><TableHead>{t('Name')}</TableHead><TableHead className="w-[80px]"></TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {countries.filter((c) => !searchQuery || c.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((c) => (
-                        <TableRow key={c.id}>
-                          <TableCell className="text-2xl">{c.flag}</TableCell>
-                          <TableCell><Badge variant="outline">{c.code}</Badge></TableCell>
-                          <TableCell className="font-medium">{c.name}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(c)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={countries.filter((c) => matches(c.name))}
+                    columns={countryColumns}
+                    rowKey={(c) => c.id}
+                    emptyState={emptyState}
+                  />
                 )}
 
-                {/* Categories Table */}
                 {activeTab === 'categories' && (
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Icon</TableHead><TableHead>{t('Name')}</TableHead><TableHead>Sort</TableHead><TableHead className="w-[80px]"></TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {categories.filter((c) => !searchQuery || c.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((c) => (
-                        <TableRow key={c.id}>
-                          <TableCell className="text-2xl">{c.icon}</TableCell>
-                          <TableCell className="font-medium">{c.name}</TableCell>
-                          <TableCell>{c.sort_order}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(c)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={categories.filter((c) => matches(c.name))}
+                    columns={categoryColumns}
+                    rowKey={(c) => c.id}
+                    mobileCardTitle={(c) => <span>{c.icon} {c.name}</span>}
+                    emptyState={emptyState}
+                  />
                 )}
 
-                {/* EU Regulations Table */}
                 {activeTab === 'regulations_eu' && (
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>{t('Name')}</TableHead><TableHead>Category</TableHead><TableHead>{t('Status')}</TableHead><TableHead className="w-[80px]"></TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {regulations.filter((r) => !searchQuery || r.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell className="font-medium">{r.name}</TableCell>
-                          <TableCell><Badge variant="outline">{r.category}</Badge></TableCell>
-                          <TableCell><Badge className={r.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>{r.status}</Badge></TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(r)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={regulations.filter((r) => matches(r.name))}
+                    columns={regulationColumns}
+                    rowKey={(r) => r.id}
+                    emptyState={emptyState}
+                  />
                 )}
 
-                {/* Pictograms Table */}
                 {activeTab === 'pictograms' && (
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Symbol</TableHead><TableHead>{t('Name')}</TableHead><TableHead>Category</TableHead><TableHead>Mandatory</TableHead><TableHead className="w-[80px]"></TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {pictograms.filter((p) => !searchQuery || p.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="text-2xl">{p.symbol}</TableCell>
-                          <TableCell className="font-medium">{p.name}</TableCell>
-                          <TableCell><Badge variant="outline">{p.category}</Badge></TableCell>
-                          <TableCell>{p.mandatory ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(p)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={pictograms.filter((p) => matches(p.name))}
+                    columns={pictogramColumns}
+                    rowKey={(p) => p.id}
+                    mobileCardTitle={(p) => <span>{p.symbol} {p.name}</span>}
+                    emptyState={emptyState}
+                  />
                 )}
 
-                {/* Recycling Codes Table */}
                 {activeTab === 'recycling_codes' && (
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Code</TableHead><TableHead>Symbol</TableHead><TableHead>{t('Name')}</TableHead><TableHead>Recyclable</TableHead><TableHead className="w-[80px]"></TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {recyclingCodes.filter((r) => !searchQuery || r.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell><Badge variant="outline">{r.code}</Badge></TableCell>
-                          <TableCell className="text-2xl">{r.symbol}</TableCell>
-                          <TableCell className="font-medium">{r.name}</TableCell>
-                          <TableCell>{r.recyclable ? <Badge className="bg-emerald-100 text-emerald-700">Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(r)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={recyclingCodes.filter((r) => matches(r.name))}
+                    columns={recyclingColumns}
+                    rowKey={(r) => r.id}
+                    mobileCardTitle={(r) => <span>{r.symbol} {r.name}</span>}
+                    emptyState={emptyState}
+                  />
                 )}
 
-                {/* News Table */}
                 {activeTab === 'news' && (
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Priority</TableHead><TableHead>Published</TableHead><TableHead className="w-[80px]"></TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {news.filter((n) => !searchQuery || n.title?.toLowerCase().includes(searchQuery.toLowerCase())).map((n) => (
-                        <TableRow key={n.id}>
-                          <TableCell className="font-medium max-w-[300px] truncate">{n.title}</TableCell>
-                          <TableCell><Badge variant="outline">{n.category}</Badge></TableCell>
-                          <TableCell><Badge className={n.priority === 'high' ? 'bg-red-100 text-red-700' : n.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-muted'}>{n.priority}</Badge></TableCell>
-                          <TableCell>{n.publishedAt}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(n)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveTable
+                    data={news.filter((n) => matches(n.title))}
+                    columns={newsColumns}
+                    rowKey={(n) => n.id}
+                    emptyState={emptyState}
+                  />
                 )}
               </>
             )}
@@ -418,7 +416,7 @@ export function AdminMasterDataPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dialogMode === 'create' ? 'Create' : 'Edit'}: {tabConfig.find((t) => t.id === activeTab)?.label}</DialogTitle>
           </DialogHeader>
@@ -443,9 +441,9 @@ export function AdminMasterDataPage() {
           {/* Category Form */}
           {activeTab === 'categories' && (
             <div className="grid gap-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><Label>Icon</Label><Input value={formData.icon || ''} onChange={(e) => updateForm('icon', e.target.value)} /></div>
-                <div className="col-span-3"><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
+                <div className="sm:col-span-3"><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
               </div>
               <div><Label>Description</Label><Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} /></div>
               <div><Label>Sort Order</Label><Input type="number" value={formData.sort_order || 0} onChange={(e) => updateForm('sort_order', parseInt(e.target.value))} /></div>
@@ -456,9 +454,9 @@ export function AdminMasterDataPage() {
           {/* Pictogram Form */}
           {activeTab === 'pictograms' && (
             <div className="grid gap-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><Label>Symbol</Label><Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} /></div>
-                <div className="col-span-3"><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
+                <div className="sm:col-span-3"><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
               </div>
               <div><Label>Description</Label><Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -487,7 +485,7 @@ export function AdminMasterDataPage() {
           {/* Recycling Code Form */}
           {activeTab === 'recycling_codes' && (
             <div className="grid gap-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div><Label>Code</Label><Input value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} /></div>
                 <div><Label>Symbol</Label><Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} /></div>
                 <div><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>

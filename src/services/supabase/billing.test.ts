@@ -14,6 +14,18 @@ vi.mock('@/lib/supabase', () => ({
   getCurrentTenantId: mockGetCurrentTenantId,
 }))
 
+// createCheckoutSession / createPortalSession no longer go through
+// `supabase.functions.invoke` — they call `invokeEdgeFunction`, which does a raw
+// fetch with an explicit access token and bails out with "Nicht eingeloggt."
+// when there is no session. Mocking the transport keeps these tests about the
+// billing logic rather than about auth plumbing.
+const { mockInvokeEdgeFunction } = vi.hoisted(() => ({
+  mockInvokeEdgeFunction: vi.fn(),
+}))
+vi.mock('@/lib/edge-function', () => ({
+  invokeEdgeFunction: mockInvokeEdgeFunction,
+}))
+
 import {
   getTenantEntitlements,
   checkQuota,
@@ -492,7 +504,7 @@ describe('Billing Service', () => {
   describe('createCheckoutSession', () => {
     it('returns checkout URL on success (subscription mode)', async () => {
       // Arrange
-      mockSupabase.functions.invoke.mockResolvedValue({
+      mockInvokeEdgeFunction.mockResolvedValue({
         data: { url: 'https://checkout.stripe.com/session_123' },
         error: null,
       })
@@ -512,7 +524,7 @@ describe('Billing Service', () => {
 
     it('returns checkout URL on success (payment mode for credits)', async () => {
       // Arrange
-      mockSupabase.functions.invoke.mockResolvedValue({
+      mockInvokeEdgeFunction.mockResolvedValue({
         data: { url: 'https://checkout.stripe.com/session_456' },
         error: null,
       })
@@ -532,7 +544,7 @@ describe('Billing Service', () => {
 
     it('returns error when edge function fails', async () => {
       // Arrange
-      mockSupabase.functions.invoke.mockResolvedValue({
+      mockInvokeEdgeFunction.mockResolvedValue({
         data: null,
         error: { message: 'Edge function error', context: { error: 'Stripe Tax not enabled' } },
       })
@@ -552,7 +564,7 @@ describe('Billing Service', () => {
 
     it('returns error when no URL returned', async () => {
       // Arrange
-      mockSupabase.functions.invoke.mockResolvedValue({
+      mockInvokeEdgeFunction.mockResolvedValue({
         data: { error: 'Missing Stripe customer' },
         error: null,
       })
@@ -576,7 +588,7 @@ describe('Billing Service', () => {
   describe('createPortalSession', () => {
     it('returns portal URL on success', async () => {
       // Arrange
-      mockSupabase.functions.invoke.mockResolvedValue({
+      mockInvokeEdgeFunction.mockResolvedValue({
         data: { url: 'https://billing.stripe.com/portal_123' },
         error: null,
       })
@@ -590,7 +602,7 @@ describe('Billing Service', () => {
 
     it('returns error when no stripe customer', async () => {
       // Arrange
-      mockSupabase.functions.invoke.mockResolvedValue({
+      mockInvokeEdgeFunction.mockResolvedValue({
         data: { error: 'No Stripe customer found for this tenant' },
         error: null,
       })
