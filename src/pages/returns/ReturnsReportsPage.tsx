@@ -15,6 +15,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { pageVariants, pageTransition, gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
 import { getReturnStats, getReturns } from '@/services/supabase';
 import type { ReturnsHubStats, RhReturn } from '@/types/returns-hub';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function ReturnsReportsPage() {
   const { t } = useTranslation('returns');
@@ -88,128 +89,134 @@ export function ReturnsReportsPage() {
   }
 
   return (
-    <Wrapper className="space-y-6" {...wrapperProps as any}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('Reports')}</h1>
-          <p className="text-muted-foreground">{t('Analytics and export')}</p>
-        </div>
-        <div className="flex gap-2">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">{t('Last 7 Days')}</SelectItem>
-              <SelectItem value="30">{t('Last 30 Days')}</SelectItem>
-              <SelectItem value="90">{t('Last 90 Days')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="h-4 w-4 mr-2" /> {t('Export CSV')}
-          </Button>
-        </div>
-      </div>
+    <Wrapper {...wrapperProps as any}>
+      <PageContainer
+        size="full"
+        padding={false}
+        onRefresh={load}
+        title={t('Reports')}
+        description={t('Analytics and export')}
+        actions={
+          <>
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">{t('Last 7 Days')}</SelectItem>
+                <SelectItem value="30">{t('Last 30 Days')}</SelectItem>
+                <SelectItem value="90">{t('Last 90 Days')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleExportCSV}>
+              <Download className="h-4 w-4 mr-2" /> {t('Export CSV')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-6">
 
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">{t('Returns Overview')}</TabsTrigger>
-          <TabsTrigger value="reasons">{t('By Reason')}</TabsTrigger>
-          <TabsTrigger value="refunds">{t('Refunds')}</TabsTrigger>
-        </TabsList>
+          <Tabs defaultValue="overview">
+            <TabsList>
+              <TabsTrigger value="overview">{t('Returns Overview')}</TabsTrigger>
+              <TabsTrigger value="reasons">{t('By Reason')}</TabsTrigger>
+              <TabsTrigger value="refunds">{t('Refunds')}</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="overview" className="mt-4 space-y-4">
-          {loading ? (
-            <>
-              <SkeletonKPICards />
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i}>
-                    <CardContent className="pt-6 animate-pulse">
-                      <div className="h-32 bg-muted rounded" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <ReturnKPICards stats={stats || emptyStats} />
-              <ReturnCharts stats={stats || emptyStats} />
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="reasons" className="mt-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t('Return Reasons')}</CardTitle></CardHeader>
-            <CardContent>
-              {reasonEntries.length === 0 ? (
-                <EmptyState
-                  icon={BarChart3}
-                  title={t('No data available')}
-                  description={t('Return reason data will appear here')}
-                />
+            <TabsContent value="overview" className="mt-4 space-y-4">
+              {loading ? (
+                <>
+                  <SkeletonKPICards />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i}>
+                        <CardContent className="pt-6 animate-pulse">
+                          <div className="h-32 bg-muted rounded" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </>
               ) : (
-                <div className="space-y-3">
-                  {reasonEntries.map(([reason, count]) => (
-                    <div
-                      key={reason}
-                      className="flex items-center justify-between p-3 rounded-lg border"
-                    >
-                      <span className="font-medium">{reason}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full"
-                            style={{ width: `${(count / returns.length) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium w-16 text-right">{count} ({((count / returns.length) * 100).toFixed(0)}%)</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <ReturnKPICards stats={stats || emptyStats} />
+                  <ReturnCharts stats={stats || emptyStats} />
+                </>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="refunds" className="mt-4">
-          {prefersReduced ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card><CardContent className="pt-4 text-center"><p className="text-3xl font-bold">{'\u20AC'}{(stats?.refundVolume ?? 0).toFixed(2)}</p><p className="text-sm text-muted-foreground">{t('Total Refunds')}</p></CardContent></Card>
-              <Card><CardContent className="pt-4 text-center"><p className="text-3xl font-bold">{refundsCount}</p><p className="text-sm text-muted-foreground">{t('Refunds Processed')}</p></CardContent></Card>
-              <Card><CardContent className="pt-4 text-center"><p className="text-3xl font-bold">{'\u20AC'}{avgRefund.toFixed(2)}</p><p className="text-sm text-muted-foreground">{t('Average Refund')}</p></CardContent></Card>
-            </div>
-          ) : (
-            <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
-              <motion.div variants={gridItem}>
-                <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
-                  <CardContent className="pt-4 text-center">
-                    <p className="text-3xl font-bold"><AnimatedCounter value={stats?.refundVolume ?? 0} prefix={'\u20AC'} decimals={2} /></p>
-                    <p className="text-sm text-muted-foreground">{t('Total Refunds')}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              <motion.div variants={gridItem}>
-                <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
-                  <CardContent className="pt-4 text-center">
-                    <p className="text-3xl font-bold"><AnimatedCounter value={refundsCount} /></p>
-                    <p className="text-sm text-muted-foreground">{t('Refunds Processed')}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              <motion.div variants={gridItem}>
-                <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
-                  <CardContent className="pt-4 text-center">
-                    <p className="text-3xl font-bold"><AnimatedCounter value={avgRefund} prefix={'\u20AC'} decimals={2} /></p>
-                    <p className="text-sm text-muted-foreground">{t('Average Refund')}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
-          )}
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="reasons" className="mt-4">
+              <Card>
+                <CardHeader><CardTitle className="text-base">{t('Return Reasons')}</CardTitle></CardHeader>
+                <CardContent>
+                  {reasonEntries.length === 0 ? (
+                    <EmptyState
+                      icon={BarChart3}
+                      title={t('No data available')}
+                      description={t('Return reason data will appear here')}
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {reasonEntries.map(([reason, count]) => (
+                        <div
+                          key={reason}
+                          className="flex items-center justify-between p-3 rounded-lg border"
+                        >
+                          <span className="font-medium">{reason}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full"
+                                style={{ width: `${(count / returns.length) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium w-16 text-right">{count} ({((count / returns.length) * 100).toFixed(0)}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="refunds" className="mt-4">
+              {prefersReduced ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card><CardContent className="pt-4 text-center"><p className="text-3xl font-bold">{'\u20AC'}{(stats?.refundVolume ?? 0).toFixed(2)}</p><p className="text-sm text-muted-foreground">{t('Total Refunds')}</p></CardContent></Card>
+                  <Card><CardContent className="pt-4 text-center"><p className="text-3xl font-bold">{refundsCount}</p><p className="text-sm text-muted-foreground">{t('Refunds Processed')}</p></CardContent></Card>
+                  <Card><CardContent className="pt-4 text-center"><p className="text-3xl font-bold">{'\u20AC'}{avgRefund.toFixed(2)}</p><p className="text-sm text-muted-foreground">{t('Average Refund')}</p></CardContent></Card>
+                </div>
+              ) : (
+                <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
+                  <motion.div variants={gridItem}>
+                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+                      <CardContent className="pt-4 text-center">
+                        <p className="text-3xl font-bold"><AnimatedCounter value={stats?.refundVolume ?? 0} prefix={'\u20AC'} decimals={2} /></p>
+                        <p className="text-sm text-muted-foreground">{t('Total Refunds')}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={gridItem}>
+                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+                      <CardContent className="pt-4 text-center">
+                        <p className="text-3xl font-bold"><AnimatedCounter value={refundsCount} /></p>
+                        <p className="text-sm text-muted-foreground">{t('Refunds Processed')}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={gridItem}>
+                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+                      <CardContent className="pt-4 text-center">
+                        <p className="text-3xl font-bold"><AnimatedCounter value={avgRefund} prefix={'\u20AC'} decimals={2} /></p>
+                        <p className="text-sm text-muted-foreground">{t('Average Refund')}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </motion.div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </PageContainer>
     </Wrapper>
   );
 }

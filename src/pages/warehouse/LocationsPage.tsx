@@ -26,6 +26,7 @@ import { getLocations, createLocation, getLocationStats } from '@/services/supab
 import { gridStagger, blurIn } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import type { WhLocation, WhLocationInput, WarehouseLocationType, LocationStats } from '@/types/warehouse';
+import { PageContainer } from '@/components/layout/page-container';
 
 const LOCATION_TYPES: WarehouseLocationType[] = ['main', 'external', 'dropship', 'consignment', 'returns'];
 
@@ -231,216 +232,218 @@ export function LocationsPage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div
-        variants={prefersReduced ? undefined : blurIn}
-        initial="initial"
-        animate="animate"
-        className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-0"
-      >
-        <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-xl font-bold tracking-tight text-transparent sm:text-2xl">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={load}
+      title={
+        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           {t('Warehouse Locations')}
-        </h1>
-        <Button onClick={openCreate} className="min-h-11 w-full sm:min-h-9 sm:w-auto">
+        </span>
+      }
+      actions={
+        <Button onClick={openCreate} className="min-h-11 sm:min-h-9">
           <Plus className="mr-2 h-4 w-4" />
           {t('Create Location')}
         </Button>
-      </motion.div>
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
 
-      {loading ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => <LocationCardSkeleton key={i} />)}
-        </div>
-      ) : error ? (
-        <ErrorState onRetry={load} />
-      ) : locs.length === 0 ? (
-        <motion.div variants={prefersReduced ? undefined : blurIn} initial="initial" animate="animate">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/15 to-cyan-500/15">
-                <Warehouse className="h-8 w-8 text-primary" />
-              </div>
-              <p className="mt-4 font-medium">{t('No locations configured')}</p>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                {t('Set up your first warehouse location to start tracking stock and capacity.')}
-              </p>
-              <Button className="mt-5 min-h-11 sm:min-h-9" onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('Create your first location')}
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      ) : (
-        <motion.div
-          variants={prefersReduced ? undefined : gridStagger}
-          initial="initial"
-          animate="animate"
-          className="space-y-4 sm:space-y-6"
-        >
-          {/* Floor map entry */}
-          {heroLocation && <FloorMapHero location={heroLocation} />}
-
-          {/* Search / filter / sort toolbar */}
-          <motion.div variants={prefersReduced ? undefined : blurIn} className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t('Search locations...')}
-                  className="h-11 pl-9 sm:h-9"
-                  aria-label={t('Search locations...')}
-                />
-              </div>
-              <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
-                <SelectTrigger className="h-11! w-full sm:h-9! sm:w-48" aria-label={t('Sort by')}>
-                  <ArrowUpDown className="mr-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="utilization">{t('Utilization')}</SelectItem>
-                  <SelectItem value="name">{t('Name')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {presentTypes.length > 1 && (
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Location Type')}>
-                {(['all', ...presentTypes] as const).map((type) => (
-                  <motion.button
-                    key={type}
-                    type="button"
-                    whileTap={prefersReduced ? undefined : { scale: 0.97 }}
-                    onClick={() => setTypeFilter(type as WarehouseLocationType | 'all')}
-                    className={cn(
-                      'min-h-11 rounded-full border px-4 text-sm transition-colors sm:min-h-8 sm:px-3 sm:text-xs',
-                      typeFilter === type
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
-                    )}
-                  >
-                    {type === 'all' ? t('All Types') : t(type)}
-                  </motion.button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-
-          {/* Cards grid */}
-          {visibleLocs.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => <LocationCardSkeleton key={i} />)}
+          </div>
+        ) : error ? (
+          <ErrorState onRetry={load} />
+        ) : locs.length === 0 ? (
+          <motion.div variants={prefersReduced ? undefined : blurIn} initial="initial" animate="animate">
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-                <Search className="h-8 w-8 text-muted-foreground/40" />
-                <p className="mt-3 text-sm text-muted-foreground">{t('No locations found')}</p>
-                {hasActiveFilters && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 min-h-11 sm:min-h-8"
-                    onClick={() => { setQuery(''); setTypeFilter('all'); }}
-                  >
-                    <X className="mr-2 h-3.5 w-3.5" />
-                    {t('Clear filters', { ns: 'common' })}
-                  </Button>
-                )}
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/15 to-cyan-500/15">
+                  <Warehouse className="h-8 w-8 text-primary" />
+                </div>
+                <p className="mt-4 font-medium">{t('No locations configured')}</p>
+                <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                  {t('Set up your first warehouse location to start tracking stock and capacity.')}
+                </p>
+                <Button className="mt-5 min-h-11 sm:min-h-9" onClick={openCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('Create your first location')}
+                </Button>
               </CardContent>
             </Card>
-          ) : (
-            <motion.div
-              variants={prefersReduced ? undefined : gridStagger}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
-            >
-              {visibleLocs.map((loc) => (
-                <LocationCard
-                  key={loc.id}
-                  location={loc}
-                  stats={stats[loc.id] || EMPTY_STATS}
-                />
-              ))}
-            </motion.div>
-          )}
-        </motion.div>
-      )}
+          </motion.div>
+        ) : (
+          <motion.div
+            variants={prefersReduced ? undefined : gridStagger}
+            initial="initial"
+            animate="animate"
+            className="space-y-4 sm:space-y-6"
+          >
+            {/* Floor map entry */}
+            {heroLocation && <FloorMapHero location={heroLocation} />}
 
-      {/* Create Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('Create Location')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Location Name')}</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            {/* Search / filter / sort toolbar */}
+            <motion.div variants={prefersReduced ? undefined : blurIn} className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={t('Search locations...')}
+                    className="h-11 pl-9 sm:h-9"
+                    aria-label={t('Search locations...')}
+                  />
+                </div>
+                <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+                  <SelectTrigger className="h-11! w-full sm:h-9! sm:w-48" aria-label={t('Sort by')}>
+                    <ArrowUpDown className="mr-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="utilization">{t('Utilization')}</SelectItem>
+                    <SelectItem value="name">{t('Name')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {presentTypes.length > 1 && (
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Location Type')}>
+                  {(['all', ...presentTypes] as const).map((type) => (
+                    <motion.button
+                      key={type}
+                      type="button"
+                      whileTap={prefersReduced ? undefined : { scale: 0.97 }}
+                      onClick={() => setTypeFilter(type as WarehouseLocationType | 'all')}
+                      className={cn(
+                        'min-h-11 rounded-full border px-4 text-sm transition-colors sm:min-h-8 sm:px-3 sm:text-xs',
+                        typeFilter === type
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
+                      )}
+                    >
+                      {type === 'all' ? t('All Types') : t(type)}
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+
+            {/* Cards grid */}
+            {visibleLocs.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                  <Search className="h-8 w-8 text-muted-foreground/40" />
+                  <p className="mt-3 text-sm text-muted-foreground">{t('No locations found')}</p>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 min-h-11 sm:min-h-8"
+                      onClick={() => { setQuery(''); setTypeFilter('all'); }}
+                    >
+                      <X className="mr-2 h-3.5 w-3.5" />
+                      {t('Clear filters', { ns: 'common' })}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <motion.div
+                variants={prefersReduced ? undefined : gridStagger}
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
+              >
+                {visibleLocs.map((loc) => (
+                  <LocationCard
+                    key={loc.id}
+                    location={loc}
+                    stats={stats[loc.id] || EMPTY_STATS}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Create Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{t('Create Location')}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>{t('Location Name')}</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('Location Code')}</Label>
+                  <Input value={form.code || ''} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="WH-01" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>{t('Location Code')}</Label>
-                <Input value={form.code || ''} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="WH-01" />
+                <Label>{t('Location Type')}</Label>
+                <Select value={form.type || 'main'} onValueChange={(v) => setForm({ ...form, type: v as WarehouseLocationType })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LOCATION_TYPES.map((type) => <SelectItem key={type} value={type}>{t(type)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>{t('City')}</Label>
+                  <Input value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('Country')}</Label>
+                  <Input value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('Facility Identifier')}</Label>
+                <Input value={form.facilityIdentifier || ''} onChange={(e) => setForm({ ...form, facilityIdentifier: e.target.value })} placeholder="GLN" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>{t('Capacity Units')}</Label>
+                  <Input
+                    type="number"
+                    value={form.capacityUnits || ''}
+                    onChange={(e) => setForm({ ...form, capacityUnits: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('Capacity Volume')}</Label>
+                  <Input
+                    type="number"
+                    value={form.capacityVolumeM3 || ''}
+                    onChange={(e) => setForm({ ...form, capacityVolumeM3: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('Area (m²)')}</Label>
+                  <Input
+                    type="number"
+                    value={form.areaM2 || ''}
+                    onChange={(e) => setForm({ ...form, areaM2: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('Notes')}</Label>
+                <Textarea value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('Location Type')}</Label>
-              <Select value={form.type || 'main'} onValueChange={(v) => setForm({ ...form, type: v as WarehouseLocationType })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {LOCATION_TYPES.map((type) => <SelectItem key={type} value={type}>{t(type)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('City')}</Label>
-                <Input value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Country')}</Label>
-                <Input value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Facility Identifier')}</Label>
-              <Input value={form.facilityIdentifier || ''} onChange={(e) => setForm({ ...form, facilityIdentifier: e.target.value })} placeholder="GLN" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>{t('Capacity Units')}</Label>
-                <Input
-                  type="number"
-                  value={form.capacityUnits || ''}
-                  onChange={(e) => setForm({ ...form, capacityUnits: e.target.value ? Number(e.target.value) : undefined })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Capacity Volume')}</Label>
-                <Input
-                  type="number"
-                  value={form.capacityVolumeM3 || ''}
-                  onChange={(e) => setForm({ ...form, capacityVolumeM3: e.target.value ? Number(e.target.value) : undefined })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Area (m²)')}</Label>
-                <Input
-                  type="number"
-                  value={form.areaM2 || ''}
-                  onChange={(e) => setForm({ ...form, areaM2: e.target.value ? Number(e.target.value) : undefined })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Notes')}</Label>
-              <Textarea value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
-            <Button onClick={handleSave} disabled={!form.name}>{t('Save', { ns: 'common' })}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+              <Button onClick={handleSave} disabled={!form.name}>{t('Save', { ns: 'common' })}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }

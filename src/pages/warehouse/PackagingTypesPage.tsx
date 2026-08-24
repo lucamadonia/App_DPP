@@ -29,10 +29,11 @@ import {
 import { getPackagingUsage } from '@/services/supabase/wh-packaging-usage';
 import { PackagingMaterialFields } from '@/components/compliance/PackagingMaterialFields';
 import { PackagingTypeCard, PackagingTypeCardSkeleton } from '@/components/warehouse/packaging-type-card';
-import { blurIn, gridStagger, useMotionVariants } from '@/lib/motion';
+import { gridStagger, useMotionVariants } from '@/lib/motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { LucidMaterial, MaterialSplitEntry } from '@/types/compliance';
 import { toast } from 'sonner';
+import { PageContainer } from '@/components/layout/page-container';
 
 const VIEW_STORAGE_KEY = 'wh-packaging-types-view';
 type ViewMode = 'table' | 'cards';
@@ -84,7 +85,6 @@ const EMPTY: FormState = {
 export function PackagingTypesPage() {
   const { t } = useTranslation('warehouse');
   const isMobile = useIsMobile();
-  const headerVariants = useMotionVariants(blurIn);
   const cardsContainerVariants = useMotionVariants(gridStagger);
   const [rows, setRows] = useState<WhPackagingType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -347,31 +347,29 @@ export function PackagingTypesPage() {
   );
 
   return (
-    <div className="px-4 py-4 sm:p-6 space-y-4 sm:space-y-6">
-      <motion.div
-        variants={headerVariants}
-        initial="initial"
-        animate="animate"
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-      >
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+    <PageContainer
+      size="full"
+      padding={false}
+      className="px-4 py-4 sm:p-6"
+      onRefresh={load}
+      title={
+        <span className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Box className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold">{t('Umverpackung')}</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {t('Kartons und Versandumschläge, die beim Shipment als Umverpackung zusätzlich zum Produktgewicht addiert werden.')}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
+          <span className="truncate">{t('Umverpackung')}</span>
+        </span>
+      }
+      description={t('Kartons und Versandumschläge, die beim Shipment als Umverpackung zusätzlich zum Produktgewicht addiert werden.')}
+      actions={
+        <>
           {viewToggle}
           <Button onClick={openCreate} className="min-h-11 sm:min-h-9">
             <Plus className="mr-2 h-4 w-4" />
             {t('Neue Umverpackung')}
           </Button>
-        </div>
-      </motion.div>
-
+        </>
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
       <KPIGrid items={kpiItems} cols={{ base: 2, lg: 4 }} compact />
 
       {lowStockRows.length > 0 && (
@@ -744,6 +742,7 @@ export function PackagingTypesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

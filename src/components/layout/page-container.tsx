@@ -99,14 +99,14 @@ export function PageContainer({
       )}
       {...rest}
     >
+      {/* Header styling matches what the twelve hand-rolled headers this
+          replaced actually did, so consolidating them is not a silent restyle:
+          - `font-bold`, not semibold — 11 of the 12 were bold
+          - `sm:items-center`, so buttons stay vertically centred against a
+            one-line title as before, and only top-align when it wraps
+          - no `truncate`: German page titles are long, and clipping one is a
+            worse failure than letting it wrap onto two lines */}
       {(title || actions) && (
-        {/* Matches what the twelve hand-rolled headers this replaced actually
-            did, so consolidating them is not a silent restyle:
-            - `font-bold`, not semibold — 11 of the 12 were bold
-            - `sm:items-center`, so buttons stay vertically centred against a
-              one-line title as before, and only top-align when it wraps
-            - no `truncate`: German page titles are long, and clipping one is a
-              worse failure than letting it wrap onto two lines */}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-6 sm:items-center">
           <div className="min-w-0">
             {title && (

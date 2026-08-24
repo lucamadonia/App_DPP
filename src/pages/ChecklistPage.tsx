@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
-  blurIn,
   staggerContainer,
   staggerItem,
   spring,
@@ -63,6 +62,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { PageContainer } from '@/components/layout/page-container';
 
 interface ChecklistItem {
   id: string;
@@ -468,19 +468,16 @@ export function ChecklistPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 checklist-print-area">
-        {/* Header */}
-        <MotionDiv
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-          {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-        >
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('Compliance Checklist')}</h1>
-            <p className="text-muted-foreground">
-              {t('Comprehensive, interactive checklist for country-specific requirements')}
-            </p>
-          </div>
-          <div className="flex gap-2 checklist-print-hide">
+      <PageContainer
+        size="full"
+        padding={false}
+        className="checklist-print-area"
+        title={t('Compliance Checklist')}
+        description={t('Comprehensive, interactive checklist for country-specific requirements')}
+        actions={
+          // `checklist-print-hide` has to ride on this wrapper: PageContainer
+          // owns the actions row, so the buttons cannot carry it themselves.
+          <span className="flex gap-2 checklist-print-hide">
             <Button
               variant="outline"
               onClick={handlePrint}
@@ -505,9 +502,10 @@ export function ChecklistPage() {
               )}
               {isExporting ? t('Generating PDF...') : t('PDF Export')}
             </Button>
-          </div>
-        </MotionDiv>
-
+          </span>
+        }
+      >
+        <div className="space-y-6">
         {/* Selection */}
         <div className="grid gap-4 md:grid-cols-2 checklist-print-hide">
           <Card>
@@ -863,7 +861,8 @@ export function ChecklistPage() {
             );
           })}
         </MotionDiv>
-      </div>
+        </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }

@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import type { FeedbackSettings, FeedbackWidgetMode } from '@/types/feedback';
 import { toast } from 'sonner';
 import { getPublicBaseUrl } from '@/lib/platform';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function FeedbackSettingsPage() {
   const { t } = useTranslation('warehouse');
@@ -65,17 +66,18 @@ export function FeedbackSettingsPage() {
   if (loading) return <ShimmerSkeleton className="h-96 w-full" />;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      title={
+        <span className="flex items-center gap-2">
           <Settings className="h-6 w-6" />
           Feedback-Einstellungen
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Konfiguriere Bewertungen, Idee-Board und das Embed-Widget für deine Website.
-        </p>
-      </div>
-
+        </span>
+      }
+      description="Konfiguriere Bewertungen, Idee-Board und das Embed-Widget für deine Website."
+    >
+      <div className="space-y-4 sm:space-y-6">
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general" className="gap-1.5">
@@ -254,7 +256,8 @@ export function FeedbackSettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

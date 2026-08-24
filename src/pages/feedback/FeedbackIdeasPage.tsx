@@ -24,6 +24,7 @@ import type {
 import { toast } from 'sonner';
 import { StarRating } from '@/components/feedback/StarRating';
 import { cn } from '@/lib/utils';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function FeedbackIdeasPage() {
   const { t } = useTranslation('warehouse');
@@ -94,17 +95,19 @@ export function FeedbackIdeasPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={reload}
+      title={
+        <span className="flex items-center gap-2">
           <Lightbulb className="h-6 w-6" />
           Ideen-Board
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Partner-Vorschläge prüfen, veröffentlichen und auf der Roadmap nachverfolgen.
-        </p>
-      </div>
-
+        </span>
+      }
+      description="Partner-Vorschläge prüfen, veröffentlichen und auf der Roadmap nachverfolgen."
+    >
+      <div className="space-y-4 sm:space-y-6">
       {stats && (
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           <Kpi label="Offen" value={stats.pending} highlight={stats.pending > 0} />
@@ -157,7 +160,8 @@ export function FeedbackIdeasPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

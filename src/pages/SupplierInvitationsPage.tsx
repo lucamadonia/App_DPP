@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
 import { SupplierInvitationsTab } from '@/components/settings/SupplierInvitationsTab';
+import { PageContainer } from '@/components/layout/page-container';
 
 export function SupplierInvitationsPage() {
   const { t } = useTranslation('settings');
@@ -22,18 +23,15 @@ export function SupplierInvitationsPage() {
         <span className="text-foreground">{t('Invitations')}</span>
       </nav>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('Supplier Invitations')}</h1>
-          <p className="text-muted-foreground">
-            {t('Manage supplier registration invitations and track their status')}
-          </p>
-        </div>
-      </div>
-
-      {/* Content */}
-      <SupplierInvitationsTab />
+      {/* Header + content */}
+      <PageContainer
+        size="full"
+        padding={false}
+        title={t('Supplier Invitations')}
+        description={t('Manage supplier registration invitations and track their status')}
+      >
+        <SupplierInvitationsTab />
+      </PageContainer>
     </div>
   );
 }

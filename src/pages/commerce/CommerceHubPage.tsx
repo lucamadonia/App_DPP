@@ -39,6 +39,7 @@ import {
   countUnbridgedShopifyOrders,
 } from '@/services/supabase/commerce-shopify-bridge';
 import { toast } from 'sonner';
+import { PageContainer } from '@/components/layout/page-container';
 
 /**
  * Commerce Hub landing page.
@@ -106,22 +107,30 @@ export function CommerceHubPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-primary">
+    <PageContainer
+      size="full"
+      padding={false}
+      onRefresh={load}
+      // The hero type scale lives on the inner spans so PageContainer's own
+      // `h1` sizing does not shrink this page's display heading at md+.
+      title={
+        <>
+          <span className="flex items-center gap-2 text-xs font-normal uppercase tracking-[0.18em] text-primary">
             <Sparkles className="h-3.5 w-3.5" />
             {t('Commerce Hub')}
-          </div>
-          <h1 className="mt-1 font-display text-3xl font-bold leading-tight md:text-4xl">
+          </span>
+          <span className="mt-1 block font-display text-3xl leading-tight md:text-4xl">
             {t('All your sales channels — one passport-aware dashboard.')}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            {t('Connect Shopify, Etsy, Pinterest, Amazon, eBay, WooCommerce and more. Match every order to its Digital Product Passport in real time.')}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          </span>
+        </>
+      }
+      description={
+        <span className="block max-w-2xl">
+          {t('Connect Shopify, Etsy, Pinterest, Amazon, eBay, WooCommerce and more. Match every order to its Digital Product Passport in real time.')}
+        </span>
+      }
+      actions={
+        <>
           <Button asChild variant="outline" className="gap-2">
             <Link to="/commerce/mega">
               <Tv2 className="h-4 w-4" />
@@ -163,9 +172,10 @@ export function CommerceHubPage() {
             <Download className="h-4 w-4" />
             {bridging ? t('Importing…') : t('Import existing Shopify orders')}
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
+      <div className="space-y-6">
       {/* Health strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <HealthStat
@@ -352,7 +362,8 @@ export function CommerceHubPage() {
         onClose={() => setWizardPlatform(null)}
         onConnected={load}
       />
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

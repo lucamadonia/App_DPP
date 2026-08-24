@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   BarChart3, Box, Download, Package, ArrowUpDown,
 } from 'lucide-react';
@@ -27,16 +26,15 @@ import { getShipments, getItemsForShipments } from '@/services/supabase/wh-shipm
 import { buildCsv, downloadCsv, timestampedFilename, type CsvColumn } from '@/lib/csv-export';
 import { countryFlagEmoji, normalizeCountryIso2 } from '@/lib/shipping-rates';
 import { SHIPMENT_STATUS_COLORS, PRIORITY_COLORS } from '@/lib/warehouse-constants';
-import { blurIn, useMotionVariants } from '@/lib/motion';
 import type { WhShipment, WhShipmentItem } from '@/types/warehouse';
 import { toast } from 'sonner';
+import { PageContainer } from '@/components/layout/page-container';
 
 /** Fallback range start for "all time" (packaging tab needs a concrete bound). */
 const ALL_TIME_FROM = '2020-01-01T00:00:00.000Z';
 
 export function ShipmentReportsPage() {
   const { t } = useTranslation('warehouse');
-  const headerVariants = useMotionVariants(blurIn);
   const [range, setRange] = useState<RangeKey>('30');
   const [homeCountry, setHomeCountry] = useState<string>('DE');
   const [shipments, setShipments] = useState<WhShipment[]>([]);
@@ -179,28 +177,20 @@ export function ShipmentReportsPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div
-        variants={headerVariants}
-        initial="initial"
-        animate="animate"
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-      >
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 p-2 sm:p-2.5">
+    <PageContainer
+      size="full"
+      padding={false}
+      title={
+        <span className="flex items-center gap-2 sm:gap-3">
+          <span className="rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 p-2 sm:p-2.5">
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              {t('Reports & Analytics')}
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {t('Comprehensive shipment analytics with charts, top lists and full-detail export.')}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+          </span>
+          {t('Reports & Analytics')}
+        </span>
+      }
+      description={t('Comprehensive shipment analytics with charts, top lists and full-detail export.')}
+      actions={
+        <span className="flex gap-2">
           <Select value={range} onValueChange={v => setRange(v as RangeKey)}>
             <SelectTrigger className="flex-1 sm:w-44 h-11 sm:h-9 motion-safe:active:scale-[0.97] motion-safe:transition-transform">
               <SelectValue />
@@ -234,9 +224,10 @@ export function ShipmentReportsPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </motion.div>
-
+        </span>
+      }
+    >
+      <div className="space-y-4 sm:space-y-6">
       <Tabs defaultValue="dashboard">
         <ScrollableTabs>
           <TabsList className="w-max">
@@ -315,7 +306,8 @@ export function ShipmentReportsPage() {
           <AdHocPivot shipments={shipments} homeCountry={homeCountry} />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

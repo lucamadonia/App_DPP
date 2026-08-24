@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
-  blurIn,
   gridStagger,
   gridItem,
   useReducedMotion,
@@ -60,6 +59,7 @@ import { AIOverallAssessment } from '@/components/ai/AIOverallAssessment';
 import { AIActionPlan } from '@/components/ai/AIActionPlan';
 import { AIAdditionalReqs } from '@/components/ai/AIAdditionalReqs';
 import { AIChatPanel } from '@/components/ai/AIChatPanel';
+import { PageContainer } from '@/components/layout/page-container';
 
 /** One row of the "All Required Documents" summary table. */
 interface DocumentChecklistRow {
@@ -336,20 +336,14 @@ export function RequirementsCalculatorPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('Requirements Calculator')}</h1>
-          <p className="text-muted-foreground">
-            {t('Determine all compliance requirements based on your product and target market')}
-          </p>
-        </div>
-        {showResults && (
-          <div className="flex gap-2">
+    <PageContainer
+      size="full"
+      padding={false}
+      title={t('Requirements Calculator')}
+      description={t('Determine all compliance requirements based on your product and target market')}
+      actions={
+        showResults ? (
+          <>
             <Button variant="outline" onClick={() => setShowResults(false)}>
               <X className="mr-2 h-4 w-4" />
               {t('Recalculate')}
@@ -358,10 +352,11 @@ export function RequirementsCalculatorPage() {
               <Download className="mr-2 h-4 w-4" />
               {t('PDF Export')}
             </Button>
-          </div>
-        )}
-      </MotionDiv>
-
+          </>
+        ) : undefined
+      }
+    >
+      <div className="space-y-6">
       {!showResults ? (
         <div className="space-y-6">
           {/* Product Configuration */}
@@ -1107,6 +1102,7 @@ export function RequirementsCalculatorPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </PageContainer>
   );
 }
