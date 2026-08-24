@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_TEAMID.eu.trackbliss.app"],
+        "components": [
+          { "/": "/auth/callback", "comment": "OAuth + magic link callback" },
+          { "/": "/auth/reset-password", "comment": "Password reset" },
+          { "/": "/customer/*/auth/callback", "comment": "Customer portal auth" },
+          { "/": "/p/*", "comment": "Digital product passport" },
+          { "/": "/01/*", "comment": "GS1 Digital Link" },
+          { "/": "/t/*", "comment": "Shipment tracking" }
+        ]
+      }
+    ]
+  }
+}

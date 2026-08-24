@@ -41,3 +41,13 @@ supabase/.temp/
 nul
 
 .vercel
+
+# Capacitor
+# The native projects ARE committed — they carry the AndroidManifest permissions,
+# App Links config and the generated icons. What must NOT be committed is the
+# copied web build: `cap sync` regenerates it from dist/ on every build.
+android/app/src/main/assets/public/
+android/app/src/main/res/xml/config.xml
+ios/App/App/public/
+ios/App/App/config.xml
+ios/App/Pods/
