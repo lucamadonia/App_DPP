@@ -8,6 +8,20 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
+    # Vite inlines these at build time. Without them `createClient('', '')`
+    # throws "supabaseUrl is required" while the module is still loading, so the
+    # app never boots and every smoke test fails on a blank page rather than on
+    # anything to do with layout.
+    #
+    # Placeholders are enough here: these tests assert layout, not data. If the
+    # repo secrets are set they win — and the anon key is public by design (it
+    # ships in the client bundle, guarded by RLS), so using the real one leaks
+    # nothing.
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+
     steps:
       - uses: actions/checkout@v4
 
