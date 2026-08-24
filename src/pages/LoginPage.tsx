@@ -1,11 +1,19 @@
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { SupabaseAuth } from '@/components/SupabaseAuth';
+import { Button } from '@/components/ui/button';
+import { showsFirstRun } from '@/lib/platform';
 import { useAuth } from '@/contexts/AuthContext';
 import { spring } from '@/lib/motion';
 
 export function LoginPage() {
+  // The intro journey sends people here with ?mode=signup. SupabaseAuth has
+  // supported both views all along; only this call site hardcoded one. With no
+  // parameter the page behaves exactly as before.
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
@@ -82,11 +90,31 @@ export function LoginPage() {
           transition={prefersReduced ? { duration: 0 } : spring.snappy}
         >
           <SupabaseAuth
-            mode="signin"
+            mode={mode}
             onAuthSuccess={handleAuthSuccess}
             onAuthError={handleAuthError}
           />
         </motion.div>
+
+        {/* Native only: a way into the product for someone who has not made up
+            their mind yet. On web this is absent, so the login page is exactly
+            what it was before guest mode existed. */}
+        {showsFirstRun() && (
+          <motion.div
+            className="text-center"
+            initial={prefersReduced ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Button
+              variant="ghost"
+              className="text-sm text-muted-foreground"
+              onClick={() => navigate('/discover')}
+            >
+              {t('discover.exploreWithoutAccount', { ns: 'journey' })}
+            </Button>
+          </motion.div>
+        )}
 
         {/* Footer - Fade in last */}
         <motion.p

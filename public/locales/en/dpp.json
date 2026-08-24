@@ -356,5 +356,6 @@
   "Failed to load products": "Failed to load products",
   "Failed to load batches": "Failed to load batches",
   "Logo file must be under 500 KB": "Logo file must be under 500 KB",
-  "Error saving settings": "Error saving settings"
+  "Error saving settings": "Error saving settings",
+  "Batch export is available in the browser version": "Batch export is available in the browser version"
 }

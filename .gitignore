@@ -57,3 +57,6 @@ ios/App/Pods/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# AI-generated first-run masters — the shipped derivatives are committed in public/first-run/
+resources/first-run/

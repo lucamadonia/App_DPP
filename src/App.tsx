@@ -20,7 +20,8 @@ import { CustomDomainPortal } from '@/components/CustomDomainPortal';
 import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
 import { PageTransition } from '@/components/ui/page-transition';
 import './index.css';
-import { isNative } from '@/lib/platform';
+import { isNative, showsFirstRun } from '@/lib/platform';
+import i18n from '@/i18n';
 import { initDeepLinks } from '@/lib/deep-links';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMotionBudget } from '@/hooks/use-motion-budget';
@@ -28,6 +29,8 @@ import { AppHeader } from '@/components/layout/app-header';
 import { SwipeBackLayer } from '@/components/layout/swipe-back-layer';
 import { initNativeShell } from '@/lib/native-init';
 import { AppSplash } from '@/components/splash/AppSplash';
+import { NativeOnly } from '@/pages/discover/NativeOnly';
+import { GuestMigrationGate } from '@/pages/onboarding/GuestMigrationGate';
 
 // --- Lazy page imports (code-split per route) ---
 
@@ -127,6 +130,14 @@ const AdminCouponsPage = lazy(() => import('@/pages/admin/AdminCouponsPage').the
 const AdminMasterDataPage = lazy(() => import('@/pages/admin/AdminMasterDataPage').then(m => ({ default: m.AdminMasterDataPage })));
 const TrainingGuidePage = lazy(() => import('@/pages/TrainingGuidePage').then(m => ({ default: m.TrainingGuidePage })));
 const OnboardingPage = lazy(() => import('@/pages/onboarding/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
+const DiscoverLayout = lazy(() => import('@/pages/discover/DiscoverLayout').then(m => ({ default: m.DiscoverLayout })));
+const DiscoverHubPage = lazy(() => import('@/pages/discover/DiscoverHubPage').then(m => ({ default: m.DiscoverHubPage })));
+const GuestQRPage = lazy(() => import('@/pages/discover/GuestQRPage').then(m => ({ default: m.GuestQRPage })));
+const DiscoverRequirementsPage = lazy(() => import('@/pages/discover/DiscoverRequirementsPage').then(m => ({ default: m.DiscoverRequirementsPage })));
+const DiscoverRegulationsPage = lazy(() => import('@/pages/discover/DiscoverRegulationsPage').then(m => ({ default: m.DiscoverRegulationsPage })));
+const DiscoverChecklistsPage = lazy(() => import('@/pages/discover/DiscoverChecklistsPage').then(m => ({ default: m.DiscoverChecklistsPage })));
+const DiscoverLexiconPage = lazy(() => import('@/pages/discover/DiscoverLexiconPage').then(m => ({ default: m.DiscoverLexiconPage })));
+const DiscoverTipsPage = lazy(() => import('@/pages/discover/DiscoverTipsPage').then(m => ({ default: m.DiscoverTipsPage })));
 const NewsPage = lazy(() => import('@/pages/NewsPage').then(m => ({ default: m.NewsPage })));
 const RequirementsCalculatorPage = lazy(() => import('@/pages/RequirementsCalculatorPage').then(m => ({ default: m.RequirementsCalculatorPage })));
 const MarketEntryPage = lazy(() => import('@/pages/MarketEntryPage').then(m => ({ default: m.MarketEntryPage })));
@@ -210,6 +221,7 @@ const CommandPalette = lazy(() => import('@/components/crm/CommandPalette').then
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useTranslation('common');
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -223,6 +235,14 @@ function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
+    // A guest opening the *app* at the root has never seen the product, and a
+    // bare login form is a dead end. Send them through the tour instead.
+    // Scoped to the root path so every other protected route still bounces to
+    // /login — deep links must not be swallowed by an intro tour. Web is
+    // untouched: this branch is unreachable in a browser.
+    if (showsFirstRun() && location.pathname === '/') {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
@@ -284,6 +304,7 @@ function AppLayout() {
         </main>
         <MobileBottomNav />
         <OnboardingGate />
+        <GuestMigrationGate />
         <Suspense fallback={null}>
           <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         </Suspense>
@@ -378,6 +399,24 @@ function NormalAppRoutes() {
 
         {/* Login & Auth */}
         <Route path="login" element={<LoginPage />} />
+
+        {/* First-run intro tour and guest mode. Public by necessity: a visitor
+            without an account has to be able to reach both. Each surface guards
+            itself with isNative() and redirects the web build away, so browser
+            behaviour is exactly what it was before this existed. */}
+        <Route path="onboarding" element={<OnboardingPage />} />
+        <Route element={<NativeOnly />}>
+          <Route path="discover" element={<DiscoverLayout />}>
+            <Route index element={<DiscoverHubPage />} />
+            <Route path="qr" element={<GuestQRPage />} />
+            <Route path="requirements" element={<DiscoverRequirementsPage />} />
+            <Route path="regulations" element={<DiscoverRegulationsPage />} />
+            <Route path="checklists" element={<DiscoverChecklistsPage />} />
+            <Route path="lexicon" element={<DiscoverLexiconPage />} />
+            <Route path="tips" element={<DiscoverTipsPage />} />
+            <Route path="*" element={<Navigate to="/discover" replace />} />
+          </Route>
+        </Route>
         <Route path="auth/callback" element={<AuthCallbackPage />} />
         <Route path="auth/reset-password" element={<ResetPasswordPage />} />
 
@@ -615,9 +654,6 @@ function NormalAppRoutes() {
           {/* Help */}
           <Route path="help" element={<TrainingGuidePage />} />
 
-          {/* First-run intro tour (native only — the page redirects on web) */}
-          <Route path="onboarding" element={<OnboardingPage />} />
-
           {/* Security / MFA */}
           <Route path="security/mfa" element={<SecurityMfaPage />} />
         </Route>
@@ -641,11 +677,30 @@ function AppShellBootstrap() {
   const { isInitializing } = useAuth();
   // Publishes data-motion / data-perf on <html> so CSS and every motion
   // component agree on one budget for the whole session.
-  useMotionBudget();
+  const budget = useMotionBudget();
   useEffect(() => initNativeShell(), []);
 
+  // The `journey` namespace is deliberately NOT in the eager `ns` array in
+  // i18n.ts: that list is preloaded on every boot for every user across ~110
+  // authenticated web routes, where the native journey never renders. Loading
+  // it here instead starts it inside the splash's 550 ms floor, so by the time
+  // the journey can mount the local file has long resolved — no Suspense flash
+  // on the app's very first frame, and no cost at all to the web boot.
+  useEffect(() => {
+    if (showsFirstRun()) void i18n.loadNamespaces('journey');
+  }, []);
+
+  // Rehydrate the master-data cache from Preferences before anything reads it.
+  // Without this every cold start refetched hundreds of KB of countries,
+  // regulations and checklist templates that had not changed in weeks. Native
+  // only, because Preferences is where the durable copy lives.
+  useEffect(() => {
+    if (!isNative()) return;
+    void import('@/services/supabase/master-data').then((m) => m.primeMasterDataCache());
+  }, []);
+
   return (
-    <AppSplash ready={!isInitializing}>
+    <AppSplash ready={!isInitializing} budget={budget}>
       <CustomDomainGate />
     </AppSplash>
   );

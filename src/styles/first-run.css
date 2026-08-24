@@ -1,0 +1,179 @@
+/**
+ * First-run experience — splash stage, intro journey, guest hub.
+ *
+ * Split out of index.css rather than appended to it: that file is already
+ * ~1,100 lines and ~90 keyframes, and this feature is native-only and
+ * self-contained. Keeping it here means the whole thing stays deletable with
+ * one `rm` plus one import line.
+ *
+ * IMPORTANT — scripts/check-native-invariants.mjs scans this file, and its
+ * allowlist covers `src/index.css` ONLY. Viewport-height units and raw
+ * safe-area environment functions are therefore build failures here (the
+ * scanner is a plain text scan, so even naming them in a comment trips it).
+ * Use dynamic viewport units or `height: 100%` inside the shell flex chain,
+ * and the `--safe-top` / `--safe-bottom` custom properties for insets.
+ */
+
+:root {
+  /* Scrim opacities. Tuned against the generated backdrops so body copy holds
+     4.5:1 against the darkest band — see scripts/build-first-run-assets.mjs,
+     which asserts this rather than trusting it. */
+  --fr-scrim-top: 0.62;
+  --fr-scrim-bottom: 0.94;
+  /* Flat tint over every photo. This is what makes seven independently
+     generated images read as one set. */
+  --fr-tint: 0.25;
+  --fr-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   Journey stage
+   ---------------------------------------------------------------------------
+   Scoped dark token set, so shadcn components inside the overlay resolve
+   against the photography instead of the app theme.
+
+   The journey is deliberately dark regardless of the user's theme: the native
+   splash is pinned to #0F172A, StatusBar.style is DARK with overlaysWebView,
+   and #boot-splash hardcodes the same colour. A light journey behind a dark
+   overlaying status bar is a visible break on the app's very first screen.
+
+   --primary is deliberately NOT overridden, so tenant branding survives.
+   Mirrors .dashboard-stage in index.css, minus the aurora/dot-grid layers —
+   here the photograph is the background. */
+.journey-stage {
+  --background: #0b1220;
+  --foreground: #f8fafc;
+  --card: #111c30;
+  --card-foreground: #f8fafc;
+  --popover: #16233b;
+  --popover-foreground: #f8fafc;
+  --secondary: #1e2c46;
+  --secondary-foreground: #f8fafc;
+  --muted: #1b2840;
+  --muted-foreground: #94a3b8;
+  --accent: #1e2c46;
+  --accent-foreground: #f8fafc;
+  --border: rgba(148, 163, 184, 0.16);
+  --input: #2a3a58;
+  --card-rgb: 17, 28, 48;
+
+  color: var(--foreground);
+  background: linear-gradient(168deg, #0b1220 0%, #0d1730 52%, #0b1220 100%);
+}
+
+/* Backdrop layer. 150% wide with 25% overshoot per side, which is what a
+   PARALLAX_LAG of 0.25 needs to never expose an edge mid-drag. */
+.fr-backdrop {
+  position: absolute;
+  inset: 0 -25%;
+  width: 150%;
+  height: 100%;
+  object-fit: cover;
+  /* The LQIP sits underneath as a background-image; upscaling a 24px WebP to
+     full screen IS the blur, for free, on the GPU. A filter: blur() here would
+     be a real cost on Android for no additional effect. */
+  background-position: center;
+  background-size: cover;
+}
+
+/* Two scrims: the vertical one buys text contrast, the flat tint buys tonal
+   consistency across seven separately generated photographs. */
+.fr-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(2, 6, 23, var(--fr-scrim-top)) 0%,
+      rgba(2, 6, 23, 0.1) 38%,
+      rgba(2, 6, 23, 0.55) 72%,
+      rgba(2, 6, 23, var(--fr-scrim-bottom)) 100%
+    ),
+    rgba(2, 6, 23, var(--fr-tint));
+}
+
+/* Slow drift on the active slide's backdrop. Transform only — never filter. */
+@keyframes fr-kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.fr-kenburns {
+  animation: fr-kenburns 14s var(--fr-slide-ease) forwards;
+}
+
+/* Aurora blobs for the splash and the finish slide. Painted as gradients, not
+   blurred divs: a 64px filter: blur() on a viewport-sized element is the single
+   most expensive thing you can ask an Android WebView to do during boot. */
+.fr-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+@keyframes fr-sweep {
+  from {
+    transform: translateX(-180%) skewX(-12deg);
+  }
+  to {
+    transform: translateX(320%) skewX(-12deg);
+  }
+}
+
+/* One pass of light across the splash logo. Deliberately longer than
+   MIN_VISIBLE_MS so it is still mid-flight when the splash fades — it must
+   never gate anything. */
+.fr-sweep {
+  animation: fr-sweep 0.7s var(--fr-slide-ease) 0.12s both;
+  mix-blend-mode: screen;
+}
+
+@keyframes fr-hairline {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.7);
+  }
+}
+
+/* The biggest win for *perceived* boot speed: the same 550 ms reads as
+   intent rather than as a hang. */
+.fr-hairline {
+  transform-origin: left center;
+  animation: fr-hairline 0.55s ease-out both;
+}
+
+/* ---------------------------------------------------------------------------
+   Degradation
+   --------------------------------------------------------------------------- */
+
+/* Low-end devices and Data Saver. `saveData` here means "cheap phone", not
+   "expensive download" — the images ship inside the APK. So drop the ANIMATION,
+   never the image. A continuous transform on a full-screen 1080x1920 layer is
+   the most expensive thing in the WebView. */
+:root[data-perf='low'] .fr-kenburns,
+:root[data-perf='low'] .fr-sweep {
+  animation: none;
+}
+
+/* The global prefers-reduced-motion reset in index.css squashes every animation
+   to 0.01ms — which SNAPS it to its end state. A Ken Burns that ends at
+   scale(1.06) would visibly jump there and stay. These need an explicit kill,
+   following the .animate-feedback-* precedent. */
+@media (prefers-reduced-motion: reduce) {
+  .fr-kenburns,
+  .fr-sweep,
+  .fr-hairline {
+    animation: none;
+  }
+
+  .fr-hairline {
+    transform: scaleX(0.7);
+  }
+}

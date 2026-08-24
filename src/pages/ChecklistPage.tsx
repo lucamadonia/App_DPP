@@ -39,12 +39,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getChecklistTemplates } from '@/services/supabase';
 import {
-  getChecklistTemplates,
-  getChecklistProgress,
-  updateChecklistProgress,
-} from '@/services/supabase';
-import type { ChecklistProgress } from '@/types/database';
+  supabaseChecklistStore,
+  type ChecklistProgressStore,
+  type ChecklistStatus,
+} from '@/lib/checklist-progress-store';
+import { canPrint } from '@/lib/download-file';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -166,7 +167,17 @@ const statusColors: Record<string, string> = {
   not_applicable: 'text-muted-foreground',
 };
 
-export function ChecklistPage() {
+export interface ChecklistPageProps {
+  /**
+   * Where ticks are persisted. Defaults to the tenant-scoped Supabase store,
+   * i.e. exactly the behaviour that shipped before this prop existed. Guest
+   * mode passes a Preferences-backed store instead, because an anonymous
+   * visitor has no tenant and `checklist_progress` is RLS-protected.
+   */
+  store?: ChecklistProgressStore;
+}
+
+export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageProps = {}) {
   const { t } = useTranslation('compliance');
   const prefersReduced = useReducedMotion();
   const MotionDiv = prefersReduced ? 'div' as const : motion.div;
@@ -181,7 +192,6 @@ export function ChecklistPage() {
 
   // Checklist data from Supabase
   const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>({});
-  const [, setProgressData] = useState<Record<string, ChecklistProgress>>({});
 
   const key = `${selectedCountry}-${selectedCategory}`;
   const checklist = checklistData[key] || [];
@@ -228,17 +238,8 @@ export function ChecklistPage() {
         }
 
         // Load progress
-        const progress = await getChecklistProgress();
-        if (progress && progress.length > 0) {
-          const progressMap: Record<string, ChecklistProgress> = {};
-          const statesMap: Record<string, ChecklistItem['status']> = {};
-
-          progress.forEach(p => {
-            progressMap[p.checklist_item_id] = p;
-            statesMap[p.checklist_item_id] = p.status;
-          });
-
-          setProgressData(progressMap);
+        const statesMap = await store.load(selectedCountry, selectedCategory);
+        if (Object.keys(statesMap).length > 0) {
           setItemStates(prev => ({ ...prev, ...statesMap }));
         }
       } catch (error) {
@@ -249,7 +250,7 @@ export function ChecklistPage() {
     };
 
     loadData();
-  }, [selectedCountry, selectedCategory, key]);
+  }, [selectedCountry, selectedCategory, key, store]);
 
   const getItemStatus = (item: ChecklistItem) => itemStates[item.id] || item.status;
 
@@ -264,10 +265,7 @@ export function ChecklistPage() {
     // Save to API
     setIsSaving(true);
     try {
-      await updateChecklistProgress(id, {
-        status: nextStatus,
-        checked: nextStatus === 'completed',
-      });
+      await store.set(selectedCountry, selectedCategory, id, nextStatus as ChecklistStatus);
     } catch (error) {
       console.error('Error saving progress:', error);
       // Revert status on error
@@ -478,18 +476,23 @@ export function ChecklistPage() {
           // `checklist-print-hide` has to ride on this wrapper: PageContainer
           // owns the actions row, so the buttons cannot carry it themselves.
           <span className="flex gap-2 checklist-print-hide">
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              disabled={isPrinting || checklist.length === 0}
-            >
-              {isPrinting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Printer className="mr-2 h-4 w-4" />
-              )}
-              {t('Print', { ns: 'common' })}
-            </Button>
+            {/* window.print() resolves to nothing inside a WebView, so on
+                native this button would silently do nothing at all. Hiding it
+                is honest; the PDF export next to it does the same job. */}
+            {canPrint() && (
+              <Button
+                variant="outline"
+                onClick={handlePrint}
+                disabled={isPrinting || checklist.length === 0}
+              >
+                {isPrinting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Printer className="mr-2 h-4 w-4" />
+                )}
+                {t('Print', { ns: 'common' })}
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={handleExportPDF}

@@ -15,6 +15,8 @@ import {
   pdf,
 } from '@react-pdf/renderer';
 
+import { saveOrShare } from '@/lib/download-file';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -364,12 +366,12 @@ function ChecklistDocument({ options }: { options: ChecklistPDFOptions }) {
 export async function generateChecklistPDF(options: ChecklistPDFOptions): Promise<void> {
   const blob = await pdf(<ChecklistDocument options={options} />).toBlob();
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `compliance-checklist-${options.countryCode}-${options.categoryKey}-${new Date().toISOString().slice(0, 10)}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Via saveOrShare rather than a bare `<a download>`: the attribute is a
+  // no-op in a Capacitor WebView, so on a phone this used to appear to work
+  // while producing no file at all.
+  await saveOrShare({
+    content: blob,
+    mime: 'application/pdf',
+    filename: `compliance-checklist-${options.countryCode}-${options.categoryKey}-${new Date().toISOString().slice(0, 10)}.pdf`,
+  });
 }

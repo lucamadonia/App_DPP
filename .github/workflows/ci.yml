@@ -21,6 +21,12 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+      # Compiles the native first-run routes (intro journey, guest mode) into the
+      # CI build ONLY, so the mobile smoke tests can measure eight screens that
+      # are otherwise unreachable from a browser. Never set by Vercel and never
+      # by build:native, so both shipping bundles fold the flag to false and drop
+      # the routes entirely. See showsFirstRun() in src/lib/platform.ts.
+      VITE_E2E_FIRST_RUN: '1'
 
     steps:
       - uses: actions/checkout@v4
