@@ -79,7 +79,7 @@ export function useCustomDomainDetection(): {
           setIsCustomDomain(true); // It IS a custom domain, just unresolved
           setError('domain_not_found');
         }
-      } catch (err) {
+      } catch (_err) {
         if (cancelled) return;
         setIsCustomDomain(true);
         setError('resolution_error');

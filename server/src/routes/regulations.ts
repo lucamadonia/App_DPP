@@ -2,12 +2,10 @@ import { Hono } from 'hono';
 import {
   countryRegulations,
   euRegulations,
-  complianceChecklists,
   regulatoryNews,
   getRegulationsForCountry,
   getChecklistForProduct,
   getNewsForCountry,
-  getNewsForCategory,
 } from '../db/regulations';
 
 const app = new Hono();

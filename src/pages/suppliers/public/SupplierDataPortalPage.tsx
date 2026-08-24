@@ -639,7 +639,7 @@ export function SupplierDataPortalPage() {
         if (result.products.length > 0) {
           setActiveProductId(result.products[0].id);
         }
-      } catch (err) {
+      } catch (_err) {
         setError('not_found');
       }
       setIsLoading(false);

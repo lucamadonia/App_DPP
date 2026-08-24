@@ -57,6 +57,13 @@ export function CustomersListPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Must sit above the `if (error)` return below. React identifies hooks by
+  // call order, so a hook after a conditional return is skipped entirely on
+  // an error render - and the next successful render then calls one more
+  // hook than the last, which React aborts with "Rendered fewer hooks than
+  // expected".
+  const prefersReduced = useReducedMotion();
+
   if (error) {
     return <ErrorState onRetry={load} />;
   }
@@ -102,7 +109,6 @@ export function CustomersListPage() {
     setCreating(false);
   };
 
-  const prefersReduced = useReducedMotion();
 
   // Skeleton for grid view
   const GridSkeleton = () => (

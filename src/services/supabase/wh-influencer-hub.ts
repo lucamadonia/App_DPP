@@ -120,15 +120,11 @@ export async function getInfluencerHubStats(): Promise<{
   deadlines.sort((a, b) => a.daysRemaining - b.daysRemaining);
 
   let totalViews = 0;
-  let totalLikes = 0;
-  let totalComments = 0;
   let contentReceived = 0;
   const platformMap = new Map<SocialPlatform, { count: number; views: number; engagement: number }>();
 
   for (const p of content) {
     totalViews += p.views || 0;
-    totalLikes += p.likes || 0;
-    totalComments += p.comments || 0;
     contentReceived++;
 
     const platform = p.platform as SocialPlatform;
