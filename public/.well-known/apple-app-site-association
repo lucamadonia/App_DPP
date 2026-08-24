@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["REPLACE_WITH_TEAMID.eu.trackbliss.app"],
+        "appIDs": ["WU8U8HD73G.eu.trackbliss.app"],
         "components": [
           { "/": "/auth/callback", "comment": "OAuth + magic link callback" },
           { "/": "/auth/reset-password", "comment": "Password reset" },
