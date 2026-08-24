@@ -75,7 +75,12 @@ interface LabelCanvasElementProps {
   onDuplicate: () => void;
   onDelete: () => void;
   // @dnd-kit props (used by SortableLabelElement)
-  dragListeners?: Record<string, (...args: unknown[]) => void>;
+  // dnd-kit's own SyntheticListenerMap is `Record<string, Function>`, so a
+  // narrower signature here is not assignable from it — SortableLabelElement
+  // passes those listeners straight through. Matching upstream is the honest
+  // shape; tightening it would only move the cast somewhere less visible.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  dragListeners?: Record<string, Function>;
   isDragging?: boolean;
   // Inline edit callback (optional — provided by SortableLabelElement)
   onContentChange?: (content: string) => void;
