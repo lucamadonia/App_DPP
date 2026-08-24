@@ -9,6 +9,7 @@ import type {
   FeedbackIdeaStatus,
   FeedbackIdeaRoadmapStatus,
 } from '@/types/feedback';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformIdea(row: any): FeedbackIdea {
@@ -198,7 +199,7 @@ export async function createIdeaInvite(params: {
   if (error || !data) throw new Error(error?.message || 'Insert failed');
 
   const invite = transformInvite(data);
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const origin = getPublicBaseUrl();
   const inviteUrl = `${origin}/ideas/submit/${invite.token}`;
 
   // Fire email (best-effort)

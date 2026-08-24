@@ -8,6 +8,7 @@ import { sendReadyEvent, initEmbedResizeObserver } from '@/lib/embed-messaging';
 import { ReturnsPortalContext } from '@/pages/returns/public/ReturnsPortalLayout';
 import type { RhReturnReason } from '@/types/returns-hub';
 import type { TenantProduct } from '@/pages/returns/public/ReturnsPortalLayout';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 function getParentDomain(): string | null {
   try {
@@ -136,7 +137,7 @@ export function EmbedLayout() {
   const fullPageUrl = (() => {
     const path = location.pathname.replace(/^\/embed\//, '/returns/');
     // portal → returns/portal, register → returns/register, track → returns/track, support → returns/support
-    return window.location.origin + path;
+    return getPublicBaseUrl() + path;
   })();
 
   return (

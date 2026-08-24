@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { TenantWhitelabelSelfService } from '@/components/settings/TenantWhitelabelSelfService';
 import { blurIn, useReducedMotion } from '@/lib/motion';
 import { UsersTab } from '@/components/settings/UsersTab';
+import { DeleteAccountCard } from '@/components/account/DeleteAccountCard';
 import {
   Building2,
   Palette,
@@ -42,13 +43,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   getCurrentTenant,
   updateCurrentTenant,
@@ -63,11 +60,14 @@ import type { Tenant, BrandingSettings } from '@/types/database';
 import { validateDomain, validatePathPrefix, normalizeDomain, buildDomainUrl } from '@/lib/domain-utils';
 import { CustomDomainWizard } from '@/components/settings/CustomDomainWizard';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 const apiKeys = [
   { id: '1', name: 'ERP Integration', key: 'dpp_live_sk_...7x9a', created: '2024-06-15', lastUsed: '2026-01-27' },
   { id: '2', name: 'Shopify Connector', key: 'dpp_live_sk_...3b2c', created: '2024-09-01', lastUsed: '2026-01-25' },
 ];
+
+type ApiKeyRow = (typeof apiKeys)[number];
 
 export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const { t } = useTranslation('settings');
@@ -380,7 +380,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       return 'https://id.gs1.org/01/GTIN/21/SERIAL';
     }
     if (domainForm.resolver === 'local') {
-      return `${window.location.origin}/p/GTIN/SERIAL`;
+      return `${getPublicBaseUrl()}/p/GTIN/SERIAL`;
     }
     if (domainForm.customDomain) {
       return buildDomainUrl({
@@ -391,7 +391,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
         serial: 'SERIAL',
       });
     }
-    return `${window.location.origin}/p/GTIN/SERIAL`;
+    return `${getPublicBaseUrl()}/p/GTIN/SERIAL`;
   };
 
   const prefersReduced = useReducedMotion();
@@ -421,6 +421,73 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       </div>
     );
   }
+
+  const apiKeyColumns: ResponsiveTableColumn<ApiKeyRow>[] = [
+    {
+      id: 'name',
+      header: t('Name'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (key) => key.name,
+    },
+    {
+      id: 'key',
+      header: t('API Key'),
+      mobilePriority: 'subtitle',
+      cell: (key) => (
+        <div className="flex items-center gap-2">
+          <code className="font-mono text-sm">
+            {showApiKey === key.id ? 'dpp_live_sk_a1b2c3d4e5f6g7h8i9j0' : key.key}
+          </code>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => setShowApiKey(showApiKey === key.id ? null : key.id)}
+          >
+            {showApiKey === key.id ? (
+              <EyeOff className="h-3 w-3" />
+            ) : (
+              <Eye className="h-3 w-3" />
+            )}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6">
+            <Copy className="h-3 w-3" />
+          </Button>
+        </div>
+      ),
+    },
+    {
+      id: 'created',
+      header: t('Created'),
+      className: 'text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Created'),
+      cell: (key) => formatDate(key.created, locale),
+    },
+    {
+      id: 'lastUsed',
+      header: t('Last Used'),
+      className: 'text-muted-foreground',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Last Used'),
+      cell: (key) => formatDate(key.lastUsed, locale),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-[100px]',
+      mobilePriority: 'meta',
+      cell: () => (
+        <Button variant="ghost" size="sm" className="text-destructive">
+          <Trash2 className="mr-2 h-4 w-4" />
+          {t('Delete')}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -650,6 +717,9 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Danger Zone — in-app account deletion (App Store guideline 5.1.1(v)) */}
+          <DeleteAccountCard redirectTo="/login" />
         </TabsContent>
 
         {/* Branding */}
@@ -888,7 +958,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         </div>
                         <div className="flex-1 bg-muted/50 rounded px-2 py-0.5">
                           <span className="text-[10px] text-muted-foreground font-mono">
-                            {window.location.origin}
+                            {getPublicBaseUrl()}
                           </span>
                         </div>
                       </div>
@@ -1252,7 +1322,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       {t('Uses the built-in public DPP pages of this application')}
                     </p>
                     <p className="text-xs font-mono mt-1 text-muted-foreground">
-                      {window.location.origin}/p/GTIN/SERIAL
+                      {getPublicBaseUrl()}/p/GTIN/SERIAL
                     </p>
                   </div>
                 </label>
@@ -1474,58 +1544,12 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Name')}</TableHead>
-                    <TableHead>{t('API Key')}</TableHead>
-                    <TableHead>{t('Created')}</TableHead>
-                    <TableHead>{t('Last Used')}</TableHead>
-                    <TableHead className="w-[100px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {apiKeys.map((key) => (
-                    <TableRow key={key.id}>
-                      <TableCell className="font-medium">{key.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <code className="font-mono text-sm">
-                            {showApiKey === key.id ? 'dpp_live_sk_a1b2c3d4e5f6g7h8i9j0' : key.key}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => setShowApiKey(showApiKey === key.id ? null : key.id)}
-                          >
-                            {showApiKey === key.id ? (
-                              <EyeOff className="h-3 w-3" />
-                            ) : (
-                              <Eye className="h-3 w-3" />
-                            )}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(key.created, locale)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(key.lastUsed, locale)}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('Delete')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ResponsiveTable
+                data={apiKeys}
+                columns={apiKeyColumns}
+                rowKey={(key) => key.id}
+                className="border-0 bg-transparent rounded-none"
+              />
             </CardContent>
           </Card>
 

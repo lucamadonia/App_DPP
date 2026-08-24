@@ -11,6 +11,7 @@ import { triggerEmailNotification } from './rh-notification-trigger';
 import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput, CustomerReturnsFilter, CustomerTicketsFilter } from '@/types/customer-portal';
 import { generateReturnNumber, generateTicketNumber } from '@/lib/return-number';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
+import { getAuthOrigin } from '@/lib/platform';
 
 // ============================================
 // AUTH HELPERS
@@ -93,7 +94,7 @@ export async function customerSendMagicLink(
   email: string,
   tenantSlug: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const redirectUrl = `${window.location.origin}/customer/${tenantSlug}/auth/callback`;
+  const redirectUrl = `${getAuthOrigin()}/customer/${tenantSlug}/auth/callback`;
   const locale = (typeof navigator !== 'undefined' ? navigator.language : 'en').slice(0, 2).toLowerCase();
   const { error } = await supabase.auth.signInWithOtp({
     email,

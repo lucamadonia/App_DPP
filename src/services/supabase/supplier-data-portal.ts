@@ -10,6 +10,7 @@ import type {
   CreateSupplierDataRequestParams,
   PublicSupplierDataRequestResult,
 } from '@/types/supplier-data-portal';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformDataRequest(row: any): SupplierDataRequest {
@@ -153,7 +154,7 @@ export async function createSupplierDataRequest(
     }
   }
 
-  const url = `${window.location.origin}/suppliers/data/${accessCode}`;
+  const url = `${getPublicBaseUrl()}/suppliers/data/${accessCode}`;
 
   return {
     dataRequest: transformDataRequest({ ...created, _productNames: productNames }),

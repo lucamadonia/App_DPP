@@ -4,6 +4,7 @@
  */
 import type { Supplier, SupplierContact, SupplierProduct } from '@/types/database';
 import { Factory, Building2, Truck, Users, type LucideIcon } from 'lucide-react';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // Available certifications (industry standards, not translated)
 export const CERTIFICATIONS = [
@@ -206,5 +207,5 @@ export function getEmptyContactForm(): Partial<SupplierContact> {
 
 /** Build the public registration URL for an invitation code */
 export function buildInvitationUrl(invitationCode: string): string {
-  return `${window.location.origin}/suppliers/register/${invitationCode}`;
+  return `${getPublicBaseUrl()}/suppliers/register/${invitationCode}`;
 }

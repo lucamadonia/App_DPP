@@ -12,13 +12,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CREDIT_PACKS, type CreditPack } from '@/types/billing';
 import { createCheckoutSession } from '@/services/supabase/billing';
 import { getCreditPackPriceId } from '@/config/stripe-prices';
+import { getAuthOrigin } from '@/lib/platform';
+import { openCheckoutUrl, iosHidesPurchases } from '@/lib/checkout';
 
 interface CreditPurchaseModalProps {
   open: boolean;
@@ -42,8 +44,8 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
       const result = await createCheckoutSession({
         priceId,
         mode: 'payment',
-        successUrl: `${window.location.origin}/settings/billing?credits=success`,
-        cancelUrl: `${window.location.origin}/settings/billing`,
+        successUrl: `${getAuthOrigin()}/settings/billing?credits=success`,
+        cancelUrl: `${getAuthOrigin()}/settings/billing`,
         metadata: {
           credit_pack: selectedPack.id,
           credits: String(selectedPack.credits),
@@ -52,7 +54,7 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
       });
 
       if ('url' in result && result.url) {
-        window.location.href = result.url;
+        await openCheckoutUrl(result.url);
       } else {
         toast({
           title: t('Error'),
@@ -71,6 +73,11 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
       setIsLoading(false);
     }
   };
+
+  // No purchase path on iOS — see iosHidesPurchases() and App Store 3.1.1.
+  // Rendering nothing is deliberate: the callers that open this modal are
+  // themselves hidden in that build, so this is a second line of defence.
+  if (iosHidesPurchases()) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

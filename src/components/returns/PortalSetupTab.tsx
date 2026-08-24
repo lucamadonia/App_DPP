@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { ReturnsHubSettings, CustomerPortalSettings } from '@/types/returns-hub';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 import { PortalDomainSettingsCard } from '@/components/returns/PortalDomainSettingsCard';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 interface PortalSetupTabProps {
   settings: ReturnsHubSettings;
@@ -47,8 +48,8 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
     });
   };
 
-  const returnsPortalBase = `${window.location.origin}/returns/portal/${tenantSlug}`;
-  const customerPortalBase = `${window.location.origin}/customer/${tenantSlug}`;
+  const returnsPortalBase = `${getPublicBaseUrl()}/returns/portal/${tenantSlug}`;
+  const customerPortalBase = `${getPublicBaseUrl()}/customer/${tenantSlug}`;
 
   const portalDomain = (settings as any).portalDomain;
   const customDomainUrl = portalDomain?.customDomain && portalDomain?.domainStatus === 'verified'

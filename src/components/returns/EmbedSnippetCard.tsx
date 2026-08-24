@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 interface EmbedSnippetCardProps {
   tenantSlug: string;
@@ -34,8 +35,8 @@ export function EmbedSnippetCard({ tenantSlug, tenantName, allowedDomains = [], 
   const [copied, setCopied] = useState(false);
   const [newDomain, setNewDomain] = useState('');
 
-  const embedOrigin = window.location.origin;
-  const previewOrigin = window.location.origin;
+  const embedOrigin = getPublicBaseUrl();
+  const previewOrigin = getPublicBaseUrl();
 
   const snippet = `<script src="${embedOrigin}/embed.js"></script>
 <div id="trackbliss-returns"></div>

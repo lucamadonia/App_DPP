@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import {
   Tabs, TabsList, TabsTrigger,
 } from '@/components/ui/tabs';
@@ -25,6 +25,7 @@ import {
   cancelSupplierInvitation,
 } from '@/services/supabase/supplier-portal';
 import type { SupplierInvitationStatus } from '@/types/supplier-portal';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 // Status badge configuration
 const STATUS_CONFIG: Record<SupplierInvitationStatus, { variant: 'default' | 'secondary' | 'destructive' | 'outline', color: string }> = {
@@ -123,6 +124,90 @@ export function SupplierInvitationsTab() {
     setCurrentPage(1);
   }, [search, statusFilter]);
 
+  const columns: ResponsiveTableColumn<(typeof invitations)[number]>[] = [
+    {
+      id: 'email',
+      header: t('Email'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (inv) => inv.email,
+    },
+    {
+      id: 'contact',
+      header: t('Contact'),
+      hideBelow: 'md',
+      mobilePriority: 'subtitle',
+      cell: (inv) => inv.contactName || '-',
+    },
+    {
+      id: 'company',
+      header: t('Company'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Company'),
+      cell: (inv) => inv.companyName || '-',
+    },
+    {
+      id: 'status',
+      header: t('Status'),
+      mobilePriority: 'badge',
+      cell: (inv) => (
+        <Badge className={STATUS_CONFIG[inv.status].color}>
+          {t(inv.status.charAt(0).toUpperCase() + inv.status.slice(1))}
+        </Badge>
+      ),
+    },
+    {
+      id: 'invitedAt',
+      header: t('Invited At'),
+      className: 'text-muted-foreground text-sm',
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      mobileLabel: t('Invited At'),
+      cell: (inv) => formatDate(inv.createdAt, locale),
+    },
+    {
+      id: 'expiresAt',
+      header: t('Expires At'),
+      className: 'text-muted-foreground text-sm',
+      hideBelow: 'md',
+      mobilePriority: 'meta',
+      mobileLabel: t('Expires At'),
+      cell: (inv) => formatDate(inv.expiresAt, locale),
+    },
+    {
+      id: 'actions',
+      header: t('Actions'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      cell: (inv) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title={t('Copy Link')}
+            onClick={() => handleCopyLink(inv.invitationCode)}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+          {inv.status === 'pending' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
+              title={t('Cancel')}
+              onClick={() => handleCancelInvitation(inv.id)}
+              disabled={cancelMutation.isPending}
+            >
+              <XCircle className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   const handleCreateInvitation = () => {
     if (!newInvitation.email) {
       toast({
@@ -147,7 +232,7 @@ export function SupplierInvitationsTab() {
   };
 
   const handleCopyLink = (invitationCode: string) => {
-    const url = `${window.location.origin}/suppliers/register/${invitationCode}`;
+    const url = `${getPublicBaseUrl()}/suppliers/register/${invitationCode}`;
     navigator.clipboard.writeText(url);
     toast({
       title: t('Link Copied'),
@@ -240,64 +325,11 @@ export function SupplierInvitationsTab() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Email')}</TableHead>
-                      <TableHead>{t('Contact')}</TableHead>
-                      <TableHead>{t('Company')}</TableHead>
-                      <TableHead>{t('Status')}</TableHead>
-                      <TableHead>{t('Invited At')}</TableHead>
-                      <TableHead>{t('Expires At')}</TableHead>
-                      <TableHead className="text-right">{t('Actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedInvitations.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{inv.email}</TableCell>
-                        <TableCell>{inv.contactName || '-'}</TableCell>
-                        <TableCell>{inv.companyName || '-'}</TableCell>
-                        <TableCell>
-                          <Badge className={STATUS_CONFIG[inv.status].color}>
-                            {t(inv.status.charAt(0).toUpperCase() + inv.status.slice(1))}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(inv.createdAt, locale)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(inv.expiresAt, locale)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title={t('Copy Link')}
-                              onClick={() => handleCopyLink(inv.invitationCode)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            {inv.status === 'pending' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive"
-                                title={t('Cancel')}
-                                onClick={() => handleCancelInvitation(inv.id)}
-                                disabled={cancelMutation.isPending}
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ResponsiveTable
+                  data={paginatedInvitations}
+                  columns={columns}
+                  rowKey={(inv) => inv.id}
+                />
               </div>
 
               {/* Pagination */}

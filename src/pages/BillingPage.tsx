@@ -41,6 +41,8 @@ import {
 import type { BillingPlan, ModuleId, BillingInvoice } from '@/types/billing';
 import { MODULE_CONFIGS } from '@/types/billing';
 import { getPlanPriceId, getModulePriceId } from '@/config/stripe-prices';
+import { getAuthOrigin } from '@/lib/platform';
+import { openCheckoutUrl, iosHidesPurchases } from '@/lib/checkout';
 
 export function BillingPage() {
   const { t, i18n } = useTranslation('billing');
@@ -101,14 +103,14 @@ export function BillingPage() {
       const result = await createCheckoutSession({
         priceId,
         mode: 'subscription',
-        successUrl: `${window.location.origin}/settings/billing?upgrade=success`,
-        cancelUrl: `${window.location.origin}/settings/billing`,
+        successUrl: `${getAuthOrigin()}/settings/billing?upgrade=success`,
+        cancelUrl: `${getAuthOrigin()}/settings/billing`,
         metadata: { plan },
         locale: i18n.language,
       });
 
       if ('url' in result && result.url) {
-        window.location.href = result.url;
+        await openCheckoutUrl(result.url);
       } else {
         toast({ title: t('Error'), description: result.error || t('Failed to start checkout. Please try again.'), variant: 'destructive' });
       }
@@ -125,14 +127,14 @@ export function BillingPage() {
       const result = await createCheckoutSession({
         priceId,
         mode: 'subscription',
-        successUrl: `${window.location.origin}/settings/billing?module=${moduleId}&status=success`,
-        cancelUrl: `${window.location.origin}/settings/billing`,
+        successUrl: `${getAuthOrigin()}/settings/billing?module=${moduleId}&status=success`,
+        cancelUrl: `${getAuthOrigin()}/settings/billing`,
         metadata: { module: moduleId },
         locale: i18n.language,
       });
 
       if ('url' in result && result.url) {
-        window.location.href = result.url;
+        await openCheckoutUrl(result.url);
       } else {
         toast({ title: t('Error'), description: result.error || t('Failed to start checkout. Please try again.'), variant: 'destructive' });
       }
@@ -145,10 +147,10 @@ export function BillingPage() {
     setActionLoading(true);
     try {
       const result = await createPortalSession(
-        `${window.location.origin}/settings/billing`,
+        `${getAuthOrigin()}/settings/billing`,
       );
       if ('url' in result && result.url) {
-        window.location.href = result.url;
+        await openCheckoutUrl(result.url);
       } else {
         toast({ title: t('Error'), description: result.error || t('Failed to open billing portal. Please try again.'), variant: 'destructive' });
       }
@@ -209,6 +211,38 @@ export function BillingPage() {
 
   const currentPlan = entitlements.plan;
   const allModuleIds = Object.keys(MODULE_CONFIGS) as ModuleId[];
+
+  // App Store guideline 3.1.1: digital goods must go through In-App Purchase.
+  // Rather than implementing IAP for plans and credits, the iOS build shows the
+  // current plan and credit balance only — no prices, no upgrade paths, no
+  // checkout. Plans are managed on the web. Android keeps Stripe.
+  if (iosHidesPurchases()) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">{t('Plan & Credits')}</h1>
+          <p className="text-muted-foreground">{t('Your current plan and AI credit balance')}</p>
+        </div>
+
+        <Card>
+          <CardContent className="flex items-center justify-between py-5">
+            <div>
+              <p className="text-sm text-muted-foreground">{t('Current plan')}</p>
+              <p className="text-lg font-semibold capitalize">{entitlements.plan}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">{t('AI Credits')}</p>
+              <p className="text-lg font-semibold">{entitlements.credits.totalAvailable}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-sm text-muted-foreground">
+          {t('Plan changes are managed by your administrator.')}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

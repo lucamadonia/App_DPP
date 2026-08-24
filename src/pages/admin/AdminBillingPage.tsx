@@ -4,14 +4,14 @@ import { CreditCard, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+  ResponsiveTable, type ResponsiveTableColumn,
+} from '@/components/ui/responsive-table';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { listAdminTenants, updateTenantPlan, toggleModule } from '@/services/supabase/admin';
@@ -81,6 +81,70 @@ export function AdminBillingPage() {
     }
   };
 
+  const columns: ResponsiveTableColumn<AdminTenant>[] = [
+    {
+      id: 'tenant',
+      header: t('Tenant'),
+      className: 'font-medium',
+      mobilePriority: 'title',
+      cell: (tenant) => tenant.name,
+    },
+    {
+      id: 'plan',
+      header: t('Plan'),
+      mobilePriority: 'meta',
+      mobileLabel: t('Plan'),
+      cell: (tenant) => (
+        <Select
+          value={tenant.plan}
+          onValueChange={(v) => handlePlanChange(tenant.id, v as BillingPlan)}
+        >
+          <SelectTrigger className="w-32 h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="free">{t('Free')}</SelectItem>
+            <SelectItem value="pro">{t('Pro')}</SelectItem>
+            <SelectItem value="enterprise">{t('Enterprise')}</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      id: 'modules',
+      header: t('Active Modules Column'),
+      hideBelow: 'md',
+      mobilePriority: 'subtitle',
+      cell: (tenant) => (
+        <div className="flex flex-wrap gap-1">
+          {tenant.activeModules.map((m) => (
+            <Badge key={m} variant="outline" className="text-xs">{t(m)}</Badge>
+          ))}
+          {tenant.activeModules.length === 0 && <span className="text-muted-foreground text-xs">-</span>}
+        </div>
+      ),
+    },
+    {
+      id: 'mrr',
+      header: t('MRR'),
+      className: 'text-right tabular-nums',
+      hideBelow: 'sm',
+      mobilePriority: 'meta',
+      mobileLabel: t('MRR'),
+      cell: (tenant) => `\u20AC${PLAN_MRR[tenant.plan] || 0}`,
+    },
+    {
+      id: 'actions',
+      header: t('Actions'),
+      mobilePriority: 'meta',
+      cell: (tenant) => (
+        <Button size="sm" variant="outline" onClick={() => setModuleDialogTenant(tenant)}>
+          {t('Manage Modules')}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -121,64 +185,13 @@ export function AdminBillingPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Tenant')}</TableHead>
-                    <TableHead>{t('Plan')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('Active Modules Column')}</TableHead>
-                    <TableHead className="hidden sm:table-cell text-right">{t('MRR')}</TableHead>
-                    <TableHead>{t('Actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tenants.map((tenant) => (
-                    <TableRow key={tenant.id}>
-                      <TableCell className="font-medium">{tenant.name}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={tenant.plan}
-                          onValueChange={(v) => handlePlanChange(tenant.id, v as BillingPlan)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="free">{t('Free')}</SelectItem>
-                            <SelectItem value="pro">{t('Pro')}</SelectItem>
-                            <SelectItem value="enterprise">{t('Enterprise')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="flex flex-wrap gap-1">
-                          {tenant.activeModules.map((m) => (
-                            <Badge key={m} variant="outline" className="text-xs">{t(m)}</Badge>
-                          ))}
-                          {tenant.activeModules.length === 0 && <span className="text-muted-foreground text-xs">-</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-right tabular-nums">
-                        {'\u20AC'}{PLAN_MRR[tenant.plan] || 0}
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline" onClick={() => setModuleDialogTenant(tenant)}>
-                          {t('Manage Modules')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {tenants.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        {t('No tenants')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={tenants}
+              columns={columns}
+              rowKey={(tenant) => tenant.id}
+              className="border-0 bg-transparent rounded-none"
+              emptyState={<span className="text-muted-foreground">{t('No tenants')}</span>}
+            />
           )}
         </CardContent>
       </Card>

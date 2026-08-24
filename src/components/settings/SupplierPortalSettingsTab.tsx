@@ -13,6 +13,7 @@ import { useBranding } from '@/hooks/use-branding';
 import { updateTenantSettings } from '@/services/supabase/tenants';
 import type { SupplierPortalSettings } from '@/types/supplier-portal';
 import { DEFAULT_SUPPLIER_PORTAL_SETTINGS } from '@/types/supplier-portal';
+import { getPublicBaseUrl } from '@/lib/platform';
 
 export function SupplierPortalSettingsTab() {
   const { t } = useTranslation('settings');
@@ -190,7 +191,7 @@ export function SupplierPortalSettingsTab() {
               <div>
                 <Label className="text-sm text-muted-foreground">{t('Invitation Link Format')}</Label>
                 <p className="text-sm font-mono bg-muted p-2 rounded mt-1">
-                  {window.location.origin}/suppliers/register/{'<invitation-code>'}
+                  {getPublicBaseUrl()}/suppliers/register/{'<invitation-code>'}
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">
