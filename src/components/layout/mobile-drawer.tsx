@@ -85,7 +85,7 @@ export function MobileDrawer({
         <div
           className={cn(
             'flex-1 overflow-y-auto px-4 py-4',
-            isBottomOrTop && 'pb-[calc(env(safe-area-inset-bottom)+1rem)]'
+            isBottomOrTop && 'pb-[calc(var(--safe-bottom)+1rem)]'
           )}
         >
           {children}
@@ -94,7 +94,7 @@ export function MobileDrawer({
           <div
             className={cn(
               'border-t bg-background/95 backdrop-blur-sm px-4 py-3',
-              isBottomOrTop && 'pb-[calc(env(safe-area-inset-bottom)+0.75rem)]'
+              isBottomOrTop && 'pb-[calc(var(--safe-bottom)+0.75rem)]'
             )}
           >
             {footer}

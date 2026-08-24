@@ -30,7 +30,7 @@ export function StickyBottomBar({
         className={cn(
           'fixed inset-x-0 bottom-0 border-t border-border bg-background/95 backdrop-blur-md px-4 py-3',
           'flex items-center justify-between gap-2',
-          'pb-[calc(env(safe-area-inset-bottom)+0.75rem)]',
+          'pb-[calc(var(--safe-bottom)+0.75rem)]',
           alwaysVisible ? 'flex' : 'flex md:hidden',
           className
         )}

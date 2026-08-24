@@ -230,3 +230,58 @@ export function useMotionVariants<T extends Variants>(variants: T): T | Record<s
 // Re-export useReducedMotion for convenience
 // ---------------------------------------------------------------------------
 export { useReducedMotion };
+
+
+// ---------------------------------------------------------------------------
+// Directional route transitions (mobile)
+// ---------------------------------------------------------------------------
+/**
+ * iOS-style push/pop. The outgoing page parallaxes to -25% while the incoming
+ * page slides over it, which is what makes a WebView read as a native stack.
+ *
+ * Requires `AnimatePresence mode="popLayout"` plus `position: relative` on the
+ * outlet wrapper and `position: absolute; inset: 0` on the exiting page —
+ * otherwise the two pages stack vertically mid-transition.
+ *
+ * Only transform/opacity animate, so this stays on the compositor.
+ */
+export const routeVariants: Variants = {
+  initial: (direction: 'push' | 'pop' | 'switch') => {
+    if (direction === 'push') return { x: '100%', opacity: 1 };
+    if (direction === 'pop') return { x: '-25%', opacity: 0.6 };
+    return { opacity: 0, x: 0 };
+  },
+  animate: { x: 0, opacity: 1 },
+  exit: (direction: 'push' | 'pop' | 'switch') => {
+    if (direction === 'push') return { x: '-25%', opacity: 0.6 };
+    if (direction === 'pop') return { x: '100%', opacity: 1 };
+    return { opacity: 0, x: 0 };
+  },
+};
+
+/** Opacity-only fallback for `prefers-reduced-motion`. */
+export const routeVariantsReduced: Variants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+/**
+ * Transition for a given motion budget.
+ * `minimal` drops springs for a short tween — spring physics on a low-end
+ * Android WebView is where dropped frames show up first.
+ */
+export function routeTransition(budget: 'full' | 'reduced' | 'minimal'): Transition {
+  if (budget === 'reduced') return { duration: timing.fast, ease: 'easeOut' };
+  if (budget === 'minimal') return { duration: timing.fast, ease: [0.16, 1, 0.3, 1] };
+  return spring.snappy;
+}
+
+/**
+ * Stagger delay for list entrances, capped so long lists do not crawl.
+ * Items past `cap` appear immediately.
+ */
+export function staggerDelayFor(index: number, budget: 'full' | 'reduced' | 'minimal', cap = 12): number {
+  if (budget !== 'full') return 0;
+  return Math.min(index, cap) * 0.03;
+}
