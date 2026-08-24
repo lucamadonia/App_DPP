@@ -74,37 +74,29 @@ jobs:
             -configuration Debug -sdk iphonesimulator \
             CODE_SIGNING_ALLOWED=NO build | tail -30
 
-      - name: Open pull request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: chore/ios-platform
-          commit-message: |
-            chore(ios): iOS-Plattform erzeugen und konfigurieren
+      # Pushes a branch; the pull request is opened by hand from it.
+      #
+      # Creating a PR from inside Actions additionally needs the repo-level
+      # "Allow GitHub Actions to create and approve pull requests" toggle, which
+      # this repo does not grant — and it is a permission worth not depending
+      # on. Pushing a branch only needs `contents: write`, which the job has.
+      - name: Push the generated platform
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b chore/ios-platform
 
-            Erzeugt auf einem macOS-Runner via `npx cap add ios`, weil das
-            Projekt unter Windows entwickelt wird und `cap add ios` CocoaPods
-            und die Xcode-Toolchain braucht.
+          # .gitignore already excludes Pods/ and the copied web assets, so this
+          # picks up the Xcode project itself and nothing that gets regenerated.
+          git add ios
+          if git diff --cached --quiet; then
+            echo '::notice::ios/ is unchanged — nothing to push.'
+            exit 0
+          fi
 
-            configure-ios.mjs setzt anschliessend, was `cap add ios` nicht
-            wissen kann: das Associated-Domains-Entitlement fuer Universal
-            Links, die Berechtigungstexte (ohne NSCameraUsageDescription
-            stuerzt der Scanner ab statt abgelehnt zu werden), das Signing-Team
-            und die ExportOptions.plist, die mobile-release.yml erwartet.
-          title: 'chore(ios): iOS-Plattform erzeugen und konfigurieren'
-          body: |
-            Erzeugt von `.github/workflows/ios-scaffold.yml` auf einem macOS-Runner.
+          git commit -m 'chore(ios): iOS-Plattform erzeugen und konfigurieren'             -m 'Erzeugt auf einem macOS-Runner via `npx cap add ios`, weil das Projekt unter Windows entwickelt wird und `cap add ios` CocoaPods und die Xcode-Toolchain braucht.'             -m 'configure-ios.mjs setzt anschliessend, was `cap add ios` nicht wissen kann: das Associated-Domains-Entitlement fuer Universal Links, die Berechtigungstexte, das Signing-Team und die ExportOptions.plist, die mobile-release.yml erwartet.'
 
-            Der Workflow hat vor diesem PR bereits verifiziert, dass das Projekt
-            fuer den Simulator kompiliert (ohne Signing).
-
-            **Vor dem Merge zu pruefen**
-            - `ios/App/App/App.entitlements` listet beide Domains
-            - `ios/App/App/Info.plist` hat `NSCameraUsageDescription`
-            - `ios/App/ExportOptions.plist` traegt die Team ID `WU8U8HD73G`
-
-            **Danach noch noetig, damit Universal Links wirklich greifen:** die
-            App-ID `eu.trackbliss.app` im Developer-Portal anlegen und dort
-            **Associated Domains** aktivieren. Ohne diese Capability lehnt Apple
-            das Entitlement beim Signieren ab.
-          add-paths: |
-            ios/**
+          # force-with-lease so a re-run replaces its own previous attempt but
+          # still refuses to clobber someone else's work on that branch.
+          git push --force-with-lease origin chore/ios-platform
+          echo "::notice::Pushed chore/ios-platform — open a PR from it."
