@@ -96,7 +96,15 @@ jobs:
 
           git commit -m 'chore(ios): iOS-Plattform erzeugen und konfigurieren'             -m 'Erzeugt auf einem macOS-Runner via `npx cap add ios`, weil das Projekt unter Windows entwickelt wird und `cap add ios` CocoaPods und die Xcode-Toolchain braucht.'             -m 'configure-ios.mjs setzt anschliessend, was `cap add ios` nicht wissen kann: das Associated-Domains-Entitlement fuer Universal Links, die Berechtigungstexte, das Signing-Team und die ExportOptions.plist, die mobile-release.yml erwartet.'
 
-          # force-with-lease so a re-run replaces its own previous attempt but
-          # still refuses to clobber someone else's work on that branch.
-          git push --force-with-lease origin chore/ios-platform
+          # A lease needs something to compare against. On the first run the
+          # branch does not exist on the remote at all, and --force-with-lease
+          # then refuses with "stale info" rather than doing the obvious thing —
+          # so the two cases are told apart explicitly. A re-run still replaces
+          # only what it can see, and never clobbers unseen work.
+          if git ls-remote --exit-code --heads origin chore/ios-platform >/dev/null 2>&1; then
+            git fetch origin chore/ios-platform
+            git push --force-with-lease origin chore/ios-platform
+          else
+            git push origin chore/ios-platform
+          fi
           echo "::notice::Pushed chore/ios-platform — open a PR from it."
