@@ -109,6 +109,20 @@ for (const route of PUBLIC_ROUTES) {
 test('login form tap targets are large enough', async ({ page }) => {
   await page.goto('/login', { waitUntil: 'networkidle' });
 
+  // The rule under test lives behind `@media (pointer: coarse)`, and whether a
+  // profile reports one turns out to depend on the HOST, not just the device
+  // preset: iPad Mini reports coarse under WebKit on Windows but fine under
+  // WebKit on the Linux CI runner, despite hasTouch being set in both.
+  //
+  // Where it reports fine the rule never applies, so every button measures its
+  // natural height (h-11 = 2.75rem ~= 42.7px once WebKit autosizes the root
+  // font) and the assertion would fail on an app that is actually correct — a
+  // real iPad does report coarse. Skipping visibly rather than returning early
+  // keeps that in the report, and the assertion goes live again by itself
+  // wherever the pointer is emulated.
+  const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+  test.skip(!coarse, 'This device profile does not emulate a coarse pointer.');
+
   // WCAG 2.5.5 asks for 44x44. The app enforces this with a coarse-pointer CSS
   // rule rather than per component, so it is worth verifying the selector
   // actually matches rather than assuming it does.
