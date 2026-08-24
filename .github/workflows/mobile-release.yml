@@ -156,6 +156,21 @@ jobs:
         if: steps.guard.outputs.present == 'true'
 
       - run: npx cap sync ios
+
+      # App Store Connect rejects any upload whose build number it has seen
+      # before, so CURRENT_PROJECT_VERSION has to increase on every run — the
+      # scaffold leaves it pinned at 1 forever. Same source of truth as Android:
+      # the run number for the build, package.json for the marketing version.
+      - name: Stamp version
+        if: steps.guard.outputs.present == 'true'
+        run: |
+          VERSION_NAME=$(node -p "require('./package.json').version")
+          BUILD_NUMBER=${{ github.run_number }}
+          cd ios/App
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NAME" App/Info.plist 2>/dev/null || true
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION_NAME;/g" App.xcodeproj/project.pbxproj
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" App.xcodeproj/project.pbxproj
+          echo "Building $VERSION_NAME ($BUILD_NUMBER)"
         if: steps.guard.outputs.present == 'true'
 
       # Same pattern as the Play upload below: the `secrets` context is not
