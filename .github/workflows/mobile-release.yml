@@ -32,13 +32,22 @@ jobs:
 
       - run: npm ci
 
-      # `build` is `tsc -b && vite build` — a type error must stop the release,
-      # not produce a broken bundle.
-      - name: Build web assets
-        run: npm run build
-
+      # Cheapest gate first: a text scan over src/ costs seconds, a build costs
+      # minutes. Fail before spending them.
       - name: Guard native invariants
         run: npm run check:native
+
+      # MUST be build:native, not build. `build:native` sets CAPACITOR_BUILD=1,
+      # which is what makes vite.config.ts leave VitePWA out. With a plain
+      # `npm run build` the service worker is emitted and — because
+      # capacitor.config.ts uses androidScheme 'https', making https://localhost
+      # a secure origin — it actually registers inside the WebView. A precached
+      # shell then survives an app update and strands users on stale assets,
+      # which is the exact failure build-native.mjs exists to prevent.
+      # `build:native` still runs `tsc -b && vite build` underneath, so a type
+      # error stops the release just as before.
+      - name: Build web assets
+        run: npm run build:native
 
       - name: Sync Capacitor
         run: npx cap sync android

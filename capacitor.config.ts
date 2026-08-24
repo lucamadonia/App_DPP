@@ -16,7 +16,12 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'always',
-    scheme: 'Trackbliss',
+    // Deliberately NOT renamed to 'Trackbliss'. This names the Xcode SCHEME,
+    // and `cap add ios` always generates one called "App" - Capacitor does not
+    // rename it. Pointing this at a scheme that does not exist breaks
+    // `cap run ios`, and mobile-release.yml archives with `-scheme App`.
+    // The user-visible name comes from CFBundleDisplayName, not from here.
+    scheme: 'App',
   },
   android: {
     // https scheme is required for Universal/App Links and secure-context APIs

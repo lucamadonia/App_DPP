@@ -1,0 +1,110 @@
+name: Scaffold iOS project
+
+# Generates ios/ on a macOS runner and opens a PR with the result.
+#
+# `npx cap add ios` only runs on macOS - it needs CocoaPods and the Xcode
+# toolchain - and this project is developed on Windows. Rather than making a
+# Mac a prerequisite for touching the iOS build, generate the platform here
+# once and commit it. From then on it is version-controlled like any other
+# source: entitlements, Info.plist keys and signing settings survive, and a
+# diff shows what changed.
+#
+# Deliberately manual (workflow_dispatch). Regenerating the platform is a
+# deliberate act, not something that should ride along with an unrelated push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Delete an existing ios/ and regenerate it from scratch'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scaffold:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Remove existing platform
+        if: inputs.force
+        run: rm -rf ios
+
+      # `cap add ios` copies webDir into the project, so dist/ has to exist.
+      # build:native (not build) sets CAPACITOR_BUILD=1, which keeps the PWA
+      # service worker out of the bundle - a precached shell inside a WebView
+      # would survive app updates and strand users on stale assets.
+      - name: Build web assets
+        run: npm run build:native
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+
+      - name: Add iOS platform
+        run: npx cap add ios
+
+      - name: Sync
+        run: npx cap sync ios
+
+      # Associated Domains entitlement, permission strings, signing team and
+      # ExportOptions.plist. Fails loudly if the project layout changed, rather
+      # than producing a build whose Universal Links silently do not work.
+      - name: Configure project
+        run: node scripts/configure-ios.mjs
+
+      # Proof it compiles before anyone is asked to review it. No signing:
+      # CODE_SIGNING_ALLOWED=NO builds the code without certificates, which is
+      # what we can verify here.
+      - name: Verify it builds
+        working-directory: ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO build | tail -30
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/ios-platform
+          commit-message: |
+            chore(ios): iOS-Plattform erzeugen und konfigurieren
+
+            Erzeugt auf einem macOS-Runner via `npx cap add ios`, weil das
+            Projekt unter Windows entwickelt wird und `cap add ios` CocoaPods
+            und die Xcode-Toolchain braucht.
+
+            configure-ios.mjs setzt anschliessend, was `cap add ios` nicht
+            wissen kann: das Associated-Domains-Entitlement fuer Universal
+            Links, die Berechtigungstexte (ohne NSCameraUsageDescription
+            stuerzt der Scanner ab statt abgelehnt zu werden), das Signing-Team
+            und die ExportOptions.plist, die mobile-release.yml erwartet.
+          title: 'chore(ios): iOS-Plattform erzeugen und konfigurieren'
+          body: |
+            Erzeugt von `.github/workflows/ios-scaffold.yml` auf einem macOS-Runner.
+
+            Der Workflow hat vor diesem PR bereits verifiziert, dass das Projekt
+            fuer den Simulator kompiliert (ohne Signing).
+
+            **Vor dem Merge zu pruefen**
+            - `ios/App/App/App.entitlements` listet beide Domains
+            - `ios/App/App/Info.plist` hat `NSCameraUsageDescription`
+            - `ios/App/ExportOptions.plist` traegt die Team ID `WU8U8HD73G`
+
+            **Danach noch noetig, damit Universal Links wirklich greifen:** die
+            App-ID `eu.trackbliss.app` im Developer-Portal anlegen und dort
+            **Associated Domains** aktivieren. Ohne diese Capability lehnt Apple
+            das Entitlement beim Signieren ab.
+          add-paths: |
+            ios/**
