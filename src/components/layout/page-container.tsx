@@ -1,5 +1,8 @@
 import * as React from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useMotionBudget } from '@/hooks/use-motion-budget';
+import { spring, timing } from '@/lib/motion';
 import { StickyBottomBar } from '@/components/layout/sticky-bottom-bar';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
@@ -85,6 +88,22 @@ export function PageContainer({
   ...rest
 }: PageContainerProps) {
   const Component = Tag;
+  const budget = useMotionBudget();
+
+  const headerMotion =
+    budget === 'reduced'
+      ? { initial: undefined, animate: undefined, transition: undefined }
+      : budget === 'minimal'
+        ? {
+            initial: { opacity: 0, y: 6 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: timing.fast, ease: 'easeOut' as const },
+          }
+        : {
+            initial: { opacity: 0, y: 8, filter: 'blur(6px)' },
+            animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+            transition: spring.gentle,
+          };
 
   const body = (
     <Component
@@ -107,7 +126,20 @@ export function PageContainer({
           - no `truncate`: German page titles are long, and clipping one is a
             worse failure than letting it wrap onto two lines */}
       {(title || actions) && (
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-6 sm:items-center">
+        <motion.div
+          // Several of the hand-rolled headers this replaced had a `blurIn`
+          // entrance; consolidating them silently dropped it. Restoring it here
+          // gives all 40 adopting pages the same entrance instead of the
+          // inconsistent mix they had before.
+          //
+          // Budget-aware: `blurIn` animates `filter`, which is expensive in a
+          // WebView, so only `full` gets it. `minimal` gets a transform/opacity
+          // fade, `reduced` gets nothing at all.
+          initial={headerMotion.initial}
+          animate={headerMotion.animate}
+          transition={headerMotion.transition}
+          className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-6 sm:items-center"
+        >
           <div className="min-w-0">
             {title && (
               <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight md:text-2xl">
@@ -117,7 +149,7 @@ export function PageContainer({
             {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
           </div>
           {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
-        </div>
+        </motion.div>
       )}
 
       {children}
