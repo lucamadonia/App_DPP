@@ -46,7 +46,7 @@ jobs:
       # Blocking, with a ratchet.
       #
       # Every rule that reports a real defect is an error and the build fails on
-      # it. What remains are 410 warnings of two kinds, both genuine debt rather
+      # it. What remains are 386 warnings of two kinds, both genuine debt rather
       # than breakage: missing type annotations (@typescript-eslint/no-explicit-any,
       # largely on third-party Shopify and DHL payloads) and React Compiler
       # diagnostics such as setState-inside-an-effect. Each of those needs a
@@ -56,7 +56,7 @@ jobs:
       # --max-warnings pins the count. Adding one more is a build failure, so the
       # number can only go down. Lower it whenever you fix a batch.
       - name: Lint
-        run: npx eslint . --max-warnings 410
+        run: npx eslint . --max-warnings 386
 
       - name: Unit tests
         run: npm run test:run

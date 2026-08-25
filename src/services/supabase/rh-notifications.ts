@@ -45,7 +45,7 @@ export async function getRhNotifications(
     return [];
   }
 
-  return (data || []).map((row: any) => transformNotification(row));
+  return (data || []).map((row) => transformNotification(row));
 }
 
 export async function createRhNotification(

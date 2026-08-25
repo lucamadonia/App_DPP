@@ -39,7 +39,7 @@ export async function getReturnItems(returnId: string): Promise<RhReturnItem[]> 
     return [];
   }
 
-  return (data || []).map((row: any) => transformReturnItem(row));
+  return (data || []).map((row) => transformReturnItem(row));
 }
 
 export async function addReturnItem(

@@ -1538,7 +1538,7 @@ function getDHLReturnsBaseUrl(settings: any): string {
   return settings.sandbox ? DHL_RETURNS_SANDBOX_URL : DHL_RETURNS_PROD_URL;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 /**
  * Public: a customer creates (or re-chooses the format of) their own return
  * label from the portal. Validated by return_number + email — no auth. Allows

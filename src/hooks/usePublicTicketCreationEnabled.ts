@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import type { TenantSettings } from '@/types/database';
 
 interface UsePublicTicketCreationEnabledResult {
   enabled: boolean;
@@ -31,7 +32,8 @@ export function usePublicTicketCreationEnabled(tenantId: string | null | undefin
           .single();
 
         if (tenant?.settings) {
-          const settings = tenant.settings as any;
+          // Non-null by the guard above; the cast is what stops TS narrowing.
+          const settings = tenant.settings as TenantSettings;
           const customerPortalSettings = settings.returnsHub?.customerPortal;
           const createTicketsEnabled = customerPortalSettings?.features?.createTickets ?? false;
           setEnabled(createTicketsEnabled);

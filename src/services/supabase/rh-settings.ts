@@ -234,7 +234,7 @@ export async function getReturnReasons(): Promise<RhReturnReason[]> {
     return [];
   }
 
-  return (data || []).map((row: any) => transformReturnReason(row));
+  return (data || []).map((row) => transformReturnReason(row));
 }
 
 export async function createReturnReason(
@@ -401,5 +401,5 @@ export async function getPublicReturnReasons(tenantSlug: string): Promise<RhRetu
     return [];
   }
 
-  return (data || []).map((row: any) => transformReturnReason(row));
+  return (data || []).map((row) => transformReturnReason(row));
 }

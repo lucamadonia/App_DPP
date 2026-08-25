@@ -112,7 +112,7 @@ export async function getRhTickets(
 
   const total = count || 0;
   return {
-    data: (data || []).map((row: any) => transformTicket(row)),
+    data: (data || []).map((row) => transformTicket(row)),
     total,
     page,
     pageSize,
@@ -266,7 +266,7 @@ export async function getRhTicketMessages(ticketId: string): Promise<RhTicketMes
     return [];
   }
 
-  return (data || []).map((row: any) => transformTicketMessage(row));
+  return (data || []).map((row) => transformTicketMessage(row));
 }
 
 export async function addRhTicketMessage(

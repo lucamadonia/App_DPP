@@ -51,7 +51,7 @@ export async function getRhEmailTemplates(): Promise<RhEmailTemplate[]> {
     return [];
   }
 
-  return (result.data || []).map((row: any) => transformEmailTemplate(row));
+  return (result.data || []).map((row) => transformEmailTemplate(row));
 }
 
 export async function getRhEmailTemplate(

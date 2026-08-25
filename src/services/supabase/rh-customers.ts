@@ -59,7 +59,7 @@ export async function getRhCustomers(
 
   const total = count || 0;
   return {
-    data: (data || []).map((row: any) => transformCustomer(row)),
+    data: (data || []).map((row) => transformCustomer(row)),
     total,
     page,
     pageSize,
