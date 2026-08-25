@@ -26,7 +26,7 @@ import type { OutstandingBatch } from '@/services/supabase/batches';
 
 export type AgeTier = 'fresh' | 'aging' | 'overdue';
 
-// eslint-disable-next-line react-refresh/only-export-components -- shared age-tier helper, also used by the desktop table on OutstandingReceiptsPage
+// Shared age-tier helper — also used by the desktop table on OutstandingReceiptsPage.
 export const getAgeTier = (days: number): AgeTier => {
   if (days > 30) return 'overdue';
   if (days > 14) return 'aging';

@@ -6,6 +6,7 @@
 import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
 import type { RhReturn, ReturnStatus, ReturnsFilter, PaginatedResult, ReturnsHubStats, RhNotificationEventType } from '@/types/returns-hub';
 import { generateReturnNumber } from '@/lib/return-number';
+import type { TenantSettings } from '@/types/database';
 import { triggerEmailNotification, triggerPublicEmailNotification } from './rh-notification-trigger';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,7 +94,7 @@ export async function getReturns(
 
   const total = count || 0;
   return {
-    data: (data || []).map((row: any) => transformReturn(row)),
+    data: (data || []).map((row) => transformReturn(row)),
     total,
     page,
     pageSize,
@@ -479,7 +480,7 @@ export async function publicCreateReturn(
 
   if (!tenant) return { success: false, error: 'Tenant not found' };
 
-  const prefix = (tenant.settings as any)?.returnsHub?.prefix || 'RET';
+  const prefix = (tenant.settings as TenantSettings | null)?.returnsHub?.prefix || 'RET';
   const rn = generateReturnNumber(prefix);
 
   const { data: ret, error } = await supabase
@@ -677,7 +678,7 @@ export async function publicGetTenantBranding(tenantSlug: string): Promise<{
 
   if (!data) return null;
 
-  const settings = data.settings as Record<string, any> | null;
+  const settings = data.settings as TenantSettings | null;
   const branding = settings?.returnsHub?.branding;
   const embedAllowedDomains: string[] | undefined = settings?.returnsHub?.embedAllowedDomains;
 

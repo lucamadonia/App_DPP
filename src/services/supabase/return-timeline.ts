@@ -31,7 +31,7 @@ export async function getReturnTimeline(returnId: string): Promise<RhReturnTimel
     return [];
   }
 
-  return (data || []).map((row: any) => transformTimelineEntry(row));
+  return (data || []).map((row) => transformTimelineEntry(row));
 }
 
 export async function addTimelineEntry(

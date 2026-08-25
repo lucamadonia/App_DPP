@@ -115,7 +115,22 @@ function getTextAlign(alignment: string): 'left' | 'center' | 'right' {
   return 'left';
 }
 
-function LabelElementRenderer({ element, data }: { element: LabelElement; data: MasterLabelData }) {
+/**
+ * MasterLabelData plus the per-label counter context.
+ *
+ * "Label 3 of 40" is a property of the print run, not of the product, so it does
+ * not belong in MasterLabelData — but the element renderer needs it. Declaring
+ * the extension replaces four `(data as any)._counter*` reads and two
+ * `as any` hand-offs that hid whether the fields were there at all.
+ */
+type LabelRenderData = MasterLabelData & {
+  _counterCurrent?: number;
+  _counterTotal?: number;
+  _counterFormat?: PackageCounterFormat;
+  _locale?: 'en' | 'de';
+};
+
+function LabelElementRenderer({ element, data }: { element: LabelElement; data: LabelRenderData }) {
   switch (element.type) {
     case 'text': {
       return (
@@ -352,10 +367,10 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
 
     case 'package-counter': {
       // Extract counter values from enriched data
-      const current = (data as any)._counterCurrent;
-      const total = (data as any)._counterTotal;
-      const counterFormat = (data as any)._counterFormat || element.format;
-      const locale = (data as any)._locale || 'en';
+      const current = data._counterCurrent;
+      const total = data._counterTotal;
+      const counterFormat = data._counterFormat || element.format;
+      const locale = data._locale || 'en';
 
       if (!current || !total) return null;  // Skip if no counter context
 
@@ -408,7 +423,7 @@ function LabelElementRenderer({ element, data }: { element: LabelElement; data: 
 // Section Renderer
 // ---------------------------------------------------------------------------
 
-function LabelSectionRenderer({ section, elements, data }: { section: LabelSection; elements: LabelElement[]; data: MasterLabelData }) {
+function LabelSectionRenderer({ section, elements, data }: { section: LabelSection; elements: LabelElement[]; data: LabelRenderData }) {
   if (!section.visible) return null;
 
   const sectionElements = elements
@@ -439,7 +454,7 @@ function LabelSectionRenderer({ section, elements, data }: { section: LabelSecti
 // PDF Document
 // ---------------------------------------------------------------------------
 
-function MasterLabelEditorDocument({ design, data }: { design: LabelDesign; data: MasterLabelData }) {
+function MasterLabelEditorDocument({ design, data }: { design: LabelDesign; data: LabelRenderData }) {
   const sortedSections = [...design.sections].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
@@ -515,7 +530,7 @@ export async function generateMasterLabelEditorPDF(
       };
 
       const blob = await pdf(
-        <MasterLabelEditorDocument design={design} data={enrichedData as any} />
+        <MasterLabelEditorDocument design={design} data={enrichedData} />
       ).toBlob();
 
       const url = URL.createObjectURL(blob);
@@ -575,7 +590,7 @@ export async function generateMasterLabelEditorPDF(
                   key={section.id}
                   section={section}
                   elements={design.elements}
-                  data={pageData as any}
+                  data={pageData}
                 />
               ))}
             </Page>

@@ -267,7 +267,6 @@ function groupByCategory(items: ChecklistPDFItem[]): { category: string; items: 
 
 // Lazy-loaded PDF module (not part of the hot-reloaded component tree),
 // same pattern as compliance-check/ComplianceReportPDF.tsx.
-// eslint-disable-next-line react-refresh/only-export-components
 function ChecklistDocument({ options }: { options: ChecklistPDFOptions }) {
   const { countryName, categoryName, progressPercent, items, labels } = options;
   const date = new Date().toLocaleDateString();

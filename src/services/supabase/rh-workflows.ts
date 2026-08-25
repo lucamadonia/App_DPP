@@ -138,7 +138,7 @@ export async function getRhWorkflowRules(): Promise<RhWorkflowRule[]> {
     return [];
   }
 
-  const rules = (data || []).map((row: any) => transformWorkflowRule(row));
+  const rules = (data || []).map((row) => transformWorkflowRule(row));
 
   // Auto-migrate legacy rules that don't have _graphVersion: 2
   await migrateLegacyRules(rules);

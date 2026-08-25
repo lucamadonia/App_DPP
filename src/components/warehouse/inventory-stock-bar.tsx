@@ -12,7 +12,7 @@ import type { WhStockLevel } from '@/types/warehouse';
  */
 export type StockHealth = 'ok' | 'low' | 'critical' | 'none';
 
-// eslint-disable-next-line react-refresh/only-export-components -- shared health helper, also used by the inventory table and card grid
+// Shared health helper — also used by the inventory table and the card grid.
 export function getStockHealth(row: WhStockLevel): StockHealth {
   if (row.reorderPoint == null) return 'none';
   if (row.quantityAvailable <= row.reorderPoint) return 'critical';
