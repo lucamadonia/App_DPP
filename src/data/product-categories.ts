@@ -1,7 +1,6 @@
 export interface ProductCategory {
   id: string;
   name: string;
-  icon: string;
   description: string;
   subcategories: string[];
 }
@@ -11,7 +10,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'electronics',
     name: 'Electronics & IT',
-    icon: '💻',
     description: 'All electronic devices and IT equipment',
     subcategories: [
       'Smartphone', 'Tablet', 'Laptop', 'Desktop PC', 'Server', 'Monitor', 'TV/Television',
@@ -28,7 +26,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'household-electronics',
     name: 'Household Appliances',
-    icon: '🏠',
     description: 'Electrical household appliances (white goods, small appliances)',
     subcategories: [
       'Refrigerator', 'Freezer', 'Fridge-Freezer Combo',
@@ -48,7 +45,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'lighting',
     name: 'Lighting',
-    icon: '💡',
     description: 'Light sources and luminaires',
     subcategories: [
       'LED Bulb E27', 'LED Bulb E14', 'LED Bulb GU10', 'LED Bulb G9',
@@ -65,7 +61,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'textiles',
     name: 'Textiles & Fashion',
-    icon: '👕',
     description: 'Clothing, shoes, and textile products',
     subcategories: [
       'T-Shirt', 'Shirt', 'Blouse', 'Sweater', 'Jacket', 'Coat',
@@ -85,7 +80,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'toys',
     name: 'Toys',
-    icon: '🧸',
     description: 'Toys for all age groups',
     subcategories: [
       'Electronic Toys', 'Learning Computer', 'Interactive Dolls',
@@ -107,7 +101,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'furniture',
     name: 'Furniture & Furnishings',
-    icon: '🛋️',
     description: 'Furniture for living and working spaces',
     subcategories: [
       'Sofa', 'Armchair', 'Chair', 'Stool', 'Bench',
@@ -126,7 +119,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'cosmetics',
     name: 'Cosmetics & Personal Care',
-    icon: '💄',
     description: 'Cosmetic products and personal care items',
     subcategories: [
       'Facial Care', 'Day Cream', 'Night Cream', 'Serum',
@@ -148,7 +140,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'food-contact',
     name: 'Food Contact Materials',
-    icon: '🍽️',
     description: 'Materials and articles in contact with food',
     subcategories: [
       'Tableware', 'Plates', 'Bowls', 'Cups',
@@ -169,7 +160,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'batteries',
     name: 'Batteries & Accumulators',
-    icon: '🔋',
     description: 'All types of batteries and accumulators',
     subcategories: [
       'Device Battery AA', 'Device Battery AAA', 'Device Battery C', 'Device Battery D',
@@ -189,7 +179,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'chemicals',
     name: 'Chemicals & Mixtures',
-    icon: '🧪',
     description: 'Chemical substances and preparations',
     subcategories: [
       'Cleaning Agents', 'All-Purpose Cleaner', 'Glass Cleaner', 'Bathroom Cleaner',
@@ -210,7 +199,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'medical',
     name: 'Medical Devices',
-    icon: '🏥',
     description: 'Medical devices and aids',
     subcategories: [
       'Class I - Non-invasive', 'Dressing Material', 'Compression Stockings',
@@ -229,7 +217,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'construction',
     name: 'Construction Products',
-    icon: '🏗️',
     description: 'Building materials and construction products',
     subcategories: [
       'Insulation Materials', 'Mineral Wool', 'EPS', 'XPS', 'PUR',
@@ -249,7 +236,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'machinery',
     name: 'Machinery & Tools',
-    icon: '🔧',
     description: 'Machinery and power tools',
     subcategories: [
       'Drill', 'Rotary Hammer', 'Impact Drill',
@@ -269,7 +255,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'automotive',
     name: 'Vehicle Parts & Accessories',
-    icon: '🚗',
     description: 'Vehicle parts and car accessories',
     subcategories: [
       'Tires', 'Summer Tires', 'Winter Tires', 'All-Season Tires',
@@ -290,7 +275,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'sports',
     name: 'Sports & Leisure',
-    icon: '⚽',
     description: 'Sports equipment and leisure articles',
     subcategories: [
       'Bicycle', 'E-Bike', 'Mountain Bike', 'Road Bike',
@@ -311,7 +295,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'packaging',
     name: 'Packaging',
-    icon: '📦',
     description: 'Packaging materials and solutions',
     subcategories: [
       'Cardboard Packaging', 'Corrugated Board', 'Folding Carton',
@@ -331,7 +314,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'pet',
     name: 'Pet Supplies',
-    icon: '🐕',
     description: 'Pet supplies and pet food',
     subcategories: [
       'Dog Food', 'Cat Food', 'Bird Food',
@@ -349,7 +331,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'garden',
     name: 'Garden & Outdoor',
-    icon: '🌳',
     description: 'Garden supplies and outdoor products',
     subcategories: [
       'Plants', 'Flowers', 'Shrubs', 'Trees',
@@ -369,7 +350,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'office',
     name: 'Office & Stationery',
-    icon: '📎',
     description: 'Office supplies and stationery',
     subcategories: [
       'Writing Instruments', 'Ballpoint Pen', 'Fountain Pen', 'Pencil',
@@ -389,7 +369,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'jewelry',
     name: 'Jewelry & Watches',
-    icon: '💍',
     description: 'Jewelry, watches, and accessories',
     subcategories: [
       'Rings', 'Engagement Rings', 'Wedding Rings', 'Fashion Rings',
@@ -408,7 +387,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'baby',
     name: 'Baby & Toddler',
-    icon: '👶',
     description: 'Baby equipment and toddler products',
     subcategories: [
       'Strollers', 'Buggy', 'Combination Stroller', 'Double Stroller',
@@ -428,7 +406,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'food',
     name: 'Food & Beverages',
-    icon: '🍎',
     description: 'Food products and beverages (packaged)',
     subcategories: [
       'Staple Foods', 'Flour', 'Sugar', 'Rice', 'Pasta',
@@ -450,7 +427,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'psa',
     name: 'PPE - Personal Protective Equipment',
-    icon: '🦺',
     description: 'Personal protective equipment',
     subcategories: [
       'Head Protection', 'Safety Helmet', 'Bump Cap', 'Hair Protection',
@@ -469,7 +445,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'optics',
     name: 'Optics & Photography',
-    icon: '📷',
     description: 'Optical devices and photo accessories',
     subcategories: [
       'Glasses', 'Prescription Glasses', 'Sunglasses', 'Reading Glasses',
@@ -488,7 +463,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'music',
     name: 'Musical Instruments',
-    icon: '🎸',
     description: 'Musical instruments and accessories',
     subcategories: [
       'Guitars', 'Acoustic Guitar', 'Electric Guitar', 'Bass Guitar', 'Ukulele',
@@ -506,7 +480,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'heating-cooling',
     name: 'Heating & Climate',
-    icon: '🌡️',
     description: 'Heating and climate technology',
     subcategories: [
       'Boilers', 'Gas Heating', 'Oil Heating', 'Pellet Heating',
@@ -524,7 +497,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'security',
     name: 'Security Technology',
-    icon: '🔒',
     description: 'Security and surveillance technology',
     subcategories: [
       'Alarm Systems', 'Wireless Alarm', 'Wired Alarm', 'Smart Alarm',
@@ -542,7 +514,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'renewable',
     name: 'Renewable Energy',
-    icon: '☀️',
     description: 'Solar, wind, and energy storage',
     subcategories: [
       'Solar Modules', 'Monocrystalline', 'Polycrystalline', 'Thin Film',
@@ -560,7 +531,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'agriculture',
     name: 'Agriculture',
-    icon: '🚜',
     description: 'Agricultural products and machinery',
     subcategories: [
       'Tractors', 'Compact Tractor', 'Standard Tractor', 'Narrow-Track Tractor',
@@ -578,7 +548,6 @@ const categoriesEn: ProductCategory[] = [
   {
     id: 'cleaning',
     name: 'Cleaning & Hygiene',
-    icon: '🧹',
     description: 'Cleaning equipment and hygiene articles',
     subcategories: [
       'Cleaning Equipment', 'Broom', 'Mop', 'Bucket', 'Squeegee',
@@ -600,7 +569,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'electronics',
     name: 'Elektronik & IT',
-    icon: '💻',
     description: 'Alle elektronischen Geräte und IT-Ausstattung',
     subcategories: [
       'Smartphone', 'Tablet', 'Laptop', 'Desktop-PC', 'Server', 'Monitor', 'TV/Fernseher',
@@ -617,7 +585,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'household-electronics',
     name: 'Haushaltsgeräte',
-    icon: '🏠',
     description: 'Elektrische Haushaltsgeräte (Großgeräte, Kleingeräte)',
     subcategories: [
       'Kühlschrank', 'Gefrierschrank', 'Kühl-Gefrier-Kombination',
@@ -637,7 +604,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'lighting',
     name: 'Beleuchtung',
-    icon: '💡',
     description: 'Leuchtmittel und Leuchten',
     subcategories: [
       'LED-Lampe E27', 'LED-Lampe E14', 'LED-Lampe GU10', 'LED-Lampe G9',
@@ -654,7 +620,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'textiles',
     name: 'Textilien & Mode',
-    icon: '👕',
     description: 'Kleidung, Schuhe und Textilprodukte',
     subcategories: [
       'T-Shirt', 'Hemd', 'Bluse', 'Pullover', 'Jacke', 'Mantel',
@@ -674,7 +639,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'toys',
     name: 'Spielzeug',
-    icon: '🧸',
     description: 'Spielwaren für alle Altersgruppen',
     subcategories: [
       'Elektronisches Spielzeug', 'Lerncomputer', 'Interaktive Puppen',
@@ -696,7 +660,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'furniture',
     name: 'Möbel & Einrichtung',
-    icon: '🛋️',
     description: 'Möbel für Wohn- und Arbeitsbereiche',
     subcategories: [
       'Sofa', 'Sessel', 'Stuhl', 'Hocker', 'Bank',
@@ -715,7 +678,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'cosmetics',
     name: 'Kosmetik & Körperpflege',
-    icon: '💄',
     description: 'Kosmetikprodukte und Körperpflegeartikel',
     subcategories: [
       'Gesichtspflege', 'Tagescreme', 'Nachtcreme', 'Serum',
@@ -737,7 +699,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'food-contact',
     name: 'Lebensmittelkontaktmaterialien',
-    icon: '🍽️',
     description: 'Materialien und Gegenstände mit Lebensmittelkontakt',
     subcategories: [
       'Geschirr', 'Teller', 'Schüsseln', 'Tassen',
@@ -758,7 +719,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'batteries',
     name: 'Batterien & Akkumulatoren',
-    icon: '🔋',
     description: 'Alle Arten von Batterien und Akkumulatoren',
     subcategories: [
       'Gerätebatterie AA', 'Gerätebatterie AAA', 'Gerätebatterie C', 'Gerätebatterie D',
@@ -778,7 +738,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'chemicals',
     name: 'Chemikalien & Gemische',
-    icon: '🧪',
     description: 'Chemische Stoffe und Zubereitungen',
     subcategories: [
       'Reinigungsmittel', 'Allzweckreiniger', 'Glasreiniger', 'Badreiniger',
@@ -799,7 +758,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'medical',
     name: 'Medizinprodukte',
-    icon: '🏥',
     description: 'Medizinische Geräte und Hilfsmittel',
     subcategories: [
       'Klasse I - Nicht-invasiv', 'Verbandmaterial', 'Kompressionsstrümpfe',
@@ -818,7 +776,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'construction',
     name: 'Bauprodukte',
-    icon: '🏗️',
     description: 'Baumaterialien und Bauprodukte',
     subcategories: [
       'Dämmstoffe', 'Mineralwolle', 'EPS', 'XPS', 'PUR',
@@ -838,7 +795,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'machinery',
     name: 'Maschinen & Werkzeuge',
-    icon: '🔧',
     description: 'Maschinen und Elektrowerkzeuge',
     subcategories: [
       'Bohrmaschine', 'Bohrhammer', 'Schlagbohrmaschine',
@@ -858,7 +814,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'automotive',
     name: 'Fahrzeugteile & Zubehör',
-    icon: '🚗',
     description: 'Fahrzeugteile und Autozubehör',
     subcategories: [
       'Reifen', 'Sommerreifen', 'Winterreifen', 'Ganzjahresreifen',
@@ -879,7 +834,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'sports',
     name: 'Sport & Freizeit',
-    icon: '⚽',
     description: 'Sportausrüstung und Freizeitartikel',
     subcategories: [
       'Fahrrad', 'E-Bike', 'Mountainbike', 'Rennrad',
@@ -900,7 +854,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'packaging',
     name: 'Verpackung',
-    icon: '📦',
     description: 'Verpackungsmaterialien und -lösungen',
     subcategories: [
       'Kartonverpackung', 'Wellpappe', 'Faltschachtel',
@@ -920,7 +873,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'pet',
     name: 'Tierbedarf',
-    icon: '🐕',
     description: 'Heimtierbedarf und Tiernahrung',
     subcategories: [
       'Hundefutter', 'Katzenfutter', 'Vogelfutter',
@@ -938,7 +890,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'garden',
     name: 'Garten & Outdoor',
-    icon: '🌳',
     description: 'Gartenbedarf und Outdoor-Produkte',
     subcategories: [
       'Pflanzen', 'Blumen', 'Sträucher', 'Bäume',
@@ -958,7 +909,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'office',
     name: 'Büro & Schreibwaren',
-    icon: '📎',
     description: 'Bürobedarf und Schreibwaren',
     subcategories: [
       'Schreibgeräte', 'Kugelschreiber', 'Füller', 'Bleistift',
@@ -978,7 +928,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'jewelry',
     name: 'Schmuck & Uhren',
-    icon: '💍',
     description: 'Schmuck, Uhren und Accessoires',
     subcategories: [
       'Ringe', 'Verlobungsringe', 'Eheringe', 'Modeschmuckringe',
@@ -997,7 +946,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'baby',
     name: 'Baby & Kleinkind',
-    icon: '👶',
     description: 'Babyausstattung und Kleinkindprodukte',
     subcategories: [
       'Kinderwagen', 'Buggy', 'Kombikinderwagen', 'Geschwisterwagen',
@@ -1017,7 +965,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'food',
     name: 'Lebensmittel & Getränke',
-    icon: '🍎',
     description: 'Lebensmittelprodukte und Getränke (verpackt)',
     subcategories: [
       'Grundnahrungsmittel', 'Mehl', 'Zucker', 'Reis', 'Nudeln',
@@ -1039,7 +986,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'psa',
     name: 'PSA - Persönliche Schutzausrüstung',
-    icon: '🦺',
     description: 'Persönliche Schutzausrüstung',
     subcategories: [
       'Kopfschutz', 'Schutzhelm', 'Anstoßkappe', 'Haarnetz',
@@ -1058,7 +1004,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'optics',
     name: 'Optik & Fotografie',
-    icon: '📷',
     description: 'Optische Geräte und Fotozubehör',
     subcategories: [
       'Brillen', 'Korrektionsbrille', 'Sonnenbrille', 'Lesebrille',
@@ -1077,7 +1022,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'music',
     name: 'Musikinstrumente',
-    icon: '🎸',
     description: 'Musikinstrumente und Zubehör',
     subcategories: [
       'Gitarren', 'Akustikgitarre', 'E-Gitarre', 'Bassgitarre', 'Ukulele',
@@ -1095,7 +1039,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'heating-cooling',
     name: 'Heizung & Klima',
-    icon: '🌡️',
     description: 'Heizungs- und Klimatechnik',
     subcategories: [
       'Heizkessel', 'Gasheizung', 'Ölheizung', 'Pelletheizung',
@@ -1113,7 +1056,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'security',
     name: 'Sicherheitstechnik',
-    icon: '🔒',
     description: 'Sicherheits- und Überwachungstechnik',
     subcategories: [
       'Alarmanlagen', 'Funk-Alarmanlage', 'Draht-Alarmanlage', 'Smart-Alarmanlage',
@@ -1131,7 +1073,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'renewable',
     name: 'Erneuerbare Energien',
-    icon: '☀️',
     description: 'Solar, Wind und Energiespeicher',
     subcategories: [
       'Solarmodule', 'Monokristallin', 'Polykristallin', 'Dünnschicht',
@@ -1149,7 +1090,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'agriculture',
     name: 'Landwirtschaft',
-    icon: '🚜',
     description: 'Landwirtschaftliche Produkte und Maschinen',
     subcategories: [
       'Traktoren', 'Kompakttraktor', 'Standardtraktor', 'Schmalspurtraktor',
@@ -1167,7 +1107,6 @@ const categoriesDe: ProductCategory[] = [
   {
     id: 'cleaning',
     name: 'Reinigung & Hygiene',
-    icon: '🧹',
     description: 'Reinigungsgeräte und Hygieneartikel',
     subcategories: [
       'Reinigungsgeräte', 'Besen', 'Wischmopp', 'Eimer', 'Abzieher',

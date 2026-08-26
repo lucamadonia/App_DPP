@@ -388,5 +388,7 @@
   "Generated": "Erstellt",
   "In Progress": "In Bearbeitung",
   "Completed": "Abgeschlossen",
-  "Not Applicable": "Nicht zutreffend"
+  "Not Applicable": "Nicht zutreffend",
+  "Recyclable": "Recycelbar",
+  "Difficult to recycle": "Schwer recycelbar"
 }

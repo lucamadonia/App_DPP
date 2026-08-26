@@ -23,7 +23,16 @@ import {
   X,
   Target,
   Lightbulb,
+  Recycle,
+  CircleSlash,
+  Trash2,
+  RefreshCw,
+  BatteryCharging,
+  ClipboardList,
+  type LucideIcon,
 } from 'lucide-react';
+import { IconTile, MonogramTile } from '@/components/ui/icon-tile';
+import { getCategoryIcon } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -120,6 +129,19 @@ function useRequirementAnalysis() {
   }, []);
 
   return { analyses, startAnalysis, clearAnalysis };
+}
+
+/**
+ * Icon for a required marking. Matched on substrings because the symbol
+ * strings are free-form label text from the requirements dataset
+ * ("WEEE-Symbol (durchgestrichene Mülltonne)"), not stable identifiers.
+ * CE is handled at the call site — it renders as lettering, not an icon.
+ */
+function getSymbolIcon(symbol: string): LucideIcon {
+  if (symbol.includes('WEEE')) return Trash2;
+  if (symbol.includes('Triman')) return RefreshCw;
+  if (symbol.includes('Batterie') || symbol.includes('Battery')) return BatteryCharging;
+  return ClipboardList;
 }
 
 export interface RequirementsCalculatorPageProps {
@@ -405,20 +427,23 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
               <div className="space-y-2">
                 <Label>{t('Product Category')} *</Label>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                  {productCategories.map(cat => (
-                    <Button
-                      key={cat.id}
-                      variant={selectedCategory === cat.id ? 'default' : 'outline'}
-                      className="h-auto py-3 flex-col min-h-[80px]"
-                      onClick={() => {
-                        setSelectedCategory(cat.id);
-                        setSelectedSubcategory('');
-                      }}
-                    >
-                      <span className="text-2xl mb-1">{cat.icon}</span>
-                      <span className="text-xs text-center leading-tight">{cat.name}</span>
-                    </Button>
-                  ))}
+                  {productCategories.map(cat => {
+                    const CategoryIcon = getCategoryIcon(cat.id, cat.name);
+                    return (
+                      <Button
+                        key={cat.id}
+                        variant={selectedCategory === cat.id ? 'default' : 'outline'}
+                        className="h-auto py-3 flex-col min-h-[80px]"
+                        onClick={() => {
+                          setSelectedCategory(cat.id);
+                          setSelectedSubcategory('');
+                        }}
+                      >
+                        <CategoryIcon className="h-5 w-5 mb-1.5" aria-hidden="true" />
+                        <span className="text-xs text-center leading-tight">{cat.name}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -657,8 +682,11 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
                               <p className="text-xs text-muted-foreground line-clamp-2">{pm.description}</p>
                               {pm.recyclable !== undefined && (
                                 <div className="flex items-center gap-1 mt-2">
-                                  <Badge variant={pm.recyclable ? 'outline' : 'secondary'} className="text-xs">
-                                    {pm.recyclable ? '♻️ Recyclable' : '❌ Difficult to recycle'}
+                                  <Badge variant={pm.recyclable ? 'outline' : 'secondary'} className="text-xs gap-1">
+                                    {pm.recyclable
+                                      ? <Recycle className="h-3 w-3" />
+                                      : <CircleSlash className="h-3 w-3" />}
+                                    {pm.recyclable ? t('Recyclable') : t('Difficult to recycle')}
                                   </Badge>
                                 </div>
                               )}
@@ -1096,12 +1124,13 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
               <div className="grid gap-4 md:grid-cols-3">
                 {[...new Set(requirements.flatMap(r => r.symbols))].map(symbol => (
                   <div key={symbol} className="p-4 rounded-lg border flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-lg font-bold">
-                      {symbol.includes('CE') ? 'CE' :
-                       symbol.includes('WEEE') ? '🗑️❌' :
-                       symbol.includes('Triman') ? '🔄' :
-                       symbol.includes('Batterie') ? '🔋' : '📋'}
-                    </div>
+                    {/* CE stays lettering — the marking itself *is* the two
+                        letters, so an icon would misrepresent it. */}
+                    {symbol.includes('CE') ? (
+                      <MonogramTile text="CE" size="lg" />
+                    ) : (
+                      <IconTile icon={getSymbolIcon(symbol)} size="lg" />
+                    )}
                     <div>
                       <p className="font-medium">{symbol}</p>
                       <p className="text-sm text-muted-foreground">{t('On product/packaging')}</p>

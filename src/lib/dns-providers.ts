@@ -1,7 +1,6 @@
 export interface DNSProvider {
   id: string;
   name: string;
-  logo: string; // emoji or icon identifier
   steps: string[]; // i18n keys for step-by-step instructions
   hostFieldName: string; // What they call the "Host" field
   targetFieldName: string; // What they call the "Value/Target" field
@@ -11,7 +10,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'cloudflare',
     name: 'Cloudflare',
-    logo: '☁️',
     hostFieldName: 'Name',
     targetFieldName: 'Target',
     steps: [
@@ -29,7 +27,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'godaddy',
     name: 'GoDaddy',
-    logo: '🌐',
     hostFieldName: 'Host',
     targetFieldName: 'Points to',
     steps: [
@@ -47,7 +44,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'namecheap',
     name: 'Namecheap',
-    logo: '🏷️',
     hostFieldName: 'Host',
     targetFieldName: 'Value',
     steps: [
@@ -65,7 +61,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'hetzner',
     name: 'Hetzner',
-    logo: '🔴',
     hostFieldName: 'Name',
     targetFieldName: 'Value',
     steps: [
@@ -82,7 +77,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'ionos',
     name: 'IONOS',
-    logo: '🔵',
     hostFieldName: 'Hostname',
     targetFieldName: 'Points to',
     steps: [
@@ -99,7 +93,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'strato',
     name: 'Strato',
-    logo: '🟦',
     hostFieldName: 'Subdomain',
     targetFieldName: 'Target',
     steps: [
@@ -115,7 +108,6 @@ export const DNS_PROVIDERS: DNSProvider[] = [
   {
     id: 'aws',
     name: 'AWS Route 53',
-    logo: '🟠',
     hostFieldName: 'Record name',
     targetFieldName: 'Value',
     steps: [

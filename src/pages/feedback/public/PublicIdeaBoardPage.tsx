@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Star, ChevronUp, Loader2 } from 'lucide-react';
+import { Star, ChevronUp, Loader2, Lightbulb } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
@@ -209,8 +209,9 @@ export function PublicIdeaBoardPage() {
 
         {!voteToken && (
           <Card className="mt-6 bg-muted/30 border-dashed">
-            <CardContent className="p-4 text-center text-sm text-muted-foreground">
-              💡 Zum Voten brauchst du den persönlichen Link aus deiner Einladungs-Email.
+            <CardContent className="p-4 flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+              <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Zum Voten brauchst du den persönlichen Link aus deiner Einladungs-Email.
             </CardContent>
           </Card>
         )}

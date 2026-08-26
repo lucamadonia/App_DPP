@@ -21,6 +21,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { IconTile } from '@/components/ui/icon-tile';
+import { getCategoryIcon } from '@/lib/category-utils';
 import { getCategories } from '@/services/supabase/master-data';
 import type { Category } from '@/types/database';
 import { PageContainer } from '@/components/layout/page-container';
@@ -30,7 +32,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'electronics',
     name: 'Electronics & IT',
-    icon: '💻',
     description: 'All electronic devices and IT equipment',
     regulations: ['CE', 'RoHS', 'WEEE', 'EMC', 'RED'],
     subcategories: [
@@ -48,7 +49,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'household-electronics',
     name: 'Household Appliances',
-    icon: '🏠',
     description: 'Electrical household appliances (white goods, small appliances)',
     regulations: ['CE', 'RoHS', 'WEEE', 'Energy Label', 'Ecodesign'],
     subcategories: [
@@ -69,7 +69,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'lighting',
     name: 'Lighting',
-    icon: '💡',
     description: 'Light sources and luminaires',
     regulations: ['CE', 'RoHS', 'WEEE', 'Energy Label', 'Ecodesign'],
     subcategories: [
@@ -87,7 +86,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'textiles',
     name: 'Textiles & Fashion',
-    icon: '👕',
     description: 'Clothing, footwear and textile products',
     regulations: ['REACH', 'Textile Labelling', 'ESPR/DPP'],
     subcategories: [
@@ -108,7 +106,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'toys',
     name: 'Toys',
-    icon: '🧸',
     description: 'Toys for all age groups',
     regulations: ['CE', 'Toy Safety Directive', 'REACH', 'EN 71'],
     subcategories: [
@@ -131,7 +128,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'furniture',
     name: 'Furniture & Furnishings',
-    icon: '🛋️',
     description: 'Furniture for living and working spaces',
     regulations: ['REACH', 'Timber Regulation', 'ESPR/DPP'],
     subcategories: [
@@ -151,7 +147,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'cosmetics',
     name: 'Cosmetics & Personal Care',
-    icon: '💄',
     description: 'Cosmetic products and personal care items',
     regulations: ['Cosmetics Regulation (EC) 1223/2009', 'REACH', 'CPNP'],
     subcategories: [
@@ -174,7 +169,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'food-contact',
     name: 'Food Contact Materials',
-    icon: '🍽️',
     description: 'Materials and articles in contact with food',
     regulations: ['Reg (EC) 1935/2004', 'Reg (EU) 10/2011', 'LFGB'],
     subcategories: [
@@ -196,7 +190,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'batteries',
     name: 'Batteries & Accumulators',
-    icon: '🔋',
     description: 'All types of batteries and accumulators',
     regulations: ['EU Battery Regulation', 'BattG', 'Digital Battery Passport'],
     subcategories: [
@@ -217,7 +210,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'chemicals',
     name: 'Chemicals & Mixtures',
-    icon: '🧪',
     description: 'Chemical substances and preparations',
     regulations: ['REACH', 'CLP', 'Biocidal Products Regulation', 'Detergents Regulation'],
     subcategories: [
@@ -239,7 +231,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'medical',
     name: 'Medical Devices',
-    icon: '🏥',
     description: 'Medical devices and aids',
     regulations: ['MDR (EU) 2017/745', 'IVDR (EU) 2017/746', 'CE'],
     subcategories: [
@@ -259,7 +250,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'construction',
     name: 'Construction Products',
-    icon: '🏗️',
     description: 'Building materials and construction products',
     regulations: ['Construction Products Regulation (EU) 305/2011', 'CE', 'DoP'],
     subcategories: [
@@ -280,7 +270,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'machinery',
     name: 'Machinery & Tools',
-    icon: '🔧',
     description: 'Machinery and power tools',
     regulations: ['Machinery Directive 2006/42/EC', 'CE', 'Outdoor Noise Directive'],
     subcategories: [
@@ -301,7 +290,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'automotive',
     name: 'Automotive Parts & Accessories',
-    icon: '🚗',
     description: 'Vehicle parts and automotive accessories',
     regulations: ['ECE Regulations', 'Type Approval', 'REACH'],
     subcategories: [
@@ -323,7 +311,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'sports',
     name: 'Sports & Leisure',
-    icon: '⚽',
     description: 'Sports equipment and leisure articles',
     regulations: ['PPE Regulation', 'CE', 'EN Standards'],
     subcategories: [
@@ -345,7 +332,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'baby',
     name: 'Baby & Toddler',
-    icon: '👶',
     description: 'Baby equipment and toddler products',
     regulations: ['Toy Safety Directive', 'EN 1888', 'ECE R44/R129', 'REACH'],
     subcategories: [
@@ -366,7 +352,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'psa',
     name: 'PPE - Protective Equipment',
-    icon: '🦺',
     description: 'Personal protective equipment',
     regulations: ['PPE Regulation (EU) 2016/425', 'CE', 'Category I-III'],
     subcategories: [
@@ -386,7 +371,6 @@ const fallbackCategories: Category[] = [
   {
     id: 'renewable',
     name: 'Renewable Energy',
-    icon: '☀️',
     description: 'Solar, wind and energy storage',
     regulations: ['CE', 'Low Voltage Directive', 'EMC', 'Ecodesign'],
     subcategories: [
@@ -548,9 +532,7 @@ export function ProductCategoriesPage() {
                   <AccordionItem value={category.id} className="border-none">
                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/50">
                       <div className="flex items-center gap-4 text-left w-full">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-2xl">
-                          {category.icon}
-                        </div>
+                        <IconTile icon={getCategoryIcon(category.id, category.name)} size="lg" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{category.name}</h3>
