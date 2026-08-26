@@ -46,6 +46,7 @@ import {
   type ChecklistStatus,
 } from '@/lib/checklist-progress-store';
 import { canPrint } from '@/lib/download-file';
+import { getCategoryIcon } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -309,22 +310,24 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
     { code: 'IE', name: t('Ireland'), flag: '🇮🇪' },
   ];
 
+  // Icons come from the shared registry in category-utils, not from this
+  // list — see getCategoryIcon().
   const categoryOptions = [
-    { id: 'electronics', name: t('Electronics'), icon: '💻' },
-    { id: 'textiles', name: t('Textiles'), icon: '👕' },
-    { id: 'batteries', name: t('Batteries'), icon: '🔋' },
-    { id: 'furniture', name: t('Furniture'), icon: '🛋️' },
-    { id: 'toys', name: t('Toys'), icon: '🧸' },
-    { id: 'packaging', name: t('Packaging'), icon: '📦' },
-    { id: 'cosmetics', name: t('Cosmetics'), icon: '💄' },
-    { id: 'food', name: t('Food'), icon: '🍎' },
-    { id: 'construction', name: t('Construction Materials'), icon: '🧱' },
-    { id: 'machinery', name: t('Machinery'), icon: '⚙️' },
-    { id: 'medical_devices', name: t('Medical Devices'), icon: '🏥' },
-    { id: 'automotive', name: t('Automotive'), icon: '🚗' },
-    { id: 'chemicals', name: t('Chemical Products'), icon: '🧪' },
-    { id: 'food_supplements', name: t('Food Supplements'), icon: '💊' },
-    { id: 'pet_products', name: t('Pet Products'), icon: '🐾' },
+    { id: 'electronics', name: t('Electronics') },
+    { id: 'textiles', name: t('Textiles') },
+    { id: 'batteries', name: t('Batteries') },
+    { id: 'furniture', name: t('Furniture') },
+    { id: 'toys', name: t('Toys') },
+    { id: 'packaging', name: t('Packaging') },
+    { id: 'cosmetics', name: t('Cosmetics') },
+    { id: 'food', name: t('Food') },
+    { id: 'construction', name: t('Construction Materials') },
+    { id: 'machinery', name: t('Machinery') },
+    { id: 'medical_devices', name: t('Medical Devices') },
+    { id: 'automotive', name: t('Automotive') },
+    { id: 'chemicals', name: t('Chemical Products') },
+    { id: 'food_supplements', name: t('Food Supplements') },
+    { id: 'pet_products', name: t('Pet Products') },
   ];
 
   const handlePrint = () => {
@@ -537,16 +540,19 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {categoryOptions.map((cat) => (
-                  <Button
-                    key={cat.id}
-                    variant={selectedCategory === cat.id ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(cat.id)}
-                  >
-                    <span className="mr-2">{cat.icon}</span>
-                    {cat.name}
-                  </Button>
-                ))}
+                {categoryOptions.map((cat) => {
+                  const CategoryIcon = getCategoryIcon(cat.id);
+                  return (
+                    <Button
+                      key={cat.id}
+                      variant={selectedCategory === cat.id ? 'default' : 'outline'}
+                      onClick={() => setSelectedCategory(cat.id)}
+                    >
+                      <CategoryIcon className="mr-2 h-4 w-4" />
+                      {cat.name}
+                    </Button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

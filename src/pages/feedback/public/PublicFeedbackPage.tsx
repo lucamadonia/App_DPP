@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, AlertCircle, Sparkles, Heart, Lightbulb, Baby, Plus, Minus, Star } from 'lucide-react';
+import {
+  Check, AlertCircle, Sparkles, Heart, Lightbulb, Baby, Plus, Minus, Star,
+  Frown, Annoyed, Meh, Smile, Laugh, Leaf,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -296,11 +300,7 @@ export function PublicFeedbackPage() {
                 </div>
 
                 {/* Rating label that appears once rated */}
-                {hasRating && (
-                  <div className="text-center text-sm font-medium animate-in fade-in slide-in-from-bottom-1 duration-300">
-                    {RATING_LABELS[r.rating]}
-                  </div>
-                )}
+                {hasRating && <RatingLabel rating={r.rating} />}
 
                 {/* Rating-tailored follow-up — appears as soon as rated */}
                 {hasRating && (
@@ -542,13 +542,26 @@ export function PublicFeedbackPage() {
 // Sub-components
 // ============================================
 
-const RATING_LABELS: Record<number, string> = {
-  1: '😞 Nicht so gut',
-  2: '🙁 Geht so',
-  3: '🙂 Okay',
-  4: '😊 Sehr gut',
-  5: '🤩 Begeistert!',
+const RATING_LABELS: Record<number, { icon: LucideIcon; label: string }> = {
+  1: { icon: Frown, label: 'Nicht so gut' },
+  2: { icon: Annoyed, label: 'Geht so' },
+  3: { icon: Meh, label: 'Okay' },
+  4: { icon: Smile, label: 'Sehr gut' },
+  5: { icon: Laugh, label: 'Begeistert!' },
 };
+
+function RatingLabel({ rating }: { rating: number }) {
+  const entry = RATING_LABELS[rating];
+  if (!entry) return null;
+  const Icon = entry.icon;
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 text-sm font-medium animate-in fade-in slide-in-from-bottom-1 duration-300">
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {entry.label}
+    </div>
+  );
+}
 
 interface ShellProps {
   children: React.ReactNode;
@@ -767,7 +780,8 @@ function SuccessState({ customerName, tenantName, tenantSlug }: { customerName?:
         </a>
       )}
       <p className="mt-6 text-xs text-muted-foreground">
-        Danke, dass du Fambliss mitgestaltest. 🌿 Du kannst diese Seite jetzt schließen.
+        <Leaf className="inline-block h-3.5 w-3.5 mr-1 -mt-0.5" aria-hidden="true" />
+        Danke, dass du Fambliss mitgestaltest. Du kannst diese Seite jetzt schließen.
       </p>
     </div>
   );

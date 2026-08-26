@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/sheet';
 import { validateDomain } from '@/lib/domain-utils';
 import { DNS_PROVIDERS, CNAME_TARGET, RECOMMENDED_TTL, getSubdomainFromDomain, type DNSProvider } from '@/lib/dns-providers';
+import { MonogramTile } from '@/components/ui/icon-tile';
 import { verifyDomainCNAME, type DNSVerificationResult } from '@/services/supabase/domain-verification';
 
 interface CustomDomainWizardProps {
@@ -234,7 +235,7 @@ export function CustomDomainWizard({
                       : 'border-border'
                   }`}
                 >
-                  <span className="text-2xl">{provider.logo}</span>
+                  <MonogramTile text={provider.name.charAt(0)} size="md" />
                   <span className="font-medium text-sm">{provider.name}</span>
                 </button>
               ))}

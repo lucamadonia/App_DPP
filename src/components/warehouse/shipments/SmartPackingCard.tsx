@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
+  Star,
 } from 'lucide-react';
 import {
   matchCarrierServices,
@@ -282,7 +283,8 @@ export function SmartPackingCard({
           </span>
           {warnMatches.length > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30">
-              {warnMatches.length} ⚠
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+              {warnMatches.length}
             </span>
           )}
           {blockedMatches.length > 0 && (
@@ -315,8 +317,9 @@ export function SmartPackingCard({
               unit mismatch in the underlying product/batch master data. */}
           {items.some((it) => it.weightKg > 50) && (
             <div className="mb-2 rounded-md bg-rose-500/15 border border-rose-500/40 p-2 text-[11px] text-rose-200 leading-snug">
-              <strong className="block font-semibold mb-0.5">
-                ⚠ {t('Suspicious weight detected')}
+              <strong className="flex items-center gap-1 font-semibold mb-0.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('Suspicious weight detected')}
               </strong>
               {t('An item is over 50 kg per unit. Check the batch form: the field expects grams (g), not kilograms. A 1.27 kg product should be entered as 1270.')}
             </div>
@@ -326,8 +329,9 @@ export function SmartPackingCard({
               excluded from the carton suggestion. Weight still counts. */}
           {itemsMissingDims > 0 && (
             <div className="mb-2 rounded-md bg-amber-50 border border-amber-300 p-2 text-[11px] text-amber-800 leading-snug dark:bg-amber-500/10 dark:border-amber-500/40 dark:text-amber-200">
-              <strong className="block font-semibold mb-0.5">
-                ⚠ {t('{{n}} items without dimensions', { n: itemsMissingDims })}
+              <strong className="flex items-center gap-1 font-semibold mb-0.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('{{n}} items without dimensions', { n: itemsMissingDims })}
               </strong>
               {t('Carton and carrier fit calculations use only items with L×W×H set. Their weight still counts. Add dimensions on the product or batch to include them.')}
             </div>
@@ -344,7 +348,7 @@ export function SmartPackingCard({
                 >
                   <span className="truncate">
                     #{i + 1}: {q}× {it.lengthCm}×{it.widthCm}×{it.heightCm} cm @ {it.weightKg.toFixed(2)} kg
-                    {flag && ' ⚠'}
+                    {flag && <AlertTriangle className="inline-block h-3 w-3 ml-1 -mt-0.5" aria-hidden="true" />}
                   </span>
                   <span className={flag ? 'text-rose-300' : 'text-white'}>{lineKg.toFixed(2)} kg</span>
                 </div>
@@ -675,7 +679,7 @@ export function SmartPackingCard({
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[11px] font-semibold text-white truncate">{p.carrier}</span>
                     {i === 0 && (
-                      <span className="text-[8px] font-bold text-emerald-300">★</span>
+                      <Star className="h-2.5 w-2.5 shrink-0 fill-emerald-300 text-emerald-300" aria-hidden="true" />
                     )}
                   </div>
                   <div className="text-sm font-mono font-semibold text-white mt-0.5">

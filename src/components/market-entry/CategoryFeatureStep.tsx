@@ -3,16 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
 import {
-  Cpu,
-  Shirt,
-  ToyBrick,
-  Armchair,
-  FlaskConical,
-  Package,
   BatteryCharging,
   Wifi,
   CircuitBoard,
 } from 'lucide-react';
+import { getCategoryIcon } from '@/lib/category-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -27,17 +22,18 @@ import { getProducts, type ProductListItem } from '@/services/supabase';
 import type { MarketEntryCategory } from '@/services/supabase';
 import type { MarketEntryFeatures } from '@/services/openrouter/market-entry-prompts';
 
+// Icons resolve through the shared registry so this wizard, the checklist
+// picker and the category directory cannot drift apart — see getCategoryIcon().
 const CATEGORY_OPTIONS: {
   id: MarketEntryCategory;
   labelKey: string;
-  icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: 'electronics', labelKey: 'Electronics', icon: Cpu },
-  { id: 'textiles', labelKey: 'Textiles', icon: Shirt },
-  { id: 'toys', labelKey: 'Toys', icon: ToyBrick },
-  { id: 'furniture', labelKey: 'Furniture', icon: Armchair },
-  { id: 'cosmetics', labelKey: 'Cosmetics', icon: FlaskConical },
-  { id: 'general', labelKey: 'General Goods', icon: Package },
+  { id: 'electronics', labelKey: 'Electronics' },
+  { id: 'textiles', labelKey: 'Textiles' },
+  { id: 'toys', labelKey: 'Toys' },
+  { id: 'furniture', labelKey: 'Furniture' },
+  { id: 'cosmetics', labelKey: 'Cosmetics' },
+  { id: 'general', labelKey: 'General Goods' },
 ];
 
 const NONE_PRODUCT = '__none__';
@@ -110,6 +106,8 @@ export function CategoryFeatureStep({
               ? {}
               : { variants: gridItem, whileTap: { scale: 0.97 } };
 
+            const CategoryIcon = getCategoryIcon(cat.id);
+
             return (
               <ItemWrapper key={cat.id} {...itemProps}>
                 <button
@@ -124,7 +122,7 @@ export function CategoryFeatureStep({
                       : 'border-border bg-card'
                   )}
                 >
-                  <cat.icon
+                  <CategoryIcon
                     className={cn(
                       'h-5 w-5',
                       isSelected ? 'text-primary' : 'text-muted-foreground'
