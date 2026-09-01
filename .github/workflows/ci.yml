@@ -67,6 +67,9 @@ jobs:
       - name: Native invariants
         run: npm run check:native
 
+      - name: Release invariants
+        run: npm run check:release
+
       # WebKit specifically, not Chromium: the iOS app runs in a WKWebView, so
       # this is the engine that actually ships. Asserts that no public route
       # scrolls horizontally at 375px and that tap targets clear 44px — the one

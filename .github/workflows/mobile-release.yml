@@ -2,20 +2,54 @@ name: Mobile Release
 
 # Builds signed store artifacts on a version tag.
 #
-# Android works once the keystore secrets exist — the native project is
-# committed, so the runner has everything it needs.
-#
-# iOS requires `npx cap add ios` to have been run ON A MAC and committed first;
-# the platform cannot be generated on Windows or Linux. Until then the ios job
-# warns and skips rather than failing the whole run.
+# Both native projects are committed. Tagged runs are release contracts: they
+# must have complete Android, Play, iOS and App Store credentials, otherwise the
+# affected job fails instead of reporting a misleading successful release.
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify release metadata and native invariants
+        run: |
+          npm run check:release
+          npm run check:native
+
+      - name: Unit tests
+        run: npm run test:run
+
+      - name: Match tag to package version
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION_NAME=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package version v${VERSION_NAME}."
+            exit 1
+          fi
+
   android:
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,6 +142,9 @@ jobs:
         run: |
           if [ -n "$PLAY_JSON" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is required for a tagged Android release."
+            exit 1
           else
             echo "::notice::PLAY_SERVICE_ACCOUNT_JSON not set — skipping Play upload."
             echo "available=false" >> "$GITHUB_OUTPUT"
@@ -124,6 +161,7 @@ jobs:
           status: completed
 
   ios:
+    needs: preflight
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -156,6 +194,7 @@ jobs:
         if: steps.guard.outputs.present == 'true'
 
       - run: npx cap sync ios
+        if: steps.guard.outputs.present == 'true'
 
       # App Store Connect rejects any upload whose build number it has seen
       # before, so CURRENT_PROJECT_VERSION has to increase on every run — the
@@ -171,7 +210,6 @@ jobs:
           sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION_NAME;/g" App.xcodeproj/project.pbxproj
           sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" App.xcodeproj/project.pbxproj
           echo "Building $VERSION_NAME ($BUILD_NUMBER)"
-        if: steps.guard.outputs.present == 'true'
 
       # Same pattern as the Play upload below: the `secrets` context is not
       # available in a step-level `if`, so presence has to be turned into an
@@ -182,12 +220,15 @@ jobs:
         if: steps.guard.outputs.present == 'true'
         env:
           CERT: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
           PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          if [ -n "$CERT" ] && [ -n "$PROFILE" ]; then
+          if [ -n "$CERT" ] && [ -n "$CERT_PASSWORD" ] && [ -n "$PROFILE" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::iOS signing secrets are not set - building unsigned and skipping TestFlight."
+            echo "::notice::iOS release credentials are incomplete - building unsigned and skipping TestFlight."
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -197,7 +238,15 @@ jobs:
         if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true'
         working-directory: ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App             -configuration Release -sdk iphonesimulator             CODE_SIGNING_ALLOWED=NO build | tail -20
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Release -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO build | tail -20
+
+      - name: Require iOS release credentials for tagged release
+        if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true' && github.ref_type == 'tag'
+        run: |
+          echo "::error::A tagged iOS release requires the certificate, provisioning profile, Apple ID and app-specific password secrets."
+          exit 1
 
       - name: Install signing assets
         if: steps.signing.outputs.available == 'true'
@@ -226,11 +275,41 @@ jobs:
           xcodebuild -exportArchive -archivePath build/App.xcarchive \
             -exportOptionsPlist ExportOptions.plist -exportPath build/ipa
 
+      - name: Locate exported IPA
+        id: ipa
+        if: steps.signing.outputs.available == 'true'
+        run: |
+          IPA_PATH=$(find ios/App/build/ipa -maxdepth 1 -type f -name '*.ipa' -print -quit)
+          if [ -z "$IPA_PATH" ]; then
+            echo "::error::Xcode export completed without an IPA."
+            exit 1
+          fi
+          echo "path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed IPA artifact
+        if: steps.signing.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-ipa
+          path: ios/App/build/ipa/*.ipa
+          retention-days: 30
+
+      - name: Validate App Store package
+        if: steps.signing.outputs.available == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          IPA_PATH: ${{ steps.ipa.outputs.path }}
+        run: |
+          xcrun altool --validate-app -f "$IPA_PATH" -t ios \
+            -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD"
+
       - name: Upload to TestFlight
         if: steps.signing.outputs.available == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          IPA_PATH: ${{ steps.ipa.outputs.path }}
         run: |
-          xcrun altool --upload-app -f ios/App/build/ipa/App.ipa -t ios \
+          xcrun altool --upload-app -f "$IPA_PATH" -t ios \
             -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD"

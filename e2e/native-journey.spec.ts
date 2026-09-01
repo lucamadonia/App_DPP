@@ -92,7 +92,11 @@ test.describe('first-run journey', () => {
 
     // Matches both locales: the aria-label is interpolated from one key.
     const steps = page.locator('[aria-label^="Go to screen"], [aria-label^="Zu Bildschirm"]');
-    await expect(steps).toHaveCount(8);
+    // The larger WebKit viewport can finish its initial image/layout work just
+    // after Playwright's 5 s assertion default on a busy CI runner. The dialog
+    // is already mounted at that point, so wait for the progress controls
+    // themselves instead of racing their animated entrance.
+    await expect(steps).toHaveCount(8, { timeout: 15_000 });
     await expect(page.locator('[aria-current="step"]')).toHaveCount(1);
   });
 

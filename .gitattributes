@@ -1,0 +1,15 @@
+* text=auto
+
+# Native build metadata and CI scripts must remain Unix-readable when the
+# repository is edited from Windows.
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.swift text eol=lf
+*.plist text eol=lf
+*.pbxproj text eol=lf
+ios/** text eol=lf
+android/*.gradle text eol=lf
+android/**/*.gradle text eol=lf
+android/gradlew text eol=lf
+

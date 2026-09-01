@@ -24,11 +24,10 @@
                 build uses, so the Supabase redirect allow-list and the Google
                 OAuth client need no native-specific entries.
 
-                Requires /.well-known/assetlinks.json on the host to carry this
-                app's RELEASE signing certificate SHA-256 fingerprint — see
-                public/.well-known/assetlinks.json, which still holds a
-                placeholder. Until that is filled in, autoVerify will fail and
-                links will open in the browser instead of the app.
+                Requires /.well-known/assetlinks.json on the host to carry the
+                release signing certificate SHA-256 fingerprint. After Play App
+                Signing is enabled, Google's app-signing fingerprint must be
+                listed there in addition to the upload-key fingerprint.
             -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -41,6 +40,24 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="trackbliss.eu" android:pathPrefix="/customer" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="trackbliss.eu" android:pathPrefix="/p" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="trackbliss.eu" android:pathPrefix="/01" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="trackbliss.eu" android:pathPrefix="/t" />
             </intent-filter>
         </activity>
 
