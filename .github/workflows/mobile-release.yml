@@ -10,6 +10,16 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Store target for this run
+        required: true
+        default: ios
+        type: choice
+        options:
+          - ios
+          - android
+          - all
 
 permissions:
   contents: read
@@ -49,6 +59,7 @@ jobs:
           fi
 
   android:
+    if: github.event_name == 'push' || inputs.platform == 'android' || inputs.platform == 'all'
     needs: preflight
     runs-on: ubuntu-latest
     steps:
@@ -161,10 +172,25 @@ jobs:
           status: completed
 
   ios:
+    if: github.event_name == 'push' || inputs.platform == 'ios' || inputs.platform == 'all'
     needs: preflight
-    runs-on: macos-latest
+    runs-on: macos-26
+    environment: app-store
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require the current App Store toolchain
+        run: |
+          XCODE_MAJOR=$(xcodebuild -version | awk '/Xcode/{split($2, version, "."); print version[1]}')
+          SDK_MAJOR=$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)
+          if [ "$XCODE_MAJOR" -lt 26 ] || [ "$SDK_MAJOR" -lt 26 ]; then
+            echo "::error::App Store uploads require Xcode 26+ with the iOS 26+ SDK."
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-version
+            exit 1
+          fi
+          xcodebuild -version
+          echo "iOS SDK $(xcrun --sdk iphoneos --show-sdk-version)"
 
       - name: Check the iOS platform exists
         id: guard
@@ -224,11 +250,14 @@ jobs:
           PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APP_STORE_APP_ID: ${{ vars.APP_STORE_CONNECT_APP_ID }}
+          APPLE_SIGN_IN_READY: ${{ vars.APPLE_SIGN_IN_CONFIGURED }}
         run: |
-          if [ -n "$CERT" ] && [ -n "$CERT_PASSWORD" ] && [ -n "$PROFILE" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ]; then
+          if [ -n "$CERT" ] && [ -n "$CERT_PASSWORD" ] && [ -n "$PROFILE" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$APP_STORE_APP_ID" ] && [ "$APPLE_SIGN_IN_READY" = "true" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::iOS release credentials are incomplete - building unsigned and skipping TestFlight."
+            echo "::notice::iOS release setup is incomplete - building unsigned and skipping TestFlight."
+            echo "::notice::Required: signing certificate/profile, Apple ID/app password, APP_STORE_CONNECT_APP_ID and APPLE_SIGN_IN_CONFIGURED=true."
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -238,42 +267,94 @@ jobs:
         if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true'
         working-directory: ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App \
-            -configuration Release -sdk iphonesimulator \
+          xcodebuild -project App.xcodeproj -scheme App \
+            -configuration Release -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build | tail -20
 
       - name: Require iOS release credentials for tagged release
-        if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true' && github.ref_type == 'tag'
+        if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true' && (github.ref_type == 'tag' || github.event_name == 'workflow_dispatch')
         run: |
-          echo "::error::A tagged iOS release requires the certificate, provisioning profile, Apple ID and app-specific password secrets."
+          echo "::error::An iOS store run requires complete signing/upload credentials, an App Store Connect app record and configured Sign in with Apple."
           exit 1
 
       - name: Install signing assets
+        id: signing-assets
         if: steps.signing.outputs.available == 'true'
         env:
           CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
           PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
         run: |
-          KEYCHAIN=build.keychain
-          security create-keychain -p "" $KEYCHAIN
-          security default-keychain -s $KEYCHAIN
-          security unlock-keychain -p "" $KEYCHAIN
-          echo "$CERT_P12_BASE64" | base64 -d > cert.p12
-          security import cert.p12 -k $KEYCHAIN -P "$CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROVISIONING_PROFILE_BASE64" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/app.mobileprovision
-          rm -f cert.p12
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          CERT_PATH="$RUNNER_TEMP/distribution.p12"
+          SOURCE_PROFILE="$RUNNER_TEMP/app.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          echo "$CERT_P12_BASE64" | base64 -d > "$CERT_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 -d > "$SOURCE_PROFILE"
+          security cms -D -i "$SOURCE_PROFILE" > "$PROFILE_PLIST"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
+          PROFILE_APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST")
+          PROFILE_EXPIRATION=$(/usr/libexec/PlistBuddy -c 'Print :ExpirationDate' "$PROFILE_PLIST")
+
+          if [ "$PROFILE_APP_ID" != "WU8U8HD73G.eu.trackbliss.app" ]; then
+            echo "::error::Provisioning profile belongs to $PROFILE_APP_ID, expected WU8U8HD73G.eu.trackbliss.app."
+            exit 1
+          fi
+          if ! /usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.applesignin:0' "$PROFILE_PLIST" | grep -qx 'Default'; then
+            echo "::error::Provisioning profile does not include Sign in with Apple. Regenerate it after enabling the capability."
+            exit 1
+          fi
+
+          INSTALLED_PROFILE="$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$SOURCE_PROFILE" "$INSTALLED_PROFILE"
+
+          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
+          echo "profile_path=$INSTALLED_PROFILE" >> "$GITHUB_OUTPUT"
+          echo "keychain_path=$KEYCHAIN_PATH" >> "$GITHUB_OUTPUT"
+          echo "Provisioning profile: $PROFILE_NAME (expires $PROFILE_EXPIRATION)"
 
       - name: Archive and export
         if: steps.signing.outputs.available == 'true'
         working-directory: ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App \
-            -configuration Release -archivePath build/App.xcarchive archive
+          mkdir -p build
+          cp ExportOptions.plist build/ExportOptions.ci.plist
+          /usr/libexec/PlistBuddy -c 'Add :signingStyle string manual' build/ExportOptions.ci.plist
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' build/ExportOptions.ci.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:eu.trackbliss.app string ${{ steps.signing-assets.outputs.profile_name }}" build/ExportOptions.ci.plist
+
+          xcodebuild -project App.xcodeproj -scheme App \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive \
+            DEVELOPMENT_TEAM=WU8U8HD73G CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER='${{ steps.signing-assets.outputs.profile_name }}' \
+            clean archive
           xcodebuild -exportArchive -archivePath build/App.xcarchive \
-            -exportOptionsPlist ExportOptions.plist -exportPath build/ipa
+            -exportOptionsPlist build/ExportOptions.ci.plist -exportPath build/ipa
+
+      - name: Remove iOS signing assets
+        if: always() && steps.signing.outputs.available == 'true'
+        env:
+          KEYCHAIN_PATH: ${{ steps.signing-assets.outputs.keychain_path }}
+          PROFILE_PATH: ${{ steps.signing-assets.outputs.profile_path }}
+        run: |
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/app.mobileprovision" "$RUNNER_TEMP/profile.plist"
+          if [ -n "$PROFILE_PATH" ]; then rm -f "$PROFILE_PATH"; fi
+          if [ -n "$KEYCHAIN_PATH" ]; then security delete-keychain "$KEYCHAIN_PATH" || true; fi
 
       - name: Locate exported IPA
         id: ipa

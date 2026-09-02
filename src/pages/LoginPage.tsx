@@ -124,7 +124,7 @@ export function LoginPage() {
           transition={{ delay: prefersReduced ? 0 : 0.4, duration: 0.3 }}
         >
           {t('By signing in you agree to our')}{' '}
-          <a href="/privacy" className="text-primary hover:underline">{t('Terms of Service')}</a>
+          <a href="/terms" className="text-primary hover:underline">{t('Terms of Service')}</a>
           {' '}{t('and')}{' '}
           <a href="/privacy" className="text-primary hover:underline">{t('Privacy Policy')}</a>.
         </motion.p>

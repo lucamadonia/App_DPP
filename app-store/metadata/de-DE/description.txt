@@ -1,0 +1,17 @@
+Trackbliss ist die B2B-Arbeitsplattform für digitale Produktpässe und produktbezogene Compliance.
+
+Verwalten Sie Produkte, Varianten, Chargen und Seriennummern zentral. Erstellen Sie GS1-kompatible QR-Codes, veröffentlichen Sie mehrsprachige Produktpässe und dokumentieren Sie Materialien, Zertifikate, Lieferketten und Nachhaltigkeitsdaten nachvollziehbar.
+
+Trackbliss unterstützt Teams unter anderem bei:
+
+• Digitalen Produktpässen nach ESPR 2024/1781
+• Produkt-, Chargen- und Dokumentenverwaltung
+• Compliance-Checklisten und KI-gestützten Analysen
+• Lieferanten- und Lieferkettendokumentation
+• QR-Codes und öffentlichen Produktansichten
+• Retouren, Support-Tickets und Kundenportalen
+• Lagerbestand, Wareneingang und Versandprozessen
+
+Die mobile App bietet zusätzlich einen Gastbereich mit Nachschlagewerken, Checklisten, Regulierungsinformationen und einem QR-Werkzeug. Angemeldete Teams greifen rollenbasiert auf ihre Organisation zu. Mandantentrennung und Datenbankregeln schützen Unternehmensdaten.
+
+Hinweis: KI-gestützte Compliance-Auswertungen dienen als Arbeitshilfe und ersetzen keine Rechtsberatung oder behördliche Prüfung.

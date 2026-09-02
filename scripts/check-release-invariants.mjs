@@ -67,6 +67,8 @@ for (const block of stepBlocks) {
 
 for (const required of [
   "tags: ['v*']",
+  'runs-on: macos-26',
+  'xcodebuild -project App.xcodeproj',
   'Match tag to package version',
   'Upload to Play internal testing',
   'Require iOS release credentials for tagged release',
@@ -74,6 +76,9 @@ for (const required of [
   'Upload to TestFlight',
 ]) {
   if (!workflow.includes(required)) fail(`Mobile workflow is missing: ${required}`);
+}
+if (workflow.includes('xcodebuild -workspace App.xcworkspace')) {
+  fail('The Capacitor SwiftPM project has no App.xcworkspace; iOS CI must use App.xcodeproj');
 }
 
 const androidManifest = read('android/app/src/main/AndroidManifest.xml');
@@ -92,9 +97,31 @@ if (!fingerprints.length || fingerprints.some((value) => !/^([0-9A-F]{2}:){31}[0
   fail('assetlinks.json must contain at least one complete SHA-256 certificate fingerprint');
 }
 
-const privacyManifest = 'node_modules/@capacitor/ios/Capacitor/Capacitor/PrivacyInfo.xcprivacy';
-if (!existsSync(privacyManifest)) {
+const capacitorPrivacyManifest = 'node_modules/@capacitor/ios/Capacitor/Capacitor/PrivacyInfo.xcprivacy';
+if (!existsSync(capacitorPrivacyManifest)) {
   fail('The installed Capacitor iOS SDK is missing its required PrivacyInfo.xcprivacy manifest');
+}
+
+const appPrivacyManifest = 'ios/App/App/PrivacyInfo.xcprivacy';
+if (!existsSync(appPrivacyManifest)) {
+  fail('The iOS app privacy manifest is missing');
+} else {
+  const privacy = read(appPrivacyManifest);
+  if (!privacy.includes('NSPrivacyAccessedAPICategoryUserDefaults') || !privacy.includes('CA92.1')) {
+    fail('The iOS privacy manifest must declare app-local UserDefaults usage with reason CA92.1');
+  }
+  if (!iosProject.includes('PrivacyInfo.xcprivacy in Resources')) {
+    fail('PrivacyInfo.xcprivacy must be included in the Xcode Resources build phase');
+  }
+}
+
+const iosInfo = read('ios/App/App/Info.plist');
+if (!iosInfo.includes('ITSAppUsesNonExemptEncryption')) {
+  fail('Info.plist must declare the app export-compliance state');
+}
+const iosEntitlements = read('ios/App/App/App.entitlements');
+if (!iosEntitlements.includes('com.apple.developer.applesignin')) {
+  fail('The iOS app must include the Sign in with Apple entitlement alongside Google login');
 }
 
 const releaseNotes = `docs/releases/v${version}.md`;
@@ -122,4 +149,3 @@ if (failures.length) {
 }
 
 console.log(`Release invariants OK - Trackbliss ${version}, ${appId}, SDK ${targetSdk}`);
-

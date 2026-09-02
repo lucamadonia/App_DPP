@@ -39,6 +39,7 @@ const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ defaul
 const ImprintPage = lazy(() => import('@/pages/ImprintPage').then(m => ({ default: m.ImprintPage })));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsPage = lazy(() => import('@/pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const SupportPage = lazy(() => import('@/pages/SupportPage').then(m => ({ default: m.SupportPage })));
 const PricingPage = lazy(() => import('@/pages/PricingPage').then(m => ({ default: m.PricingPage })));
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
@@ -395,6 +396,7 @@ function NormalAppRoutes() {
         <Route path="imprint" element={<ImprintPage />} />
         <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="terms" element={<TermsPage />} />
+        <Route path="support" element={<SupportPage />} />
         <Route path="pricing" element={<PricingPage />} />
 
         {/* Login & Auth */}

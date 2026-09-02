@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Trackbliss uses the camera to scan barcodes and QR codes on products and shipments.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

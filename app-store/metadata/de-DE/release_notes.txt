@@ -1,0 +1,1 @@
+Trackbliss 1.2.0 bringt ein neu gestaltetes Dashboard mit direktem Überblick über Produkte, Chargen, Dokumente und anstehende Compliance-Aufgaben. Verbesserte App Links öffnen Produktpässe und Kundenbereiche zuverlässiger direkt in der App. Zusätzlich wurden Stabilität, Datenschutzangaben und Release-Prüfungen für iOS erweitert.

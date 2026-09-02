@@ -1,0 +1,17 @@
+Trackbliss is the B2B workspace for digital product passports and product compliance.
+
+Manage products, variants, batches, and serial numbers in one place. Create GS1-compatible QR codes, publish multilingual product passports, and document materials, certificates, supply chains, and sustainability information with a clear audit trail.
+
+Trackbliss helps teams with:
+
+• Digital Product Passports for ESPR 2024/1781
+• Product, batch, and document management
+• Compliance checklists and AI-assisted analysis
+• Supplier and supply-chain documentation
+• QR codes and public product views
+• Returns, support tickets, and customer portals
+• Inventory, goods receipt, and shipping operations
+
+The mobile app also includes a guest area with reference guides, checklists, regulatory information, and a QR tool. Signed-in teams access their organization through role-based permissions. Tenant isolation and database policies protect company data.
+
+Note: AI-assisted compliance results are a working aid and do not replace legal advice or an assessment by a competent authority.

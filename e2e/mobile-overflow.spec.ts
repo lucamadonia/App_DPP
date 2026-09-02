@@ -21,6 +21,7 @@ const PUBLIC_ROUTES = [
   { path: '/imprint', name: 'Imprint' },
   { path: '/privacy', name: 'Privacy policy' },
   { path: '/terms', name: 'Terms' },
+  { path: '/support', name: 'App Store support' },
   { path: '/auth/reset-password', name: 'Password reset' },
 
   // Customer-facing surfaces. These use deliberately invalid parameters, so

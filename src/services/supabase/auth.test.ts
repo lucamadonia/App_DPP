@@ -14,6 +14,7 @@ vi.mock('@/lib/supabase', () => ({
 
 import {
   signInWithEmail,
+  signInWithApple,
   signUpWithEmail,
   signOut,
   sendPasswordReset,
@@ -95,6 +96,24 @@ describe('Auth Service', () => {
       expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'mypassword',
+      })
+    })
+  })
+
+  describe('signInWithApple', () => {
+    it('starts Apple OAuth with the requested public callback', async () => {
+      mockSupabaseAuth('signInWithOAuth', {
+        data: { provider: 'apple', url: 'https://appleid.apple.com/auth/authorize' },
+        error: null,
+      })
+
+      const redirectTo = 'https://trackbliss.eu/auth/callback'
+      const result = await signInWithApple(redirectTo)
+
+      expect(result.error).toBeNull()
+      expect(mockSupabase.auth.signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'apple',
+        options: { redirectTo },
       })
     })
   })

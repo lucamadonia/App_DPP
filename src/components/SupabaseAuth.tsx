@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mail, Lock, User, KeyRound, LogOut, Eye, EyeOff } from 'lucide-react';
+import { Apple, Loader2, Mail, Lock, User, KeyRound, LogOut, Eye, EyeOff } from 'lucide-react';
 import {
   signInWithEmail,
   signUpWithEmail,
+  signInWithApple,
   signInWithGoogle,
   sendMagicLink,
   sendPasswordReset,
@@ -17,6 +18,7 @@ import {
   type AuthUser,
 } from '@/services/supabase/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import { isIOS } from '@/lib/platform';
 
 /**
  * SupabaseAuth - Authentication Component for Supabase
@@ -24,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
  * Supports:
  * - Email/Password sign in & sign up
  * - Google OAuth
+ * - Sign in with Apple on iOS
  * - Magic Link (OTP)
  */
 
@@ -48,6 +51,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
   const [otpSent, setOtpSent] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const showAppleSignIn = isIOS();
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +109,21 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
         throw new Error(authError.message);
       }
       // OAuth will redirect, no need to handle success here
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message);
+      onAuthError?.(error);
+    }
+  };
+
+  const handleAppleAuth = async () => {
+    try {
+      const { error: authError } = await signInWithApple();
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+      // OAuth returns through the public Universal Link callback.
     } catch (err) {
       const error = err as Error;
       setError(error.message);
@@ -344,6 +363,16 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
           /* Standard Sign In/Up View */
           <>
             {/* Social providers */}
+            {showAppleSignIn && (
+              <Button
+                onClick={handleAppleAuth}
+                className="w-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+              >
+                <Apple className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('Continue with Apple')}
+              </Button>
+            )}
+
             <Button variant="outline" onClick={handleGoogleAuth} className="w-full">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

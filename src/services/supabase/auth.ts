@@ -4,6 +4,7 @@
  * Authentifizierungsfunktionen für:
  * - Email/Password
  * - Google OAuth
+ * - Sign in with Apple (required alongside Google on iOS)
  * - Magic Link (OTP)
  */
 
@@ -111,15 +112,33 @@ export async function signUpWithEmail(
  * Sign in with Google OAuth
  */
 export async function signInWithGoogle(redirectTo?: string): Promise<{ error: AuthError | null }> {
+  return signInWithOAuthProvider('google', redirectTo);
+}
+
+/**
+ * Sign in with Apple.
+ *
+ * The Capacitor shell uses the same browser + Universal Link round-trip as
+ * Google. The Apple provider must be enabled in Supabase before the store
+ * build is uploaded; the App Store handoff documents the exact account steps.
+ */
+export async function signInWithApple(redirectTo?: string): Promise<{ error: AuthError | null }> {
+  return signInWithOAuthProvider('apple', redirectTo);
+}
+
+async function signInWithOAuthProvider(
+  provider: 'google' | 'apple',
+  redirectTo?: string,
+): Promise<{ error: AuthError | null }> {
   const target = redirectTo || `${getAuthOrigin()}/auth/callback`;
 
-  // Native: Google refuses to render its consent screen inside an embedded
-  // WebView (`disallowed_useragent`), so the authorization URL must be opened
-  // in the system browser. The result comes back through a Universal/App Link
-  // and is handled by the `appUrlOpen` listener in src/lib/deep-links.ts.
+  // Native OAuth must be opened in the system browser. Google rejects embedded
+  // WebViews outright (`disallowed_useragent`), and Apple uses the same secure
+  // browser + Universal Link round-trip. The `appUrlOpen` listener in
+  // src/lib/deep-links.ts consumes the callback.
   if (isNative()) {
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: {
         redirectTo: target,
         skipBrowserRedirect: true,
@@ -135,7 +154,7 @@ export async function signInWithGoogle(redirectTo?: string): Promise<{ error: Au
   }
 
   const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider,
     options: {
       redirectTo: target,
     },
