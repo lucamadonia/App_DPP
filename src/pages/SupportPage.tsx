@@ -15,6 +15,8 @@ const COPY: Record<Language, {
   include: string;
   deleteTitle: string;
   deleteText: string;
+  deleteRequestCta: string;
+  deleteRequestHint: string;
   adminPath: string;
   customerPath: string;
   privacyTitle: string;
@@ -31,6 +33,8 @@ const COPY: Record<Language, {
     include: 'Please include your organization name, the affected area, and the steps that led to the issue.',
     deleteTitle: 'Delete your account',
     deleteText: 'Account deletion is available directly inside Trackbliss and does not require a support request.',
+    deleteRequestCta: 'Request account deletion by email',
+    deleteRequestHint: 'If you no longer have access to the app, send the request from your account email address. Include the organization name, but never a password or one-time code.',
     adminPath: 'Admin account: Sign in → Settings → Account → Danger zone → Delete account',
     customerPath: 'Customer portal: Sign in → Profile → Delete account',
     privacyTitle: 'Privacy and legal information',
@@ -47,6 +51,8 @@ const COPY: Record<Language, {
     include: 'Nennen Sie bitte Ihre Organisation, den betroffenen Bereich und die Schritte, die zum Problem geführt haben.',
     deleteTitle: 'Konto löschen',
     deleteText: 'Die Kontolöschung ist direkt in Trackbliss möglich und erfordert keine Support-Anfrage.',
+    deleteRequestCta: 'Kontolöschung per E-Mail anfordern',
+    deleteRequestHint: 'Wenn Sie keinen Zugriff mehr auf die App haben, senden Sie die Anfrage von der E-Mail-Adresse Ihres Kontos. Nennen Sie die Organisation, aber niemals ein Passwort oder einen Einmalcode.',
     adminPath: 'Administratorkonto: Anmelden → Einstellungen → Konto → Gefahrenbereich → Konto löschen',
     customerPath: 'Kundenportal: Anmelden → Profil → Konto löschen',
     privacyTitle: 'Datenschutz und Rechtliches',
@@ -63,6 +69,8 @@ const COPY: Record<Language, {
     include: 'Συμπεριλάβετε τον οργανισμό σας, την επηρεαζόμενη περιοχή και τα βήματα που οδήγησαν στο πρόβλημα.',
     deleteTitle: 'Διαγραφή λογαριασμού',
     deleteText: 'Η διαγραφή λογαριασμού είναι διαθέσιμη απευθείας στο Trackbliss χωρίς αίτημα υποστήριξης.',
+    deleteRequestCta: 'Αίτημα διαγραφής λογαριασμού μέσω email',
+    deleteRequestHint: 'Αν δεν έχετε πλέον πρόσβαση στην εφαρμογή, στείλτε το αίτημα από τη διεύθυνση email του λογαριασμού σας. Συμπεριλάβετε τον οργανισμό, αλλά ποτέ κωδικό πρόσβασης ή κωδικό μίας χρήσης.',
     adminPath: 'Λογαριασμός διαχειριστή: Σύνδεση → Ρυθμίσεις → Λογαριασμός → Ζώνη κινδύνου → Διαγραφή λογαριασμού',
     customerPath: 'Πύλη πελατών: Σύνδεση → Προφίλ → Διαγραφή λογαριασμού',
     privacyTitle: 'Απόρρητο και νομικές πληροφορίες',
@@ -132,6 +140,14 @@ export function SupportPage() {
               <li className="rounded-xl bg-slate-50 p-3">{copy.adminPath}</li>
               <li className="rounded-xl bg-slate-50 p-3">{copy.customerPath}</li>
             </ol>
+            <a
+              href="mailto:info@myfamblissgroup.com?subject=Trackbliss%20account%20deletion%20request&body=Account%20email%3A%0AOrganization%3A%0A%0APlease%20delete%20my%20Trackbliss%20account%20and%20associated%20personal%20data."
+              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100"
+            >
+              {copy.deleteRequestCta}
+              <ExternalLink className="size-4" aria-hidden="true" />
+            </a>
+            <p className="mt-4 text-xs leading-relaxed text-slate-500">{copy.deleteRequestHint}</p>
           </section>
         </div>
 

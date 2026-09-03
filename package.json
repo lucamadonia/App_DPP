@@ -22,9 +22,11 @@
     "images:first-run": "node scripts/build-first-run-assets.mjs",
     "audit:mobile": "node scripts/audit-mobile.mjs",
     "build:native": "node scripts/build-native.mjs",
-    "check:release": "node scripts/check-release-invariants.mjs && node scripts/check-app-store-assets.mjs",
+    "check:release": "node scripts/check-release-invariants.mjs && node scripts/check-app-store-assets.mjs && node scripts/check-play-store-assets.mjs",
     "check:app-store": "node scripts/check-app-store-assets.mjs",
     "appstore:screenshots": "node scripts/capture-app-store-screenshots.mjs",
+    "check:play-store": "node scripts/check-play-store-assets.mjs",
+    "playstore:assets": "node scripts/generate-play-store-assets.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
