@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link2, Link2Off, Loader2, PackageSearch } from 'lucide-react';
+import { Link2, Link2Off, Loader2, PackageSearch, Truck } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { getOrderWithItems, linkOrderItemToProduct } from '@/services/supabase/commerce-orders';
+import {
+  getOrderWithItems, linkOrderItemToProduct, createShipmentFromOrder,
+} from '@/services/supabase/commerce-orders';
 import { getProducts, type ProductListItem } from '@/services/supabase/products';
 import type { CommerceOrder, CommerceOrderItem } from '@/types/commerce-channels';
 import { toast } from 'sonner';
@@ -34,6 +36,7 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [creatingShipment, setCreatingShipment] = useState(false);
 
   const load = useCallback(async () => {
     if (!orderId) return;
@@ -70,6 +73,25 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
       toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const createShipment = async () => {
+    if (!orderId) return;
+    setCreatingShipment(true);
+    try {
+      const res = await createShipmentFromOrder(orderId);
+      toast.success(t('Shipment {{number}} created with {{n}} items', {
+        number: res.shipmentNumber, n: res.itemsCreated,
+      }));
+      if (res.itemsCreated === 0) {
+        toast.warning(t('No items on the shipment — assign the lines to products first.'));
+      }
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Shipment failed');
+    } finally {
+      setCreatingShipment(false);
     }
   };
 
@@ -156,9 +178,17 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
               </div>
             ))}
 
-            <p className="text-xs text-muted-foreground">
-              {t('Linked lines are picked up by the next sync and turned into shipment items.')}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <p className="text-xs text-muted-foreground">
+                {t('Creates a warehouse shipment you can pack and label with DHL.')}
+              </p>
+              <Button onClick={createShipment} disabled={creatingShipment || items.length === 0}>
+                {creatingShipment
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <Truck className="mr-2 h-4 w-4" />}
+                {t('Create shipment')}
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

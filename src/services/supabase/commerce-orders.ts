@@ -200,6 +200,99 @@ export async function linkOrderItemToProduct(
     .eq('tenant_id', tenantId);
 }
 
+/**
+ * Turn a marketplace order into a warehouse shipment on demand.
+ *
+ * The Etsy sync does this automatically, but only for lines that were already
+ * assigned when it ran — so after a manual assignment the operator would have
+ * to re-sync just to get the shipment.  This lets them trigger it straight
+ * from the order, the way Shopify orders are fulfilled.
+ *
+ * Address fields live in the stored provider payload, since commerce_orders
+ * keeps no street column.
+ */
+export async function createShipmentFromOrder(orderId: string): Promise<{ shipmentNumber: string; itemsCreated: number }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  const { data: order } = await supabase
+    .from('commerce_orders').select('*').eq('id', orderId).eq('tenant_id', tenantId).single();
+  if (!order) throw new Error('Order not found');
+
+  const orderRef = `${order.platform === 'etsy' ? 'Etsy' : order.platform} ${order.external_order_id}`;
+  const { data: existing } = await supabase
+    .from('wh_shipments').select('shipment_number').eq('tenant_id', tenantId)
+    .eq('order_reference', orderRef).maybeSingle();
+  if (existing) throw new Error(`Shipment already exists: ${existing.shipment_number}`);
+
+  const raw = (order.raw_payload ?? {}) as Record<string, unknown>;
+  const street = [raw.first_line, raw.second_line].filter(Boolean).join(' ').trim();
+  const city = (raw.city as string) || order.customer_city;
+  const zip = raw.zip ? String(raw.zip) : order.customer_postal_code;
+  if (!street || !city || !zip) {
+    throw new Error('Order has no complete shipping address — add it on the shipment manually.');
+  }
+
+  const { data: items } = await supabase
+    .from('commerce_order_items').select('*').eq('order_id', orderId).eq('tenant_id', tenantId);
+  const lines = (items ?? []) as Array<Record<string, never> & {
+    product_id: string | null; quantity: number; unit_price: number; sku: string | null;
+  }>;
+
+  const dateStr = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const { data: shipment, error } = await supabase.from('wh_shipments').insert({
+    tenant_id: tenantId,
+    shipment_number: `SHP-${dateStr}-${rand}`,
+    status: 'draft',
+    recipient_type: 'customer',
+    recipient_name: (raw.name as string) || order.customer_name || 'Marketplace buyer',
+    recipient_email: order.customer_email || null,
+    shipping_street: street,
+    shipping_city: city,
+    shipping_state: (raw.state as string) || null,
+    shipping_postal_code: zip,
+    shipping_country: order.customer_country || 'DE',
+    total_items: lines.reduce((n, l) => n + (l.quantity || 0), 0),
+    order_reference: orderRef,
+    notes: orderRef,
+  }).select('id, shipment_number').single();
+  if (error || !shipment) throw error || new Error('Shipment could not be created');
+
+  // Shipment items need product, batch and location — none of which a
+  // marketplace supplies. Unassigned lines are skipped, not fatal.
+  const { data: location } = await supabase
+    .from('wh_locations').select('id').eq('tenant_id', tenantId).order('created_at').limit(1).maybeSingle();
+
+  let itemsCreated = 0;
+  if (location) {
+    for (const line of lines.filter((l) => l.product_id)) {
+      const { data: batch } = await supabase
+        .from('product_batches').select('id').eq('product_id', line.product_id!)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (!batch) continue;
+      const { error: itemError } = await supabase.from('wh_shipment_items').insert({
+        tenant_id: tenantId,
+        shipment_id: shipment.id,
+        product_id: line.product_id,
+        batch_id: batch.id,
+        location_id: location.id,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        currency: order.currency || 'EUR',
+        notes: line.sku ? `SKU ${line.sku}` : null,
+      });
+      if (!itemError) itemsCreated++;
+    }
+  }
+
+  await supabase.from('commerce_orders')
+    .update({ metadata: { ...(order.metadata ?? {}), shipmentId: shipment.id, orderReference: orderRef } })
+    .eq('id', orderId);
+
+  return { shipmentNumber: shipment.shipment_number, itemsCreated };
+}
+
 export async function getOrderWithItems(
   id: string,
 ): Promise<{ order: CommerceOrder; items: CommerceOrderItem[] } | null> {

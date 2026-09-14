@@ -164,5 +164,9 @@
   "Unlink": "Unlink",
   "Product linked": "Product linked",
   "Link removed": "Link removed",
-  "Linked lines are picked up by the next sync and turned into shipment items.": "Linked lines are picked up by the next sync and turned into shipment items."
+  "Linked lines are picked up by the next sync and turned into shipment items.": "Linked lines are picked up by the next sync and turned into shipment items.",
+  "Create shipment": "Create shipment",
+  "Creates a warehouse shipment you can pack and label with DHL.": "Creates a warehouse shipment you can pack and label with DHL.",
+  "Shipment {{number}} created with {{n}} items": "Shipment {{number}} created with {{n}} items",
+  "No items on the shipment — assign the lines to products first.": "No items on the shipment — assign the lines to products first."
 }

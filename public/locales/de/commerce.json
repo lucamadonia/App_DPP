@@ -164,5 +164,9 @@
   "Unlink": "Zuordnung aufheben",
   "Product linked": "Produkt zugeordnet",
   "Link removed": "Zuordnung entfernt",
-  "Linked lines are picked up by the next sync and turned into shipment items.": "Zugeordnete Positionen werden beim nächsten Sync als Sendungspositionen übernommen."
+  "Linked lines are picked up by the next sync and turned into shipment items.": "Zugeordnete Positionen werden beim nächsten Sync als Sendungspositionen übernommen.",
+  "Create shipment": "Sendung erstellen",
+  "Creates a warehouse shipment you can pack and label with DHL.": "Erstellt eine Sendung im Warehouse, die du packen und per DHL etikettieren kannst.",
+  "Shipment {{number}} created with {{n}} items": "Sendung {{number}} mit {{n}} Positionen erstellt",
+  "No items on the shipment — assign the lines to products first.": "Keine Positionen auf der Sendung — ordne die Zeilen zuerst Produkten zu."
 }
