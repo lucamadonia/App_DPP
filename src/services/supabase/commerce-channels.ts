@@ -7,6 +7,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { invokeEdgeFunction } from '@/lib/edge-function';
 import type {
   CommerceChannelConnection,
   CommerceConnectionStatus,
@@ -172,6 +173,23 @@ export async function createConnection(input: CreateConnectionInput): Promise<Co
   });
 
   return transformConnection(data);
+}
+
+/** Start a provider OAuth flow for an existing tenant-scoped connection. */
+export async function startCommerceOAuth(
+  connectionId: string,
+  platform: CommercePlatform,
+  redirectUri: string,
+  scopes: string[],
+  shop?: string,
+): Promise<{ authorizeUrl: string; state: string }> {
+  const { data, error } = await invokeEdgeFunction<{ authorizeUrl?: string; state?: string; error?: string }>(
+    'commerce-channel-oauth',
+    { action: 'start', platform, connectionId, redirectUri, scopes, shop },
+  );
+  if (error) throw error;
+  if (!data?.authorizeUrl || !data.state) throw new Error(data?.error || 'OAuth konnte nicht gestartet werden.');
+  return { authorizeUrl: data.authorizeUrl, state: data.state };
 }
 
 export async function updateConnection(

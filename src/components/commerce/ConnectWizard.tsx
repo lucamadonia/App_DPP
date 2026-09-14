@@ -17,7 +17,7 @@ import {
   type CommercePlatform,
   getPlatformDescriptor,
 } from '@/types/commerce-channels';
-import { createConnection } from '@/services/supabase/commerce-channels';
+import { createConnection, startCommerceOAuth } from '@/services/supabase/commerce-channels';
 import { toast } from 'sonner';
 
 interface ConnectWizardProps {
@@ -65,7 +65,7 @@ export function ConnectWizard({ platform, open, onClose, onConnected }: ConnectW
     try {
       // For OAuth platforms in production we'd open a popup here. For now we record
       // the intent locally so the operator can finish credentials via the edge function.
-      await createConnection({
+      const connection = await createConnection({
         platform,
         accountLabel: accountLabel || desc.label,
         accountUrl: shopUrl || undefined,
@@ -74,6 +74,18 @@ export function ConnectWizard({ platform, open, onClose, onConnected }: ConnectW
         autoSyncEnabled: true,
         syncIntervalMinutes: 15,
       });
+      if (desc.authMethod === 'oauth2') {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+        const redirectUri = `${supabaseUrl}/functions/v1/commerce-channel-oauth`;
+        const { authorizeUrl } = await startCommerceOAuth(
+          connection.id,
+          platform,
+          redirectUri,
+          desc.scopesRequired,
+        );
+        window.location.assign(authorizeUrl);
+        return;
+      }
       toast.success(t('Channel connected', { ns: 'commerce' }));
       onConnected();
       handleClose();

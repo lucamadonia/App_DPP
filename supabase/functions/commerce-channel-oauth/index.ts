@@ -11,13 +11,20 @@
  *   3. test          → validates an existing connection
  *   4. webhook       → ingests platform webhooks (orders/create etc.)
  *
- * Credentials are stored encrypted in tenants.settings.commerceHubCredentials
- * keyed by connection_id; the row in commerce_channel_connections only stores
- * the credential_ref pointer.
+ * Credentials are stored encrypted in commerce_connection_credentials keyed by
+ * connection_id; the row in commerce_channel_connections only stores the
+ * credential_ref pointer plus a short-lived PKCE stash in metadata.oauth.
+ *
+ * DEPLOY WITH  --no-verify-jwt.  Providers return the user here via a plain
+ * browser GET that carries no Supabase JWT, so platform-level JWT verification
+ * would reject every callback with a 401 before this code runs.  Authorization
+ * is enforced in-function instead: the GET path only trusts an HMAC-signed
+ * state, and every POST action requires a valid user JWT plus a tenant
+ * ownership check on the connection.
  *
  * Required secrets (Supabase dashboard)
  *   COMMERCE_OAUTH_REDIRECT_URI  — base URL of this function (callback target)
- *   ETSY_CLIENT_ID / ETSY_CLIENT_SECRET
+ *   ETSY_CLIENT_ID / ETSY_CLIENT_SECRET  — Etsy keystring / shared secret
  *   PINTEREST_CLIENT_ID / PINTEREST_CLIENT_SECRET
  *   SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET
  *   AMAZON_LWA_CLIENT_ID / AMAZON_LWA_CLIENT_SECRET
@@ -45,6 +52,10 @@ const OAUTH_CONFIG: Record<Platform, {
   clientIdSecret: string;
   clientSecretSecret: string;
   scopeJoiner: string;
+  /** Provider mandates RFC 7636 PKCE (S256) on every authorization request. */
+  usesPkce?: boolean;
+  /** Provider rejects client_secret on the token exchange (PKCE-only public client). */
+  omitClientSecret?: boolean;
 }> = {
   shopify: {
     // Shopify has a unique flow — shop is part of host
@@ -60,6 +71,10 @@ const OAUTH_CONFIG: Record<Platform, {
     clientIdSecret: 'ETSY_CLIENT_ID',
     clientSecretSecret: 'ETSY_CLIENT_SECRET',
     scopeJoiner: ' ',
+    // Etsy requires PKCE on every flow and takes no client_secret on the token
+    // exchange — the shared secret is only used in the x-api-key header.
+    usesPkce: true,
+    omitClientSecret: true,
   },
   pinterest: {
     authorizeUrl: 'https://www.pinterest.com/oauth/',
@@ -128,20 +143,48 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    // Etsy returns to this function with a browser GET.  Keep the callback
+    // public, but authenticate the state cryptographically below.
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const state = url.searchParams.get('state') || '';
+      const code = url.searchParams.get('code') || '';
+      if (url.searchParams.get('error')) return redirectResult(false, url.searchParams.get('error')!);
+      if (!state || !code) return redirectResult(false, 'Missing OAuth callback parameters');
+      const payload = await verifyState(state);
+      if (!payload) return redirectResult(false, 'Invalid or expired OAuth state');
+      const supabase = createServiceClient();
+      const result = await handleCallback(supabase, {
+        action: 'callback', platform: payload.platform, connectionId: payload.connectionId,
+        code, state, shop: url.searchParams.get('shop') || undefined,
+      });
+      return result.ok ? redirectResult(true) : redirectResult(false, result.error || 'OAuth callback failed');
+    }
+
     const { action, ...params }: Params = await req.json();
 
     // Auth: require service role JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'Missing Authorization' }, 401);
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+    const supabase = createServiceClient();
+    const userClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: authData } = await userClient.auth.getUser();
+    if (!authData.user) return json({ error: 'Invalid Authorization' }, 401);
+    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', authData.user.id).single();
+    if (!profile?.tenant_id) return json({ error: 'Tenant not found' }, 403);
+    const requestedConnectionId = (params as { connectionId?: string }).connectionId;
+    if (requestedConnectionId) {
+      const { data: ownedConnection } = await supabase.from('commerce_channel_connections')
+        .select('id').eq('id', requestedConnectionId).eq('tenant_id', profile.tenant_id).single();
+      if (!ownedConnection) return json({ error: 'Connection does not belong to this tenant' }, 403);
+    }
 
     switch (action) {
       case 'start':
-        return json(await handleStart(params as StartParams));
+        return json(await handleStart(supabase, params as StartParams));
       case 'callback':
         return json(await handleCallback(supabase, params as CallbackParams));
       case 'test':
@@ -154,7 +197,7 @@ serve(async (req) => {
   }
 });
 
-async function handleStart(p: StartParams) {
+async function handleStart(supabase: any, p: StartParams) {
   const cfg = OAUTH_CONFIG[p.platform];
   if (!cfg) return { error: `Unsupported platform: ${p.platform}` };
   if (p.platform === 'woocommerce') {
@@ -164,8 +207,28 @@ async function handleStart(p: StartParams) {
   const clientId = Deno.env.get(cfg.clientIdSecret);
   if (!clientId) return { error: `Missing ${cfg.clientIdSecret}` };
 
-  const state = crypto.randomUUID();
+  const state = await createState(p.platform, p.connectionId);
   const scopeStr = (p.scopes || []).join(cfg.scopeJoiner);
+
+  // The verifier must survive until the callback and must never leave the
+  // server, so it is stashed on the connection row rather than in the state
+  // blob (which is signed but readable by the browser and the provider).
+  const verifier = cfg.usesPkce ? randomVerifier() : null;
+  const { data: existing } = await supabase
+    .from('commerce_channel_connections')
+    .select('metadata')
+    .eq('id', p.connectionId)
+    .single();
+  await supabase
+    .from('commerce_channel_connections')
+    .update({
+      status: 'connecting',
+      metadata: {
+        ...((existing?.metadata ?? {}) as Record<string, unknown>),
+        oauth: { verifier, redirectUri: p.redirectUri, createdAt: new Date().toISOString() },
+      },
+    })
+    .eq('id', p.connectionId);
 
   let url: string;
   if (p.platform === 'shopify') {
@@ -179,6 +242,10 @@ async function handleStart(p: StartParams) {
       scope: scopeStr,
       state,
     });
+    if (verifier) {
+      params.set('code_challenge', await codeChallenge(verifier));
+      params.set('code_challenge_method', 'S256');
+    }
     url = `${cfg.authorizeUrl}?${params.toString()}`;
   }
 
@@ -189,9 +256,30 @@ async function handleCallback(supabase: any, p: CallbackParams) {
   const cfg = OAUTH_CONFIG[p.platform];
   if (!cfg) return { error: `Unsupported platform: ${p.platform}` };
 
+  // Verify the state before anything else — the POST path reaches this without
+  // the GET handler's pre-check, so an unverified code must never be redeemed.
+  const statePayload = await verifyState(p.state);
+  if (!statePayload || statePayload.connectionId !== p.connectionId || statePayload.platform !== p.platform) {
+    return { error: 'Invalid OAuth state' };
+  }
+
   const clientId = Deno.env.get(cfg.clientIdSecret);
   const clientSecret = Deno.env.get(cfg.clientSecretSecret);
-  if (!clientId || !clientSecret) return { error: 'Missing OAuth credentials' };
+  if (!clientId || (!cfg.omitClientSecret && !clientSecret)) return { error: 'Missing OAuth credentials' };
+
+  // Resolve the connection before the exchange: the PKCE verifier and the exact
+  // redirect_uri used at /start live on the row and must be replayed verbatim.
+  const { data: conn } = await supabase
+    .from('commerce_channel_connections')
+    .select('tenant_id, scopes, metadata')
+    .eq('id', p.connectionId)
+    .single();
+  if (!conn) return { error: 'Connection not found' };
+
+  const stash = ((conn.metadata ?? {}).oauth ?? {}) as { verifier?: string; redirectUri?: string };
+  if (cfg.usesPkce && !stash.verifier) {
+    return { error: 'PKCE verifier missing or already consumed — restart the connection' };
+  }
 
   // Exchange code for token (per-platform)
   const tokenUrl = p.platform === 'shopify'
@@ -200,11 +288,12 @@ async function handleCallback(supabase: any, p: CallbackParams) {
 
   const body = new URLSearchParams({
     client_id: clientId,
-    client_secret: clientSecret,
     code: p.code,
     grant_type: 'authorization_code',
-    redirect_uri: Deno.env.get('COMMERCE_OAUTH_REDIRECT_URI') ?? '',
+    redirect_uri: stash.redirectUri ?? Deno.env.get('COMMERCE_OAUTH_REDIRECT_URI') ?? '',
   });
+  if (!cfg.omitClientSecret) body.set('client_secret', clientSecret!);
+  if (cfg.usesPkce) body.set('code_verifier', stash.verifier!);
 
   const tokenRes = await fetch(tokenUrl, {
     method: 'POST',
@@ -217,23 +306,7 @@ async function handleCallback(supabase: any, p: CallbackParams) {
   }
   const tokens = await tokenRes.json();
 
-  // Persist credentials encrypted into tenants.settings.commerceHubCredentials
-  const { data: conn } = await supabase
-    .from('commerce_channel_connections')
-    .select('tenant_id, scopes')
-    .eq('id', p.connectionId)
-    .single();
-  if (!conn) return { error: 'Connection not found' };
-
-  const credKey = `commerceHubCredentials.${p.connectionId}`;
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('id', conn.tenant_id)
-    .single();
-  const settings = tenant?.settings || {};
-  const credBag = settings.commerceHubCredentials || {};
-  credBag[p.connectionId] = {
+  const encryptedPayload = await encryptCredentials({
     platform: p.platform,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token || null,
@@ -243,19 +316,21 @@ async function handleCallback(supabase: any, p: CallbackParams) {
       ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
       : null,
     obtainedAt: new Date().toISOString(),
-  };
+  });
 
-  await supabase
-    .from('tenants')
-    .update({ settings: { ...settings, commerceHubCredentials: credBag } })
-    .eq('id', conn.tenant_id);
+  await supabase.from('commerce_connection_credentials').upsert({
+    connection_id: p.connectionId, tenant_id: conn.tenant_id, platform: p.platform,
+    encrypted_payload: encryptedPayload,
+  });
 
-  // Mark connection connected
+  // Mark connection connected and burn the one-shot PKCE stash.
+  const { oauth: _consumed, ...restMetadata } = (conn.metadata ?? {}) as Record<string, unknown>;
   await supabase
     .from('commerce_channel_connections')
     .update({
       status: 'connected',
-      credential_ref: credKey,
+      credential_ref: `commerce_connection_credentials:${p.connectionId}`,
+      metadata: restMetadata,
       last_full_sync_at: null,
       last_error_message: null,
       last_error_at: null,
@@ -273,13 +348,120 @@ async function handleTest(supabase: any, p: TestParams) {
     .single();
   if (!conn) return { error: 'Connection not found' };
 
-  // Stub: a real implementation would fetch a small endpoint per platform.
+  if (conn.platform === 'etsy') {
+    const { data: credential } = await supabase.from('commerce_connection_credentials')
+      .select('encrypted_payload').eq('connection_id', p.connectionId).single();
+    if (!credential) return { error: 'No credentials found', status: 'reauth_required' };
+    let token = await decryptCredentials(credential.encrypted_payload);
+    let probe = await etsyProbe(token.accessToken);
+    if (probe.status === 401) {
+      // Etsy access tokens expire after an hour; refresh once before giving up.
+      const refreshed = await refreshEtsyToken(supabase, p.connectionId, conn.tenant_id, token.refreshToken);
+      if (!refreshed) return { error: 'Etsy authorization is no longer valid', status: 'reauth_required' };
+      token = refreshed;
+      probe = await etsyProbe(token.accessToken);
+    }
+    if (!probe.ok) return { error: 'Etsy authorization is no longer valid', status: 'reauth_required' };
+  }
   return {
     ok: true,
     platform: conn.platform,
     status: conn.status,
-    note: 'Test endpoint stub — implement per-platform health probe.',
+    note: 'Provider health probe succeeded.',
   };
+}
+
+/** Etsy v3 requires `x-api-key: <keystring>:<shared secret>` alongside the bearer token. */
+function etsyProbe(accessToken: string) {
+  return fetch('https://api.etsy.com/v3/application/users/me', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'x-api-key': `${Deno.env.get('ETSY_CLIENT_ID')}:${Deno.env.get('ETSY_CLIENT_SECRET')}`,
+    },
+  });
+}
+
+/** Redeems the stored refresh token and re-encrypts the rotated pair. */
+async function refreshEtsyToken(supabase: any, connectionId: string, tenantId: string, refreshToken?: string) {
+  const clientId = Deno.env.get('ETSY_CLIENT_ID');
+  if (!clientId || !refreshToken) return null;
+  const res = await fetch(OAUTH_CONFIG.etsy.tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: new URLSearchParams({ grant_type: 'refresh_token', client_id: clientId, refresh_token: refreshToken }),
+  });
+  if (!res.ok) return null;
+  const tokens = await res.json();
+  const payload = {
+    platform: 'etsy' as Platform,
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token || refreshToken,
+    tokenType: tokens.token_type || 'Bearer',
+    scope: tokens.scope || '',
+    expiresAt: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
+    obtainedAt: new Date().toISOString(),
+  };
+  await supabase.from('commerce_connection_credentials').upsert({
+    connection_id: connectionId,
+    tenant_id: tenantId,
+    platform: 'etsy',
+    encrypted_payload: await encryptCredentials(payload),
+  });
+  return payload;
+}
+
+function createServiceClient() {
+  return createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+}
+
+type StatePayload = { connectionId: string; platform: Platform; exp: number };
+const encoder = new TextEncoder();
+function b64(input: Uint8Array) { return btoa(String.fromCharCode(...input)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
+function unb64(input: string) { const s = input.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - input.length % 4) % 4); return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+async function hmac(value: string) {
+  const key = await crypto.subtle.importKey('raw', encoder.encode(Deno.env.get('OAUTH_STATE_SECRET') ?? ''), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(value)));
+}
+/** RFC 7636 verifier: base64url of 64 random bytes → 86 chars, inside Etsy's 43–128 range. */
+function randomVerifier() {
+  return b64(crypto.getRandomValues(new Uint8Array(64)));
+}
+async function codeChallenge(verifier: string) {
+  return b64(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(verifier))));
+}
+async function createState(platform: Platform, connectionId: string) {
+  const body = b64(encoder.encode(JSON.stringify({ platform, connectionId, exp: Date.now() + 10 * 60_000 })));
+  return `${body}.${b64(await hmac(body))}`;
+}
+async function verifyState(state: string): Promise<StatePayload | null> {
+  const [body, signature] = state.split('.');
+  if (!body || !signature || !Deno.env.get('OAUTH_STATE_SECRET')) return null;
+  const expected = await hmac(body);
+  const actual = unb64(signature);
+  if (actual.length !== expected.length || !actual.every((v, i) => v === expected[i])) return null;
+  const payload = JSON.parse(new TextDecoder().decode(unb64(body))) as StatePayload;
+  return payload.exp > Date.now() ? payload : null;
+}
+async function encryptionKey() {
+  const raw = Deno.env.get('OAUTH_TOKEN_ENCRYPTION_KEY');
+  if (!raw) throw new Error('Missing OAUTH_TOKEN_ENCRYPTION_KEY');
+  const bytes = raw.length === 64 ? Uint8Array.from(raw.match(/.{2}/g)!.map((x) => parseInt(x, 16))) : unb64(raw);
+  return crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+async function encryptCredentials(value: unknown) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await encryptionKey(), encoder.encode(JSON.stringify(value))));
+  return `${b64(iv)}.${b64(encrypted)}`;
+}
+async function decryptCredentials(value: string): Promise<any> {
+  const [iv, ciphertext] = value.split('.');
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await encryptionKey(), unb64(ciphertext));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+function redirectResult(ok: boolean, error?: string) {
+  const base = Deno.env.get('COMMERCE_APP_URL') || 'https://trackbliss.eu';
+  const url = new URL('/commerce', base); url.searchParams.set('etsy', ok ? 'connected' : 'error'); if (error) url.searchParams.set('message', error);
+  return new Response(null, { status: 302, headers: { Location: url.toString() } });
 }
 
 function json(body: unknown, status = 200) {
