@@ -9,7 +9,7 @@
  * 6. Return typed result OR normalised error
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase, SUPABASE_URL } from '@/lib/supabase';
 import i18n from '@/i18n';
 import { extractDocument, type ExtractedDocument } from '@/services/document-extraction';
 import { prematchProducts, type PrematchProduct } from '@/lib/product-prematch';
@@ -125,8 +125,8 @@ export async function classifyDocument(
     return { ok: false, code: 'no_session', error: 'Not signed in.' };
   }
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseUrl = SUPABASE_URL;
+  const anonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
   let response: Response;
   try {
     response = await fetch(`${supabaseUrl}/functions/v1/openrouter-proxy`, {

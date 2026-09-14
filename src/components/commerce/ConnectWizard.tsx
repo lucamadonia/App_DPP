@@ -18,6 +18,7 @@ import {
   getPlatformDescriptor,
 } from '@/types/commerce-channels';
 import { createConnection, startCommerceOAuth } from '@/services/supabase/commerce-channels';
+import { SUPABASE_URL } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface ConnectWizardProps {
@@ -75,8 +76,8 @@ export function ConnectWizard({ platform, open, onClose, onConnected }: ConnectW
         syncIntervalMinutes: 15,
       });
       if (desc.authMethod === 'oauth2') {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-        const redirectUri = `${supabaseUrl}/functions/v1/commerce-channel-oauth`;
+        // Must match the callback registered with the provider byte for byte.
+        const redirectUri = `${SUPABASE_URL}/functions/v1/commerce-channel-oauth`;
         const { authorizeUrl } = await startCommerceOAuth(
           connection.id,
           platform,

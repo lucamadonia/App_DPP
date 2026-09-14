@@ -11,8 +11,19 @@ import { createClient } from '@supabase/supabase-js';
 import { isNative } from './platform';
 import { capacitorAuthStorage } from './native-storage';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+/**
+ * Hosting dashboards happily store a trailing newline or space in an env var,
+ * and the character is invisible in their UI.  Concatenating such a value into
+ * a URL yields `https://host.co%0A/functions/...`, which providers reject as an
+ * unregistered redirect — so sanitize once, here, and build every URL from this
+ * constant rather than from import.meta.env directly.
+ */
+export const SUPABASE_URL: string = String(import.meta.env.VITE_SUPABASE_URL ?? '')
+  .trim()
+  .replace(/\/+$/, '');
+
+const supabaseUrl = SUPABASE_URL;
+const supabaseAnonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(

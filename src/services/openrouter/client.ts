@@ -11,7 +11,7 @@
  * - Streaming proxy to OpenRouter API
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase, SUPABASE_URL } from '@/lib/supabase';
 import type { OpenRouterMessage } from './types';
 
 /**
@@ -37,8 +37,7 @@ export async function* streamCompletion(
   }
 
   // Call the Edge Function proxy (credit check + rate limiting happens server-side)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const response = await fetch(`${supabaseUrl}/functions/v1/openrouter-proxy`, {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/openrouter-proxy`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -6,10 +6,9 @@
  * from its internal cache, causing persistent 401 errors.
  */
 
-import { supabase } from './supabase';
+import { supabase, SUPABASE_URL } from './supabase';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
 /**
  * Decode JWT payload without verification (for debugging only).

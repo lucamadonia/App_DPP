@@ -10,7 +10,7 @@
  * leak into the tracking page.
  */
 
-import { supabaseAnon } from '@/lib/supabase';
+import { supabaseAnon, SUPABASE_URL } from '@/lib/supabase';
 import { getPublicBaseUrl } from '@/lib/platform';
 
 export interface PublicShipmentSummary {
@@ -274,7 +274,7 @@ export async function getPublicShipmentTrackingEvents(
   const cleanToken = token.trim().toLowerCase();
   if (!cleanToken) return [];
 
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dhl-shipping`;
+  const url = `${SUPABASE_URL}/functions/v1/dhl-shipping`;
   try {
     const resp = await fetch(url, {
       method: 'POST',

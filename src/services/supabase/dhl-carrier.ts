@@ -3,7 +3,7 @@
  * Client-side wrapper for the dhl-shipping Edge Function
  */
 
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { supabase, getCurrentTenantId, SUPABASE_URL } from '@/lib/supabase';
 import { invokeEdgeFunction } from '@/lib/edge-function';
 import type {
   DHLSettingsPublic,
@@ -247,7 +247,7 @@ export async function publicCreateReturnLabel(
   email: string,
   labelType: 'SHIPMENT_LABEL' | 'QR_LABEL' | 'BOTH'
 ): Promise<{ success: boolean; error?: string }> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dhl-shipping`;
+  const url = `${SUPABASE_URL}/functions/v1/dhl-shipping`;
   try {
     const resp = await fetch(url, {
       method: 'POST',
@@ -275,7 +275,7 @@ export async function getPublicDHLTracking(
   trackingNumber: string,
   returnNumber: string
 ): Promise<DHLTrackingEvent[]> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dhl-shipping`;
+  const url = `${SUPABASE_URL}/functions/v1/dhl-shipping`;
   try {
     const resp = await fetch(url, {
       method: 'POST',
