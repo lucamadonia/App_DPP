@@ -151,5 +151,18 @@
   "Sync now": "Sync now",
   "Syncing…": "Syncing…",
   "Etsy sync: {{created}} new, {{updated}} updated, {{linked}} DPP-linked": "Etsy sync: {{created}} new, {{updated}} updated, {{linked}} DPP-linked",
-  "{{n}} receipts could not be imported": "{{n}} receipts could not be imported"
+  "{{n}} receipts could not be imported": "{{n}} receipts could not be imported",
+  "Open line items": "Open line items",
+  "Assign each line to a product so it can be fulfilled and carry a DPP.": "Assign each line to a product so it can be fulfilled and carry a DPP.",
+  "Filter products by name or GTIN": "Filter products by name or GTIN",
+  "No line items": "No line items",
+  "no SKU": "no SKU",
+  "Linked manually": "Linked manually",
+  "Linked automatically": "Linked automatically",
+  "Not linked": "Not linked",
+  "— not linked —": "— not linked —",
+  "Unlink": "Unlink",
+  "Product linked": "Product linked",
+  "Link removed": "Link removed",
+  "Linked lines are picked up by the next sync and turned into shipment items.": "Linked lines are picked up by the next sync and turned into shipment items."
 }

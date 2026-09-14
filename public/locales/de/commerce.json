@@ -151,5 +151,18 @@
   "Sync now": "Jetzt synchronisieren",
   "Syncing…": "Synchronisiere…",
   "Etsy sync: {{created}} new, {{updated}} updated, {{linked}} DPP-linked": "Etsy-Sync: {{created}} neu, {{updated}} aktualisiert, {{linked}} mit DPP verknüpft",
-  "{{n}} receipts could not be imported": "{{n}} Bestellungen konnten nicht importiert werden"
+  "{{n}} receipts could not be imported": "{{n}} Bestellungen konnten nicht importiert werden",
+  "Open line items": "Positionen öffnen",
+  "Assign each line to a product so it can be fulfilled and carry a DPP.": "Ordne jeder Position ein Produkt zu, damit sie versendet werden kann und einen DPP erhält.",
+  "Filter products by name or GTIN": "Produkte nach Name oder GTIN filtern",
+  "No line items": "Keine Positionen",
+  "no SKU": "keine SKU",
+  "Linked manually": "Manuell zugeordnet",
+  "Linked automatically": "Automatisch zugeordnet",
+  "Not linked": "Nicht zugeordnet",
+  "— not linked —": "— nicht zugeordnet —",
+  "Unlink": "Zuordnung aufheben",
+  "Product linked": "Produkt zugeordnet",
+  "Link removed": "Zuordnung entfernt",
+  "Linked lines are picked up by the next sync and turned into shipment items.": "Zugeordnete Positionen werden beim nächsten Sync als Sendungspositionen übernommen."
 }

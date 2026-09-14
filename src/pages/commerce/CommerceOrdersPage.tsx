@@ -21,11 +21,13 @@ import {
   getPlatformDescriptor,
 } from '@/types/commerce-channels';
 import { PlatformIcon } from '@/components/commerce/PlatformIcon';
+import { OrderItemsDialog } from '@/components/commerce/OrderItemsDialog';
 import { PageContainer } from '@/components/layout/page-container';
 
 export function CommerceOrdersPage() {
   const { t } = useTranslation('commerce');
   const [orders, setOrders] = useState<CommerceOrder[]>([]);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [platform, setPlatform] = useState<CommercePlatform | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -113,7 +115,12 @@ export function CommerceOrdersPage() {
                     <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">{t('No orders match these filters.')}</td></tr>
                   )}
                   {!loading && orders.map((o) => (
-                    <tr key={o.id} className="border-b last:border-0 hover:bg-muted/30">
+                    <tr
+                      key={o.id}
+                      className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
+                      onClick={() => setDetailOrderId(o.id)}
+                      title={t('Open line items')}
+                    >
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           <PlatformIcon platform={o.platform} size={16} />
@@ -150,6 +157,12 @@ export function CommerceOrdersPage() {
           </Card>
         </div>
       </PageContainer>
+
+      <OrderItemsDialog
+        orderId={detailOrderId}
+        onClose={() => setDetailOrderId(null)}
+        onChanged={load}
+      />
     </>
   );
 }

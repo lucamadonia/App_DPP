@@ -148,6 +148,58 @@ export async function listOrders(filters: ListOrdersFilters = {}): Promise<Comme
   return (data || []).map(transformOrder);
 }
 
+/**
+ * Manually point one order line at a Trackbliss product, or clear the link.
+ *
+ * Automatic matching only fires on an exact SKU/GTIN hit, which marketplaces
+ * frequently cannot deliver — Etsy exposes no GTIN at all.  Without a manual
+ * override an unmatched line can never reach the warehouse, since shipment
+ * items require a product.
+ */
+export async function linkOrderItemToProduct(
+  itemId: string,
+  orderId: string,
+  productId: string | null,
+): Promise<void> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  let gtin: string | null = null;
+  if (productId) {
+    const { data: product } = await supabase
+      .from('products').select('gtin').eq('id', productId).eq('tenant_id', tenantId).single();
+    if (!product) throw new Error('Product not found in this tenant');
+    gtin = (product as { gtin?: string }).gtin ?? null;
+  }
+
+  const { error } = await supabase
+    .from('commerce_order_items')
+    .update({
+      product_id: productId,
+      gtin,
+      match_method: productId ? 'manual' : null,
+      match_confidence: productId ? 1 : null,
+      dpp_url: productId ? `/products/${productId}` : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', itemId)
+    .eq('tenant_id', tenantId);
+  if (error) throw error;
+
+  // Keep the order's roll-up honest; the dashboards read it directly.
+  const { data: items } = await supabase
+    .from('commerce_order_items').select('product_id').eq('order_id', orderId).eq('tenant_id', tenantId);
+  const rows = (items ?? []) as Array<{ product_id: string | null }>;
+  await supabase
+    .from('commerce_orders')
+    .update({
+      dpp_linked_count: rows.filter((i) => i.product_id).length,
+      dpp_total_count: rows.length,
+    })
+    .eq('id', orderId)
+    .eq('tenant_id', tenantId);
+}
+
 export async function getOrderWithItems(
   id: string,
 ): Promise<{ order: CommerceOrder; items: CommerceOrderItem[] } | null> {

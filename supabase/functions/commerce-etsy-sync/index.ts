@@ -318,7 +318,85 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
     dpp_total_count: items.length,
   }).eq('id', order.id);
 
+  await createShipmentForOrder(supabase, tenantId, order.id, receipt, items);
+
   return { created: !existing, linked };
+}
+
+/**
+ * Mirror a paid, unshipped Etsy order into the warehouse so it can be picked,
+ * packed and labelled like any Shopify order.
+ *
+ * Only the header is guaranteed: wh_shipment_items demands product, batch and
+ * location, none of which Etsy supplies.  Unlinked lines are therefore skipped
+ * rather than blocking the shipment — assign them in the Commerce Hub and the
+ * next sync fills them in.
+ */
+async function createShipmentForOrder(
+  supabase: any, tenantId: string, orderId: string, receipt: any, items: any[],
+) {
+  const { financialStatus, shipped } = mapStatuses(receipt);
+  if (financialStatus !== 'paid' || shipped) return;
+
+  const orderRef = `Etsy ${receipt.receipt_id}`;
+  const { data: existing } = await supabase
+    .from('wh_shipments').select('id').eq('tenant_id', tenantId).eq('order_reference', orderRef).maybeSingle();
+  if (existing) return;   // idempotent: never a second shipment per receipt
+
+  const street = [receipt.first_line, receipt.second_line].filter(Boolean).join(' ').trim();
+  if (!street || !receipt.city || !receipt.zip) return;  // NOT NULL columns
+
+  const dateStr = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+  const { data: shipment, error } = await supabase.from('wh_shipments').insert({
+    tenant_id: tenantId,
+    shipment_number: `SHP-${dateStr}-${rand}`,
+    status: 'draft',
+    recipient_type: 'customer',
+    recipient_name: receipt.name || 'Etsy buyer',
+    recipient_email: receipt.buyer_email || null,
+    shipping_street: street,
+    shipping_city: receipt.city,
+    shipping_state: receipt.state || null,
+    shipping_postal_code: String(receipt.zip),
+    shipping_country: receipt.country_iso || 'DE',
+    total_items: items.reduce((n, i) => n + (i.quantity || 0), 0),
+    order_reference: orderRef,
+    notes: `Etsy receipt ${receipt.receipt_id}`,
+  }).select('id').single();
+  if (error || !shipment) {
+    console.error('shipment insert failed', error?.message);
+    return;
+  }
+
+  await supabase.from('commerce_orders')
+    .update({ metadata: { shipmentId: shipment.id, orderReference: orderRef } })
+    .eq('id', orderId);
+
+  // Newest active batch + the tenant's first location, per the configured rule.
+  const { data: location } = await supabase
+    .from('wh_locations').select('id').eq('tenant_id', tenantId).order('created_at').limit(1).maybeSingle();
+  if (!location) return;
+
+  for (const item of items.filter((i) => i.product_id)) {
+    const { data: batch } = await supabase
+      .from('product_batches').select('id').eq('product_id', item.product_id)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!batch) continue;
+
+    await supabase.from('wh_shipment_items').insert({
+      tenant_id: tenantId,
+      shipment_id: shipment.id,
+      product_id: item.product_id,
+      batch_id: batch.id,
+      location_id: location.id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      currency: 'EUR',
+      notes: item.sku ? `Etsy SKU ${item.sku}` : null,
+    });
+  }
 }
 
 /**
