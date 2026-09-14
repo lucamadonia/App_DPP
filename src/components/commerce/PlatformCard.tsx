@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Plug, ChevronRight, Lock } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Plug, ChevronRight, Lock, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PlatformIcon } from './PlatformIcon';
 import {
@@ -15,13 +15,16 @@ interface PlatformCardProps {
   /** When true, renders as locked/upgrade-required */
   locked?: boolean;
   onConnect?: () => void;
+  /** Pull orders now. Omit for platforms without an implemented sync. */
+  onSync?: () => void;
+  syncing?: boolean;
 }
 
 /**
  * Marketing-grade card for the integrations grid.
  * Shows brand, blurb, capability chips, and connect/manage CTA.
  */
-export function PlatformCard({ platform, connection, locked, onConnect }: PlatformCardProps) {
+export function PlatformCard({ platform, connection, locked, onConnect, onSync, syncing }: PlatformCardProps) {
   const { t } = useTranslation('commerce');
   const desc = getPlatformDescriptor(platform);
   const hasError = connection?.status === 'error' || connection?.status === 'reauth_required';
@@ -94,13 +97,26 @@ export function PlatformCard({ platform, connection, locked, onConnect }: Platfo
               {t('Upgrade')}
             </Link>
           ) : connection ? (
-            <Link
-              to={`/commerce/channels/${connection.id}`}
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              {hasError ? t('Fix') : t('Manage')}
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-3">
+              {onSync && !hasError && (
+                <button
+                  type="button"
+                  onClick={onSync}
+                  disabled={syncing}
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? t('Syncing…') : t('Sync now')}
+                </button>
+              )}
+              <Link
+                to={`/commerce/channels/${connection.id}`}
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                {hasError ? t('Fix') : t('Manage')}
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
           ) : desc.available ? (
             <button
               type="button"

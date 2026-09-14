@@ -35,6 +35,8 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { b64, unb64, encryptCredentials, decryptCredentials } from '../_shared/commerce-crypto.ts';
+import { etsyFetch, EtsyReauthRequired } from '../_shared/etsy.ts';
 
 type Platform =
   | 'shopify' | 'etsy' | 'pinterest' | 'amazon' | 'ebay' | 'woocommerce' | 'tiktok_shop';
@@ -352,16 +354,16 @@ async function handleTest(supabase: any, p: TestParams) {
     const { data: credential } = await supabase.from('commerce_connection_credentials')
       .select('encrypted_payload').eq('connection_id', p.connectionId).single();
     if (!credential) return { error: 'No credentials found', status: 'reauth_required' };
-    let token = await decryptCredentials(credential.encrypted_payload);
-    let probe = await etsyProbe(token.accessToken);
-    if (probe.status === 401) {
-      // Etsy access tokens expire after an hour; refresh once before giving up.
-      const refreshed = await refreshEtsyToken(supabase, p.connectionId, conn.tenant_id, token.refreshToken);
-      if (!refreshed) return { error: 'Etsy authorization is no longer valid', status: 'reauth_required' };
-      token = refreshed;
-      probe = await etsyProbe(token.accessToken);
+    try {
+      // etsyFetch refreshes the hour-long access token once on 401 before failing.
+      await etsyFetch({
+        creds: await decryptCredentials(credential.encrypted_payload),
+        supabase, connectionId: p.connectionId, tenantId: conn.tenant_id,
+      }, '/users/me');
+    } catch (e) {
+      if (e instanceof EtsyReauthRequired) return { error: e.message, status: 'reauth_required' };
+      return { error: e instanceof Error ? e.message : String(e) };
     }
-    if (!probe.ok) return { error: 'Etsy authorization is no longer valid', status: 'reauth_required' };
   }
   return {
     ok: true,
@@ -371,53 +373,12 @@ async function handleTest(supabase: any, p: TestParams) {
   };
 }
 
-/** Etsy v3 requires `x-api-key: <keystring>:<shared secret>` alongside the bearer token. */
-function etsyProbe(accessToken: string) {
-  return fetch('https://api.etsy.com/v3/application/users/me', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'x-api-key': `${Deno.env.get('ETSY_CLIENT_ID')}:${Deno.env.get('ETSY_CLIENT_SECRET')}`,
-    },
-  });
-}
-
-/** Redeems the stored refresh token and re-encrypts the rotated pair. */
-async function refreshEtsyToken(supabase: any, connectionId: string, tenantId: string, refreshToken?: string) {
-  const clientId = Deno.env.get('ETSY_CLIENT_ID');
-  if (!clientId || !refreshToken) return null;
-  const res = await fetch(OAUTH_CONFIG.etsy.tokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-    body: new URLSearchParams({ grant_type: 'refresh_token', client_id: clientId, refresh_token: refreshToken }),
-  });
-  if (!res.ok) return null;
-  const tokens = await res.json();
-  const payload = {
-    platform: 'etsy' as Platform,
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token || refreshToken,
-    tokenType: tokens.token_type || 'Bearer',
-    scope: tokens.scope || '',
-    expiresAt: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
-    obtainedAt: new Date().toISOString(),
-  };
-  await supabase.from('commerce_connection_credentials').upsert({
-    connection_id: connectionId,
-    tenant_id: tenantId,
-    platform: 'etsy',
-    encrypted_payload: await encryptCredentials(payload),
-  });
-  return payload;
-}
-
 function createServiceClient() {
   return createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 }
 
 type StatePayload = { connectionId: string; platform: Platform; exp: number };
 const encoder = new TextEncoder();
-function b64(input: Uint8Array) { return btoa(String.fromCharCode(...input)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
-function unb64(input: string) { const s = input.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - input.length % 4) % 4); return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
 async function hmac(value: string) {
   const key = await crypto.subtle.importKey('raw', encoder.encode(Deno.env.get('OAUTH_STATE_SECRET') ?? ''), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
   return new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(value)));
@@ -441,22 +402,6 @@ async function verifyState(state: string): Promise<StatePayload | null> {
   if (actual.length !== expected.length || !actual.every((v, i) => v === expected[i])) return null;
   const payload = JSON.parse(new TextDecoder().decode(unb64(body))) as StatePayload;
   return payload.exp > Date.now() ? payload : null;
-}
-async function encryptionKey() {
-  const raw = Deno.env.get('OAUTH_TOKEN_ENCRYPTION_KEY');
-  if (!raw) throw new Error('Missing OAUTH_TOKEN_ENCRYPTION_KEY');
-  const bytes = raw.length === 64 ? Uint8Array.from(raw.match(/.{2}/g)!.map((x) => parseInt(x, 16))) : unb64(raw);
-  return crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
-}
-async function encryptCredentials(value: unknown) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await encryptionKey(), encoder.encode(JSON.stringify(value))));
-  return `${b64(iv)}.${b64(encrypted)}`;
-}
-async function decryptCredentials(value: string): Promise<any> {
-  const [iv, ciphertext] = value.split('.');
-  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await encryptionKey(), unb64(ciphertext));
-  return JSON.parse(new TextDecoder().decode(plain));
 }
 function redirectResult(ok: boolean, error?: string) {
   const base = Deno.env.get('COMMERCE_APP_URL') || 'https://trackbliss.eu';

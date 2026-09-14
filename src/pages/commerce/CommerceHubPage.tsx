@@ -27,6 +27,7 @@ import {
 import {
   listConnections,
   getHealthSummary,
+  syncEtsyOrders,
   type CommerceHealthSummary,
 } from '@/services/supabase/commerce-channels';
 import {
@@ -58,6 +59,7 @@ export function CommerceHubPage() {
   const [seeding, setSeeding] = useState(false);
   const [bridging, setBridging] = useState(false);
   const [unbridgedShopify, setUnbridgedShopify] = useState(0);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const hasModule = billing.hasAnyCommerceHubModule();
   const limits = billing.entitlements?.limits as Record<string, number> | undefined;
@@ -92,6 +94,26 @@ export function CommerceHubPage() {
   }, [hasModule]);
 
   useEffect(() => { load(); }, [load]);
+
+  const runEtsySync = useCallback(async (connectionId: string) => {
+    setSyncingId(connectionId);
+    try {
+      const res = await syncEtsyOrders(connectionId);
+      toast.success(
+        t('Etsy sync: {{created}} new, {{updated}} updated, {{linked}} DPP-linked', {
+          created: res.created, updated: res.updated, linked: res.linked,
+        }),
+      );
+      if (res.failed > 0) {
+        toast.warning(t('{{n}} receipts could not be imported', { n: res.failed }));
+      }
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Etsy sync failed');
+    } finally {
+      setSyncingId(null);
+    }
+  }, [load, t]);
 
   const connectionByPlatform = useMemo(() => {
     const m = new Map<CommercePlatform, CommerceChannelConnection>();
@@ -264,6 +286,9 @@ export function CommerceHubPage() {
                 key={c.id}
                 platform={c.platform}
                 connection={c}
+                // Etsy is the only platform with an implemented pull today.
+                onSync={c.platform === 'etsy' ? () => runEtsySync(c.id) : undefined}
+                syncing={syncingId === c.id}
               />
             ))}
           </div>

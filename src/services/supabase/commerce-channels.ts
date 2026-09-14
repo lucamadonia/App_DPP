@@ -192,6 +192,38 @@ export async function startCommerceOAuth(
   return { authorizeUrl: data.authorizeUrl, state: data.state };
 }
 
+export interface EtsySyncResult {
+  mode: 'full' | 'incremental';
+  /** Receipts read from Etsy in this run. */
+  processed: number;
+  created: number;
+  updated: number;
+  failed: number;
+  /** Line items that resolved to a Trackbliss product. */
+  linked: number;
+}
+
+/** Pull Etsy receipts into the Commerce Hub. Incremental unless `full` is asked for. */
+export async function syncEtsyOrders(
+  connectionId: string,
+  mode: 'full' | 'incremental' = 'incremental',
+): Promise<EtsySyncResult> {
+  const { data, error } = await invokeEdgeFunction<Partial<EtsySyncResult> & { ok?: boolean; error?: string }>(
+    'commerce-etsy-sync',
+    { connectionId, mode },
+  );
+  if (error) throw error;
+  if (!data?.ok) throw new Error(data?.error || 'Etsy-Sync fehlgeschlagen.');
+  return {
+    mode: data.mode ?? mode,
+    processed: data.processed ?? 0,
+    created: data.created ?? 0,
+    updated: data.updated ?? 0,
+    failed: data.failed ?? 0,
+    linked: data.linked ?? 0,
+  };
+}
+
 export async function updateConnection(
   id: string,
   updates: Partial<CreateConnectionInput & { status: CommerceConnectionStatus }>,
