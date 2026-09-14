@@ -38,6 +38,30 @@ export interface DHLSettingsPublic {
   shipper: DHLAddress;
   connectedAt?: string;
   hasCredentials: boolean;
+  internetmarke: DeutschePostInternetmarkeSettingsPublic;
+}
+
+export interface DeutschePostInternetmarkeSettingsPublic {
+  enabled: boolean;
+  pageFormatId: number;
+  connectedAt?: string;
+  hasCredentials: boolean;
+}
+
+export interface DeutschePostLetterProduct {
+  productCode: string;
+  name: string;
+  priceCents: number;
+  currency: string;
+  transport: 'national' | 'international' | string;
+  minLengthMm?: number;
+  maxLengthMm?: number;
+  minWidthMm?: number;
+  maxWidthMm?: number;
+  minHeightMm?: number;
+  maxHeightMm?: number;
+  minWeightGrams?: number;
+  maxWeightGrams?: number;
 }
 
 export interface DHLAddress {
@@ -59,7 +83,7 @@ export interface DHLLabelResponse {
   labelUrl: string; // signed storage URL
   /** The DHL product the label was actually created with (after auto-detection,
    *  e.g. 'V62KP' when the package fit the Kleinpaket envelope). */
-  product?: DHLParcelProduct;
+  product?: string;
   validationMessages?: { property: string; message: string; state: 'Warning' | 'Error' }[];
 }
 
@@ -79,7 +103,13 @@ export interface CarrierLabelData {
   createdAt: string;
   cancelledAt?: string;
   /** Which DHL API produced the label: 'returns' (real DHL Retoure) or 'shipping_v2' (fallback). */
-  apiType?: 'returns' | 'shipping_v2';
+  apiType?: 'returns' | 'shipping_v2' | 'internetmarke';
+  /** INTERNETMARKE purchase references. Letters may not have parcel tracking. */
+  internetmarkeShopOrderId?: string;
+  internetmarkeVoucherId?: string;
+  internetmarkeProductCode?: string;
+  internetmarkeProductName?: string;
+  internetmarkePriceCents?: number;
   /** Returns-ID for manual entry if the QR can't be scanned (RET + shipment no). */
   dhlReturnId?: string;
   /** Mobile-return QR code (PNG) — present only when DHL issues one. */

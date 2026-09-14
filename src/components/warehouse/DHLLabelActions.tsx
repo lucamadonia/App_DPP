@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, Download, Printer, XCircle, Truck, Scale } from 'lucide-react';
+import { Loader2, Download, Printer, XCircle, Truck, Scale, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -14,9 +15,15 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
-import { createDHLLabel, cancelDHLLabel, getDHLSettings } from '@/services/supabase/dhl-carrier';
+import {
+  createDHLLabel,
+  createDeutschePostLetterLabel,
+  cancelDHLLabel,
+  getDHLSettings,
+  getDeutschePostLetterProducts,
+} from '@/services/supabase/dhl-carrier';
 import { DHL_PRODUCT_LABELS } from '@/types/dhl';
-import type { DHLParcelProduct } from '@/types/dhl';
+import type { DeutschePostLetterProduct, DHLParcelProduct } from '@/types/dhl';
 import type { WhShipment } from '@/types/warehouse';
 
 interface DHLLabelActionsProps {
@@ -30,6 +37,12 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
   const [cancelling, setCancelling] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [weightGramsInput, setWeightGramsInput] = useState('');
+  const [shippingMethod, setShippingMethod] = useState<'parcel' | 'letter'>('parcel');
+  const [hasParcelCredentials, setHasParcelCredentials] = useState(false);
+  const [hasLetterCredentials, setHasLetterCredentials] = useState(false);
+  const [letterProducts, setLetterProducts] = useState<DeutschePostLetterProduct[]>([]);
+  const [letterProductsLoading, setLetterProductsLoading] = useState(false);
+  const [letterProductCode, setLetterProductCode] = useState('');
 
   // Seed the editable weight from the shipment whenever the dialog opens.
   useEffect(() => {
@@ -41,14 +54,18 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
   // Only render for DHL carrier
   if (!shipment.carrier || shipment.carrier !== 'DHL') return null;
 
-  const hasLabel = shipment.status === 'label_created' && shipment.trackingNumber;
+  const hasLabel = shipment.status === 'label_created' && !!shipment.labelUrl;
   const canCreate = ['draft', 'picking', 'packed'].includes(shipment.status) && !shipment.trackingNumber;
   const isShipped = ['shipped', 'in_transit', 'delivered'].includes(shipment.status);
 
   const openPrintDialog = async () => {
     // Check DHL configured first — no point opening the dialog if creds are missing.
     const settings = await getDHLSettings();
-    if (!settings?.hasCredentials) {
+    const parcelReady = !!settings?.hasCredentials;
+    const letterReady = !!(settings?.internetmarke.enabled && settings.internetmarke.hasCredentials);
+    setHasParcelCredentials(parcelReady);
+    setHasLetterCredentials(letterReady);
+    if (!parcelReady && !letterReady) {
       toast.error(
         <div className="flex flex-col gap-1">
           <span>{t('DHL not configured')}</span>
@@ -58,6 +75,24 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
         </div>
       );
       return;
+    }
+    setShippingMethod(parcelReady ? 'parcel' : 'letter');
+    if (letterReady) {
+      setLetterProductsLoading(true);
+      try {
+        const products = await getDeutschePostLetterProducts();
+        setLetterProducts(products);
+        const destination = (shipment.shippingCountry || 'DE').toUpperCase();
+        const transport = destination === 'DE' || destination === 'DEU' ? 'national' : 'international';
+        const matching = products.filter((product) => product.transport === transport);
+        setLetterProductCode((current) => matching.some((product) => product.productCode === current)
+          ? current
+          : matching[0]?.productCode || '');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t('Could not load letter products'));
+      } finally {
+        setLetterProductsLoading(false);
+      }
     }
     setShowPrintDialog(true);
   };
@@ -72,9 +107,18 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
     setCreating(true);
     try {
       const override = grams !== shipment.totalWeightGrams ? grams : undefined;
-      const result = await createDHLLabel(shipment.id, undefined, override);
+      if (shippingMethod === 'letter' && !letterProductCode) {
+        toast.error(t('Select a letter product'));
+        return;
+      }
+      const result = shippingMethod === 'letter'
+        ? await createDeutschePostLetterLabel(shipment.id, letterProductCode, override)
+        : await createDHLLabel(shipment.id, undefined, override);
       // Surface which product the system auto-selected (e.g. Kleinpaket when it fit).
-      const productName = result.product
+      const selectedLetter = letterProducts.find((product) => product.productCode === letterProductCode);
+      const productName = shippingMethod === 'letter'
+        ? selectedLetter?.name || t('Deutsche Post Brief')
+        : result.product
         ? t(DHL_PRODUCT_LABELS[result.product as DHLParcelProduct] ?? result.product)
         : '';
       toast.success(productName ? t('Label created — {{product}}', { product: productName }) : t('Label Created Successfully'));
@@ -96,7 +140,9 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
     setCancelling(true);
     try {
       await cancelDHLLabel(shipment.id);
-      toast.success(t('Label Cancelled Successfully'));
+      toast.success(shipment.carrierLabelData?.apiType === 'internetmarke'
+        ? t('Letter stamp refund requested')
+        : t('Label Cancelled Successfully'));
       onUpdate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error cancelling label');
@@ -129,6 +175,10 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
     const autoWeightKg = shipment.totalWeightGrams
       ? (shipment.totalWeightGrams / 1000).toFixed(2)
       : null;
+    const destination = (shipment.shippingCountry || 'DE').toUpperCase();
+    const expectedTransport = destination === 'DE' || destination === 'DEU' ? 'national' : 'international';
+    const availableLetterProducts = letterProducts.filter((product) => product.transport === expectedTransport);
+    const selectedLetterProduct = availableLetterProducts.find((product) => product.productCode === letterProductCode);
     return (
       <>
         <Button
@@ -142,22 +192,66 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
           ) : (
             <Truck className="h-4 w-4 mr-1.5" />
           )}
-          {t('Create DHL Label')}
+          {t('Create shipping label')}
         </Button>
 
         <Dialog open={showPrintDialog} onOpenChange={(o) => !creating && setShowPrintDialog(o)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Scale className="h-5 w-5 text-amber-500" />
-                {t('Confirm weight before printing')}
+                {shippingMethod === 'letter'
+                  ? <Mail className="h-5 w-5 text-blue-600" />
+                  : <Scale className="h-5 w-5 text-amber-500" />}
+                {t('Create shipping label')}
               </DialogTitle>
               <DialogDescription>
-                {t('DHL bills by the weight you print. Weigh the packed box and adjust if needed.')}
+                {t('Choose the shipping method and confirm the packed shipment weight before purchase.')}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  {t('Shipping method')}
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant={shippingMethod === 'parcel' ? 'default' : 'outline'} disabled={!hasParcelCredentials} onClick={() => setShippingMethod('parcel')} className="justify-start">
+                    <Truck className="mr-2 h-4 w-4" /> {t('DHL Parcel')}
+                  </Button>
+                  <Button type="button" variant={shippingMethod === 'letter' ? 'default' : 'outline'} disabled={!hasLetterCredentials} onClick={() => setShippingMethod('letter')} className="justify-start">
+                    <Mail className="mr-2 h-4 w-4" /> {t('Deutsche Post Brief')}
+                  </Button>
+                </div>
+              </div>
+
+              {shippingMethod === 'letter' && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    {t('Letter product')}
+                  </Label>
+                  <Select value={letterProductCode} onValueChange={setLetterProductCode} disabled={letterProductsLoading}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue placeholder={letterProductsLoading ? t('Loading products...') : t('Select a letter product')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLetterProducts.map((product) => (
+                        <SelectItem key={product.productCode} value={product.productCode}>
+                          {product.name} — {(product.priceCents / 100).toLocaleString(undefined, { style: 'currency', currency: product.currency || 'EUR' })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedLetterProduct && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('Live price from Deutsche Post')} · {t('up to')} {selectedLetterProduct.maxWeightGrams ?? '—'} g
+                    </p>
+                  )}
+                  {!letterProductsLoading && availableLetterProducts.length === 0 && (
+                    <p className="text-xs text-destructive">{t('No matching letter products are currently available for this destination.')}</p>
+                  )}
+                </div>
+              )}
+
               {autoWeightKg && autoWeightKg !== weightKgPreview && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
                   {t('Auto-filled from items: {{kg}} kg', { kg: autoWeightKg })}
@@ -209,7 +303,7 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
               </Button>
               <Button
                 onClick={handleConfirmPrint}
-                disabled={creating || !Number(weightGramsInput) || Number(weightGramsInput) <= 0}
+                disabled={creating || !Number(weightGramsInput) || Number(weightGramsInput) <= 0 || (shippingMethod === 'letter' && !letterProductCode)}
                 className="bg-yellow-500 hover:bg-yellow-600 text-black"
               >
                 {creating ? (
@@ -217,7 +311,9 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
                 ) : (
                   <Printer className="h-4 w-4 mr-1.5" />
                 )}
-                {t('Print with {{kg}} kg', { kg: weightKgPreview ?? '?' })}
+                {shippingMethod === 'letter'
+                  ? t('Buy and create letter stamp')
+                  : t('Print with {{kg}} kg', { kg: weightKgPreview ?? '?' })}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -242,20 +338,22 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm" disabled={cancelling}>
               {cancelling ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <XCircle className="h-3.5 w-3.5 mr-1" />}
-              {t('Cancel DHL Label')}
+              {shipment.carrierLabelData?.apiType === 'internetmarke' ? t('Refund letter stamp') : t('Cancel DHL Label')}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('Confirm cancel label')}</AlertDialogTitle>
+                <AlertDialogTitle>{shipment.carrierLabelData?.apiType === 'internetmarke' ? t('Refund letter stamp') : t('Confirm cancel label')}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t('This will cancel the DHL shipment and remove the tracking number.')}
+                {shipment.carrierLabelData?.apiType === 'internetmarke'
+                  ? t('This requests a refund from Deutsche Post and removes the letter stamp from the shipment.')
+                  : t('This will cancel the DHL shipment and remove the tracking number.')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('Cancel', { ns: 'common' })}</AlertDialogCancel>
               <AlertDialogAction onClick={handleCancelLabel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {t('Cancel DHL Label')}
+                  {shipment.carrierLabelData?.apiType === 'internetmarke' ? t('Refund letter stamp') : t('Cancel DHL Label')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

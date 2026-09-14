@@ -10,6 +10,7 @@ import type {
   DHLLabelResponse,
   DHLTrackingEvent,
   DHLReturnLabelResponse,
+  DeutschePostLetterProduct,
 } from '@/types/dhl';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,6 +93,17 @@ export async function getDHLSettings(): Promise<DHLSettingsPublic | null> {
     shipper: dhl.shipper || {},
     connectedAt: dhl.connectedAt,
     hasCredentials: !!(dhl.apiKey && dhl.username && dhl.password),
+    internetmarke: {
+      enabled: dhl.internetmarke?.enabled ?? false,
+      pageFormatId: Number(dhl.internetmarke?.pageFormatId) || 2,
+      connectedAt: dhl.internetmarke?.connectedAt,
+      hasCredentials: !!(
+        dhl.internetmarke?.clientId
+        && dhl.internetmarke?.clientSecret
+        && dhl.internetmarke?.portokasseUsername
+        && dhl.internetmarke?.portokassePassword
+      ),
+    },
   };
 }
 
@@ -110,8 +122,41 @@ export async function saveDHLCredentials(creds: {
   defaultProduct: string;
   labelFormat: string;
   shipper: Record<string, unknown>;
+  internetmarke?: {
+    enabled: boolean;
+    clientId?: string;
+    clientSecret?: string;
+    portokasseUsername?: string;
+    portokassePassword?: string;
+    pageFormatId?: number;
+  };
 }): Promise<void> {
   await callDHL('save_credentials', creds);
+}
+
+export async function testInternetmarkeConnection(): Promise<{
+  success: boolean;
+  walletBalanceCents?: number;
+  error?: string;
+}> {
+  return await callDHL('test_internetmarke_connection');
+}
+
+export async function getDeutschePostLetterProducts(): Promise<DeutschePostLetterProduct[]> {
+  const data = await callDHL('get_letter_products');
+  return Array.isArray(data?.products) ? data.products : [];
+}
+
+export async function createDeutschePostLetterLabel(
+  shipmentId: string,
+  productCode: string,
+  weightGramsOverride?: number,
+): Promise<DHLLabelResponse> {
+  const { hasModule } = await import('./billing');
+  const hasPro = await hasModule('warehouse_professional') || await hasModule('warehouse_business');
+  if (!hasPro) throw new Error('Warehouse Professional or Business module required');
+
+  return await callDHL('create_letter_label', { shipmentId, productCode, weightGramsOverride });
 }
 
 /**

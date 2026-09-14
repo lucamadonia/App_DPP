@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Truck, Lock, CheckCircle2, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Truck, Lock, CheckCircle2, Loader2, Eye, EyeOff, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { useBillingOptional } from '@/contexts/BillingContext';
-import { getDHLSettings, saveDHLCredentials, testDHLConnection } from '@/services/supabase/dhl-carrier';
+import { getDHLSettings, saveDHLCredentials, testDHLConnection, testInternetmarkeConnection } from '@/services/supabase/dhl-carrier';
 import { DHL_PRODUCT_LABELS, DHL_PRODUCTS } from '@/types/dhl';
 import type { DHLSettingsPublic, DHLParcelProduct, DHLLabelFormat } from '@/types/dhl';
 
@@ -26,6 +26,8 @@ export function DHLIntegrationPage() {
   const [settings, setSettings] = useState<DHLSettingsPublic | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingInternetmarke, setTestingInternetmarke] = useState(false);
+  const [internetmarkeBalance, setInternetmarkeBalance] = useState<number | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
 
   // Form state
@@ -39,6 +41,11 @@ export function DHLIntegrationPage() {
   const [billingNumberKleinpaket, setBillingNumberKleinpaket] = useState('');
   const [defaultProduct, setDefaultProduct] = useState<DHLParcelProduct>('V01PAK');
   const [labelFormat, setLabelFormat] = useState<DHLLabelFormat>('PDF_A4');
+  const [internetmarkeEnabled, setInternetmarkeEnabled] = useState(false);
+  const [internetmarkeClientId, setInternetmarkeClientId] = useState('');
+  const [internetmarkeClientSecret, setInternetmarkeClientSecret] = useState('');
+  const [portokasseUsername, setPortokasseUsername] = useState('');
+  const [portokassePassword, setPortokassePassword] = useState('');
 
   // Shipper
   const [shipperName, setShipperName] = useState('');
@@ -62,6 +69,7 @@ export function DHLIntegrationPage() {
         setBillingNumberKleinpaket(s.billingNumberKleinpaket || '');
         setDefaultProduct(s.defaultProduct);
         setLabelFormat(s.labelFormat);
+        setInternetmarkeEnabled(s.internetmarke.enabled);
         if (s.shipper) {
           setShipperName(s.shipper.name1 || '');
           setShipperName2(s.shipper.name2 || '');
@@ -81,8 +89,16 @@ export function DHLIntegrationPage() {
   useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const handleSave = async () => {
-    if (!billingNumber || billingNumber.length < 10) {
+    if (enabled && (!billingNumber || billingNumber.length < 10)) {
       toast.error(t('Billing number must be at least 10 characters'));
+      return;
+    }
+    if (
+      internetmarkeEnabled
+      && !settings?.internetmarke.hasCredentials
+      && (!internetmarkeClientId || !internetmarkeClientSecret || !portokasseUsername || !portokassePassword)
+    ) {
+      toast.error(t('Complete all INTERNETMARKE and Portokasse credentials'));
       return;
     }
     setSaving(true);
@@ -98,6 +114,14 @@ export function DHLIntegrationPage() {
         billingNumberKleinpaket: billingNumberKleinpaket || undefined,
         defaultProduct,
         labelFormat,
+        internetmarke: {
+          enabled: internetmarkeEnabled,
+          clientId: internetmarkeClientId || undefined,
+          clientSecret: internetmarkeClientSecret || undefined,
+          portokasseUsername: portokasseUsername || undefined,
+          portokassePassword: portokassePassword || undefined,
+          pageFormatId: 2,
+        },
         shipper: {
           name1: shipperName,
           name2: shipperName2 || undefined,
@@ -115,10 +139,31 @@ export function DHLIntegrationPage() {
       setApiKey('');
       setUsername('');
       setPassword('');
+      setInternetmarkeClientId('');
+      setInternetmarkeClientSecret('');
+      setPortokasseUsername('');
+      setPortokassePassword('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestInternetmarke = async () => {
+    setTestingInternetmarke(true);
+    try {
+      const result = await testInternetmarkeConnection();
+      if (result.success) {
+        setInternetmarkeBalance(result.walletBalanceCents ?? null);
+        toast.success(t('INTERNETMARKE connection successful'));
+      } else {
+        toast.error(result.error || t('Connection failed'));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('Connection failed'));
+    } finally {
+      setTestingInternetmarke(false);
     }
   };
 
@@ -257,6 +302,69 @@ export function DHLIntegrationPage() {
             )}
           </div>
         </CardContent>
+      </Card>
+
+      {/* Deutsche Post letter postage uses the separate INTERNETMARKE API. */}
+      <Card className="border-blue-200/70 dark:border-blue-800/60">
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <Mail className="h-4.5 w-4.5 text-blue-700 dark:text-blue-300" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-base">{t('Deutsche Post Brief')}</CardTitle>
+                {settings?.internetmarke.hasCredentials && (
+                  <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <CheckCircle2 className="h-3 w-3" /> {t('Connected')}
+                  </Badge>
+                )}
+              </div>
+              <CardDescription className="mt-1">
+                {t('Create Standard, Compact, Large and Maxi letter stamps through Deutsche Post INTERNETMARKE and your Portokasse.')}
+              </CardDescription>
+            </div>
+            <Switch checked={internetmarkeEnabled} onCheckedChange={setInternetmarkeEnabled} aria-label={t('Enable letter postage')} />
+          </div>
+        </CardHeader>
+        {internetmarkeEnabled && (
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+              {t('Uses the separately activated INTERNETMARKE API. Purchases are charged directly to the connected Portokasse; available products and prices are loaded live from Deutsche Post.')}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">INTERNETMARKE Client ID</Label>
+                <Input type={showPasswords ? 'text' : 'password'} value={internetmarkeClientId} onChange={(e) => setInternetmarkeClientId(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : 'Client ID'} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">INTERNETMARKE Client Secret</Label>
+                <Input type={showPasswords ? 'text' : 'password'} value={internetmarkeClientSecret} onChange={(e) => setInternetmarkeClientSecret(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : 'Client Secret'} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">{t('Portokasse Username')}</Label>
+                <Input type={showPasswords ? 'text' : 'password'} value={portokasseUsername} onChange={(e) => setPortokasseUsername(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : t('Portokasse Username')} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">{t('Portokasse Password')}</Label>
+                <Input type={showPasswords ? 'text' : 'password'} value={portokassePassword} onChange={(e) => setPortokassePassword(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : t('Portokasse Password')} />
+              </div>
+            </div>
+            {settings?.internetmarke.hasCredentials && (
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="outline" onClick={handleTestInternetmarke} disabled={testingInternetmarke}>
+                  {testingInternetmarke ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                  {t('Test INTERNETMARKE')}
+                </Button>
+                {internetmarkeBalance != null && (
+                  <span className="text-sm text-muted-foreground">
+                    {t('Portokasse balance')}: <strong className="text-foreground">{(internetmarkeBalance / 100).toLocaleString(undefined, { style: 'currency', currency: 'EUR' })}</strong>
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       {/* Card 2: Settings */}

@@ -12,6 +12,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '
 
 const DHL_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/shipping/v2';
 const DHL_PROD_URL = 'https://api-eu.dhl.com/parcel/de/shipping/v2';
+const INTERNETMARKE_URL = 'https://api-eu.dhl.com/post/de/shipping/im/v1';
+const POST_PRODUCTS_URL = 'https://api-eu.dhl.com/post/de/information/products/v1/products?profile=IM-PARTNER&shortVersion=true';
 // DHL Parcel DE Returns API v1 — the new harmonized path. (The old
 // cig.dhl.de / parcel/de/returns/v1 path is wrong and returns 401
 // "Access to the resource is not allowed".) Endpoints: GET /locations,
@@ -119,7 +121,9 @@ Deno.serve(async (req) => {
     const tenantId = profile.tenant_id;
 
     // --- Billing Gate (skip for config actions — tenants need to set up DHL before subscribing) ---
-    const isConfigAction = action === 'save_credentials' || action === 'test_connection';
+    const isConfigAction = action === 'save_credentials'
+      || action === 'test_connection'
+      || action === 'test_internetmarke_connection';
 
     if (!isConfigAction) {
       const { data: activeMods } = await supabase
@@ -153,8 +157,14 @@ Deno.serve(async (req) => {
         return await handleSaveCredentials(supabase, tenantId, params);
       case 'test_connection':
         return await handleTestConnection(supabase, tenantId);
+      case 'test_internetmarke_connection':
+        return await handleTestInternetmarkeConnection(supabase, tenantId);
+      case 'get_letter_products':
+        return await handleGetLetterProducts(supabase, tenantId);
       case 'create_label':
         return await handleCreateLabel(supabase, tenantId, params);
+      case 'create_letter_label':
+        return await handleCreateLetterLabel(supabase, tenantId, params);
       case 'validate_address':
         return await handleValidateAddress(supabase, tenantId, params);
       case 'cancel_label':
@@ -203,6 +213,90 @@ function getDHLHeaders(settings: any): Record<string, string> {
     'Authorization': `Basic ${auth}`,
     'dhl-api-key': settings.apiKey,
     'Content-Type': 'application/json',
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getInternetmarkeAccess(settings: any): Promise<{ accessToken: string; walletBalanceCents?: number }> {
+  const im = settings?.internetmarke;
+  if (!im?.enabled || !im.clientId || !im.clientSecret || !im.portokasseUsername || !im.portokassePassword) {
+    throw new Error('Deutsche Post INTERNETMARKE is not configured');
+  }
+
+  const form = new URLSearchParams({
+    client_id: im.clientId,
+    client_secret: im.clientSecret,
+    username: im.portokasseUsername,
+    password: im.portokassePassword,
+    grant_type: 'client_credentials',
+  });
+  const resp = await fetch(`${INTERNETMARKE_URL}/user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || !data?.access_token) {
+    const message = data?.detail || data?.error_description || data?.error || `INTERNETMARKE authentication failed (${resp.status})`;
+    throw new Error(String(message));
+  }
+  return {
+    accessToken: String(data.access_token),
+    walletBalanceCents: Number.isFinite(Number(data.walletBalance))
+      ? Number(data.walletBalance)
+      : Number.isFinite(Number(data.walletBallance)) ? Number(data.walletBallance) : undefined,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function refundInternetmarkeVoucher(settings: any, accessToken: string, voucherId: string): Promise<boolean> {
+  if (!voucherId) return false;
+  const resp = await fetch(`${INTERNETMARKE_URL}/app/retoure`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'dhl-api-key': settings.internetmarke.clientId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ shoppingCart: { voucherList: [{ voucherId }] } }),
+  });
+  return resp.ok;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchInternetmarkeProducts(settings: any) {
+  const apiKey = settings?.internetmarke?.clientId;
+  if (!apiKey) throw new Error('INTERNETMARKE API client ID is missing');
+  const resp = await fetch(POST_PRODUCTS_URL, { headers: { 'dhl-api-key': apiKey } });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(String(data?.detail || data?.title || `Deutsche Post Products API failed (${resp.status})`));
+  return Array.isArray(data?.shortSalesProducts) ? data.shortSalesProducts : [];
+}
+
+// Keep the product catalogue dynamic: Deutsche Post can change product IDs and
+// prices. Only actual letter products are exposed in the shipment dialog.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isLetterProduct(product: any): boolean {
+  const name = String(product?.extProductname || '').toLocaleLowerCase('de-DE');
+  return /^(standardbrief|kompaktbrief|großbrief|grossbrief|maxibrief)(\s|$)/.test(name);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toLetterProduct(product: any) {
+  return {
+    productCode: String(product.extProductid),
+    name: String(product.extProductname),
+    priceCents: Math.round(Number(product.grossprice) * 100),
+    currency: String(product.currency || 'EUR'),
+    transport: String(product.transport || ''),
+    minLengthMm: product.minLength == null ? undefined : Number(product.minLength),
+    maxLengthMm: product.maxLength == null ? undefined : Number(product.maxLength),
+    minWidthMm: product.minWidth == null ? undefined : Number(product.minWidth),
+    maxWidthMm: product.maxWidth == null ? undefined : Number(product.maxWidth),
+    minHeightMm: product.minHeight == null ? undefined : Number(product.minHeight),
+    maxHeightMm: product.maxHeight == null ? undefined : Number(product.maxHeight),
+    minWeightGrams: product.minWeight == null ? undefined : Number(product.minWeight),
+    maxWeightGrams: product.maxWeight == null ? undefined : Number(product.maxWeight),
   };
 }
 
@@ -316,18 +410,32 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
     ...currentDhl,
     enabled: params.enabled ?? true,
     sandbox: params.sandbox ?? true,
-    apiKey: params.apiKey || '',
-    username: params.username || '',
-    password: params.password || '',
+    apiKey: params.apiKey || currentDhl.apiKey || '',
+    username: params.username || currentDhl.username || '',
+    password: params.password || currentDhl.password || '',
     billingNumber: params.billingNumber || '',
     billingNumberInternational: params.billingNumberInternational || '',
     billingNumberKleinpaket: params.billingNumberKleinpaket || '',
     defaultProduct: params.defaultProduct || 'V01PAK',
     labelFormat: params.labelFormat || 'PDF_A4',
     shipper: params.shipper || {},
-    connectedAt: params.apiKey ? new Date().toISOString() : undefined,
+    connectedAt: params.apiKey ? new Date().toISOString() : currentDhl.connectedAt,
     // Allow updating returnsApi explicitly when the form sends it.
     ...(params.returnsApi ? { returnsApi: params.returnsApi } : {}),
+    ...(params.internetmarke ? {
+      internetmarke: {
+        ...(currentDhl.internetmarke || {}),
+        enabled: (params.internetmarke as Record<string, unknown>).enabled ?? false,
+        clientId: (params.internetmarke as Record<string, unknown>).clientId || currentDhl.internetmarke?.clientId || '',
+        clientSecret: (params.internetmarke as Record<string, unknown>).clientSecret || currentDhl.internetmarke?.clientSecret || '',
+        portokasseUsername: (params.internetmarke as Record<string, unknown>).portokasseUsername || currentDhl.internetmarke?.portokasseUsername || '',
+        portokassePassword: (params.internetmarke as Record<string, unknown>).portokassePassword || currentDhl.internetmarke?.portokassePassword || '',
+        pageFormatId: Number((params.internetmarke as Record<string, unknown>).pageFormatId) || 2,
+        connectedAt: (params.internetmarke as Record<string, unknown>).clientId
+          ? new Date().toISOString()
+          : currentDhl.internetmarke?.connectedAt,
+      },
+    } : {}),
   };
 
   const { error } = await supabase
@@ -381,6 +489,35 @@ async function handleTestConnection(supabase: any, tenantId: string) {
     return json({ success: false, error: `DHL returned ${resp.status}: ${text.slice(0, 200)}` });
   } catch (err) {
     return json({ success: false, error: err instanceof Error ? err.message : 'Connection failed' });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleTestInternetmarkeConnection(supabase: any, tenantId: string) {
+  const settings = await getDHLSettings(supabase, tenantId);
+  try {
+    const auth = await getInternetmarkeAccess(settings);
+    return json({ success: true, walletBalanceCents: auth.walletBalanceCents });
+  } catch (err) {
+    return json({ success: false, error: err instanceof Error ? err.message : 'Connection failed' });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleGetLetterProducts(supabase: any, tenantId: string) {
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.internetmarke?.enabled) return json({ error: 'Deutsche Post INTERNETMARKE is not enabled' }, 400);
+  try {
+    const products = (await fetchInternetmarkeProducts(settings))
+      .filter(isLetterProduct)
+      .map(toLetterProduct)
+      .filter((product: { productCode: string; priceCents: number }) => product.productCode && product.priceCents > 0)
+      .sort((a: { transport: string; priceCents: number }, b: { transport: string; priceCents: number }) =>
+        a.transport.localeCompare(b.transport) || a.priceCents - b.priceCents
+      );
+    return json({ products });
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : 'Could not load letter products' });
   }
 }
 
@@ -611,6 +748,182 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     labelStoragePath: storagePath,
     validationMessages: item.validationMessages || [],
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Action: create_letter_label — Deutsche Post INTERNETMARKE                  */
+/* -------------------------------------------------------------------------- */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleCreateLetterLabel(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  if (!params?.shipmentId || !params?.productCode) return json({ error: 'Missing shipmentId or productCode' }, 400);
+  const shipmentId = String(params.shipmentId);
+  const requestedProductCode = String(params.productCode);
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.internetmarke?.enabled) return json({ error: 'Deutsche Post INTERNETMARKE is not enabled' }, 400);
+
+  const { data: shipment, error: shipErr } = await supabase
+    .from('wh_shipments')
+    .select('*')
+    .eq('id', shipmentId)
+    .eq('tenant_id', tenantId)
+    .single();
+  if (shipErr || !shipment) return json({ error: 'Shipment not found' }, 404);
+  if (!shipment.shipping_street || !shipment.shipping_postal_code || !shipment.shipping_city) {
+    return json({ error: 'Complete shipping address is required' }, 400);
+  }
+
+  const weightOverrideRaw = params.weightGramsOverride;
+  const weightOverride = Number(weightOverrideRaw);
+  const effectiveWeightGrams = Number.isFinite(weightOverride) && weightOverride > 0
+    ? weightOverride
+    : Number(shipment.total_weight_grams || 0);
+  if (effectiveWeightGrams <= 0) return json({ error: 'Weight is required for letter postage' }, 400);
+
+  try {
+    // Resolve product and price server-side immediately before checkout. Never
+    // trust a cached/client-supplied postage price.
+    const catalogue = await fetchInternetmarkeProducts(settings);
+    const rawProduct = catalogue.find((p: Record<string, unknown>) =>
+      String(p.extProductid) === requestedProductCode && isLetterProduct(p)
+    );
+    if (!rawProduct) return json({ error: 'The selected letter product is no longer available. Reload the product list.' }, 400);
+    const product = toLetterProduct(rawProduct);
+
+    const shipperCountry = mapCountryToISO3(settings.shipper?.country || 'DEU');
+    const receiverCountry = mapCountryToISO3(shipment.shipping_country || 'DEU');
+    if (shipperCountry !== 'DEU') {
+      return json({ error: 'Deutsche Post INTERNETMARKE requires a sender address in Germany.' }, 400);
+    }
+    if (!settings.shipper?.name1 || !settings.shipper?.addressStreet || !settings.shipper?.postalCode || !settings.shipper?.city) {
+      return json({ error: 'Complete sender address is required for letter postage.' }, 400);
+    }
+    const expectedTransport = shipperCountry === receiverCountry ? 'national' : 'international';
+    if (product.transport && product.transport !== expectedTransport) {
+      return json({ error: `This letter product is for ${product.transport} shipments, but the address is ${expectedTransport}.` }, 400);
+    }
+    if (product.maxWeightGrams && effectiveWeightGrams > product.maxWeightGrams) {
+      return json({ error: `${product.name} allows a maximum weight of ${product.maxWeightGrams} g.` }, 400);
+    }
+
+    const auth = await getInternetmarkeAccess(settings);
+    const requestBody = {
+      type: 'AppShoppingCartPDFRequest',
+      pageFormatId: Number(settings.internetmarke.pageFormatId) || 2,
+      positions: [{
+        productCode: Number(product.productCode),
+        address: {
+          sender: {
+            additionalName: settings.shipper?.name2 || '',
+            name: settings.shipper?.name1 || '',
+            addressLine1: settings.shipper?.addressStreet || '',
+            postalCode: settings.shipper?.postalCode || '',
+            city: settings.shipper?.city || '',
+            country: shipperCountry,
+          },
+          receiver: {
+            additionalName: shipment.recipient_company ? shipment.recipient_name || '' : '',
+            name: shipment.recipient_company || shipment.recipient_name || '',
+            addressLine1: shipment.shipping_street,
+            postalCode: shipment.shipping_postal_code,
+            city: shipment.shipping_city,
+            country: receiverCountry,
+          },
+        },
+        voucherLayout: 'ADDRESS_ZONE',
+        position: { labelX: 1, labelY: 1, page: 1 },
+        positionType: 'AppShoppingCartPDFPosition',
+      }],
+      total: product.priceCents,
+      createManifest: false,
+      createShippingList: '0',
+      dpi: 'DPI300',
+    };
+
+    const resp = await fetch(`${INTERNETMARKE_URL}/app/shoppingcart/pdf?directCheckout=true`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${auth.accessToken}`,
+        'dhl-api-key': settings.internetmarke.clientId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    const responseBody = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const message = responseBody?.detail || responseBody?.title || responseBody?.message || `INTERNETMARKE checkout failed (${resp.status})`;
+      return json({ error: String(message), dhlResponse: responseBody });
+    }
+
+    const voucher = responseBody?.shoppingCart?.voucherList?.[0] || {};
+    const shopOrderId = String(responseBody?.shoppingCart?.shopOrderId || '');
+    const voucherId = String(voucher?.voucherId || '');
+    const trackId = String(voucher?.trackId || '');
+    const labelUrl = String(responseBody?.link || voucher?.link || '');
+    if (!labelUrl) return json({ error: 'INTERNETMARKE did not return a PDF link', dhlResponse: responseBody });
+
+    const labelResp = await fetch(labelUrl, { headers: { Authorization: `Bearer ${auth.accessToken}` } });
+    if (!labelResp.ok) {
+      const refunded = await refundInternetmarkeVoucher(settings, auth.accessToken, voucherId);
+      return json({ error: refunded
+        ? `Could not download INTERNETMARKE PDF (${labelResp.status}); the purchase was refunded.`
+        : `Could not download INTERNETMARKE PDF (${labelResp.status}). Voucher ${voucherId} must be refunded manually.` });
+    }
+    const labelBuffer = await labelResp.arrayBuffer();
+    const storagePath = `${tenantId}/shipping-labels/${shipmentId}-brief.pdf`;
+    const { error: uploadErr } = await supabase.storage
+      .from('documents')
+      .upload(storagePath, new Uint8Array(labelBuffer), { contentType: 'application/pdf', upsert: true });
+    if (uploadErr) {
+      const refunded = await refundInternetmarkeVoucher(settings, auth.accessToken, voucherId);
+      return json({ error: refunded
+        ? `Could not store INTERNETMARKE PDF; the purchase was refunded: ${uploadErr.message}`
+        : `Could not store INTERNETMARKE PDF. Voucher ${voucherId} must be refunded manually: ${uploadErr.message}` });
+    }
+    const { data: signedData } = await supabase.storage.from('documents').createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+
+    if (weightOverride > 0 && weightOverride !== Number(shipment.total_weight_grams || 0)) {
+      await supabase.from('wh_shipments').update({ total_weight_grams: weightOverride }).eq('id', shipmentId).eq('tenant_id', tenantId);
+    }
+
+    const carrierLabelData = {
+      carrier: 'Deutsche Post',
+      apiType: 'internetmarke',
+      internetmarkeShopOrderId: shopOrderId,
+      internetmarkeVoucherId: voucherId,
+      internetmarkeProductCode: product.productCode,
+      internetmarkeProductName: product.name,
+      internetmarkePriceCents: product.priceCents,
+      labelFormat: 'PDF_A4',
+      labelStoragePath: storagePath,
+      createdAt: new Date().toISOString(),
+    };
+    const { error: updateErr } = await supabase.from('wh_shipments').update({
+      tracking_number: trackId || null,
+      label_url: signedData?.signedUrl || labelUrl,
+      carrier_label_data: carrierLabelData,
+      shipping_cost: product.priceCents / 100,
+      status: 'label_created',
+    }).eq('id', shipmentId).eq('tenant_id', tenantId);
+    if (updateErr) {
+      const refunded = await refundInternetmarkeVoucher(settings, auth.accessToken, voucherId);
+      return json({ error: refunded
+        ? `Shipment update failed; the letter stamp purchase was refunded: ${updateErr.message}`
+        : `Letter stamp was purchased, but shipment update failed. Voucher ${voucherId} must be refunded manually: ${updateErr.message}` });
+    }
+
+    return json({
+      success: true,
+      trackingNumber: trackId,
+      shipmentNumber: voucherId || shopOrderId,
+      product: product.productCode,
+      labelUrl: signedData?.signedUrl || labelUrl,
+      labelStoragePath: storagePath,
+      validationMessages: [],
+    });
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : 'INTERNETMARKE label creation failed' });
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -941,32 +1254,36 @@ async function handleCancelLabel(supabase: any, tenantId: string, params?: Recor
 
   if (shipErr || !shipment) return json({ error: 'Shipment not found' }, 404);
 
-  const dhlShipmentNumber = shipment.carrier_label_data?.dhlShipmentNumber;
-  if (!dhlShipmentNumber) return json({ error: 'No DHL shipment number found' }, 400);
-
   // 2. Load DHL settings
   const settings = await getDHLSettings(supabase, tenantId);
-  if (!settings?.apiKey) return json({ error: 'DHL not configured' }, 400);
+  const isInternetmarke = shipment.carrier_label_data?.apiType === 'internetmarke';
+  if (isInternetmarke) {
+    const voucherId = shipment.carrier_label_data?.internetmarkeVoucherId;
+    if (!voucherId) return json({ error: 'No INTERNETMARKE voucher ID found' }, 400);
+    try {
+      const auth = await getInternetmarkeAccess(settings);
+      const refunded = await refundInternetmarkeVoucher(settings, auth.accessToken, voucherId);
+      if (!refunded) return json({ error: 'INTERNETMARKE refund request failed' });
+    } catch (err) {
+      return json({ error: err instanceof Error ? err.message : 'INTERNETMARKE refund failed' });
+    }
+  } else {
+    const dhlShipmentNumber = shipment.carrier_label_data?.dhlShipmentNumber;
+    if (!dhlShipmentNumber) return json({ error: 'No DHL shipment number found' }, 400);
+    if (!settings?.apiKey) return json({ error: 'DHL not configured' }, 400);
 
-  // 3. Cancel at DHL.
-  //    DHL Parcel DE v2 uses `DELETE /orders?shipment={num}` — the shipment
-  //    number goes in the QUERY STRING, not the URL path. Pointing at a path
-  //    segment produces a 401 "RF-UndefinedResource" fault.
-  const baseUrl = getDHLBaseUrl(settings);
-  const headers = getDHLHeaders(settings);
-
-  const resp = await fetch(`${baseUrl}/orders?shipment=${encodeURIComponent(dhlShipmentNumber)}`, {
-    method: 'DELETE',
-    headers,
-  });
-
-  // DHL returns 200 on success, 400 if already cancelled/shipped.
-  if (!resp.ok && resp.status !== 200) {
-    const respBody = await resp.text();
-    // If already cancelled or shipment not found, we still clean up locally
-    // so the UI doesn't get stuck on a zombie label record.
-    if (resp.status !== 404 && resp.status !== 400) {
-      return json({ error: `DHL cancellation failed: ${respBody.slice(0, 200)}` }, 502);
+    // DHL Parcel DE v2 uses `DELETE /orders?shipment={num}`.
+    const baseUrl = getDHLBaseUrl(settings);
+    const headers = getDHLHeaders(settings);
+    const resp = await fetch(`${baseUrl}/orders?shipment=${encodeURIComponent(dhlShipmentNumber)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!resp.ok && resp.status !== 200) {
+      const respBody = await resp.text();
+      if (resp.status !== 404 && resp.status !== 400) {
+        return json({ error: `DHL cancellation failed: ${respBody.slice(0, 200)}` }, 502);
+      }
     }
   }
 
