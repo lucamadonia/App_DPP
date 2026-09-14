@@ -400,28 +400,34 @@ async function createShipmentForOrder(
 }
 
 /**
- * Etsy exposes no GTIN on a transaction, so the SKU is the only join key.
- * Matched against products.sku, then products.gtin for sellers who put the
- * barcode in Etsy's SKU field.
+ * Resolve Etsy's SKU string against a Trackbliss product.
+ *
+ * Etsy sends no GTIN on a transaction, and `products` carries no SKU column —
+ * the only identifiers available are gtin and serial_number.  So whatever the
+ * seller typed into Etsy's SKU field is matched against both; anything else
+ * has to be assigned by hand in the Commerce Hub.
  */
 async function lookupProducts(supabase: any, tenantId: string, skus: string[]) {
-  const map = new Map<string, { id: string; gtin: string | null; matchedBy: 'sku' | 'gtin' }>();
+  const map = new Map<string, { id: string; gtin: string | null; matchedBy: 'gtin' | 'sku' }>();
   const unique = Array.from(new Set(skus.filter(Boolean)));
   if (unique.length === 0) return map;
 
   // Quote each value and drop embedded quotes — PostgREST `in.()` lists are
-  // comma-separated and would otherwise break on a SKU containing , or ".
+  // comma-separated and would otherwise break on a value containing , or ".
   const list = unique.map((s) => `"${s.replaceAll('"', '')}"`).join(',');
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('products')
-    .select('id, sku, gtin')
+    .select('id, gtin, serial_number')
     .eq('tenant_id', tenantId)
-    .or(`sku.in.(${list}),gtin.in.(${list})`);
+    .or(`gtin.in.(${list}),serial_number.in.(${list})`);
 
-  for (const p of (data ?? []) as Array<{ id: string; sku?: string; gtin?: string }>) {
-    if (p.sku) map.set(p.sku.toLowerCase(), { id: p.id, gtin: p.gtin ?? null, matchedBy: 'sku' });
-    if (p.gtin && !map.has(p.gtin.toLowerCase())) {
-      map.set(p.gtin.toLowerCase(), { id: p.id, gtin: p.gtin, matchedBy: 'gtin' });
+  // A schema drift here used to fail silently and look like "no matches".
+  if (error) throw new Error(`product lookup failed: ${error.message}`);
+
+  for (const p of (data ?? []) as Array<{ id: string; gtin?: string; serial_number?: string }>) {
+    if (p.gtin) map.set(p.gtin.toLowerCase(), { id: p.id, gtin: p.gtin, matchedBy: 'gtin' });
+    if (p.serial_number && !map.has(p.serial_number.toLowerCase())) {
+      map.set(p.serial_number.toLowerCase(), { id: p.id, gtin: p.gtin ?? null, matchedBy: 'sku' });
     }
   }
   return map;
