@@ -65,7 +65,7 @@ function KPICard({ label, value, icon: Icon, color, bgColor, loading }: {
                 <AnimatedCounter value={value} />
               </p>
             )}
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{label}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words">{label}</p>
           </div>
         </div>
       </CardContent>
@@ -554,8 +554,8 @@ export function ShipmentListPage() {
       }
       actions={
         <div className="flex gap-2 w-full sm:w-auto justify-end">
-          {/* Desktop create button — mobile uses the FAB at the bottom instead */}
-          <Button asChild className="hidden sm:inline-flex">
+          {/* Keep creation reachable without overlapping the mobile navigation. */}
+          <Button asChild className="inline-flex">
             <Link to="/warehouse/shipments/new">
               <Plus className="mr-2 h-4 w-4" />
               {t('Create Shipment')}
@@ -620,7 +620,7 @@ export function ShipmentListPage() {
       </motion.div>
 
       {/* Status pipeline chips — draft → … → delivered, with "all"/"cancelled" set apart */}
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide snap-x pb-1 -mb-1 -mx-1 px-1">
+      <div className="flex flex-wrap items-center gap-1 pb-1">
         <StatusChip
           status="all"
           label={t('All')}
@@ -676,7 +676,7 @@ export function ShipmentListPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
         <Select value={carrierFilter} onValueChange={setCarrierFilter}>
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder={t('Carrier')} />
@@ -698,19 +698,19 @@ export function ShipmentListPage() {
             <SelectItem value="urgent">{t('urgent')}</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex gap-2 sm:contents">
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:contents">
           <Input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="flex-1 sm:flex-none sm:w-40"
+            className="min-w-0 w-full sm:w-40"
             placeholder={t('Date from')}
           />
           <Input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="flex-1 sm:flex-none sm:w-40"
+            className="min-w-0 w-full sm:w-40"
             placeholder={t('Date to')}
           />
         </div>
@@ -761,10 +761,10 @@ export function ShipmentListPage() {
                 to={`/warehouse/shipments/${s.id}`}
                 className="block rounded-lg border bg-card p-3 hover:bg-muted/50 hover:shadow-md transition-all active:scale-[0.99]"
               >
-                <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex flex-col items-start gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {hasExportIssue && <ExportIssueDot title={t('Shopify sync pending or failed')} />}
-                    <span className="font-mono text-sm font-medium text-primary truncate">
+                    <span className="font-mono text-sm font-medium text-primary break-all">
                       {s.shipmentNumber}
                     </span>
                   </div>
@@ -791,7 +791,7 @@ export function ShipmentListPage() {
                       )}
                     </div>
                     {s.recipientCompany && (
-                      <div className="text-xs text-muted-foreground truncate">{s.recipientCompany}</div>
+                      <div className="text-xs text-muted-foreground break-words">{s.recipientCompany}</div>
                     )}
                   </div>
                 </div>
@@ -1004,16 +1004,6 @@ export function ShipmentListPage() {
         </div>
       )}
 
-      {/* Mobile FAB — replaces the header create button below sm */}
-      <Button
-        asChild
-        size="icon"
-        className="sm:hidden fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full shadow-lg"
-      >
-        <Link to="/warehouse/shipments/new" aria-label={t('Create Shipment')}>
-          <Plus className="h-6 w-6" />
-        </Link>
-      </Button>
       </div>
     </PageContainer>
   );

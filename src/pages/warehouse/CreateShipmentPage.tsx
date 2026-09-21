@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
+import { StickyBottomBar } from '@/components/layout/sticky-bottom-bar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -1067,6 +1068,7 @@ export function CreateShipmentPage() {
                 </Label>
                 <Input
                   value={shippingCity}
+                  aria-label={t('City')}
                   onChange={(e) => setShippingCity(e.target.value)}
                   className={`h-11 rounded-xl ${addressErrorFor('city') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
                 />
@@ -1081,7 +1083,7 @@ export function CreateShipmentPage() {
                   <Globe className="h-3.5 w-3.5" /> {t('Country')}
                 </Label>
                 <Select value={shippingCountry} onValueChange={setShippingCountry}>
-                  <SelectTrigger className="h-11 rounded-xl">
+                  <SelectTrigger className="w-full min-w-0 h-11 rounded-xl">
                     <SelectValue placeholder={t('Country')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1250,7 +1252,7 @@ export function CreateShipmentPage() {
                           {t('Product')}
                         </Label>
                         <Select value={item.productId} onValueChange={(v) => updateItem(idx, 'productId', v)}>
-                          <SelectTrigger className="h-10 rounded-lg">
+                          <SelectTrigger className="w-full min-w-0 h-10 rounded-lg">
                             <SelectValue placeholder={t('Select Product')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1273,7 +1275,7 @@ export function CreateShipmentPage() {
                             onValueChange={(v) => updateItem(idx, 'batchId', v)}
                             disabled={!item.productId || item.batchOptions.length === 0}
                           >
-                            <SelectTrigger className="h-10 rounded-lg">
+                            <SelectTrigger className="w-full min-w-0 h-10 rounded-lg">
                               <SelectValue placeholder={!item.productId ? t('Select Product first') : t('Select Batch')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -1293,7 +1295,7 @@ export function CreateShipmentPage() {
                           {t('Location')}
                         </Label>
                         <Select value={item.locationId} onValueChange={(v) => updateItem(idx, 'locationId', v)}>
-                          <SelectTrigger className="h-10 rounded-lg">
+                          <SelectTrigger className="w-full min-w-0 h-10 rounded-lg">
                             <SelectValue placeholder={t('Select Warehouse')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1440,7 +1442,7 @@ export function CreateShipmentPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Carrier')}</Label>
                 <Select value={carrier} onValueChange={setCarrier}>
-                  <SelectTrigger className="h-11 rounded-xl">
+                  <SelectTrigger className="w-full min-w-0 h-11 rounded-xl">
                     <SelectValue placeholder={t('Carrier')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1739,14 +1741,14 @@ export function CreateShipmentPage() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Sticky bottom action bar — mobile + desktop */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] sm:static sm:z-auto sm:mt-6 sm:border-0 sm:bg-transparent sm:backdrop-blur-0 sm:shadow-none dark:sm:bg-transparent">
-        <div className="mx-auto max-w-4xl flex items-center justify-between gap-2 px-4 py-3 sm:px-0 sm:py-0">
+      {/* Portal clears transformed route ancestors and the mobile navigation. */}
+      <StickyBottomBar className="bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))] pb-3">
           <Button
             variant="outline"
             size="lg"
             onClick={() => step > 0 ? goToStep(step - 1) : navigate('/warehouse/shipments')}
             className="rounded-xl h-11"
+            aria-label={t('Back', { ns: 'common' })}
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             <span className="hidden sm:inline">{t('Back', { ns: 'common' })}</span>
@@ -1777,8 +1779,7 @@ export function CreateShipmentPage() {
               {loading ? t('Creating...', { ns: 'common' }) : t('Create & Send')}
             </Button>
           )}
-        </div>
-      </div>
+      </StickyBottomBar>
     </div>
   );
 }

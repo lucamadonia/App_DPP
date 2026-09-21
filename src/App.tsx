@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence } from 'framer-motion';
 import { Toaster } from 'sonner';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -23,7 +22,6 @@ import './index.css';
 import { isNative, showsFirstRun } from '@/lib/platform';
 import i18n from '@/i18n';
 import { initDeepLinks } from '@/lib/deep-links';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useMotionBudget } from '@/hooks/use-motion-budget';
 import { AppHeader } from '@/components/layout/app-header';
 import { SwipeBackLayer } from '@/components/layout/swipe-back-layer';
@@ -259,32 +257,17 @@ function ProtectedRoute() {
 
 function AnimatedOutlet() {
   const location = useLocation();
-  const isMobile = useIsMobile();
 
-  // Mobile uses `popLayout` so the outgoing and incoming pages overlap — that
-  // overlap is what makes the push/pop read as a native stack. It requires a
-  // positioned wrapper, because the exiting page is taken out of flow.
-  //
-  // Desktop keeps `wait`: the blur-in crossfade has nothing to overlap, and
-  // sequential mode avoids a transient double scrollbar on wide layouts.
-  if (isMobile) {
-    return (
-      <div className="relative isolate min-h-full">
-        <AnimatePresence mode="popLayout" initial={false} custom={location.pathname}>
-          <PageTransition key={location.pathname} className="min-h-full">
-            <Outlet />
-          </PageTransition>
-        </AnimatePresence>
-      </div>
-    );
-  }
-
+  // Keep the routed subtree stable across orientation/breakpoint changes.
+  // Changing wrapper types remounts Outlet and discards unsaved form state.
+  // Animate only the incoming route: an exiting live Outlet can render the new
+  // form briefly, accept input, and then discard it when its exit completes.
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <PageTransition key={location.pathname}>
+    <div className="relative isolate min-h-full min-w-0">
+      <PageTransition key={location.pathname} className="min-h-full min-w-0">
         <Outlet />
       </PageTransition>
-    </AnimatePresence>
+    </div>
   );
 }
 
@@ -296,7 +279,7 @@ function AppLayout() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <ImpersonationBanner />
         <AppHeader onSearch={() => setPaletteOpen(true)} />
         <main className="flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app">

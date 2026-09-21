@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 interface StickyBottomBarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -26,7 +27,7 @@ export function StickyBottomBar({
   return (
     <>
       {/* Mobile: fixed bottom bar */}
-      <div
+      {createPortal(<div
         className={cn(
           'fixed inset-x-0 bottom-0 border-t border-border bg-background/95 backdrop-blur-md px-4 py-3',
           'flex items-center justify-between gap-2',
@@ -38,7 +39,7 @@ export function StickyBottomBar({
         {...rest}
       >
         {children}
-      </div>
+      </div>, document.body)}
       {/* Desktop: inline spacer when not always-visible (rendered by parent) */}
       {!alwaysVisible && (
         <div
