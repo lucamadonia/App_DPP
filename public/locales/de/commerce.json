@@ -168,5 +168,12 @@
   "Create shipment": "Sendung erstellen",
   "Creates a warehouse shipment you can pack and label with DHL.": "Erstellt eine Sendung im Warehouse, die du packen und per DHL etikettieren kannst.",
   "Shipment {{number}} created with {{n}} items": "Sendung {{number}} mit {{n}} Positionen erstellt",
-  "No items on the shipment — assign the lines to products first.": "Keine Positionen auf der Sendung — ordne die Zeilen zuerst Produkten zu."
+  "No items on the shipment — assign the lines to products first.": "Keine Positionen auf der Sendung — ordne die Zeilen zuerst Produkten zu.",
+  "Shipment {{number}} updated with {{n}} new items": "Sendung {{number}} aktualisiert: {{n}} neue Positionen",
+  "Etsy order not found": "Etsy-Bestellung nicht gefunden",
+  "Only draft or empty picking shipments can be reconciled": "Nur Entw?rfe oder leere Sendungen in Kommissionierung k?nnen erg?nzt werden",
+  "Assign all order lines to products first": "Bitte zuerst alle Bestellpositionen Produkten zuordnen",
+  "Create a warehouse location first": "Bitte zuerst einen Lagerstandort anlegen",
+  "Order has no complete shipping address": "Die Bestellung hat keine vollst?ndige Lieferadresse",
+  "Shipment failed": "Sendung konnte nicht erstellt oder erg?nzt werden"
 }

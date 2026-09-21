@@ -211,13 +211,21 @@ export async function linkOrderItemToProduct(
  * Address fields live in the stored provider payload, since commerce_orders
  * keeps no street column.
  */
-export async function createShipmentFromOrder(orderId: string): Promise<{ shipmentNumber: string; itemsCreated: number }> {
+export async function createShipmentFromOrder(orderId: string): Promise<{ shipmentNumber: string; itemsCreated: number; itemCount?: number; reused?: boolean }> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) throw new Error('No tenant');
 
   const { data: order } = await supabase
     .from('commerce_orders').select('*').eq('id', orderId).eq('tenant_id', tenantId).single();
   if (!order) throw new Error('Order not found');
+
+  if (order.platform === 'etsy') {
+    const { data, error } = await supabase.rpc('reconcile_etsy_shipment', {
+      p_order_id: orderId, p_tenant_id: tenantId,
+    });
+    if (error) throw new Error(error.message);
+    return data;
+  }
 
   const orderRef = `${order.platform === 'etsy' ? 'Etsy' : order.platform} ${order.external_order_id}`;
   const { data: existing } = await supabase

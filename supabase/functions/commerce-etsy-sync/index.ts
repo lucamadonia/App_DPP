@@ -220,7 +220,7 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
 
   const { data: existing } = await supabase
     .from('commerce_orders')
-    .select('id')
+    .select('id, metadata')
     .eq('tenant_id', tenantId).eq('platform', 'etsy').eq('external_order_id', externalOrderId)
     .maybeSingle();
 
@@ -262,7 +262,7 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
     updated_at: new Date().toISOString(),
 
     raw_payload: receipt,
-    metadata: { shopId: shop.shopId, etsyStatus: receipt.status ?? null },
+    metadata: { ...(existing?.metadata ?? {}), shopId: shop.shopId, etsyStatus: receipt.status ?? null },
   };
 
   const { data: order, error: orderError } = existing
@@ -270,9 +270,11 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
     : await supabase.from('commerce_orders').insert(orderPayload).select('id').single();
   if (orderError) throw new Error(`order upsert failed: ${orderError.message}`);
 
-  // Line items are replaced wholesale: Etsy exposes no stable per-line revision,
-  // so diffing would cost more reads than rewriting a handful of rows.
-  await supabase.from('commerce_order_items').delete().eq('order_id', order.id);
+  // Keep stable transaction IDs and manual assignments across every sync.
+  const { data: previousItems, error: previousError } = await supabase
+    .from('commerce_order_items').select('*').eq('order_id', order.id).eq('tenant_id', tenantId);
+  if (previousError) throw new Error(previousError.message);
+  const previousById = new Map((previousItems ?? []).map((i: any) => [i.external_item_id, i]));
 
   const skus = transactions.map((t) => t.sku).filter(Boolean).map(String);
   const productMap = await lookupProducts(supabase, tenantId, skus);
@@ -280,7 +282,10 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
   let linked = 0;
   const items = transactions.map((t) => {
     const sku = t.sku ? String(t.sku) : null;
-    const match = sku ? productMap.get(sku.toLowerCase()) : undefined;
+    const previous: any = previousById.get(String(t.transaction_id));
+    const match = previous?.match_method === 'manual' && previous.product_id
+      ? { id: previous.product_id, gtin: previous.gtin, matchedBy: 'manual' }
+      : sku ? productMap.get(sku.toLowerCase()) : undefined;
     if (match) linked++;
     const unit = money(t.price);
     const qty = Number(t.quantity) || 1;
@@ -302,15 +307,25 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
       total_price: unit * qty,
       product_id: match?.id ?? null,
       match_method: match ? match.matchedBy : null,
-      match_confidence: match ? 0.99 : null,
+      match_confidence: match ? (match.matchedBy === 'manual' ? 1 : 0.99) : null,
       dpp_url: match ? `/products/${match.id}` : null,
       metadata: {},
     };
   });
 
-  if (items.length > 0) {
-    const { error: itemError } = await supabase.from('commerce_order_items').insert(items);
-    if (itemError) throw new Error(`item insert failed: ${itemError.message}`);
+  for (const item of items) {
+    const previous: any = previousById.get(item.external_item_id);
+    const { error: itemError } = previous
+      ? await supabase.from('commerce_order_items').update(item).eq('id', previous.id).eq('tenant_id', tenantId)
+      : await supabase.from('commerce_order_items').insert(item);
+    if (itemError) throw new Error(`item write failed: ${itemError.message}`);
+  }
+  // Delete only transactions that Etsy actually removed, after successful writes.
+  const currentIds = new Set(items.map((item) => item.external_item_id));
+  const staleIds = (previousItems ?? []).filter((item: any) => !currentIds.has(item.external_item_id)).map((item: any) => item.id);
+  if (staleIds.length) {
+    const { error } = await supabase.from('commerce_order_items').delete().in('id', staleIds).eq('tenant_id', tenantId);
+    if (error) throw new Error(error.message);
   }
 
   await supabase.from('commerce_orders').update({
@@ -323,80 +338,24 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
   return { created: !existing, linked };
 }
 
-/**
- * Mirror a paid, unshipped Etsy order into the warehouse so it can be picked,
- * packed and labelled like any Shopify order.
- *
- * Only the header is guaranteed: wh_shipment_items demands product, batch and
- * location, none of which Etsy supplies.  Unlinked lines are therefore skipped
- * rather than blocking the shipment — assign them in the Commerce Hub and the
- * next sync fills them in.
- */
+/** Fill missing positions on draft shipments using the same transaction as the UI. */
 async function createShipmentForOrder(
   supabase: any, tenantId: string, orderId: string, receipt: any, items: any[],
 ) {
   const { financialStatus, shipped } = mapStatuses(receipt);
-  if (financialStatus !== 'paid' || shipped) return;
-
-  const orderRef = `Etsy ${receipt.receipt_id}`;
-  const { data: existing } = await supabase
-    .from('wh_shipments').select('id').eq('tenant_id', tenantId).eq('order_reference', orderRef).maybeSingle();
-  if (existing) return;   // idempotent: never a second shipment per receipt
-
-  const street = [receipt.first_line, receipt.second_line].filter(Boolean).join(' ').trim();
-  if (!street || !receipt.city || !receipt.zip) return;  // NOT NULL columns
-
-  const dateStr = new Date().toISOString().slice(0, 10).replaceAll('-', '');
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-
-  const { data: shipment, error } = await supabase.from('wh_shipments').insert({
-    tenant_id: tenantId,
-    shipment_number: `SHP-${dateStr}-${rand}`,
-    status: 'draft',
-    recipient_type: 'customer',
-    recipient_name: receipt.name || 'Etsy buyer',
-    recipient_email: receipt.buyer_email || null,
-    shipping_street: street,
-    shipping_city: receipt.city,
-    shipping_state: receipt.state || null,
-    shipping_postal_code: String(receipt.zip),
-    shipping_country: receipt.country_iso || 'DE',
-    total_items: items.reduce((n, i) => n + (i.quantity || 0), 0),
-    order_reference: orderRef,
-    notes: `Etsy receipt ${receipt.receipt_id}`,
-  }).select('id').single();
-  if (error || !shipment) {
-    console.error('shipment insert failed', error?.message);
-    return;
+  if (financialStatus !== 'paid' || shipped || !items.length || items.some((i) => !i.product_id)) return;
+  const { data: existing, error: lookupError } = await supabase.from('wh_shipments').select('id, status')
+    .eq('tenant_id', tenantId).eq('order_reference', `Etsy ${receipt.receipt_id}`).maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (existing && existing.status !== 'draft') {
+    if (existing.status !== 'picking') return;
+    const { count, error: countError } = await supabase.from('wh_shipment_items')
+      .select('id', { count: 'exact', head: true }).eq('shipment_id', existing.id).eq('tenant_id', tenantId);
+    if (countError) throw new Error(countError.message);
+    if (count) return;
   }
-
-  await supabase.from('commerce_orders')
-    .update({ metadata: { shipmentId: shipment.id, orderReference: orderRef } })
-    .eq('id', orderId);
-
-  // Newest active batch + the tenant's first location, per the configured rule.
-  const { data: location } = await supabase
-    .from('wh_locations').select('id').eq('tenant_id', tenantId).order('created_at').limit(1).maybeSingle();
-  if (!location) return;
-
-  for (const item of items.filter((i) => i.product_id)) {
-    const { data: batch } = await supabase
-      .from('product_batches').select('id').eq('product_id', item.product_id)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!batch) continue;
-
-    await supabase.from('wh_shipment_items').insert({
-      tenant_id: tenantId,
-      shipment_id: shipment.id,
-      product_id: item.product_id,
-      batch_id: batch.id,
-      location_id: location.id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      currency: 'EUR',
-      notes: item.sku ? `Etsy SKU ${item.sku}` : null,
-    });
-  }
+  const { error } = await supabase.rpc('reconcile_etsy_shipment', { p_order_id: orderId, p_tenant_id: tenantId });
+  if (error) throw new Error(`shipment reconciliation failed: ${error.message}`);
 }
 
 /**

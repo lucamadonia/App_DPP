@@ -168,5 +168,12 @@
   "Create shipment": "Create shipment",
   "Creates a warehouse shipment you can pack and label with DHL.": "Creates a warehouse shipment you can pack and label with DHL.",
   "Shipment {{number}} created with {{n}} items": "Shipment {{number}} created with {{n}} items",
-  "No items on the shipment — assign the lines to products first.": "No items on the shipment — assign the lines to products first."
+  "No items on the shipment — assign the lines to products first.": "No items on the shipment — assign the lines to products first.",
+  "Shipment {{number}} updated with {{n}} new items": "Shipment {{number}} updated with {{n}} new items",
+  "Etsy order not found": "Etsy order not found",
+  "Only draft or empty picking shipments can be reconciled": "Only draft or empty picking shipments can be reconciled",
+  "Assign all order lines to products first": "Assign all order lines to products first",
+  "Create a warehouse location first": "Create a warehouse location first",
+  "Order has no complete shipping address": "Order has no complete shipping address",
+  "Shipment failed": "Shipment failed"
 }

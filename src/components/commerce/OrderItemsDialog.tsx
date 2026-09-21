@@ -81,15 +81,15 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
     setCreatingShipment(true);
     try {
       const res = await createShipmentFromOrder(orderId);
-      toast.success(t('Shipment {{number}} created with {{n}} items', {
+      toast.success(t(res.reused ? 'Shipment {{number}} updated with {{n}} new items' : 'Shipment {{number}} created with {{n}} items', {
         number: res.shipmentNumber, n: res.itemsCreated,
       }));
-      if (res.itemsCreated === 0) {
+      if ((res.itemCount ?? res.itemsCreated) === 0) {
         toast.warning(t('No items on the shipment — assign the lines to products first.'));
       }
       onChanged?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Shipment failed');
+      toast.error(e instanceof Error ? t(e.message) : t('Shipment failed'));
     } finally {
       setCreatingShipment(false);
     }
