@@ -109,8 +109,16 @@ export function TriggerConfigurator({ data, onChange }: TriggerConfiguratorProps
       </div>
 
       {/* Schedule config */}
+      {(isScheduled(data.eventType) || data.eventType === 'return_overdue' || data.eventType === 'ticket_overdue' || data.eventType === 'manual') && <p className="text-xs text-muted-foreground">{t('Enable server execution on the workflow list to run this trigger.')}</p>}
+      {data.eventType === 'return_overdue' && <div className="space-y-1.5">
+        <Label htmlFor="workflow-overdue-days">{t('Unresolved for days')}</Label>
+        <Input id="workflow-overdue-days" type="number" min={1} max={3650} value={data.overdueDays ?? 7} onChange={event => onChange({ ...data, overdueDays: Number(event.target.value) })} />
+        <p className="text-xs text-muted-foreground">{t('Measured from return creation. Closed returns are excluded.')}</p>
+      </div>}
+      {data.eventType === 'ticket_overdue' && <p className="text-xs text-muted-foreground">{t('Runs once per exceeded ticket resolution deadline.')}</p>}
       {isScheduled(data.eventType) && (
         <div className="space-y-2 p-2 bg-muted rounded-md">
+          <div className="space-y-1.5"><Label htmlFor="workflow-timezone">{t('Time zone')}</Label><Input id="workflow-timezone" value={data.schedule?.timezone || 'Europe/Berlin'} onChange={event => onChange({ ...data, schedule: { ...data.schedule, timezone: event.target.value } })} placeholder="Europe/Zurich" /></div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('Time')}</Label>
             <Input

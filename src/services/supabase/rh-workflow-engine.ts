@@ -8,6 +8,7 @@
  * Client-side only — delay nodes require browser tab to stay open.
  */
 
+import { walkWorkflow } from '@/lib/workflow-walk';
 import type {
   WorkflowGraph,
   WorkflowNode,
@@ -109,6 +110,8 @@ export async function executeWorkflowsForEvent(
 
     // Execute each matching rule
     for (const rule of rules) {
+      // Database triggers have already queued these rules atomically with the event.
+      if (rule.server_execution) continue;
       if (executingRuleIds.has(rule.id)) {
         console.warn(`[workflow-engine] Skipping re-entrant rule "${rule.name}" (${rule.id})`);
         continue;
@@ -210,57 +213,14 @@ async function walkGraph(graph: WorkflowGraph, ctx: WorkflowEventContext): Promi
     }
   }
 
-  // Walk from the trigger node
-  await walkFromNode(triggerNode.id, graph, ctx);
-}
-
-async function walkFromNode(
-  nodeId: string,
-  graph: WorkflowGraph,
-  ctx: WorkflowEventContext
-): Promise<void> {
-  // Find outgoing edges from this node
-  const outgoingEdges = graph.edges.filter((e) => e.source === nodeId);
-  if (!outgoingEdges.length) return;
-
-  for (const edge of outgoingEdges) {
-    const targetNode = graph.nodes.find((n) => n.id === edge.target);
-    if (!targetNode) continue;
-
-    switch (targetNode.type) {
-      case 'condition': {
-        const result = evaluateConditionNode(targetNode, ctx);
-        // Follow the matching branch ('true' or 'false')
-        const branchLabel = result ? 'true' : 'false';
-        const branchEdges = graph.edges.filter(
-          (e) => e.source === targetNode.id && e.sourceHandle === branchLabel
-        );
-        for (const branchEdge of branchEdges) {
-          await walkFromNode(branchEdge.target, graph, ctx);
-        }
-        break;
-      }
-
-      case 'action': {
-        await executeActionNode(targetNode, ctx);
-        await walkFromNode(targetNode.id, graph, ctx);
-        break;
-      }
-
-      case 'delay': {
-        const delayData = targetNode.data as DelayNodeData;
-        const ms = delayToMs(delayData.amount, delayData.unit);
-        await new Promise((resolve) => setTimeout(resolve, ms));
-        await walkFromNode(targetNode.id, graph, ctx);
-        break;
-      }
-
-      default:
-        // Unknown node type, continue walking
-        await walkFromNode(targetNode.id, graph, ctx);
-        break;
-    }
-  }
+  await walkWorkflow(graph, triggerNode.id, {
+    condition: node => evaluateConditionNode(node, ctx),
+    action: node => executeActionNode(node, ctx),
+    delay: async node => {
+      const data = node.data as DelayNodeData;
+      await new Promise(resolve => setTimeout(resolve, delayToMs(data.amount, data.unit)));
+    },
+  });
 }
 
 function delayToMs(amount: number, unit: string): number {

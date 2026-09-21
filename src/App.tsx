@@ -42,6 +42,7 @@ const TermsPage = lazy(() => import('@/pages/TermsPage').then(m => ({ default: m
 const SupportPage = lazy(() => import('@/pages/SupportPage').then(m => ({ default: m.SupportPage })));
 const PricingPage = lazy(() => import('@/pages/PricingPage').then(m => ({ default: m.PricingPage })));
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const BatchUploadPage = lazy(() => import('@/pages/BatchUploadPage').then(m => ({ default: m.BatchUploadPage })));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 
@@ -314,18 +315,6 @@ function AppLayout() {
   );
 }
 
-function PlaceholderPage({ title }: { title: string }) {
-  const { t } = useTranslation('common');
-  return (
-    <div className="flex h-[50vh] items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        <p className="mt-2 text-muted-foreground">{t('This page is under development')}</p>
-      </div>
-    </div>
-  );
-}
-
 function CustomDomainGate() {
   const { t } = useTranslation('common');
   const { isCustomDomain, isResolving, resolution } = useCustomDomainDetection();
@@ -538,7 +527,7 @@ function NormalAppRoutes() {
           <Route path="dpp/visibility" element={<DPPVisibilitySettingsPageV3 />} />
           <Route path="dpp/design" element={<DPPDesignPage />} />
           <Route path="dpp/transparency" element={<TransparencyConfigPage />} />
-          <Route path="dpp/batch-upload" element={<PlaceholderPage title="Batch-Upload" />} />
+          <Route path="dpp/batch-upload" element={<BatchUploadPage />} />
 
           {/* Documents */}
           <Route path="documents" element={<DocumentsPage />} />

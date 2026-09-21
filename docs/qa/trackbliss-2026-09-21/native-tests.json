@@ -1,0 +1,1078 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Users\\luca\\Projects\\App_DPP\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config",
+      "tmp/readiness/native.config.ts"
+    ],
+    "configFile": "C:\\Users\\luca\\Projects\\App_DPP\\tmp\\readiness\\native.config.ts",
+    "rootDir": "C:/Users/luca/Projects/App_DPP/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/luca/Projects/App_DPP/tmp/readiness/native-test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "iPhone SE",
+        "name": "iPhone SE",
+        "testDir": "C:/Users/luca/Projects/App_DPP/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "native-journey.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/luca/Projects/App_DPP/tmp/readiness/native-test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "iPad Mini",
+        "name": "iPad Mini",
+        "testDir": "C:/Users/luca/Projects/App_DPP/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "native-journey.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "C:\\Users\\luca\\Projects\\App_DPP\\tmp\\readiness\\native-tests.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 4,
+    "webServer": {
+      "cwd": "C:\\Users\\luca\\Projects\\App_DPP",
+      "command": "node node_modules/vite/bin/vite.js preview --outDir tmp/readiness/native-dist --port 4183",
+      "url": "http://localhost:4183",
+      "reuseExistingServer": false,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "native-journey.spec.ts",
+      "file": "native-journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "first-run journey",
+          "file": "native-journey.spec.ts",
+          "line": 74,
+          "column": 6,
+          "specs": [
+            {
+              "title": "the root sends a signed-out visitor into the journey, not to a bare login form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3932,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:33.443Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-13afa28c2b11cadef0be",
+              "file": "native-journey.spec.ts",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "shows eight panels and marks exactly one current step",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4304,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:37.653Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-76b0c3a5b2b0e6241f05",
+              "file": "native-journey.spec.ts",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "the finish panel offers three ways out",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5987,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:42.002Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-1d145582acf405794dc2",
+              "file": "native-journey.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "requests nothing from outside the app origin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11732,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:48.017Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-bd6f164c618ff5e1ddeb",
+              "file": "native-journey.spec.ts",
+              "line": 113,
+              "column": 3
+            },
+            {
+              "title": "backdrops load and stay within the asset budget",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9962,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:59.778Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-b7a33e236805544b77a3",
+              "file": "native-journey.spec.ts",
+              "line": 136,
+              "column": 3
+            },
+            {
+              "title": "stays navigable with reduced motion",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4455,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:09.772Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-20d13df0c2ab36f5b202",
+              "file": "native-journey.spec.ts",
+              "line": 185,
+              "column": 3
+            },
+            {
+              "title": "the root sends a signed-out visitor into the journey, not to a bare login form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4933,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:33.461Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-05ffff1c2a3ba8fac183",
+              "file": "native-journey.spec.ts",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "shows eight panels and marks exactly one current step",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 6096,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:38.661Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-43a0d0ea8e24a12ce5f1",
+              "file": "native-journey.spec.ts",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "the finish panel offers three ways out",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 9781,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:44.810Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-173989c2a1573d8b2304",
+              "file": "native-journey.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "requests nothing from outside the app origin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 19763,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:35:54.629Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-05f6795cabbf4732d9c7",
+              "file": "native-journey.spec.ts",
+              "line": 113,
+              "column": 3
+            },
+            {
+              "title": "backdrops load and stay within the asset budget",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 20903,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:14.428Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-e3dae60b1227a13b4902",
+              "file": "native-journey.spec.ts",
+              "line": 136,
+              "column": 3
+            },
+            {
+              "title": "stays navigable with reduced motion",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 6392,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:35.359Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-612ba54b3250e62273bf",
+              "file": "native-journey.spec.ts",
+              "line": 185,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "guest mode",
+          "file": "native-journey.spec.ts",
+          "line": 197,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Discover hub does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2455,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:14.254Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-ffcdf39cf299efe92ba6",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Requirements check does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2846,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:16.733Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-e82ee198aa7ba9692c69",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Checklists does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3201,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:19.605Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-48ad1e5bcebb0533cfc9",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "QR generator does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3093,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:22.832Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-84f6e4ecb19753af9a5b",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Regulations does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2936,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:25.954Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-1daa5d751b96346e2c0e",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Certificates lexicon does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2686,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:28.915Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-bf751f4485843fab117a",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Daily tips does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4698,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:31.627Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-b02dfb2bd368d28488c1",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "hub tap targets are large enough",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPhone SE",
+                  "projectName": "iPhone SE",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2877,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:36.345Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-494e83c6855505147597",
+              "file": "native-journey.spec.ts",
+              "line": 225,
+              "column": 3
+            },
+            {
+              "title": "Discover hub does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 5553,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:41.778Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-83b4a45953de2e8a4675",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Requirements check does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 5434,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:47.362Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-3c6f1cbd5dbfddb494e1",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Checklists does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 6245,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:52.832Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-791a7f4fc07746490c82",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "QR generator does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 7508,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:36:59.113Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-3b368f77f3ae088ba5ee",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Regulations does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4462,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:37:06.651Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-1f6c98ab67ecacc1a803",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Certificates lexicon does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 6507,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:37:11.141Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-fd425b800d8bd96ca227",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "Daily tips does not scroll horizontally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 6976,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:37:17.677Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-4842d1218487c1d5fb4c",
+              "file": "native-journey.spec.ts",
+              "line": 199,
+              "column": 5
+            },
+            {
+              "title": "hub tap targets are large enough",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iPad Mini",
+                  "projectName": "iPad Mini",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3588,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-21T08:37:24.682Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "30ff609f77eaaf43f08e-e413116226766a914a95",
+              "file": "native-journey.spec.ts",
+              "line": 225,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-21T08:35:31.224Z",
+    "duration": 118848.438,
+    "expected": 28,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

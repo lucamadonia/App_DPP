@@ -1,0 +1,3301 @@
+[
+  {
+    "pattern": "/products/new",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 527,
+    "interactions": [],
+    "width": 360,
+    "path": "/products/new",
+    "landed": "/products/new",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 278
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex gap-2",
+        "width": 313
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 99
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      }
+    ],
+    "textLength": 1244,
+    "headings": [
+      "Produkte",
+      "Neues Produkt erstellen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 9,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_products_new.png"
+  },
+  {
+    "pattern": "/products",
+    "guard": "tenant-auth",
+    "element": "{<ProductsPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 526,
+    "interactions": [],
+    "width": 360,
+    "path": "/products",
+    "landed": "/products",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [],
+    "textLength": 321,
+    "headings": [
+      "Produkte",
+      "Products"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_products.png"
+  },
+  {
+    "pattern": "/products/:id",
+    "guard": "tenant-auth",
+    "element": "{<ProductPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 529,
+    "interactions": [],
+    "width": 360,
+    "path": "/products/00000000-0000-4000-8000-000000000001",
+    "landed": "/products/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 135
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 129
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 12
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 374
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 232
+      },
+      {
+        "tag": "DIV",
+        "cls": "bg-primary/20 relative overflow-hidden rounded-full h-2 w-48",
+        "width": 192
+      },
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 192
+      },
+      {
+        "tag": "SPAN",
+        "cls": "tabular-nums text-sm font-medium text-success",
+        "width": 32
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4 text-sm text-muted-foreground",
+        "width": 172
+      },
+      {
+        "tag": "SPAN",
+        "cls": "flex items-center gap-1",
+        "width": 59
+      }
+    ],
+    "textLength": 492,
+    "headings": [
+      "Produkte",
+      "Mobiler QA-Produkttest mit langem Produktnamen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_products_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/",
+    "guard": "tenant-auth",
+    "element": "{<DashboardPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 523,
+    "interactions": [
+      "More menu opened: 53 navigation links"
+    ],
+    "width": 360,
+    "path": "/",
+    "landed": "/",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-orb dashboard-hero-orb--one",
+        "width": 352
+      },
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-orb dashboard-hero-orb--two",
+        "width": 352
+      },
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-visual",
+        "width": 326
+      },
+      {
+        "tag": "IMG",
+        "cls": "",
+        "width": 326
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center justify-between gap-2",
+        "width": 336
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:point",
+        "width": 136
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center justify-between gap-2",
+        "width": 380
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:point",
+        "width": 136
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      }
+    ],
+    "textLength": 2453,
+    "headings": [
+      "Dashboard",
+      "Guten Morgen, Trackbliss QA!",
+      "Alle Bereiche"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_.png"
+  },
+  {
+    "pattern": "/products/:id/edit",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 530,
+    "interactions": [],
+    "width": 360,
+    "path": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "landed": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 278
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex gap-2",
+        "width": 313
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 99
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      }
+    ],
+    "textLength": 1430,
+    "headings": [
+      "Produkte",
+      "Produkt bearbeiten"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 9,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_products_00000000_0000_4000_8000_000000000001_edit.png"
+  },
+  {
+    "pattern": "/dpp",
+    "guard": "tenant-auth",
+    "element": "{<DPPOverviewPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 536,
+    "interactions": [],
+    "width": 360,
+    "path": "/dpp",
+    "landed": "/dpp",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [],
+    "textLength": 334,
+    "headings": [
+      "DPP / Pässe",
+      "Digitale Produktpässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_dpp.png"
+  },
+  {
+    "pattern": "/dpp/qr-generator",
+    "guard": "tenant-auth",
+    "element": "{<QRGeneratorPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 537,
+    "interactions": [],
+    "width": 360,
+    "path": "/dpp/qr-generator",
+    "landed": "/dpp/qr-generator",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:s",
+        "width": 431
+      },
+      {
+        "tag": "DIV",
+        "cls": "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.bo",
+        "width": 429
+      },
+      {
+        "tag": "DIV",
+        "cls": "leading-none font-semibold flex items-center justify-between",
+        "width": 381
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center justify-center rounded-full border border-transparent px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrin",
+        "width": 23
+      },
+      {
+        "tag": "DIV",
+        "cls": "text-muted-foreground text-sm",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "px-6 space-y-4",
+        "width": 429
+      },
+      {
+        "tag": "INPUT",
+        "cls": "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input ",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-2 max-h-[250px] overflow-y-auto",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "p-3 rounded-lg border cursor-pointer transition-colors border-primary bg-primary/5 ring-1 ring-primary",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-start justify-between",
+        "width": 355
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 312
+      },
+      {
+        "tag": "P",
+        "cls": "font-medium",
+        "width": 312
+      }
+    ],
+    "textLength": 985,
+    "headings": [
+      "DPP / Pässe",
+      "QR-Code-Generator"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 1,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_dpp_qr_generator.png"
+  },
+  {
+    "pattern": "/dpp/visibility",
+    "guard": "tenant-auth",
+    "element": "{<DPPVisibilitySettingsPageV3 />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 538,
+    "interactions": [],
+    "width": 360,
+    "path": "/dpp/visibility",
+    "landed": "/dpp/visibility",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [],
+    "textLength": 716,
+    "headings": [
+      "DPP / Pässe",
+      "Sichtbarkeitseinstellungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 14,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_dpp_visibility.png"
+  },
+  {
+    "pattern": "/dpp/design",
+    "guard": "tenant-auth",
+    "element": "{<DPPDesignPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 539,
+    "interactions": [],
+    "width": 360,
+    "path": "/dpp/design",
+    "landed": "/dpp/design",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 219
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 111
+      },
+      {
+        "tag": "LABEL",
+        "cls": "flex items-center gap-2 font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-di",
+        "width": 67
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-vis",
+        "width": 36
+      },
+      {
+        "tag": "SPAN",
+        "cls": "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[",
+        "width": 16
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 219
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 111
+      },
+      {
+        "tag": "LABEL",
+        "cls": "flex items-center gap-2 font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-di",
+        "width": 67
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-vis",
+        "width": 36
+      },
+      {
+        "tag": "SPAN",
+        "cls": "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[",
+        "width": 16
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 219
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 111
+      }
+    ],
+    "textLength": 3592,
+    "headings": [
+      "DPP / Pässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 34,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_dpp_design.png"
+  },
+  {
+    "pattern": "/warehouse/shipments",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentListPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 610,
+    "interactions": [],
+    "width": 360,
+    "path": "/warehouse/shipments",
+    "landed": "/warehouse/shipments",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "BUTTON",
+        "cls": "relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-11 sm:min-h-9 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap",
+        "width": 168
+      },
+      {
+        "tag": "SPAN",
+        "cls": "relative z-10 flex items-center gap-1 sm:gap-1.5",
+        "width": 148
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.25rem] h-5 text-xs font-semibold tabular-nums bg-background text-muted-",
+        "width": 20
+      },
+      {
+        "tag": "SPAN",
+        "cls": "tabular-nums",
+        "width": 8
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 12
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-11 sm:min-h-9 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap",
+        "width": 114
+      },
+      {
+        "tag": "SPAN",
+        "cls": "relative z-10 flex items-center gap-1 sm:gap-1.5",
+        "width": 94
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 14
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "polyline",
+        "cls": "[object SVGAnimatedString]",
+        "width": 10
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      }
+    ],
+    "textLength": 398,
+    "headings": [
+      "Lager & Versand",
+      "Sendungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_warehouse_shipments.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/new",
+    "guard": "tenant-auth",
+    "element": "{<CreateShipmentPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 611,
+    "interactions": [],
+    "width": 360,
+    "path": "/warehouse/shipments/new",
+    "landed": "/warehouse/shipments/new",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [],
+    "textLength": 541,
+    "headings": [
+      "Lager & Versand",
+      "Empfänger & Priorität",
+      "Bestehenden Empfänger finden",
+      "Empfängertyp",
+      "Priorität",
+      "Kontaktdaten",
+      "Lieferadresse"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_warehouse_shipments_new.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/:id",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentDetailPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 612,
+    "interactions": [],
+    "width": 360,
+    "path": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "landed": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card",
+        "width": 144
+      },
+      {
+        "tag": "DIV",
+        "cls": "min-w-0",
+        "width": 94
+      },
+      {
+        "tag": "P",
+        "cls": "text-sm font-semibold tabular-nums truncate",
+        "width": 94
+      },
+      {
+        "tag": "P",
+        "cls": "text-[10px] uppercase tracking-wider text-muted-foreground",
+        "width": 94
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card",
+        "width": 128
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 4
+      },
+      {
+        "tag": "DIV",
+        "cls": "min-w-0",
+        "width": 35
+      },
+      {
+        "tag": "P",
+        "cls": "text-sm font-semibold truncate",
+        "width": 35
+      },
+      {
+        "tag": "P",
+        "cls": "text-[10px] uppercase tracking-wider text-muted-foreground",
+        "width": 35
+      },
+      {
+        "tag": "DIV",
+        "cls": "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:s",
+        "width": 460
+      }
+    ],
+    "textLength": 818,
+    "headings": [
+      "Lager & Versand",
+      "SHP-QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_warehouse_shipments_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/products",
+    "guard": "tenant-auth",
+    "element": "{<ProductsPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 526,
+    "interactions": [],
+    "width": 390,
+    "path": "/products",
+    "landed": "/products",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [],
+    "textLength": 321,
+    "headings": [
+      "Produkte",
+      "Products"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_products.png"
+  },
+  {
+    "pattern": "/",
+    "guard": "tenant-auth",
+    "element": "{<DashboardPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 523,
+    "interactions": [
+      "More menu opened: 53 navigation links"
+    ],
+    "width": 390,
+    "path": "/",
+    "landed": "/",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-orb dashboard-hero-orb--one",
+        "width": 352
+      },
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-orb dashboard-hero-orb--two",
+        "width": 352
+      },
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-visual",
+        "width": 359
+      },
+      {
+        "tag": "IMG",
+        "cls": "",
+        "width": 359
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center justify-between gap-2",
+        "width": 380
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:point",
+        "width": 136
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      },
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 284
+      }
+    ],
+    "textLength": 2453,
+    "headings": [
+      "Dashboard",
+      "Guten Morgen, Trackbliss QA!",
+      "Alle Bereiche"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_.png"
+  },
+  {
+    "pattern": "/products/new",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 527,
+    "interactions": [],
+    "width": 390,
+    "path": "/products/new",
+    "landed": "/products/new",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 308
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex gap-2",
+        "width": 313
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 99
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      }
+    ],
+    "textLength": 1244,
+    "headings": [
+      "Produkte",
+      "Neues Produkt erstellen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 9,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_products_new.png"
+  },
+  {
+    "pattern": "/products/:id",
+    "guard": "tenant-auth",
+    "element": "{<ProductPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 529,
+    "interactions": [],
+    "width": 390,
+    "path": "/products/00000000-0000-4000-8000-000000000001",
+    "landed": "/products/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 135
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 129
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 12
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 374
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 232
+      },
+      {
+        "tag": "SPAN",
+        "cls": "tabular-nums text-sm font-medium text-success",
+        "width": 32
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4 text-sm text-muted-foreground",
+        "width": 172
+      },
+      {
+        "tag": "SPAN",
+        "cls": "flex items-center gap-1",
+        "width": 59
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 12
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 10
+      }
+    ],
+    "textLength": 492,
+    "headings": [
+      "Produkte",
+      "Mobiler QA-Produkttest mit langem Produktnamen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_products_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/products/:id/edit",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 530,
+    "interactions": [],
+    "width": 390,
+    "path": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "landed": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 308
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex gap-2",
+        "width": 313
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 99
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      }
+    ],
+    "textLength": 1430,
+    "headings": [
+      "Produkte",
+      "Produkt bearbeiten"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 9,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_products_00000000_0000_4000_8000_000000000001_edit.png"
+  },
+  {
+    "pattern": "/dpp",
+    "guard": "tenant-auth",
+    "element": "{<DPPOverviewPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 536,
+    "interactions": [],
+    "width": 390,
+    "path": "/dpp",
+    "landed": "/dpp",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [],
+    "textLength": 334,
+    "headings": [
+      "DPP / Pässe",
+      "Digitale Produktpässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_dpp.png"
+  },
+  {
+    "pattern": "/dpp/qr-generator",
+    "guard": "tenant-auth",
+    "element": "{<QRGeneratorPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 537,
+    "interactions": [],
+    "width": 390,
+    "path": "/dpp/qr-generator",
+    "landed": "/dpp/qr-generator",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:s",
+        "width": 431
+      },
+      {
+        "tag": "DIV",
+        "cls": "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.bo",
+        "width": 429
+      },
+      {
+        "tag": "DIV",
+        "cls": "leading-none font-semibold flex items-center justify-between",
+        "width": 381
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center justify-center rounded-full border border-transparent px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrin",
+        "width": 23
+      },
+      {
+        "tag": "DIV",
+        "cls": "text-muted-foreground text-sm",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "px-6 space-y-4",
+        "width": 429
+      },
+      {
+        "tag": "INPUT",
+        "cls": "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input ",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-2 max-h-[250px] overflow-y-auto",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "p-3 rounded-lg border cursor-pointer transition-colors border-primary bg-primary/5 ring-1 ring-primary",
+        "width": 381
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-start justify-between",
+        "width": 355
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center justify-center rounded-full border px-2 py-0.5 font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&",
+        "width": 43
+      },
+      {
+        "tag": "DIV",
+        "cls": "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientat",
+        "width": 381
+      }
+    ],
+    "textLength": 985,
+    "headings": [
+      "DPP / Pässe",
+      "QR-Code-Generator"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 1,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_dpp_qr_generator.png"
+  },
+  {
+    "pattern": "/dpp/visibility",
+    "guard": "tenant-auth",
+    "element": "{<DPPVisibilitySettingsPageV3 />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 538,
+    "interactions": [],
+    "width": 390,
+    "path": "/dpp/visibility",
+    "landed": "/dpp/visibility",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [],
+    "textLength": 716,
+    "headings": [
+      "DPP / Pässe",
+      "Sichtbarkeitseinstellungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 14,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_dpp_visibility.png"
+  },
+  {
+    "pattern": "/dpp/design",
+    "guard": "tenant-auth",
+    "element": "{<DPPDesignPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 539,
+    "interactions": [],
+    "width": 390,
+    "path": "/dpp/design",
+    "landed": "/dpp/design",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 219
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 111
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-vis",
+        "width": 36
+      },
+      {
+        "tag": "SPAN",
+        "cls": "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[",
+        "width": 16
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 219
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 111
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-vis",
+        "width": 36
+      },
+      {
+        "tag": "SPAN",
+        "cls": "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[",
+        "width": 16
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-4",
+        "width": 219
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2",
+        "width": 111
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-vis",
+        "width": 36
+      },
+      {
+        "tag": "SPAN",
+        "cls": "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[",
+        "width": 16
+      }
+    ],
+    "textLength": 3592,
+    "headings": [
+      "DPP / Pässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 34,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_dpp_design.png"
+  },
+  {
+    "pattern": "/warehouse/shipments",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentListPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 610,
+    "interactions": [],
+    "width": 390,
+    "path": "/warehouse/shipments",
+    "landed": "/warehouse/shipments",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 12
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-11 sm:min-h-9 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap",
+        "width": 114
+      },
+      {
+        "tag": "SPAN",
+        "cls": "relative z-10 flex items-center gap-1 sm:gap-1.5",
+        "width": 94
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 14
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "polyline",
+        "cls": "[object SVGAnimatedString]",
+        "width": 10
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.25rem] h-5 text-xs font-semibold tabular-nums bg-background text-muted-",
+        "width": 20
+      },
+      {
+        "tag": "SPAN",
+        "cls": "tabular-nums",
+        "width": 8
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 12
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      }
+    ],
+    "textLength": 398,
+    "headings": [
+      "Lager & Versand",
+      "Sendungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_warehouse_shipments.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/new",
+    "guard": "tenant-auth",
+    "element": "{<CreateShipmentPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 611,
+    "interactions": [],
+    "width": 390,
+    "path": "/warehouse/shipments/new",
+    "landed": "/warehouse/shipments/new",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [],
+    "textLength": 541,
+    "headings": [
+      "Lager & Versand",
+      "Empfänger & Priorität",
+      "Bestehenden Empfänger finden",
+      "Empfängertyp",
+      "Priorität",
+      "Kontaktdaten",
+      "Lieferadresse"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_warehouse_shipments_new.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/:id",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentDetailPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 612,
+    "interactions": [],
+    "width": 390,
+    "path": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "landed": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card",
+        "width": 144
+      },
+      {
+        "tag": "DIV",
+        "cls": "min-w-0",
+        "width": 94
+      },
+      {
+        "tag": "P",
+        "cls": "text-sm font-semibold tabular-nums truncate",
+        "width": 94
+      },
+      {
+        "tag": "P",
+        "cls": "text-[10px] uppercase tracking-wider text-muted-foreground",
+        "width": 94
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center gap-2 rounded-lg border p-3 snap-start shrink-0 min-w-[8rem] sm:min-w-0 sm:shrink bg-card",
+        "width": 128
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 4
+      },
+      {
+        "tag": "DIV",
+        "cls": "min-w-0",
+        "width": 35
+      },
+      {
+        "tag": "P",
+        "cls": "text-sm font-semibold truncate",
+        "width": 35
+      },
+      {
+        "tag": "P",
+        "cls": "text-[10px] uppercase tracking-wider text-muted-foreground",
+        "width": 35
+      },
+      {
+        "tag": "DIV",
+        "cls": "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:s",
+        "width": 460
+      }
+    ],
+    "textLength": 818,
+    "headings": [
+      "Lager & Versand",
+      "SHP-QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_warehouse_shipments_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/",
+    "guard": "tenant-auth",
+    "element": "{<DashboardPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 523,
+    "interactions": [],
+    "width": 768,
+    "path": "/",
+    "landed": "/",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-orb dashboard-hero-orb--two",
+        "width": 352
+      },
+      {
+        "tag": "DIV",
+        "cls": "dashboard-hero-visual",
+        "width": 321
+      },
+      {
+        "tag": "IMG",
+        "cls": "",
+        "width": 321
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center justify-between gap-2",
+        "width": 380
+      },
+      {
+        "tag": "DIV",
+        "cls": "font-semibold flex min-w-0 items-center gap-2 text-base",
+        "width": 236
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center justify-center rounded-full border border-transparent px-2 py-0.5 font-medium w-fit whitespace-nowrap shrink-0 [&>s",
+        "width": 81
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:point",
+        "width": 136
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 9
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 5
+      },
+      {
+        "tag": "DIV",
+        "cls": "flex items-center justify-between gap-2",
+        "width": 295
+      },
+      {
+        "tag": "A",
+        "cls": "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:point",
+        "width": 136
+      }
+    ],
+    "textLength": 1957,
+    "headings": [
+      "Dashboard",
+      "Guten Morgen, Trackbliss QA!"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_.png"
+  },
+  {
+    "pattern": "/products",
+    "guard": "tenant-auth",
+    "element": "{<ProductsPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 526,
+    "interactions": [],
+    "width": 768,
+    "path": "/products",
+    "landed": "/products",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative",
+        "width": 720
+      }
+    ],
+    "textLength": 726,
+    "headings": [
+      "Produkte",
+      "Products"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 5,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_products.png"
+  },
+  {
+    "pattern": "/products/new",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 527,
+    "interactions": [],
+    "width": 768,
+    "path": "/products/new",
+    "landed": "/products/new",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-6",
+        "width": 720
+      }
+    ],
+    "textLength": 1719,
+    "headings": [
+      "Produkte",
+      "Neues Produkt erstellen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 12,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_products_new.png"
+  },
+  {
+    "pattern": "/products/:id",
+    "guard": "tenant-auth",
+    "element": "{<ProductPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 529,
+    "interactions": [],
+    "width": 768,
+    "path": "/products/00000000-0000-4000-8000-000000000001",
+    "landed": "/products/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-6",
+        "width": 720
+      }
+    ],
+    "textLength": 965,
+    "headings": [
+      "Produkte",
+      "Mobiler QA-Produkttest mit langem Produktnamen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 3,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_products_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/products/:id/edit",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 530,
+    "interactions": [],
+    "width": 768,
+    "path": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "landed": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-6",
+        "width": 720
+      }
+    ],
+    "textLength": 1905,
+    "headings": [
+      "Produkte",
+      "Produkt bearbeiten"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 12,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_products_00000000_0000_4000_8000_000000000001_edit.png"
+  },
+  {
+    "pattern": "/dpp",
+    "guard": "tenant-auth",
+    "element": "{<DPPOverviewPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 536,
+    "interactions": [],
+    "width": 768,
+    "path": "/dpp",
+    "landed": "/dpp",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [],
+    "textLength": 711,
+    "headings": [
+      "DPP / Pässe",
+      "Digitale Produktpässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 6,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_dpp.png"
+  },
+  {
+    "pattern": "/dpp/qr-generator",
+    "guard": "tenant-auth",
+    "element": "{<QRGeneratorPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 537,
+    "interactions": [],
+    "width": 768,
+    "path": "/dpp/qr-generator",
+    "landed": "/dpp/qr-generator",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [],
+    "textLength": 1376,
+    "headings": [
+      "DPP / Pässe",
+      "QR-Code-Generator"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 7,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_dpp_qr_generator.png"
+  },
+  {
+    "pattern": "/dpp/visibility",
+    "guard": "tenant-auth",
+    "element": "{<DPPVisibilitySettingsPageV3 />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 538,
+    "interactions": [],
+    "width": 768,
+    "path": "/dpp/visibility",
+    "landed": "/dpp/visibility",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "h-screen flex flex-col",
+        "width": 720
+      }
+    ],
+    "textLength": 1474,
+    "headings": [
+      "DPP / Pässe",
+      "Sichtbarkeitseinstellungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 20,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_dpp_visibility.png"
+  },
+  {
+    "pattern": "/dpp/design",
+    "guard": "tenant-auth",
+    "element": "{<DPPDesignPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 539,
+    "interactions": [],
+    "width": 768,
+    "path": "/dpp/design",
+    "landed": "/dpp/design",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 515
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 515
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 515
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 515
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 515
+      }
+    ],
+    "textLength": 3984,
+    "headings": [
+      "DPP / Pässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 40,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_dpp_design.png"
+  },
+  {
+    "pattern": "/warehouse/shipments",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentListPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 610,
+    "interactions": [],
+    "width": 768,
+    "path": "/warehouse/shipments",
+    "landed": "/warehouse/shipments",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative",
+        "width": 720
+      }
+    ],
+    "textLength": 1047,
+    "headings": [
+      "Lager & Versand",
+      "Sendungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 24,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_warehouse_shipments.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/new",
+    "guard": "tenant-auth",
+    "element": "{<CreateShipmentPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 611,
+    "interactions": [],
+    "width": 768,
+    "path": "/warehouse/shipments/new",
+    "landed": "/warehouse/shipments/new",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [],
+    "textLength": 1094,
+    "headings": [
+      "Lager & Versand",
+      "Empfänger & Priorität",
+      "Bestehenden Empfänger finden",
+      "Empfängertyp",
+      "Priorität",
+      "Kontaktdaten",
+      "Lieferadresse"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 18,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_warehouse_shipments_new.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/:id",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentDetailPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 612,
+    "interactions": [],
+    "width": 768,
+    "path": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "landed": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 595
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 595
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 595
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 450
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 595
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 595
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 547
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-4 sm:space-y-6",
+        "width": 547
+      }
+    ],
+    "textLength": 1364,
+    "headings": [
+      "Lager & Versand",
+      "SHP-QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 18,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_warehouse_shipments_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/",
+    "guard": "tenant-auth",
+    "element": "{<DashboardPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 523,
+    "interactions": [],
+    "width": 1440,
+    "path": "/",
+    "landed": "/",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 1957,
+    "headings": [
+      "Dashboard",
+      "Guten Morgen, Trackbliss QA!"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 0,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_.png"
+  },
+  {
+    "pattern": "/products",
+    "guard": "tenant-auth",
+    "element": "{<ProductsPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 526,
+    "interactions": [],
+    "width": 1440,
+    "path": "/products",
+    "landed": "/products",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 726,
+    "headings": [
+      "Produkte",
+      "Products"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 5,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_products.png"
+  },
+  {
+    "pattern": "/products/new",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 527,
+    "interactions": [],
+    "width": 1440,
+    "path": "/products/new",
+    "landed": "/products/new",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 1086
+      }
+    ],
+    "textLength": 1719,
+    "headings": [
+      "Produkte",
+      "Neues Produkt erstellen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 12,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_products_new.png"
+  },
+  {
+    "pattern": "/products/:id",
+    "guard": "tenant-auth",
+    "element": "{<ProductPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 529,
+    "interactions": [],
+    "width": 1440,
+    "path": "/products/00000000-0000-4000-8000-000000000001",
+    "landed": "/products/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 1324
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 1324
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 1324
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 1179
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 1324
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 1324
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 1276
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-6",
+        "width": 1276
+      }
+    ],
+    "textLength": 965,
+    "headings": [
+      "Produkte",
+      "Mobiler QA-Produkttest mit langem Produktnamen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 14,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_products_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/products/:id/edit",
+    "guard": "tenant-auth",
+    "element": "{<ProductFormPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 530,
+    "interactions": [],
+    "width": 1440,
+    "path": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "landed": "/products/00000000-0000-4000-8000-000000000001/edit",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [
+      {
+        "tag": "DIV",
+        "cls": "bg-primary h-full w-full flex-1 transition-all",
+        "width": 1086
+      }
+    ],
+    "textLength": 1905,
+    "headings": [
+      "Produkte",
+      "Produkt bearbeiten"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 12,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_products_00000000_0000_4000_8000_000000000001_edit.png"
+  },
+  {
+    "pattern": "/dpp",
+    "guard": "tenant-auth",
+    "element": "{<DPPOverviewPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 536,
+    "interactions": [],
+    "width": 1440,
+    "path": "/dpp",
+    "landed": "/dpp",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 711,
+    "headings": [
+      "DPP / Pässe",
+      "Digitale Produktpässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 6,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_dpp.png"
+  },
+  {
+    "pattern": "/dpp/qr-generator",
+    "guard": "tenant-auth",
+    "element": "{<QRGeneratorPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 537,
+    "interactions": [],
+    "width": 1440,
+    "path": "/dpp/qr-generator",
+    "landed": "/dpp/qr-generator",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 1376,
+    "headings": [
+      "DPP / Pässe",
+      "QR-Code-Generator"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 10,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_dpp_qr_generator.png"
+  },
+  {
+    "pattern": "/dpp/visibility",
+    "guard": "tenant-auth",
+    "element": "{<DPPVisibilitySettingsPageV3 />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 538,
+    "interactions": [],
+    "width": 1440,
+    "path": "/dpp/visibility",
+    "landed": "/dpp/visibility",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 1201
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 1201
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 1201
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 1201
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 1201
+      }
+    ],
+    "textLength": 1474,
+    "headings": [
+      "DPP / Pässe",
+      "Sichtbarkeitseinstellungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 26,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_dpp_visibility.png"
+  },
+  {
+    "pattern": "/dpp/design",
+    "guard": "tenant-auth",
+    "element": "{<DPPDesignPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 539,
+    "interactions": [],
+    "width": 1440,
+    "path": "/dpp/design",
+    "landed": "/dpp/design",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 3984,
+    "headings": [
+      "DPP / Pässe"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 40,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_dpp_design.png"
+  },
+  {
+    "pattern": "/warehouse/shipments",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentListPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 610,
+    "interactions": [],
+    "width": 1440,
+    "path": "/warehouse/shipments",
+    "landed": "/warehouse/shipments",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 1440
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 1440
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 1440
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 1295
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 1440
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 1440
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 1392
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative",
+        "width": 1392
+      }
+    ],
+    "textLength": 1093,
+    "headings": [
+      "Lager & Versand",
+      "Sendungen"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 24,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_warehouse_shipments.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/new",
+    "guard": "tenant-auth",
+    "element": "{<CreateShipmentPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 611,
+    "interactions": [],
+    "width": 1440,
+    "path": "/warehouse/shipments/new",
+    "landed": "/warehouse/shipments/new",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 1094,
+    "headings": [
+      "Lager & Versand",
+      "Empfänger & Priorität",
+      "Bestehenden Empfänger finden",
+      "Empfängertyp",
+      "Priorität",
+      "Kontaktdaten",
+      "Lieferadresse"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 18,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_warehouse_shipments_new.png"
+  },
+  {
+    "pattern": "/warehouse/shipments/:id",
+    "guard": "tenant-auth",
+    "element": "{<ShipmentDetailPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 612,
+    "interactions": [],
+    "width": 1440,
+    "path": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "landed": "/warehouse/shipments/00000000-0000-4000-8000-000000000001",
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 1364,
+    "headings": [
+      "Lager & Versand",
+      "SHP-QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 18,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_warehouse_shipments_00000000_0000_4000_8000_000000000001.png"
+  },
+  {
+    "pattern": "/commerce/orders",
+    "guard": "tenant-auth",
+    "element": "{<CommerceOrdersPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 566,
+    "interactions": [
+      "order item dialog opened"
+    ],
+    "width": 390,
+    "path": "/commerce/orders",
+    "landed": "/commerce/orders",
+    "clippedContainers": [
+      {
+        "tag": "DIV",
+        "role": null,
+        "cls": "overflow-x-auto",
+        "clientWidth": 356,
+        "scrollWidth": 720
+      },
+      {
+        "tag": "DIV",
+        "role": "dialog",
+        "cls": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-",
+        "clientWidth": 388,
+        "scrollWidth": 564
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 43
+      }
+    ],
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [
+      {
+        "tag": "TABLE",
+        "cls": "w-full text-sm",
+        "width": 720
+      },
+      {
+        "tag": "THEAD",
+        "cls": "border-b bg-muted/50 text-left",
+        "width": 720
+      },
+      {
+        "tag": "TR",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 75
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 97
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 text-right font-medium",
+        "width": 85
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 114
+      },
+      {
+        "tag": "TBODY",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "TR",
+        "cls": "cursor-pointer border-b last:border-0 hover:bg-muted/30",
+        "width": 720
+      },
+      {
+        "tag": "TD",
+        "cls": "px-4 py-2 tabular-nums",
+        "width": 75
+      },
+      {
+        "tag": "TD",
+        "cls": "px-4 py-2",
+        "width": 97
+      },
+      {
+        "tag": "SPAN",
+        "cls": "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+        "width": 29
+      }
+    ],
+    "textLength": 711,
+    "headings": [
+      "Commerce Hub",
+      "Alle Bestellungen",
+      "Bestellung QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 1,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_commerce_orders.png"
+  },
+  {
+    "pattern": "/commerce/orders",
+    "guard": "tenant-auth",
+    "element": "{<CommerceOrdersPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 566,
+    "interactions": [
+      "order item dialog opened"
+    ],
+    "width": 360,
+    "path": "/commerce/orders",
+    "landed": "/commerce/orders",
+    "clippedContainers": [
+      {
+        "tag": "DIV",
+        "role": null,
+        "cls": "overflow-x-auto",
+        "clientWidth": 326,
+        "scrollWidth": 720
+      },
+      {
+        "tag": "DIV",
+        "role": "dialog",
+        "cls": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-",
+        "clientWidth": 358,
+        "scrollWidth": 564
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 43
+      }
+    ],
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [
+      {
+        "tag": "TABLE",
+        "cls": "w-full text-sm",
+        "width": 720
+      },
+      {
+        "tag": "THEAD",
+        "cls": "border-b bg-muted/50 text-left",
+        "width": 720
+      },
+      {
+        "tag": "TR",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 65
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 75
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 97
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 text-right font-medium",
+        "width": 85
+      },
+      {
+        "tag": "TH",
+        "cls": "px-4 py-2 font-medium",
+        "width": 114
+      },
+      {
+        "tag": "TBODY",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "TR",
+        "cls": "cursor-pointer border-b last:border-0 hover:bg-muted/30",
+        "width": 720
+      },
+      {
+        "tag": "TD",
+        "cls": "px-4 py-2 text-muted-foreground",
+        "width": 65
+      },
+      {
+        "tag": "TD",
+        "cls": "px-4 py-2 tabular-nums",
+        "width": 75
+      }
+    ],
+    "textLength": 711,
+    "headings": [
+      "Commerce Hub",
+      "Alle Bestellungen",
+      "Bestellung QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 1,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_commerce_orders.png"
+  },
+  {
+    "pattern": "/commerce/orders",
+    "guard": "tenant-auth",
+    "element": "{<CommerceOrdersPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 566,
+    "interactions": [
+      "order item dialog opened"
+    ],
+    "width": 768,
+    "path": "/commerce/orders",
+    "landed": "/commerce/orders",
+    "clippedContainers": [
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 19
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 101
+      },
+      {
+        "tag": "DIV",
+        "role": "dialog",
+        "cls": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-",
+        "clientWidth": 510,
+        "scrollWidth": 564
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 43
+      }
+    ],
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 768
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 768
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 623
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 768
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 768
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 720
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative",
+        "width": 720
+      }
+    ],
+    "textLength": 1068,
+    "headings": [
+      "Commerce Hub",
+      "Alle Bestellungen",
+      "Bestellung QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 4,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_commerce_orders.png"
+  },
+  {
+    "pattern": "/commerce/orders",
+    "guard": "tenant-auth",
+    "element": "{<CommerceOrdersPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 566,
+    "interactions": [
+      "order item dialog opened"
+    ],
+    "width": 1440,
+    "path": "/commerce/orders",
+    "landed": "/commerce/orders",
+    "clippedContainers": [
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 19
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 101
+      },
+      {
+        "tag": "DIV",
+        "role": "dialog",
+        "cls": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-",
+        "clientWidth": 510,
+        "scrollWidth": 564
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 43
+      }
+    ],
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 1068,
+    "headings": [
+      "Commerce Hub",
+      "Alle Bestellungen",
+      "Bestellung QA-0001"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 4,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_commerce_orders.png"
+  }
+]

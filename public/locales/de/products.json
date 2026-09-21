@@ -342,7 +342,6 @@
   "Enter name and country to quickly create a new supplier.": "Name und Land eingeben, um schnell einen neuen Lieferanten anzulegen.",
   "Create Supplier": "Lieferant anlegen",
   "Select country...": "Land auswählen...",
-
   "Search category...": "Kategorie suchen...",
   "No category found.": "Keine Kategorie gefunden.",
   "Create new category...": "Neue Kategorie erstellen...",
@@ -355,7 +354,6 @@
   "Add Subcategory": "Unterkategorie hinzufügen",
   "Subcategory Name (English)": "Unterkategoriename (Englisch)",
   "Subcategory Name (German)": "Unterkategoriename (Deutsch)",
-
   "Master Label": "Master Label",
   "ml.title": "Master Label Generator",
   "ml.description": "EU-konforme Produktetiketten (A6-Format) mit Identifikation, DPP-QR-Code, Konformitätsmodulen und Nachhaltigkeitsinfos erstellen.",
@@ -389,7 +387,6 @@
   "ml.validation.productNameRecommended": "Produktname-Feld wird auf dem Etikett empfohlen.",
   "ml.validation.fontSizeTooSmall": "Schriftgröße unter 3,4pt (1,2mm). EU-Verordnung erfordert mindestens 1,2mm Texthöhe.",
   "ml.validation.manufacturerRecommended": "Herstellerinformationen werden auf dem Etikett empfohlen.",
-
   "ml.editor.advancedEditor": "Erweiterter Editor",
   "ml.editor.backToSimple": "Einfacher Modus",
   "ml.editor.saving": "Speichern...",
@@ -460,7 +457,6 @@
   "ml.editor.paddingTop": "Abstand oben",
   "ml.editor.paddingBottom": "Abstand unten",
   "ml.editor.applyCorporateDesign": "Corporate Design anwenden",
-
   "ml.element.text": "Text",
   "ml.element.fieldValue": "Feld",
   "ml.element.fieldvalue": "Feld",
@@ -478,7 +474,6 @@
   "ml.element.iconText": "Icon-Text",
   "ml.element.icontext": "Icon-Text",
   "ml.element.packageCounter": "Zähler",
-
   "ml.field.productName": "Produktname",
   "ml.field.gtin": "GTIN/EAN",
   "ml.field.batchNumber": "Chargennummer",
@@ -504,7 +499,6 @@
   "ml.field.repairabilityScore": "Reparierbarkeits-Score",
   "ml.field.dppRegistryId": "DPP-Register-ID",
   "ml.field.safetyInformation": "Sicherheitshinweise",
-
   "ml.section.identity": "Identifikation & Rückverfolgbarkeit",
   "ml.section.dpp": "Digitaler Produktpass",
   "ml.section.compliance": "Konformität",
@@ -516,7 +510,6 @@
   "ml.section.dpp-barcode": "ZONE 3: DPP & Barcode",
   "ml.section.packaging": "ZONE 4: PPWR & Nachhaltigkeit",
   "ml.section.handling": "ZONE 5: Handling-Symbole",
-
   "ml.pictogram.library": "Piktogramm-Bibliothek",
   "ml.pictogram.search": "Piktogramme suchen...",
   "ml.pictogram.all": "Alle",
@@ -528,7 +521,6 @@
   "ml.pictogram.mandatory": "Pflicht",
   "ml.pictogram.add": "Hinzufügen",
   "ml.pictogram.noResults": "Keine Piktogramme gefunden.",
-
   "ml.template.gallery": "Etikett-Vorlagen",
   "ml.template.galleryDescription": "Wählen Sie eine Vorlage oder erstellen Sie ein leeres Etikett.",
   "ml.template.search": "Vorlagen suchen...",
@@ -545,7 +537,6 @@
   "ml.template.untitled": "Unbenanntes Etikett",
   "ml.template.description": "Beschreibung",
   "ml.template.descriptionPlaceholder": "Optionale Beschreibung...",
-
   "ml.field.manufacturerEmail": "Hersteller E-Mail",
   "ml.field.manufacturerPhone": "Hersteller Telefon",
   "ml.field.manufacturerVAT": "Hersteller USt-IdNr.",
@@ -558,19 +549,16 @@
   "ml.field.importerVAT": "Importeur USt-IdNr.",
   "ml.field.importerEORI": "Importeur EORI",
   "ml.field.importerCountry": "Importeur Land",
-
   "ml.palette.elements": "Elemente",
   "ml.palette.fields": "Felder",
   "ml.palette.searchFields": "Felder suchen...",
   "ml.palette.noResults": "Keine Felder gefunden.",
-
   "ml.fieldGroup.identity": "Identität",
   "ml.fieldGroup.manufacturer": "Hersteller",
   "ml.fieldGroup.importer": "Importeur",
   "ml.fieldGroup.measurements": "Maße",
   "ml.fieldGroup.sustainability": "Nachhaltigkeit",
   "ml.fieldGroup.compliance": "Konformität",
-
   "ml.editor.tabCheck": "Check",
   "ml.editor.mobileElements": "Elemente",
   "ml.editor.mobileElementsHint": "Element antippen, um es dem Etikett hinzuzufügen",
@@ -580,7 +568,6 @@
   "ml.editor.lineHeight": "Zeilenhöhe",
   "ml.editor.marginBottom": "Abstand unten",
   "ml.editor.fontFamilyDefault": "Design-Standard",
-
   "ml.check.title": "Konformitätsprüfung",
   "ml.check.subtitle": "Prüft Ihr Etikett gegen EU-regulatorische Anforderungen",
   "ml.check.noData": "Etikettendaten zuerst erstellen, um Prüfungen auszuführen.",
@@ -621,12 +608,10 @@
   "ml.check.countryOriginDesc": "Empfohlen für B2C-Etiketten zur Angabe der Produktherkunft.",
   "ml.check.minFontSize": "Mindestschriftgröße (3,4pt)",
   "ml.check.minFontSizeDesc": "EU-Verordnungen erfordern eine Mindestschriftgröße von 3,4pt (1,2mm).",
-
   "Total Products": "Alle Produkte",
   "{{count}} of {{total}} products": "{{count}} von {{total}} Produkten",
   "{{count}} products": "{{count}} Produkte",
   "Try adjusting your search or filters.": "Passen Sie Ihre Suche oder Filter an.",
-
   "Duplicate Product": "Produkt duplizieren",
   "Select what to include in the copy": "Wählen Sie, was kopiert werden soll",
   "{{count}} entries": "{{count}} Einträge",
@@ -639,7 +624,6 @@
   "Failed to duplicate product": "Produkt konnte nicht dupliziert werden",
   "Supplier Assignments": "Lieferantenzuordnungen",
   "Supply Chain": "Lieferkette",
-
   "Export as CSV": "Als CSV exportieren",
   "PDF Overview": "PDF-Übersicht",
   "PDF Catalog": "PDF-Katalog",
@@ -648,7 +632,6 @@
   "Product Overview": "Produktübersicht",
   "Exporting...": "Wird exportiert...",
   "No products to export": "Keine Produkte zum Exportieren",
-
   "Import": "Importieren",
   "Import Products": "Produkte importieren",
   "Upload File": "Datei hochladen",
@@ -675,7 +658,6 @@
   "Back": "Zurück",
   "Next": "Weiter",
   "All products imported as draft": "Alle Produkte als Entwurf importiert",
-
   "Packaging Details": "Verpackungsdetails",
   "Packaging Type": "Verpackungsart",
   "Packaging Description": "Verpackungsbeschreibung",
@@ -738,7 +720,6 @@
   "ml.element.packageCounter.previewParcel": "Paket X von Y",
   "ml.element.packageCounter.previewXofY": "X von Y",
   "ml.element.packageCounter.dynamic": "Dynamisch",
-
   "Packaging Layers": "Verpackungsebenen",
   "Add Packaging Layer": "Verpackungsebene hinzufügen",
   "Remove Packaging Layer": "Verpackungsebene entfernen",
@@ -760,7 +741,6 @@
   "No packaging layers yet": "Noch keine Verpackungsebenen",
   "Add packaging layers to define all packaging components": "Verpackungsebenen hinzufügen, um alle Verpackungsbestandteile zu definieren",
   "Select layer type...": "Ebenentyp wählen...",
-
   "pictograms.title": "Piktogramm-Datenbank",
   "pictograms.subtitle": "Laden Sie Piktogramme für Ihre Produktetiketten hoch und verwalten Sie sie",
   "pictograms.upload": "Piktogramm hochladen",
@@ -802,5 +782,19 @@
   "Error deleting batch: {{error}}": "Fehler beim Löschen der Charge: {{error}}",
   "Batch not found": "Charge nicht gefunden",
   "The batch does not exist or you do not have access.": "Die Charge existiert nicht oder Sie haben keinen Zugriff.",
-  "Failed to create supplier": "Lieferant konnte nicht erstellt werden"
+  "Failed to create supplier": "Lieferant konnte nicht erstellt werden",
+  "Create your first product to get started with Trackbliss.": "Erstellen Sie Ihr erstes Produkt, um mit Trackbliss zu starten.",
+  "Create multiple product passports from a CSV or JSON file.": "Erstellen Sie mehrere Produktpässe aus einer CSV- oder JSON-Datei.",
+  "Download the template in the import wizard, map your columns and review every row before importing.": "Laden Sie die Vorlage im Importassistenten herunter, ordnen Sie die Spalten zu und prüfen Sie jede Zeile vor dem Import.",
+  "Existing products are preserved. New products count towards your plan limit.": "Bestehende Produkte bleiben erhalten. Neue Produkte zählen zum Limit Ihres Tarifs.",
+  "Import finished. Your products are available in the product list.": "Import abgeschlossen. Ihre Produkte finden Sie in der Produktliste.",
+  "Choose a CSV or JSON file up to 10 MB.": "Wählen Sie eine CSV- oder JSON-Datei mit maximal 10 MB.",
+  "Choose a file with 1 to 1000 rows.": "Wählen Sie eine Datei mit 1 bis 1000 Zeilen.",
+  "Invalid import file": "Die Importdatei ist ungültig.",
+  "Invalid positive number: {{field}}": "Eine positive Zahl wird benötigt: {{field}}",
+  "Invalid JSON structure: {{field}}": "Ungültige JSON-Struktur: {{field}}",
+  "Validation failed. Check column mappings and your connection, then try again.": "Prüfung fehlgeschlagen. Prüfen Sie die Spaltenzuordnung und Ihre Verbindung und versuchen Sie es erneut.",
+  "Import failed": "Import fehlgeschlagen",
+  "Import interrupted. Check the product list before retrying.": "Import unterbrochen. Prüfen Sie die Produktliste vor einem erneuten Versuch.",
+  "Target field for {{column}}": "Zielfeld für {{column}}"
 }

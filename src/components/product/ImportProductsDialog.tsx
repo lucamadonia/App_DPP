@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import {
@@ -38,6 +38,7 @@ import {
 } from '@/lib/product-csv';
 import { importProducts, getExistingGtins } from '@/services/supabase/products';
 import type { Product } from '@/types/product';
+import { normalizeImportJSON, validateImportRows } from '@/lib/product-import';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,6 +89,15 @@ export function ImportProductsDialog({
     errors: Array<{ index: number; name: string; error: string }>;
   } | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [fileError, setFileError] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const importingRef = useRef(false);
+  useEffect(() => {
+    if (!isImporting) return;
+    const preventExit = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', preventExit);
+    return () => window.removeEventListener('beforeunload', preventExit);
+  }, [isImporting]);
 
   // -------------------------------------------------------------------------
   // Step 1: Upload
@@ -105,50 +115,53 @@ export function ImportProductsDialog({
     setImportTotal(0);
     setImportResult(null);
     setIsImporting(false);
+    setFileError('');
+    setSkipErrors(true);
   };
 
   const handleFile = useCallback((file: File) => {
+    setFileError('');
+    if (!/\.(csv|json)$/i.test(file.name) || file.size > 10 * 1024 * 1024) {
+      setFileError(t('Choose a CSV or JSON file up to 10 MB.'));
+      return;
+    }
     setFileName(file.name);
     setFileSize(file.size);
 
-    if (file.name.endsWith('.json')) {
+    const acceptRows = (rows: Record<string, string>[]) => {
+      if (!rows.length || rows.length > 1000) { setFileError(t('Choose a file with 1 to 1000 rows.')); return; }
+      const headers = [...new Set(rows.flatMap(row => Object.keys(row)))];
+      setRawRows(rows);
+      setSourceHeaders(headers);
+      setColumnMapping(autoMapColumns(headers));
+      setStep('mapping');
+    };
+
+    if (file.name.toLowerCase().endsWith('.json')) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const json = JSON.parse(e.target?.result as string);
-          const rows: Record<string, string>[] = Array.isArray(json) ? json : [json];
-          const headers = Object.keys(rows[0] || {});
-          setRawRows(rows.map(r => {
-            const out: Record<string, string> = {};
-            for (const k of headers) out[k] = r[k] != null ? String(r[k]) : '';
-            return out;
-          }));
-          setSourceHeaders(headers);
-          setColumnMapping(autoMapColumns(headers));
-          setStep('mapping');
+          acceptRows(normalizeImportJSON(JSON.parse(e.target?.result as string)));
         } catch {
-          alert('Invalid JSON file');
+          setFileError(t('Invalid import file'));
         }
       };
+      reader.onerror = () => setFileError(t('Invalid import file'));
       reader.readAsText(file);
     } else {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: (result) => {
-          const rows = result.data as Record<string, string>[];
-          const headers = result.meta.fields || [];
-          setRawRows(rows);
-          setSourceHeaders(headers);
-          setColumnMapping(autoMapColumns(headers));
-          setStep('mapping');
+          if (result.errors.length) { setFileError(t('Invalid import file')); return; }
+          acceptRows(result.data as Record<string, string>[]);
         },
         error: () => {
-          alert('Failed to parse CSV file');
+          setFileError(t('Invalid import file'));
         },
       });
     }
-  }, []);
+  }, [t]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -186,66 +199,20 @@ export function ImportProductsDialog({
   // -------------------------------------------------------------------------
 
   const runValidation = async () => {
-    // Fetch existing GTINs for duplicate check
-    let existingGtins = new Set<string>();
-    const gtinField = Object.entries(columnMapping).find(([, v]) => v === 'gtin');
-    if (gtinField) {
-      existingGtins = new Set(await getExistingGtins());
-    }
-
-    const results: RowValidation[] = rawRows.map((row, i) => {
-      const issues: string[] = [];
-
-      // Map row values
-      const mapped: Record<string, string> = {};
-      for (const [src, target] of Object.entries(columnMapping)) {
-        if (target && target !== '_skip') mapped[target] = row[src] || '';
-      }
-
-      // Required checks
-      for (const f of IMPORTABLE_FIELDS) {
-        if (f.required && !mapped[f.key]?.trim()) {
-          issues.push(t('Required field missing: {{field}}', { field: f.label }));
-        }
-      }
-
-      // GTIN format
-      if (mapped.gtin?.trim()) {
-        const g = mapped.gtin.trim();
-        if (!/^\d{8}$|^\d{12,14}$/.test(g)) {
-          issues.push(t('Invalid GTIN format'));
-        }
-        if (existingGtins.has(g)) {
-          issues.push(t('GTIN already exists'));
-        }
-      }
-
-      // Numeric checks
-      for (const key of ['netWeight', 'grossWeight']) {
-        if (mapped[key]?.trim()) {
-          const n = Number(mapped[key]);
-          if (isNaN(n) || n <= 0) {
-            issues.push(t('Must be a number') + `: ${key}`);
-          }
-        }
-      }
-
-      const hasError = issues.some(
-        (iss) =>
-          iss.includes(t('Required field missing: {{field}}', { field: '' }).replace('{{field}}', '').trim()) ||
-          iss.includes(t('Invalid GTIN format')),
-      );
-
-      return {
-        index: i,
-        data: mapped,
-        status: issues.length === 0 ? 'valid' : hasError ? 'error' : 'warning',
-        issues,
-      };
-    });
-
-    setValidations(results);
-    setStep('validation');
+    if (isValidating) return;
+    setIsValidating(true);
+    setFileError('');
+    try {
+      const targets = Object.values(columnMapping).filter(target => target && target !== '_skip');
+      if (new Set(targets).size !== targets.length) throw new Error('Duplicate mapping');
+      const existing = targets.includes('gtin') ? new Set(await getExistingGtins()) : new Set<string>();
+      setValidations(validateImportRows(rawRows, columnMapping, existing).map(row => ({
+        ...row, issues: row.issues.map(issue => t(issue.key, { field: issue.field ? t(issue.field) : '' })),
+      })));
+      setStep('validation');
+    } catch {
+      setFileError(t('Validation failed. Check column mappings and your connection, then try again.'));
+    } finally { setIsValidating(false); }
   };
 
   const validCount = validations.filter((v) => v.status === 'valid').length;
@@ -257,9 +224,10 @@ export function ImportProductsDialog({
   // -------------------------------------------------------------------------
 
   const runImport = async () => {
-    const rowsToImport = validations.filter(
-      (v) => v.status === 'valid' || (v.status === 'warning' && !skipErrors) || v.status === 'warning',
-    ).filter(v => !(skipErrors && v.status === 'error'));
+    if (importingRef.current || (!skipErrors && errorCount > 0)) return;
+    const rowsToImport = validations.filter(row => row.status !== 'error');
+    if (!rowsToImport.length) return;
+    importingRef.current = true;
 
     setImportTotal(rowsToImport.length);
     setImportProgress(0);
@@ -278,8 +246,8 @@ export function ImportProductsDialog({
         countryOfOrigin: d.countryOfOrigin || undefined,
         netWeight: d.netWeight ? Number(d.netWeight) : undefined,
         grossWeight: d.grossWeight ? Number(d.grossWeight) : undefined,
-        materials: d.materials ? tryParseJSON(d.materials) : [],
-        certifications: d.certifications ? tryParseJSON(d.certifications) : [],
+        materials: d.materials ? JSON.parse(d.materials) as Product['materials'] : [],
+        certifications: d.certifications ? JSON.parse(d.certifications) as Product['certifications'] : [],
       };
     });
 
@@ -287,18 +255,20 @@ export function ImportProductsDialog({
     const errors: Array<{ index: number; name: string; error: string }> = [];
     let imported = 0;
     for (let i = 0; i < products.length; i++) {
-      const result = await importProducts([products[i]]);
-      if (result.imported > 0) {
-        imported++;
-      } else if (result.errors.length > 0) {
-        errors.push({
-          index: i,
-          name: products[i].name || `Row ${i + 1}`,
-          error: result.errors[0].error,
-        });
+      try {
+        const result = await importProducts([products[i]]);
+        if (result.imported > 0) imported++;
+        else errors.push({ index: rowsToImport[i].index, name: products[i].name || '', error: result.errors[0]?.error || t('Import failed') });
+      } catch {
+        // The server may have accepted an interrupted request. Do not retry automatically.
+        for (let pending = i; pending < products.length; pending++) {
+          errors.push({ index: rowsToImport[pending].index, name: products[pending].name || '', error: t('Import interrupted. Check the product list before retrying.') });
+        }
+        break;
       }
       setImportProgress(i + 1);
     }
+    importingRef.current = false;
 
     setImportResult({ imported, failed: errors.length, errors });
     setIsImporting(false);
@@ -320,11 +290,12 @@ export function ImportProductsDialog({
     <Dialog
       open={open}
       onOpenChange={(v) => {
+        if (importingRef.current || isValidating) return;
         if (!v) resetState();
         onOpenChange(v);
       }}
     >
-      <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent showCloseButton={!isImporting && !isValidating} className="sm:max-w-4xl max-h-[85dvh] min-w-0 flex flex-col [&>*]:min-w-0">
         <DialogHeader>
           <DialogTitle>{t('Import Products')}</DialogTitle>
         </DialogHeader>
@@ -358,13 +329,17 @@ export function ImportProductsDialog({
           ))}
         </div>
 
+        {fileError && <p role="alert" className="text-sm text-destructive">{fileError}</p>}
         {/* Step content */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 min-w-0">
           {/* STEP 1: Upload */}
           {step === 'upload' && (
             <div className="space-y-4">
               <div
                 className="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                role="button"
+                tabIndex={0}
+                onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileRef.current?.click(); } }}
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileRef.current?.click()}
@@ -391,7 +366,7 @@ export function ImportProductsDialog({
           {/* STEP 2: Column Mapping */}
           {step === 'mapping' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-3 break-all text-sm text-muted-foreground">
                 <FileSpreadsheet className="h-4 w-4" />
                 <span>{fileName}</span>
                 <span>{(fileSize / 1024).toFixed(1)} KB</span>
@@ -400,7 +375,7 @@ export function ImportProductsDialog({
                 </Badge>
               </div>
 
-              <div className="border rounded-md overflow-hidden">
+              <div className="border rounded-md overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
@@ -436,7 +411,8 @@ export function ImportProductsDialog({
                               }
                             >
                               <SelectTrigger
-                                className={`h-8 text-xs ${
+                                aria-label={t('Target field for {{column}}', { column: header })}
+                                className={`h-11 text-xs ${
                                   mapped && isRequired
                                     ? 'border-green-300'
                                     : mapped
@@ -452,7 +428,7 @@ export function ImportProductsDialog({
                                 </SelectItem>
                                 {IMPORTABLE_FIELDS.map((f) => (
                                   <SelectItem key={f.key} value={f.key}>
-                                    {f.label}
+                                    {t(f.label)}
                                     {f.required ? ' *' : ''}
                                   </SelectItem>
                                 ))}
@@ -517,7 +493,7 @@ export function ImportProductsDialog({
                 </Label>
               </div>
 
-              <div className="border rounded-md overflow-hidden max-h-[350px] overflow-y-auto">
+              <div className="border rounded-md overflow-x-auto max-h-[350px] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-background">
                     <tr className="border-b bg-muted/50">
@@ -595,13 +571,13 @@ export function ImportProductsDialog({
                               className="bg-yellow-100 text-yellow-800 text-xs"
                             >
                               <AlertTriangle className="mr-1 h-3 w-3" />
-                              Warn
+                              {t('Warning', { ns: 'common' })}
                             </Badge>
                           )}
                           {v.status === 'error' && (
                             <Badge variant="destructive" className="text-xs">
                               <XCircle className="mr-1 h-3 w-3" />
-                              Error
+                              {t('Error', { ns: 'common' })}
                             </Badge>
                           )}
                         </td>
@@ -667,12 +643,12 @@ export function ImportProductsDialog({
 
           {step === 'mapping' && (
             <>
-              <Button variant="outline" onClick={() => setStep('upload')}>
+              <Button variant="outline" disabled={isValidating} onClick={() => setStep('upload')}>
                 {t('Back')}
               </Button>
               <Button
                 onClick={runValidation}
-                disabled={requiredMissing.length > 0}
+                disabled={requiredMissing.length > 0 || isValidating}
               >
                 {t('Next')}
               </Button>
@@ -686,7 +662,7 @@ export function ImportProductsDialog({
               </Button>
               <Button
                 onClick={runImport}
-                disabled={validCount === 0 && (skipErrors || warningCount === 0)}
+                disabled={validCount + warningCount === 0 || (!skipErrors && errorCount > 0)}
               >
                 {t('Start Import')}
               </Button>
@@ -698,7 +674,7 @@ export function ImportProductsDialog({
               onClick={() => {
                 resetState();
                 onOpenChange(false);
-                onImportComplete();
+                if (importResult.imported > 0) onImportComplete();
               }}
             >
               {t('Done')}
@@ -708,17 +684,4 @@ export function ImportProductsDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function tryParseJSON(val: string): any {
-  try {
-    return JSON.parse(val);
-  } catch {
-    return [];
-  }
 }

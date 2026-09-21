@@ -53,6 +53,7 @@ ios/App/App/config.xml
 ios/App/Pods/
 
 # Playwright
+/tmp/
 /test-results/
 /playwright-report/
 /blob-report/

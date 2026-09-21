@@ -851,7 +851,7 @@ export function ProductFormPage() {
                     <step.icon className="h-4 w-4" />
                   )}
                 </div>
-                <span className="hidden sm:inline text-sm font-medium">{step.title}</span>
+                <span className="hidden sm:inline text-sm font-medium">{t(step.title)}</span>
               </div>
             ))}
           </div>
@@ -883,7 +883,7 @@ export function ProductFormPage() {
               const StepIcon = steps[currentStep].icon;
               return <StepIcon className="h-5 w-5" />;
             })()}
-            {steps[currentStep].title}
+            {t(steps[currentStep].title)}
           </CardTitle>
           <CardDescription>
             {currentStepId === 'master-data' && t('Enter basic product information')}

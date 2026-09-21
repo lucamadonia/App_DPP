@@ -94,6 +94,7 @@ export interface FieldMetadata {
 // ============================================
 
 export interface ScheduleConfig {
+  timezone?: string;  // IANA zone, defaults to Europe/Berlin
   time?: string;       // HH:mm
   dayOfWeek?: number;  // 0=Sun..6=Sat
   dayOfMonth?: number; // 1-31
@@ -109,6 +110,7 @@ export interface TriggerNodeData {
   eventType: TriggerEventType;
   filters?: TriggerFilter[];
   schedule?: ScheduleConfig;
+  overdueDays?: number;
 }
 
 export interface FieldCondition {

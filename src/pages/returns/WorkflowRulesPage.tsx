@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { WorkflowRuleEditor } from '@/components/returns/WorkflowRuleEditor';
+import { WorkflowRuntimePanel } from '@/components/returns/WorkflowRuntimePanel';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { pageVariants, pageTransition, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
@@ -51,7 +52,8 @@ export function WorkflowRulesPage() {
   const handleCreate = async (rule: Omit<RhWorkflowRule, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>) => {
     setSaving(true);
     try {
-      await createRhWorkflowRule(rule);
+      const result = await createRhWorkflowRule(rule);
+      if (!result.success) throw new Error(result.error);
       setCreating(false);
       await load();
     } catch (err) {
@@ -65,7 +67,8 @@ export function WorkflowRulesPage() {
     if (!editing) return;
     setSaving(true);
     try {
-      await updateRhWorkflowRule(editing.id, rule);
+      const result = await updateRhWorkflowRule(editing.id, rule);
+      if (!result.success) throw new Error(result.error);
       setEditing(null);
       await load();
     } catch (err) {
@@ -76,13 +79,19 @@ export function WorkflowRulesPage() {
   };
 
   const handleToggle = async (id: string, active: boolean) => {
-    await updateRhWorkflowRule(id, { active });
-    await load();
+    try {
+      const result = await updateRhWorkflowRule(id, { active });
+      if (!result.success) throw new Error(result.error);
+      await load();
+    } catch (err) { showActionError(err); }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteRhWorkflowRule(id);
-    await load();
+    try {
+      const result = await deleteRhWorkflowRule(id);
+      if (!result.success) throw new Error(result.error);
+      await load();
+    } catch (err) { showActionError(err); }
   };
 
   const handleNewVisualWorkflow = async () => {
@@ -238,6 +247,24 @@ export function WorkflowRulesPage() {
           </motion.div>
         )
       )}
+      {!creating && !editing && <>
+        <Card><CardContent className="space-y-4 pt-6">
+          <h2 className="font-semibold">{t('Server execution')}</h2>
+          {rules.map(rule => <div key={rule.id} className="flex min-w-0 items-center justify-between gap-4">
+            <label htmlFor={`server-${rule.id}`} className="min-w-0 break-words text-sm">{rule.name}</label>
+            <Switch id={`server-${rule.id}`} checked={!!rule.serverExecution} disabled={saving} onCheckedChange={async enabled => {
+              setSaving(true);
+              try {
+                const result = await updateRhWorkflowRule(rule.id, { serverExecution: enabled });
+                if (!result.success) throw new Error(result.error || t('Action failed'));
+                await load();
+              } catch (err) { showActionError(err); }
+              finally { setSaving(false); }
+            }} />
+          </div>)}
+        </CardContent></Card>
+        <WorkflowRuntimePanel rules={rules} />
+      </>}
     </Wrapper>
   );
 }

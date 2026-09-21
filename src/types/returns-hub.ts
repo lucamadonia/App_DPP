@@ -274,6 +274,7 @@ export interface RhWorkflowRule {
   conditions: Record<string, unknown>;
   actions: RhWorkflowAction[];
   active: boolean;
+  serverExecution?: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

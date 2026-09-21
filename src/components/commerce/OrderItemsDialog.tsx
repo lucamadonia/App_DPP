@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link2, Link2Off, Loader2, PackageSearch, Truck } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -102,9 +102,9 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
 
   return (
     <Dialog open={Boolean(orderId)} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-h-[85dvh] min-w-0 overflow-y-auto sm:max-w-3xl [&>*]:min-w-0">
+        <DialogHeader className="pr-8 text-left">
+          <DialogTitle className="break-words">
             {t('Order')} {order?.externalOrderNumber || order?.externalOrderId || ''}
           </DialogTitle>
           <DialogDescription>
@@ -115,7 +115,7 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
         {loading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin" /></div>
         ) : (
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -127,10 +127,10 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
             )}
 
             {items.map((item) => (
-              <div key={item.id} className="rounded-lg border border-border p-3">
+              <div key={item.id} className="min-w-0 rounded-lg border border-border p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{item.title}</div>
+                  <div className="min-w-0 flex-1 basis-48">
+                    <div className="break-words font-medium [overflow-wrap:anywhere]">{item.title}</div>
                     <div className="mt-0.5 text-xs text-muted-foreground">
                       {item.sku ? `SKU ${item.sku}` : t('no SKU')} · {item.quantity}×
                     </div>
@@ -148,9 +148,10 @@ export function OrderItemsDialog({ orderId, onClose, onChanged }: OrderItemsDial
                   )}
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-3 flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <select
-                    className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                    aria-label={t('Product for {{item}}', { item: item.title })}
+                    className="h-11 w-full min-w-0 max-w-full shrink-0 rounded-md border border-input bg-background px-2 text-sm sm:flex-1"
                     value={item.productId ?? ''}
                     disabled={savingId === item.id}
                     onChange={(e) => assign(item.id, e.target.value || null)}

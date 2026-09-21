@@ -175,5 +175,6 @@
   "Assign all order lines to products first": "Assign all order lines to products first",
   "Create a warehouse location first": "Create a warehouse location first",
   "Order has no complete shipping address": "Order has no complete shipping address",
-  "Shipment failed": "Shipment failed"
+  "Shipment failed": "Shipment failed",
+  "Product for {{item}}": "Product for {{item}}"
 }

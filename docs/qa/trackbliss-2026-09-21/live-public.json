@@ -1,0 +1,29 @@
+[
+  {
+    "path": "/login",
+    "landed": "/login",
+    "errors": [],
+    "failed": [],
+    "text": "Digitale Produktpässe für nachhaltige Produkte\n\nAnmelden\nMelden Sie sich bei Ihrem Trackbliss-Konto an\nMit Google fortfahren\nMit Magic Link anmelden\nODER\nE-Mail\nPasswort\nPasswort vergessen?\nAnmelden\n\nNoch kein Konto? Registrieren\n\nMit der Anmeldung akzeptieren Sie unsere Nutzungsbedingungen und Datenschutzrichtlinie.",
+    "width": 390,
+    "scrollWidth": 390
+  },
+  {
+    "path": "/pricing",
+    "landed": "/pricing",
+    "errors": [],
+    "failed": [],
+    "text": "Zurück zur Startseite\nDeutsch\nTB\nPreise\nPläne & Preise\n\nKostenlos starten, upgraden wenn Sie wachsen. Transparente Preise, keine versteckten Kosten.\n\nMonatlich\nJährlich\n20% sparen\nFree\n\nFür Einsteiger in digitale Produktpässe.\n\nKostenlos\nBis zu 5 Produkte\n3 Batches pro Produkt\n10 Dokumente (100 MB)\n3 DPP-Templates\n3 KI-Credits / Monat\n1 Admin-Benutzer\nVerbraucher-Sichtbarkeit\nQR-Code-Generierung\nJetzt starten\nBeliebteste Wahl\nPro\n\nFür wachsende Unternehmen mit vollen Compliance-Tools.\n\n€49\n/Monat\nBis zu 50 Produkte\n20 Batches pro Produkt\n200 Dokumente (2 GB)\nAlle 11 DPP-Templates\n25 KI-Credits / Monat\n5 Admin-Benutzer\nVerbraucher + Zoll-Stufen\nEigenes Branding & QR-Logos\nKostenlos testen\nEnt",
+    "width": 390,
+    "scrollWidth": 390
+  },
+  {
+    "path": "/feedback/00000000-0000-4000-8000-000000000001",
+    "landed": "/feedback/00000000-0000-4000-8000-000000000001",
+    "errors": [],
+    "failed": [],
+    "text": "Link nicht gefunden\n\nDer Link scheint ungültig zu sein. Bitte überprüfe deine Email noch einmal.",
+    "width": 390,
+    "scrollWidth": 390
+  }
+]

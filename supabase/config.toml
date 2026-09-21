@@ -1,0 +1,12 @@
+project_id = "trackbliss"
+
+# Provider callbacks arrive without a Supabase JWT. This function validates the
+# signed OAuth state and authenticates every non-callback action internally.
+[functions.commerce-channel-oauth]
+verify_jwt = false
+
+[functions.commerce-etsy-sync]
+verify_jwt = true
+
+[functions.workflow-webhooks]
+verify_jwt = true

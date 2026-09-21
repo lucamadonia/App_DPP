@@ -661,3 +661,5 @@ export {
   createPublicProductTicket,
   createPublicReturnTicket,
 } from './customer-portal';
+
+export { getWorkflowRuns, runWorkflowManually } from './workflow-runs';

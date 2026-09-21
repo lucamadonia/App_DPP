@@ -342,7 +342,6 @@
   "Enter name and country to quickly create a new supplier.": "Enter name and country to quickly create a new supplier.",
   "Create Supplier": "Create Supplier",
   "Select country...": "Select country...",
-
   "Search category...": "Search category...",
   "No category found.": "No category found.",
   "Create new category...": "Create new category...",
@@ -355,7 +354,6 @@
   "Add Subcategory": "Add Subcategory",
   "Subcategory Name (English)": "Subcategory Name (English)",
   "Subcategory Name (German)": "Subcategory Name (German)",
-
   "Master Label": "Master Label",
   "ml.title": "Master Label Generator",
   "ml.description": "Generate EU-compliant product labels (A6 format) with identity, DPP QR code, compliance modules, and sustainability info.",
@@ -389,7 +387,6 @@
   "ml.validation.productNameRecommended": "Product name field is recommended on the label.",
   "ml.validation.fontSizeTooSmall": "Font size below 3.4pt (1.2mm). EU regulation requires minimum 1.2mm text height.",
   "ml.validation.manufacturerRecommended": "Manufacturer information is recommended on the label.",
-
   "ml.editor.advancedEditor": "Advanced Editor",
   "ml.editor.backToSimple": "Simple Mode",
   "ml.editor.saving": "Saving...",
@@ -460,7 +457,6 @@
   "ml.editor.paddingTop": "Top Padding",
   "ml.editor.paddingBottom": "Bottom Padding",
   "ml.editor.applyCorporateDesign": "Apply Corporate Design",
-
   "ml.element.text": "Text",
   "ml.element.fieldValue": "Field",
   "ml.element.fieldvalue": "Field",
@@ -478,7 +474,6 @@
   "ml.element.iconText": "Icon Text",
   "ml.element.icontext": "Icon Text",
   "ml.element.packageCounter": "Counter",
-
   "ml.field.productName": "Product Name",
   "ml.field.gtin": "GTIN/EAN",
   "ml.field.batchNumber": "Batch Number",
@@ -504,7 +499,6 @@
   "ml.field.repairabilityScore": "Repairability Score",
   "ml.field.dppRegistryId": "DPP Registry ID",
   "ml.field.safetyInformation": "Safety Information",
-
   "ml.section.identity": "Identity & Traceability",
   "ml.section.dpp": "Digital Product Passport",
   "ml.section.compliance": "Compliance",
@@ -516,7 +510,6 @@
   "ml.section.dpp-barcode": "ZONE 3: DPP & Barcode",
   "ml.section.packaging": "ZONE 4: PPWR & Sustainability",
   "ml.section.handling": "ZONE 5: Handling Symbols",
-
   "ml.pictogram.library": "Pictogram Library",
   "ml.pictogram.search": "Search pictograms...",
   "ml.pictogram.all": "All",
@@ -528,7 +521,6 @@
   "ml.pictogram.mandatory": "Mandatory",
   "ml.pictogram.add": "Add",
   "ml.pictogram.noResults": "No pictograms found.",
-
   "ml.template.gallery": "Label Templates",
   "ml.template.galleryDescription": "Choose a built-in template or create a blank label.",
   "ml.template.search": "Search templates...",
@@ -545,7 +537,6 @@
   "ml.template.untitled": "Untitled Label",
   "ml.template.description": "Description",
   "ml.template.descriptionPlaceholder": "Optional description...",
-
   "ml.field.manufacturerEmail": "Manufacturer Email",
   "ml.field.manufacturerPhone": "Manufacturer Phone",
   "ml.field.manufacturerVAT": "Manufacturer VAT",
@@ -558,19 +549,16 @@
   "ml.field.importerVAT": "Importer VAT",
   "ml.field.importerEORI": "Importer EORI",
   "ml.field.importerCountry": "Importer Country",
-
   "ml.palette.elements": "Elements",
   "ml.palette.fields": "Fields",
   "ml.palette.searchFields": "Search fields...",
   "ml.palette.noResults": "No fields found.",
-
   "ml.fieldGroup.identity": "Identity",
   "ml.fieldGroup.manufacturer": "Manufacturer",
   "ml.fieldGroup.importer": "Importer",
   "ml.fieldGroup.measurements": "Measurements",
   "ml.fieldGroup.sustainability": "Sustainability",
   "ml.fieldGroup.compliance": "Compliance",
-
   "ml.editor.tabCheck": "Check",
   "ml.editor.mobileElements": "Elements",
   "ml.editor.mobileElementsHint": "Tap an element to add it to the label",
@@ -580,7 +568,6 @@
   "ml.editor.lineHeight": "Line Height",
   "ml.editor.marginBottom": "Margin Bottom",
   "ml.editor.fontFamilyDefault": "Design Default",
-
   "ml.check.title": "Compliance Checker",
   "ml.check.subtitle": "Checks your label against EU regulatory requirements",
   "ml.check.noData": "Assemble label data first to run compliance checks.",
@@ -621,12 +608,10 @@
   "ml.check.countryOriginDesc": "Recommended for B2C labels to indicate product origin.",
   "ml.check.minFontSize": "Minimum Font Size (3.4pt)",
   "ml.check.minFontSizeDesc": "EU regulations require a minimum font size of 3.4pt (1.2mm).",
-
   "Total Products": "Total Products",
   "{{count}} of {{total}} products": "{{count}} of {{total}} products",
   "{{count}} products": "{{count}} products",
   "Try adjusting your search or filters.": "Try adjusting your search or filters.",
-
   "Duplicate Product": "Duplicate Product",
   "Select what to include in the copy": "Select what to include in the copy",
   "{{count}} entries": "{{count}} entries",
@@ -639,7 +624,6 @@
   "Failed to duplicate product": "Failed to duplicate product",
   "Supplier Assignments": "Supplier Assignments",
   "Supply Chain": "Supply Chain",
-
   "Export as CSV": "Export as CSV",
   "PDF Overview": "PDF Overview",
   "PDF Catalog": "PDF Catalog",
@@ -648,7 +632,6 @@
   "Product Overview": "Product Overview",
   "Exporting...": "Exporting...",
   "No products to export": "No products to export",
-
   "Import": "Import",
   "Import Products": "Import Products",
   "Upload File": "Upload File",
@@ -675,7 +658,6 @@
   "Back": "Back",
   "Next": "Next",
   "All products imported as draft": "All products imported as draft",
-
   "Packaging Details": "Packaging Details",
   "Packaging Type": "Packaging Type",
   "Packaging Description": "Packaging Description",
@@ -738,7 +720,6 @@
   "ml.element.packageCounter.previewParcel": "Parcel X of Y",
   "ml.element.packageCounter.previewXofY": "X of Y",
   "ml.element.packageCounter.dynamic": "Dynamic",
-
   "Packaging Layers": "Packaging Layers",
   "Add Packaging Layer": "Add Packaging Layer",
   "Remove Packaging Layer": "Remove Packaging Layer",
@@ -760,7 +741,6 @@
   "No packaging layers yet": "No packaging layers yet",
   "Add packaging layers to define all packaging components": "Add packaging layers to define all packaging components",
   "Select layer type...": "Select layer type...",
-
   "pictograms.title": "Pictogram Database",
   "pictograms.subtitle": "Upload and manage pictograms for your product labels",
   "pictograms.upload": "Upload Pictogram",
@@ -802,5 +782,19 @@
   "Error deleting batch: {{error}}": "Error deleting batch: {{error}}",
   "Batch not found": "Batch not found",
   "The batch does not exist or you do not have access.": "The batch does not exist or you do not have access.",
-  "Failed to create supplier": "Failed to create supplier"
+  "Failed to create supplier": "Failed to create supplier",
+  "Create your first product to get started with Trackbliss.": "Create your first product to get started with Trackbliss.",
+  "Create multiple product passports from a CSV or JSON file.": "Create multiple product passports from a CSV or JSON file.",
+  "Download the template in the import wizard, map your columns and review every row before importing.": "Download the template in the import wizard, map your columns and review every row before importing.",
+  "Existing products are preserved. New products count towards your plan limit.": "Existing products are preserved. New products count towards your plan limit.",
+  "Import finished. Your products are available in the product list.": "Import finished. Your products are available in the product list.",
+  "Choose a CSV or JSON file up to 10 MB.": "Choose a CSV or JSON file up to 10 MB.",
+  "Choose a file with 1 to 1000 rows.": "Choose a file with 1 to 1000 rows.",
+  "Invalid import file": "Invalid import file",
+  "Invalid positive number: {{field}}": "Invalid positive number: {{field}}",
+  "Invalid JSON structure: {{field}}": "Invalid JSON structure: {{field}}",
+  "Validation failed. Check column mappings and your connection, then try again.": "Validation failed. Check column mappings and your connection, then try again.",
+  "Import failed": "Import failed",
+  "Import interrupted. Check the product list before retrying.": "Import interrupted. Check the product list before retrying.",
+  "Target field for {{column}}": "Target field for {{column}}"
 }

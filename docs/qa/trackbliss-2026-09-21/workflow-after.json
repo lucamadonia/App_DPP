@@ -1,0 +1,221 @@
+[
+  {
+    "pattern": "/returns/workflows",
+    "guard": "tenant-auth",
+    "element": "{<WorkflowRulesPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 578,
+    "interactions": [
+      "Manual workflow queued, execution history visible"
+    ],
+    "width": 390,
+    "path": "/returns/workflows",
+    "landed": "/returns/workflows",
+    "clippedContainers": [],
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenders": [],
+    "textLength": 600,
+    "headings": [
+      "Retouren & Support",
+      "Workflow-Regeln",
+      "Serverseitige Ausführung"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 3,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-390-_returns_workflows.png"
+  },
+  {
+    "pattern": "/returns/workflows",
+    "guard": "tenant-auth",
+    "element": "{<WorkflowRulesPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 578,
+    "interactions": [
+      "Manual workflow queued, execution history visible"
+    ],
+    "width": 360,
+    "path": "/returns/workflows",
+    "landed": "/returns/workflows",
+    "clippedContainers": [],
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "offenders": [],
+    "textLength": 600,
+    "headings": [
+      "Retouren & Support",
+      "Workflow-Regeln",
+      "Serverseitige Ausführung"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 3,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-360-_returns_workflows.png"
+  },
+  {
+    "pattern": "/returns/workflows",
+    "guard": "tenant-auth",
+    "element": "{<WorkflowRulesPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 578,
+    "interactions": [
+      "Manual workflow queued, execution history visible"
+    ],
+    "width": 1440,
+    "path": "/returns/workflows",
+    "landed": "/returns/workflows",
+    "clippedContainers": [
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 19
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 101
+      }
+    ],
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": [],
+    "textLength": 1014,
+    "headings": [
+      "Retouren & Support",
+      "Workflow-Regeln",
+      "Serverseitige Ausführung"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 9,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-1440-_returns_workflows.png"
+  },
+  {
+    "pattern": "/returns/workflows",
+    "guard": "tenant-auth",
+    "element": "{<WorkflowRulesPage />}",
+    "placeholder": false,
+    "redirect": false,
+    "line": 578,
+    "interactions": [
+      "Manual workflow queued, execution history visible"
+    ],
+    "width": 768,
+    "path": "/returns/workflows",
+    "landed": "/returns/workflows",
+    "clippedContainers": [
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 19
+      },
+      {
+        "tag": "SPAN",
+        "role": null,
+        "cls": "sr-only",
+        "clientWidth": 1,
+        "scrollWidth": 101
+      }
+    ],
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "offenders": [
+      {
+        "tag": "MAIN",
+        "cls": "bg-background relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=",
+        "width": 670
+      },
+      {
+        "tag": "HEADER",
+        "cls": "sticky top-0 z-40 shrink-0 border-b border-transparent bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 pt-[var",
+        "width": 670
+      },
+      {
+        "tag": "DIV",
+        "cls": "relative flex h-14 items-center gap-2 px-4",
+        "width": 670
+      },
+      {
+        "tag": "H1",
+        "cls": "min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium",
+        "width": 525
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.9",
+        "width": 44
+      },
+      {
+        "tag": "svg",
+        "cls": "[object SVGAnimatedString]",
+        "width": 16
+      },
+      {
+        "tag": "path",
+        "cls": "[object SVGAnimatedString]",
+        "width": 3
+      },
+      {
+        "tag": "circle",
+        "cls": "[object SVGAnimatedString]",
+        "width": 11
+      },
+      {
+        "tag": "DIV",
+        "cls": "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent",
+        "width": 670
+      },
+      {
+        "tag": "MAIN",
+        "cls": "flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app",
+        "width": 670
+      },
+      {
+        "tag": "DIV",
+        "cls": "",
+        "width": 622
+      },
+      {
+        "tag": "DIV",
+        "cls": "space-y-6",
+        "width": 622
+      }
+    ],
+    "textLength": 1014,
+    "headings": [
+      "Retouren & Support",
+      "Workflow-Regeln",
+      "Serverseitige Ausführung"
+    ],
+    "notFound": false,
+    "errorBoundary": false,
+    "smallTargets": 9,
+    "errors": [],
+    "deniedHosts": [],
+    "redirected": false,
+    "overflow": false,
+    "screenshot": "tmp/readiness/populated-768-_returns_workflows.png"
+  }
+]

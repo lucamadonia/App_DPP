@@ -19,7 +19,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { decryptCredentials } from '../_shared/commerce-crypto.ts';
 import {
   etsyFetch, resolveShop, money, currencyOf, tsToIso, EtsyReauthRequired,
@@ -33,12 +33,31 @@ const corsHeaders = {
   'Content-Type': 'application/json',
 };
 
+interface EtsyTransaction {
+  transaction_id?: string | number; listing_id?: string | number; product_id?: string | number;
+  sku?: string; title?: string; quantity?: number; price?: unknown;
+  variations?: Array<{ formatted_value?: string; value?: string | number }>;
+}
+interface EtsyReceipt {
+  receipt_id: string | number; status?: string; is_paid?: boolean; was_paid?: boolean;
+  is_shipped?: boolean; was_shipped?: boolean; transactions?: EtsyTransaction[];
+  grandtotal?: unknown; total_price?: unknown; subtotal?: unknown; total_shipping_cost?: unknown;
+  total_tax_cost?: unknown; total_vat_cost?: unknown; discount_amt?: unknown;
+  create_timestamp?: number; created_timestamp?: number; paid_timestamp?: number; shipped_timestamp?: number;
+  buyer_user_id?: string | number; buyer_email?: string; name?: string; country_iso?: string;
+  city?: string; zip?: string | number;
+}
+interface EtsyConnection {
+  id: string; tenant_id: string; account_currency?: string; account_label?: string;
+  last_incremental_sync_at?: string;
+}
+
 const PAGE_SIZE = 100;          // Etsy's documented maximum for getShopReceipts
 const MAX_PAGES = 25;           // 2 500 receipts per run, well inside 5 000/day
 const PAGE_DELAY_MS = 250;      // stay under the 5 req/s personal-access ceiling
 
 /** Etsy receipt status → the Commerce Hub's own vocabulary. */
-function mapStatuses(receipt: any) {
+function mapStatuses(receipt: EtsyReceipt) {
   const status = String(receipt.status ?? '').toLowerCase();
   const paid = receipt.is_paid ?? receipt.was_paid ?? (status === 'paid' || status === 'completed');
   const shipped = receipt.is_shipped ?? receipt.was_shipped ?? false;
@@ -100,7 +119,7 @@ serve(async (req) => {
   }
 });
 
-async function runSync(supabase: any, conn: any, mode: 'full' | 'incremental') {
+async function runSync(supabase: SupabaseClient, conn: EtsyConnection, mode: 'full' | 'incremental') {
   const startedAt = Date.now();
   const tenantId = conn.tenant_id as string;
 
@@ -140,7 +159,7 @@ async function runSync(supabase: any, conn: any, mode: 'full' | 'incremental') {
       if (since) query.min_created = since;
 
       const batch = await etsyFetch(holder, `/shops/${shop.shopId}/receipts`, query);
-      const receipts: any[] = Array.isArray(batch?.results) ? batch.results : [];
+      const receipts: EtsyReceipt[] = Array.isArray(batch?.results) ? batch.results : [];
       if (receipts.length === 0) break;
 
       for (const receipt of receipts) {
@@ -209,8 +228,8 @@ async function runSync(supabase: any, conn: any, mode: 'full' | 'incremental') {
   }
 }
 
-async function importReceipt(supabase: any, conn: any, tenantId: string, receipt: any, shop: { shopId: string }) {
-  const transactions: any[] = Array.isArray(receipt.transactions) ? receipt.transactions : [];
+async function importReceipt(supabase: SupabaseClient, conn: EtsyConnection, tenantId: string, receipt: EtsyReceipt, shop: { shopId: string }) {
+  const transactions: EtsyTransaction[] = Array.isArray(receipt.transactions) ? receipt.transactions : [];
   const currency = currencyOf(receipt.grandtotal ?? receipt.total_price, conn.account_currency || 'EUR');
   const { financialStatus, fulfillmentStatus, orderStatus, paid, shipped } = mapStatuses(receipt);
 
@@ -301,7 +320,7 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
       external_variant_id: t.product_id ? String(t.product_id) : null,
       title: t.title || 'Etsy item',
       variant_title: Array.isArray(t.variations) && t.variations.length
-        ? t.variations.map((v: any) => v.formatted_value ?? v.value).filter(Boolean).join(' / ')
+        ? t.variations.map((v) => v.formatted_value ?? v.value).filter(Boolean).join(' / ')
         : null,
       sku,
       gtin: match?.gtin ?? null,
@@ -344,7 +363,7 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
 
 /** Fill missing positions on draft shipments using the same transaction as the UI. */
 async function createShipmentForOrder(
-  supabase: any, tenantId: string, orderId: string, receipt: any, items: any[],
+  supabase: SupabaseClient, tenantId: string, orderId: string, receipt: EtsyReceipt, items: Array<{ product_id: string | null }>,
 ) {
   const { financialStatus, shipped } = mapStatuses(receipt);
   if (financialStatus !== 'paid' || shipped || !items.length || items.some((i) => !i.product_id)) return;
@@ -370,7 +389,7 @@ async function createShipmentForOrder(
  * seller typed into Etsy's SKU field is matched against both; anything else
  * has to be assigned by hand in the Commerce Hub.
  */
-async function lookupProducts(supabase: any, tenantId: string, skus: string[]) {
+async function lookupProducts(supabase: SupabaseClient, tenantId: string, skus: string[]) {
   const map = new Map<string, { id: string; gtin: string | null; matchedBy: 'gtin' | 'sku' }>();
   const unique = Array.from(new Set(skus.filter(Boolean)));
   if (unique.length === 0) return map;
@@ -396,7 +415,7 @@ async function lookupProducts(supabase: any, tenantId: string, skus: string[]) {
   return map;
 }
 
-async function markReauth(supabase: any, connectionId: string, message: string) {
+async function markReauth(supabase: SupabaseClient, connectionId: string, message: string) {
   await supabase.from('commerce_channel_connections').update({
     status: 'reauth_required',
     last_error_message: message.slice(0, 500),
@@ -404,7 +423,7 @@ async function markReauth(supabase: any, connectionId: string, message: string) 
   }).eq('id', connectionId);
 }
 
-async function logEvent(supabase: any, conn: any, tenantId: string, event: Record<string, unknown>) {
+async function logEvent(supabase: SupabaseClient, conn: EtsyConnection, tenantId: string, event: Record<string, unknown>) {
   await supabase.from('commerce_sync_events').insert({
     tenant_id: tenantId, connection_id: conn.id, platform: 'etsy', ...event,
   });

@@ -34,7 +34,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { b64, unb64, encryptCredentials, decryptCredentials } from '../_shared/commerce-crypto.ts';
 import { etsyFetch, EtsyReauthRequired } from '../_shared/etsy.ts';
 
@@ -199,7 +199,7 @@ serve(async (req) => {
   }
 });
 
-async function handleStart(supabase: any, p: StartParams) {
+async function handleStart(supabase: SupabaseClient, p: StartParams) {
   const cfg = OAUTH_CONFIG[p.platform];
   if (!cfg) return { error: `Unsupported platform: ${p.platform}` };
   if (p.platform === 'woocommerce') {
@@ -254,7 +254,7 @@ async function handleStart(supabase: any, p: StartParams) {
   return { authorizeUrl: url, state, connectionId: p.connectionId };
 }
 
-async function handleCallback(supabase: any, p: CallbackParams) {
+async function handleCallback(supabase: SupabaseClient, p: CallbackParams) {
   const cfg = OAUTH_CONFIG[p.platform];
   if (!cfg) return { error: `Unsupported platform: ${p.platform}` };
 
@@ -342,7 +342,7 @@ async function handleCallback(supabase: any, p: CallbackParams) {
   return { ok: true, connectionId: p.connectionId };
 }
 
-async function handleTest(supabase: any, p: TestParams) {
+async function handleTest(supabase: SupabaseClient, p: TestParams) {
   const { data: conn } = await supabase
     .from('commerce_channel_connections')
     .select('*')

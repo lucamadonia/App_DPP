@@ -43,6 +43,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    watch: { ignored: ['**/tmp/**', '**/test-results/**', '**/playwright-report/**'] },
+  },
   build: {
     reportCompressedSize: false,
     rollupOptions: {

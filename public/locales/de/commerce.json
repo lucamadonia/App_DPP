@@ -175,5 +175,6 @@
   "Assign all order lines to products first": "Bitte zuerst alle Bestellpositionen Produkten zuordnen",
   "Create a warehouse location first": "Bitte zuerst einen Lagerstandort anlegen",
   "Order has no complete shipping address": "Die Bestellung hat keine vollst?ndige Lieferadresse",
-  "Shipment failed": "Sendung konnte nicht erstellt oder erg?nzt werden"
+  "Shipment failed": "Sendung konnte nicht erstellt oder erg?nzt werden",
+  "Product for {{item}}": "Produkt für {{item}}"
 }

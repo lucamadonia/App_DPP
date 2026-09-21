@@ -11,7 +11,7 @@ import type { WorkflowGraph, WorkflowNode, WorkflowEdge, TriggerEventType, Workf
 
 const LEGACY_TRIGGER_MAP: Record<string, TriggerEventType> = {
   status_changed: 'return_status_changed',
-  return_overdue: 'return_created', // fallback — return_overdue not implemented in engine
+  return_overdue: 'return_overdue',
 };
 
 const LEGACY_ACTION_MAP: Record<string, WorkflowActionType> = {
@@ -117,6 +117,7 @@ function transformWorkflowRule(row: any): RhWorkflowRule {
     conditions: row.conditions || {},
     actions: row.actions || [],
     active: row.active ?? true,
+    serverExecution: row.server_execution ?? false,
     sortOrder: row.sort_order || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -135,7 +136,7 @@ export async function getRhWorkflowRules(): Promise<RhWorkflowRule[]> {
 
   if (error) {
     console.error('Failed to load workflow rules:', error);
-    return [];
+    throw error;
   }
 
   const rules = (data || []).map((row) => transformWorkflowRule(row));
@@ -231,6 +232,8 @@ export async function updateRhWorkflowRule(
   id: string,
   updates: Partial<RhWorkflowRule>
 ): Promise<{ success: boolean; error?: string }> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -241,31 +244,34 @@ export async function updateRhWorkflowRule(
   if (updates.conditions !== undefined) updateData.conditions = updates.conditions;
   if (updates.actions !== undefined) updateData.actions = updates.actions;
   if (updates.active !== undefined) updateData.active = updates.active;
+  if (updates.serverExecution !== undefined) updateData.server_execution = updates.serverExecution;
   if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('rh_workflow_rules')
     .update(updateData)
-    .eq('id', id);
+    .eq('id', id).eq('tenant_id', tenantId).select('id').maybeSingle();
 
   if (error) {
     console.error('Failed to update workflow rule:', error);
     return { success: false, error: error.message };
   }
 
-  return { success: true };
+  return data ? { success: true } : { success: false, error: 'Workflow not found' };
 }
 
 export async function deleteRhWorkflowRule(id: string): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { success: false, error: 'No tenant set' };
+  const { data, error } = await supabase
     .from('rh_workflow_rules')
     .delete()
-    .eq('id', id);
+    .eq('id', id).eq('tenant_id', tenantId).select('id').maybeSingle();
 
   if (error) {
     console.error('Failed to delete workflow rule:', error);
     return { success: false, error: error.message };
   }
 
-  return { success: true };
+  return data ? { success: true } : { success: false, error: 'Workflow not found' };
 }

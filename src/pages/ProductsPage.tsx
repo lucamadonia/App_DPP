@@ -323,7 +323,7 @@ export function ProductsPage() {
       size="full"
       padding={false}
       onRefresh={() => refetchProducts()}
-      title={t('Products')}
+      title={t('Products', { ns: 'common' })}
       description={t('Manage your products and their Digital Product Passports')}
       actions={
         <>

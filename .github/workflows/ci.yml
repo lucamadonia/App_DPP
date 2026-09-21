@@ -61,6 +61,9 @@ jobs:
       - name: Unit tests
         run: npm run test:run
 
+      - name: Database regressions
+        run: npm run test:database
+
       # Guards the invariants the native build depends on:
       # no window.location.origin outside the platform layer, no 100vh,
       # no raw env(safe-area-*) outside index.css.

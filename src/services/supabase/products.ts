@@ -236,22 +236,16 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
  */
 export async function getExistingGtins(): Promise<string[]> {
   const tenantId = await getCurrentTenantId();
-  if (!tenantId) {
-    console.warn('No tenant set - cannot load GTINs');
-    return [];
+  if (!tenantId) throw new Error('No tenant set');
+  const gtins: string[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from('products').select('gtin')
+      .eq('tenant_id', tenantId).order('id').range(offset, offset + 999);
+    // An incomplete lookup cannot safely authorize importing a duplicate.
+    if (error) throw error;
+    gtins.push(...(data || []).map(row => row.gtin).filter((gtin): gtin is string => Boolean(gtin)));
+    if (!data || data.length < 1000) return gtins;
   }
-
-  const { data, error } = await supabase
-    .from('products')
-    .select('gtin')
-    .eq('tenant_id', tenantId);
-
-  if (error) {
-    console.error('Failed to load GTINs:', error);
-    return [];
-  }
-
-  return (data || []).map((r) => r.gtin).filter((g): g is string => Boolean(g));
 }
 
 /**

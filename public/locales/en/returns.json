@@ -53,7 +53,6 @@
   "Confirm": "Confirm",
   "Are you sure?": "Are you sure?",
   "This action cannot be undone": "This action cannot be undone",
-
   "Created": "Created",
   "Pending Approval": "Pending Approval",
   "Approved": "Approved",
@@ -65,25 +64,21 @@
   "Completed": "Completed",
   "Rejected": "Rejected",
   "Cancelled": "Cancelled",
-
   "Low": "Low",
   "Normal": "Normal",
   "High": "High",
   "Urgent": "Urgent",
   "Priority": "Priority",
-
   "Refund": "Refund",
   "Exchange": "Exchange",
   "Voucher": "Voucher",
   "Repair": "Repair",
   "Desired Solution": "Desired Solution",
-
   "New": "New",
   "Like New": "Like New",
   "Used": "Used",
   "Damaged": "Damaged",
   "Defective": "Defective",
-
   "Open Returns": "Open Returns",
   "Received Today": "Received Today",
   "Avg. Processing Time": "Avg. Processing Time",
@@ -94,7 +89,6 @@
   "Return Trend": "Return Trend",
   "Return Reasons": "Return Reasons",
   "Recent Returns": "Recent Returns",
-
   "Return Number": "Return Number",
   "Customer": "Customer",
   "Status": "Status",
@@ -111,7 +105,6 @@
   "Assign Selected": "Assign Selected",
   "No returns found": "No returns found",
   "Showing {{from}} to {{to}} of {{total}} returns": "Showing {{from}} to {{to}} of {{total}} returns",
-
   "Select Customer": "Select Customer",
   "Create New Customer": "Create New Customer",
   "Order Information": "Order Information",
@@ -137,7 +130,6 @@
   "Internal Notes": "Internal Notes",
   "Return created successfully": "Return created successfully",
   "Return updated successfully": "Return updated successfully",
-
   "Overview": "Overview",
   "Timeline": "Timeline",
   "Communication": "Communication",
@@ -153,7 +145,6 @@
   "Label Expires": "Label Expires",
   "Approved Items": "Approved Items",
   "Rejected Items": "Rejected Items",
-
   "Status changed to {{status}}": "Status changed to {{status}}",
   "Return created": "Return created",
   "Item added": "Item added",
@@ -161,7 +152,6 @@
   "by {{name}}": "by {{name}}",
   "System": "System",
   "Agent": "Agent",
-
   "Customer List": "Customer List",
   "Customer Details": "Customer Details",
   "New Customer": "New Customer",
@@ -178,10 +168,9 @@
   "Communication History": "Communication History",
   "Customer since {{date}}": "Customer since {{date}}",
   "No customers found": "No customers found",
-  "360\u00b0 Customer View": "360\u00b0 Customer View",
+  "360° Customer View": "360° Customer View",
   "Customer Profile": "Customer Profile",
   "Tags": "Tags",
-
   "Ticket List": "Ticket List",
   "New Ticket": "New Ticket",
   "Ticket Number": "Ticket Number",
@@ -203,7 +192,6 @@
   "Add Attachment": "Add Attachment",
   "Linked Return": "Linked Return",
   "No tickets found": "No tickets found",
-
   "Returns Overview": "Returns Overview",
   "By Product": "By Product",
   "By Reason": "By Reason",
@@ -218,7 +206,6 @@
   "Export Excel": "Export Excel",
   "Total Returns": "Total Returns",
   "Average Processing Time": "Average Processing Time",
-
   "General": "General",
   "License": "License",
   "Email Templates": "Email Templates",
@@ -260,7 +247,6 @@
   "Follow-up Questions": "Follow-up Questions",
   "Sort Order": "Sort Order",
   "Settings saved successfully": "Settings saved successfully",
-
   "New Rule": "New Rule",
   "Edit Rule": "Edit Rule",
   "Rule Name": "Rule Name",
@@ -273,7 +259,6 @@
   "On Return Overdue": "On Return Overdue",
   "Auto-Approve": "Auto-Approve",
   "Send Notification": "Send Notification",
-
   "Customs Information": "Customs Information",
   "Scenario": "Scenario",
   "Country of Origin": "Country of Origin",
@@ -288,7 +273,6 @@
   "Original Import Date": "Original Import Date",
   "Original Import Reference": "Original Import Reference",
   "AES Reference": "AES Reference",
-
   "Register Return": "Register Return",
   "Step {{current}} of {{total}}": "Step {{current}} of {{total}}",
   "Identification": "Identification",
@@ -327,7 +311,6 @@
   "Next": "Next",
   "Previous": "Previous",
   "Submit Return": "Submit Return",
-
   "Track Return": "Track Return",
   "Enter your return number and email to track your return": "Enter your return number and email to track your return",
   "Check Status": "Check Status",
@@ -346,11 +329,9 @@
   "Enter reason for rejection...": "Enter reason for rejection...",
   "Return Timeline": "Return Timeline",
   "Estimated completion": "Estimated completion",
-
   "Return Confirmation": "Return Confirmation",
   "Return Approved": "Return Approved",
   "Refund Processed": "Refund Processed",
-
   "Overview of your return operations": "Overview of your return operations",
   "View all": "View all",
   "Register a new return": "Register a new return",
@@ -406,7 +387,6 @@
   "Ticket Details": "Ticket Details",
   "No workflow rules defined": "No workflow rules defined",
   "Return Rate": "Return Rate",
-
   "Email Notifications": "Email Notifications",
   "Enable email notifications": "Enable email notifications",
   "Send email notifications when return status changes": "Send email notifications when return status changes",
@@ -431,7 +411,6 @@
   "refund_completed": "Refund Completed",
   "ticket_created": "Ticket Created",
   "ticket_agent_reply": "Agent Reply",
-
   "Ticket subject...": "Ticket subject...",
   "Initial Message": "Initial Message",
   "Create": "Create",
@@ -446,10 +425,8 @@
   "Remove photo": "Remove photo",
   "{{count}} photos selected": "{{count}} photos selected",
   "Photos will be uploaded after submission": "Photos will be uploaded after submission",
-
   "Privacy Policy": "Privacy Policy",
   "Terms of Service": "Terms of Service",
-
   "Welcome to the Returns Portal of {{name}}": "Welcome to the Returns Portal of {{name}}",
   "Easy returns in 3 simple steps": "Easy returns in 3 simple steps",
   "Start a New Return": "Start a New Return",
@@ -458,7 +435,6 @@
   "Track Your Return": "Track Your Return",
   "Check the current status of your return": "Check the current status of your return",
   "Track Status": "Track Status",
-
   "How It Works": "How It Works",
   "Step 1": "Step 1",
   "Step 2": "Step 2",
@@ -469,7 +445,6 @@
   "Send the items back using the provided label": "Send the items back using the provided label",
   "Done": "Done",
   "Receive your refund or exchange": "Receive your refund or exchange",
-
   "Frequently Asked Questions": "Frequently Asked Questions",
   "How long does a return take?": "How long does a return take?",
   "Returns are typically processed within 5-7 business days after we receive your items.": "Returns are typically processed within 5-7 business days after we receive your items.",
@@ -479,7 +454,6 @@
   "Refunds are issued to your original payment method within 3-5 business days after approval.": "Refunds are issued to your original payment method within 3-5 business days after approval.",
   "Can I exchange instead of returning?": "Can I exchange instead of returning?",
   "Yes, you can select exchange as your preferred solution during the return registration.": "Yes, you can select exchange as your preferred solution during the return registration.",
-
   "No order number?": "No order number?",
   "Check your confirmation email or account for the order number": "Check your confirmation email or account for the order number",
   "Item Condition": "Item Condition",
@@ -492,24 +466,20 @@
   "Max 10MB per file": "Max 10MB per file",
   "File too large": "File too large",
   "Maximum file size is 10MB": "Maximum file size is 10MB",
-
   "How would you like to resolve this?": "How would you like to resolve this?",
   "Get your money back": "Get your money back",
   "Swap for a new item": "Swap for a new item",
   "Receive store credit": "Receive store credit",
   "Have the item repaired": "Have the item repaired",
-
   "How would you like to ship?": "How would you like to ship?",
   "Print a prepaid shipping label": "Print a prepaid shipping label",
   "Show a QR code at the drop-off point": "Show a QR code at the drop-off point",
   "Schedule a pickup at your address": "Schedule a pickup at your address",
-
   "Review Your Return": "Review Your Return",
   "Order & Contact": "Order & Contact",
   "Solution": "Solution",
   "Change": "Change",
   "I confirm that the information above is correct": "I confirm that the information above is correct",
-
   "Return Submitted Successfully!": "Return Submitted Successfully!",
   "Your return has been registered and is being processed.": "Your return has been registered and is being processed.",
   "Your Return Number": "Your Return Number",
@@ -523,7 +493,6 @@
   "Drop off your package at the nearest shipping point": "Drop off your package at the nearest shipping point",
   "Track This Return": "Track This Return",
   "Back to Portal": "Back to Portal",
-
   "Registered": "Registered",
   "Under Review": "Under Review",
   "Shipped Back": "Shipped Back",
@@ -542,10 +511,8 @@
   "Describe your issue...": "Describe your issue...",
   "Send Request": "Send Request",
   "Support request sent": "Support request sent",
-
   "Portal URL": "Portal URL",
   "Share this link with your customers": "Share this link with your customers",
-
   "Table View": "Table View",
   "Kanban View": "Kanban View",
   "Advanced Filters": "Advanced Filters",
@@ -556,14 +523,12 @@
   "Ascending": "Ascending",
   "Descending": "Descending",
   "Active Filters": "Active Filters",
-
   "Select All": "Select All",
   "{{count}} selected": "{{count}} selected",
   "Change Status": "Change Status",
   "Change Priority": "Change Priority",
   "Close Selected": "Close Selected",
   "Assign To...": "Assign To...",
-
   "SLA Met": "SLA Met",
   "SLA At Risk": "SLA At Risk",
   "SLA Breached": "SLA Breached",
@@ -571,15 +536,12 @@
   "{{time}} remaining": "{{time}} remaining",
   "Overdue by {{time}}": "Overdue by {{time}}",
   "SLA Status": "SLA Status",
-
   "Assignee": "Assignee",
   "Assign to...": "Assign to...",
   "Quick Assign": "Quick Assign",
-
   "Add Tag": "Add Tag",
   "Remove Tag": "Remove Tag",
   "Type tag and press Enter": "Type tag and press Enter",
-
   "Status changed from {{from}} to {{to}}": "Status changed from {{from}} to {{to}}",
   "Assigned to {{name}}": "Assigned to {{name}}",
   "Priority changed from {{from}} to {{to}}": "Priority changed from {{from}} to {{to}}",
@@ -589,7 +551,6 @@
   "Ticket reopened": "Ticket reopened",
   "No activity yet": "No activity yet",
   "Activity Log": "Activity Log",
-
   "Close Ticket": "Close Ticket",
   "Close with Reason": "Close with Reason",
   "Reopen": "Reopen",
@@ -603,18 +564,15 @@
   "Ticket closed": "Ticket closed",
   "Ticket reopened successfully": "Ticket reopened successfully",
   "Tickets merged successfully": "Tickets merged successfully",
-
   "Canned Responses": "Canned Responses",
   "Search responses...": "Search responses...",
   "Insert Response": "Insert Response",
   "No canned responses": "No canned responses",
-
   "Attach Files": "Attach Files",
   "Uploading...": "Uploading...",
   "{{count}} files attached": "{{count}} files attached",
   "Download": "Download",
   "File uploaded": "File uploaded",
-
   "Today": "Today",
   "Yesterday": "Yesterday",
   "First Responded": "First Responded",
@@ -639,20 +597,16 @@
   "Response text...": "Response text...",
   "Title": "Title",
   "Content": "Content",
-
   "Email Template Editor": "Email Template Editor",
   "Manage your email templates": "Manage your email templates",
   "Open Email Template Editor": "Open Email Template Editor",
   "Visual editor with 15 templates, block editor, and live preview": "Visual editor with 15 templates, block editor, and live preview",
-
   "Templates": "Templates",
   "Design": "Design",
-
   "All": "All",
   "returns": "Returns",
   "tickets": "Tickets",
   "general": "General",
-
   "Return Confirmed": "Return Confirmed",
   "Sent when a customer submits a new return request": "Sent when a customer submits a new return request",
   "Sent when a return is approved by an agent": "Sent when a return is approved by an agent",
@@ -680,7 +634,6 @@
   "Sent after a return is completed to request feedback": "Sent after a return is completed to request feedback",
   "Return Reminder": "Return Reminder",
   "Sent as a reminder to ship back pending returns": "Sent as a reminder to ship back pending returns",
-
   "return_label_ready": "Label Ready",
   "return_inspection_complete": "Inspection Complete",
   "exchange_shipped": "Exchange Shipped",
@@ -689,7 +642,6 @@
   "voucher_issued": "Voucher Issued",
   "feedback_request": "Feedback Request",
   "return_reminder": "Return Reminder",
-
   "Variables": "Variables",
   "Click to insert": "Click to insert",
   "Email subject line...": "Email subject line...",
@@ -708,7 +660,6 @@
   "Thickness": "Thickness",
   "Height": "Height",
   "Border": "Border",
-
   "Layout": "Layout",
   "Max Width": "Max Width",
   "Content Background": "Content Background",
@@ -724,16 +675,13 @@
   "Footer Text": "Footer Text",
   "Typography": "Typography",
   "Base Font Size": "Base Font Size",
-
   "Desktop": "Desktop",
   "Mobile": "Mobile",
   "Sample Data": "Sample Data",
   "Send Test Email": "Send Test Email",
   "Coming Soon": "Coming Soon",
-
   "You have unsaved changes. Do you want to discard them?": "You have unsaved changes. Do you want to discard them?",
   "Discard": "Discard",
-
   "The return you are looking for does not exist": "The return you are looking for does not exist",
   "This customer has no return history": "This customer has no return history",
   "No addresses on file": "No addresses on file",
@@ -745,7 +693,6 @@
   "Get started by creating your first return": "Get started by creating your first return",
   "Email Language": "Email Language",
   "Language used for automated email notifications sent to customers": "Language used for automated email notifications sent to customers",
-
   "Portal Setup & Registration": "Portal Setup & Registration",
   "Configure portal access and registration options": "Configure portal access and registration options",
   "Enable Customer Portal": "Enable Customer Portal",
@@ -777,7 +724,6 @@
   "Getting Started Guide": "Getting Started Guide",
   "Show new customers a getting started guide on first login": "Show new customers a getting started guide on first login",
   "Security settings for customer sessions": "Security settings for customer sessions",
-
   "Corporate Identity": "Corporate Identity",
   "Logo, typography and visual identity for the customer portal": "Logo, typography and visual identity for the customer portal",
   "Favicon URL": "Favicon URL",
@@ -790,7 +736,6 @@
   "Medium": "Medium",
   "Large": "Large",
   "Preview": "Preview",
-
   "Color Scheme": "Color Scheme",
   "Define the color palette for the customer portal": "Define the color palette for the customer portal",
   "Secondary Color": "Secondary Color",
@@ -801,7 +746,6 @@
   "Header Text Color": "Header Text Color",
   "Sidebar Background": "Sidebar Background",
   "Sidebar Text Color": "Sidebar Text Color",
-
   "Customize the login page appearance": "Customize the login page appearance",
   "Layout Style": "Layout Style",
   "Centered": "Centered",
@@ -811,7 +755,6 @@
   "Background Image URL": "Background Image URL",
   "Welcome Title": "Welcome Title",
   "Welcome Subtitle": "Welcome Subtitle",
-
   "Footer": "Footer",
   "Configure the portal footer": "Configure the portal footer",
   "Copyright Text": "Copyright Text",
@@ -820,14 +763,11 @@
   "Footer Links": "Footer Links",
   "Label": "Label",
   "Add": "Add",
-
   "Message shown on the dashboard after login": "Message shown on the dashboard after login",
   "Welcome to our customer portal...": "Welcome to our customer portal...",
-
   "Custom CSS": "Custom CSS",
   "Add custom CSS to override portal styles": "Add custom CSS to override portal styles",
   "Available CSS variables: --portal-primary, --portal-secondary, --portal-accent, --portal-radius": "Available CSS variables: --portal-primary, --portal-secondary, --portal-accent, --portal-radius",
-
   "Image": "Image",
   "Social Links": "Social Links",
   "Social": "Social",
@@ -867,7 +807,6 @@
   "Click a block to edit its settings": "Click a block to edit its settings",
   "Apply Corporate Design": "Apply Corporate Design",
   "No logo set": "No logo set",
-
   "Visual Builder": "Visual Builder",
   "New Workflow": "New Workflow",
   "Node Palette": "Node Palette",
@@ -972,7 +911,6 @@
   "Delay": "Delay",
   "Trigger": "Trigger",
   "Action": "Action",
-
   "Drag nodes from palette": "Drag nodes from the palette",
   "Start by dragging a trigger node onto the canvas, then add conditions and actions.": "Start by dragging a trigger node onto the canvas, then add conditions and actions.",
   "Fit to View": "Fit to View",
@@ -1037,7 +975,6 @@
   "An unexpected error occurred. Please try again.": "An unexpected error occurred. Please try again.",
   "Portal not found": "Portal not found",
   "Ticket creation is currently unavailable": "Ticket creation is currently unavailable",
-
   "Portal Design": "Portal Design",
   "Portal Setup": "Portal Setup",
   "Portal Links": "Portal Links",
@@ -1049,11 +986,9 @@
   "License & Usage": "License & Usage",
   "Welcome back": "Welcome back",
   "Sign in to your account": "Sign in to your account",
-
   "Search product...": "Search product...",
   "No products found": "No products found",
   "Or type custom name": "Or type custom name",
-
   "Shipment Tracking": "Shipment Tracking",
   "Track on DHL": "Track on DHL",
   "Last updated": "Last updated",
@@ -1062,14 +997,12 @@
   "Out for Delivery": "Out for Delivery",
   "Tracking data unavailable": "Tracking data unavailable",
   "Auto-refreshes every minute": "Auto-refreshes every minute",
-
   "Your shipping label is ready!": "Your shipping label is ready!",
   "Download Shipping Label (PDF)": "Download Shipping Label (PDF)",
   "Label expires on {{date}}": "Label expires on {{date}}",
   "Download step": "Download",
   "Print step": "Print",
   "Drop off step": "Drop off",
-
   "Embed Widget": "Embed Widget",
   "Embed your returns portal on any website": "Embed your returns portal on any website",
   "Widget Type": "Widget Type",
@@ -1097,7 +1030,6 @@
   "How can we help you?": "How can we help you?",
   "Back to Overview": "Back to Overview",
   "Open in new tab": "Open in new tab",
-
   "Shipping": "Shipping",
   "Generate Return Label": "Generate Return Label",
   "Generate DHL Return Label": "Generate DHL Return Label",
@@ -1130,7 +1062,6 @@
   "Your Address": "Your Address",
   "We need your address to create a return shipping label": "We need your address to create a return shipping label",
   "Shipping Method": "Shipping Method",
-
   "DHL Integration Status": "DHL Integration Status",
   "DHL Parcel DE connection for return shipping labels and tracking": "DHL Parcel DE connection for return shipping labels and tracking",
   "DHL Connected": "DHL Connected",
@@ -1156,7 +1087,6 @@
   "Automatic actions for return processing": "Automatic actions for return processing",
   "Auto-generate return label on approval": "Auto-generate return label on approval",
   "Automatically create a DHL return label when a return is approved. Requires a customer address on file.": "Automatically create a DHL return label when a return is approved. Requires a customer address on file.",
-
   "Customer Information": "Customer Information",
   "Mark as Shipped": "Mark as Shipped",
   "Parcel shipped by customer": "Parcel shipped by customer",
@@ -1164,7 +1094,6 @@
   "Parcel delivered to warehouse": "Parcel delivered to warehouse",
   "Complete Return": "Complete Return",
   "Return completed": "Return completed",
-
   "Inspection": "Inspection",
   "Select condition": "Select condition",
   "Inspection Notes": "Inspection Notes",
@@ -1205,7 +1134,6 @@
   "Confirm Rejection": "Confirm Rejection",
   "The refund amount will be reduced by the deduction.": "The refund amount will be reduced by the deduction.",
   "This will reject the return after inspection. The customer will be notified.": "This will reject the return after inspection. The customer will be notified.",
-
   "Step completed": "Step completed",
   "Review this return": "Review this return",
   "Approve or reject the return request": "Approve or reject the return request",
@@ -1244,5 +1172,29 @@
   "No branch": "No branch",
   "Table view": "Table view",
   "Kanban view": "Kanban view",
-  "Action failed": "Action failed"
+  "Action failed": "Action failed",
+  "Workflow execution": "Workflow execution",
+  "Server execution": "Server execution",
+  "Server workflows continue when the app is closed. Enable server execution for each rule after reviewing its actions.": "Server workflows continue when the app is closed. Enable server execution for each rule after reviewing its actions.",
+  "Select workflow": "Select workflow",
+  "Apply to": "Apply to",
+  "Without linked record": "Without linked record",
+  "Search records": "Search records",
+  "Select record": "Select record",
+  "Workflow queued": "Workflow queued",
+  "Run now": "Run now",
+  "Recent runs": "Recent runs",
+  "Workflow history could not be loaded.": "Workflow history could not be loaded.",
+  "No workflow runs yet.": "No workflow runs yet.",
+  "Execution queued": "Execution queued",
+  "Execution waiting": "Execution waiting",
+  "Execution completed": "Execution completed",
+  "Execution failed": "Execution failed",
+  "Execution cancelled": "Execution cancelled",
+  "Resume at": "Resume at",
+  "Enable server execution on the workflow list to run this trigger.": "Enable server execution on the workflow list to run this trigger.",
+  "Unresolved for days": "Unresolved for days",
+  "Measured from return creation. Closed returns are excluded.": "Measured from return creation. Closed returns are excluded.",
+  "Runs once per exceeded ticket resolution deadline.": "Runs once per exceeded ticket resolution deadline.",
+  "Time zone": "Time zone"
 }

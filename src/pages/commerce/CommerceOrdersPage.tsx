@@ -25,7 +25,7 @@ import { OrderItemsDialog } from '@/components/commerce/OrderItemsDialog';
 import { PageContainer } from '@/components/layout/page-container';
 
 export function CommerceOrdersPage() {
-  const { t } = useTranslation('commerce');
+  const { t, i18n } = useTranslation('commerce');
   const [orders, setOrders] = useState<CommerceOrder[]>([]);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,26 @@ export function CommerceOrdersPage() {
           </Card>
 
           {/* Orders table */}
-          <Card className="overflow-hidden">
+          <div className="space-y-3 md:hidden">
+            {loading && <p role="status" className="p-4 text-muted-foreground">{t('Loading…')}</p>}
+            {!loading && orders.length === 0 && <p className="p-4 text-muted-foreground">{t('No orders match these filters.')}</p>}
+            {!loading && orders.map(order => (
+              <button key={order.id} type="button" onClick={() => setDetailOrderId(order.id)} title={t('Open line items')}
+                className="w-full min-w-0 space-y-3 rounded-xl border bg-card p-4 text-left shadow-sm focus-visible:outline-2 focus-visible:outline-primary">
+                <span className="flex min-w-0 items-center gap-2">
+                  <PlatformIcon platform={order.platform} size={20} />
+                  <span className="min-w-0 flex-1 break-all font-medium">{getPlatformDescriptor(order.platform).label} · {order.externalOrderNumber || order.externalOrderId}</span>
+                </span>
+                <span className="block break-words text-sm">{order.customerName || order.customerEmail || '—'} · {order.customerCountryName || order.customerCountry || '—'}</span>
+                <span className="flex flex-wrap justify-between gap-2 text-sm">
+                  <span>{t('Items')}: {order.itemCount} · {t('DPP linked')}: {order.dppLinkedCount}/{order.dppTotalCount}</span>
+                  <span className="font-semibold tabular-nums">{new Intl.NumberFormat(i18n.language, { style: 'currency', currency: order.currency }).format(order.totalAmount)}</span>
+                </span>
+                <span className="block text-xs text-muted-foreground">{new Date(order.placedAt).toLocaleString(i18n.language)}</span>
+              </button>
+            ))}
+          </div>
+          <Card className="hidden overflow-hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b bg-muted/50 text-left">
@@ -127,7 +146,7 @@ export function CommerceOrdersPage() {
                           <span className="text-xs text-muted-foreground">{getPlatformDescriptor(o.platform).label}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-2 font-medium">{o.externalOrderNumber || o.externalOrderId.slice(0, 12)}</td>
+                      <td className="px-4 py-2 font-medium"><button type="button" className="min-h-11 text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary" onClick={(event) => { event.stopPropagation(); setDetailOrderId(o.id); }}>{o.externalOrderNumber || o.externalOrderId.slice(0, 12)}</button></td>
                       <td className="px-4 py-2 text-muted-foreground">{o.customerName || o.customerEmail || '—'}</td>
                       <td className="px-4 py-2 text-muted-foreground">{o.customerCountryName || o.customerCountry || '—'}</td>
                       <td className="px-4 py-2 tabular-nums">{o.itemCount}</td>
@@ -146,7 +165,7 @@ export function CommerceOrdersPage() {
                         ) : '—'}
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums">
-                        {new Intl.NumberFormat('de-DE', { style: 'currency', currency: o.currency }).format(o.totalAmount)}
+                        {new Intl.NumberFormat(i18n.language, { style: 'currency', currency: o.currency }).format(o.totalAmount)}
                       </td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">{new Date(o.placedAt).toLocaleString()}</td>
                     </tr>

@@ -14,6 +14,7 @@
  */
 
 // deno-lint-ignore-file no-explicit-any
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encryptCredentials } from './commerce-crypto.ts';
 
 const API = 'https://api.etsy.com/v3/application';
@@ -39,7 +40,7 @@ function apiKeyHeader() {
  * connection to reauth_required rather than retry.
  */
 export async function refreshEtsyToken(
-  supabase: any,
+  supabase: SupabaseClient,
   connectionId: string,
   tenantId: string,
   refreshToken?: string,
@@ -77,7 +78,7 @@ export async function refreshEtsyToken(
 
 export interface TokenHolder {
   creds: EtsyCredentials;
-  supabase: any;
+  supabase: SupabaseClient;
   connectionId: string;
   tenantId: string;
 }
@@ -122,22 +123,23 @@ export async function etsyFetch(holder: TokenHolder, path: string, query?: Recor
  * some payloads carry a plain number.  Accept both so a schema drift degrades
  * to a correct number rather than NaN in the dashboard.
  */
-export function money(value: any): number {
+export function money(value: unknown): number {
   if (value == null) return 0;
   if (typeof value === 'number') return value;
   if (typeof value === 'string') return Number(value) || 0;
+  if (typeof value !== 'object' || !('amount' in value)) return 0;
   const amount = Number(value.amount);
-  const divisor = Number(value.divisor);
+  const divisor = Number('divisor' in value ? value.divisor : 1);
   if (!Number.isFinite(amount)) return 0;
   return Number.isFinite(divisor) && divisor > 0 ? amount / divisor : amount;
 }
 
-export function currencyOf(value: any, fallback = 'EUR'): string {
-  return (value && typeof value === 'object' && value.currency_code) || fallback;
+export function currencyOf(value: unknown, fallback = 'EUR'): string {
+  return value && typeof value === 'object' && 'currency_code' in value && typeof value.currency_code === 'string' && value.currency_code ? value.currency_code : fallback;
 }
 
 /** Etsy timestamps are unix seconds under either `*_timestamp` spelling. */
-export function tsToIso(seconds: any): string | null {
+export function tsToIso(seconds: unknown): string | null {
   const n = Number(seconds);
   return Number.isFinite(n) && n > 0 ? new Date(n * 1000).toISOString() : null;
 }
