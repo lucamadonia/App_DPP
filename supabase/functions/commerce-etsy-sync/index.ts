@@ -274,7 +274,11 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
   const { data: previousItems, error: previousError } = await supabase
     .from('commerce_order_items').select('*').eq('order_id', order.id).eq('tenant_id', tenantId);
   if (previousError) throw new Error(previousError.message);
-  const previousById = new Map((previousItems ?? []).map((i: any) => [i.external_item_id, i]));
+  const priorRows = (previousItems ?? []) as Array<{
+    id: string; external_item_id: string | null; product_id: string | null;
+    gtin: string | null; match_method: string | null; metadata: Record<string, unknown> | null;
+  }>;
+  const previousById = new Map(priorRows.map((i) => [i.external_item_id, i]));
 
   const skus = transactions.map((t) => t.sku).filter(Boolean).map(String);
   const productMap = await lookupProducts(supabase, tenantId, skus);
@@ -282,7 +286,7 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
   let linked = 0;
   const items = transactions.map((t) => {
     const sku = t.sku ? String(t.sku) : null;
-    const previous: any = previousById.get(String(t.transaction_id));
+    const previous = previousById.get(String(t.transaction_id));
     const match = previous?.match_method === 'manual' && previous.product_id
       ? { id: previous.product_id, gtin: previous.gtin, matchedBy: 'manual' }
       : sku ? productMap.get(sku.toLowerCase()) : undefined;
@@ -309,12 +313,12 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
       match_method: match ? match.matchedBy : null,
       match_confidence: match ? (match.matchedBy === 'manual' ? 1 : 0.99) : null,
       dpp_url: match ? `/products/${match.id}` : null,
-      metadata: {},
+      metadata: previous?.metadata ?? {},
     };
   });
 
   for (const item of items) {
-    const previous: any = previousById.get(item.external_item_id);
+    const previous = previousById.get(item.external_item_id);
     const { error: itemError } = previous
       ? await supabase.from('commerce_order_items').update(item).eq('id', previous.id).eq('tenant_id', tenantId)
       : await supabase.from('commerce_order_items').insert(item);
@@ -322,7 +326,7 @@ async function importReceipt(supabase: any, conn: any, tenantId: string, receipt
   }
   // Delete only transactions that Etsy actually removed, after successful writes.
   const currentIds = new Set(items.map((item) => item.external_item_id));
-  const staleIds = (previousItems ?? []).filter((item: any) => !currentIds.has(item.external_item_id)).map((item: any) => item.id);
+  const staleIds = priorRows.filter((item) => !currentIds.has(item.external_item_id)).map((item) => item.id);
   if (staleIds.length) {
     const { error } = await supabase.from('commerce_order_items').delete().in('id', staleIds).eq('tenant_id', tenantId);
     if (error) throw new Error(error.message);
