@@ -54,6 +54,8 @@ Secrets:
 - `IOS_PROVISIONING_PROFILE_BASE64`
 - `APPLE_ID`
 - `APPLE_APP_SPECIFIC_PASSWORD`
+- `VITE_SUPABASE_URL` — production Trackbliss Supabase URL
+- `VITE_SUPABASE_ANON_KEY` — public anon/publishable key, never a service-role key
 
 Variables:
 
@@ -65,3 +67,9 @@ workflow** > `platform: ios` performs all local gates, builds with Xcode 26,
 validates the IPA, and uploads it to TestFlight. App Review submission remains
 an explicit App Store Connect action after metadata, privacy answers, screenshots,
 and the review account have been confirmed.
+
+To verify compilation and signing while Apple account setup is still pending,
+select `platform: ios` and `verify_only: true`. This exports the signed
+`ios-release-ipa` artifact without validating or uploading it to Apple. A green
+verification run is not evidence of TestFlight availability. Leave
+`verify_only: false` for the subsequent upload; all Apple upload gates still apply.
