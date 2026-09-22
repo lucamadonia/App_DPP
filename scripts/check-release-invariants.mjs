@@ -71,7 +71,8 @@ for (const required of [
   'xcodebuild -project App.xcodeproj',
   'Match tag to package version',
   'Upload to Play internal testing',
-  'Require iOS release credentials for tagged release',
+  'Check TestFlight upload configuration',
+  'Verify production backend configuration',
   'Validate App Store package',
   'Upload to TestFlight',
 ]) {

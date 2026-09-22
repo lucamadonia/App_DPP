@@ -20,6 +20,10 @@ on:
           - ios
           - android
           - all
+      verify_only:
+        description: Build a signed iOS IPA without uploading to TestFlight
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -45,6 +49,7 @@ jobs:
         run: |
           npm run check:release
           npm run check:native
+          node --test scripts/check-ios-build-env.test.mjs
 
       - name: Unit tests
         run: npm run test:run
@@ -176,6 +181,9 @@ jobs:
     needs: preflight
     runs-on: macos-26
     environment: app-store
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -196,8 +204,8 @@ jobs:
         id: guard
         run: |
           if [ ! -d "ios/App" ]; then
-            echo "::warning::ios/ is missing. Run 'npx cap add ios' on a Mac and commit it before releasing to the App Store."
-            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::error::ios/ is missing. Commit the iOS platform before releasing."
+            exit 1
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
@@ -210,6 +218,9 @@ jobs:
 
       - run: npm ci
         if: steps.guard.outputs.present == 'true'
+
+      - name: Verify production backend configuration
+        run: node scripts/check-ios-build-env.mjs
 
       # Same reason as the Android job above: build:native sets CAPACITOR_BUILD=1
       # so no service worker is emitted into the bundle. iOS happens to be safer
@@ -237,10 +248,9 @@ jobs:
           sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" App.xcodeproj/project.pbxproj
           echo "Building $VERSION_NAME ($BUILD_NUMBER)"
 
-      # Same pattern as the Play upload below: the `secrets` context is not
-      # available in a step-level `if`, so presence has to be turned into an
-      # output first. Without this the job FAILS when no certificate is set up
-      # yet - which is not a broken pipeline, just an incomplete Apple account.
+      # A verification run still signs and exports a real distribution IPA.
+      # Upload credentials are checked separately so account setup does not
+      # prevent proving compilation and signing on the macOS runner.
       - name: Check for signing credentials
         id: signing
         if: steps.guard.outputs.present == 'true'
@@ -248,34 +258,26 @@ jobs:
           CERT: ${{ secrets.IOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
           PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          if [ -n "$CERT" ] && [ -n "$CERT_PASSWORD" ] && [ -n "$PROFILE" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Missing iOS signing certificate, password or provisioning profile."
+            exit 1
+          fi
+
+      - name: Check TestFlight upload configuration
+        if: inputs.verify_only != true
+        env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APP_STORE_APP_ID: ${{ vars.APP_STORE_CONNECT_APP_ID }}
           APPLE_SIGN_IN_READY: ${{ vars.APPLE_SIGN_IN_CONFIGURED }}
         run: |
-          if [ -n "$CERT" ] && [ -n "$CERT_PASSWORD" ] && [ -n "$PROFILE" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$APP_STORE_APP_ID" ] && [ "$APPLE_SIGN_IN_READY" = "true" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::iOS release setup is incomplete - building unsigned and skipping TestFlight."
-            echo "::notice::Required: signing certificate/profile, Apple ID/app password, APP_STORE_CONNECT_APP_ID and APPLE_SIGN_IN_CONFIGURED=true."
-            echo "available=false" >> "$GITHUB_OUTPUT"
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || ! [[ "$APP_STORE_APP_ID" =~ ^[0-9]+$ ]] || [ "$APPLE_SIGN_IN_READY" != "true" ]; then
+            echo "::error::Required: Apple ID/app password, numeric APP_STORE_CONNECT_APP_ID and verified APPLE_SIGN_IN_CONFIGURED=true."
+            exit 1
           fi
-
-      # Proves the project still compiles even when there is nothing to sign
-      # with, so a signing gap never hides a real build regression.
-      - name: Verify it builds (unsigned)
-        if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true'
-        working-directory: ios/App
-        run: |
-          xcodebuild -project App.xcodeproj -scheme App \
-            -configuration Release -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build | tail -20
-
-      - name: Require iOS release credentials for tagged release
-        if: steps.guard.outputs.present == 'true' && steps.signing.outputs.available != 'true' && (github.ref_type == 'tag' || github.event_name == 'workflow_dispatch')
-        run: |
-          echo "::error::An iOS store run requires complete signing/upload credentials, an App Store Connect app record and configured Sign in with Apple."
-          exit 1
 
       - name: Install signing assets
         id: signing-assets
@@ -376,7 +378,7 @@ jobs:
           retention-days: 30
 
       - name: Validate App Store package
-        if: steps.signing.outputs.available == 'true'
+        if: steps.signing.outputs.available == 'true' && inputs.verify_only != true
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -386,7 +388,7 @@ jobs:
             -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD"
 
       - name: Upload to TestFlight
-        if: steps.signing.outputs.available == 'true'
+        if: steps.signing.outputs.available == 'true' && inputs.verify_only != true
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}

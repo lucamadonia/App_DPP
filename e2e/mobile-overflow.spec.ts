@@ -92,6 +92,9 @@ for (const route of PUBLIC_ROUTES) {
 }
 
 test('login form tap targets are large enough', async ({ page }) => {
+  // Measure final layout, not fractional boxes during the JS spring entrance.
+  // The page honors reduced motion, leaving the target-size assertion intact.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/login', { waitUntil: 'networkidle' });
 
   // The rule under test lives behind `@media (pointer: coarse)`, and whether a
