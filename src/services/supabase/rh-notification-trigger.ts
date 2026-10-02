@@ -70,7 +70,7 @@ export interface NotificationContext {
 // flips the row status to sent/failed.
 //
 // DO NOT also send from the client here. A previous client-side forward
-// (sendNotificationEmail → mail-hub-forward) ran IN ADDITION to the trigger,
+// (sendNotificationEmail → mail-hub-forward, now removed) ran IN ADDITION to the trigger,
 // so every client-initiated mail was dispatched twice — once by the client
 // (region hard-coded 'dach') and once by notify-dispatch (region derived from
 // the recipient TLD, e.g. 'intl'). The Family-Joy receiver dedups on
