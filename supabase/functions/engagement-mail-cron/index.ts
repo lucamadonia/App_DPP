@@ -223,11 +223,13 @@ interface ShipmentRow {
   delivered_at: string;
 }
 
-// ─── Action: fire engagement.day_N mail for shipments delivered N days ago ──
+// ─── Action: fire engagement_day_N mail for shipments delivered N days ago ──
 
 interface EngagementDayConfig {
   delayDays: number;
-  triggerEvent: 'engagement.day_1' | 'engagement.day_14' | 'engagement.day_30';
+  // Family-Joy message_templates.trigger_event values (underscore form, as
+  // documented in RhNotificationEventType and the mail-hub templates).
+  triggerEvent: 'engagement_day_1' | 'engagement_day_14' | 'engagement_day_30';
   /**
    * Build the template context for a given shipment. Receives the shipment
    * row + extracted first name. Output map keys must match the placeholders

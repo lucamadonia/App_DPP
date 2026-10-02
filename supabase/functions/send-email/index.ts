@@ -19,6 +19,13 @@
  *     tenant SMTP config, and caps platform-sender mails of non-paying
  *     tenants at send time (tenant_mail_tier + smtp:platform:* buckets),
  *   - refuses empty / unrendered (render='server') rows.
+ *   - EF-07: free tenants on the platform sender additionally count against a
+ *     GLOBAL ceiling shared by all non-paying tenants
+ *     (smtp:platform:free:global:*, PLATFORM_FREE_GLOBAL_HOURLY / _DAILY), and
+ *     their mails are sent as plain text only (HTML flattened, links shown as
+ *     visible URLs), with the display name forced to "<tenant> via Trackbliss"
+ *     and a fixed sender footer (_shared/platform-mail-policy.ts). Rollback
+ *     switch: PLATFORM_FREE_HTML_POLICY=allow.
  *
  * ROLLOUT ORDER (mandatory, docs/releases/golive-20261001-mail-rollout.md):
  *   1. migration 20261001d (claim_rh_notification, tenant_mail_tier,
@@ -46,10 +53,25 @@ import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 import { logToCentralLog } from '../_shared/mail-hub.ts';
 import { isServiceRoleRequest } from '../_shared/service-auth.ts';
 import { enforceRateLimits } from '../_shared/rate-limit.ts';
+import { freeTierPlainBody, platformDisplayName } from '../_shared/platform-mail-policy.ts';
 
 /** Platform-sender (noreply@trackbliss.eu) budget per non-paying tenant. */
 const PLATFORM_FREE_HOURLY = 60;
 const PLATFORM_FREE_DAILY = 300;
+
+function intEnv(name: string, fallback: number): number {
+  const n = parseInt(Deno.env.get(name) || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/**
+ * EF-07: ceiling for ALL non-paying tenants combined on the platform sender,
+ * so mass sign-ups cannot multiply the per-tenant budget.
+ */
+const PLATFORM_FREE_GLOBAL_HOURLY = intEnv('PLATFORM_FREE_GLOBAL_HOURLY', 600);
+const PLATFORM_FREE_GLOBAL_DAILY = intEnv('PLATFORM_FREE_GLOBAL_DAILY', 3000);
+/** 'plaintext' (default) or 'allow' (rollback: send free-tier HTML unchanged). */
+const PLATFORM_FREE_HTML_POLICY = (Deno.env.get('PLATFORM_FREE_HTML_POLICY') || 'plaintext').toLowerCase();
 
 const SMTP_HOST = Deno.env.get('SMTP_HOST') || '';
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '465', 10);
@@ -197,20 +219,40 @@ Deno.serve(async (req) => {
     // insert-time caps can be raced (complete SMTP config while queueing →
     // blank it before delivery), this cannot. Generous enough for portal
     // confirmations and cron mails of a small free tenant.
+    // Free tenant on the platform sender: restricted presentation (EF-07).
+    let freePlatform: { tenantName: string } | null = null;
     if (!tenantSmtp && record.tenant_id) {
       const { data: tier, error: tierError } = await supabase
         .rpc('tenant_mail_tier', { p_tenant_id: record.tenant_id });
       if (tierError) console.error('send-email tenant_mail_tier failed:', tierError.message);
       if (tier !== 'paid') {
         // Fail open on counter errors: the insert-time guard still applies and
-        // a transient DB error must not drop a customer's mail.
+        // a transient DB error must not drop a customer's mail. Per-tenant
+        // buckets first, so a tenant over its own quota does not use up the
+        // shared global budget.
         const verdict = await enforceRateLimits(supabase, [
           { bucket: `smtp:platform:h:${record.tenant_id}`, limit: PLATFORM_FREE_HOURLY, windowSeconds: 3600 },
           { bucket: `smtp:platform:d:${record.tenant_id}`, limit: PLATFORM_FREE_DAILY, windowSeconds: 86400 },
+          { bucket: 'smtp:platform:free:global:h', limit: PLATFORM_FREE_GLOBAL_HOURLY, windowSeconds: 3600 },
+          { bucket: 'smtp:platform:free:global:d', limit: PLATFORM_FREE_GLOBAL_DAILY, windowSeconds: 86400 },
         ], { failOpen: true });
         if (!verdict.allowed) {
-          await markFailed(record.id, record.metadata, 'platform_quota_exceeded');
-          return json({ error: 'platform_quota_exceeded' });
+          const reason = verdict.exceeded?.startsWith('smtp:platform:free:global')
+            ? 'platform_global_quota_exceeded'
+            : 'platform_quota_exceeded';
+          if (reason === 'platform_global_quota_exceeded') {
+            console.error('send-email: global free-tier platform ceiling reached');
+          }
+          await markFailed(record.id, record.metadata, reason);
+          return json({ error: reason });
+        }
+        if (PLATFORM_FREE_HTML_POLICY !== 'allow') {
+          const { data: tenantRow } = await supabase
+            .from('tenants')
+            .select('name')
+            .eq('id', record.tenant_id)
+            .maybeSingle();
+          freePlatform = { tenantName: typeof tenantRow?.name === 'string' ? tenantRow.name : '' };
         }
       }
     }
@@ -220,7 +262,10 @@ Deno.serve(async (req) => {
     const effectiveUser = tenantSmtp?.username || SMTP_USER;
     const effectivePass = tenantSmtp?.password || SMTP_PASS;
     const effectiveFromAddress = tenantSmtp?.from_address || SMTP_FROM;
-    const effectiveFromName = (tenantSmtp?.from_name || senderName).replace(/[\r\n"<>]/g, ' ').trim();
+    // Free tier on the platform sender: the display name is not tenant-chosen.
+    const effectiveFromName = freePlatform
+      ? platformDisplayName(freePlatform.tenantName)
+      : (tenantSmtp?.from_name || senderName).replace(/[\r\n"<>]/g, ' ').trim();
     const effectiveUseTls = tenantSmtp?.use_tls ?? useTls;
 
     if (!effectiveHost || !effectiveUser || !effectivePass) {
@@ -231,7 +276,13 @@ Deno.serve(async (req) => {
     const fromAddress = effectiveFromName
       ? `${effectiveFromName} <${effectiveFromAddress}>`
       : effectiveFromAddress;
-    const htmlBody = isHtml ? record.content : wrapPlainTextAsHtml(record.content || '', effectiveFromName);
+    // Free tier on the platform sender: never deliver tenant-authored HTML.
+    const htmlBody = freePlatform
+      ? wrapPlainTextAsHtml(
+        freeTierPlainBody(String(record.content || ''), isHtml, freePlatform.tenantName, String(record.metadata?.locale || '')),
+        effectiveFromName,
+      )
+      : isHtml ? record.content : wrapPlainTextAsHtml(record.content || '', effectiveFromName);
 
     // One short-lived SMTP connection per message.
     const client = new SMTPClient({
@@ -283,6 +334,7 @@ Deno.serve(async (req) => {
         channel: record.channel ?? 'email',
         notification_id: record.id,
         used_tenant_smtp: !!tenantSmtp,
+        free_platform_plaintext: !!freePlatform,
       },
     }).catch(() => { /* never propagate logging errors */ });
 

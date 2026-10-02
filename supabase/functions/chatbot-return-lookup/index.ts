@@ -1,10 +1,18 @@
+/**
+ * Supabase Edge Function: chatbot-return-lookup
+ *
+ * Return status lookup for the support chatbot. Hardened (EF-09): requires the
+ * CHATBOT_SHARED_SECRET header, persistent rate limits, and one uniform
+ * not-found answer for unknown tenant / return / email.
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-};
+import {
+  chatbotCorsHeaders as corsHeaders,
+  chatbotJson as jsonResponse,
+  checkChatbotSecret,
+  enforceChatbotLimits,
+  NOT_FOUND_MESSAGE,
+} from '../_shared/chatbot-guard.ts';
 
 const STATUS_LABELS_DE: Record<string, string> = {
   CREATED: 'Erstellt — Retoure wurde registriert',
@@ -30,6 +38,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
+  const denied = checkChatbotSecret(req);
+  if (denied) return denied;
+
   let body: { return_number?: string; email?: string; tenant_slug?: string };
   try {
     body = await req.json();
@@ -37,9 +48,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
-  const returnNumber = (body.return_number || '').trim();
-  const email = (body.email || '').trim().toLowerCase();
-  const tenantSlug = (body.tenant_slug || '').trim();
+  const returnNumber = (body.return_number || '').trim().replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 64);
+  const email = (body.email || '').trim().toLowerCase().slice(0, 254);
+  const tenantSlug = (body.tenant_slug || '').trim().replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 80);
 
   if (!returnNumber || !email || !tenantSlug) {
     return jsonResponse({
@@ -61,18 +72,25 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. Resolve tenant
+    const limited = await enforceChatbotLimits(supabase, req, {
+      fn: 'return-lookup',
+      email,
+      tenantSlug,
+      reference: returnNumber,
+    });
+    if (limited) return limited;
+
+    const notFound = () => jsonResponse({ found: false, message: NOT_FOUND_MESSAGE }, 200);
+
+    // 1. Resolve tenant (unknown tenant answers exactly like an unknown return)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('id, name')
       .eq('slug', tenantSlug)
-      .single();
+      .maybeSingle();
 
     if (tenantError || !tenant) {
-      return jsonResponse({
-        found: false,
-        message: 'Tenant nicht gefunden. Bitte prüfe den Shop-Namen.',
-      }, 404);
+      return notFound();
     }
 
     // 2. Look up return with customer join, filtered by tenant.
@@ -105,15 +123,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (returnError) {
-      console.error('Failed to query return:', returnError);
+      console.error('Failed to query return:', returnError.message);
       return jsonResponse({ error: 'Database error' }, 500);
     }
 
     if (!ret) {
-      return jsonResponse({
-        found: false,
-        message: `Keine Retoure mit der Nummer ${returnNumber} gefunden. Bitte prüfe die Nummer.`,
-      }, 200);
+      return notFound();
     }
 
     // 3. Verify email matches (identity check — prevents leak across customers).
@@ -129,10 +144,7 @@ Deno.serve(async (req) => {
 
     if (customerEmail !== email && metadataEmail !== email) {
       // Same error as "not found" — don't reveal that the return exists with a different email
-      return jsonResponse({
-        found: false,
-        message: `Keine Retoure mit der Nummer ${returnNumber} unter dieser E-Mail-Adresse gefunden.`,
-      }, 200);
+      return notFound();
     }
 
     // 4. Fetch latest 3 timeline entries (status history)
@@ -250,9 +262,3 @@ function buildSummary(ret: any, statusLabel: string, customerName: string, links
   return parts.join(' ');
 }
 
-function jsonResponse(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}

@@ -12,6 +12,7 @@ import {
   tenantIdsWithSecrets,
   isServiceRoleBearer,
 } from '../_shared/tenant-secrets.ts';
+import { enforceRateLimits, getClientIp, hashKey, rateLimitedResponse } from '../_shared/rate-limit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     if (action === 'public_create_return_label') {
       if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: 'Server misconfigured' });
       const pubSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      return await handlePublicCreateReturnLabel(pubSupabase, params);
+      return await handlePublicCreateReturnLabel(pubSupabase, params, req);
     }
 
     // --- Cron-mode: poll all tenants. Requires Authorization: Bearer <SERVICE_ROLE_KEY> ---
@@ -2012,20 +2013,51 @@ function getDHLReturnsBaseUrl(settings: any): string {
  
 /**
  * Public: a customer creates (or re-chooses the format of) their own return
- * label from the portal. Validated by return_number + email — no auth. Allows
- * QR / PDF / both via labelType. If a label already exists, it's cleared first
- * so the customer can switch format (the abandoned DHL label is free/unused).
+ * label from the portal. Validated by return_number + email — no auth.
+ *
+ * Hardening (EF-08):
+ *   - persistent rate limits per IP and per return number BEFORE the lookup
+ *     (also throttles email guessing), per return (3 generations/day + a 60 s
+ *     single-flight lock against concurrent double clicks) and per tenant,
+ *     failing closed because every generation is a paid DHL order,
+ *   - the tenant must have an active Returns Hub module, exactly like the
+ *     authenticated create_return_label path,
+ *   - idempotent: an existing, non-cancelled label in the requested format (or
+ *     BOTH) is returned instead of creating a new DHL order. A format switch
+ *     first cancels the old Shipping-v2 label at DHL; Returns-API labels cannot
+ *     be cancelled via API, so their format cannot be switched publicly.
  */
-async function handlePublicCreateReturnLabel(supabase: SupabaseClient, params?: Record<string, unknown>) {
-  const returnNumber = String(params?.return_number || params?.returnNumber || '').trim();
-  const email = String(params?.email || '').trim().toLowerCase();
+const PUBLIC_LABEL_LIMITS = {
+  ipPerHour: 20,
+  returnNumberPerHour: 10,
+  generationsPerReturnPerDay: 3,
+  tenantPerDay: 200,
+};
+
+async function handlePublicCreateReturnLabel(
+  supabase: SupabaseClient,
+  params: Record<string, unknown> | undefined,
+  req: Request,
+) {
+  const returnNumber = String(params?.return_number || params?.returnNumber || '').trim().slice(0, 64);
+  const email = String(params?.email || '').trim().toLowerCase().slice(0, 254);
   const ALLOWED = ['SHIPMENT_LABEL', 'QR_LABEL', 'BOTH'];
   const labelType = ALLOWED.includes(String(params?.labelType || '')) ? String(params!.labelType) : 'BOTH';
   if (!returnNumber || !email) return json({ error: 'Bitte Retourennummer und E-Mail angeben.' }, 400);
 
+  const tooMany = (retry: number) =>
+    rateLimitedResponse(retry, corsHeaders, 'Zu viele Anfragen. Bitte versuche es später noch einmal.');
+
+  // 1. Throttle before touching the database (fail closed: cost-bearing).
+  const pre = await enforceRateLimits(supabase, [
+    { bucket: `dhl:publabel:ip:${await hashKey(getClientIp(req))}`, limit: PUBLIC_LABEL_LIMITS.ipPerHour, windowSeconds: 3600 },
+    { bucket: `dhl:publabel:ref:${await hashKey(returnNumber)}`, limit: PUBLIC_LABEL_LIMITS.returnNumberPerHour, windowSeconds: 3600 },
+  ], { failOpen: false });
+  if (!pre.allowed) return tooMany(pre.retryAfterSeconds);
+
   const { data: ret } = await supabase
     .from('rh_returns')
-    .select('id, tenant_id, status, metadata, customer_id, tracking_number')
+    .select('id, tenant_id, status, metadata, customer_id, tracking_number, label_url, carrier_label_data')
     .eq('return_number', returnNumber)
     .maybeSingle();
 
@@ -2046,14 +2078,57 @@ async function handlePublicCreateReturnLabel(supabase: SupabaseClient, params?: 
     return json({ error: 'Das Label kann erst erstellt werden, sobald die Retoure genehmigt wurde.' }, 400);
   }
 
-  // Clear any existing label so handleCreateReturnLabel can regenerate in the
-  // newly chosen format (lets the customer switch between QR/PDF/both).
-  if (ret.tracking_number) {
-    await supabase
-      .from('rh_returns')
-      .update({ tracking_number: null, label_url: null, carrier_label_data: null })
-      .eq('id', ret.id)
-      .eq('tenant_id', ret.tenant_id);
+  // 2. Same module gate as the authenticated create_return_label action.
+  const { data: activeMods } = await supabase
+    .from('billing_module_subscriptions')
+    .select('module_id')
+    .eq('tenant_id', ret.tenant_id)
+    .eq('status', 'active');
+  const hasReturnsHub = (activeMods || []).some((m: { module_id: string }) =>
+    typeof m.module_id === 'string' && m.module_id.startsWith('returns_hub_'));
+  if (!hasReturnsHub) {
+    return json({ error: 'Die Label-Erstellung ist für diesen Shop derzeit nicht verfügbar. Bitte wende dich an den Support.' }, 403);
+  }
+
+  // 3. Idempotency: reuse an existing, non-cancelled label.
+  const cld = (ret.carrier_label_data || {}) as Record<string, unknown>;
+  const hasActiveLabel = !!ret.tracking_number && !!cld.dhlShipmentNumber && !cld.cancelledAt;
+  if (hasActiveLabel) {
+    const existingType = typeof cld.labelType === 'string' ? cld.labelType : 'SHIPMENT_LABEL';
+    if (existingType === labelType || existingType === 'BOTH') {
+      return json({
+        success: true,
+        reused: true,
+        trackingNumber: ret.tracking_number,
+        shipmentNumber: ret.tracking_number,
+        labelUrl: ret.label_url || '',
+      });
+    }
+    if ((cld.apiType || 'shipping_v2') !== 'shipping_v2') {
+      return json({
+        error: 'Für diese Retoure wurde bereits ein Label erstellt. Bitte wende dich an den Support, wenn du ein anderes Format brauchst.',
+      }, 409);
+    }
+  }
+
+  // 4. Per-return / per-tenant budget + single-flight lock, counted only for
+  //    calls that will really create a DHL order.
+  const gen = await enforceRateLimits(supabase, [
+    { bucket: `dhl:publabel:lock:${ret.id}`, limit: 1, windowSeconds: 60 },
+    { bucket: `dhl:publabel:gen:${ret.id}`, limit: PUBLIC_LABEL_LIMITS.generationsPerReturnPerDay, windowSeconds: 86400 },
+    { bucket: `dhl:publabel:tenant:${ret.tenant_id}`, limit: PUBLIC_LABEL_LIMITS.tenantPerDay, windowSeconds: 86400 },
+  ], { failOpen: false });
+  if (!gen.allowed) return tooMany(gen.retryAfterSeconds);
+
+  // 5. Format switch of a Shipping-v2 label: cancel the old one at DHL first,
+  //    never leave a second live label behind.
+  if (hasActiveLabel) {
+    const cancelRes = await handleCancelReturnLabel(supabase, ret.tenant_id, { returnId: ret.id });
+    const cancelBody = await cancelRes.json().catch(() => null);
+    if (!cancelRes.ok || !cancelBody?.success) {
+      console.error('[dhl-shipping] public label switch: cancel failed for return', ret.id);
+      return json({ error: 'Das bestehende Label konnte nicht storniert werden. Bitte wende dich an den Support.' }, 502);
+    }
   }
 
   return await handleCreateReturnLabel(supabase, ret.tenant_id, { returnId: ret.id, labelType });

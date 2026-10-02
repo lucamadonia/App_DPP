@@ -3,6 +3,7 @@
  *
  * Creates a Stripe Customer Portal session for managing
  * existing subscriptions, payment methods, and invoices.
+ * Tenant admins only (EF-06).
  *
  * Deployment:
  *   supabase functions deploy create-portal-session
@@ -55,12 +56,18 @@ Deno.serve(async (req) => {
     // Get tenant's Stripe customer ID
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('id', user.id)
       .single();
 
     if (!profile?.tenant_id) {
       return jsonResponse({ error: 'No tenant found' }, 400);
+    }
+
+    // EF-06: billing changes (subscribe, cancel, payment methods) are
+    // tenant-admin only, like manage-vercel-domain and invite-user.
+    if (profile.role !== 'admin') {
+      return jsonResponse({ error: 'Only tenant admins can manage billing' }, 403);
     }
 
     const { data: tenant } = await supabase
@@ -88,9 +95,9 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ url: session.url });
   } catch (error) {
-    console.error('create-portal-session error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return jsonResponse({ error: msg }, 500);
+    // Log details server-side only; raw Stripe errors are not returned.
+    console.error('create-portal-session error:', error instanceof Error ? error.message : String(error));
+    return jsonResponse({ error: 'Could not open the billing portal' }, 500);
   }
 });
 

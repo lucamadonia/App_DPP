@@ -19,6 +19,7 @@ project_id = "trackbliss"
 # Not listed on purpose: mail-hub-forward. It is a deprecated open signed relay
 # (SEC-15) and must be deleted, not deployed; without an entry the deploy script
 # refuses it.
+# Likewise chatbot-create-return (EF-09): superseded by chatbot-create, deleted.
 # =============================================================================
 
 [functions.address-validation]
@@ -32,10 +33,10 @@ verify_jwt = true
 [functions.auth-email-hook]
 verify_jwt = false
 
+# Support chatbot (server-to-server, public anon key). The lookups require the
+# x-chatbot-secret header (CHATBOT_SHARED_SECRET, fail closed when unset) and
+# are rate limited via _shared/chatbot-guard.ts (EF-09).
 [functions.chatbot-create]
-verify_jwt = true
-
-[functions.chatbot-create-return]
 verify_jwt = true
 
 [functions.chatbot-lookup]

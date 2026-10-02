@@ -13,6 +13,7 @@
  *     descriptor). Client-supplied `metadata` is ignored.
  *   - successUrl / cancelUrl must point at an allowed app origin
  *     (defaults + APP_ALLOWED_ORIGINS secret, CSV).
+ *   - Only tenant admins (profiles.role = 'admin') may start a checkout (EF-06).
  *
  * Deployment:
  *   supabase functions deploy create-checkout-session
@@ -65,12 +66,18 @@ Deno.serve(async (req) => {
     // Get tenant
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('id', user.id)
       .single();
 
     if (!profile?.tenant_id) {
       return jsonResponse({ error: 'No tenant found' }, 400);
+    }
+
+    // EF-06: billing changes (subscribe, cancel, payment methods) are
+    // tenant-admin only, like manage-vercel-domain and invite-user.
+    if (profile.role !== 'admin') {
+      return jsonResponse({ error: 'Only tenant admins can manage billing' }, 403);
     }
 
     const tenantId = profile.tenant_id;

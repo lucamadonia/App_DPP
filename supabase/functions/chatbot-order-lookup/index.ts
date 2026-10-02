@@ -1,10 +1,18 @@
+/**
+ * Supabase Edge Function: chatbot-order-lookup
+ *
+ * Order status lookup for the support chatbot. Hardened (EF-09): requires the
+ * CHATBOT_SHARED_SECRET header, persistent rate limits, and one uniform
+ * not-found answer for unknown tenant / order / email (no enumeration oracle).
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-};
+import {
+  chatbotCorsHeaders as corsHeaders,
+  chatbotJson as jsonResponse,
+  checkChatbotSecret,
+  enforceChatbotLimits,
+  NOT_FOUND_MESSAGE,
+} from '../_shared/chatbot-guard.ts';
 
 const FINANCIAL_LABELS_DE: Record<string, string> = {
   paid: 'Bezahlt',
@@ -49,6 +57,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
+  const denied = checkChatbotSecret(req);
+  if (denied) return denied;
+
   let body: { order_number?: string; email?: string; tenant_slug?: string };
   try {
     body = await req.json();
@@ -61,9 +72,10 @@ Deno.serve(async (req) => {
   const rawOrderNumber = (body.order_number || '')
     .trim()
     .replace(/^#/, '')
-    .replace(/[^a-zA-Z0-9-_]/g, '');
-  const email = (body.email || '').trim().toLowerCase();
-  const tenantSlug = (body.tenant_slug || '').trim().replace(/[^a-zA-Z0-9-_]/g, '');
+    .replace(/[^a-zA-Z0-9-_]/g, '')
+    .slice(0, 64);
+  const email = (body.email || '').trim().toLowerCase().slice(0, 254);
+  const tenantSlug = (body.tenant_slug || '').trim().replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 80);
 
   if (!rawOrderNumber || !email || !tenantSlug) {
     return jsonResponse({
@@ -85,18 +97,25 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. Resolve tenant
+    const limited = await enforceChatbotLimits(supabase, req, {
+      fn: 'order-lookup',
+      email,
+      tenantSlug,
+      reference: rawOrderNumber,
+    });
+    if (limited) return limited;
+
+    const notFound = () => jsonResponse({ found: false, message: NOT_FOUND_MESSAGE }, 200);
+
+    // 1. Resolve tenant (unknown tenant answers exactly like an unknown order)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('id, name')
       .eq('slug', tenantSlug)
-      .single();
+      .maybeSingle();
 
     if (tenantError || !tenant) {
-      return jsonResponse({
-        found: false,
-        message: 'Tenant nicht gefunden. Bitte prüfe den Shop-Namen.',
-      }, 404);
+      return notFound();
     }
 
     // 2. Look up order by external_order_number, filtered by tenant + email
@@ -125,23 +144,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (orderError) {
-      console.error('Failed to query order:', orderError);
+      console.error('Failed to query order:', orderError.message);
       return jsonResponse({ error: 'Database error' }, 500);
     }
 
-    if (!order) {
-      return jsonResponse({
-        found: false,
-        message: `Keine Bestellung mit der Nummer #${rawOrderNumber} gefunden. Bitte prüfe die Nummer.`,
-      }, 200);
-    }
-
-    // 3. Verify email matches (prevent cross-customer data leak)
-    if ((order.customer_email || '').toLowerCase() !== email) {
-      return jsonResponse({
-        found: false,
-        message: `Keine Bestellung mit der Nummer #${rawOrderNumber} unter dieser E-Mail-Adresse gefunden.`,
-      }, 200);
+    // 2b/3. Unknown order and email mismatch get the identical answer, so the
+    // endpoint cannot be used to enumerate order numbers or test emails.
+    if (!order || (order.customer_email || '').toLowerCase() !== email) {
+      return notFound();
     }
 
     // 4. Fetch order items (for context)
@@ -297,9 +307,3 @@ function formatItemLine(item: any, currency: string): string {
   return `${qty}× ${name}${price}`;
 }
 
-function jsonResponse(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}

@@ -1,10 +1,28 @@
+/**
+ * Supabase Edge Function: chatbot-lookup
+ *
+ * Unified return / order / ticket / product lookup for the support chatbot.
+ * Hardened (EF-09): requires the CHATBOT_SHARED_SECRET header, persistent rate
+ * limits, and one uniform not-found answer for unknown tenant / reference /
+ * email so the endpoint is no enumeration oracle.
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  chatbotCorsHeaders as corsHeaders,
+  chatbotJson as jsonResponse,
+  checkChatbotSecret,
+  enforceChatbotLimits,
+  NOT_FOUND_MESSAGE,
+} from '../_shared/chatbot-guard.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-};
+/** Escape LIKE wildcards so a product search cannot match everything. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
+function notFound(type: string): Response {
+  return jsonResponse({ found: false, type, message: NOT_FOUND_MESSAGE }, 200);
+}
 
 // ============================================================================
 // Status label dictionaries
@@ -74,6 +92,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
+  const denied = checkChatbotSecret(req);
+  if (denied) return denied;
+
   let body: {
     query_type?: string;
     reference_number?: string;
@@ -88,10 +109,10 @@ Deno.serve(async (req) => {
 
   const queryType = (body.query_type || '').trim().toLowerCase();
   // For product search, keep raw input (spaces, letters allowed for name search)
-  const rawReference = (body.reference_number || '').trim();
-  const referenceSanitized = rawReference.replace(/^#/, '').replace(/[^a-zA-Z0-9-_]/g, '');
-  const email = (body.email || '').trim().toLowerCase();
-  const tenantSlug = (body.tenant_slug || '').trim().replace(/[^a-zA-Z0-9-_]/g, '');
+  const rawReference = (body.reference_number || '').trim().slice(0, 100);
+  const referenceSanitized = rawReference.replace(/^#/, '').replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 64);
+  const email = (body.email || '').trim().toLowerCase().slice(0, 254);
+  const tenantSlug = (body.tenant_slug || '').trim().replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 80);
 
   const validTypes = ['return', 'order', 'ticket', 'product'];
   if (!validTypes.includes(queryType)) {
@@ -127,18 +148,23 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Resolve tenant
+    const limited = await enforceChatbotLimits(supabase, req, {
+      fn: 'lookup',
+      email: isProductQuery ? undefined : email,
+      tenantSlug,
+      reference: isProductQuery ? undefined : `${queryType}:${referenceSanitized}`,
+    });
+    if (limited) return limited;
+
+    // Resolve tenant (unknown tenant answers like an unknown reference)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('id, name')
       .eq('slug', tenantSlug)
-      .single();
+      .maybeSingle();
 
     if (tenantError || !tenant) {
-      return jsonResponse({
-        found: false,
-        message: 'Tenant nicht gefunden. Bitte prüfe den Shop-Namen.',
-      }, 404);
+      return notFound(queryType);
     }
 
     // Route to the right handler
@@ -212,11 +238,7 @@ async function handleReturnLookup(
     .maybeSingle();
 
   if (!ret) {
-    return jsonResponse({
-      found: false,
-      type: 'return',
-      message: `Keine Retoure mit der Nummer ${returnNumber} gefunden.`,
-    }, 200);
+    return notFound('return');
   }
 
   // LEFT join + metadata fallback: portal returns may have no linked customer
@@ -225,11 +247,7 @@ async function handleReturnLookup(
   const metadata = (ret.metadata || {}) as Record<string, unknown>;
   const metadataEmail = (typeof metadata.email === 'string' ? metadata.email : '').toLowerCase();
   if ((customer?.email || '').toLowerCase() !== email && metadataEmail !== email) {
-    return jsonResponse({
-      found: false,
-      type: 'return',
-      message: `Keine Retoure mit der Nummer ${returnNumber} unter dieser E-Mail-Adresse gefunden.`,
-    }, 200);
+    return notFound('return');
   }
 
   const { data: timeline } = await supabase
@@ -308,20 +326,8 @@ async function handleOrderLookup(
     .or(`external_order_number.eq.${orderNumber},external_order_number.eq.#${orderNumber}`)
     .maybeSingle();
 
-  if (!order) {
-    return jsonResponse({
-      found: false,
-      type: 'order',
-      message: `Keine Bestellung mit der Nummer #${orderNumber} gefunden.`,
-    }, 200);
-  }
-
-  if ((order.customer_email || '').toLowerCase() !== email) {
-    return jsonResponse({
-      found: false,
-      type: 'order',
-      message: `Keine Bestellung mit der Nummer #${orderNumber} unter dieser E-Mail-Adresse gefunden.`,
-    }, 200);
+  if (!order || (order.customer_email || '').toLowerCase() !== email) {
+    return notFound('order');
   }
 
   const { data: items } = await supabase
@@ -388,7 +394,7 @@ async function handleOrderLookup(
     parts.push(`Gesamtbetrag: ${order.total_amount} ${order.currency}.`);
   }
   if (itemsFormatted.length > 0) {
-    const lines = itemsFormatted.slice(0, 5).map((i) => i.display);
+    const lines = itemsFormatted.slice(0, 5).map((i: { display: string }) => i.display);
     const suffix = itemsFormatted.length > 5 ? ` (und ${itemsFormatted.length - 5} weitere)` : '';
     parts.push(`Bestellte Artikel: ${lines.join('; ')}${suffix}.`);
   }
@@ -436,11 +442,7 @@ async function handleTicketLookup(
     .maybeSingle();
 
   if (!ticket) {
-    return jsonResponse({
-      found: false,
-      type: 'ticket',
-      message: `Kein Ticket mit der Nummer ${ticketNumber} gefunden.`,
-    }, 200);
+    return notFound('ticket');
   }
 
   // LEFT join + metadata fallback (some tickets have no linked customer row).
@@ -448,11 +450,7 @@ async function handleTicketLookup(
   const ticketMeta = (ticket.metadata || {}) as Record<string, unknown>;
   const ticketMetaEmail = (typeof ticketMeta.email === 'string' ? ticketMeta.email : '').toLowerCase();
   if ((customer?.email || '').toLowerCase() !== email && ticketMetaEmail !== email) {
-    return jsonResponse({
-      found: false,
-      type: 'ticket',
-      message: `Kein Ticket mit der Nummer ${ticketNumber} unter dieser E-Mail-Adresse gefunden.`,
-    }, 200);
+    return notFound('ticket');
   }
 
   const { data: lastMessage } = await supabase
@@ -537,7 +535,7 @@ async function handleProductLookup(
         country_of_origin, image_url, status
       `)
       .eq('tenant_id', tenantId)
-      .ilike('name', `%${searchTerm}%`)
+      .ilike('name', `%${escapeLike(searchTerm)}%`)
       .eq('status', 'published')
       .limit(5);
     products = data || [];
@@ -639,9 +637,3 @@ function formatItemLine(item: any, currency: string): string {
   return `${qty}× ${name}${price}`;
 }
 
-function jsonResponse(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}

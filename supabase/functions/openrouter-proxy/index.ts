@@ -10,7 +10,18 @@
  *     enforces a durable per-tenant rate limit.
  *   - If the upstream call fails before any output is streamed, the credits
  *     are refunded via the service-role-only RPC `refund_credits`.
- *   - Cost scales with model (Opus x5) and very large inputs.
+ *   - EF-05: the charge is priced by size, never below the per-operation
+ *     floor: estimated input tokens (text chars / 3, images at a fixed
+ *     per-part estimate) plus 5x the requested
+ *     max_tokens (output is ~5x the input price), 1 credit per started
+ *     40k token units, times the model multiplier (allowlisted models only).
+ *     Hard caps: 400k text chars, 15 MB attachments, 12 attachment parts,
+ *     100 messages, 8000 output tokens; a call that would price above
+ *     MAX_CHARGED_CREDITS is rejected rather than undercharged.
+ *   - `file` parts (PDF/documents) are rejected with 400: OpenRouter accepts a
+ *     plain URL in file_data and bills PDFs per page, so their cost cannot be
+ *     bounded from the request size. No in-app caller sends them.
+ *   - A durable per-user limit (rate_limit_hit) backs up the in-memory one.
  *
  * Deployment:
  *   supabase functions deploy openrouter-proxy
@@ -23,6 +34,8 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimits } from '../_shared/rate-limit.ts';
+import { estimateInputTokens, priceCall, type UsageEstimate } from './pricing.ts';
 
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -72,8 +85,7 @@ function cleanRateLimitMap() {
 // Multimodal content parts (Claude Vision / document attachments)
 type ContentPart =
   | { type: 'text'; text: string }
-  | { type: 'image_url'; image_url: { url: string } }
-  | { type: 'file'; file: { filename: string; file_data: string } };
+  | { type: 'image_url'; image_url: { url: string } };
 
 type MessageContent = string | ContentPart[];
 
@@ -89,19 +101,30 @@ interface ProxyRequestBody {
   model?: string;
 }
 
-// Maximum total size (bytes) of all message content (approx) — guards against huge base64 uploads
-const MAX_TOTAL_CONTENT_BYTES = 15 * 1024 * 1024; // 15 MB
+// --- EF-05 hard caps -------------------------------------------------------
+// Plain text (system prompts, product context, chat history). The largest
+// legitimate prompt (compliance check with full product context) is well
+// below 100 KB; 400k chars is ~130k tokens.
+const MAX_TEXT_CHARS = 400_000;
+// Base64 image / PDF attachments (document classification, vision).
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15 MB
+const MAX_ATTACHMENT_PARTS = 12;
+const MAX_MESSAGES = 100;
+// Reject request bodies larger than this before parsing them.
+const MAX_BODY_BYTES = MAX_ATTACHMENT_BYTES + MAX_TEXT_CHARS * 4 + 256 * 1024;
 const MAX_OUTPUT_TOKENS = 8000; // hard output cap per call (SEC-12)
 
-// Allowed models (if client overrides) → credit multiplier.
+// Allowed models (if client overrides) → credit multiplier. Anything else,
+// including 1M-context variants, is rejected.
 const MODEL_COST_MULTIPLIER: Record<string, number> = {
   'anthropic/claude-sonnet-4': 1,
   'anthropic/claude-opus-4': 5,
 };
 
-// Inputs above this size cost one extra credit per started block.
-const SIZE_SURCHARGE_FREE_BYTES = 4 * 1024 * 1024;
-const SIZE_SURCHARGE_BLOCK_BYTES = 4 * 1024 * 1024;
+// A call priced above this is refused (with the caps above a Sonnet call
+// tops out around 25 credits; Opus x5).
+const MAX_CHARGED_CREDITS = 150;
+const USER_LIMIT_PER_10_MIN = 40;
 
 // Server-side minimum credit cost per operation. The client sends the
 // requested creditCost, but it can never undercut these minimums — a
@@ -169,6 +192,15 @@ Deno.serve(async (req) => {
       cleanRateLimitMap();
     }
 
+    // 2b. Durable per-user limit (the in-memory map resets on cold start).
+    // Fails open: consume_credits enforces its own durable tenant limit.
+    const userVerdict = await enforceRateLimits(supabase, [
+      { bucket: `ai:user:${user.id}`, limit: USER_LIMIT_PER_10_MIN, windowSeconds: 600 },
+    ]);
+    if (!userVerdict.allowed) {
+      return jsonResponse({ error: 'Rate limit exceeded. Please wait a minute.', code: 'RATE_LIMITED' }, 429);
+    }
+
     // 3. Get tenant ID
     const { data: profile } = await supabase
       .from('profiles')
@@ -182,8 +214,24 @@ Deno.serve(async (req) => {
 
     const tenantId = profile.tenant_id;
 
-    // 4. Parse request
-    const body: ProxyRequestBody = await req.json();
+    // 4. Parse request (refuse oversized bodies before buffering them)
+    const declaredLength = Number(req.headers.get('content-length') || '0');
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+      return jsonResponse({ error: 'Request too large', code: 'INPUT_TOO_LARGE' }, 413);
+    }
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return jsonResponse({ error: 'Request too large', code: 'INPUT_TOO_LARGE' }, 413);
+    }
+    let body: ProxyRequestBody;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return jsonResponse({ error: 'Invalid JSON body' }, 400);
+    }
+    if (!body || typeof body !== 'object') {
+      return jsonResponse({ error: 'Invalid JSON body' }, 400);
+    }
     const {
       messages,
       maxTokens = 2000,
@@ -202,6 +250,9 @@ Deno.serve(async (req) => {
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return jsonResponse({ error: 'messages array is required and must not be empty' }, 400);
     }
+    if (messages.length > MAX_MESSAGES) {
+      return jsonResponse({ error: `Too many messages (max ${MAX_MESSAGES})`, code: 'INPUT_TOO_LARGE' }, 413);
+    }
 
     // SEC-12: validate generation params BEFORE any credit is consumed. A
     // non-numeric maxTokens would serialise to null and drop the output cap.
@@ -215,8 +266,11 @@ Deno.serve(async (req) => {
     const safeTemperature = Math.max(0, Math.min(temperature, 2));
 
     // Validate message structure (supports both string content and multimodal array content)
-    let totalContentSize = 0;
+    const usage: UsageEstimate = { textChars: 0, attachmentBytes: 0, imageParts: 0 };
     for (const msg of messages) {
+      if (!msg || typeof msg !== 'object') {
+        return jsonResponse({ error: 'Each message must be an object' }, 400);
+      }
       if (!msg.role || typeof msg.role !== 'string') {
         return jsonResponse({ error: 'Each message must have a string role' }, 400);
       }
@@ -227,7 +281,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: 'Each message must have content' }, 400);
       }
       if (typeof msg.content === 'string') {
-        totalContentSize += msg.content.length;
+        usage.textChars += msg.content.length;
       } else if (Array.isArray(msg.content)) {
         // Validate multimodal parts
         for (const part of msg.content) {
@@ -238,17 +292,20 @@ Deno.serve(async (req) => {
             if (typeof part.text !== 'string') {
               return jsonResponse({ error: 'Text part must have string text' }, 400);
             }
-            totalContentSize += part.text.length;
+            usage.textChars += part.text.length;
           } else if (part.type === 'image_url') {
             if (!part.image_url || typeof part.image_url.url !== 'string') {
               return jsonResponse({ error: 'image_url part must have image_url.url' }, 400);
             }
-            totalContentSize += part.image_url.url.length;
-          } else if (part.type === 'file') {
-            if (!part.file || typeof part.file.file_data !== 'string' || typeof part.file.filename !== 'string') {
-              return jsonResponse({ error: 'file part must have file.file_data and file.filename' }, 400);
-            }
-            totalContentSize += part.file.file_data.length;
+            usage.attachmentBytes += part.image_url.url.length;
+            usage.imageParts += 1;
+          } else if ((part as { type: string }).type === 'file') {
+            // EF-05: file parts are not priceable from request size (URL file_data,
+            // per-page PDF billing) -> refuse instead of undercharging.
+            return jsonResponse(
+              { error: 'File attachments are not supported. Send images as image_url parts.', code: 'UNSUPPORTED_PART' },
+              400
+            );
           } else {
             return jsonResponse({ error: `Unsupported content part type: ${(part as { type: string }).type}` }, 400);
           }
@@ -258,12 +315,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (totalContentSize > MAX_TOTAL_CONTENT_BYTES) {
+    if (usage.textChars > MAX_TEXT_CHARS) {
       return jsonResponse(
-        { error: `Total content size (${totalContentSize} bytes) exceeds limit (${MAX_TOTAL_CONTENT_BYTES} bytes).` },
+        { error: `Text content (${usage.textChars} chars) exceeds limit (${MAX_TEXT_CHARS} chars).`, code: 'INPUT_TOO_LARGE' },
         413
       );
     }
+    if (usage.attachmentBytes > MAX_ATTACHMENT_BYTES) {
+      return jsonResponse(
+        { error: `Attachments (${usage.attachmentBytes} bytes) exceed limit (${MAX_ATTACHMENT_BYTES} bytes).`, code: 'INPUT_TOO_LARGE' },
+        413
+      );
+    }
+    if (usage.imageParts > MAX_ATTACHMENT_PARTS) {
+      return jsonResponse(
+        { error: `Too many attachments (max ${MAX_ATTACHMENT_PARTS}).`, code: 'INPUT_TOO_LARGE' },
+        413
+      );
+    }
+    const totalContentSize = usage.textChars + usage.attachmentBytes;
 
     // Validate model override
     let chosenModel = MODEL;
@@ -276,19 +346,28 @@ Deno.serve(async (req) => {
 
     const isJsonMode = responseFormat === 'json';
 
-    // 5. Atomic credit consumption (server-side cost, never below 1)
-    const sizeSurcharge = totalContentSize > SIZE_SURCHARGE_FREE_BYTES
-      ? Math.ceil((totalContentSize - SIZE_SURCHARGE_FREE_BYTES) / SIZE_SURCHARGE_BLOCK_BYTES)
-      : 0;
-    const chargedCredits = Math.min(
-      MAX_CREDIT_COST * 5,
-      creditCost * (MODEL_COST_MULTIPLIER[chosenModel] ?? 1) + sizeSurcharge,
+    // 5. Atomic credit consumption. Server-side price by size (EF-05), never
+    // below the operation floor; refused instead of capped when too large.
+    const chargedCredits = priceCall(
+      usage,
+      safeMaxTokens,
+      creditCost,
+      MODEL_COST_MULTIPLIER[chosenModel] ?? 1,
     );
+    if (chargedCredits > MAX_CHARGED_CREDITS) {
+      return jsonResponse({ error: 'Request too large for a single AI call', code: 'INPUT_TOO_LARGE' }, 413);
+    }
 
     const { data: consumed, error: consumeErr } = await supabase.rpc('consume_credits', {
       p_amount: chargedCredits,
       p_description: String(operationLabel).slice(0, 200),
-      p_metadata: { model: chosenModel, user_id: user.id, size_bytes: totalContentSize },
+      p_metadata: {
+        model: chosenModel,
+        user_id: user.id,
+        size_bytes: totalContentSize,
+        est_input_tokens: estimateInputTokens(usage),
+        max_tokens: safeMaxTokens,
+      },
       p_tenant_id: tenantId,
     });
 
@@ -363,7 +442,7 @@ Deno.serve(async (req) => {
 
     if (!openRouterResponse.ok) {
       const errorText = await openRouterResponse.text();
-      console.error('OpenRouter API error:', openRouterResponse.status, errorText);
+      console.error('OpenRouter API error:', openRouterResponse.status, errorText.slice(0, 500));
       await refund(`upstream_${openRouterResponse.status}`);
       return jsonResponse({ error: `AI service error: ${openRouterResponse.status}` }, 502);
     }

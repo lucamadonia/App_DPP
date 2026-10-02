@@ -1220,7 +1220,7 @@ async function handleSyncInventoryImport(supabase: any, tenantId: string, userId
     }
 
     // deno-lint-ignore no-explicit-any
-    const inventoryItemMap = new Map((productMaps || []).map((m: any) => [m.shopify_inventory_item_id, m]));
+    const inventoryItemMap = new Map<unknown, any>((productMaps || []).map((m: any) => [m.shopify_inventory_item_id, m]));
 
     // deno-lint-ignore no-explicit-any
     for (const locMap of locationMaps) {
@@ -2215,14 +2215,14 @@ async function handleResyncOrder(
       config.shopDomain, config.accessToken, config.apiVersion,
       `orders/${shopifyOrderId}.json`,
     );
-    order = body?.order || null;
+    order = (body as { order?: Record<string, unknown> } | null)?.order || null;
   } else {
     const name = orderName!.startsWith('#') ? orderName! : `#${orderName}`;
     const { body } = await shopifyApi(
       config.shopDomain, config.accessToken, config.apiVersion,
       `orders.json?name=${encodeURIComponent(name)}&status=any&limit=1`,
     );
-    order = body?.orders?.[0] || null;
+    order = (body as { orders?: Record<string, unknown>[] } | null)?.orders?.[0] || null;
   }
   if (!order) return json({ error: `Order not found in Shopify: ${orderName || shopifyOrderId}` }, 404);
 
