@@ -258,13 +258,23 @@ export const FONT_FAMILY_MAP: Record<string, string> = {
   'Playfair Display': '"Playfair Display", serif',
 };
 
-export const GOOGLE_FONT_URLS: Record<string, string> = {
-  Inter: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
-  Roboto: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap',
-  Poppins: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap',
-  Merriweather: 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap',
-  'Playfair Display': 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&display=swap',
+/**
+ * Stylesheet URL per DPP font family.
+ *
+ * Self-hosted under public/fonts/dpp/ (latin, latin-ext, greek subsets) so
+ * public DPP and portal pages never send the visitor's IP to Google
+ * (GDPR, LG München I 3 O 17493/20).
+ */
+export const SELF_HOSTED_FONT_URLS: Record<string, string> = {
+  Inter: '/fonts/dpp/inter.css',
+  Roboto: '/fonts/dpp/roboto.css',
+  Poppins: '/fonts/dpp/poppins.css',
+  Merriweather: '/fonts/dpp/merriweather.css',
+  'Playfair Display': '/fonts/dpp/playfair-display.css',
 };
+
+/** Legacy name kept for existing callers; values are local, not Google, URLs. */
+export const GOOGLE_FONT_URLS = SELF_HOSTED_FONT_URLS;
 
 export const BORDER_RADIUS_MAP: Record<string, string> = {
   none: '0',

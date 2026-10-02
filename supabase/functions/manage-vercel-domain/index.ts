@@ -1,7 +1,9 @@
 /**
  * Supabase Edge Function: manage-vercel-domain
  *
- * Adds or removes custom domains from the Vercel project.
+ * Adds or removes custom domains from the Vercel project, and verifies the
+ * customer's CNAME record server-side (action "verify"), so the browser does
+ * not need a DNS-over-HTTPS origin in its CSP and cannot fake the result.
  *
  * Deployment:
  *   supabase functions deploy manage-vercel-domain
@@ -21,6 +23,94 @@ const VERCEL_PROJECT_ID = Deno.env.get('VERCEL_PROJECT_ID') || '';
 const VERCEL_TEAM_ID = Deno.env.get('VERCEL_TEAM_ID') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+// Must match CNAME_TARGET in src/lib/dns-providers.ts
+const CNAME_TARGET = 'cname.vercel-dns.com';
+const DOMAIN_RE = /^(?=.{1,253}$)(?!-)([a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$/;
+
+// DNS-over-HTTPS resolvers (JSON API), tried in order.
+const DOH_RESOLVERS = [
+  'https://dns.google/resolve',
+  'https://cloudflare-dns.com/dns-query',
+];
+
+interface DnsJsonResponse {
+  Status: number;
+  Answer?: Array<{ name: string; type: number; TTL: number; data: string }>;
+}
+
+interface DNSVerificationResult {
+  status: 'verified' | 'pending' | 'failed';
+  cnameFound: boolean;
+  cnameValue?: string;
+  error?: string;
+}
+
+async function queryCname(domain: string): Promise<DnsJsonResponse> {
+  let lastError: unknown = null;
+  for (const resolver of DOH_RESOLVERS) {
+    try {
+      const resp = await fetch(
+        `${resolver}?name=${encodeURIComponent(domain)}&type=CNAME`,
+        { headers: { Accept: 'application/dns-json' }, signal: AbortSignal.timeout(5000) },
+      );
+      if (!resp.ok) {
+        lastError = new Error(`DNS lookup failed: HTTP ${resp.status}`);
+        continue;
+      }
+      return await resp.json() as DnsJsonResponse;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('DNS lookup failed');
+}
+
+async function verifyCname(domain: string): Promise<DNSVerificationResult> {
+  let data: DnsJsonResponse;
+  try {
+    data = await queryCname(domain);
+  } catch (err) {
+    return {
+      status: 'failed',
+      cnameFound: false,
+      error: err instanceof Error ? err.message : 'DNS lookup failed',
+    };
+  }
+
+  // Status 0 = NOERROR
+  if (data.Status !== 0) {
+    return {
+      status: 'pending',
+      cnameFound: false,
+      error: 'No DNS records found. The record may not have propagated yet.',
+    };
+  }
+
+  // CNAME records are type 5
+  const cnameRecords = (data.Answer || []).filter((a) => a.type === 5);
+  if (cnameRecords.length === 0) {
+    return {
+      status: 'pending',
+      cnameFound: false,
+      error: 'No CNAME record found. Please check your DNS configuration.',
+    };
+  }
+
+  const strip = (v: string) => v.replace(/\.$/, '');
+  const match = cnameRecords.find((r) => strip(r.data).toLowerCase() === CNAME_TARGET);
+  if (match) {
+    return { status: 'verified', cnameFound: true, cnameValue: strip(match.data) };
+  }
+
+  const actual = strip(cnameRecords[0].data);
+  return {
+    status: 'failed',
+    cnameFound: true,
+    cnameValue: actual,
+    error: `CNAME record found but points to "${actual}" instead of "${CNAME_TARGET}".`,
+  };
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,10 +161,27 @@ Deno.serve(async (req) => {
 
     const { action, domain } = await req.json();
 
-    if (!action || !domain) {
+    if (!action || !domain || typeof domain !== 'string') {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing action or domain' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // CNAME check: read-only DNS lookup, allowed before the domain is saved
+    // (the setup wizard verifies first and stores the domain afterwards).
+    if (action === 'verify') {
+      const normalized = domain.trim().toLowerCase().replace(/\.$/, '');
+      if (!DOMAIN_RE.test(normalized)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid domain' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const result = await verifyCname(normalized);
+      return new Response(
+        JSON.stringify({ success: true, result }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -156,7 +263,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: 'Invalid action. Use "add" or "remove".' }),
+      JSON.stringify({ success: false, error: 'Invalid action. Use "add", "remove" or "verify".' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
