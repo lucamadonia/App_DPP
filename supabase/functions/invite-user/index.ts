@@ -9,9 +9,14 @@
  *   - A matching *pending* invitation for (caller tenant, email) must exist; the
  *     role is taken from that row (allowlisted), never from the request body.
  *   - Existing auth users are NEVER moved between tenants here. Their
- *     invitation stays pending until they explicitly accept it while logged in
- *     (accept flow is separate). Moving a profile without consent allowed a
- *     cross-tenant takeover of other tenants' owners.
+ *     invitation stays pending and they get an email with an accept link
+ *     (/invitations/accept?id=<invitation id>). Joining happens only through
+ *     the accept_invitation RPC (migration 20261001h) while logged in with the
+ *     invited, confirmed address. Moving a profile without consent allowed a
+ *     cross-tenant takeover of other tenants' owners. The link carries no
+ *     secret: the RPC checks the caller's email, not possession of the id.
+ *     The accept mail is sent after the response (EdgeRuntime.waitUntil when
+ *     available), so its SMTP latency is no account-existence timing oracle.
  *   - The response does not reveal whether an account exists for the email:
  *     every outcome after the invitation lookup (invite mail sent, address
  *     already registered, mail provider failure) returns the SAME body
@@ -43,13 +48,24 @@
  * Required Supabase Secrets:
  *   - SUPABASE_URL (automatic)
  *   - SUPABASE_SERVICE_ROLE_KEY (automatic)
+ *   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM (same as send-email /
+ *     auth-email-hook; used for the accept-link mail to existing accounts)
+ *   - TRACKBLISS_PUBLIC_URL (optional, default https://dpp-app.fambliss.eu)
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 import { enforceRateLimits, getClientIp, hashKey, rateLimitedResponse } from '../_shared/rate-limit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+const SMTP_HOST = Deno.env.get('SMTP_HOST') || '';
+const SMTP_PORT = Number.parseInt(Deno.env.get('SMTP_PORT') || '465', 10);
+const SMTP_USER = Deno.env.get('SMTP_USER') || '';
+const SMTP_PASS = Deno.env.get('SMTP_PASS') || '';
+const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@trackbliss.eu';
+const PUBLIC_APP_URL = (Deno.env.get('TRACKBLISS_PUBLIC_URL') || 'https://dpp-app.fambliss.eu').replace(/\/+$/, '');
 
 const ALLOWED_ROLES = new Set(['admin', 'editor', 'viewer']);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,6 +145,113 @@ async function pendingResponse(startedAt: number) {
   const remaining = MIN_RESPONSE_MS + Math.floor(Math.random() * 250) - (Date.now() - startedAt);
   if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
   return jsonResponse({ success: true, emailSent: true, userAlreadyExists: false });
+}
+
+const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] ?? c);
+}
+
+/** Strip characters that could break a mail header line. */
+function headerSafe(value: string): string {
+  return value.replace(/[\r\n\t]+/g, ' ').slice(0, 160);
+}
+
+const ROLE_LABELS: Record<string, { de: string; en: string }> = {
+  admin: { de: 'Admin', en: 'Admin' },
+  editor: { de: 'Redakteur', en: 'Editor' },
+  viewer: { de: 'Betrachter', en: 'Viewer' },
+};
+
+interface AcceptMailInput {
+  to: string;
+  invitationId: string;
+  tenantName: string;
+  inviterName: string;
+  role: string;
+  expiresAt: string | null;
+}
+
+/**
+ * Bilingual (DE/EN) mail with an accept link for an address that already has
+ * an account. Tenant and inviter names are tenant-controlled text, so they are
+ * HTML-escaped (and header-sanitised in the subject).
+ */
+function buildAcceptInvitationMail(input: AcceptMailInput): { subject: string; html: string; text: string } {
+  const link = `${PUBLIC_APP_URL}/invitations/accept?id=${encodeURIComponent(input.invitationId)}`;
+  const tenant = escapeHtml(input.tenantName);
+  const inviter = escapeHtml(input.inviterName);
+  const role = ROLE_LABELS[input.role] ?? ROLE_LABELS.viewer;
+  const expires = input.expiresAt ? new Date(input.expiresAt) : null;
+  const valid = expires && !Number.isNaN(expires.getTime());
+  const expiresDe = valid ? expires.toLocaleDateString('de-DE') : '';
+  const expiresEn = valid ? expires.toLocaleDateString('en-GB') : '';
+  const button = (label: string) =>
+    `<p style="margin:24px 0"><a href="${link}" style="background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;display:inline-block">${label}</a></p>`;
+  const subject = headerSafe(`Einladung zu ${input.tenantName} / Invitation to ${input.tenantName} - Trackbliss`);
+  const html = `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5;max-width:560px;margin:0 auto;padding:24px">
+<h2 style="margin:0 0 12px">Einladung zu ${tenant}</h2>
+<p>${inviter} hat dich eingeladen, der Organisation <strong>${tenant}</strong> auf Trackbliss als <strong>${role.de}</strong> beizutreten.</p>
+<p>Melde dich mit dieser E-Mail-Adresse an und bestätige die Einladung. Vor dem Beitritt siehst du genau, was sich für dein bisheriges Konto ändert. Ohne deine Bestätigung passiert nichts.</p>
+${button('Einladung ansehen')}
+${expiresDe ? `<p style="color:#6b7280;font-size:13px">Gültig bis ${expiresDe}.</p>` : ''}
+<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+<h2 style="margin:0 0 12px">Invitation to ${tenant}</h2>
+<p>${inviter} invited you to join <strong>${tenant}</strong> on Trackbliss as <strong>${role.en}</strong>.</p>
+<p>Sign in with this email address and confirm the invitation. Before you join, you will see exactly what changes for your current account. Nothing happens without your confirmation.</p>
+${button('View invitation')}
+${expiresEn ? `<p style="color:#6b7280;font-size:13px">Valid until ${expiresEn}.</p>` : ''}
+<p style="color:#6b7280;font-size:12px">Wenn du diese Einladung nicht erwartest, ignoriere diese E-Mail. / If you did not expect this invitation, ignore this email.</p>
+</body></html>`;
+  const text = [
+    `${input.inviterName} hat dich eingeladen, ${input.tenantName} auf Trackbliss als ${role.de} beizutreten.`,
+    `Einladung ansehen: ${link}`,
+    expiresDe ? `Gültig bis ${expiresDe}.` : '',
+    '',
+    `${input.inviterName} invited you to join ${input.tenantName} on Trackbliss as ${role.en}.`,
+    `View invitation: ${link}`,
+    expiresEn ? `Valid until ${expiresEn}.` : '',
+  ].join('\n');
+  return { subject, html, text };
+}
+
+async function sendAcceptInvitationMail(input: AcceptMailInput): Promise<void> {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    console.error('[invite-user] SMTP not configured; accept-link mail not sent');
+    return;
+  }
+  const { subject, html, text } = buildAcceptInvitationMail(input);
+  const client = new SMTPClient({
+    connection: {
+      hostname: SMTP_HOST,
+      port: SMTP_PORT,
+      tls: SMTP_PORT === 465,
+      auth: { username: SMTP_USER, password: SMTP_PASS },
+    },
+  });
+  try {
+    await client.send({ from: `Trackbliss <${SMTP_FROM}>`, to: input.to, subject, content: text, html });
+    console.info(`[invite-user] invitation ${input.invitationId}: accept-link mail sent`);
+  } catch (err) {
+    console.error(`[invite-user] invitation ${input.invitationId}: accept-link mail failed:`, (err as Error).message);
+  } finally {
+    try { await client.close(); } catch { /* ignore */ }
+  }
+}
+
+/**
+ * Run work after the response when the runtime supports it, so the SMTP
+ * round-trip does not make the existing-account path measurably slower.
+ * Returns the promise when it must be awaited inline instead.
+ */
+function runInBackground(task: Promise<void>): Promise<void> | null {
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(task);
+    return null;
+  }
+  return task;
 }
 
 function isAlreadyRegisteredError(err: { message?: string; code?: string } | null): boolean {
@@ -264,7 +387,23 @@ Deno.serve(async (req) => {
       // profile. The invitation stays pending. Logged here only — the caller
       // gets the same answer as for a successfully sent invite.
       if (isAlreadyRegisteredError(inviteError)) {
-        console.info(`[invite-user] invitation ${invitation.id}: address already registered, left pending`);
+        console.info(`[invite-user] invitation ${invitation.id}: address already registered, sending accept link`);
+        const [{ data: tenantRow }, { data: inviterRow }] = await Promise.all([
+          supabaseAdmin.from('tenants').select('name').eq('id', tenantId).maybeSingle(),
+          supabaseAdmin.from('profiles').select('name, email').eq('id', caller.id).maybeSingle(),
+        ]);
+        const inline = runInBackground(sendAcceptInvitationMail({
+          to: invitation.email,
+          invitationId: invitation.id,
+          tenantName: String(tenantRow?.name ?? '').trim() || 'Trackbliss',
+          inviterName: String(inviterRow?.name ?? '').trim()
+            || String(inviterRow?.email ?? '').trim()
+            || caller.email
+            || 'Trackbliss',
+          role: inviteRole,
+          expiresAt: (invitation.expires_at as string | null) ?? null,
+        }));
+        if (inline) await inline;
       } else {
         console.error(`[invite-user] invitation ${invitation.id}: inviteUserByEmail failed:`, inviteError.message);
       }

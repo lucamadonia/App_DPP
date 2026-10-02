@@ -45,7 +45,9 @@ export function InviteUserDialog({ open, onOpenChange, onInvited }: Props) {
     if (result.success) {
       // invite-user answers identically for new and existing accounts (no
       // account-existence oracle), so the dialog shows one neutral message.
-      setInfo(t('Invitation saved. If this address does not have an account yet, the person will receive an email. People who already have an account cannot join through an invitation yet. Please contact support.'));
+      // People who already have an account get a link to review and accept
+      // the invitation; they only join after confirming it themselves.
+      setInfo(t('Invitation sent. The person will receive an email. If they already have a Trackbliss account, they sign in and confirm the invitation before they join.'));
 
       setEmail('');
       setRole('viewer');

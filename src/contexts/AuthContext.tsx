@@ -16,6 +16,11 @@ interface AuthContextType {
   isInitializing: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  /**
+   * Re-read tenant_id / admin flags after the user's profile moved to another
+   * tenant (accepted invitation). Clears the module-level tenant cache first.
+   */
+  refreshTenant: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -118,6 +123,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [refreshSession, loadTenantId]);
 
+  const refreshTenant = useCallback(async () => {
+    clearTenantIdCache();
+    if (user) {
+      await loadTenantId(user.id);
+    }
+  }, [user, loadTenantId]);
+
   const signOut = useCallback(async () => {
     await authSignOut();
     clearTenantIdCache(); // Clear tenant ID cache
@@ -138,7 +150,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isInitializing,
     signOut,
     refreshSession,
-  }), [user, isLoading, tenantId, isSuperAdmin, adminRole, isInitializing, signOut, refreshSession]);
+    refreshTenant,
+  }), [user, isLoading, tenantId, isSuperAdmin, adminRole, isInitializing, signOut, refreshSession, refreshTenant]);
 
   return (
     <AuthContext.Provider value={value}>
