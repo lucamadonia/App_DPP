@@ -4,7 +4,6 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import { filterProductFieldsToColumns, filterBatchFieldsToColumns } from '@/lib/supplier-data-fields';
 import type {
   SupplierDataRequest,
   CreateSupplierDataRequestParams,
@@ -24,7 +23,8 @@ function transformDataRequest(row: any): SupplierDataRequest {
     productId: row.product_id || productIds[0] || null,
     productIds,
     accessCode: row.access_code,
-    passwordHash: row.password_hash,
+    // Never expose the stored hash: passwords are verified server-side only.
+    passwordHash: '',
     allowedProductFields: row.allowed_product_fields || [],
     allowedBatchFields: row.allowed_batch_fields || [],
     allowBatchCreate: row.allow_batch_create,
@@ -187,104 +187,149 @@ export async function deleteSupplierDataRequest(id: string): Promise<void> {
 }
 
 // ─── Public Functions (anon) ────────────────────────────────────────────────
+// All public access goes through SECURITY DEFINER RPCs
+// (supabase/migrations/20261001f_supplier_portal_rpc.sql). The access code
+// plus the SHA-256 hex of the password is verified server-side (bcrypt), and
+// the allowed-field whitelist is enforced in the database.
+
+/** Password hashes verified in this browser session, keyed by access code. */
+const verifiedPasswordHashes = new Map<string, string>();
+
+function resolvePasswordHash(accessCode: string, passwordHash?: string): string {
+  const hash = passwordHash || verifiedPasswordHashes.get(accessCode);
+  if (!hash) throw new Error('Invalid password');
+  return hash;
+}
+
+const RPC_ERROR_MESSAGES: Record<string, string> = {
+  invalid_password: 'Invalid password',
+  inactive: 'Data request is no longer active',
+  expired: 'Data request has expired',
+  locked: 'Too many failed attempts. Please try again later.',
+  not_found: 'Data request not found',
+  no_product: 'No product specified',
+  product_not_in_request: 'Product not part of this data request',
+  batch_edit_not_allowed: 'Batch editing not allowed',
+  batch_create_not_allowed: 'Batch creation not allowed',
+  batch_not_found: 'Batch not found',
+  invalid_serial: 'Invalid serial number',
+};
+
+function rpcError(code: string | undefined): Error {
+  return new Error((code && RPC_ERROR_MESSAGES[code]) || code || 'Request failed');
+}
+
+interface RpcResult {
+  ok: boolean;
+  error?: string;
+  [key: string]: unknown;
+}
+
+/** Throws for transport errors (RAISE EXCEPTION '<code>') and { ok: false } results. */
+function assertRpcOk(result: unknown, error: { message?: string } | null): RpcResult {
+  if (error) throw rpcError(error.message);
+  const r = result as RpcResult | null;
+  if (!r?.ok) throw rpcError(r?.error);
+  return r;
+}
 
 /**
  * Get a data request by access code (public, no auth)
- * Returns the request with tenant/product info for rendering the portal
+ * Returns the request with tenant/product info for rendering the portal.
+ * Contains no password hash.
  */
 export async function getSupplierDataRequestByCode(
   accessCode: string,
 ): Promise<PublicSupplierDataRequestResult | null> {
-  const { data, error } = await supabase
-    .from('supplier_data_requests')
-    .select('*, tenants:tenant_id(id, name, slug, settings)')
-    .eq('access_code', accessCode)
-    .single();
+  const { data, error } = await supabase.rpc('get_supplier_data_request_public', {
+    p_access_code: accessCode,
+  });
 
   if (error || !data) return null;
 
-  const tenant = data.tenants as any;
-  const branding = tenant?.settings?.branding || {};
-  const productIds: string[] = Array.isArray(data.product_ids) ? data.product_ids : [];
-
-  // Fetch all product names
-  let products: Array<{ id: string; name: string }> = [];
-  if (productIds.length > 0) {
-    const { data: productRows } = await supabase
-      .from('products')
-      .select('id, name')
-      .in('id', productIds);
-
-    if (productRows) {
-      // Maintain order from product_ids
-      products = productIds
-        .map(pid => productRows.find(p => p.id === pid))
-        .filter(Boolean) as Array<{ id: string; name: string }>;
-    }
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = data as any;
+  const products: Array<{ id: string; name: string }> = Array.isArray(result.products) ? result.products : [];
 
   return {
-    dataRequest: transformDataRequest({ ...data, suppliers: null, _productNames: products.map(p => p.name) }),
-    tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug },
+    dataRequest: transformDataRequest({
+      ...result.dataRequest,
+      suppliers: null,
+      _productNames: products.map(p => p.name),
+    }),
+    tenant: result.tenant,
     products,
     branding: {
-      logoUrl: branding.logoUrl,
-      primaryColor: branding.primaryColor,
+      logoUrl: result.branding?.logoUrl ?? undefined,
+      primaryColor: result.branding?.primaryColor ?? undefined,
     },
   };
 }
 
+/** Outcome of a server-side password check for the supplier data portal. */
+export type SupplierDataPasswordCheck = 'ok' | 'invalid' | 'locked' | 'inactive' | 'expired' | 'error';
+
+const PASSWORD_CHECK_ERRORS: ReadonlySet<string> = new Set(['locked', 'inactive', 'expired']);
+
 /**
- * Load product data for a specific product in the data request portal (anon)
+ * Verify the portal password server-side (public, no auth).
+ * On success the request moves from pending to in_progress and the hash is
+ * remembered for the following calls in this browser session.
+ * Returns 'locked' during the lockout window (even for the correct password),
+ * so the page can explain the lockout instead of reporting a wrong password.
+ */
+export async function verifySupplierDataRequestPassword(
+  accessCode: string,
+  passwordHash: string,
+): Promise<SupplierDataPasswordCheck> {
+  const { data, error } = await supabase.rpc('verify_supplier_data_request_password', {
+    p_access_code: accessCode,
+    p_password_hash: passwordHash,
+  });
+
+  if (error) {
+    const code = error.message ?? '';
+    if (PASSWORD_CHECK_ERRORS.has(code)) return code as SupplierDataPasswordCheck;
+    console.warn('Supplier data request password check failed:', code);
+    return 'error';
+  }
+  if (data === true) {
+    verifiedPasswordHashes.set(accessCode, passwordHash);
+    return 'ok';
+  }
+  return 'invalid';
+}
+
+/**
+ * Load product data for a specific product in the data request portal (anon).
+ * Requires a verified password (explicit or from verifySupplierDataRequestPassword).
  */
 export async function publicGetProductForDataRequest(
   accessCode: string,
   productId?: string,
+  passwordHash?: string,
 ): Promise<{ product: Record<string, unknown>; batches: Record<string, unknown>[] } | null> {
-  // First verify the data request
-  const { data: req, error: reqError } = await supabase
-    .from('supplier_data_requests')
-    .select('product_id, product_ids, allowed_product_fields, allowed_batch_fields, status, expires_at')
-    .eq('access_code', accessCode)
-    .single();
+  const hash = passwordHash || verifiedPasswordHashes.get(accessCode);
+  if (!hash) return null;
 
-  if (reqError || !req) return null;
-  if (req.status === 'expired' || req.status === 'cancelled') return null;
-  if (new Date(req.expires_at) < new Date()) return null;
+  const { data, error } = await supabase.rpc('get_supplier_data_request_product', {
+    p_access_code: accessCode,
+    p_password_hash: hash,
+    p_product_id: productId ?? null,
+  });
 
-  // Determine which product to load
-  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
-  const targetProductId = productId || productIds[0] || req.product_id;
+  const result = data as RpcResult | null;
+  if (error || !result?.ok || !result.product) return null;
 
-  if (!targetProductId) return null;
-
-  // Verify the product is part of this request
-  if (productIds.length > 0 && !productIds.includes(targetProductId)) return null;
-
-  // Load product
-  const { data: product, error: productError } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', targetProductId)
-    .single();
-
-  if (productError || !product) return null;
-
-  // Load batches
-  const { data: batches, error: batchesError } = await supabase
-    .from('product_batches')
-    .select('*')
-    .eq('product_id', targetProductId)
-    .order('created_at', { ascending: false });
-
-  if (batchesError) return null;
-
-  return { product, batches: batches || [] };
+  return {
+    product: result.product as Record<string, unknown>,
+    batches: Array.isArray(result.batches) ? (result.batches as Record<string, unknown>[]) : [],
+  };
 }
 
 /**
- * Submit product data updates from the portal (anon)
- * Filters data to only allowed fields before writing
+ * Submit product data updates from the portal (anon).
+ * The server keeps only the fields allowed by the request.
  */
 export async function publicSubmitProductData(
   accessCode: string,
@@ -292,40 +337,13 @@ export async function publicSubmitProductData(
   data: Record<string, unknown>,
   productId?: string,
 ): Promise<void> {
-  // Verify request + password
-  const { data: req, error: reqError } = await supabase
-    .from('supplier_data_requests')
-    .select('*')
-    .eq('access_code', accessCode)
-    .single();
-
-  if (reqError || !req) throw new Error('Data request not found');
-  if (req.password_hash !== passwordHash) throw new Error('Invalid password');
-  if (req.status === 'expired' || req.status === 'cancelled' || req.status === 'submitted') {
-    throw new Error('Data request is no longer active');
-  }
-  if (new Date(req.expires_at) < new Date()) throw new Error('Data request has expired');
-
-  // Determine target product
-  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
-  const targetProductId = productId || productIds[0] || req.product_id;
-
-  if (!targetProductId) throw new Error('No product specified');
-  if (productIds.length > 0 && !productIds.includes(targetProductId)) {
-    throw new Error('Product not part of this data request');
-  }
-
-  // Filter to only allowed fields and convert to DB columns
-  const filteredData = filterProductFieldsToColumns(data, req.allowed_product_fields || []);
-
-  if (Object.keys(filteredData).length > 0) {
-    const { error } = await supabase
-      .from('products')
-      .update(filteredData)
-      .eq('id', targetProductId);
-
-    if (error) throw error;
-  }
+  const { data: result, error } = await supabase.rpc('submit_supplier_data_request_product', {
+    p_access_code: accessCode,
+    p_password_hash: resolvePasswordHash(accessCode, passwordHash),
+    p_product_id: productId ?? null,
+    p_data: data,
+  });
+  assertRpcOk(result, error);
 }
 
 /**
@@ -338,37 +356,14 @@ export async function publicSubmitBatchData(
   data: Record<string, unknown>,
   productId?: string,
 ): Promise<void> {
-  const { data: req, error: reqError } = await supabase
-    .from('supplier_data_requests')
-    .select('*')
-    .eq('access_code', accessCode)
-    .single();
-
-  if (reqError || !req) throw new Error('Data request not found');
-  if (req.password_hash !== passwordHash) throw new Error('Invalid password');
-  if (!req.allow_batch_edit) throw new Error('Batch editing not allowed');
-  if (req.status === 'expired' || req.status === 'cancelled' || req.status === 'submitted') {
-    throw new Error('Data request is no longer active');
-  }
-  if (new Date(req.expires_at) < new Date()) throw new Error('Data request has expired');
-
-  // Determine target product
-  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
-  const targetProductId = productId || productIds[0] || req.product_id;
-
-  if (!targetProductId) throw new Error('No product specified');
-
-  const filteredData = filterBatchFieldsToColumns(data, req.allowed_batch_fields || []);
-
-  if (Object.keys(filteredData).length > 0) {
-    const { error } = await supabase
-      .from('product_batches')
-      .update(filteredData)
-      .eq('id', batchId)
-      .eq('product_id', targetProductId);
-
-    if (error) throw error;
-  }
+  const { data: result, error } = await supabase.rpc('submit_supplier_data_request_batch', {
+    p_access_code: accessCode,
+    p_password_hash: resolvePasswordHash(accessCode, passwordHash),
+    p_product_id: productId ?? null,
+    p_batch_id: batchId,
+    p_data: data,
+  });
+  assertRpcOk(result, error);
 }
 
 /**
@@ -380,69 +375,36 @@ export async function publicCreateBatch(
   data: Record<string, unknown>,
   productId?: string,
 ): Promise<string> {
-  const { data: req, error: reqError } = await supabase
-    .from('supplier_data_requests')
-    .select('*')
-    .eq('access_code', accessCode)
-    .single();
-
-  if (reqError || !req) throw new Error('Data request not found');
-  if (req.password_hash !== passwordHash) throw new Error('Invalid password');
-  if (!req.allow_batch_create) throw new Error('Batch creation not allowed');
-  if (req.status === 'expired' || req.status === 'cancelled' || req.status === 'submitted') {
-    throw new Error('Data request is no longer active');
-  }
-  if (new Date(req.expires_at) < new Date()) throw new Error('Data request has expired');
-
-  // Determine target product
-  const productIds: string[] = Array.isArray(req.product_ids) ? req.product_ids : [];
-  const targetProductId = productId || productIds[0] || req.product_id;
-
-  if (!targetProductId) throw new Error('No product specified');
-
-  const filteredData = filterBatchFieldsToColumns(data, req.allowed_batch_fields || []);
-
-  const batchId = crypto.randomUUID();
-
-  const { error } = await supabase
-    .from('product_batches')
-    .insert({
-      id: batchId,
-      tenant_id: req.tenant_id,
-      product_id: targetProductId,
-      serial_number: (data.serialNumber as string) || crypto.randomUUID().slice(0, 8),
-      ...filteredData,
-    });
-
-  if (error) throw error;
-  return batchId;
+  const { data: result, error } = await supabase.rpc('create_supplier_data_request_batch', {
+    p_access_code: accessCode,
+    p_password_hash: resolvePasswordHash(accessCode, passwordHash),
+    p_product_id: productId ?? null,
+    p_data: data,
+  });
+  const r = assertRpcOk(result, error);
+  if (typeof r.batchId !== 'string') throw rpcError(undefined);
+  return r.batchId;
 }
 
 /**
- * Mark a data request as submitted (anon)
+ * Mark a data request as submitted (anon). Requires a verified password.
  */
-export async function publicMarkDataRequestSubmitted(accessCode: string): Promise<void> {
-  const { error } = await supabase
-    .from('supplier_data_requests')
-    .update({
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-    })
-    .eq('access_code', accessCode);
-
-  if (error) throw error;
+export async function publicMarkDataRequestSubmitted(
+  accessCode: string,
+  passwordHash?: string,
+): Promise<void> {
+  const { data: result, error } = await supabase.rpc('mark_supplier_data_request_submitted', {
+    p_access_code: accessCode,
+    p_password_hash: resolvePasswordHash(accessCode, passwordHash),
+  });
+  assertRpcOk(result, error);
 }
 
 /**
- * Mark a data request as in_progress (anon)
+ * Mark a data request as in_progress (anon).
+ * Kept for API compatibility: verifySupplierDataRequestPassword() already
+ * moves the request to in_progress server-side, so this is a no-op.
  */
 export async function publicMarkDataRequestInProgress(accessCode: string): Promise<void> {
-  const { error } = await supabase
-    .from('supplier_data_requests')
-    .update({ status: 'in_progress' })
-    .eq('access_code', accessCode)
-    .eq('status', 'pending');
-
-  // Ignore errors — it's fine if status was already changed
-  if (error) console.warn('Could not update status to in_progress:', error.message);
+  void accessCode;
 }

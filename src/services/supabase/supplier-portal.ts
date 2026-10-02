@@ -121,45 +121,25 @@ export async function cancelSupplierInvitation(invitationId: string): Promise<vo
 
 /**
  * PUBLIC: Get supplier invitation by code (no auth required)
- * Returns invitation + tenant info + branding
+ * Returns invitation + tenant info + branding.
+ * Uses the SECURITY DEFINER RPC get_supplier_invitation_by_code, which only
+ * returns the single matching invitation (no table-wide anon SELECT) and
+ * marks it expired server-side when needed.
  */
 export async function getSupplierInvitationByCode(
   invitationCode: string
 ): Promise<PublicSupplierInvitationResult> {
-  // Query invitation with tenant info (no auth required due to RLS policy)
-  const { data: invitationData, error: invitationError } = await supabase
-    .from('supplier_invitations')
-    .select(`
-      *,
-      tenants:tenant_id (
-        id,
-        name,
-        slug,
-        settings
-      )
-    `)
-    .eq('invitation_code', invitationCode)
-    .single();
+  const { data, error } = await supabase.rpc('get_supplier_invitation_by_code', {
+    p_code: invitationCode,
+  });
 
-  if (invitationError || !invitationData) {
+  if (error || !data) {
     throw new Error('Invitation not found');
   }
 
-  const invitation = transformInvitation(invitationData);
-  const tenant = invitationData.tenants as any;
-
-  // Check if invitation is expired
-  const now = new Date();
-  const expiresAt = new Date(invitation.expiresAt);
-  if (invitation.status === 'pending' && expiresAt < now) {
-    // Mark as expired
-    await supabase
-      .from('supplier_invitations')
-      .update({ status: 'expired' })
-      .eq('id', invitation.id);
-
-    invitation.status = 'expired';
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = data as any;
+  const invitation = transformInvitation(result.invitation);
 
   // Validate invitation status
   if (invitation.status !== 'pending') {
@@ -168,42 +148,37 @@ export async function getSupplierInvitationByCode(
 
   // Extract portal settings
   const portalSettings: SupplierPortalSettings = {
-    ...(typeof DEFAULT_SUPPLIER_PORTAL_SETTINGS === 'object' ? DEFAULT_SUPPLIER_PORTAL_SETTINGS : {}),
-    ...(tenant.settings?.supplierPortal || {}),
-  } as SupplierPortalSettings;
-
-  // Extract branding
-  const branding = {
-    logoUrl: tenant.settings?.branding?.logo,
-    primaryColor: tenant.settings?.branding?.primaryColor,
+    ...DEFAULT_SUPPLIER_PORTAL_SETTINGS,
+    ...(result.portalSettings || {}),
   };
 
   return {
     invitation,
     tenant: {
-      id: tenant.id,
-      name: tenant.name,
-      slug: tenant.slug,
+      id: result.tenant.id,
+      name: result.tenant.name,
+      slug: result.tenant.slug,
     },
     portalSettings,
-    branding,
+    branding: {
+      logoUrl: result.branding?.logoUrl ?? undefined,
+      primaryColor: result.branding?.primaryColor ?? undefined,
+    },
   };
 }
 
 /**
  * PUBLIC: Submit supplier registration (no auth required)
- * Creates supplier with status 'pending_approval' and marks invitation as completed
+ * Creates supplier with status 'pending_approval' and marks invitation as completed.
+ * Validation and the insert run server-side in the SECURITY DEFINER RPC
+ * submit_supplier_registration (invitation code checked under row lock).
  */
 export async function publicSubmitSupplierRegistration(
   invitationCode: string,
   data: SupplierRegistrationData
 ): Promise<{ success: boolean; supplierId: string }> {
-  // Validate invitation first
-  const invitationResult = await getSupplierInvitationByCode(invitationCode);
-  const { invitation, tenant } = invitationResult;
-
-  // Validate required fields
-  const requiredFields = [
+  // Client-side pre-validation for fast feedback (server re-validates)
+  const requiredFields: Array<keyof SupplierRegistrationData> = [
     'companyName',
     'contactName',
     'email',
@@ -218,99 +193,24 @@ export async function publicSubmitSupplierRegistration(
   ];
 
   for (const field of requiredFields) {
-    if (!data[field as keyof SupplierRegistrationData]) {
+    if (!data[field]) {
       throw new Error(`Missing required field: ${field}`);
     }
   }
 
-  // Validate terms acceptance
   if (!data.termsAccepted) {
     throw new Error('Terms must be accepted');
   }
 
-  // Build shipping address if different
-  let shippingAddress = undefined;
-  if (data.shippingAddressDifferent) {
-    shippingAddress = {
-      street: data.shippingStreet || '',
-      addressLine2: data.shippingAddressLine2,
-      city: data.shippingCity || '',
-      state: data.shippingState,
-      country: data.shippingCountry || '',
-      postalCode: data.shippingPostalCode || '',
-    };
-  }
+  const { data: supplierId, error } = await supabase.rpc('submit_supplier_registration', {
+    p_code: invitationCode,
+    p_data: data,
+  });
 
-  // Create supplier record with status 'pending_approval'
-  const supplierData = {
-    tenant_id: tenant.id,
-    name: data.companyName.trim(),
-    status: 'pending_approval' as const,
-    verified: false,
+  if (error) throw new Error(error.message || 'Registration failed');
+  if (typeof supplierId !== 'string') throw new Error('Registration failed');
 
-    // Contact info
-    contact_name: data.contactName.trim(),
-    contact_position: data.contactPosition?.trim(),
-    email: data.email.trim(),
-    phone: data.phone?.trim(),
-    mobile: data.mobile?.trim(),
-    website: data.website?.trim(),
-    linkedin: data.linkedin?.trim(),
-
-    // Address
-    address: {
-      street: data.street.trim(),
-      addressLine2: data.addressLine2?.trim(),
-      city: data.city.trim(),
-      state: data.state?.trim(),
-      country: data.country,
-      postalCode: data.postalCode.trim(),
-    },
-
-    // Shipping address (if different)
-    shipping_address: shippingAddress,
-
-    // Legal info
-    legal_form: data.legalForm?.trim(),
-    tax_number: data.taxNumber.trim(),
-    vat_number: data.vatNumber.trim(),
-    commercial_register_number: data.commercialRegisterNumber?.trim(),
-
-    // Banking
-    bank_name: data.bankName?.trim(),
-    iban: data.iban.trim().replace(/\s/g, ''), // Remove spaces
-    bic: data.bic.trim().replace(/\s/g, ''), // Remove spaces
-    payment_terms: data.paymentTerms?.trim(),
-
-    // Business details
-    supplier_type: data.supplierType,
-    industry: data.industry?.trim(),
-    product_categories: data.productCategories?.trim(),
-    certifications: data.certifications?.trim(),
-    internal_notes: data.notes?.trim(),
-  };
-
-  const { data: supplier, error: supplierError } = await supabase
-    .from('suppliers')
-    .insert(supplierData)
-    .select()
-    .single();
-
-  if (supplierError) throw supplierError;
-
-  // Mark invitation as completed
-  const { error: updateError } = await supabase
-    .from('supplier_invitations')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      supplier_id: supplier.id,
-    })
-    .eq('id', invitation.id);
-
-  if (updateError) throw updateError;
-
-  return { success: true, supplierId: supplier.id };
+  return { success: true, supplierId };
 }
 
 /**
