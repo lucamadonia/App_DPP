@@ -2,6 +2,7 @@
  * Supabase Returns Hub Settings Service
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { getPublicTenantBySlug } from './public-tenant';
 import type { ReturnsHubSettings, RhReturnReason, CustomerPortalSettings, PortalDomainSettings } from '@/types/returns-hub';
 
 export const DEFAULT_CUSTOMER_PORTAL_SETTINGS: CustomerPortalSettings = {
@@ -380,12 +381,9 @@ export async function removePortalDomain(): Promise<{ success: boolean; error?: 
 
 // Public access (no auth needed) - for public return registration
 export async function getPublicReturnReasons(tenantSlug: string): Promise<RhReturnReason[]> {
-  // First get tenant id from slug
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('id')
-    .eq('slug', tenantSlug)
-    .single();
+  // Resolve tenant id via the public RPC: since migration 20261001b anon can
+  // no longer filter `tenants` by slug.
+  const tenant = await getPublicTenantBySlug(tenantSlug);
 
   if (!tenant) return [];
 

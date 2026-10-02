@@ -30,6 +30,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getTenantSecrets, mergeTenantSecrets, isServiceRoleBearer } from '../_shared/tenant-secrets.ts';
 import { buildShipmentItems, loadShopifyMappings } from '../_shared/shopify-order-items.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -88,25 +89,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const token = authHeader.replace('Bearer ', '');
 
-    // ─── Cron mode: bypass user auth when caller presents a service-role JWT ───
+    // ─── Cron mode: bypass user auth when caller presents the service role ───
     // The pg_cron job calls this with `Authorization: Bearer <SERVICE_ROLE_JWT>`.
-    // Decode the JWT payload (no signature check — we trust this comes from the
-    // platform's own scheduler hitting our function URL) and accept any token
-    // whose `role` claim is `service_role`.
-    // IMPORTANT: this try/catch must wrap ONLY the JWT decode. Wrapping the
-    // dispatch too would swallow any handler exception and fall through to user
-    // auth, reporting a misleading 401 instead of the real error.
-    let isServiceRole = false;
-    try {
-      const parts = token.split('.');
-      if (parts.length === 3) {
-        // base64url → base64
-        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
-        const claim = JSON.parse(atob(padded));
-        isServiceRole = claim.role === 'service_role';
-      }
-    } catch (_e) { /* not a decodable JWT — fall through to user auth */ }
+    // The token is verified (exact key match, or accepted as service_role by
+    // PostgREST) — an unsigned `role` claim is never trusted, because anyone
+    // can forge one and would otherwise run cron/repair actions for any tenant.
+    const isServiceRole = await isServiceRoleBearer(authHeader, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     if (isServiceRole) {
       const peek = await req.clone().json().catch(() => ({} as Record<string, unknown>));
@@ -127,7 +115,7 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('id', user.id)
       .single();
     if (!profile?.tenant_id) return json({ error: 'No tenant' }, 400);
@@ -146,6 +134,11 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, params } = body as { action: string; params?: Record<string, unknown> };
+
+    // Storing the Shopify Admin token is an admin-only operation.
+    if (action === 'save_token' && profile.role !== 'admin') {
+      return json({ error: 'Only tenant admins can connect Shopify' }, 403);
+    }
 
     switch (action) {
       case 'save_token':
@@ -224,7 +217,10 @@ async function getShopifyConfig(supabase: any, tenantId: string) {
     .eq('id', tenantId)
     .single();
 
-  const settings = tenant?.settings?.shopifyIntegration;
+  const stored = tenant?.settings?.shopifyIntegration;
+  // The access token lives in tenant_secrets (service role only).
+  const { accessToken } = await getTenantSecrets<{ accessToken?: string }>(supabase, tenantId, 'shopify');
+  const settings = stored ? { ...stored, accessToken } : null;
   if (!settings?.shopDomain || !settings?.accessToken) {
     throw new Error('Shopify not configured — missing domain or access token');
   }
@@ -418,7 +414,12 @@ async function handleSaveToken(supabase: any, tenantId: string, params?: Record<
     .single();
 
   const currentSettings = tenant?.settings || {};
-  const currentShopify = currentSettings.shopifyIntegration || {};
+  // deno-lint-ignore no-unused-vars
+  const { accessToken: _legacyToken, ...currentShopify } = currentSettings.shopifyIntegration || {};
+
+  // Token -> tenant_secrets (service role only); never into settings.
+  const secretErr = await mergeTenantSecrets(supabase, tenantId, 'shopify', { accessToken: token });
+  if (secretErr) return json({ error: secretErr }, 500);
 
   const updated = {
     ...currentSettings,
@@ -426,7 +427,6 @@ async function handleSaveToken(supabase: any, tenantId: string, params?: Record<
       ...currentShopify,
       enabled: true,
       shopDomain,
-      accessToken: token,
       apiVersion: currentShopify.apiVersion || '2024-10',
       syncConfig: currentShopify.syncConfig || {
         importOrders: true,
@@ -443,7 +443,11 @@ async function handleSaveToken(supabase: any, tenantId: string, params?: Record<
     },
   };
 
-  await supabase.from('tenants').update({ settings: updated }).eq('id', tenantId);
+  const { error: saveErr } = await supabase.from('tenants').update({ settings: updated }).eq('id', tenantId);
+  if (saveErr) {
+    console.error('[shopify-sync] save settings failed:', saveErr.message);
+    return json({ error: 'Failed to save Shopify settings' }, 500);
+  }
   return json({ success: true });
 }
 

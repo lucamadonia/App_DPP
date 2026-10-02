@@ -10,6 +10,7 @@
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { invokeEdgeFunction } from '@/lib/edge-function';
+import { deleteOwnTenantSecret } from './tenants';
 import type {
   ShopifyIntegrationSettings,
   ShopifySyncConfig,
@@ -123,7 +124,8 @@ export async function getShopifySettings(): Promise<ShopifyIntegrationSettings |
   const settings = data?.settings?.shopifyIntegration as ShopifyIntegrationSettings | undefined;
   if (!settings) return null;
 
-  // Strip accessToken from client-side result
+  // The token lives in tenant_secrets since 20261001b; strip defensively in
+  // case a legacy row still carries it.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { accessToken, ...safeSettings } = settings;
   return safeSettings as ShopifyIntegrationSettings;
@@ -214,6 +216,10 @@ export async function disconnectShopify(): Promise<void> {
     .from('tenants')
     .update({ settings: rest })
     .eq('id', tenantId);
+
+  // The Admin API token lives in tenant_secrets (service role only); remove
+  // it via the admin-only RPC so a disconnected shop leaves no credential.
+  await deleteOwnTenantSecret('shopify');
 
   // Clean up mapping tables (bundle components cascade via bundle_id)
   await supabase.from('shopify_product_map').delete().eq('tenant_id', tenantId);

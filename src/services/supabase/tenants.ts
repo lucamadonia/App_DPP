@@ -6,6 +6,7 @@
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { gtinCandidates } from '@/lib/barcode-parser';
+import { getPublicTenantById } from './public-tenant';
 import type { Tenant, TenantSettings, BrandingSettings, QRCodeDomainSettings, DPPDesignSettings } from '@/types/database';
 
 // Transform database row to Tenant type
@@ -304,25 +305,20 @@ export async function getPublicTenantBranding(tenantId: string): Promise<Brandin
     return null;
   }
 
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('settings, name, logo')
-    .eq('id', tenantId)
-    .single();
-
-  if (error || !data) {
-    console.error('Failed to load public tenant branding:', error);
+  // Public RPC: allow-listed fields only (tenants is not anon-readable).
+  const data = await getPublicTenantById(tenantId);
+  if (!data) {
     return null;
   }
 
   // Combine tenant fields with branding settings
-  const settings = data.settings as TenantSettings | null;
+  const settings = data.settings;
   const branding: BrandingSettings = {
     ...settings?.branding,
     // Use tenant.name as fallback for appName
     appName: settings?.branding?.appName || data.name || 'Trackbliss',
     // Use tenant.logo as fallback
-    logo: settings?.branding?.logo || data.logo,
+    logo: settings?.branding?.logo || data.logo || undefined,
   };
 
   return branding;
@@ -405,20 +401,9 @@ export async function getPublicTenantQRSettings(
       return null;
     }
 
-    // Step 3: Fetch tenant settings
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('settings')
-      .eq('id', tenantId)
-      .single();
-
-    if (error || !data) {
-      console.error('Error fetching tenant QR settings:', error);
-      return null;
-    }
-
-    const settings = data.settings as TenantSettings | null;
-    return settings?.qrCode || null;
+    // Step 3: Fetch tenant settings via the public RPC (allow-listed fields)
+    const data = await getPublicTenantById(tenantId);
+    return data?.settings?.qrCode || null;
   } catch (error) {
     console.error('Error in getPublicTenantQRSettings:', error);
     return null;
@@ -546,20 +531,9 @@ export async function getPublicTenantDPPDesign(
       return null;
     }
 
-    // Step 3: Fetch tenant DPP design settings
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('settings')
-      .eq('id', tenantId)
-      .single();
-
-    if (error || !data) {
-      console.error('Error fetching tenant DPP design:', error);
-      return null;
-    }
-
-    const settings = data.settings as TenantSettings | null;
-    return settings?.dppDesign || null;
+    // Step 3: Fetch tenant DPP design via the public RPC (allow-listed fields)
+    const data = await getPublicTenantById(tenantId);
+    return data?.settings?.dppDesign || null;
   } catch (error) {
     console.error('Error in getPublicTenantDPPDesign:', error);
     return null;
@@ -607,4 +581,39 @@ export async function uploadHeroImage(
     .getPublicUrl(filename);
 
   return { success: true, url: urlData.publicUrl };
+}
+
+// ============================================
+// INTEGRATION CREDENTIAL STATUS
+// ============================================
+
+export interface TenantSecretStatus {
+  dhl: boolean;
+  internetmarke: boolean;
+  shopify: boolean;
+}
+
+/**
+ * Which integrations have credentials stored for the current tenant.
+ * Credentials live in the service-role-only tenant_secrets table; the client
+ * only ever learns booleans.
+ */
+export async function getOwnTenantSecretStatus(): Promise<TenantSecretStatus> {
+  const { data, error } = await supabase.rpc('get_own_tenant_secret_status');
+  if (error || !data) {
+    if (error) console.warn('Failed to load credential status:', error.message);
+    return { dhl: false, internetmarke: false, shopify: false };
+  }
+  const status = data as Partial<TenantSecretStatus>;
+  return {
+    dhl: status.dhl === true,
+    internetmarke: status.internetmarke === true,
+    shopify: status.shopify === true,
+  };
+}
+
+/** Delete stored credentials of one integration (tenant admins only). */
+export async function deleteOwnTenantSecret(provider: keyof TenantSecretStatus): Promise<void> {
+  const { error } = await supabase.rpc('delete_own_tenant_secret', { p_provider: provider });
+  if (error) throw new Error(`Failed to remove credentials: ${error.message}`);
 }

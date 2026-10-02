@@ -6,6 +6,12 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  getTenantSecrets,
+  mergeTenantSecrets,
+  tenantIdsWithSecrets,
+  isServiceRoleBearer,
+} from '../_shared/tenant-secrets.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -20,6 +26,13 @@ const POST_PRODUCTS_URL = 'https://api-eu.dhl.com/post/de/information/products/v
 // POST /orders?labelType=SHIPMENT_LABEL|QR_LABEL|BOTH.
 const DHL_RETURNS_SANDBOX_URL = 'https://api-sandbox.dhl.com/parcel/de/shipping/returns/v1';
 const DHL_RETURNS_PROD_URL = 'https://api-eu.dhl.com/parcel/de/shipping/returns/v1';
+
+// DHL Unified Tracking keys have low daily quotas. Public tracking pages are
+// served from the persisted snapshot while it is fresh, and the cron polls a
+// bounded, oldest-first slice per tenant and run.
+const PUBLIC_TRACKING_CACHE_MS = 20 * 60 * 1000;
+const CRON_MAX_PARCELS_PER_TENANT = 100;
+const CRON_DELAY_BETWEEN_CALLS_MS = 250;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,8 +85,11 @@ Deno.serve(async (req) => {
       if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
         return json({ error: 'Server misconfigured' });
       }
+      if (!(await isServiceRoleBearer(req.headers.get('Authorization'), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY))) {
+        return json({ error: 'Unauthorized' }, 401);
+      }
       const cronSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      return await handlePollAllTenantsCron(cronSupabase, req.headers.get('Authorization'));
+      return await handlePollAllTenantsCron(cronSupabase);
     }
 
     // --- Cron-mode: poll DHL tracking for return parcels across all tenants. ---
@@ -81,8 +97,11 @@ Deno.serve(async (req) => {
       if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
         return json({ error: 'Server misconfigured' });
       }
+      if (!(await isServiceRoleBearer(req.headers.get('Authorization'), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY))) {
+        return json({ error: 'Unauthorized' }, 401);
+      }
       const cronSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      return await handlePollReturnsTrackingCron(cronSupabase, req.headers.get('Authorization'));
+      return await handlePollReturnsTrackingCron(cronSupabase);
     }
 
     // --- Auth ---
@@ -90,35 +109,44 @@ Deno.serve(async (req) => {
     if (!authHeader) return json({ error: 'Missing authorization' }, 401);
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return json({ error: 'Server misconfigured: missing Supabase env vars' });
+      return json({ error: 'Server misconfigured' });
     }
 
     let supabase;
     try {
       supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     } catch (e) {
-      return json({ error: `createClient failed: ${e instanceof Error ? e.message : String(e)}` });
+      console.error('[dhl-shipping] createClient failed:', e);
+      return json({ error: 'Server misconfigured' });
     }
 
     const token = authHeader.replace('Bearer ', '');
     let user;
     try {
       const { data, error: authErr } = await supabase.auth.getUser(token);
-      if (authErr) return json({ error: `Auth error: ${authErr.message}` });
-      if (!data?.user) return json({ error: 'No user in token' });
+      if (authErr || !data?.user) {
+        if (authErr) console.warn('[dhl-shipping] auth error:', authErr.message);
+        return json({ error: 'Unauthorized' }, 401);
+      }
       user = data.user;
     } catch (e) {
-      return json({ error: `getUser crashed: ${e instanceof Error ? e.message : String(e)}` });
+      console.error('[dhl-shipping] getUser crashed:', e);
+      return json({ error: 'Unauthorized' }, 401);
     }
 
     // --- Tenant ---
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('id', user.id)
       .single();
     if (!profile?.tenant_id) return json({ error: 'No tenant' }, 403);
     const tenantId = profile.tenant_id;
+
+    // Storing carrier credentials is an admin-only operation.
+    if (action === 'save_credentials' && profile.role !== 'admin') {
+      return json({ error: 'Only tenant admins can change DHL credentials' });
+    }
 
     // --- Billing Gate (skip for config actions — tenants need to set up DHL before subscribing) ---
     const isConfigAction = action === 'save_credentials'
@@ -146,7 +174,7 @@ Deno.serve(async (req) => {
         // Warehouse actions require Warehouse Pro/Business
         const hasWarehousePro = moduleIds.includes('warehouse_professional') || moduleIds.includes('warehouse_business');
         if (!hasWarehousePro) {
-          return json({ error: 'Warehouse Professional or Business module required (modules: ' + moduleIds.join(',') + ')' });
+          return json({ error: 'Warehouse Professional or Business module required' });
         }
       }
     }
@@ -182,8 +210,8 @@ Deno.serve(async (req) => {
     }
   } catch (err) {
     console.error('DHL shipping error:', err);
-    // Return 200 with error body so supabase-js passes through the error message
-    return json({ error: err instanceof Error ? err.message : 'Internal error' });
+    // Return 200 with a generic error body; details stay in the function logs.
+    return json({ error: 'Internal error' });
   }
 });
 
@@ -198,7 +226,20 @@ async function getDHLSettings(supabase: any, tenantId: string) {
     .select('settings')
     .eq('id', tenantId)
     .single();
-  return data?.settings?.warehouse?.dhl || null;
+  const dhl = data?.settings?.warehouse?.dhl;
+  if (!dhl) return null;
+  // Credentials live in tenant_secrets (service role only), never in settings.
+  const [secrets, imSecrets] = await Promise.all([
+    getTenantSecrets(supabase, tenantId, 'dhl'),
+    getTenantSecrets(supabase, tenantId, 'internetmarke'),
+  ]);
+  return {
+    ...dhl,
+    ...secrets,
+    internetmarke: dhl.internetmarke || Object.keys(imSecrets).length > 0
+      ? { ...(dhl.internetmarke || {}), ...imSecrets }
+      : undefined,
+  };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -402,17 +443,45 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
   const currentSettings = tenant?.settings || {};
   const warehouse = currentSettings.warehouse || {};
   const currentDhl = warehouse.dhl || {};
+  const imParams = params.internetmarke as Record<string, unknown> | undefined;
+
+  // 1. Credentials -> tenant_secrets (service role only). Empty values keep
+  //    the stored secret, so the form can be saved without re-entering them.
+  const dhlErr = await mergeTenantSecrets(supabase, tenantId, 'dhl', {
+    apiKey: params.apiKey,
+    username: params.username,
+    password: params.password,
+  });
+  if (dhlErr) return json({ error: dhlErr }, 500);
+  if (imParams) {
+    const imErr = await mergeTenantSecrets(supabase, tenantId, 'internetmarke', {
+      clientId: imParams.clientId,
+      clientSecret: imParams.clientSecret,
+      portokasseUsername: imParams.portokasseUsername,
+      portokassePassword: imParams.portokassePassword,
+    });
+    if (imErr) return json({ error: imErr }, 500);
+  }
+
+  // 2. Non-secret configuration stays in tenants.settings. Any legacy secret
+  //    keys are dropped here (the DB trigger would strip them anyway).
+  const {
+    apiKey: _apiKey, username: _username, password: _password,
+    ...currentDhlPublic
+  } = currentDhl;
+  const {
+    clientId: _clientId, clientSecret: _clientSecret,
+    portokasseUsername: _pkUser, portokassePassword: _pkPass,
+    ...currentImPublic
+  } = currentDhl.internetmarke || {};
 
   const dhlSettings = {
     // Preserve any existing sub-config the credentials form doesn't manage —
     // most importantly returnsApi (receiverId/enabled). Previously this object
     // was rebuilt from scratch, silently wiping returnsApi on every save.
-    ...currentDhl,
+    ...currentDhlPublic,
     enabled: params.enabled ?? true,
     sandbox: params.sandbox ?? true,
-    apiKey: params.apiKey || currentDhl.apiKey || '',
-    username: params.username || currentDhl.username || '',
-    password: params.password || currentDhl.password || '',
     billingNumber: params.billingNumber || '',
     billingNumberInternational: params.billingNumberInternational || '',
     billingNumberKleinpaket: params.billingNumberKleinpaket || '',
@@ -422,20 +491,16 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
     connectedAt: params.apiKey ? new Date().toISOString() : currentDhl.connectedAt,
     // Allow updating returnsApi explicitly when the form sends it.
     ...(params.returnsApi ? { returnsApi: params.returnsApi } : {}),
-    ...(params.internetmarke ? {
+    ...(imParams ? {
       internetmarke: {
-        ...(currentDhl.internetmarke || {}),
-        enabled: (params.internetmarke as Record<string, unknown>).enabled ?? false,
-        clientId: (params.internetmarke as Record<string, unknown>).clientId || currentDhl.internetmarke?.clientId || '',
-        clientSecret: (params.internetmarke as Record<string, unknown>).clientSecret || currentDhl.internetmarke?.clientSecret || '',
-        portokasseUsername: (params.internetmarke as Record<string, unknown>).portokasseUsername || currentDhl.internetmarke?.portokasseUsername || '',
-        portokassePassword: (params.internetmarke as Record<string, unknown>).portokassePassword || currentDhl.internetmarke?.portokassePassword || '',
-        pageFormatId: Number((params.internetmarke as Record<string, unknown>).pageFormatId) || 2,
-        connectedAt: (params.internetmarke as Record<string, unknown>).clientId
+        ...currentImPublic,
+        enabled: imParams.enabled ?? false,
+        pageFormatId: Number(imParams.pageFormatId) || 2,
+        connectedAt: imParams.clientId
           ? new Date().toISOString()
           : currentDhl.internetmarke?.connectedAt,
       },
-    } : {}),
+    } : (Object.keys(currentImPublic).length > 0 ? { internetmarke: currentImPublic } : {})),
   };
 
   const { error } = await supabase
@@ -451,7 +516,10 @@ async function handleSaveCredentials(supabase: any, tenantId: string, params?: R
     })
     .eq('id', tenantId);
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) {
+    console.error('[dhl-shipping] save settings failed:', error.message);
+    return json({ error: 'Failed to save DHL settings' }, 500);
+  }
   return json({ success: true });
 }
 
@@ -1407,13 +1475,16 @@ async function pollTrackingForTenant(supabase: any, tenantId: string) {
     .ilike('carrier', 'DHL%')
     .not('tracking_number', 'is', null)
     .in('status', ['shipped', 'label_created', 'in_transit'])
-    .order('tracking_polled_at', { ascending: true, nullsFirst: true });
+    .order('tracking_polled_at', { ascending: true, nullsFirst: true })
+    .limit(CRON_MAX_PARCELS_PER_TENANT);
 
   const results = { tenantId, total: shipments?.length ?? 0, delivered: 0, inTransit: 0, noChange: 0, errors: 0 };
   const details: Array<Record<string, unknown>> = [];
   const now = new Date().toISOString();
 
+  let shipIdx = 0;
   for (const ship of (shipments || [])) {
+    if (shipIdx++ > 0) await sleep(CRON_DELAY_BETWEEN_CALLS_MS);
     try {
       const resp = await fetch(`${trackingBase}?trackingNumber=${encodeURIComponent(ship.tracking_number)}`, {
         headers: { 'DHL-API-Key': settings.apiKey },
@@ -1478,19 +1549,30 @@ async function pollTrackingForTenant(supabase: any, tenantId: string) {
   return json({ success: true, data: results, details });
 }
 
-/** Cron-mode: iterate over ALL tenants and poll their DHL shipments.
- *  Read-only on user-input, safe to leave unauthenticated behind Obscurity. */
+/** Tenants with stored DHL credentials whose DHL integration is enabled. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handlePollAllTenantsCron(supabase: any, _authHeader: string | null) {
-  // Find all tenants that have DHL configured
+async function listTenantsWithDHL(supabase: any): Promise<Array<{ id: string; name: string }>> {
+  const ids = await tenantIdsWithSecrets(supabase, 'dhl', 'apiKey');
+  if (ids.length === 0) return [];
   const { data: tenants } = await supabase
     .from('tenants')
     .select('id, name, settings')
-    .not('settings', 'is', null);
+    .in('id', ids);
+  return (tenants || [])
+    .filter((t: { settings?: { warehouse?: { dhl?: { enabled?: boolean } } } }) =>
+      t.settings?.warehouse?.dhl && t.settings.warehouse.dhl.enabled !== false)
+    .map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+}
 
-  const tenantsWithDHL = (tenants || []).filter((t: { settings?: { warehouse?: { dhl?: { apiKey?: string; enabled?: boolean } } } }) =>
-    t.settings?.warehouse?.dhl?.apiKey && t.settings.warehouse.dhl.enabled !== false
-  );
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Cron-mode: iterate over ALL tenants and poll their DHL shipments.
+ *  Caller must present the service-role key (checked in the router). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handlePollAllTenantsCron(supabase: any) {
+  const tenantsWithDHL = await listTenantsWithDHL(supabase);
 
   const summary = { tenantsScanned: tenantsWithDHL.length, perTenant: [] as unknown[] };
   for (const tenant of tenantsWithDHL) {
@@ -1520,7 +1602,8 @@ async function pollReturnsTrackingForTenant(supabase: any, tenantId: string) {
     .eq('tenant_id', tenantId)
     .not('tracking_number', 'is', null)
     .in('status', ['LABEL_GENERATED', 'SHIPPED'])
-    .order('tracking_polled_at', { ascending: true, nullsFirst: true });
+    .order('tracking_polled_at', { ascending: true, nullsFirst: true })
+    .limit(CRON_MAX_PARCELS_PER_TENANT);
 
   // Notification sender/locale (for the branded status mails on status change).
   const { data: tenantRow } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
@@ -1531,7 +1614,9 @@ async function pollReturnsTrackingForTenant(supabase: any, tenantId: string) {
   const results = { tenantId, total: returns?.length ?? 0, delivered: 0, shipped: 0, noChange: 0, errors: 0 };
   const now = new Date().toISOString();
 
+  let retIdx = 0;
   for (const r of (returns || [])) {
+    if (retIdx++ > 0) await sleep(CRON_DELAY_BETWEEN_CALLS_MS);
     try {
       const resp = await fetch(`${trackingBase}?trackingNumber=${encodeURIComponent(r.tracking_number)}`, {
         headers: { 'DHL-API-Key': settings.apiKey },
@@ -1627,15 +1712,8 @@ async function pollReturnsTrackingForTenant(supabase: any, tenantId: string) {
 
 /** Cron-mode: poll return tracking for ALL tenants with DHL configured. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handlePollReturnsTrackingCron(supabase: any, _authHeader: string | null) {
-  const { data: tenants } = await supabase
-    .from('tenants')
-    .select('id, name, settings')
-    .not('settings', 'is', null);
-
-  const tenantsWithDHL = (tenants || []).filter((t: { settings?: { warehouse?: { dhl?: { apiKey?: string; enabled?: boolean } } } }) =>
-    t.settings?.warehouse?.dhl?.apiKey && t.settings.warehouse.dhl.enabled !== false
-  );
+async function handlePollReturnsTrackingCron(supabase: any) {
+  const tenantsWithDHL = await listTenantsWithDHL(supabase);
 
   const summary = { tenantsScanned: tenantsWithDHL.length, perTenant: [] as unknown[] };
   for (const tenant of tenantsWithDHL) {
@@ -1687,6 +1765,59 @@ function buildReturnStatusMail(status: string, name: string, returnNumber: strin
 /*  Action: get_public_shipment_tracking (no auth — validated by token)        */
 /* -------------------------------------------------------------------------- */
 
+/** Normalise DHL events (raw API shape from the cron, or the already mapped
+ *  shape persisted by the public handlers) into the client event format. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeTrackingEvents(raw: any): Array<{ timestamp: string; location?: string; description: string; statusCode?: string }> {
+  if (!Array.isArray(raw)) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return raw.map((ev: any) => ({
+    timestamp: ev?.timestamp || '',
+    location: typeof ev?.location === 'string'
+      ? ev.location
+      : ev?.location?.address?.addressLocality || undefined,
+    description: ev?.description || ev?.status || '',
+    statusCode: ev?.statusCode || undefined,
+  }));
+}
+
+/**
+ * Atomically claims the right to call DHL for one row (SRE-12).
+ *
+ * The gate is the age of `tracking_polled_at` ALONE — not whether history is
+ * non-empty — because freshly labelled parcels (404 / no events yet) are
+ * exactly the ones customers keep refreshing. The stamp is written BEFORE the
+ * DHL call, so 404, empty and failed responses also count against the window,
+ * and concurrent requests cannot both pass (conditional UPDATE ... RETURNING).
+ * Returns false when another call happened within the window: serve the
+ * cached snapshot (possibly []) instead.
+ */
+async function claimPublicTrackingPoll(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  table: 'rh_returns' | 'wh_shipments',
+  rowId: string,
+  polledAt: string | null | undefined,
+): Promise<boolean> {
+  if (polledAt) {
+    const age = Date.now() - new Date(polledAt).getTime();
+    if (Number.isFinite(age) && age >= 0 && age < PUBLIC_TRACKING_CACHE_MS) return false;
+  }
+  const cutoff = new Date(Date.now() - PUBLIC_TRACKING_CACHE_MS).toISOString();
+  const { data, error } = await supabase
+    .from(table)
+    .update({ tracking_polled_at: new Date().toISOString() })
+    .eq('id', rowId)
+    .or(`tracking_polled_at.is.null,tracking_polled_at.lt.${cutoff}`)
+    .select('id');
+  if (error) {
+    // Fail closed: without a stamp we cannot bound DHL calls.
+    console.warn(`[dhl-shipping] tracking poll claim failed on ${table}:`, error.message);
+    return false;
+  }
+  return Array.isArray(data) && data.length > 0;
+}
+
 async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
   const token = (params?.token as string | undefined)?.trim().toLowerCase();
   if (!token) {
@@ -1706,7 +1837,7 @@ async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
   // Validate token + load tenant + tracking number
   const { data: shipment, error: shipErr } = await supabase
     .from('wh_shipments')
-    .select('tenant_id, tracking_number, carrier, tracking_history')
+    .select('id, tenant_id, tracking_number, carrier, tracking_history, tracking_polled_at')
     .eq('tracking_token', token)
     .single();
 
@@ -1721,25 +1852,32 @@ async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
     return json({ events: shipment.tracking_history || [], carrier: shipment.carrier });
   }
 
+  const cachedEvents = normalizeTrackingEvents(shipment.tracking_history);
+  // Serve the persisted snapshot while fresh — protects the DHL quota from
+  // open tracking tabs (SRE-12).
   const settings = await getDHLSettings(supabase, shipment.tenant_id);
   if (!settings?.apiKey) {
-    return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+    return json({ events: cachedEvents, carrier: 'DHL' });
+  }
+
+  if (!(await claimPublicTrackingPoll(supabase, 'wh_shipments', shipment.id, shipment.tracking_polled_at))) {
+    return json({ events: cachedEvents, carrier: 'DHL', cached: true });
   }
 
   try {
     const base = settings.sandbox
       ? 'https://api-sandbox.dhl.com/track/shipments'
       : 'https://api-eu.dhl.com/track/shipments';
-    const trackingUrl = `${base}?trackingNumber=${shipment.tracking_number}&language=${locale}`;
+    const trackingUrl = `${base}?trackingNumber=${encodeURIComponent(shipment.tracking_number)}&language=${locale}`;
 
     const resp = await fetch(trackingUrl, { headers: { 'DHL-API-Key': settings.apiKey } });
     if (!resp.ok) {
-      return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+      return json({ events: cachedEvents, carrier: 'DHL' });
     }
     const data = await resp.json();
     const shipments = data?.shipments || [];
     if (shipments.length === 0) {
-      return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+      return json({ events: cachedEvents, carrier: 'DHL' });
     }
 
     const events = (shipments[0]?.events || []).map((ev: {
@@ -1755,17 +1893,18 @@ async function handlePublicShipmentTracking(params?: Record<string, unknown>) {
     }));
 
     // Persist as snapshot so future loads are fast even if DHL is down.
+    // (tracking_polled_at was already stamped by claimPublicTrackingPoll.)
     if (events.length > 0) {
       await supabase
         .from('wh_shipments')
-        .update({ tracking_history: events, tracking_polled_at: new Date().toISOString() })
-        .eq('tracking_token', token);
+        .update({ tracking_history: events })
+        .eq('id', shipment.id);
     }
 
     return json({ events, carrier: 'DHL' });
   } catch (err) {
     console.error('Public shipment tracking error:', err);
-    return json({ events: shipment.tracking_history || [], carrier: 'DHL' });
+    return json({ events: cachedEvents, carrier: 'DHL' });
   }
 }
 
@@ -1790,7 +1929,7 @@ async function handlePublicTracking(params?: Record<string, unknown>) {
   // Validate: return must exist with matching tracking number
   const { data: returnRow, error: returnErr } = await supabase
     .from('rh_returns')
-    .select('tenant_id')
+    .select('id, tenant_id, tracking_history, tracking_polled_at')
     .eq('return_number', returnNumber)
     .eq('tracking_number', trackingNumber)
     .single();
@@ -1799,10 +1938,16 @@ async function handlePublicTracking(params?: Record<string, unknown>) {
     return json({ events: [], error: 'Return not found' });
   }
 
+  const cachedEvents = normalizeTrackingEvents(returnRow.tracking_history);
+  // Serve the persisted snapshot while fresh (SRE-12 — DHL quota).
   // Load DHL settings from tenant
   const settings = await getDHLSettings(supabase, returnRow.tenant_id);
   if (!settings?.apiKey) {
-    return json({ events: [], error: 'Carrier not configured' });
+    return json({ events: cachedEvents, error: cachedEvents.length ? undefined : 'Carrier not configured' });
+  }
+
+  if (!(await claimPublicTrackingPoll(supabase, 'rh_returns', returnRow.id, returnRow.tracking_polled_at))) {
+    return json({ events: cachedEvents, carrier: 'DHL', cached: true });
   }
 
   // Call DHL Tracking API
@@ -1812,20 +1957,20 @@ async function handlePublicTracking(params?: Record<string, unknown>) {
     const base = settings.sandbox
       ? 'https://api-sandbox.dhl.com/track/shipments'
       : 'https://api-eu.dhl.com/track/shipments';
-    const trackingUrl = `${base}?trackingNumber=${trackingNumber}&language=${locale}`;
+    const trackingUrl = `${base}?trackingNumber=${encodeURIComponent(trackingNumber)}&language=${locale}`;
 
     const resp = await fetch(trackingUrl, {
       headers: { 'DHL-API-Key': settings.apiKey },
     });
 
     if (!resp.ok) {
-      if (resp.status === 404) return json({ events: [], carrier: 'DHL' });
-      return json({ events: [], error: `DHL tracking API error: ${resp.status}`, carrier: 'DHL' });
+      if (resp.status !== 404) console.warn(`[dhl-shipping] public tracking DHL ${resp.status}`);
+      return json({ events: cachedEvents, carrier: 'DHL' });
     }
 
     const data = await resp.json();
     const shipments = data?.shipments || [];
-    if (shipments.length === 0) return json({ events: [], carrier: 'DHL' });
+    if (shipments.length === 0) return json({ events: cachedEvents, carrier: 'DHL' });
 
     const events = (shipments[0]?.events || []).map((ev: {
       timestamp?: string;
@@ -1839,10 +1984,20 @@ async function handlePublicTracking(params?: Record<string, unknown>) {
       statusCode: ev.statusCode || undefined,
     }));
 
+    // Persist the snapshot so further page loads within the cache window are
+    // served without another DHL call. Status transitions stay with the cron.
+    // tracking_polled_at was already stamped by claimPublicTrackingPoll.
+    if (events.length > 0) {
+      await supabase
+        .from('rh_returns')
+        .update({ tracking_history: events })
+        .eq('id', returnRow.id);
+    }
+
     return json({ events, carrier: 'DHL' });
   } catch (err) {
     console.error('Public DHL tracking error:', err);
-    return json({ events: [], error: err instanceof Error ? err.message : 'Tracking failed', carrier: 'DHL' });
+    return json({ events: cachedEvents, error: cachedEvents.length ? undefined : 'Tracking failed', carrier: 'DHL' });
   }
 }
 

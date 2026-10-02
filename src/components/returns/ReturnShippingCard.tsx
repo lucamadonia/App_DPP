@@ -39,12 +39,14 @@ import {
 import { triggerEmailNotification } from '@/services/supabase/rh-notification-trigger';
 import type { RhReturn } from '@/types/returns-hub';
 import type { DHLTrackingEvent, DHLSettingsPublic } from '@/types/dhl';
+import { useVisibleInterval } from '@/hooks/use-visible-interval';
 
 interface ReturnShippingCardProps {
   returnData: RhReturn;
   onUpdate: () => void;
 }
 
+const TRACKING_REFRESH_MS = 5 * 60_000;
 const DHL_TRACKING_URL = 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=';
 
 function getStatusColor(statusCode: string | undefined): string {
@@ -104,12 +106,9 @@ export function ReturnShippingCard({ returnData, onUpdate }: ReturnShippingCardP
     loadTracking();
   }, [loadTracking]);
 
-  // Auto-refresh tracking every 60s
-  useEffect(() => {
-    if (!returnData.trackingNumber) return;
-    const interval = setInterval(loadTracking, 60_000);
-    return () => clearInterval(interval);
-  }, [loadTracking, returnData.trackingNumber]);
+  // Auto-refresh tracking every 5 min while the tab is visible (each refresh
+  // is a live DHL Tracking API call — the key has a low daily quota).
+  useVisibleInterval(loadTracking, TRACKING_REFRESH_MS, !!returnData.trackingNumber);
 
   const handleGenerateLabel = async (senderAddress?: Record<string, unknown>) => {
     setGenerating(true);

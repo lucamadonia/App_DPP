@@ -5,6 +5,7 @@
 
 import { supabase, getCurrentTenantId, SUPABASE_URL } from '@/lib/supabase';
 import { invokeEdgeFunction } from '@/lib/edge-function';
+import { getOwnTenantSecretStatus } from './tenants';
 import type {
   DHLSettingsPublic,
   DHLLabelResponse,
@@ -65,17 +66,22 @@ export async function validateAddressWithDHL(input: {
 
 /**
  * Get DHL settings for the current tenant (without credentials).
- * Reads from tenants.settings.warehouse.dhl directly.
+ * Non-secret config comes from tenants.settings.warehouse.dhl; whether
+ * credentials are stored comes from the get_own_tenant_secret_status RPC
+ * (the credentials themselves live in the service-role-only tenant_secrets).
  */
 export async function getDHLSettings(): Promise<DHLSettingsPublic | null> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return null;
 
-  const { data } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('id', tenantId)
-    .single();
+  const [{ data }, secretStatus] = await Promise.all([
+    supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .single(),
+    getOwnTenantSecretStatus(),
+  ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dhl = (data?.settings as any)?.warehouse?.dhl;
@@ -92,17 +98,12 @@ export async function getDHLSettings(): Promise<DHLSettingsPublic | null> {
     labelFormat: dhl.labelFormat || 'PDF_A4',
     shipper: dhl.shipper || {},
     connectedAt: dhl.connectedAt,
-    hasCredentials: !!(dhl.apiKey && dhl.username && dhl.password),
+    hasCredentials: secretStatus.dhl,
     internetmarke: {
       enabled: dhl.internetmarke?.enabled ?? false,
       pageFormatId: Number(dhl.internetmarke?.pageFormatId) || 2,
       connectedAt: dhl.internetmarke?.connectedAt,
-      hasCredentials: !!(
-        dhl.internetmarke?.clientId
-        && dhl.internetmarke?.clientSecret
-        && dhl.internetmarke?.portokasseUsername
-        && dhl.internetmarke?.portokassePassword
-      ),
+      hasCredentials: secretStatus.internetmarke,
     },
   };
 }

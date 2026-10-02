@@ -3,6 +3,7 @@
  * Pattern mirrors rh-settings.ts: deep-merge with defaults, atomic update.
  */
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { getPublicTenantBySlug } from './public-tenant';
 import type { FeedbackSettings } from '@/types/feedback';
 
 export const DEFAULT_FEEDBACK_SETTINGS: FeedbackSettings = {
@@ -58,14 +59,10 @@ export async function getFeedbackSettings(): Promise<FeedbackSettings> {
 export async function getFeedbackSettingsByTenantSlug(
   slug: string,
 ): Promise<FeedbackSettings | null> {
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('slug', slug)
-    .single();
-
-  if (error || !data?.settings?.feedback) return null;
-  return deepMerge(data.settings.feedback);
+  // Allow-listed public RPC: exposes only feedback.enabled + feedback.widget.
+  const tenant = await getPublicTenantBySlug(slug);
+  if (!tenant?.settings?.feedback) return null;
+  return deepMerge(tenant.settings.feedback);
 }
 
 export async function updateFeedbackSettings(

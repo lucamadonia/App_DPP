@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getPublicDHLTracking } from '@/services/supabase/dhl-carrier';
+import { useVisibleInterval } from '@/hooks/use-visible-interval';
 import type { DHLTrackingEvent } from '@/types/dhl';
 
 interface ShipmentTrackerProps {
@@ -44,6 +45,8 @@ function getStatusLabel(statusCode: string | undefined, t: (key: string) => stri
   return null;
 }
 
+const TRACKING_REFRESH_MS = 5 * 60_000;
+
 export function ShipmentTracker({ trackingNumber, returnNumber, translationNamespace = 'returns' }: ShipmentTrackerProps) {
   const { t } = useTranslation(translationNamespace);
   const [events, setEvents] = useState<DHLTrackingEvent[]>([]);
@@ -72,11 +75,9 @@ export function ShipmentTracker({ trackingNumber, returnNumber, translationNames
     loadTracking();
   }, [loadTracking]);
 
-  // Auto-refresh every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(loadTracking, 60_000);
-    return () => clearInterval(interval);
-  }, [loadTracking]);
+  // Auto-refresh every 5 minutes while the tab is visible. The server caches
+  // the DHL snapshot anyway; this keeps open tabs off the DHL quota.
+  useVisibleInterval(loadTracking, TRACKING_REFRESH_MS);
 
   const topStatus = events[0]?.statusCode;
   const statusLabel = getStatusLabel(topStatus, t);

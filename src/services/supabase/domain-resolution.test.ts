@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  mockSupabase,
-  mockSupabaseTable,
-  clearSupabaseMocks,
-} from '@/test/mocks/supabase'
+
+const { rpcMock, anonRpcMock } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
+  anonRpcMock: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase', () => ({
-  supabase: mockSupabase,
+  supabase: { rpc: rpcMock },
+  supabaseAnon: { rpc: anonRpcMock },
 }))
 
 import { resolveTenantByDomain, isDomainAvailable } from './domain-resolution'
 
 describe('Domain Resolution Service', () => {
   beforeEach(() => {
-    clearSupabaseMocks()
     vi.clearAllMocks()
   })
 
@@ -21,9 +21,8 @@ describe('Domain Resolution Service', () => {
   // resolveTenantByDomain
   // ==========================================
   describe('resolveTenantByDomain', () => {
-    it('resolves a verified custom domain to tenant info', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', {
+    it('resolves a verified custom domain via the public RPC', async () => {
+      anonRpcMock.mockResolvedValue({
         data: {
           id: 'tenant-1',
           name: 'Acme Corp',
@@ -45,63 +44,51 @@ describe('Domain Resolution Service', () => {
         error: null,
       })
 
-      // Act
-      const result = await resolveTenantByDomain('returns.acme.com')
+      const result = await resolveTenantByDomain('Returns.Acme.com')
 
-      // Assert
-      expect(result).toBeTruthy()
-      expect(result?.tenantId).toBe('tenant-1')
-      expect(result?.tenantSlug).toBe('acme')
-      expect(result?.tenantName).toBe('Acme Corp')
-      expect(result?.portalType).toBe('returns')
-      expect(result?.primaryColor).toBe('#FF5500')
-      expect(result?.logoUrl).toBe('https://cdn.acme.com/logo.png')
+      expect(anonRpcMock).toHaveBeenCalledWith('get_public_tenant_by_domain', { p_domain: 'returns.acme.com' })
+      expect(result).toEqual({
+        tenantId: 'tenant-1',
+        tenantSlug: 'acme',
+        tenantName: 'Acme Corp',
+        portalType: 'returns',
+        primaryColor: '#FF5500',
+        logoUrl: 'https://cdn.acme.com/logo.png',
+      })
+    })
+
+    it('never queries the tenants table directly', async () => {
+      anonRpcMock.mockResolvedValue({ data: null, error: null })
+      const lib = await import('@/lib/supabase')
+      await resolveTenantByDomain('returns.acme.com')
+      expect((lib.supabase as unknown as { from?: unknown }).from).toBeUndefined()
     })
 
     it('returns null when domain not found', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', { data: null, error: null })
-
-      // Act
-      const result = await resolveTenantByDomain('unknown.example.com')
-
-      // Assert
-      expect(result).toBeNull()
+      anonRpcMock.mockResolvedValue({ data: null, error: null })
+      expect(await resolveTenantByDomain('unknown.example.com')).toBeNull()
     })
 
-    it('returns null on database error', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', { data: null, error: { message: 'DB error' } })
+    it('returns null on RPC error', async () => {
+      anonRpcMock.mockResolvedValue({ data: null, error: { message: 'DB error' } })
+      expect(await resolveTenantByDomain('returns.acme.com')).toBeNull()
+    })
 
-      // Act
-      const result = await resolveTenantByDomain('returns.acme.com')
-
-      // Assert
-      expect(result).toBeNull()
+    it('rejects invalid hostnames without calling the RPC', async () => {
+      expect(await resolveTenantByDomain("evil.com'; drop")).toBeNull()
+      expect(anonRpcMock).not.toHaveBeenCalled()
     })
 
     it('returns null when portalDomain settings are missing', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', {
-        data: {
-          id: 'tenant-1',
-          name: 'Acme',
-          slug: 'acme',
-          settings: { returnsHub: {} },
-        },
+      anonRpcMock.mockResolvedValue({
+        data: { id: 'tenant-1', name: 'Acme', slug: 'acme', settings: { returnsHub: {} } },
         error: null,
       })
-
-      // Act
-      const result = await resolveTenantByDomain('returns.acme.com')
-
-      // Assert
-      expect(result).toBeNull()
+      expect(await resolveTenantByDomain('returns.acme.com')).toBeNull()
     })
 
     it('uses default branding when none configured', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', {
+      anonRpcMock.mockResolvedValue({
         data: {
           id: 'tenant-2',
           name: 'Basic Corp',
@@ -119,10 +106,8 @@ describe('Domain Resolution Service', () => {
         error: null,
       })
 
-      // Act
       const result = await resolveTenantByDomain('portal.basic.com')
 
-      // Assert
       expect(result?.primaryColor).toBe('#3B82F6') // default blue
       expect(result?.logoUrl).toBe('')
       expect(result?.portalType).toBe('both')
@@ -133,38 +118,25 @@ describe('Domain Resolution Service', () => {
   // isDomainAvailable
   // ==========================================
   describe('isDomainAvailable', () => {
-    it('returns true when domain is not used', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', { data: [], error: null })
-
-      // Act
-      const result = await isDomainAvailable('new-domain.example.com')
-
-      // Assert
-      expect(result).toBe(true)
+    it('returns true when the RPC reports the domain as free', async () => {
+      rpcMock.mockResolvedValue({ data: true, error: null })
+      expect(await isDomainAvailable('New-Domain.example.com')).toBe(true)
+      expect(rpcMock).toHaveBeenCalledWith('is_portal_domain_available', { p_domain: 'new-domain.example.com' })
     })
 
     it('returns false when domain is already used', async () => {
-      // Arrange
-      mockSupabaseTable('tenants', { data: [{ id: 'tenant-1' }], error: null })
-
-      // Act
-      const result = await isDomainAvailable('taken-domain.example.com')
-
-      // Assert
-      expect(result).toBe(false)
+      rpcMock.mockResolvedValue({ data: false, error: null })
+      expect(await isDomainAvailable('taken-domain.example.com')).toBe(false)
     })
 
-    it('returns true when domain is only used by excluded tenant', async () => {
-      // Arrange - query with neq will filter out the excluded tenant
-      mockSupabaseTable('tenants', { data: [], error: null })
+    it('fails closed on RPC error', async () => {
+      rpcMock.mockResolvedValue({ data: null, error: { message: 'Forbidden' } })
+      expect(await isDomainAvailable('my-domain.example.com', 'tenant-1')).toBe(false)
+    })
 
-      // Act
-      const result = await isDomainAvailable('my-domain.example.com', 'tenant-1')
-
-      // Assert
-      expect(result).toBe(true)
-      expect(mockSupabase.from).toHaveBeenCalledWith('tenants')
+    it('rejects invalid domains without calling the RPC', async () => {
+      expect(await isDomainAvailable('bad domain')).toBe(false)
+      expect(rpcMock).not.toHaveBeenCalled()
     })
   })
 })
