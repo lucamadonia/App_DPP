@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useId, useContext } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Loader2, Search, SearchX, Download, MessageSquare, Package, Ban, Tag, Printer, MapPin, QrCode, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,16 @@ import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
 import { ContactSupportForm } from '@/components/returns/public/ContactSupportForm';
 import { ShipmentTracker } from '@/components/returns/public/ShipmentTracker';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
-import { publicTrackReturn, publicGetReturnItems, getCustomerPortalBranding, publicCancelReturn, publicCreateReturnLabel } from '@/services/supabase';
-import { supabaseAnon } from '@/lib/supabase';
+import { publicTrackReturn, publicGetReturnItems, publicCancelReturn, publicCreateReturnLabel } from '@/services/supabase';
+import {
+  lookupPublicTenantById,
+  getCustomerPortalBrandingFromTenant,
+  getTenantLegalUrls,
+} from '@/services/supabase/public-tenant-lookup';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
+import { useForceLightTheme } from '@/hooks/use-force-light-theme';
+import { LegalFooterLinks } from '@/components/public/LegalFooterLinks';
+import { ReturnsPortalContext } from './ReturnsPortalLayout';
 import type { RhReturn, RhReturnTimeline as TimelineType, CustomerPortalBrandingOverrides } from '@/types/returns-hub';
 
 interface ReturnItem {
@@ -31,16 +38,31 @@ export function PublicReturnTrackingPage() {
   const { t } = useTranslation('returns');
   const navigate = useNavigate();
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const { isEmbed } = useEmbedMode();
+  // On custom domains this page is nested in ReturnsPortalLayout, which already
+  // renders the header, footer and page wrapper. Avoid duplicating them.
+  const inPortalLayout = useContext(ReturnsPortalContext) !== null;
+  const showChrome = !isEmbed && !inPortalLayout;
+  const fieldId = useId();
+  const returnNumberId = `${fieldId}-return-number`;
+  const emailId = `${fieldId}-email`;
+  const confirmEmailId = `${fieldId}-confirm-email`;
+
+  // Branded tracking page is designed for light backgrounds (see hook docs).
+  useForceLightTheme();
 
   // In embed mode the param is tenantSlug, in public mode it's returnNumber
   const paramReturnNumber = isEmbed ? '' : (params.returnNumber || '');
   const embedTenantSlug = isEmbed ? (params.tenantSlug || '') : '';
 
   const [returnNumberInput, setReturnNumberInput] = useState(paramReturnNumber);
-  const [email, setEmail] = useState('');
+  // Tracking requires the e-mail used for the return (public_track_return);
+  // links may carry it as ?email=.
+  const [email, setEmail] = useState(() => searchParams.get('email')?.trim() || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [failedLookups, setFailedLookups] = useState(0);
   const [returnData, setReturnData] = useState<RhReturn | null>(null);
   const [timeline, setTimeline] = useState<TimelineType[]>([]);
   const [items, setItems] = useState<ReturnItem[]>([]);
@@ -51,13 +73,15 @@ export function PublicReturnTrackingPage() {
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
   const [branding, setBranding] = useState<CustomerPortalBrandingOverrides | null>(null);
+  const [legalUrls, setLegalUrls] = useState<{ imprintUrl?: string; privacyUrl?: string }>({});
   // Customer-driven label choice (QR / PDF / both)
   const [labelGenLoading, setLabelGenLoading] = useState<string | null>(null);
   const [labelGenError, setLabelGenError] = useState('');
 
-  // Auto-search if returnNumber is in URL
+  // Auto-search only when both the return number (URL) and the e-mail are
+  // known; otherwise the number is pre-filled and the e-mail field focused.
   useEffect(() => {
-    if (paramReturnNumber) {
+    if (paramReturnNumber && email.trim()) {
       handleSearch(paramReturnNumber);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,48 +90,53 @@ export function PublicReturnTrackingPage() {
   const handleSearch = async (searchNumber?: string) => {
     const number = searchNumber || returnNumberInput.trim();
     if (!number) return;
+    if (!email.trim()) {
+      setError(t('Please enter the email address you used for this return.'));
+      return;
+    }
     setLoading(true);
     setError('');
 
     try {
-      const result = await publicTrackReturn(number, email || undefined);
+      const result = await publicTrackReturn(number, email);
 
       if (!result.returnData) {
+        // The RPC does not distinguish "not found" from "rate-limited";
+        // after repeated failures, point at the limit instead.
+        const failures = failedLookups + 1;
+        setFailedLookups(failures);
         setReturnData(null);
         setTimeline([]);
         setItems([]);
-        setError(t('Return not found. Please check your return number and try again.'));
+        setError(failures >= 5
+          ? t('Too many attempts. Please try again later.')
+          : t('Return not found. Please check your return number and try again.'));
         return;
       }
 
+      setFailedLookups(0);
       setReturnData(result.returnData);
       setTimeline(result.timeline as TimelineType[]);
+
+      if (result.tenantSlug) setTenantSlug(result.tenantSlug);
 
       // Fetch tenant slug and branding from tenant ID
       try {
         if (result.returnData.tenantId) {
-          const { data: tenant, error: tenantError } = await supabaseAnon
-            .from('tenants')
-            .select('slug')
-            .eq('id', result.returnData.tenantId)
-            .single();
-          if (tenantError) {
-            console.warn('[Tracking] Tenant query error:', tenantError.message);
-          }
-          if (tenant?.slug) {
+          // Anon cannot read `tenants` (migration 20261001b): use the public RPC.
+          const lookup = await lookupPublicTenantById(result.returnData.tenantId);
+          if (lookup.status === 'found') {
+            const tenant = lookup.tenant;
+            const brandingData = getCustomerPortalBrandingFromTenant(tenant);
             setTenantSlug(tenant.slug);
-
-            // Load branding
-            const brandingData = await getCustomerPortalBranding(tenant.slug);
-            if (brandingData) {
-              setTenantName(brandingData.name);
-              setBranding(brandingData.branding);
-              if (brandingData.branding.primaryColor) {
-                applyPrimaryColor(brandingData.branding.primaryColor);
-              }
-              if (brandingData.name) {
-                document.title = `${brandingData.name} - ${t('Track Return')}`;
-              }
+            setTenantName(tenant.name);
+            setBranding(brandingData);
+            setLegalUrls(getTenantLegalUrls(tenant));
+            if (brandingData.primaryColor) {
+              applyPrimaryColor(brandingData.primaryColor);
+            }
+            if (tenant.name) {
+              document.title = `${tenant.name} - ${t('Track Return')}`;
             }
           }
         }
@@ -183,7 +212,7 @@ export function PublicReturnTrackingPage() {
 
   // Simple branded header
   const renderHeader = () => (
-    <header className="bg-white border-b sticky top-0 z-50">
+    <header className="bg-white border-b sticky top-0 z-50 pt-[var(--safe-top)]">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {branding?.logoUrl ? (
@@ -213,13 +242,25 @@ export function PublicReturnTrackingPage() {
     </header>
   );
 
+  // Legal links: the search form collects an email address, so a privacy
+  // notice and imprint must be reachable (GDPR Art. 13, DDG §5).
+  const renderFooter = () => (
+    <footer className="border-t py-4 pb-[calc(1rem+var(--safe-bottom))] bg-white">
+      <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+        <span>Powered by Trackbliss</span>
+        {/* Tenant legal URLs when configured; no platform B2B terms for consumers */}
+        <LegalFooterLinks imprintUrl={legalUrls.imprintUrl} privacyUrl={legalUrls.privacyUrl} />
+      </div>
+    </footer>
+  );
+
   const backToPortal = isEmbed && embedTenantSlug ? (
     <div className="max-w-lg mx-auto px-4 pt-4">
       <button
         onClick={() => navigate(`/embed/portal/${embedTenantSlug}`)}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t('Back to Overview')}
       </button>
     </div>
@@ -228,10 +269,10 @@ export function PublicReturnTrackingPage() {
   // Search form view
   if (!returnData && !loading) {
     return (
-      <div className={`flex flex-col ${isEmbed ? '' : 'min-h-screen bg-gray-50'}`}>
-        {!isEmbed && renderHeader()}
+      <div className={`flex flex-col ${showChrome ? 'min-h-dvh bg-gray-50 text-foreground' : ''}`}>
+        {showChrome && renderHeader()}
         {backToPortal}
-        <div className="max-w-lg mx-auto px-4 py-12 animate-fade-in-up">
+        <div className="w-full flex-1 max-w-lg mx-auto px-4 py-12 animate-fade-in-up">
         <Card>
           <CardHeader className="text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mx-auto mb-3">
@@ -244,24 +285,33 @@ export function PublicReturnTrackingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('Return Number')}</Label>
+              <Label htmlFor={returnNumberId}>{t('Return Number')}</Label>
               <Input
+                id={returnNumberId}
+                autoComplete="off"
                 value={returnNumberInput}
                 onChange={(e) => setReturnNumberInput(e.target.value)}
                 placeholder="RET-20260131-XXXX0"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                autoFocus
+                autoFocus={!paramReturnNumber}
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('Email Address')}</Label>
+              <Label htmlFor={emailId}>{t('Email Address')}</Label>
               <Input
+                id={emailId}
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                autoFocus={!!paramReturnNumber}
+                aria-describedby={`${emailId}-hint`}
               />
+              <p id={`${emailId}-hint`} className="text-xs text-muted-foreground">
+                {t('Please enter the email address you used for this return.')}
+              </p>
             </div>
 
             {error && (
@@ -277,8 +327,8 @@ export function PublicReturnTrackingPage() {
 
             <Button
               onClick={() => handleSearch()}
-              disabled={loading || !returnNumberInput.trim()}
-              className="w-full"
+              disabled={loading || !returnNumberInput.trim() || !email.trim()}
+              className="w-full min-h-11"
             >
               {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
               {t('Check Status')}
@@ -286,6 +336,7 @@ export function PublicReturnTrackingPage() {
           </CardContent>
         </Card>
         </div>
+        {showChrome && renderFooter()}
       </div>
     );
   }
@@ -293,8 +344,8 @@ export function PublicReturnTrackingPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label={t('Loading...')} />
       </div>
     );
   }
@@ -303,8 +354,8 @@ export function PublicReturnTrackingPage() {
   if (!returnData) return null;
 
   return (
-    <div className={`flex flex-col ${isEmbed ? '' : 'min-h-screen bg-gray-50'}`}>
-      {!isEmbed && renderHeader()}
+    <div className={`flex flex-col ${showChrome ? 'min-h-dvh bg-gray-50 text-foreground' : ''}`}>
+      {showChrome && renderHeader()}
       {backToPortal}
       <main className="flex-1">
         <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-4 animate-fade-in-up">
@@ -383,8 +434,8 @@ export function PublicReturnTrackingPage() {
             </p>
             {!email.trim() && (
               <div className="space-y-1 max-w-xs">
-                <Label className="text-xs">{t('Your email (for confirmation)')}</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+                <Label htmlFor={confirmEmailId} className="text-xs">{t('Your email (for confirmation)')}</Label>
+                <Input id={confirmEmailId} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -644,6 +695,7 @@ export function PublicReturnTrackingPage() {
       </Dialog>
         </div>
       </main>
+      {showChrome && renderFooter()}
     </div>
   );
 }

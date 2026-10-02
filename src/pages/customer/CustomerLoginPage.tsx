@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Mail, Lock, Wand2, Package } from 'lucide-react';
@@ -21,6 +21,9 @@ export function CustomerLoginPage() {
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'password' | 'magic'>('password');
+  const fieldId = useId();
+  const emailId = `${fieldId}-email`;
+  const passwordId = `${fieldId}-password`;
 
   const loginStyle = branding.loginStyle || 'centered';
   const primaryColor = branding.primaryColor;
@@ -130,11 +133,13 @@ export function CustomerLoginPage() {
       {mode === 'password' ? (
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label>{t('Email')}</Label>
+            <Label htmlFor={emailId}>{t('Email')}</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
+                id={emailId}
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -144,11 +149,13 @@ export function CustomerLoginPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>{t('Password')}</Label>
+            <Label htmlFor={passwordId}>{t('Password')}</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
+                id={passwordId}
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
@@ -170,11 +177,13 @@ export function CustomerLoginPage() {
       ) : (
         <form onSubmit={handleMagicLink} className="space-y-4">
           <div className="space-y-2">
-            <Label>{t('Email')}</Label>
+            <Label htmlFor={emailId}>{t('Email')}</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
+                id={emailId}
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -200,7 +209,7 @@ export function CustomerLoginPage() {
         <button
           type="button"
           onClick={() => setMode(mode === 'password' ? 'magic' : 'password')}
-          className="text-sm hover:underline"
+          className="inline-flex min-h-11 items-center px-2 text-sm hover:underline"
           style={{ color: primaryColor }}
         >
           {mode === 'password' ? t('Use Magic Link instead') : t('Use password instead')}
@@ -209,7 +218,7 @@ export function CustomerLoginPage() {
 
       <div className="text-center text-sm text-muted-foreground">
         {t("Don't have an account?")}{' '}
-        <Link to={`/customer/${tenantSlug}/register`} className="font-medium hover:underline" style={{ color: primaryColor }}>
+        <Link to={`/customer/${tenantSlug}/register`} className="inline-flex min-h-11 items-center font-medium hover:underline" style={{ color: primaryColor }}>
           {t('Create Account')}
         </Link>
       </div>

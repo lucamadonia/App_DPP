@@ -3,8 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { Package, Loader2, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { publicGetTenantBranding, getPublicReturnReasons, publicGetTenantProducts } from '@/services/supabase';
+import { getPublicReturnReasons, publicGetTenantProducts } from '@/services/supabase';
+import {
+  lookupPublicTenantBySlug,
+  lookupPublicTenantById,
+  getReturnsPortalBranding,
+  getTenantLegalUrls,
+} from '@/services/supabase/public-tenant-lookup';
 import { applyPrimaryColor } from '@/lib/dynamic-theme';
+import { useForceLightTheme } from '@/hooks/use-force-light-theme';
+import { LegalFooterLinks } from '@/components/public/LegalFooterLinks';
+import { PortalNotFound } from '@/components/public/PortalNotFound';
 import type { RhReturnReason } from '@/types/returns-hub';
 
 export interface TenantProduct {
@@ -49,6 +58,12 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
   const [products, setProducts] = useState<TenantProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [legalUrls, setLegalUrls] = useState<{ imprintUrl?: string; privacyUrl?: string }>({});
+
+  // Tenant branding is designed for light backgrounds; keep the portal light
+  // even when the visitor's OS is in dark mode.
+  useForceLightTheme();
 
   // Extract tenantSlug from any nested route param or override
   const tenantSlug = tenantOverride?.tenantSlug || paramSlug || '';
@@ -78,10 +93,14 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
         if (tenantOverride.primaryColor) {
           applyPrimaryColor(tenantOverride.primaryColor);
         }
-        const [reasonsData, productsData] = await Promise.all([
+        const [reasonsData, productsData, lookup] = await Promise.all([
           getPublicReturnReasons(tenantOverride.tenantSlug),
           publicGetTenantProducts(tenantOverride.tenantSlug),
+          lookupPublicTenantById(tenantOverride.tenantId),
         ]);
+        if (lookup.status === 'found') {
+          setLegalUrls(getTenantLegalUrls(lookup.tenant));
+        }
         setReasons(reasonsData);
         setProducts(productsData);
         setIsLoading(false);
@@ -89,23 +108,33 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
       }
 
       if (!tenantSlug) {
+        setNotFound(true);
         setIsLoading(false);
         return;
       }
+      setNotFound(false);
       try {
-        const [branding, reasonsData, productsData] = await Promise.all([
-          publicGetTenantBranding(tenantSlug),
+        const [lookup, reasonsData, productsData] = await Promise.all([
+          lookupPublicTenantBySlug(tenantSlug),
           getPublicReturnReasons(tenantSlug),
           publicGetTenantProducts(tenantSlug),
         ]);
-        if (branding) {
+        if (lookup.status === 'found') {
+          const branding = getReturnsPortalBranding(lookup.tenant);
           setTenantName(branding.name);
           setPrimaryColor(branding.primaryColor);
           setLogoUrl(branding.logoUrl);
+          setLegalUrls(getTenantLegalUrls(lookup.tenant));
           if (branding.primaryColor) {
             applyPrimaryColor(branding.primaryColor);
           }
+        } else if (lookup.status === 'not_found') {
+          // Definitely unknown or mistyped slug: show a not-found state instead
+          // of a generic portal whose wizard can only fail on submit.
+          setNotFound(true);
         }
+        // status 'error' (network / 5xx): keep the unbranded portal usable
+        // rather than telling customers the shop's portal does not exist.
         setReasons(reasonsData);
         setProducts(productsData);
       } catch (err) {
@@ -118,8 +147,8 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-dvh bg-gray-50 flex items-center justify-center">
+        <div className="text-center" role="status">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="mt-3 text-sm text-muted-foreground">{t('Loading...')}</p>
         </div>
@@ -127,17 +156,21 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
     );
   }
 
+  if (notFound) {
+    return <PortalNotFound actionLabel={t('Track Return')} />;
+  }
+
   return (
     <ReturnsPortalContext.Provider
       value={{ tenantSlug, tenantName, primaryColor, logoUrl, reasons, products, isLoading }}
     >
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        {/* Header */}
-        <header className="bg-white border-b sticky top-0 z-50">
+      <div className="min-h-dvh flex flex-col bg-gray-50 text-foreground">
+        {/* Header — padded below the iOS status bar when opened in the native shell */}
+        <header className="bg-white border-b sticky top-0 z-50 pt-[var(--safe-top)]">
           <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
             <Link
               to={tenantOverride ? '/' : `/returns/portal/${tenantSlug}`}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              className="flex min-h-11 items-center gap-3 hover:opacity-80 transition-opacity"
             >
               {logoUrl ? (
                 <img
@@ -166,10 +199,10 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
               variant="outline"
               size="sm"
               onClick={toggleLanguage}
-              className="gap-1.5"
+              className="gap-1.5 min-h-11 min-w-11"
               title={currentLang === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}
             >
-              <Languages className="h-4 w-4" />
+              <Languages className="h-4 w-4" aria-hidden="true" />
               {currentLang === 'de' ? 'DE' : 'EN'}
             </Button>
           </div>
@@ -181,17 +214,11 @@ export function ReturnsPortalLayout({ tenantOverride }: ReturnsPortalLayoutProps
         </main>
 
         {/* Footer */}
-        <footer className="border-t py-6 bg-white">
-          <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+        <footer className="border-t py-4 pb-[calc(1rem+var(--safe-bottom))] bg-white">
+          <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
             <span>Powered by Trackbliss</span>
-            <div className="flex items-center gap-4">
-              <span className="hover:text-foreground transition-colors cursor-default">
-                {t('Privacy Policy')}
-              </span>
-              <span className="hover:text-foreground transition-colors cursor-default">
-                {t('Terms of Service')}
-              </span>
-            </div>
+            {/* Tenant legal URLs when configured; no platform B2B terms for consumers */}
+            <LegalFooterLinks imprintUrl={legalUrls.imprintUrl} privacyUrl={legalUrls.privacyUrl} />
           </div>
         </footer>
       </div>

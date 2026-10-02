@@ -1,19 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link } from 'react-router-dom';
 import { Package, Languages, Loader2, Menu, X } from 'lucide-react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CustomerPortalProvider, type TenantOverride } from '@/contexts/CustomerPortalContext';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
 import { CustomerNav } from '@/components/customer/CustomerNav';
 import { FloatingHelpButton } from '@/components/customer/FloatingHelpButton';
+import { LegalFooterLinks } from '@/components/public/LegalFooterLinks';
+import { PortalNotFound } from '@/components/public/PortalNotFound';
+import { useForceLightTheme } from '@/hooks/use-force-light-theme';
 import { FONT_FAMILY_MAP, GOOGLE_FONT_URLS, BORDER_RADIUS_MAP } from '@/lib/dpp-design-defaults';
 
 function CustomerPortalContent() {
   const { t, i18n } = useTranslation('customer-portal');
-  const { tenantSlug, tenantName, branding, isAuthenticated, isLoading } = useCustomerPortal();
+  const portal = useCustomerPortal();
+  const { tenantSlug, tenantName, branding, isAuthenticated, isLoading } = portal;
+  // `tenantNotFound` is exposed by CustomerPortalContext once the provider
+  // tracks an unresolved slug; read defensively so this layout works either way.
+  const tenantNotFound = 'tenantNotFound' in portal && portal.tenantNotFound === true;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Portal branding (page/header/card colours) is designed for light
+  // backgrounds; keep semantic tokens light even when the OS is in dark mode.
+  useForceLightTheme();
   const currentLang = i18n.language?.startsWith('de') ? 'de' : 'en';
 
   const toggleLanguage = () => {
@@ -70,8 +80,8 @@ function CustomerPortalContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-dvh bg-gray-50 flex items-center justify-center">
+        <div className="text-center" role="status">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="mt-3 text-sm text-muted-foreground">{t('Loading...', { ns: 'common' })}</p>
         </div>
@@ -79,16 +89,20 @@ function CustomerPortalContent() {
     );
   }
 
+  if (tenantNotFound) {
+    return <PortalNotFound actionTo="/returns/track" actionLabel={t('Track Return', { ns: 'returns' })} />;
+  }
+
   const footerLinks = branding.footerLinks || [];
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-dvh flex flex-col text-foreground"
       style={{ ...portalStyle, backgroundColor: branding.pageBackground }}
     >
       {/* Header */}
       <header
-        className="border-b sticky top-0 z-50 shadow-sm customer-portal-header"
+        className="border-b sticky top-0 z-50 shadow-sm customer-portal-header pt-[var(--safe-top)]"
         style={{
           backgroundColor: branding.headerBackground,
           color: branding.headerTextColor,
@@ -100,15 +114,17 @@ function CustomerPortalContent() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden min-h-11 min-w-11"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label={sidebarOpen ? t('Close menu', { ns: 'common' }) : t('Open menu', { ns: 'common' })}
+                aria-expanded={sidebarOpen}
               >
-                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {sidebarOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
               </Button>
             )}
             <Link
               to={tenantSlug && !window.location.hostname.includes(tenantSlug) ? `/customer/${tenantSlug}` : '/portal'}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              className="flex min-h-11 items-center gap-3 hover:opacity-80 transition-opacity"
             >
               {logoUrl ? (
                 <img src={logoUrl} alt={tenantName} className="h-9 w-auto max-w-[120px] rounded-lg object-contain" />
@@ -136,10 +152,10 @@ function CustomerPortalContent() {
             variant="outline"
             size="sm"
             onClick={toggleLanguage}
-            className="gap-1.5"
+            className="gap-1.5 min-h-11 min-w-11"
             title={currentLang === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}
           >
-            <Languages className="h-4 w-4" />
+            <Languages className="h-4 w-4" aria-hidden="true" />
             {currentLang === 'de' ? 'DE' : 'EN'}
           </Button>
         </div>
@@ -153,7 +169,7 @@ function CustomerPortalContent() {
             <div className="fixed inset-0 z-40 md:hidden" onClick={() => setSidebarOpen(false)}>
               <div className="absolute inset-0 bg-black/50" />
               <aside
-                className="absolute left-0 top-16 bottom-0 w-64 border-r shadow-lg"
+                className="absolute left-0 top-[calc(4rem+var(--safe-top))] bottom-0 w-64 border-r shadow-lg"
                 style={{
                   backgroundColor: branding.sidebarBackground,
                   color: branding.sidebarTextColor,
@@ -191,7 +207,10 @@ function CustomerPortalContent() {
       )}
 
       {/* Footer */}
-      <footer className="border-t py-6" style={{ backgroundColor: branding.cardBackground }}>
+      <footer
+        className="border-t py-4 pb-[calc(1rem+var(--safe-bottom))]"
+        style={{ backgroundColor: branding.cardBackground }}
+      >
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
           <div className="flex flex-col sm:flex-row items-center gap-2">
             {branding.showPoweredBy !== false && (
@@ -204,29 +223,25 @@ function CustomerPortalContent() {
               <span>{branding.footerText}</span>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            {footerLinks.map((link, i) => (
-              <a
-                key={i}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
-            {footerLinks.length === 0 && (
-              <>
-                <span className="hover:text-foreground transition-colors cursor-default">
-                  {t('Privacy Policy', { ns: 'returns' })}
-                </span>
-                <span className="hover:text-foreground transition-colors cursor-default">
-                  {t('Terms of Service', { ns: 'returns' })}
-                </span>
-              </>
-            )}
-          </div>
+          {footerLinks.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-center gap-x-3">
+              {footerLinks.map((link, i) => (
+                <a
+                  key={i}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center px-1 hover:text-foreground hover:underline underline-offset-4 transition-colors"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          ) : (
+            // No tenant-configured legal links: fall back to the platform pages
+            // instead of dead text (GDPR Art. 13, DDG §5).
+            <LegalFooterLinks />
+          )}
         </div>
       </footer>
     </div>

@@ -1,7 +1,8 @@
-import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, Navigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { SupabaseAuth } from '@/components/SupabaseAuth';
+import { LandingBrand } from '@/components/landing/LandingBrand';
 import { Button } from '@/components/ui/button';
 import { showsFirstRun } from '@/lib/platform';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,11 +67,7 @@ export function LoginPage() {
           transition={prefersReduced ? { duration: 0 } : spring.bouncy}
         >
           <div className="flex items-center justify-center">
-            <img
-              src="/trackbliss-logo.png"
-              alt="Trackbliss"
-              className="h-14 sm:h-16 object-contain"
-            />
+            <LandingBrand tone="auto" size={40} />
           </div>
           <motion.p
             className="text-muted-foreground text-sm"
@@ -124,9 +121,10 @@ export function LoginPage() {
           transition={{ delay: prefersReduced ? 0 : 0.4, duration: 0.3 }}
         >
           {t('By signing in you agree to our')}{' '}
-          <a href="/terms" className="text-primary hover:underline">{t('Terms of Service')}</a>
-          {' '}{t('and')}{' '}
-          <a href="/privacy" className="text-primary hover:underline">{t('Privacy Policy')}</a>.
+          {/* inline-flex + min-h-11: 44px touch target without changing the text size */}
+          <Link to="/terms" className="inline-flex min-h-11 items-center px-1 text-primary hover:underline underline-offset-4">{t('Terms of Service')}</Link>
+          {t('and')}
+          <Link to="/privacy" className="inline-flex min-h-11 items-center px-1 text-primary hover:underline underline-offset-4">{t('Privacy Policy')}</Link>.
         </motion.p>
       </div>
     </div>

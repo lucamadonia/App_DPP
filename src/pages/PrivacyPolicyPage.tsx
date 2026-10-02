@@ -16,27 +16,40 @@ export function PrivacyPolicyPage() {
 
   const lastUpdated = '06.02.2026';
 
+  const dpf = 'EU-U.S. Data Privacy Framework';
+  const processors = [
+    { service: 'Vercel', country: 'USA', safeguard: dpf },
+    {
+      service: 'Supabase',
+      country: t('privacy.10.table.supabaseCountry'),
+      safeguard: t('privacy.10.table.supabaseSafeguard'),
+    },
+    { service: 'OpenRouter / Anthropic', country: 'USA', safeguard: dpf },
+    { service: 'Resend', country: 'USA', safeguard: dpf },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50 pt-[var(--safe-top)]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link
             to="/landing"
-            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+            className="flex min-h-11 items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             {t('backToHome')}
           </Link>
           <div className="flex items-center gap-4">
             <button
+              type="button"
               onClick={cycleLang}
-              className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+              className="flex min-h-11 items-center gap-1.5 px-1 text-sm text-slate-600 hover:text-slate-900 transition-colors"
             >
-              <Globe className="h-4 w-4" />
+              <Globe className="h-4 w-4" aria-hidden="true" />
               {LANG_LABELS[i18n.language] ?? 'English'}
             </button>
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-violet-600 text-white font-bold text-[10px]">
+            <div aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-violet-600 text-white font-bold text-[10px]">
               TB
             </div>
           </div>
@@ -164,36 +177,40 @@ export function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-slate-900 mb-4">{t('privacy.10.title')}</h2>
             <p className="text-slate-700 leading-relaxed mb-3">{t('privacy.10.intro')}</p>
-            <div className="overflow-x-auto">
+            {/* Below sm the 3-column table does not fit a 390px viewport:
+                render each processor as a stacked card instead. */}
+            <dl className="sm:hidden space-y-3">
+              {processors.map((row) => (
+                <div key={row.service} className="rounded-lg border border-slate-200 p-4 text-sm">
+                  <dt className="font-medium text-slate-900">{row.service}</dt>
+                  <dd className="mt-2 text-slate-700">
+                    <span className="block text-xs uppercase tracking-wide text-slate-500">{t('privacy.10.table.country')}</span>
+                    {row.country}
+                  </dd>
+                  <dd className="mt-2 text-slate-700">
+                    <span className="block text-xs uppercase tracking-wide text-slate-500">{t('privacy.10.table.safeguard')}</span>
+                    {row.safeguard}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
                 <thead className="bg-slate-100">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-slate-900">{t('privacy.10.table.service')}</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-900">{t('privacy.10.table.country')}</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-900">{t('privacy.10.table.safeguard')}</th>
+                    <th scope="col" className="text-left px-4 py-3 font-medium text-slate-900">{t('privacy.10.table.service')}</th>
+                    <th scope="col" className="text-left px-4 py-3 font-medium text-slate-900">{t('privacy.10.table.country')}</th>
+                    <th scope="col" className="text-left px-4 py-3 font-medium text-slate-900">{t('privacy.10.table.safeguard')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  <tr>
-                    <td className="px-4 py-3 text-slate-700">Vercel</td>
-                    <td className="px-4 py-3 text-slate-700">USA</td>
-                    <td className="px-4 py-3 text-slate-700">EU-U.S. Data Privacy Framework</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-slate-700">Supabase</td>
-                    <td className="px-4 py-3 text-slate-700">{t('privacy.10.table.supabaseCountry')}</td>
-                    <td className="px-4 py-3 text-slate-700">{t('privacy.10.table.supabaseSafeguard')}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-slate-700">OpenRouter / Anthropic</td>
-                    <td className="px-4 py-3 text-slate-700">USA</td>
-                    <td className="px-4 py-3 text-slate-700">EU-U.S. Data Privacy Framework</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-slate-700">Resend</td>
-                    <td className="px-4 py-3 text-slate-700">USA</td>
-                    <td className="px-4 py-3 text-slate-700">EU-U.S. Data Privacy Framework</td>
-                  </tr>
+                  {processors.map((row) => (
+                    <tr key={row.service}>
+                      <td className="px-4 py-3 text-slate-700">{row.service}</td>
+                      <td className="px-4 py-3 text-slate-700">{row.country}</td>
+                      <td className="px-4 py-3 text-slate-700">{row.safeguard}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -258,12 +275,12 @@ export function PrivacyPolicyPage() {
         </div>
 
         {/* Footer links */}
-        <div className="mt-16 pt-8 border-t border-slate-200 flex flex-wrap gap-4 text-sm text-slate-500">
-          <Link to="/imprint" className="hover:text-slate-900 transition-colors">
+        <div className="mt-16 pt-8 border-t border-slate-200 flex flex-wrap items-center gap-x-4 text-sm text-slate-500">
+          <Link to="/imprint" className="inline-flex min-h-11 items-center hover:text-slate-900 transition-colors">
             {t('imprint')}
           </Link>
-          <span className="text-slate-300">|</span>
-          <Link to="/landing" className="hover:text-slate-900 transition-colors">
+          <span aria-hidden="true" className="text-slate-300">|</span>
+          <Link to="/landing" className="inline-flex min-h-11 items-center hover:text-slate-900 transition-colors">
             {t('home')}
           </Link>
         </div>
