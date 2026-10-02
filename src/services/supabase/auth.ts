@@ -320,7 +320,12 @@ export async function handleAuthCallback(): Promise<AuthResult> {
 
 export type DeletableAccountType = 'admin' | 'customer';
 
-export type AccountDeletionBlockedReason = 'last_admin' | 'no_account';
+/**
+ * `has_members`: the caller is the last admin and other users still belong to
+ * the organisation — they must be removed (in-app) before the organisation can
+ * be deleted together with the account.
+ */
+export type AccountDeletionBlockedReason = 'has_members' | 'no_account';
 
 export interface AccountDeletionEligibility {
   /**
@@ -333,39 +338,73 @@ export interface AccountDeletionEligibility {
   email: string;
   canDelete: boolean;
   blockedReason: AccountDeletionBlockedReason | null;
+  /**
+   * The caller is the organisation's last active admin: deleting the account
+   * deletes the whole organisation (all data, subscription cancelled). The UI
+   * must require the typed organisation name in addition to the email.
+   */
+  requiresOrganizationDeletion: boolean;
+  /** Organisation name the second confirmation expects (only set when required). */
+  organizationName: string | null;
 }
 
 /**
  * Determine whether the signed-in account may delete itself.
  *
- * A tenant's last remaining admin is refused: deleting them would leave the
- * tenant (products, passports, returns) without anyone able to administer it.
- * `getAdminCount()` returns 0 when the tenant cannot be resolved, so `<= 1`
- * also covers "could not verify" — we block rather than guess.
+ * A tenant's last remaining admin cannot leave the organisation orphaned, so
+ * for them deletion means deleting the organisation together with the account
+ * (App Store guideline 5.1.1(v): no other person may be required). That is
+ * only offered when nobody else belongs to the organisation; otherwise the
+ * admin has to remove those users first. The edge function re-checks all of
+ * this server-side.
  */
 export async function getAccountDeletionEligibility(): Promise<AccountDeletionEligibility> {
   const { data: { user } } = await supabase.auth.getUser();
+  const noOrg = { requiresOrganizationDeletion: false, organizationName: null };
   if (!user) {
-    return { accountType: null, email: '', canDelete: false, blockedReason: 'no_account' };
+    return { accountType: null, email: '', canDelete: false, blockedReason: 'no_account', ...noOrg };
   }
 
   const email = user.email || '';
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('id', user.id)
     .maybeSingle();
 
   if (profile) {
-    if (profile.role === 'admin') {
-      const { getAdminCount } = await import('./profiles');
-      const adminCount = await getAdminCount();
-      if (adminCount <= 1) {
-        return { accountType: 'admin', email, canDelete: false, blockedReason: 'last_admin' };
+    if (profile.role === 'admin' && profile.tenant_id) {
+      const { count: adminCount } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', profile.tenant_id)
+        .eq('role', 'admin')
+        // Same rule as the edge function: a missing status counts as active.
+        .or('status.is.null,status.neq.inactive');
+
+      if ((adminCount ?? 0) <= 1) {
+        const [{ data: tenant }, { count: otherMembers }] = await Promise.all([
+          supabase.from('tenants').select('name').eq('id', profile.tenant_id).maybeSingle(),
+          supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('tenant_id', profile.tenant_id)
+            .neq('id', user.id),
+        ]);
+        const organizationName = (tenant?.name as string | undefined) || null;
+        const hasMembers = (otherMembers ?? 0) > 0;
+        return {
+          accountType: 'admin',
+          email,
+          canDelete: !hasMembers && !!organizationName,
+          blockedReason: hasMembers ? 'has_members' : null,
+          requiresOrganizationDeletion: true,
+          organizationName,
+        };
       }
     }
-    return { accountType: 'admin', email, canDelete: true, blockedReason: null };
+    return { accountType: 'admin', email, canDelete: true, blockedReason: null, ...noOrg };
   }
 
   const { data: customerProfile } = await supabase
@@ -375,13 +414,13 @@ export async function getAccountDeletionEligibility(): Promise<AccountDeletionEl
     .maybeSingle();
 
   if (customerProfile) {
-    return { accountType: 'customer', email, canDelete: true, blockedReason: null };
+    return { accountType: 'customer', email, canDelete: true, blockedReason: null, ...noOrg };
   }
 
   // Valid session, no profile row of either kind: a deletion that failed
   // partway through. Deletion must stay available, otherwise the auth user is
   // stranded forever with no way to clear it.
-  return { accountType: null, email, canDelete: true, blockedReason: null };
+  return { accountType: null, email, canDelete: true, blockedReason: null, ...noOrg };
 }
 
 /**
@@ -393,12 +432,18 @@ export async function getAccountDeletionEligibility(): Promise<AccountDeletionEl
  *
  * On success the local session is signed out — the auth user no longer exists.
  *
+ * For the last admin, `confirmOrganizationName` must be the typed
+ * organisation name; the organisation is then deleted together with the
+ * account (subscription cancelled server-side).
+ *
  * Errors are returned as stable codes where the UI needs to explain them
- * ('last_admin', 'no_account', 'email_mismatch'); anything else is the raw
- * message from the edge function.
+ * ('last_admin', 'has_members', 'no_account', 'email_mismatch',
+ * 'organization_name_mismatch', 'subscription_cancel_failed'); anything else
+ * is the raw message from the edge function.
  */
 export async function requestAccountDeletion(
-  confirmEmail: string
+  confirmEmail: string,
+  options: { confirmOrganizationName?: string } = {}
 ): Promise<{ success: boolean; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'no_account' };
@@ -412,15 +457,35 @@ export async function requestAccountDeletion(
     return { success: false, error: eligibility.blockedReason || 'not_eligible' };
   }
 
+  const body: Record<string, unknown> = { confirmEmail: confirmEmail.trim() };
+  if (eligibility.requiresOrganizationDeletion) {
+    const typedName = (options.confirmOrganizationName || '').trim().toLowerCase();
+    if (!typedName || typedName !== (eligibility.organizationName || '').trim().toLowerCase()) {
+      return { success: false, error: 'organization_name_mismatch' };
+    }
+    body.deleteOrganization = true;
+    body.confirmOrganizationName = options.confirmOrganizationName!.trim();
+  }
+
+  // Sign in with Apple: hand the provider refresh token (if the session still
+  // has it) to the server so it can revoke the Apple grant (App Store 5.1.1(v)).
+  const isAppleUser = (user.identities ?? []).some((i) => i.provider === 'apple');
+  if (isAppleUser) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.provider_refresh_token) body.appleRefreshToken = session.provider_refresh_token;
+  }
+
   const { invokeEdgeFunction } = await import('@/lib/edge-function');
   const { data, error } = await invokeEdgeFunction<{ success?: boolean; error?: string }>(
     'delete-account',
-    { confirmEmail: confirmEmail.trim() }
+    body
   );
 
+  // invokeEdgeFunction maps a non-2xx JSON body { error: "<code>" } to error.message.
   if (error) return { success: false, error: error.message };
   if (!data?.success) return { success: false, error: data?.error || 'delete_failed' };
 
   await supabase.auth.signOut();
   return { success: true };
 }
+

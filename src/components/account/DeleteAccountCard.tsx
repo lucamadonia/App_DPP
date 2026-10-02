@@ -11,6 +11,10 @@
  * The confirmation gate is the `confirmed` flag below: the destructive button
  * stays disabled until the typed address matches the signed-in email exactly
  * (trimmed, case-insensitive).
+ *
+ * The last admin of an organisation deletes the organisation together with
+ * the account (App Store 5.1.1(v) — no other person may be required). That
+ * mode adds a second typed confirmation: the organisation name.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -50,6 +54,7 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
   const [eligibility, setEligibility] = useState<AccountDeletionEligibility | null>(null);
   const [open, setOpen] = useState(false);
   const [typedEmail, setTypedEmail] = useState('');
+  const [typedOrgName, setTypedOrgName] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,13 +69,25 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
   }, []);
 
   const email = eligibility?.email || '';
-  const confirmed = email.length > 0 && typedEmail.trim().toLowerCase() === email.toLowerCase();
+  const deletesOrganization = eligibility?.requiresOrganizationDeletion === true;
+  const organizationName = eligibility?.organizationName || '';
+  const emailConfirmed = email.length > 0 && typedEmail.trim().toLowerCase() === email.toLowerCase();
+  const orgConfirmed =
+    !deletesOrganization ||
+    (organizationName.length > 0 && typedOrgName.trim().toLowerCase() === organizationName.trim().toLowerCase());
+  const confirmed = emailConfirmed && orgConfirmed;
 
   const errorMessage = useCallback(
     (code: string): string => {
       switch (code) {
         case 'last_admin':
-          return t('You are the last administrator of this organisation. Assign the administrator role to another user before deleting your account.');
+          return t('You are the last administrator of this organisation. Deleting your account also deletes the organisation.');
+        case 'has_members':
+          return t('Other users still belong to this organisation. Remove them under Settings > Users, or make one of them an administrator, before deleting the organisation.');
+        case 'organization_name_mismatch':
+          return t('The organisation name does not match.');
+        case 'subscription_cancel_failed':
+          return t('Your subscription could not be cancelled, so nothing was deleted. Please try again or contact support.');
         case 'email_mismatch':
           return t('The email address does not match.');
         case 'no_account':
@@ -87,6 +104,7 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
     setOpen(next);
     if (!next) {
       setTypedEmail('');
+      setTypedOrgName('');
       setError(null);
     }
   };
@@ -96,7 +114,10 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
     setDeleting(true);
     setError(null);
 
-    const result = await requestAccountDeletion(typedEmail);
+    const result = await requestAccountDeletion(
+      typedEmail,
+      deletesOrganization ? { confirmOrganizationName: typedOrgName } : {}
+    );
 
     if (result.success) {
       // The service already signed the session out.
@@ -138,9 +159,14 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {eligibility.blockedReason === 'last_admin' && (
+        {deletesOrganization && eligibility.blockedReason !== 'has_members' && (
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-            {t('You are the last administrator of this organisation. Assign the administrator role to another user before deleting your account.')}
+            {t('You are the last administrator of this organisation. Deleting your account also deletes the organisation.')}
+          </div>
+        )}
+        {eligibility.blockedReason === 'has_members' && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            {t('Other users still belong to this organisation. Remove them under Settings > Users, or make one of them an administrator, before deleting the organisation.')}
           </div>
         )}
         {eligibility.blockedReason === 'no_account' && (
@@ -156,14 +182,16 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
           onClick={() => setOpen(true)}
         >
           <Trash2 className="h-4 w-4" />
-          {t('Delete Account')}
+          {deletesOrganization ? t('Delete organisation and account') : t('Delete Account')}
         </Button>
       </CardContent>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-destructive">{t('Delete Account')}</DialogTitle>
+            <DialogTitle className="text-destructive">
+              {deletesOrganization ? t('Delete organisation and account') : t('Delete Account')}
+            </DialogTitle>
             <DialogDescription>
               {t('This cannot be undone. Please read carefully what happens to your data.')}
             </DialogDescription>
@@ -185,6 +213,13 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
                     <li>{t('Your portal profile: name, phone number and saved addresses')}</li>
                     <li>{t('Your access to the customer portal')}</li>
                   </>
+                ) : deletesOrganization ? (
+                  <>
+                    <li>{t('Your user profile: name, email address and avatar')}</li>
+                    <li>{t('The organisation {{name}} with all products, passports, documents, returns, tickets and files', { name: organizationName })}</li>
+                    <li>{t('Customer portal accounts of your customers')}</li>
+                    <li>{t('Your subscription is cancelled immediately; there is no refund for the current period')}</li>
+                  </>
                 ) : (
                   <>
                     <li>{t('Your user profile: name, email address and avatar')}</li>
@@ -200,6 +235,8 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
               <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
                 {isCustomer ? (
                   <li>{t('Returns, refunds and invoices are retained because of statutory retention periods. They are anonymised and can no longer be traced back to you.')}</li>
+                ) : deletesOrganization ? (
+                  <li>{t('Invoices already issued remain with our payment provider because of statutory retention periods.')}</li>
                 ) : (
                   <>
                     <li>{t('Products, passports, documents and returns belong to the organisation and remain in place.')}</li>
@@ -230,6 +267,25 @@ export function DeleteAccountCard({ redirectTo }: DeleteAccountCardProps) {
                 disabled={deleting}
               />
             </div>
+
+            {deletesOrganization && (
+              <div className="space-y-2">
+                <Label htmlFor="delete-organization-confirm">
+                  {t('Type the organisation name {{name}} to confirm.', { name: organizationName })}
+                </Label>
+                <Input
+                  id="delete-organization-confirm"
+                  type="text"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder={organizationName}
+                  value={typedOrgName}
+                  onChange={(e) => setTypedOrgName(e.target.value)}
+                  disabled={deleting}
+                />
+              </div>
+            )}
           </div>
 
           {/*

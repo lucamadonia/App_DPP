@@ -13,9 +13,22 @@
  * Required Supabase secret: GOOGLE_MAPS_API_KEY
  * If absent, all actions return { enabled: false } so the frontend can
  * gracefully fall back to plain inputs.
+ *
+ * Cost protection (SEC-11): every paid Google call requires a tenant staff
+ * user (profiles row) and passes persistent rate limits (see
+ * _shared/rate-limit.ts, migration 20261001d): per user per minute, per user
+ * per day and a per-tenant daily cap that is small for Free tenants and larger
+ * for paid plans. The limiter fails CLOSED — the frontend then simply shows
+ * plain inputs. Caps are tunable via optional secrets:
+ *   ADDRESS_VALIDATION_USER_PER_MINUTE   (default 60)
+ *   ADDRESS_VALIDATION_USER_PER_DAY      (default 600)
+ *   ADDRESS_VALIDATION_FREE_TENANT_DAY   (default 50)
+ *   ADDRESS_VALIDATION_PAID_TENANT_DAY   (default 2000)
+ * Budget alerts / quota caps in Google Cloud remain a required user action.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimits, rateLimitedResponse } from '../_shared/rate-limit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -28,6 +41,26 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const PAID_PLANS = new Set(['pro', 'enterprise']);
+const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
+const PAID_ACTIONS = new Set(['autocomplete', 'place_details', 'validate']);
+
+function envInt(name: string, fallback: number): number {
+  const n = Number.parseInt(Deno.env.get(name) || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+async function isPaidTenant(supabase: SupabaseClient, tenantId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('billing_subscriptions')
+    .select('plan, status')
+    .eq('tenant_id', tenantId);
+  return (data ?? []).some(
+    (row: { plan?: string; status?: string }) =>
+      PAID_PLANS.has(String(row.plan)) && PAID_STATUSES.has(String(row.status)),
+  );
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -59,10 +92,35 @@ Deno.serve(async (req) => {
     if (!authHeader) return json({ error: 'Missing authorization' }, 401);
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: 'Server misconfigured' }, 500);
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const token = authHeader.replace('Bearer ', '');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const token = authHeader.replace(/^Bearer\s+/i, '');
     const { data: userData, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !userData?.user) return json({ error: 'Auth failed' }, 401);
+
+    if (!PAID_ACTIONS.has(action)) return json({ error: 'Unknown action' }, 400);
+
+    // Only tenant staff may spend on Google APIs (customer-portal logins have
+    // no profiles row).
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tenant_id')
+      .eq('id', userData.user.id)
+      .maybeSingle();
+    if (!profile?.tenant_id) return json({ error: 'Forbidden' }, 403);
+
+    const tenantDailyCap = (await isPaidTenant(supabase, profile.tenant_id))
+      ? envInt('ADDRESS_VALIDATION_PAID_TENANT_DAY', 2000)
+      : envInt('ADDRESS_VALIDATION_FREE_TENANT_DAY', 50);
+    const verdict = await enforceRateLimits(supabase, [
+      { bucket: `addrval:user-min:${userData.user.id}`, limit: envInt('ADDRESS_VALIDATION_USER_PER_MINUTE', 60), windowSeconds: 60 },
+      { bucket: `addrval:user-day:${userData.user.id}`, limit: envInt('ADDRESS_VALIDATION_USER_PER_DAY', 600), windowSeconds: 86_400 },
+      { bucket: `addrval:tenant-day:${profile.tenant_id}`, limit: tenantDailyCap, windowSeconds: 86_400 },
+    ], { failOpen: false });
+    if (!verdict.allowed) {
+      return rateLimitedResponse(verdict.retryAfterSeconds, corsHeaders);
+    }
 
     switch (action) {
       case 'autocomplete':
@@ -72,11 +130,11 @@ Deno.serve(async (req) => {
       case 'validate':
         return await handleValidate(params);
       default:
-        return json({ error: `Unknown action: ${action}` }, 400);
+        return json({ error: 'Unknown action' }, 400);
     }
   } catch (err) {
     console.error('[address-validation] error:', err);
-    return json({ error: err instanceof Error ? err.message : 'Internal error' }, 500);
+    return json({ error: 'Internal error' }, 500);
   }
 });
 
@@ -84,7 +142,7 @@ Deno.serve(async (req) => {
 // Action: autocomplete
 // -----------------------------------------------------------------------------
 async function handleAutocomplete(params?: Record<string, unknown>) {
-  const input = (params?.input as string) || '';
+  const input = typeof params?.input === 'string' ? params.input.slice(0, 200) : '';
   if (input.trim().length < 2) return json({ enabled: true, suggestions: [] });
 
   const country = (params?.country as string) || '';
@@ -135,8 +193,8 @@ async function handleAutocomplete(params?: Record<string, unknown>) {
 // Action: place_details
 // -----------------------------------------------------------------------------
 async function handlePlaceDetails(params?: Record<string, unknown>) {
-  const placeId = params?.placeId as string;
-  if (!placeId) return json({ error: 'Missing placeId' }, 400);
+  const placeId = typeof params?.placeId === 'string' ? params.placeId : '';
+  if (!placeId || placeId.length > 512) return json({ error: 'Missing placeId' }, 400);
   const sessionToken = (params?.sessionToken as string) || '';
 
   const fields = 'id,formattedAddress,addressComponents,location';

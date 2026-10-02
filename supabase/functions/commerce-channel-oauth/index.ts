@@ -155,10 +155,19 @@ serve(async (req) => {
       if (!state || !code) return redirectResult(false, 'Missing OAuth callback parameters');
       const payload = await verifyState(state);
       if (!payload) return redirectResult(false, 'Invalid or expired OAuth state');
+      const callbackShop = url.searchParams.get('shop') || undefined;
+      if (payload.platform === 'shopify') {
+        // Shopify signs every redirect with the app secret; an unsigned or
+        // tampered callback must never trigger a token exchange.
+        const secret = Deno.env.get(OAUTH_CONFIG.shopify.clientSecretSecret);
+        if (!secret || !(await verifyShopifyCallbackHmac(url.searchParams, secret))) {
+          return redirectResult(false, 'Invalid Shopify callback signature');
+        }
+      }
       const supabase = createServiceClient();
       const result = await handleCallback(supabase, {
         action: 'callback', platform: payload.platform, connectionId: payload.connectionId,
-        code, state, shop: url.searchParams.get('shop') || undefined,
+        code, state, shop: callbackShop,
       });
       return result.ok ? redirectResult(true) : redirectResult(false, result.error || 'OAuth callback failed');
     }
@@ -178,10 +187,13 @@ serve(async (req) => {
     const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', authData.user.id).single();
     if (!profile?.tenant_id) return json({ error: 'Tenant not found' }, 403);
     const requestedConnectionId = (params as { connectionId?: string }).connectionId;
-    if (requestedConnectionId) {
-      const { data: ownedConnection } = await supabase.from('commerce_channel_connections')
-        .select('id').eq('id', requestedConnectionId).eq('tenant_id', profile.tenant_id).single();
-      if (!ownedConnection) return json({ error: 'Connection does not belong to this tenant' }, 403);
+    if (!requestedConnectionId) return json({ error: 'Missing connectionId' }, 400);
+    const { data: ownedConnection } = await supabase.from('commerce_channel_connections')
+      .select('id, platform').eq('id', requestedConnectionId).eq('tenant_id', profile.tenant_id).single();
+    if (!ownedConnection) return json({ error: 'Connection does not belong to this tenant' }, 403);
+    const requestedPlatform = (params as { platform?: Platform }).platform;
+    if (requestedPlatform && ownedConnection.platform && ownedConnection.platform !== requestedPlatform) {
+      return json({ error: 'Platform does not match connection' }, 400);
     }
 
     switch (action) {
@@ -209,7 +221,18 @@ async function handleStart(supabase: SupabaseClient, p: StartParams) {
   const clientId = Deno.env.get(cfg.clientIdSecret);
   if (!clientId) return { error: `Missing ${cfg.clientIdSecret}` };
 
-  const state = await createState(p.platform, p.connectionId);
+  if (!isAllowedRedirectUri(p.redirectUri)) return { error: 'Invalid redirectUri' };
+
+  let shop: string | undefined;
+  if (p.platform === 'shopify') {
+    shop = normalizeShopDomain(p.shop) ?? undefined;
+    if (!shop) return { error: 'Shopify requires a valid *.myshopify.com shop domain' };
+  }
+
+  // One-shot nonce: bound into the signed state and stashed on the row, so a
+  // state can be redeemed exactly once and only for the shop it was issued for.
+  const nonce = b64(crypto.getRandomValues(new Uint8Array(24)));
+  const state = await createState(p.platform, p.connectionId, nonce, shop);
   const scopeStr = (p.scopes || []).join(cfg.scopeJoiner);
 
   // The verifier must survive until the callback and must never leave the
@@ -227,15 +250,14 @@ async function handleStart(supabase: SupabaseClient, p: StartParams) {
       status: 'connecting',
       metadata: {
         ...((existing?.metadata ?? {}) as Record<string, unknown>),
-        oauth: { verifier, redirectUri: p.redirectUri, createdAt: new Date().toISOString() },
+        oauth: { verifier, nonce, shop: shop ?? null, redirectUri: p.redirectUri, createdAt: new Date().toISOString() },
       },
     })
     .eq('id', p.connectionId);
 
   let url: string;
   if (p.platform === 'shopify') {
-    if (!p.shop) return { error: 'Shopify requires shop domain' };
-    url = `https://${p.shop}/admin/oauth/authorize?client_id=${encodeURIComponent(clientId)}&scope=${encodeURIComponent(scopeStr)}&redirect_uri=${encodeURIComponent(p.redirectUri)}&state=${state}`;
+    url = `https://${shop}/admin/oauth/authorize?client_id=${encodeURIComponent(clientId)}&scope=${encodeURIComponent(scopeStr)}&redirect_uri=${encodeURIComponent(p.redirectUri)}&state=${state}`;
   } else {
     const params = new URLSearchParams({
       client_id: clientId,
@@ -265,6 +287,16 @@ async function handleCallback(supabase: SupabaseClient, p: CallbackParams) {
     return { error: 'Invalid OAuth state' };
   }
 
+  // Shopify: the token host is attacker-influenced (query string / body), so it
+  // must be a real *.myshopify.com domain AND match the shop bound into the state.
+  let shop: string | undefined;
+  if (p.platform === 'shopify') {
+    shop = normalizeShopDomain(p.shop) ?? undefined;
+    if (!shop || !statePayload.shop || shop !== statePayload.shop) {
+      return { error: 'Invalid Shopify shop domain' };
+    }
+  }
+
   const clientId = Deno.env.get(cfg.clientIdSecret);
   const clientSecret = Deno.env.get(cfg.clientSecretSecret);
   if (!clientId || (!cfg.omitClientSecret && !clientSecret)) return { error: 'Missing OAuth credentials' };
@@ -278,14 +310,35 @@ async function handleCallback(supabase: SupabaseClient, p: CallbackParams) {
     .single();
   if (!conn) return { error: 'Connection not found' };
 
-  const stash = ((conn.metadata ?? {}).oauth ?? {}) as { verifier?: string; redirectUri?: string };
+  const stash = ((conn.metadata ?? {}).oauth ?? {}) as {
+    verifier?: string; redirectUri?: string; nonce?: string; shop?: string | null;
+  };
+  if (!stash.nonce || !statePayload.nonce || stash.nonce !== statePayload.nonce) {
+    return { error: 'OAuth state already used or superseded — restart the connection' };
+  }
   if (cfg.usesPkce && !stash.verifier) {
     return { error: 'PKCE verifier missing or already consumed — restart the connection' };
+  }
+  if (p.platform === 'shopify' && stash.shop !== shop) {
+    return { error: 'Invalid Shopify shop domain' };
+  }
+
+  // Burn the stash BEFORE the exchange. The nonce filter makes this a
+  // compare-and-swap: only one concurrent redemption of a state can win.
+  const { oauth: _consumed, ...restMetadata } = (conn.metadata ?? {}) as Record<string, unknown>;
+  const { data: burned } = await supabase
+    .from('commerce_channel_connections')
+    .update({ metadata: restMetadata })
+    .eq('id', p.connectionId)
+    .eq('metadata->oauth->>nonce', stash.nonce)
+    .select('id');
+  if (!burned || burned.length === 0) {
+    return { error: 'OAuth state already used — restart the connection' };
   }
 
   // Exchange code for token (per-platform)
   const tokenUrl = p.platform === 'shopify'
-    ? `https://${p.shop}/admin/oauth/access_token`
+    ? `https://${shop}/admin/oauth/access_token`
     : cfg.tokenUrl;
 
   const body = new URLSearchParams({
@@ -325,8 +378,7 @@ async function handleCallback(supabase: SupabaseClient, p: CallbackParams) {
     encrypted_payload: encryptedPayload,
   });
 
-  // Mark connection connected and burn the one-shot PKCE stash.
-  const { oauth: _consumed, ...restMetadata } = (conn.metadata ?? {}) as Record<string, unknown>;
+  // Mark connection connected (the one-shot stash was already burned above).
   await supabase
     .from('commerce_channel_connections')
     .update({
@@ -377,7 +429,49 @@ function createServiceClient() {
   return createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 }
 
-type StatePayload = { connectionId: string; platform: Platform; exp: number };
+type StatePayload = { connectionId: string; platform: Platform; exp: number; nonce?: string; shop?: string };
+
+const SHOP_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/;
+/** Accepts "name", "name.myshopify.com" or a pasted URL; returns null for anything else. */
+function normalizeShopDomain(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  let v = String(raw).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!v.includes('.')) v = `${v}.myshopify.com`;
+  return SHOP_DOMAIN_RE.test(v) ? v : null;
+}
+
+/** The redirect URI is replayed to providers' token endpoints — only our own callback is allowed. */
+function isAllowedRedirectUri(uri: string | undefined): boolean {
+  if (!uri) return false;
+  const allowed = new Set<string>();
+  const configured = Deno.env.get('COMMERCE_OAUTH_REDIRECT_URI');
+  if (configured) allowed.add(configured.replace(/\/+$/, ''));
+  const base = Deno.env.get('SUPABASE_URL');
+  if (base) allowed.add(`${base.replace(/\/+$/, '')}/functions/v1/commerce-channel-oauth`);
+  return allowed.has(uri.replace(/\/+$/, ''));
+}
+
+/** Shopify OAuth redirect HMAC: hex HMAC-SHA256 over the sorted query (minus hmac/signature). */
+async function verifyShopifyCallbackHmac(params: URLSearchParams, secret: string): Promise<boolean> {
+  const provided = (params.get('hmac') || '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(provided)) return false;
+  const message = [...params.entries()]
+    .filter(([k]) => k !== 'hmac' && k !== 'signature')
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('&');
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const digest = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
+  const expected = [...digest].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return timingSafeEqualStr(expected, provided);
+}
+
+function timingSafeEqualStr(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 const encoder = new TextEncoder();
 async function hmac(value: string) {
   const key = await crypto.subtle.importKey('raw', encoder.encode(Deno.env.get('OAUTH_STATE_SECRET') ?? ''), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
@@ -390,8 +484,8 @@ function randomVerifier() {
 async function codeChallenge(verifier: string) {
   return b64(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(verifier))));
 }
-async function createState(platform: Platform, connectionId: string) {
-  const body = b64(encoder.encode(JSON.stringify({ platform, connectionId, exp: Date.now() + 10 * 60_000 })));
+async function createState(platform: Platform, connectionId: string, nonce: string, shop?: string) {
+  const body = b64(encoder.encode(JSON.stringify({ platform, connectionId, nonce, shop, exp: Date.now() + 10 * 60_000 })));
   return `${body}.${b64(await hmac(body))}`;
 }
 async function verifyState(state: string): Promise<StatePayload | null> {
@@ -399,8 +493,16 @@ async function verifyState(state: string): Promise<StatePayload | null> {
   if (!body || !signature || !Deno.env.get('OAUTH_STATE_SECRET')) return null;
   const expected = await hmac(body);
   const actual = unb64(signature);
-  if (actual.length !== expected.length || !actual.every((v, i) => v === expected[i])) return null;
-  const payload = JSON.parse(new TextDecoder().decode(unb64(body))) as StatePayload;
+  if (actual.length !== expected.length) return null;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= actual[i] ^ expected[i];
+  if (diff !== 0) return null;
+  let payload: StatePayload;
+  try {
+    payload = JSON.parse(new TextDecoder().decode(unb64(body))) as StatePayload;
+  } catch {
+    return null;
+  }
   return payload.exp > Date.now() ? payload : null;
 }
 function redirectResult(ok: boolean, error?: string) {

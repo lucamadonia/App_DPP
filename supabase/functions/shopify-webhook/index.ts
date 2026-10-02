@@ -1,9 +1,11 @@
 /**
  * Supabase Edge Function: shopify-webhook
  *
- * Receives Shopify webhooks. HMAC-verifies, dedups via x-shopify-webhook-id,
- * records in shopify_webhook_events (dead-letter queue), then dispatches to
- * topic-specific handlers.
+ * Receives Shopify webhooks. HMAC-verifies FIRST (constant-time; unsigned or
+ * oversized requests are rejected without any DB access), then dedups via
+ * x-shopify-webhook-id against verified deliveries only, records in
+ * shopify_webhook_events (dead-letter queue), and dispatches to topic-specific
+ * handlers.
  *
  * Supported topics:
  *   - orders/create          → create wh_shipment + reserve stock
@@ -38,6 +40,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const SHOPIFY_WEBHOOK_SECRET = Deno.env.get('SHOPIFY_WEBHOOK_SECRET') || '';
 
+/** Shopify payloads are well below this; anything larger is rejected unread. */
+const MAX_BODY_BYTES = 5 * 1024 * 1024;
+
 // ============================================
 // MAIN HANDLER
 // ============================================
@@ -49,27 +54,45 @@ Deno.serve(async (req) => {
 
   let eventId: string | null = null;
   try {
-    const rawBody = await req.text();
+    const declaredLength = Number(req.headers.get('content-length') || '0');
+    if (declaredLength > MAX_BODY_BYTES) return json({ error: 'Payload too large' }, 413);
 
     const hmacHeader = req.headers.get('x-shopify-hmac-sha256');
+    if (!hmacHeader || !SHOPIFY_WEBHOOK_SECRET) {
+      return json({ error: 'Invalid HMAC signature' }, 401);
+    }
+
+    const rawBody = await req.text();
+    if (new TextEncoder().encode(rawBody).length > MAX_BODY_BYTES) {
+      return json({ error: 'Payload too large' }, 413);
+    }
+
+    // Verify before ANY database access: unsigned requests must not be able to
+    // write rows or influence dedup.
+    const isValid = await verifyHmac(rawBody, hmacHeader, SHOPIFY_WEBHOOK_SECRET);
+    if (!isValid) {
+      return json({ error: 'Invalid HMAC signature' }, 401);
+    }
+
     const shopDomain = req.headers.get('x-shopify-shop-domain') || '';
     const topic = req.headers.get('x-shopify-topic') || '';
     const webhookId = req.headers.get('x-shopify-webhook-id') || '';
 
-    const isValid = hmacHeader && SHOPIFY_WEBHOOK_SECRET
-      ? await verifyHmac(rawBody, hmacHeader, SHOPIFY_WEBHOOK_SECRET)
-      : false;
-
-    // Dedup via webhookId (fast short-circuit if this delivery was seen before)
+    // Dedup via webhookId — only verified deliveries count. Rows recorded by
+    // the pre-hardening code with hmac_valid=false would otherwise block the
+    // genuine delivery (UNIQUE on shopify_webhook_id), so they are dropped.
     if (webhookId) {
       const { data: dupe } = await supabase
         .from('shopify_webhook_events')
-        .select('id, status')
+        .select('id, status, hmac_valid')
         .eq('shopify_webhook_id', webhookId)
         .maybeSingle();
-      if (dupe) {
+      if (dupe && dupe.hmac_valid === true) {
         console.log(`Duplicate webhook ${webhookId} (status=${dupe.status}), returning 200`);
         return json({ received: true, deduped: true }, 200);
+      }
+      if (dupe) {
+        await supabase.from('shopify_webhook_events').delete().eq('id', dupe.id).eq('hmac_valid', false);
       }
     }
 
@@ -94,10 +117,6 @@ Deno.serve(async (req) => {
       .single();
     eventId = logRow?.id;
 
-    if (!isValid) {
-      await markEvent(supabase, eventId, 'failed', 'HMAC invalid');
-      return json({ error: 'Invalid HMAC signature' }, 401);
-    }
     if (!shopDomain) {
       await markEvent(supabase, eventId, 'failed', 'Missing shop domain');
       return json({ error: 'Missing shop domain' }, 400);
@@ -156,7 +175,7 @@ Deno.serve(async (req) => {
     const msg = err instanceof Error ? err.message : String(err);
     if (eventId) await markEvent(supabase, eventId, 'failed', msg);
     // 500 → Shopify will retry up to 19 times over 48h
-    return json({ error: msg }, 500);
+    return json({ error: 'Internal error' }, 500);
   }
 });
 
@@ -183,7 +202,15 @@ async function verifyHmac(body: string, hmacHeader: string, secret: string): Pro
   );
   const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
   const computed = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  return computed === hmacHeader;
+  return timingSafeEqual(computed, hmacHeader.trim());
+}
+
+/** Constant-time comparison (length is not secret: base64 SHA-256 is always 44 chars). */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -891,6 +918,8 @@ async function handleAppUninstalled(supabase: any, tenantId: string) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { shopifyIntegration, ...rest } = settings;
   await supabase.from('tenants').update({ settings: rest }).eq('id', tenantId);
+  // The access token lives in tenant_secrets since migration 20261001b.
+  await supabase.from('tenant_secrets').delete().eq('tenant_id', tenantId).eq('provider', 'shopify');
   await supabase.from('shopify_product_map').update({ is_active: false }).eq('tenant_id', tenantId);
   console.log(`App uninstalled — wiped shopifyIntegration for tenant ${tenantId}`);
 }

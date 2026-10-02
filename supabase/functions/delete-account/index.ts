@@ -43,18 +43,52 @@
  *   6. Deploy WITH JWT verification (i.e. NOT `--no-verify-jwt`):
  *        supabase functions deploy delete-account
  *
+ *   7. Organisation deletion (last admin): on staging, delete a throwaway
+ *      self-signup tenant that has a Stripe TEST subscription, files in each
+ *      bucket and one portal customer. Confirm: subscription cancelled in
+ *      Stripe, tenants row + all tenant rows gone, no objects left under
+ *      {tenantId}/, portal login and own auth user gone. Also confirm every
+ *      FK onto tenants(id) is ON DELETE CASCADE on the live schema
+ *      (otherwise the tenant delete fails AFTER the subscription was already
+ *      cancelled; no data is deleted in that case).
+ *
  * Required Supabase Secrets (both provided automatically):
  *   - SUPABASE_URL
  *   - SUPABASE_SERVICE_ROLE_KEY
  *
  * Security model:
  *   The target account is derived exclusively from the verified JWT. The
- *   request body carries only `confirmEmail`, which is compared against the
- *   JWT's email. No user id, tenant id, or account type is ever read from the
- *   body, so a caller cannot address anyone but themselves.
+ *   request body carries only `confirmEmail` (compared against the JWT's
+ *   email) and, for the last admin of a tenant, `deleteOrganization: true` plus
+ *   `confirmOrganizationName` (compared against the tenant's name from the
+ *   DB). No user id, tenant id, or account type is ever read from the body,
+ *   so a caller cannot address anyone but themselves and their own tenant.
+ *
+ * Last admin (QA-3, App Store 5.1.1(v)):
+ *   The sole admin may delete the organisation together with the account:
+ *   Stripe subscriptions are cancelled server-side first (STRIPE_SECRET_KEY),
+ *   then the tenant row is deleted (cascades over all tenant data), storage
+ *   under {tenantId}/ and the tenant's customer-portal logins are removed, and
+ *   finally the auth user. See ./organization.ts. If other users still belong
+ *   to the organisation the request is refused with 'has_members' — the admin
+ *   can remove them in-app first (no other person's cooperation required).
+ *
+ * Optional secret: STRIPE_SECRET_KEY (required as soon as a tenant has a live
+ * Stripe subscription; without it organisation deletion is refused).
+ *
+ * Sign in with Apple (QA-3): after every successful deletion the caller's
+ * Apple grant is revoked best-effort via ./apple-revoke.ts when the client
+ * sends `appleRefreshToken` or `appleAuthorizationCode` and the APPLE_TEAM_ID,
+ * APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_CLIENT_ID secrets are set. The token
+ * is only revoked if Apple's id_token `sub` matches the caller's own Apple
+ * identity. Checklist item 8: verify on staging with a real Apple sign-in that
+ * the response reports appleRevocation='revoked' and the app disappears from
+ * appleid.apple.com > "Sign in with Apple".
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { deleteOrganization } from './organization.ts';
+import { readAppleTokenInput, revokeAppleTokens, type AppleTokenInput } from './apple-revoke.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -75,6 +109,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== 'POST') {
+    return jsonResponse({ success: false, error: 'method_not_allowed' }, 405);
+  }
 
   try {
     const authHeader = req.headers.get('authorization');
@@ -82,10 +119,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: 'Missing authorization header' }, 401);
     }
 
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // The ONLY source of the target identity.
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.replace(/^Bearer\s+/i, '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
       return jsonResponse({ success: false, error: 'Invalid auth token' }, 401);
@@ -94,12 +133,26 @@ Deno.serve(async (req) => {
     // Re-check the typed confirmation server-side. The body is trusted for
     // nothing else.
     let confirmEmail = '';
+    let wantsOrganizationDeletion = false;
+    let confirmOrganizationName = '';
+    let appleInput: AppleTokenInput = {};
     try {
       const body = await req.json();
+      appleInput = readAppleTokenInput(body);
       confirmEmail = typeof body?.confirmEmail === 'string' ? body.confirmEmail : '';
+      wantsOrganizationDeletion = body?.deleteOrganization === true;
+      confirmOrganizationName = typeof body?.confirmOrganizationName === 'string' ? body.confirmOrganizationName : '';
     } catch {
       // Empty/invalid body -> confirmEmail stays '' and fails the check below.
     }
+
+    // Called on every successful deletion path (all cases incl. organisation
+    // deletion): revoke Sign in with Apple tokens, best-effort, after the data
+    // is gone so a refused deletion never revokes anything.
+    const succeed = async (payload: Record<string, unknown>) => {
+      const apple = await revokeAppleTokens(user, appleInput);
+      return jsonResponse({ ...payload, success: true, appleTokenRevoked: apple === 'revoked', appleRevocation: apple });
+    };
 
     const sessionEmail = (user.email || '').trim().toLowerCase();
     if (!sessionEmail || confirmEmail.trim().toLowerCase() !== sessionEmail) {
@@ -135,7 +188,10 @@ Deno.serve(async (req) => {
         ).length;
 
         if (activeAdmins <= 1) {
-          return jsonResponse({ success: false, error: 'last_admin' }, 409);
+          return await handleLastAdmin(supabaseAdmin, user.id, profile.tenant_id, {
+            wantsOrganizationDeletion,
+            confirmOrganizationName,
+          }, succeed);
         }
       }
 
@@ -155,7 +211,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: false, error: userDeleteError.message }, 500);
       }
 
-      return jsonResponse({ success: true, accountType: 'admin' });
+      return await succeed({ accountType: 'admin' });
     }
 
     // ---------------------------------------------------------------------
@@ -207,7 +263,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: false, error: userDeleteError.message }, 500);
       }
 
-      return jsonResponse({ success: true, accountType: 'customer' });
+      return await succeed({ accountType: 'customer' });
     }
 
     // ---------------------------------------------------------------------
@@ -240,10 +296,75 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: orphanDeleteError.message }, 500);
     }
 
-    return jsonResponse({ success: true, accountType: 'orphaned' });
+    return await succeed({ accountType: 'orphaned' });
   } catch (error) {
     console.error('delete-account error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return jsonResponse({ success: false, error: msg }, 500);
+    return jsonResponse({ success: false, error: 'delete_failed' }, 500);
   }
 });
+
+/**
+ * The caller is the tenant's only active admin. Without an explicit, typed
+ * organisation confirmation this stays a 409 so the client can switch the
+ * dialog into "delete organisation and account" mode.
+ */
+async function handleLastAdmin(
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
+  userId: string,
+  tenantId: string,
+  opts: { wantsOrganizationDeletion: boolean; confirmOrganizationName: string },
+  succeed: (payload: Record<string, unknown>) => Promise<Response>,
+): Promise<Response> {
+  if (!opts.wantsOrganizationDeletion) {
+    return jsonResponse({ success: false, error: 'last_admin' }, 409);
+  }
+
+  const { data: tenant, error: tenantError } = await supabaseAdmin
+    .from('tenants')
+    .select('id, name, stripe_customer_id')
+    .eq('id', tenantId)
+    .maybeSingle();
+  if (tenantError || !tenant) {
+    return jsonResponse({ success: false, error: 'organization_not_found' }, 404);
+  }
+
+  const expectedName = String(tenant.name ?? '').trim().toLowerCase();
+  if (!expectedName || opts.confirmOrganizationName.trim().toLowerCase() !== expectedName) {
+    return jsonResponse({ success: false, error: 'organization_name_mismatch' }, 400);
+  }
+
+  // Never delete other people's access implicitly.
+  const { count: otherMembers, error: memberError } = await supabaseAdmin
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .neq('id', userId);
+  if (memberError) {
+    return jsonResponse({ success: false, error: 'admin_check_failed' }, 500);
+  }
+  if ((otherMembers ?? 0) > 0) {
+    return jsonResponse({ success: false, error: 'has_members' }, 409);
+  }
+
+  const result = await deleteOrganization(supabaseAdmin, tenantId, tenant.stripe_customer_id ?? null);
+  if (!result.ok) {
+    return jsonResponse({ success: false, error: result.error }, result.status);
+  }
+  if (result.warnings.length > 0) {
+    console.warn(`[delete-account] organisation ${tenantId} deleted with cleanup warnings: ${result.warnings.join(',')}`);
+  }
+
+  // profiles row is gone via the tenants cascade; delete explicitly anyway in
+  // case the cascade is missing on this project.
+  await supabaseAdmin.from('profiles').delete().eq('id', userId);
+
+  // If this fails, a retry lands in "Case 3" (orphaned auth user) and finishes.
+  const { error: userDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  if (userDeleteError) {
+    console.error(`[delete-account] auth user delete failed after organisation delete: ${userDeleteError.message}`);
+    return jsonResponse({ success: false, error: 'delete_failed' }, 500);
+  }
+
+  return await succeed({ accountType: 'admin', organizationDeleted: true });
+}
