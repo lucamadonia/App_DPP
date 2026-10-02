@@ -530,7 +530,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">{t('ml.fontSize')}</Label>
+              <Label className="text-xs">{t('ml.editor.fontSize')}</Label>
               <Input
                 type="number"
                 min={6}
@@ -541,7 +541,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">{t('ml.fontWeight')}</Label>
+              <Label className="text-xs">{t('ml.editor.fontWeight')}</Label>
               <Select
                 value={element.fontWeight}
                 onValueChange={(v) => update({ fontWeight: v as 'normal' | 'bold' })}
@@ -550,15 +550,15 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="normal">{t('ml.fontWeight.normal')}</SelectItem>
-                  <SelectItem value="bold">{t('ml.fontWeight.bold')}</SelectItem>
+                  <SelectItem value="normal">{t('ml.editor.fontWeightNormal')}</SelectItem>
+                  <SelectItem value="bold">{t('ml.editor.bold')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">{t('ml.alignment')}</Label>
+            <Label className="text-xs">{t('ml.editor.alignment')}</Label>
             <RadioGroup
               value={element.alignment}
               onValueChange={(v) => update({ alignment: v as 'left' | 'center' | 'right' })}
@@ -566,22 +566,22 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
               <div className="flex gap-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="left" id="counter-left" />
-                  <Label htmlFor="counter-left" className="text-xs font-normal">{t('ml.alignment.left')}</Label>
+                  <Label htmlFor="counter-left" className="text-xs font-normal">{t('ml.editor.alignLeft')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="center" id="counter-center" />
-                  <Label htmlFor="counter-center" className="text-xs font-normal">{t('ml.alignment.center')}</Label>
+                  <Label htmlFor="counter-center" className="text-xs font-normal">{t('ml.editor.alignCenter')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="right" id="counter-right" />
-                  <Label htmlFor="counter-right" className="text-xs font-normal">{t('ml.alignment.right')}</Label>
+                  <Label htmlFor="counter-right" className="text-xs font-normal">{t('ml.editor.alignRight')}</Label>
                 </div>
               </div>
             </RadioGroup>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">{t('ml.color')}</Label>
+            <Label className="text-xs">{t('ml.editor.color')}</Label>
             <div className="flex gap-1.5">
               <input
                 type="color"
@@ -609,7 +609,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
           {element.showBorder && (
             <div className="grid grid-cols-2 gap-3 pl-6">
               <div className="space-y-1.5">
-                <Label className="text-xs">{t('ml.borderColor')}</Label>
+                <Label className="text-xs">{t('ml.editor.borderColor')}</Label>
                 <div className="flex gap-1.5">
                   <input
                     type="color"
@@ -625,7 +625,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">{t('ml.borderWidth')}</Label>
+                <Label className="text-xs">{t('ml.editor.borderWidth')}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -650,7 +650,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
 
           {element.showBackground && (
             <div className="space-y-1.5 pl-6">
-              <Label className="text-xs">{t('ml.backgroundColor')}</Label>
+              <Label className="text-xs">{t('ml.editor.backgroundColor')}</Label>
               <div className="flex gap-1.5">
                 <input
                   type="color"
@@ -669,7 +669,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">{t('ml.borderRadius')}</Label>
+              <Label className="text-xs">{t('ml.editor.borderRadius')}</Label>
               <Input
                 type="number"
                 min={0}
@@ -680,7 +680,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">{t('ml.padding')}</Label>
+              <Label className="text-xs">{t('ml.editor.padding')}</Label>
               <Input
                 type="number"
                 min={0}
@@ -698,7 +698,7 @@ export function LabelElementSettingsPanel({ element, onChange }: LabelElementSet
               checked={element.uppercase}
               onCheckedChange={(checked) => update({ uppercase: !!checked })}
             />
-            <Label htmlFor="uppercase" className="text-xs font-normal">{t('ml.uppercase')}</Label>
+            <Label htmlFor="uppercase" className="text-xs font-normal">{t('ml.editor.uppercase')}</Label>
           </div>
         </>
       )}

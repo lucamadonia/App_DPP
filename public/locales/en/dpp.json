@@ -357,5 +357,12 @@
   "Failed to load batches": "Failed to load batches",
   "Logo file must be under 500 KB": "Logo file must be under 500 KB",
   "Error saving settings": "Error saving settings",
-  "Batch export is available in the browser version": "Batch export is available in the browser version"
+  "Batch export is available in the browser version": "Batch export is available in the browser version",
+  "Batch": "Batch",
+  "Created": "Created",
+  "QR-Code": "QR Code",
+  "Published": "Published",
+  "Archived": "Archived",
+  "Create First Product": "Create First Product",
+  "URL Preview": "URL Preview"
 }

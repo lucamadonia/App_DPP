@@ -515,11 +515,11 @@ export function SupplierDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{t('Quality:')}</span>
+                    <span className="text-muted-foreground">{t('Quality')}:</span>
                     <StarRating rating={supplier.quality_rating} size="md" />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{t('Delivery:')}</span>
+                    <span className="text-muted-foreground">{t('Delivery')}:</span>
                     <StarRating rating={supplier.delivery_rating} size="md" />
                   </div>
                   <Separator />

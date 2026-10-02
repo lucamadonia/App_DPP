@@ -390,5 +390,15 @@
   "Completed": "Completed",
   "Not Applicable": "Not Applicable",
   "Recyclable": "Recyclable",
-  "Difficult to recycle": "Difficult to recycle"
+  "Difficult to recycle": "Difficult to recycle",
+  "Document": "Document",
+  "Priority": "Priority",
+  "Countries": "Countries",
+  "Requirement": "Requirement",
+  "Subcategory": "Subcategory",
+  "Target Markets (Countries)": "Target Markets (Countries)",
+  "Target Audience": "Target Audience",
+  "Selected Materials": "Selected Materials",
+  "Please fill in all required fields:": "Please fill in all required fields:",
+  "Product": "Product"
 }

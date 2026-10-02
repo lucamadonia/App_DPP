@@ -176,5 +176,7 @@
   "Create a warehouse location first": "Bitte zuerst einen Lagerstandort anlegen",
   "Order has no complete shipping address": "Die Bestellung hat keine vollst?ndige Lieferadresse",
   "Shipment failed": "Sendung konnte nicht erstellt oder erg?nzt werden",
-  "Product for {{item}}": "Produkt für {{item}}"
+  "Product for {{item}}": "Produkt für {{item}}",
+  "Orders by Country — Today": "Bestellungen nach Land — Heute",
+  "Alle Bestellungen": "Alle Bestellungen"
 }

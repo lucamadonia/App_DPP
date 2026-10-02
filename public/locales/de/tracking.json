@@ -102,5 +102,6 @@
   "widget_email_label": "E-Mail-Adresse",
   "widget_submit": "Paket verfolgen",
   "widget_not_found": "Wir konnten keine Sendung mit dieser Bestellnummer und E-Mail finden. Bitte beides prüfen und erneut versuchen.",
-  "widget_powered_by": "Live-Tracking von Trackbliss"
+  "widget_powered_by": "Live-Tracking von Trackbliss",
+  "In this shipment": "In dieser Sendung"
 }

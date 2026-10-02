@@ -176,5 +176,7 @@
   "Create a warehouse location first": "Create a warehouse location first",
   "Order has no complete shipping address": "Order has no complete shipping address",
   "Shipment failed": "Shipment failed",
-  "Product for {{item}}": "Product for {{item}}"
+  "Product for {{item}}": "Product for {{item}}",
+  "Orders by Country — Today": "Orders by Country — Today",
+  "Alle Bestellungen": "All Orders"
 }

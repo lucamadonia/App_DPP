@@ -193,5 +193,6 @@
   "Download": "Download",
   "Print": "Print",
   "Drop off": "Drop off",
-  "Label Ready": "Label Ready"
+  "Label Ready": "Label Ready",
+  "Password must be at least {{count}} characters": "Password must be at least {{count}} characters"
 }

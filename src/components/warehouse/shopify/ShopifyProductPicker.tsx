@@ -185,7 +185,7 @@ export function ShopifyProductPicker({ products, existingMaps, onClose, onMapped
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t('Close', { ns: 'translation' })}</Button>
+          <Button variant="outline" onClick={onClose}>{t('Close', { ns: 'common' })}</Button>
           <Button onClick={handleSaveAll} disabled={pendingCount === 0 || saving}>
             {saving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
