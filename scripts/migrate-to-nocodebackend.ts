@@ -8,8 +8,13 @@
 const NCB_CONFIG = {
   instance: '48395_mfg_ddp',
   baseUrl: 'https://app.nocodebackend.com/api',
-  secretKey: 'e4d980652106cfd48dd5786dbe25f9b4be24a4ba1adb33bc889e139d8ff3f5d7',
+  // Never hard-code this key (the old literal is public in git history and must be revoked).
+  secretKey: process.env.NOCODEBACKEND_SECRET_KEY ?? '',
 };
+if (!NCB_CONFIG.secretKey) {
+  console.error('Missing NOCODEBACKEND_SECRET_KEY environment variable');
+  process.exit(1);
+}
 
 // Helper für API-Aufrufe
 async function ncbFetch(endpoint: string, data: any) {

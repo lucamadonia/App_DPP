@@ -7,7 +7,12 @@
 
 const NOCODEBACKEND_URL = 'https://app.nocodebackend.com/api';
 const DATABASE_INSTANCE = '48395_mfg_ddp';
-const SECRET_KEY = 'e4d980652106cfd48dd5786dbe25f9b4be24a4ba1adb33bc889e139d8ff3f5d7';
+// Never hard-code this key (the old literal is public in git history and must be revoked).
+const SECRET_KEY = process.env.NOCODEBACKEND_SECRET_KEY ?? '';
+if (!SECRET_KEY) {
+  console.error('Missing NOCODEBACKEND_SECRET_KEY environment variable');
+  process.exit(1);
+}
 
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const url = `${NOCODEBACKEND_URL}/${endpoint}`;

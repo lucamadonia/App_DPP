@@ -7,6 +7,17 @@ const env = Object.fromEntries(
     .map(l => { const [k, ...v] = l.split('='); return [k.trim(), v.join('=').trim()]; })
 );
 
+// Credentials come from .env only. Never hard-code them here (SEC-1: the old
+// literal key is public in git history and must be rotated).
+function requireEnv(name) {
+  const value = env[name] || process.env[name];
+  if (!value) {
+    console.error(`Missing ${name} in .env`);
+    process.exit(1);
+  }
+  return value;
+}
+
 const url = env.VITE_SUPABASE_URL;
 const key = env.SUPABASE_SERVICE_ROLE_KEY;
 const tenantId = '616002b0-5de8-4a86-b59d-de53aef0f406';
@@ -22,9 +33,9 @@ const warehouse = currentSettings.warehouse || {};
 const dhlSettings = {
   enabled: true,
   sandbox: true,
-  apiKey: '3KtNgSkuR97vUF3mVtFtQs48Di7xYgCN',
-  username: 'user-valid',
-  password: 'SandboxPasswort2023!',
+  apiKey: requireEnv('DHL_API_KEY'),
+  username: requireEnv('DHL_USERNAME'),
+  password: requireEnv('DHL_PASSWORD'),
   billingNumber: '33333333330102',
   defaultProduct: 'V01PAK',
   labelFormat: 'PDF_A4',

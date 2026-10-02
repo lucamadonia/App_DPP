@@ -23,13 +23,33 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables: every .env variant (development, staging, test,
+# production, *.local, nested ones such as server/.env). Only the documented
+# templates are tracked.
 .env
-.env.local
-.env.production
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Secrets and signing material (App Store / Play release work). Keystores,
+# provisioning profiles and service-account keys never belong in the repo.
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+keystore.properties
+google-services.json
+GoogleService-Info.plist
+service-account*.json
 
 .vercel
-.env*.local
+
+# Local Claude Code agent worktrees
+.claude/worktrees/
 
 # Office temp files
 ~$*

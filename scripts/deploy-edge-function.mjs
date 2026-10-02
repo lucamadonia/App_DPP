@@ -14,11 +14,11 @@
  *
  * Two behaviours worth knowing about:
  *
- * 1. verify_jwt is PRESERVED from the already-deployed function unless you pass
- *    --verify-jwt / --no-verify-jwt. It used to be hardcoded to true, which
- *    silently broke public functions on redeploy — shopify-webhook, send-email,
- *    stripe-webhook and auth-email-hook all run with verify_jwt=false and do
- *    their own signature verification.
+ * 1. verify_jwt is taken from supabase/config.toml ([functions.<slug>]), the
+ *    reviewed manifest. A missing entry or a --verify-jwt / --no-verify-jwt
+ *    flag that contradicts it aborts the deploy. (It used to be hardcoded to
+ *    true, later "preserved" from the deployed version; both let the deployed
+ *    gateway setting drift from what the code review saw.)
  *
  * 2. If any source file imports from '../_shared/', the upload is re-based to
  *    supabase/functions/ so the shared module travels with the function and the
@@ -28,6 +28,7 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { readFunctionsConfig } from './edge-function-manifest.mjs';
 
 function loadDotenv(path) {
   const env = {};
@@ -63,6 +64,12 @@ async function main() {
   const slug = process.argv[2];
   if (!slug) {
     console.error('Usage: node scripts/deploy-edge-function.mjs <slug>');
+    process.exit(2);
+  }
+  // The slug becomes a filesystem path and a URL segment: no traversal, no
+  // query injection, no deploying the _shared helper folder on its own.
+  if (!/^[a-z0-9][a-z0-9_-]*$/i.test(slug)) {
+    console.error(`Invalid function slug: ${slug}`);
     process.exit(2);
   }
 
@@ -105,26 +112,32 @@ async function main() {
   const entryRel = usesShared ? `${slug}/index.ts` : 'index.ts';
   const entry = files.find(f => f.rel === entryRel) || files[0];
 
-  // Preserve verify_jwt from the deployed function unless explicitly overridden.
-  // Hardcoding true here silently breaks every public function on redeploy.
-  let verifyJwt;
-  if (process.argv.includes('--no-verify-jwt')) verifyJwt = false;
-  else if (process.argv.includes('--verify-jwt')) verifyJwt = true;
-  else {
-    try {
-      const cur = await fetch(
-        `https://api.supabase.com/v1/projects/${ref}/functions/${slug}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (cur.ok) verifyJwt = (await cur.json()).verify_jwt;
-    } catch { /* fall through to the default below */ }
-    if (verifyJwt === undefined) {
-      verifyJwt = true;
-      console.log('  (no deployed version found — defaulting to verify_jwt=true)');
-    } else {
-      console.log(`  (preserving verify_jwt=${verifyJwt} from the deployed version)`);
-    }
+  // verify_jwt comes from the reviewed manifest in supabase/config.toml. A flag
+  // that contradicts it is refused, so a one-off deploy cannot quietly open
+  // (or close) a function's gateway auth. CI enforces that every function has
+  // an entry (scripts/check-edge-jwt-drift.mjs).
+  const flag = process.argv.includes('--no-verify-jwt') ? false
+    : process.argv.includes('--verify-jwt') ? true
+    : undefined;
+  let manifest;
+  try {
+    manifest = readFunctionsConfig().get(slug);
+  } catch (err) {
+    console.error(`Cannot read supabase/config.toml: ${err.message}`);
+    process.exit(2);
   }
+  if (manifest?.verifyJwt === undefined) {
+    console.error(`supabase/config.toml has no explicit verify_jwt for [functions.${slug}].`);
+    console.error('Add the entry (reviewed) before deploying; the deploy no longer guesses.');
+    process.exit(2);
+  }
+  if (flag !== undefined && flag !== manifest.verifyJwt) {
+    console.error(`Flag says verify_jwt=${flag} but supabase/config.toml says ${manifest.verifyJwt}.`);
+    console.error('Change config.toml in a reviewed commit instead of overriding it here.');
+    process.exit(2);
+  }
+  const verifyJwt = manifest.verifyJwt;
+  console.log(`  (verify_jwt=${verifyJwt} from supabase/config.toml)`);
 
   // Build multipart body manually (Node 18+ has FormData)
   const form = new FormData();

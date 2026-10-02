@@ -5,7 +5,48 @@ on:
   push:
     branches: [main]
 
+# CI only reads the repo. It never deploys: edge functions and migrations go out
+# by hand (scripts/deploy-edge-function.mjs, scripts/db-migrate.mjs) after review.
+permissions:
+  contents: read
+
 jobs:
+  # The repo is public, so a committed key is a published key. gitleaks scans
+  # the commits this push or PR adds (not the whole history: old leaks are
+  # handled by rotation, not by a CI failure nobody can fix). Runs the pinned
+  # binary directly, so no third-party action or licence key is involved.
+  secrets:
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.24.3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/gitleaks" gitleaks
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+
+      - name: Scan new commits for secrets
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$PR_BASE" ]; then
+            RANGE="$PR_BASE..$PR_HEAD"
+          elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            RANGE="$PUSH_BEFORE..$GITHUB_SHA"
+          else
+            RANGE="-1 $GITHUB_SHA"
+          fi
+          echo "Scanning $RANGE"
+          gitleaks git --log-opts="$RANGE" --redact --no-banner --exit-code 1 .
+
   verify:
     runs-on: ubuntu-latest
 
@@ -38,10 +79,32 @@ jobs:
 
       - run: npm ci
 
+      # The bundle scan below only sees values CI has, so a secret that lives
+      # only in the Vercel env (or an opaque one like a hex HMAC key) would slip
+      # past it. This gate works on the source: every import.meta.env.VITE_*
+      # name must be on the public allowlist, no dynamic env access, and no
+      # vite.config define/envPrefix that pulls server env into the client.
+      - name: Client env allowlist
+        run: node scripts/check-vite-env-allowlist.mjs
+
       # `npm run build` is `tsc -b && vite build` — a type error here blocks
       # `cap sync`, so it has to fail in the PR, not at release time.
       - name: Build
         run: npm run build
+
+      # Vite inlines every VITE_* variable it is given. Fails if a server secret
+      # (Stripe sk_/rk_/whsec_, OpenRouter sk-or-, Supabase sbp_/sb_secret_,
+      # a service_role JWT, a private key) ended up in the shipped bundle.
+      - name: Client bundle contains no secrets
+        run: node scripts/check-bundle-secrets.mjs dist
+
+      # Every supabase/functions/<slug>/ needs an explicit verify_jwt entry in
+      # supabase/config.toml, the manifest deploy-edge-function.mjs deploys from.
+      - name: Edge function verify_jwt manifest
+        run: node scripts/check-edge-jwt-drift.mjs
+
+      - name: CI script tests
+        run: node --test scripts/secrets-ci-checks.test.mjs
 
       # Blocking, with a ratchet.
       #
