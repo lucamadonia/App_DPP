@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:database": "node scripts/test-etsy-shipment-reconciliation.mjs && node scripts/test-durable-workflows.mjs && node scripts/test-identity-lockdown.mjs && node scripts/test-notification-lockdown.mjs",
+    "test:database": "node scripts/test-etsy-shipment-reconciliation.mjs && node scripts/test-durable-workflows.mjs && node scripts/test-identity-lockdown.mjs && node scripts/test-notification-lockdown.mjs && node scripts/test-accept-invitation.mjs && node scripts/test-public-dpp-visibility.mjs && node scripts/test-tenant-guards.mjs",
     "test:coverage": "vitest run --coverage",
     "seed:checklists": "node scripts/generate-checklist-seed.mjs && node scripts/seed-checklist-templates.mjs --json supabase/seed-checklists-full.json",
     "icons": "node scripts/generate-app-icons.mjs",

@@ -64,30 +64,6 @@ export async function getProductComponents(productId: string): Promise<ProductCo
 }
 
 /**
- * Get components for a product set (public, no auth required).
- */
-export async function getProductComponentsPublic(productId: string): Promise<ProductComponent[]> {
-  const { data, error } = await supabase
-    .from('product_components')
-    .select(`
-      *,
-      component_product:products!product_components_component_product_id_fkey(
-        id, name, gtin, manufacturer, category, image_url,
-        materials, carbon_footprint, recyclability, net_weight, gross_weight
-      )
-    `)
-    .eq('parent_product_id', productId)
-    .order('sort_order', { ascending: true });
-
-  if (error) {
-    console.error('Failed to load public product components:', error);
-    return [];
-  }
-
-  return (data || []).map(transformComponent);
-}
-
-/**
  * Add a component to a product set.
  */
 export async function addProductComponent(

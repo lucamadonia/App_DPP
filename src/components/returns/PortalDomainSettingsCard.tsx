@@ -107,12 +107,13 @@ export function PortalDomainSettingsCard({
       return;
     }
 
-    // Save domain settings
-    const domainSettings: PortalDomainSettings = {
+    // Save domain settings. domainStatus/domainVerifiedAt are server-owned
+    // (RLS-4): the domain is stored as 'pending' and the verify call below
+    // lets manage-vercel-domain persist the real status.
+    let domainSettings: PortalDomainSettings = {
       customDomain: verifiedDomain,
       portalType,
-      domainStatus: 'verified',
-      domainVerifiedAt: new Date().toISOString(),
+      domainStatus: 'pending',
       vercelDomainAdded: false,
     };
 
@@ -124,6 +125,13 @@ export function PortalDomainSettingsCard({
       setIsRegistering(false);
       return;
     }
+
+    // Server-side CNAME check; the edge function persists 'verified'.
+    const verifyResult = await verifyDomainCNAME(verifiedDomain);
+    domainSettings = {
+      ...domainSettings,
+      domainStatus: verifyResult.status === 'verified' ? 'verified' : 'pending',
+    };
 
     // Register with Vercel
     showStatus(t('Adding domain to hosting...'));
@@ -176,16 +184,17 @@ export function PortalDomainSettingsCard({
     if (!domain) return;
     setIsReverifying(true);
 
+    // manage-vercel-domain persists the status server-side (RLS-4); only the
+    // local state is updated here.
     const result = await verifyDomainCNAME(domain.customDomain);
 
     const newStatus = result.status === 'verified' ? 'verified' : 'failed';
     const updatedDomain: PortalDomainSettings = {
       ...domain,
-      domainStatus: newStatus,
+      domainStatus: result.status,
       domainVerifiedAt: newStatus === 'verified' ? new Date().toISOString() : domain.domainVerifiedAt,
     };
 
-    await updatePortalDomainSettings(updatedDomain);
     onSettingsChange({
       ...settings,
       portalDomain: updatedDomain,

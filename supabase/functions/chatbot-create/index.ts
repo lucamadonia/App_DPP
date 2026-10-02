@@ -5,8 +5,9 @@
  * Callable with the public anon key (verify_jwt = true in supabase/config.toml).
  *
  * Abuse protection (go-live hardening SEC-10/SRE-16):
- *   - Optional shared secret: when CHATBOT_SHARED_SECRET is set, every request
- *     must send it in the `x-chatbot-secret` header (server-to-server bots).
+ *   - Mandatory shared secret (EF-09): every request must send
+ *     CHATBOT_SHARED_SECRET in the `x-chatbot-secret` header (server-to-server
+ *     bots). Without the secret configured the function answers 503.
  *   - Persistent rate limits per IP (CHATBOT_IP_LIMIT_PER_HOUR, default 60 —
  *     raise it if the bot calls from one fixed server IP), per email (10/h,
  *     5 tickets/day) and per tenant (200/h).
@@ -19,8 +20,8 @@ import {
   getClientIp,
   hashKey,
   rateLimitedResponse,
-  timingSafeEqual,
 } from '../_shared/rate-limit.ts';
+import { checkChatbotSecret } from '../_shared/chatbot-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +29,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, apikey, x-client-info, content-type, x-chatbot-secret',
 };
 
-const CHATBOT_SHARED_SECRET = Deno.env.get('CHATBOT_SHARED_SECRET') || '';
 const IP_LIMIT_PER_HOUR = Math.max(1, parseInt(Deno.env.get('CHATBOT_IP_LIMIT_PER_HOUR') || '60', 10) || 60);
 
 const ALPHANUMERIC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -76,12 +76,8 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
-  if (CHATBOT_SHARED_SECRET) {
-    const provided = req.headers.get('x-chatbot-secret') || '';
-    if (!provided || !timingSafeEqual(provided, CHATBOT_SHARED_SECRET)) {
-      return jsonResponse({ error: 'Forbidden' }, 403);
-    }
-  }
+  const denied = checkChatbotSecret(req);
+  if (denied) return denied;
 
   let body: {
     request_type?: string;

@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
+import { PendingInvitationsBanner } from '@/components/invitations/PendingInvitationsBanner';
 import { OnboardingGate } from '@/pages/onboarding/OnboardingGate';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -44,6 +45,7 @@ const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m
 const BatchUploadPage = lazy(() => import('@/pages/BatchUploadPage').then(m => ({ default: m.BatchUploadPage })));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const AcceptInvitationPage = lazy(() => import('@/pages/AcceptInvitationPage'));
 
 // Public DPP
 const PublicLayout = lazy(() => import('@/pages/public/PublicLayout').then(m => ({ default: m.PublicLayout })));
@@ -282,6 +284,7 @@ function AppLayout() {
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <ImpersonationBanner />
+        <PendingInvitationsBanner />
         <AppHeader onSearch={() => setPaletteOpen(true)} />
         <main className="flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app">
           <SwipeBackLayer>
@@ -399,6 +402,7 @@ function NormalAppRoutes() {
         </Route>
         <Route path="auth/callback" element={<AuthCallbackPage />} />
         <Route path="auth/reset-password" element={<ResetPasswordPage />} />
+        <Route path="invitations/accept" element={<AcceptInvitationPage />} />
 
         {/* Public pages without sidebar */}
         <Route element={<RouteErrorBoundary name="public"><PublicLayout /></RouteErrorBoundary>}>

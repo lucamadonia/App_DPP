@@ -193,7 +193,6 @@ export {
 // Product Components (Sets / Bundles)
 export {
   getProductComponents,
-  getProductComponentsPublic,
   addProductComponent,
   updateProductComponent,
   removeProductComponent,
@@ -230,6 +229,11 @@ export {
   cancelInvitation,
   resendInvitation,
   deleteInvitation,
+  listMyPendingInvitations,
+  acceptInvitation,
+  type MyPendingInvitation,
+  type LeaveAssessment,
+  type AcceptInvitationResult,
 } from './invitations';
 
 // Activity Log

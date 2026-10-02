@@ -264,7 +264,8 @@ export async function publicCreateReturnLabel(
     });
     const data = await resp.json().catch(() => null);
     if (!resp.ok || data?.error) {
-      return { success: false, error: data?.error || `Request failed (${resp.status})` };
+      // A 429 answers {error:'rate_limited', message:'...'}: prefer the readable message.
+      return { success: false, error: data?.message || data?.error || `Request failed (${resp.status})` };
     }
     return { success: true };
   } catch (err) {

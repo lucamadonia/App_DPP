@@ -247,5 +247,6 @@
   "Full idea board with roadmap status": "Full idea board with roadmap status",
   "White-label widget": "White-label widget",
   "Read/Write API access": "Read/Write API access",
-  "Manage Plan": "Manage Plan"
+  "Manage Plan": "Manage Plan",
+  "Only tenant admins can manage billing": "Only tenant admins can manage billing"
 }

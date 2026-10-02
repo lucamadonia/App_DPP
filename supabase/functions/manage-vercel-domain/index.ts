@@ -180,8 +180,20 @@ Deno.serve(async (req) => {
         );
       }
       const result = await verifyCname(normalized);
+      // Persist the server-side result (RLS-4): clients can no longer set
+      // domainStatus themselves. The RPC only touches this tenant's stored
+      // portal domain and returns false for any other domain, so the wizard's
+      // pre-save verify call stays harmless.
+      const { data: persisted, error: persistError } = await supabase.rpc('set_portal_domain_status', {
+        p_tenant_id: profile.tenant_id,
+        p_domain: normalized,
+        p_status: result.status,
+      });
+      if (persistError) {
+        console.error('set_portal_domain_status failed:', persistError.message);
+      }
       return new Response(
-        JSON.stringify({ success: true, result }),
+        JSON.stringify({ success: true, result, persisted: persisted === true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

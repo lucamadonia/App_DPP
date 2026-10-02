@@ -39,7 +39,7 @@ export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
 
 export type TicketSenderType = 'agent' | 'customer' | 'system';
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'websocket';
-export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'failed';
+export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'failed' | 'deferred';
 
 // ============================================
 // RETURNS HUB - CUSTOMER

@@ -247,5 +247,6 @@
   "Full idea board with roadmap status": "Vollständiges Ideenboard mit Roadmap-Status",
   "White-label widget": "White-Label-Widget",
   "Read/Write API access": "Lese-/Schreib-API-Zugriff",
-  "Manage Plan": "Plan verwalten"
+  "Manage Plan": "Plan verwalten",
+  "Only tenant admins can manage billing": "Nur Administratoren des Mandanten können die Abrechnung verwalten"
 }
