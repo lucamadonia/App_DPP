@@ -17,6 +17,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkTenantCustomDomain, normalizeCustomDomain, vercelDomainPath } from '../_shared/custom-domain.ts';
 
 const VERCEL_TOKEN = Deno.env.get('VERCEL_TOKEN') || '';
 const VERCEL_PROJECT_ID = Deno.env.get('VERCEL_PROJECT_ID') || '';
@@ -185,41 +186,100 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify the domain is stored in the tenant's settings
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('settings')
-      .eq('id', profile.tenant_id)
-      .single();
-
-    const portalDomain = tenant?.settings?.returnsHub?.portalDomain;
-    if (!portalDomain || portalDomain.customDomain !== domain) {
+    // add/remove act on the PRODUCTION Vercel project (re-audit EF-01):
+    // strict hostname (no '/', '?', '#', '%', ...), never a platform host,
+    // URL-encoded in every API path, and removal only of domains this
+    // function itself added for this tenant (tenant_vercel_domains).
+    const checked = checkTenantCustomDomain(domain);
+    if (!checked.ok) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Domain not found in tenant settings' }),
+        JSON.stringify({ success: false, error: checked.error === 'platform_domain' ? 'Domain not allowed' : 'Invalid domain' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    const cleanDomain = checked.domain;
 
-    const teamParam = VERCEL_TEAM_ID ? `?teamId=${VERCEL_TEAM_ID}` : '';
+    if (!VERCEL_TOKEN || !VERCEL_PROJECT_ID) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Vercel API not configured' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const vercelUrl = (path: string) => {
+      const url = new URL(`https://api.vercel.com${path}`);
+      if (VERCEL_TEAM_ID) url.searchParams.set('teamId', VERCEL_TEAM_ID);
+      return url.toString();
+    };
 
     if (action === 'add') {
+      // Paid add-on: Custom Domain / White-Label module.
+      const { data: moduleRow } = await supabase
+        .from('billing_module_subscriptions')
+        .select('id')
+        .eq('tenant_id', profile.tenant_id)
+        .eq('module_id', 'custom_domain')
+        .in('status', ['active', 'past_due'])
+        .limit(1)
+        .maybeSingle();
+      if (!moduleRow) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Custom Domain module required' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Only the domain saved in this tenant's settings (the guard trigger
+      // keeps it unique across tenants and rejects platform hosts).
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', profile.tenant_id)
+        .single();
+      const stored = normalizeCustomDomain(tenant?.settings?.returnsHub?.portalDomain?.customDomain);
+      if (stored !== cleanDomain) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Domain not found in tenant settings' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: owner } = await supabase
+        .from('tenant_vercel_domains')
+        .select('tenant_id')
+        .eq('domain', cleanDomain)
+        .maybeSingle();
+      if (owner && owner.tenant_id !== profile.tenant_id) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Domain already in use' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (owner) {
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const resp = await fetch(
-        `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/domains${teamParam}`,
+        vercelUrl(`/v10/projects/${encodeURIComponent(VERCEL_PROJECT_ID)}/domains`),
         {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${VERCEL_TOKEN}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ name: domain }),
+          body: JSON.stringify({ name: cleanDomain }),
         }
       );
 
-      const data = await resp.json();
+      const data = await resp.json().catch(() => ({}));
 
       if (!resp.ok) {
-        // Domain might already exist — that's fine
-        if (data.error?.code === 'domain_already_in_use') {
+        // Never record ownership for a domain we did not add ourselves
+        // (409 = already on this or another project).
+        if (resp.status === 409 || data.error?.code === 'domain_already_in_use') {
           return new Response(
             JSON.stringify({ success: false, error: 'Domain already in use by another project' }),
             { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -231,6 +291,13 @@ Deno.serve(async (req) => {
         );
       }
 
+      const { error: recordError } = await supabase
+        .from('tenant_vercel_domains')
+        .insert({ domain: cleanDomain, tenant_id: profile.tenant_id, source: 'portal_domain' });
+      if (recordError) {
+        console.error('[manage-vercel-domain] could not record added domain:', recordError.message);
+      }
+
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -238,8 +305,21 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'remove') {
+      const { data: owner } = await supabase
+        .from('tenant_vercel_domains')
+        .select('tenant_id')
+        .eq('domain', cleanDomain)
+        .maybeSingle();
+      if (!owner || owner.tenant_id !== profile.tenant_id) {
+        // Not added by this tenant through this function: nothing to remove.
+        return new Response(
+          JSON.stringify({ success: false, error: 'Domain was not added by this organisation' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const resp = await fetch(
-        `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/domains/${domain}${teamParam}`,
+        vercelUrl(vercelDomainPath(VERCEL_PROJECT_ID, cleanDomain, 'v9')),
         {
           method: 'DELETE',
           headers: {
@@ -249,12 +329,18 @@ Deno.serve(async (req) => {
       );
 
       if (!resp.ok && resp.status !== 404) {
-        const data = await resp.json();
+        const data = await resp.json().catch(() => ({}));
         return new Response(
           JSON.stringify({ success: false, error: data.error?.message || 'Vercel API error' }),
           { status: resp.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      await supabase
+        .from('tenant_vercel_domains')
+        .delete()
+        .eq('domain', cleanDomain)
+        .eq('tenant_id', profile.tenant_id);
 
       return new Response(
         JSON.stringify({ success: true }),

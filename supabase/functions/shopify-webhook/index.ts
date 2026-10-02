@@ -224,23 +224,28 @@ async function markEvent(supabase: any, id: string | null, status: string, error
 
 // deno-lint-ignore no-explicit-any
 async function resolveTenant(supabase: any, shopDomain: string): Promise<string | null> {
-  if (!shopDomain) return null;
-  // Shopify sends `myshopify_domain` (e.g. za6qkk-gt.myshopify.com) in the
-  // x-shopify-shop-domain header, even when the user-facing domain is
-  // different (e.g. fambliss.myshopify.com). We store both on tenant
-  // settings; match on either.
-  // deno-lint-ignore no-explicit-any
-  const { data: rows } = await supabase
-    .from('tenants')
-    .select('id, settings');
-  // deno-lint-ignore no-explicit-any
-  const match = (rows || []).find((t: any) => {
-    const s = t.settings?.shopifyIntegration;
-    if (!s) return false;
-    return s.shopDomain === shopDomain || s.myshopifyDomain === shopDomain;
-  });
-  return match?.id || null;
+  // Shopify sends the canonical `myshopify_domain` (e.g. za6qkk-gt.myshopify.com)
+  // in x-shopify-shop-domain. The tenant comes ONLY from the server-side
+  // binding table (unique per shop, written by shopify-sync after shop.json
+  // confirmed the domain), never from tenant-writable settings: another tenant
+  // could otherwise claim a shop and receive its webhooks (re-audit EF-04).
+  const domain = String(shopDomain || '').trim().toLowerCase();
+  if (!SHOP_DOMAIN_RE.test(domain)) return null;
+  const { data, error } = await supabase
+    .from('shopify_shop_bindings')
+    .select('tenant_id')
+    .eq('myshopify_domain', domain)
+    .limit(2);
+  if (error) {
+    console.error('[shopify-webhook] binding lookup failed:', error.message);
+    return null;
+  }
+  // PRIMARY KEY makes >1 impossible; fail closed anyway.
+  if (!data || data.length !== 1) return null;
+  return data[0].tenant_id || null;
 }
+
+const SHOP_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/;
 
 function generateShipmentNumber(): string {
   const now = new Date();
@@ -920,6 +925,8 @@ async function handleAppUninstalled(supabase: any, tenantId: string) {
   await supabase.from('tenants').update({ settings: rest }).eq('id', tenantId);
   // The access token lives in tenant_secrets since migration 20261001b.
   await supabase.from('tenant_secrets').delete().eq('tenant_id', tenantId).eq('provider', 'shopify');
+  // Release the shop binding so the store can be connected again later.
+  await supabase.from('shopify_shop_bindings').delete().eq('tenant_id', tenantId);
   await supabase.from('shopify_product_map').update({ is_active: false }).eq('tenant_id', tenantId);
   console.log(`App uninstalled — wiped shopifyIntegration for tenant ${tenantId}`);
 }

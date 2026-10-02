@@ -17,9 +17,14 @@
  *          service role, so the Professional-tier gate on the client-side
  *          createRhTicket() does NOT block a legally-required acknowledgement.
  *   4. ALWAYS send the acknowledgement-of-receipt email
- *      (trigger_event='widerruf_eingang_bestaetigt') by POSTing the event to
- *      the Family-Joy mail hub (HMAC). No renderedHtml is sent, so the hub
- *      renders the central message_templates template with the context vars.
+ *      (trigger_event='widerruf_eingang_bestaetigt'). Fambliss tenants
+ *      (MAIL_HUB_TENANT_IDS, same allowlist as notify-dispatch) get it via the
+ *      Family-Joy mail hub (HMAC; no renderedHtml, the hub renders the central
+ *      message_templates template). Every other tenant gets a plain-text
+ *      receipt queued in rh_notifications, which notify-dispatch/send-email
+ *      deliver with the tenant's own SMTP or the platform sender and its caps
+ *      (re-audit EF-03: the Fambliss mailbox is never a relay for other
+ *      tenants).
  *
  * COMPLIANCE: the validity window NEVER blocks submission. An expired window,
  * unknown order or mismatched email all still produce a recorded declaration
@@ -31,14 +36,20 @@
  * unverified declarations (manual-review tickets); optional Cloudflare
  * Turnstile (enforced once TURNSTILE_SECRET_KEY is set; the page must then send
  * `captcha_token`); the receipt mail at most once per tenant+email+order per
- * day; and a sanitised name in the mail context. A verified declaration (order
- * found, email matches, inside the window) is never throttled, so nobody can
- * exhaust shared buckets to block genuine § 356a withdrawals.
+ * day; and a sanitised name in the mail context (declared AND order name).
+ * Verified declarations (order found, email matches, inside the window) are
+ * not subject to the anonymous IP/email buckets, so nobody can exhaust shared
+ * buckets to block genuine § 356a withdrawals. They have their own caps per
+ * tenant (50/h) and per tenant+recipient (5/h), because a tenant can insert
+ * commerce_orders for itself and would otherwise get unlimited "verified"
+ * receipts (re-audit EF-03). Only someone who can create orders in THAT tenant
+ * (its staff) or knows real order number + email can fill these buckets.
  *
  * Required Edge Function Secrets:
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — auto
  *   MAIL_HUB_URL                             — Family-Joy mail-event-receiver URL
  *   MAIL_HUB_SECRET                          — same value as Family-Joy MAIL_EVENT_RECEIVER_SECRET
+ *   MAIL_HUB_TENANT_IDS (optional)           — CSV of Fambliss tenant UUIDs; default = MYFAMBLISS GmbH
  *   TURNSTILE_SECRET_KEY (optional)          — enables the captcha check
  *
  * Deploy with verify_jwt = false (public, login-free; see supabase/config.toml).
@@ -60,6 +71,19 @@ const corsHeaders = {
 };
 
 const ALPHANUMERIC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+// Same allowlist and default as notify-dispatch: only Fambliss' own tenants
+// may send through the Family-Joy hub (Fambliss sender address).
+const DEFAULT_FAMBLISS_TENANT_ID = '522f6254-f73c-4a26-b1e9-662035194bc5';
+const MAIL_HUB_TENANT_IDS = (Deno.env.get('MAIL_HUB_TENANT_IDS') || DEFAULT_FAMBLISS_TENANT_ID)
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+function mailHubAllowsTenant(tenantId: unknown, allowlist: string[] = MAIL_HUB_TENANT_IDS): boolean {
+  const tid = typeof tenantId === 'string' ? tenantId.trim().toLowerCase() : '';
+  return tid.length > 0 && allowlist.includes(tid);
+}
 
 // Conservative grace windows — the check only ROUTES (valid case vs. manual
 // review), it never rejects. Generous thresholds keep genuine withdrawals on
@@ -236,7 +260,9 @@ Deno.serve(async (req) => {
 
     const isValidCase = orderFound && emailMatches && !outsideWindow;
 
-    const orderName = (order?.customer_name || '').trim();
+    // The order name is tenant-controlled (commerce_orders is tenant-writable):
+    // sanitised exactly like the declared name before it reaches a mail.
+    const orderName = sanitizeName(order?.customer_name || '');
     const firstName = (declaredName || orderName).split(' ')[0] || '';
 
     // 3. Throttling — ONLY for unverified declarations (manual-review tickets).
@@ -256,6 +282,20 @@ Deno.serve(async (req) => {
         { bucket: `widerruf:tenant:${tenant.id}`, limit: 200, windowSeconds: 3600 },
       ], { failOpen: true });
       if (!limit.allowed) {
+        return rateLimitedResponse(limit.retryAfterSeconds, corsHeaders);
+      }
+    } else {
+      // Verified cases: own buckets, never shared with the anonymous ones
+      // above. A tenant can insert commerce_orders for itself, so without a
+      // cap "verified" declarations would be an unlimited receipt-mail relay
+      // (re-audit EF-03). Fails open: the legal flow never depends on the
+      // counter store; a hit is still recorded when it works.
+      const limit = await enforceRateLimits(supabase, [
+        { bucket: `widerruf:verified:rcpt:${tenant.id}:${await hashKey(email)}`, limit: 5, windowSeconds: 3600 },
+        { bucket: `widerruf:verified:tenant:${tenant.id}`, limit: 50, windowSeconds: 3600 },
+      ], { failOpen: true });
+      if (!limit.allowed) {
+        console.warn(`[widerruf-request] verified-case cap reached for tenant ${tenant.id}`);
         return rateLimitedResponse(limit.retryAfterSeconds, corsHeaders);
       }
     }
@@ -393,6 +433,48 @@ Deno.serve(async (req) => {
     ], { failOpen: true });
     if (!receiptGate.allowed) {
       console.log(`[widerruf-request] receipt already sent today for ${reference} — skipping duplicate mail`);
+    } else if (!mailHubAllowsTenant(tenant.id)) {
+      // Non-Fambliss tenant: queue the receipt in rh_notifications. The insert
+      // trigger hands it to notify-dispatch → send-email (tenant SMTP or the
+      // platform sender with its per-tenant caps). Plain text: send-email
+      // escapes it when wrapping it into HTML.
+      const subject = lang === 'de'
+        ? `Eingangsbestätigung Ihres Widerrufs – Bestellung #${orderNumber}`
+        : `Confirmation of receipt of your withdrawal – order #${orderNumber}`;
+      const greetingName = firstName.slice(0, 40);
+      const shopName = String(tenant.name || '').replace(/[\r\n]+/g, ' ').slice(0, 100);
+      const content = lang === 'de'
+        ? [
+          `Guten Tag${greetingName ? ` ${greetingName}` : ''},`,
+          '',
+          `wir bestätigen den Eingang Ihres Widerrufs für die Bestellung #${orderNumber} am ${receivedAtLabel}.`,
+          `Referenz: ${reference}`,
+          '',
+          shopName,
+        ].join('\n')
+        : [
+          `Hello${greetingName ? ` ${greetingName}` : ''},`,
+          '',
+          `We confirm receipt of your withdrawal for order #${orderNumber} on ${receivedAtLabel}.`,
+          `Reference: ${reference}`,
+          '',
+          shopName,
+        ].join('\n');
+      const { error: notifError } = await supabase.from('rh_notifications').insert({
+        tenant_id: tenant.id,
+        customer_id: customerId,
+        channel: 'email',
+        template: 'widerruf_eingang_bestaetigt',
+        recipient_email: email,
+        subject,
+        content,
+        status: 'pending',
+        metadata: { source: 'widerruf', isHtml: false, locale: lang, reference, outcome },
+      });
+      if (notifError) {
+        // Mail failure must NOT fail the withdrawal — it is already recorded.
+        console.error('[widerruf-request] receipt notification insert failed:', notifError.message);
+      }
     } else if (mailHubUrl && mailHubSecret) {
       const mailBody = JSON.stringify({
         eventType: 'widerruf_eingang_bestaetigt',

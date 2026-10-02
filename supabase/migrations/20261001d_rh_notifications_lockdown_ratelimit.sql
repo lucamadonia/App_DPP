@@ -21,9 +21,10 @@
 --      IP / tenant / recipient.
 --   4. claim_rh_notification(): atomic per-stage claim so notify-dispatch and
 --      send-email never deliver the same row twice.
---   5. BEFORE INSERT guard: authenticated (tenant) inserts are capped per
---      tenant and per recipient. Service-role inserts (crons, edge functions)
---      are not limited.
+--   5. BEFORE INSERT guard: authenticated (tenant) inserts and durable
+--      workflow mails (metadata.source='workflow', re-audit RLS-2) are capped
+--      per tenant and per recipient. Other service-role inserts (crons, edge
+--      functions) are not limited.
 --   6. tenant_mail_tier() / sanitize_public_mail_text(): shared helpers for
 --      the caps (complete own-SMTP config only) and for visitor free text.
 --
@@ -241,8 +242,10 @@ REVOKE ALL ON FUNCTION public.sanitize_public_mail_text(TEXT, INTEGER) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.sanitize_public_mail_text(TEXT, INTEGER) TO service_role;
 
 -- -----------------------------------------------------------------------------
--- 4. Insert guard for tenant users (authenticated role)
+-- 4. Insert guard for tenant users (authenticated role) and workflow mails
 -- -----------------------------------------------------------------------------
+-- Also applies to durable workflow mails (metadata.source = 'workflow'),
+-- which workflow_step inserts from cron without a JWT (re-audit RLS-2).
 -- Tenant users may still queue their own (client-rendered) mails through the
 -- "Tenant isolation for rh_notifications" policy, but a self-signup tenant can
 -- no longer turn the platform SMTP into a bulk sender. Limits are generous
@@ -270,7 +273,16 @@ BEGIN
         NULLIF(current_setting('request.jwt.claim.role', true), ''),
         ''
     );
-    IF v_role <> 'authenticated' OR NEW.channel IS DISTINCT FROM 'email' THEN
+    IF NEW.channel IS DISTINCT FROM 'email' THEN
+        RETURN NEW;
+    END IF;
+    -- Durable workflow mails (workflow_step, run by cron without a JWT) are
+    -- tenant-configured automation and get the same caps as tenant inserts.
+    -- Otherwise anything that fires a workflow (public tickets/returns) would
+    -- be an uncapped sender (re-audit RLS-2). Other service-role inserts
+    -- (crons, edge functions) stay unlimited.
+    IF v_role <> 'authenticated'
+       AND COALESCE(NEW.metadata ->> 'source', '') IS DISTINCT FROM 'workflow' THEN
         RETURN NEW;
     END IF;
 

@@ -41,6 +41,13 @@
 --      delete_own_tenant_secret(text) (admin, write-only).
 --   6. Makes resolve_tenant_by_host() SECURITY DEFINER (it was invoker-mode
 --      and relied on the anon USING(true) policy).
+--   8. tenant_vercel_domains: domains our edge functions added to Vercel;
+--      only these may ever be removed again (re-audit EF-01/EF-02). Portal
+--      custom domains must be plain hostnames and never platform hosts
+--      (is_platform_host()).
+--   9. shopify_shop_bindings: server-side, unique *.myshopify.com -> tenant
+--      binding for shopify-webhook; clients can no longer change the shop
+--      domains in settings.shopifyIntegration (re-audit EF-04).
 --
 -- Idempotent. AFTER deploying: rotate every DHL / Portokasse / Shopify
 -- credential that ever lived in tenants.settings — treat them as leaked.
@@ -421,9 +428,32 @@ $$;
 REVOKE ALL ON FUNCTION public.is_portal_domain_available(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_portal_domain_available(text) TO authenticated;
 
+-- Platform / production hostnames no tenant may claim as a custom domain
+-- (exact match or any subdomain). Keep in sync with PLATFORM_SUFFIXES in
+-- supabase/functions/_shared/custom-domain.ts (re-audit EF-01/EF-02).
+CREATE OR REPLACE FUNCTION public.is_platform_host(p_domain text)
+RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1
+      FROM unnest(ARRAY[
+        'fambliss.eu', 'fambliss.de', 'fambliss.com', 'family-joy.com',
+        'trackbliss.eu', 'trackbliss.de', 'trackbliss.com',
+        'vercel.app', 'vercel.com', 'vercel-dns.com', 'now.sh',
+        'supabase.co', 'supabase.com', 'supabase.in', 'myshopify.com', 'localhost'
+      ]) AS s(suffix)
+     WHERE lower(rtrim(btrim(COALESCE(p_domain, '')), '.')) = s.suffix
+        OR lower(rtrim(btrim(COALESCE(p_domain, '')), '.')) LIKE '%.' || s.suffix
+  );
+$$;
+REVOKE ALL ON FUNCTION public.is_platform_host(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_platform_host(text) TO authenticated, service_role;
+
 -- Server-side uniqueness of portal custom domains (is_portal_domain_available
 -- is only a client-side hint). First claim wins; a second tenant writing the
 -- same customDomain is rejected. SECURITY DEFINER so it sees all tenants.
+-- A changed customDomain must also be a plain hostname (no path, query,
+-- port or URL syntax) and never a platform host (re-audit EF-01).
 CREATE OR REPLACE FUNCTION public.tenants_guard_portal_domain()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -436,6 +466,13 @@ BEGIN
   IF TG_OP = 'UPDATE'
      AND v_domain IS NOT DISTINCT FROM lower(NULLIF(btrim(OLD.settings #>> '{returnsHub,portalDomain,customDomain}'), '')) THEN
     RETURN NEW;  -- unchanged: never block unrelated settings saves
+  END IF;
+  IF length(v_domain) > 253
+     OR v_domain !~ '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$' THEN
+    RAISE EXCEPTION 'Invalid portal domain' USING ERRCODE = '22023';
+  END IF;
+  IF public.is_platform_host(v_domain) THEN
+    RAISE EXCEPTION 'Portal domain not allowed' USING ERRCODE = '22023';
   END IF;
   IF EXISTS (
     SELECT 1 FROM public.tenants t
@@ -526,6 +563,10 @@ BEGIN
     RAISE EXCEPTION 'Unknown provider' USING ERRCODE = '22023';
   END IF;
   DELETE FROM public.tenant_secrets WHERE tenant_id = v_tenant AND provider = p_provider;
+  -- "Disconnect Shopify" also releases the shop binding (section 9).
+  IF p_provider = 'shopify' AND to_regclass('public.shopify_shop_bindings') IS NOT NULL THEN
+    DELETE FROM public.shopify_shop_bindings WHERE tenant_id = v_tenant;
+  END IF;
 END;
 $$;
 REVOKE ALL ON FUNCTION public.delete_own_tenant_secret(text) FROM PUBLIC, anon;
@@ -625,4 +666,142 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'credentials still present in tenants.settings';
   END IF;
+END $$;
+
+-- ----------------------------------------------------------------
+-- 8. Vercel domains added by our edge functions (re-audit EF-01/EF-02)
+-- ----------------------------------------------------------------
+-- manage-vercel-domain and admin-api set_custom_domain used to trust the
+-- tenant-writable settings.returnsHub.portalDomain.customDomain /
+-- tenants.custom_domain when REMOVING a domain from the production Vercel
+-- project, so a tenant admin could make them delete the production host.
+-- They now record every domain they successfully added (2xx from Vercel)
+-- here and only ever remove domains recorded for the same tenant.
+-- Service role only. Domains added before this table existed are not
+-- recorded and must be removed manually in the Vercel dashboard.
+CREATE TABLE IF NOT EXISTS public.tenant_vercel_domains (
+  domain     text        PRIMARY KEY
+             CHECK (domain = lower(domain)
+                    AND length(domain) <= 253
+                    AND domain ~ '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$'),
+  tenant_id  uuid        NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  source     text        NOT NULL CHECK (source IN ('portal_domain', 'custom_domain')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_vercel_domains_tenant ON public.tenant_vercel_domains (tenant_id);
+ALTER TABLE public.tenant_vercel_domains ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.tenant_vercel_domains FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_vercel_domains TO service_role;
+
+-- ----------------------------------------------------------------
+-- 9. Shopify shop binding (re-audit EF-04)
+-- ----------------------------------------------------------------
+-- shopify-webhook resolved the tenant from the tenant-writable
+-- settings.shopifyIntegration.shopDomain / myshopifyDomain (first matching
+-- row), so another tenant could claim a shop and receive its signed order and
+-- customer webhooks. The binding is now server-side: one row per
+-- *.myshopify.com domain (UNIQUE), one shop per tenant, written only by
+-- shopify-sync (save_token / test_connection) after Shopify's shop.json
+-- confirmed the myshopify_domain for the stored token. shopify-webhook
+-- resolves by indexed equality on this table only.
+CREATE TABLE IF NOT EXISTS public.shopify_shop_bindings (
+  myshopify_domain text        PRIMARY KEY
+                   CHECK (myshopify_domain ~ '^[a-z0-9][a-z0-9-]*\.myshopify\.com$'),
+  tenant_id        uuid        NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+  source           text        NOT NULL DEFAULT 'shop_json' CHECK (source IN ('shop_json', 'backfill')),
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.shopify_shop_bindings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.shopify_shop_bindings FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.shopify_shop_bindings TO service_role;
+
+-- Clients (anon/authenticated) can no longer set or change the shop domains
+-- in settings.shopifyIntegration: on UPDATE the stored values are kept, on
+-- INSERT they are stripped. Removing the whole shopifyIntegration object
+-- (disconnect) stays possible. Service role (edge functions) and direct DB
+-- sessions are not restricted. Same caller detection as tenants_extract_secrets.
+CREATE OR REPLACE FUNCTION public.tenants_guard_shopify_domain()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_role text;
+  v_new  jsonb;
+  v_old  jsonb;
+  k      text;
+BEGIN
+  BEGIN
+    v_role := COALESCE(
+      NULLIF(current_setting('request.jwt.claim.role', true), ''),
+      NULLIF(current_setting('request.jwt.claims', true), '')::jsonb->>'role'
+    );
+  EXCEPTION WHEN others THEN
+    v_role := NULL;
+  END;
+  IF v_role = 'service_role'
+     OR (v_role IS NULL AND session_user NOT IN ('authenticator', 'anon', 'authenticated')) THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.settings IS NULL OR jsonb_typeof(NEW.settings) <> 'object' THEN
+    RETURN NEW;
+  END IF;
+  v_new := NEW.settings->'shopifyIntegration';
+  IF v_new IS NULL OR jsonb_typeof(v_new) <> 'object' THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'UPDATE' AND jsonb_typeof(OLD.settings->'shopifyIntegration') = 'object' THEN
+    v_old := OLD.settings->'shopifyIntegration';
+  ELSE
+    v_old := '{}'::jsonb;
+  END IF;
+  FOREACH k IN ARRAY ARRAY['shopDomain', 'myshopifyDomain'] LOOP
+    IF v_old ? k THEN
+      v_new := jsonb_set(v_new, ARRAY[k], v_old->k);
+    ELSE
+      v_new := v_new - k;
+    END IF;
+  END LOOP;
+  NEW.settings := jsonb_set(NEW.settings, '{shopifyIntegration}', v_new);
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.tenants_guard_shopify_domain() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS tenants_guard_shopify_domain ON public.tenants;
+CREATE TRIGGER tenants_guard_shopify_domain
+  BEFORE INSERT OR UPDATE OF settings ON public.tenants
+  FOR EACH ROW EXECUTE FUNCTION public.tenants_guard_shopify_domain();
+
+-- Backfill from existing settings: myshopifyDomain (written by
+-- test_connection from shop.json), else shopDomain when it is a
+-- *.myshopify.com host. Fail closed: a domain claimed by more than one tenant
+-- is NOT bound (WARNING) and its webhooks resolve to no tenant until an admin
+-- reconnects the store via save_token.
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    WITH c AS (
+      SELECT t.id AS tenant_id,
+             CASE
+               WHEN lower(btrim(t.settings #>> '{shopifyIntegration,myshopifyDomain}')) ~ '^[a-z0-9][a-z0-9-]*\.myshopify\.com$'
+                 THEN lower(btrim(t.settings #>> '{shopifyIntegration,myshopifyDomain}'))
+               WHEN lower(btrim(t.settings #>> '{shopifyIntegration,shopDomain}')) ~ '^[a-z0-9][a-z0-9-]*\.myshopify\.com$'
+                 THEN lower(btrim(t.settings #>> '{shopifyIntegration,shopDomain}'))
+             END AS d
+        FROM public.tenants t
+    )
+    SELECT d, min(tenant_id::text)::uuid AS tenant_id, count(*) AS n
+      FROM c
+     WHERE d IS NOT NULL
+     GROUP BY d
+  LOOP
+    IF r.n > 1 THEN
+      RAISE WARNING 'Shopify domain % is claimed by % tenants; not bound. Reconnect the store from the owning tenant.', r.d, r.n;
+      CONTINUE;
+    END IF;
+    INSERT INTO public.shopify_shop_bindings (myshopify_domain, tenant_id, source)
+    VALUES (r.d, r.tenant_id, 'backfill')
+    ON CONFLICT DO NOTHING;
+  END LOOP;
 END $$;

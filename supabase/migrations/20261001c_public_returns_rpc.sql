@@ -21,6 +21,9 @@
 -- INSERT guards (status CREATED, no refund/shopify/label/assignment data).
 -- public_create_return only accepts tenants with an enabled + licensed
 -- Returns Hub. Active return_* workflow rules move to the durable engine.
+-- Re-audit: anon loses SELECT on rh_workflow_rules (RLS-1) and INSERT on
+-- rh_customers / rh_tickets / rh_ticket_messages; public support tickets go
+-- through the rate-limited public_create_ticket(p_tenant_id, p_payload) (RLS-2).
 --
 -- Idempotent: safe to run multiple times.
 -- =====================================================================
@@ -907,3 +910,272 @@ BEGIN
     END;
   END LOOP;
 END $$;
+
+-- ---------------------------------------------------------------------
+-- 8. Workflow rules are never readable by anon (re-audit RLS-1)
+-- ---------------------------------------------------------------------
+-- 20260611_tighten_anon_rls kept "Anon read workflow rules" (active = true,
+-- no tenant filter) for the browser workflow engine on public flows. Public
+-- return/ticket events now run in the durable engine (section 7 above and
+-- section 9 below), so anon no longer needs the rules. The policy leaked every
+-- tenant's rule graphs, including webhook URLs, Authorization headers and
+-- internal e-mail bodies/recipients. Webhook credentials already stored in
+-- rules must be treated as leaked and rotated by the tenants.
+DROP POLICY IF EXISTS "Anon read workflow rules" ON public.rh_workflow_rules;
+DO $$
+DECLARE pol record;
+BEGIN
+  FOR pol IN
+    SELECT policyname FROM pg_policies
+     WHERE schemaname = 'public' AND tablename = 'rh_workflow_rules' AND 'anon' = ANY (roles)
+  LOOP
+    RAISE NOTICE 'Dropping policy % on rh_workflow_rules', pol.policyname;
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.rh_workflow_rules', pol.policyname);
+  END LOOP;
+END $$;
+REVOKE ALL ON public.rh_workflow_rules FROM anon;
+
+-- ---------------------------------------------------------------------
+-- 9. Public support tickets only through a rate-limited RPC (re-audit RLS-2)
+-- ---------------------------------------------------------------------
+-- The anon INSERT policies on rh_customers / rh_tickets / rh_ticket_messages
+-- (20260611_tighten_anon_rls 3a-3c) let anyone create tickets for any tenant,
+-- with any customer e-mail and free text, without a rate limit. Every insert
+-- fired the tenant's durable ticket_created workflows (e.g. an auto-reply
+-- e-mail to the attacker-chosen address). They are replaced by
+-- public_create_ticket(): tenant must have an enabled + licensed Returns Hub
+-- and public ticket creation switched on, input is validated and
+-- length-limited, and creation is rate limited per IP (+tenant), per e-mail
+-- (+tenant) and tenant-wide (circuit breaker). Workflow mails caused by
+-- public events are additionally capped and sanitised in
+-- 20261001g_workflow_public_mail_limits.sql.
+DROP POLICY IF EXISTS "Allow anon to create customer records" ON public.rh_customers;
+DROP POLICY IF EXISTS "Public insert customers" ON public.rh_customers;
+DROP POLICY IF EXISTS "Allow anon to create tickets" ON public.rh_tickets;
+DROP POLICY IF EXISTS "Allow anon to create ticket messages" ON public.rh_ticket_messages;
+DO $$
+DECLARE pol record;
+BEGIN
+  FOR pol IN
+    SELECT tablename, policyname
+      FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename IN ('rh_customers', 'rh_tickets', 'rh_ticket_messages')
+       AND (
+         'anon' = ANY (roles)
+         OR (COALESCE(TRIM(qual), 'true') = 'true'
+             AND COALESCE(TRIM(with_check), 'true') = 'true')
+       )
+  LOOP
+    RAISE NOTICE 'Dropping policy % on %', pol.policyname, pol.tablename;
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, pol.tablename);
+  END LOOP;
+END $$;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.rh_customers, public.rh_tickets, public.rh_ticket_messages FROM anon;
+
+-- Client IP for the ticket buckets. Same order as public_enqueue_notification
+-- (20261001d): cf-connecting-ip, then the RIGHT-most X-Forwarded-For hop (the
+-- first entry is client-controlled), then x-real-ip.
+CREATE OR REPLACE FUNCTION public._public_ticket_client_ip()
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_headers JSONB;
+BEGIN
+  BEGIN
+    v_headers := NULLIF(current_setting('request.headers', true), '')::jsonb;
+  EXCEPTION WHEN others THEN
+    v_headers := NULL;
+  END;
+  IF v_headers IS NULL THEN
+    RETURN NULL;
+  END IF;
+  RETURN NULLIF(LEFT(COALESCE(
+    NULLIF(TRIM(v_headers ->> 'cf-connecting-ip'), ''),
+    NULLIF(TRIM(regexp_replace(COALESCE(v_headers ->> 'x-forwarded-for', ''), '^.*,', '')), ''),
+    NULLIF(TRIM(v_headers ->> 'x-real-ip'), '')
+  ), 64), '');
+END $$;
+REVOKE ALL ON FUNCTION public._public_ticket_client_ip() FROM PUBLIC, anon, authenticated;
+
+-- p_payload: { tenantSlug?, source: 'public_product_page' | 'public_return_portal',
+--              email, name?, subject, message, returnNumber?,
+--              product?: { productName, gtin, serialNumber } }
+-- Rate limits (rolling hour, table public_returns_rate_limit):
+--   ticket:ip:<tenant>:<md5 ip>     5 per IP + tenant
+--   ticket:ipall:<md5 ip>           20 per IP, all tenants
+--   ticket:email:<tenant>:<md5>     3 per e-mail + tenant
+--   ticket:tenant:<tenant>          500 per tenant (circuit breaker, WARNING)
+-- Refusals are returned as {success:false, error}, never raised.
+CREATE OR REPLACE FUNCTION public.public_create_ticket(p_tenant_id UUID, p_payload JSONB)
+RETURNS JSONB
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_tenant_id UUID := p_tenant_id;
+  v_settings JSONB;
+  v_source TEXT;
+  v_email TEXT;
+  v_name TEXT;
+  v_subject TEXT;
+  v_message TEXT;
+  v_ip TEXT;
+  v_ip_bucket TEXT;
+  v_ip_all_bucket TEXT;
+  v_email_bucket TEXT;
+  v_tenant_bucket TEXT;
+  v_customer_id UUID;
+  v_return public.rh_returns;
+  v_return_id UUID;
+  v_ticket_id UUID := gen_random_uuid();
+  v_number TEXT;
+  v_tries INT := 0;
+  v_meta JSONB;
+  v_product JSONB;
+BEGIN
+  IF p_payload IS NULL OR jsonb_typeof(p_payload) <> 'object' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_payload');
+  END IF;
+
+  IF v_tenant_id IS NULL THEN
+    SELECT id INTO v_tenant_id FROM public.tenants
+     WHERE slug = LEFT(TRIM(COALESCE(p_payload->>'tenantSlug', '')), 120);
+  END IF;
+  SELECT settings INTO v_settings FROM public.tenants WHERE id = v_tenant_id;
+  IF v_tenant_id IS NULL OR NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'tenant_not_found');
+  END IF;
+  -- Licensed + enabled Returns Hub AND public ticket creation switched on.
+  -- Same answer for every refusal so tenant configuration is not disclosed.
+  IF NOT public._public_returns_tenant_enabled(v_tenant_id)
+     OR COALESCE(v_settings #>> '{returnsHub,customerPortal,features,createTickets}', 'false') <> 'true' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_enabled');
+  END IF;
+
+  v_source := COALESCE(p_payload->>'source', 'public_return_portal');
+  IF v_source NOT IN ('public_product_page', 'public_return_portal') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_payload');
+  END IF;
+
+  v_email := LOWER(TRIM(COALESCE(p_payload->>'email', '')));
+  IF LENGTH(v_email) > 254 OR v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_email');
+  END IF;
+  v_subject := TRIM(regexp_replace(COALESCE(p_payload->>'subject', ''), '[[:cntrl:]]', ' ', 'g'));
+  v_message := TRIM(COALESCE(p_payload->>'message', ''));
+  IF v_subject = '' OR LENGTH(v_subject) > 200 OR v_message = '' OR LENGTH(v_message) > 5000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_input');
+  END IF;
+  v_name := NULLIF(LEFT(TRIM(regexp_replace(COALESCE(p_payload->>'name', ''), '[[:cntrl:]]', ' ', 'g')), 100), '');
+
+  v_ip := public._public_ticket_client_ip();
+  IF v_ip IS NOT NULL THEN
+    v_ip_bucket := 'ticket:ip:' || v_tenant_id::text || ':' || md5(v_ip);
+    v_ip_all_bucket := 'ticket:ipall:' || md5(v_ip);
+    PERFORM pg_advisory_xact_lock(hashtext(v_ip_all_bucket));
+    IF public._public_returns_hits(v_ip_bucket) >= 5
+       OR public._public_returns_hits(v_ip_all_bucket) >= 20 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'rate_limited');
+    END IF;
+  END IF;
+  v_email_bucket := 'ticket:email:' || v_tenant_id::text || ':' || md5(v_email);
+  v_tenant_bucket := 'ticket:tenant:' || v_tenant_id::text;
+  PERFORM pg_advisory_xact_lock(hashtext(v_email_bucket));
+  IF public._public_returns_hits(v_email_bucket) >= 3 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'rate_limited');
+  END IF;
+  IF public._public_returns_hits(v_tenant_bucket) >= 500 THEN
+    RAISE WARNING 'ALERT public_create_ticket circuit breaker tripped for tenant % (>= 500 public tickets in 1h)',
+      v_tenant_id;
+    RETURN jsonb_build_object('success', false, 'error', 'rate_limited');
+  END IF;
+
+  -- Optional link to a return: only when this e-mail owns it.
+  IF NULLIF(TRIM(COALESCE(p_payload->>'returnNumber', '')), '') IS NOT NULL THEN
+    SELECT * INTO v_return FROM public.rh_returns
+     WHERE tenant_id = v_tenant_id
+       AND return_number = LEFT(TRIM(p_payload->>'returnNumber'), 64)
+     ORDER BY created_at DESC
+     LIMIT 1;
+    IF v_return.id IS NOT NULL AND public._public_return_email_matches(v_return, v_email) THEN
+      v_return_id := v_return.id;
+    END IF;
+  END IF;
+
+  SELECT id INTO v_customer_id FROM public.rh_customers
+   WHERE tenant_id = v_tenant_id AND LOWER(TRIM(email)) = v_email
+   ORDER BY created_at
+   LIMIT 1;
+  IF v_customer_id IS NULL THEN
+    v_customer_id := gen_random_uuid();
+    INSERT INTO public.rh_customers (id, tenant_id, email, first_name, tags, notes)
+    VALUES (
+      v_customer_id, v_tenant_id, v_email,
+      COALESCE(v_name, split_part(v_email, '@', 1)),
+      ARRAY['public-ticket'],
+      CASE v_source WHEN 'public_product_page' THEN 'Customer created via public product page ticket'
+                    ELSE 'Customer created via public return portal ticket' END
+    );
+  END IF;
+
+  LOOP
+    v_number := 'TKT-' || to_char(now(), 'YYYYMMDD') || '-'
+             || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+    EXIT WHEN NOT EXISTS (
+      SELECT 1 FROM public.rh_tickets WHERE tenant_id = v_tenant_id AND ticket_number = v_number
+    );
+    v_tries := v_tries + 1;
+    IF v_tries > 10 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'number_generation_failed');
+    END IF;
+  END LOOP;
+
+  v_meta := jsonb_build_object('source', v_source, 'contact_email', v_email);
+  v_product := p_payload->'product';
+  IF v_source = 'public_product_page' AND v_product IS NOT NULL AND jsonb_typeof(v_product) = 'object' THEN
+    v_meta := v_meta || jsonb_strip_nulls(jsonb_build_object(
+      'productName', NULLIF(LEFT(TRIM(COALESCE(v_product->>'productName', '')), 200), ''),
+      'gtin', NULLIF(LEFT(TRIM(COALESCE(v_product->>'gtin', '')), 32), ''),
+      'serialNumber', NULLIF(LEFT(TRIM(COALESCE(v_product->>'serialNumber', '')), 64), '')
+    ));
+  END IF;
+
+  INSERT INTO public.rh_tickets (
+    id, tenant_id, ticket_number, customer_id, return_id, subject,
+    category, priority, status, tags, metadata
+  ) VALUES (
+    v_ticket_id, v_tenant_id, v_number, v_customer_id, v_return_id, v_subject,
+    CASE v_source WHEN 'public_product_page' THEN 'product_inquiry' ELSE 'return_inquiry' END,
+    'normal', 'open',
+    CASE v_source WHEN 'public_product_page' THEN ARRAY['public-product-page'] ELSE ARRAY['public-return-portal'] END,
+    v_meta
+  );
+
+  INSERT INTO public.rh_ticket_messages (
+    ticket_id, tenant_id, sender_type, sender_id, sender_name, sender_email, content, is_internal
+  ) VALUES (
+    v_ticket_id, v_tenant_id, 'customer', v_customer_id,
+    COALESCE(v_name, split_part(v_email, '@', 1)), v_email, v_message, false
+  );
+
+  PERFORM public._public_returns_record(
+    ARRAY[v_email_bucket, v_tenant_bucket, v_ip_bucket, v_ip_all_bucket]
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'ticket_id', v_ticket_id,
+    'ticket_number', v_number,
+    'tenant_id', v_tenant_id
+  );
+END $$;
+
+REVOKE ALL ON FUNCTION public.public_create_ticket(UUID, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.public_create_ticket(UUID, JSONB) TO anon, authenticated;

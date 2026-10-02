@@ -208,6 +208,25 @@ r = await as('service_role', null,
   `INSERT INTO rh_notifications (tenant_id, channel, recipient_email) VALUES ($1,'email','svc@example.com')`, [T_FREE]);
 expect('service_role insert not limited', r.ok, r);
 
+// Durable workflow mails are inserted by cron without a JWT and carry
+// metadata.source='workflow'; they get the tenant caps (re-audit RLS-2).
+// T_FREE has used up its daily budget above.
+async function workflowInsert(tenantId) {
+  await db.query(`RESET ROLE`);
+  await db.query(`SELECT set_config('request.jwt.claim.sub', '', false), set_config('request.jwt.claims', '', false)`);
+  try {
+    await db.query(`INSERT INTO rh_notifications (tenant_id, channel, recipient_email, metadata)
+      VALUES ($1,'email','wf@example.com','{"source":"workflow"}')`, [tenantId]);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, err: e.message };
+  }
+}
+r = await workflowInsert(T_FREE);
+expect('workflow mail without JWT capped like tenant inserts', !r.ok && /rate limit/i.test(r.err || ''), r);
+r = await workflowInsert(T_PAID);
+expect('workflow mail of paid tenant within cap', r.ok, r);
+
 // ---- claim ------------------------------------------------------------------
 const { rows: [n1] } = await db.query(`SELECT id FROM rh_notifications WHERE return_id = $1`, [ret1.id]);
 r = await as('service_role', null, `SELECT count(*)::int AS c FROM claim_rh_notification($1, 'dispatch')`, [n1.id]);

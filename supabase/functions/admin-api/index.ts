@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkTenantCustomDomain, normalizeCustomDomain } from '../_shared/custom-domain.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -208,7 +209,14 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: true, data: await setTenantSubdomain(admin, auditCtx, params.tenantId as string, params.subdomain as string | null) });
 
       case 'set_custom_domain':
-        return jsonResponse({ success: true, data: await setCustomDomain(admin, auditCtx, params.tenantId as string, params.domain as string | null) });
+        return jsonResponse({
+          success: true,
+          data: await setCustomDomain(admin, auditCtx, params.tenantId as string, params.domain as string | null, {
+            // Tenant-admin self-service (no platform admin role): the paid
+            // Custom Domain module is required (re-audit EF-02).
+            requireModule: !isSuperAdmin && !granularAllowed,
+          }),
+        });
 
       case 'verify_custom_domain':
         return jsonResponse({ success: true, data: await verifyCustomDomain(admin, auditCtx, params.tenantId as string) });
@@ -1509,13 +1517,29 @@ async function setCustomDomain(
   ctx: AuditContext,
   tenantId: string,
   domain: string | null,
+  opts: { requireModule: boolean } = { requireModule: true },
 ) {
   const { data: before } = await admin.from('tenants').select('name, custom_domain').eq('id', tenantId).single();
   let clean: string | null = null;
   let token: string | null = null;
   if (domain && domain.trim()) {
-    clean = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(clean)) throw new Error('Ungültiges Domain-Format');
+    // Strict hostname, never a platform/production host (re-audit EF-02).
+    const checked = checkTenantCustomDomain(domain.trim().replace(/^https?:\/\//i, '').replace(/\/$/, ''));
+    if (!checked.ok) {
+      throw new Error(checked.error === 'platform_domain' ? 'Diese Domain ist nicht erlaubt' : 'Ungültiges Domain-Format');
+    }
+    clean = checked.domain;
+    if (opts.requireModule) {
+      const { data: moduleRow } = await admin
+        .from('billing_module_subscriptions')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('module_id', 'custom_domain')
+        .in('status', ['active', 'past_due'])
+        .limit(1)
+        .maybeSingle();
+      if (!moduleRow) throw new Error('Custom-Domain-Modul erforderlich');
+    }
     const { data: existing } = await admin
       .from('tenants')
       .select('id')
@@ -1523,29 +1547,70 @@ async function setCustomDomain(
       .neq('id', tenantId)
       .maybeSingle();
     if (existing) throw new Error(`Domain "${clean}" wird bereits verwendet`);
+    const { data: owner } = await admin
+      .from('tenant_vercel_domains')
+      .select('tenant_id')
+      .eq('domain', clean)
+      .maybeSingle();
+    if (owner && owner.tenant_id !== tenantId) throw new Error(`Domain "${clean}" wird bereits verwendet`);
     token = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
   }
 
-  // Auto-provision / deprovision in Vercel
+  // Auto-provision / deprovision in Vercel. Only domains recorded in
+  // tenant_vercel_domains (added by us, 2xx) for THIS tenant are ever removed;
+  // tenants.custom_domain is tenant-writable and never trusted for a DELETE.
+  // The new domain is added first so a failed add leaves everything unchanged.
   const vercelMessages: string[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let vercelDomainInfo: any = null;
   if (isVercelConfigured()) {
-    if (before?.custom_domain && before.custom_domain !== clean) {
-      const del = await vercelRemoveDomain(before.custom_domain);
-      if (del.ok || del.status === 404) vercelMessages.push(`Alte Custom-Domain aus Vercel entfernt: ${before.custom_domain}`);
-    }
     if (clean) {
-      const add = await vercelAddDomain(clean);
-      if (add.ok) {
-        vercelDomainInfo = add.data;
-        vercelMessages.push(`In Vercel registriert: ${clean}`);
-      } else if (add.status === 409) {
-        vercelMessages.push(`In Vercel bereits vorhanden`);
+      const { data: ownRecord } = await admin
+        .from('tenant_vercel_domains')
+        .select('domain')
+        .eq('domain', clean)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      if (ownRecord) {
+        vercelMessages.push(`In Vercel bereits registriert: ${clean}`);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const errMsg = ((add.data as any)?.error?.message) || add.error || `Status ${add.status}`;
-        throw new Error(`Vercel-API-Fehler: ${errMsg}`);
+        const add = await vercelAddDomain(clean);
+        if (add.ok) {
+          vercelDomainInfo = add.data;
+          vercelMessages.push(`In Vercel registriert: ${clean}`);
+          const { error: recordError } = await admin
+            .from('tenant_vercel_domains')
+            .insert({ domain: clean, tenant_id: tenantId, source: 'custom_domain' });
+          if (recordError) console.error('[admin-api] could not record added Vercel domain:', recordError.message);
+        } else if (add.status === 409) {
+          // Already on this or another Vercel project and not added by us for
+          // this tenant: do not claim it (and never save it).
+          throw new Error(`Domain "${clean}" ist in Vercel bereits vergeben`);
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const errMsg = ((add.data as any)?.error?.message) || add.error || `Status ${add.status}`;
+          throw new Error(`Vercel-API-Fehler: ${errMsg}`);
+        }
+      }
+    }
+    const previous = normalizeCustomDomain(before?.custom_domain);
+    if (previous && previous !== clean) {
+      const { data: prevRecord } = await admin
+        .from('tenant_vercel_domains')
+        .select('domain')
+        .eq('domain', previous)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      if (!prevRecord) {
+        vercelMessages.push(`Alte Custom-Domain nicht automatisch entfernt (nicht über Trackbliss angelegt): ${previous}`);
+      } else {
+        const del = await vercelRemoveDomain(previous);
+        if (del.ok || del.status === 404) {
+          await admin.from('tenant_vercel_domains').delete().eq('domain', previous).eq('tenant_id', tenantId);
+          vercelMessages.push(`Alte Custom-Domain aus Vercel entfernt: ${previous}`);
+        } else {
+          vercelMessages.push(`Warnung: Alte Vercel-Domain konnte nicht entfernt werden (${del.status})`);
+        }
       }
     }
   }

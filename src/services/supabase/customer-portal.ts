@@ -9,7 +9,7 @@ import { supabase, supabaseAnon } from '@/lib/supabase';
 import type { RhReturn, RhReturnItem, RhReturnTimeline, RhTicket, RhTicketMessage, RhReturnReason, CustomerPortalBrandingOverrides, CustomerPortalSettings, ReturnStatus } from '@/types/returns-hub';
 import { triggerEmailNotification } from './rh-notification-trigger';
 import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput, CustomerReturnsFilter, CustomerTicketsFilter } from '@/types/customer-portal';
-import { generateReturnNumber, generateTicketNumber } from '@/lib/return-number';
+import { generateReturnNumber } from '@/lib/return-number';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 import { getAuthOrigin } from '@/lib/platform';
 import { getPublicTenantById, getPublicTenantBySlug } from './public-tenant';
@@ -878,6 +878,38 @@ export async function isPublicTicketCreationEnabled(tenantId: string): Promise<b
 }
 
 /**
+ * Server-side ticket creation for anonymous visitors (go-live re-audit RLS-2).
+ * anon has no INSERT on rh_customers / rh_tickets / rh_ticket_messages any
+ * more; public_create_ticket validates the input, checks that the tenant runs
+ * a licensed Returns Hub with public ticket creation enabled, rate-limits per
+ * IP / e-mail / tenant and links a return only when the e-mail owns it.
+ */
+async function publicCreateTicket(
+  tenantId: string | null,
+  payload: Record<string, unknown>,
+): Promise<{ ok: true; ticketId: string; ticketNumber: string; tenantId: string } | { ok: false; error: string }> {
+  const { data, error } = await supabaseAnon.rpc('public_create_ticket', {
+    p_tenant_id: tenantId,
+    p_payload: payload,
+  });
+  if (error) {
+    console.error('public_create_ticket failed:', error);
+    return { ok: false, error: 'rpc_error' };
+  }
+  const result = (data || {}) as {
+    success?: boolean;
+    error?: string;
+    ticket_id?: string;
+    ticket_number?: string;
+    tenant_id?: string;
+  };
+  if (!result.success || !result.ticket_id || !result.ticket_number || !result.tenant_id) {
+    return { ok: false, error: result.error || 'unknown' };
+  }
+  return { ok: true, ticketId: result.ticket_id, ticketNumber: result.ticket_number, tenantId: result.tenant_id };
+}
+
+/**
  * Create a support ticket from a public product page (unauthenticated)
  */
 export async function createPublicProductTicket(params: {
@@ -894,128 +926,29 @@ export async function createPublicProductTicket(params: {
 }): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
   const { tenantId, email, name, subject, message, productContext } = params;
 
-  // Verify feature is enabled
-  const isEnabled = await isPublicTicketCreationEnabled(tenantId);
-  if (!isEnabled) {
-    return { success: false, error: 'Ticket creation is not enabled' };
-  }
-
-  // 1. Find or create customer
-  let customerId: string;
-
-  // SECURITY DEFINER RPC — anon has no direct SELECT on rh_customers anymore
-  // (the RPC returns only the customer id for an exact tenant+email match).
-  const { data: existingCustomerId } = await supabaseAnon.rpc('public_lookup_customer', {
-    p_tenant_id: tenantId,
-    p_email: email.toLowerCase(),
-  });
-
-  if (existingCustomerId) {
-    customerId = existingCustomerId as string;
-  } else {
-    // Create new customer — generate ID client-side to avoid chaining .select() after .insert()
-    customerId = crypto.randomUUID();
-    const customerData = {
-      id: customerId,
-      tenant_id: tenantId,
-      email: email.toLowerCase(),
-      first_name: name || email.split('@')[0],
-      last_name: null,
-      phone: null,
-      company: null,
-      addresses: [],
-      payment_methods: [],
-      communication_preferences: { email: true, sms: false, marketing: false },
-      lifecycle_stage: 'lead',
-      tags: ['public-ticket'],
-      notes: 'Customer created via public product page ticket',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: customerError } = await supabaseAnon
-      .from('rh_customers')
-      .insert(customerData);
-
-    if (customerError) {
-      console.error('Error creating customer:', customerError);
-      return { success: false, error: 'Failed to create customer record' };
-    }
-  }
-
-  // 2. Generate ticket number
-  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-
-  // Simple Luhn checksum for ticket number validation
-  const digits = (timestamp + random).split('').map(Number);
-  let sum = 0;
-  for (let i = digits.length - 1; i >= 0; i -= 2) {
-    sum += digits[i];
-    if (i > 0) {
-      const doubled = digits[i - 1] * 2;
-      sum += doubled > 9 ? doubled - 9 : doubled;
-    }
-  }
-  const checksum = (10 - (sum % 10)) % 10;
-  const ticketNumber = `TKT-${timestamp}-${random}${checksum}`;
-
-  // 3. Create ticket with product metadata
-  // Generate UUID client-side to avoid needing a SELECT policy for anon
-  const ticketId = crypto.randomUUID();
-  const ticketData = {
-    id: ticketId,
-    tenant_id: tenantId,
-    ticket_number: ticketNumber,
-    customer_id: customerId,
+  const result = await publicCreateTicket(tenantId, {
+    source: 'public_product_page',
+    email: email.trim().toLowerCase(),
+    name: name || undefined,
     subject,
-    category: 'product_inquiry',
-    priority: 'normal',
-    status: 'open',
-    tags: ['public-product-page'],
-    metadata: {
+    message,
+    product: {
       productName: productContext.productName,
       gtin: productContext.gtin,
       serialNumber: productContext.serialNumber,
-      source: 'public_product_page',
     },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  });
 
-  const { error: ticketError } = await supabaseAnon
-    .from('rh_tickets')
-    .insert(ticketData);
-
-  if (ticketError) {
-    console.error('Error creating ticket:', ticketError);
-    return { success: false, error: 'Failed to create ticket' };
+  if (!result.ok) {
+    if (result.error === 'not_enabled' || result.error === 'tenant_not_found') {
+      return { success: false, error: 'Ticket creation is not enabled' };
+    }
+    // Other refusals (rate_limited, invalid_input, ...) fall back to the
+    // caller's translated generic error message.
+    return { success: false };
   }
 
-  // 4. Create initial message
-  const messageData = {
-    ticket_id: ticketId,
-    tenant_id: tenantId,
-    sender_type: 'customer',
-    sender_id: customerId,
-    sender_name: name || email.split('@')[0],
-    sender_email: email.toLowerCase(),
-    content: message,
-    attachments: [],
-    is_internal: false,
-    created_at: new Date().toISOString(),
-  };
-
-  const { error: messageError } = await supabaseAnon
-    .from('rh_ticket_messages')
-    .insert(messageData);
-
-  if (messageError) {
-    console.error('Error creating ticket message:', messageError);
-    // Ticket was created, but message failed - still return success
-  }
-
-  return { success: true, ticketNumber };
+  return { success: true, ticketNumber: result.ticketNumber };
 }
 
 /**
@@ -1030,131 +963,41 @@ export async function createPublicReturnTicket(params: {
   returnNumber?: string;
 }): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
   const { tenantSlug, email, subject, message, returnNumber } = params;
-
-  // 1. Resolve tenant ID from slug
-  const tenant = await getPublicTenantBySlug(tenantSlug);
-
-  if (!tenant) {
-    console.error('Error resolving tenant for slug:', tenantSlug);
-    return { success: false, error: 'Portal not found' };
-  }
-
-  const tenantId = tenant.id;
-
-  // 2. Check if feature is enabled
-  const isEnabled = await isPublicTicketCreationEnabled(tenantId);
-  if (!isEnabled) {
-    return { success: false, error: 'Ticket creation is currently unavailable' };
-  }
-
-  // 3. Find or create customer
   const normalizedEmail = email.trim().toLowerCase();
-  let customerId: string;
 
-  // SECURITY DEFINER RPC — anon has no direct SELECT on rh_customers anymore
-  // (the RPC returns only the customer id for an exact tenant+email match).
-  const { data: existingCustomerId } = await supabaseAnon.rpc('public_lookup_customer', {
-    p_tenant_id: tenantId,
-    p_email: normalizedEmail,
+  // The RPC resolves the slug itself (anon cannot read tenants) and links the
+  // return only when this e-mail owns it.
+  const result = await publicCreateTicket(null, {
+    tenantSlug,
+    source: 'public_return_portal',
+    email: normalizedEmail,
+    subject,
+    message,
+    returnNumber: returnNumber || undefined,
   });
 
-  if (existingCustomerId) {
-    customerId = existingCustomerId as string;
-  } else {
-    // Create new customer record — generate ID client-side to avoid chaining .select() after .insert()
-    customerId = crypto.randomUUID();
-    const { error: customerError } = await supabaseAnon
-      .from('rh_customers')
-      .insert({
-        id: customerId,
-        tenant_id: tenantId,
-        email: normalizedEmail,
-        display_name: normalizedEmail.split('@')[0],
-        created_at: new Date().toISOString(),
-      });
-
-    if (customerError) {
-      console.error('Error creating customer:', customerError);
-      return { success: false, error: 'Failed to create customer record' };
+  if (!result.ok) {
+    if (result.error === 'tenant_not_found') {
+      return { success: false, error: 'Portal not found' };
     }
-  }
-
-  // 4. Optionally lookup return by return number (if provided)
-  let returnId: string | undefined = undefined;
-
-  if (returnNumber) {
-    // anon has no table access to rh_returns since migration 20261001c; the RPC
-    // also enforces that this e-mail owns the return.
-    const { publicResolveReturnId } = await import('./returns');
-    returnId = await publicResolveReturnId(returnNumber, normalizedEmail, tenantId);
-    if (!returnId) {
-      // Continue without linking - customer might have typo or return doesn't exist
-      console.warn('Return not linked (not found or e-mail mismatch):', returnNumber);
+    if (result.error === 'not_enabled') {
+      return { success: false, error: 'Ticket creation is currently unavailable' };
     }
+    return { success: false };
   }
 
-  // 5. Generate ticket number
-  const ticketNumber = generateTicketNumber();
-
-  // 6. Create ticket
-  // Generate UUID client-side to avoid needing a SELECT policy for anon
-  const ticketId = crypto.randomUUID();
-  const ticketData = {
-    id: ticketId,
-    tenant_id: tenantId,
-    ticket_number: ticketNumber,
-    customer_id: customerId,
-    return_id: returnId,
-    subject,
-    category: 'return_inquiry',
-    priority: 'normal',
-    status: 'open',
-    metadata: { source: 'public_return_portal' },
-    created_at: new Date().toISOString(),
-  };
-
-  const { error: ticketError } = await supabaseAnon
-    .from('rh_tickets')
-    .insert(ticketData);
-
-  if (ticketError) {
-    console.error('Error creating ticket:', ticketError);
-    return { success: false, error: 'Failed to create ticket' };
-  }
-
-  // 7. Create initial message
-  const messageData = {
-    ticket_id: ticketId,
-    tenant_id: tenantId,
-    sender_type: 'customer',
-    sender_id: customerId,
-    sender_name: normalizedEmail.split('@')[0],
-    sender_email: normalizedEmail,
-    content: message,
-    attachments: [],
-    is_internal: false,
-    created_at: new Date().toISOString(),
-  };
-
-  const { error: messageError } = await supabaseAnon
-    .from('rh_ticket_messages')
-    .insert(messageData);
-
-  if (messageError) {
-    console.error('Error creating ticket message:', messageError);
-    // Ticket was created, but message failed - still return success
-  }
-
-  // 8. Trigger email notification (public context)
+  // Trigger email notification (public context). The server derives the
+  // recipient from the ticket and enforces its own limits.
   try {
     const { triggerPublicEmailNotification } = await import('./rh-notification-trigger');
     await triggerPublicEmailNotification(
-      tenantId,
+      result.tenantId,
       'ticket_created',
       {
         recipientEmail: normalizedEmail,
         customerName: normalizedEmail.split('@')[0],
-        ticketNumber,
+        ticketId: result.ticketId,
+        ticketNumber: result.ticketNumber,
         subject,
       }
     );
@@ -1163,5 +1006,5 @@ export async function createPublicReturnTicket(params: {
     // Non-critical - ticket was still created
   }
 
-  return { success: true, ticketNumber };
+  return { success: true, ticketNumber: result.ticketNumber };
 }

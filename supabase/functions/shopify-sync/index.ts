@@ -30,6 +30,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getTenantSecrets, mergeTenantSecrets, isServiceRoleBearer } from '../_shared/tenant-secrets.ts';
 import { buildShipmentItems, loadShopifyMappings } from '../_shared/shopify-order-items.ts';
 
@@ -209,6 +210,54 @@ function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
 }
 
+// Shop domains are only ever *.myshopify.com hosts (re-audit EF-04): the
+// value is used as the fetch host, so anything else would be an SSRF.
+const SHOP_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/;
+const API_VERSION_RE = /^(\d{4}-\d{2}|unstable)$/;
+
+/** Accepts "name", "name.myshopify.com" or a pasted URL; null for anything else. */
+function normalizeShopDomain(input: unknown): string | null {
+  if (typeof input !== 'string') return null;
+  let v = input.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  if (v && !v.includes('.')) v = `${v}.myshopify.com`;
+  return SHOP_DOMAIN_RE.test(v) ? v : null;
+}
+
+function shopifyAdminUrl(shopDomain: string, apiVersion: string, endpoint: string): string {
+  if (!SHOP_DOMAIN_RE.test(shopDomain)) throw new Error('Invalid Shopify shop domain (expected *.myshopify.com)');
+  const version = API_VERSION_RE.test(apiVersion) ? apiVersion : '2024-10';
+  return `https://${shopDomain}/admin/api/${version}/${endpoint}`;
+}
+
+/**
+ * Bind a verified *.myshopify.com domain to this tenant (unique per shop and
+ * per tenant; table shopify_shop_bindings, service role only). shopify-webhook
+ * resolves tenants exclusively through this binding. Returns an error message
+ * when the shop is already bound to another tenant.
+ */
+async function bindShop(supabase: SupabaseClient, tenantId: string, myshopifyDomain: string): Promise<string | null> {
+  const { data: existing, error: readErr } = await supabase
+    .from('shopify_shop_bindings')
+    .select('tenant_id')
+    .eq('myshopify_domain', myshopifyDomain)
+    .maybeSingle();
+  if (readErr) return 'Failed to check the Shopify store binding';
+  if (existing && existing.tenant_id !== tenantId) {
+    return 'This Shopify store is already connected to another organisation';
+  }
+  if (existing) return null;
+  await supabase.from('shopify_shop_bindings').delete().eq('tenant_id', tenantId);
+  const { error } = await supabase
+    .from('shopify_shop_bindings')
+    .insert({ myshopify_domain: myshopifyDomain, tenant_id: tenantId, source: 'shop_json' });
+  if (error) {
+    return error.code === '23505'
+      ? 'This Shopify store is already connected to another organisation'
+      : 'Failed to save the Shopify store binding';
+  }
+  return null;
+}
+
 // deno-lint-ignore no-explicit-any
 async function getShopifyConfig(supabase: any, tenantId: string) {
   const { data: tenant } = await supabase
@@ -220,9 +269,10 @@ async function getShopifyConfig(supabase: any, tenantId: string) {
   const stored = tenant?.settings?.shopifyIntegration;
   // The access token lives in tenant_secrets (service role only).
   const { accessToken } = await getTenantSecrets<{ accessToken?: string }>(supabase, tenantId, 'shopify');
-  const settings = stored ? { ...stored, accessToken } : null;
+  const shopDomain = normalizeShopDomain(stored?.shopDomain) || normalizeShopDomain(stored?.myshopifyDomain);
+  const settings = stored ? { ...stored, shopDomain, accessToken } : null;
   if (!settings?.shopDomain || !settings?.accessToken) {
-    throw new Error('Shopify not configured — missing domain or access token');
+    throw new Error('Shopify not configured — missing *.myshopify.com domain or access token');
   }
   return settings as {
     shopDomain: string;
@@ -252,7 +302,7 @@ async function shopifyApi(
   body?: any,
   options?: { withLink?: boolean; attempt?: number },
 ): Promise<{ body: unknown; link: string | null }> {
-  const url = `https://${shopDomain}/admin/api/${apiVersion}/${endpoint}`;
+  const url = shopifyAdminUrl(shopDomain, apiVersion, endpoint);
   const attempt = options?.attempt ?? 0;
   const res = await fetch(url, {
     method,
@@ -309,7 +359,7 @@ async function shopifyGraphQL(
   // deno-lint-ignore no-explicit-any
   variables?: Record<string, any>,
 ): Promise<{ data?: unknown; errors?: Array<{ message: string; extensions?: Record<string, unknown> }> }> {
-  const url = `https://${shopDomain}/admin/api/${apiVersion}/graphql.json`;
+  const url = shopifyAdminUrl(shopDomain, apiVersion, 'graphql.json');
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -403,9 +453,11 @@ async function completeSyncLog(supabase: any, logId: string, status: string, cou
 
 // deno-lint-ignore no-explicit-any
 async function handleSaveToken(supabase: any, tenantId: string, params?: Record<string, unknown>) {
-  const token = params?.accessToken as string;
-  const shopDomain = params?.shopDomain as string;
-  if (!token || !shopDomain) return json({ error: 'accessToken and shopDomain required' }, 400);
+  const token = typeof params?.accessToken === 'string' ? params.accessToken.trim() : '';
+  const shopDomain = normalizeShopDomain(params?.shopDomain);
+  if (!token || !shopDomain) {
+    return json({ error: 'accessToken and a *.myshopify.com shopDomain are required' }, 400);
+  }
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -417,6 +469,21 @@ async function handleSaveToken(supabase: any, tenantId: string, params?: Record<
   // deno-lint-ignore no-unused-vars
   const { accessToken: _legacyToken, ...currentShopify } = currentSettings.shopifyIntegration || {};
 
+  // Prove the token belongs to this shop and take the canonical
+  // myshopify_domain from Shopify itself; only that is bound to the tenant
+  // (shopify-webhook resolves tenants through the binding, re-audit EF-04).
+  let myshopifyDomain: string | null = null;
+  try {
+    const { body } = await shopifyApi(shopDomain, token, currentShopify.apiVersion || '2024-10', 'shop.json');
+    myshopifyDomain = normalizeShopDomain((body as { shop?: { myshopify_domain?: unknown } } | null)?.shop?.myshopify_domain);
+  } catch (err) {
+    console.warn('[shopify-sync] save_token verification failed:', err instanceof Error ? err.message.slice(0, 200) : err);
+    return json({ error: 'Could not verify the access token for this Shopify store' }, 400);
+  }
+  if (!myshopifyDomain) return json({ error: 'Shopify did not confirm the store domain' }, 400);
+  const bindError = await bindShop(supabase, tenantId, myshopifyDomain);
+  if (bindError) return json({ error: bindError }, 409);
+
   // Token -> tenant_secrets (service role only); never into settings.
   const secretErr = await mergeTenantSecrets(supabase, tenantId, 'shopify', { accessToken: token });
   if (secretErr) return json({ error: secretErr }, 500);
@@ -427,6 +494,7 @@ async function handleSaveToken(supabase: any, tenantId: string, params?: Record<
       ...currentShopify,
       enabled: true,
       shopDomain,
+      myshopifyDomain,
       apiVersion: currentShopify.apiVersion || '2024-10',
       syncConfig: currentShopify.syncConfig || {
         importOrders: true,
@@ -470,6 +538,12 @@ async function handleTestConnection(supabase: any, tenantId: string) {
   }
 
   if (shop?.name) {
+    // shop.myshopify_domain is the canonical *.myshopify.com URL Shopify uses
+    // in webhook x-shopify-shop-domain headers. It is bound to this tenant
+    // (shopify_shop_bindings) only if no other tenant holds the store.
+    const canonical = normalizeShopDomain(shop.myshopify_domain);
+    const bindError = canonical ? await bindShop(supabase, tenantId, canonical) : 'missing myshopify_domain';
+    if (bindError) console.warn(`[shopify-sync] test_connection: store not bound for tenant ${tenantId}: ${bindError}`);
     const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
     const settings = tenant?.settings || {};
     await supabase
@@ -480,11 +554,7 @@ async function handleTestConnection(supabase: any, tenantId: string) {
           shopifyIntegration: {
             ...settings.shopifyIntegration,
             shopName: shop.name,
-            // shop.myshopify_domain is the canonical *.myshopify.com URL
-            // Shopify uses in webhook x-shopify-shop-domain headers. We need
-            // it for tenant resolution in shopify-webhook — the user-facing
-            // shopDomain alone is not enough.
-            myshopifyDomain: shop.myshopify_domain,
+            ...(canonical && !bindError ? { myshopifyDomain: canonical } : {}),
           },
         },
       })
