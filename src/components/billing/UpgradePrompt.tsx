@@ -3,6 +3,10 @@
  *
  * Shows a specific message based on what's blocking the user,
  * with a direct action button.
+ *
+ * In the native apps (App Store 3.1.1 / Google Play Payments policy) no
+ * upgrade CTA is rendered — only the informational message plus a hint that
+ * plan changes are managed by the administrator (SRE-15/SRE-18).
  */
 
 import { useTranslation } from 'react-i18next';
@@ -10,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Lock, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { nativeHidesPurchases } from '@/lib/checkout';
 
 type PromptVariant = 'quota' | 'module' | 'credits' | 'feature';
 
@@ -57,6 +62,26 @@ export function UpgradePrompt({
     credits: 'text-purple-600 dark:text-purple-400',
     feature: 'text-muted-foreground',
   }[variant];
+
+  const hidePurchase = nativeHidesPurchases();
+
+  if (hidePurchase) {
+    return (
+      <div
+        className={cn(
+          inline ? 'flex items-center gap-2 text-sm' : 'flex items-center gap-3 rounded-lg border p-4',
+          !inline && bgColor,
+          className,
+        )}
+      >
+        <Icon className={cn(inline ? 'h-4 w-4' : 'h-5 w-5', 'shrink-0', iconColor)} />
+        <p className={cn('text-sm', inline ? 'text-muted-foreground' : 'flex-1')}>
+          {message}{' '}
+          <span className="text-muted-foreground">{t('Plan changes are managed by your administrator.')}</span>
+        </p>
+      </div>
+    );
+  }
 
   if (inline) {
     return (

@@ -4,6 +4,14 @@
  * Proxies AI requests to OpenRouter API so the API key never reaches the client.
  * Includes JWT auth, per-user rate limiting, and credit consumption.
  *
+ * Credit handling (go-live hardening DB-03/SEC-06, QA-2/SEC-12):
+ *   - Credits are consumed via the atomic SECURITY DEFINER RPC
+ *     `consume_credits` (row lock, monthly first, then purchased) which also
+ *     enforces a durable per-tenant rate limit.
+ *   - If the upstream call fails before any output is streamed, the credits
+ *     are refunded via the service-role-only RPC `refund_credits`.
+ *   - Cost scales with model (Opus x5) and very large inputs.
+ *
  * Deployment:
  *   supabase functions deploy openrouter-proxy
  *   supabase secrets set OPENROUTER_API_KEY=sk-or-v1-...
@@ -83,12 +91,17 @@ interface ProxyRequestBody {
 
 // Maximum total size (bytes) of all message content (approx) — guards against huge base64 uploads
 const MAX_TOTAL_CONTENT_BYTES = 15 * 1024 * 1024; // 15 MB
+const MAX_OUTPUT_TOKENS = 8000; // hard output cap per call (SEC-12)
 
-// Allowed models (if client overrides)
-const ALLOWED_MODELS = new Set([
-  'anthropic/claude-sonnet-4',
-  'anthropic/claude-opus-4',
-]);
+// Allowed models (if client overrides) → credit multiplier.
+const MODEL_COST_MULTIPLIER: Record<string, number> = {
+  'anthropic/claude-sonnet-4': 1,
+  'anthropic/claude-opus-4': 5,
+};
+
+// Inputs above this size cost one extra credit per started block.
+const SIZE_SURCHARGE_FREE_BYTES = 4 * 1024 * 1024;
+const SIZE_SURCHARGE_BLOCK_BYTES = 4 * 1024 * 1024;
 
 // Server-side minimum credit cost per operation. The client sends the
 // requested creditCost, but it can never undercut these minimums — a
@@ -190,6 +203,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'messages array is required and must not be empty' }, 400);
     }
 
+    // SEC-12: validate generation params BEFORE any credit is consumed. A
+    // non-numeric maxTokens would serialise to null and drop the output cap.
+    if (typeof maxTokens !== 'number' || !Number.isFinite(maxTokens) || maxTokens < 1) {
+      return jsonResponse({ error: 'maxTokens must be a positive number' }, 400);
+    }
+    if (typeof temperature !== 'number' || !Number.isFinite(temperature)) {
+      return jsonResponse({ error: 'temperature must be a finite number' }, 400);
+    }
+    const safeMaxTokens = Math.min(Math.floor(maxTokens), MAX_OUTPUT_TOKENS);
+    const safeTemperature = Math.max(0, Math.min(temperature, 2));
+
     // Validate message structure (supports both string content and multimodal array content)
     let totalContentSize = 0;
     for (const msg of messages) {
@@ -244,7 +268,7 @@ Deno.serve(async (req) => {
     // Validate model override
     let chosenModel = MODEL;
     if (modelOverride) {
-      if (!ALLOWED_MODELS.has(modelOverride)) {
+      if (!Object.prototype.hasOwnProperty.call(MODEL_COST_MULTIPLIER, modelOverride)) {
         return jsonResponse({ error: `Model not allowed: ${modelOverride}` }, 400);
       }
       chosenModel = modelOverride;
@@ -252,85 +276,76 @@ Deno.serve(async (req) => {
 
     const isJsonMode = responseFormat === 'json';
 
-    // 5. Credit check and consumption (creditCost is always >= 1 here)
-    {
-      const { data: credits } = await supabase
-        .from('billing_credits')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .single();
+    // 5. Atomic credit consumption (server-side cost, never below 1)
+    const sizeSurcharge = totalContentSize > SIZE_SURCHARGE_FREE_BYTES
+      ? Math.ceil((totalContentSize - SIZE_SURCHARGE_FREE_BYTES) / SIZE_SURCHARGE_BLOCK_BYTES)
+      : 0;
+    const chargedCredits = Math.min(
+      MAX_CREDIT_COST * 5,
+      creditCost * (MODEL_COST_MULTIPLIER[chosenModel] ?? 1) + sizeSurcharge,
+    );
 
-      if (!credits) {
+    const { data: consumed, error: consumeErr } = await supabase.rpc('consume_credits', {
+      p_amount: chargedCredits,
+      p_description: String(operationLabel).slice(0, 200),
+      p_metadata: { model: chosenModel, user_id: user.id, size_bytes: totalContentSize },
+      p_tenant_id: tenantId,
+    });
+
+    if (consumeErr || !consumed) {
+      console.error('consume_credits failed:', consumeErr);
+      return jsonResponse({ error: 'Credit check failed' }, 500);
+    }
+
+    const consumption = consumed as {
+      success: boolean;
+      code?: string;
+      remaining?: number;
+      from_monthly?: number;
+      from_purchased?: number;
+    };
+
+    if (!consumption.success) {
+      if (consumption.code === 'RATE_LIMITED') {
+        return jsonResponse({ error: 'Rate limit exceeded. Please wait a minute.', code: 'RATE_LIMITED' }, 429);
+      }
+      if (consumption.code === 'NO_CREDIT_ACCOUNT') {
         return jsonResponse({ error: 'No billing credits found for tenant' }, 402);
       }
-
-      const monthlyRemaining = Math.max(0, credits.monthly_allowance - credits.monthly_used);
-      const totalAvailable = monthlyRemaining + credits.purchased_balance;
-
-      if (totalAvailable < creditCost) {
-        return jsonResponse({
-          error: `Not enough AI credits (${totalAvailable} remaining, need ${creditCost}). Purchase more credits or upgrade your plan.`,
-          code: 'INSUFFICIENT_CREDITS',
-          remaining: totalAvailable,
-        }, 402);
-      }
-
-      // Consume credits
-      const fromMonthly = Math.min(creditCost, monthlyRemaining);
-      const fromPurchased = creditCost - fromMonthly;
-
-      await supabase
-        .from('billing_credits')
-        .update({
-          monthly_used: credits.monthly_used + fromMonthly,
-          purchased_balance: credits.purchased_balance - fromPurchased,
-          total_consumed: credits.total_consumed + creditCost,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('tenant_id', tenantId);
-
-      // Log transaction
-      const transactions = [];
-      if (fromMonthly > 0) {
-        transactions.push({
-          tenant_id: tenantId,
-          type: 'consumption',
-          amount: -fromMonthly,
-          source: 'monthly',
-          description: operationLabel,
-          user_id: user.id,
-          balance_after: monthlyRemaining - fromMonthly + credits.purchased_balance,
-        });
-      }
-      if (fromPurchased > 0) {
-        transactions.push({
-          tenant_id: tenantId,
-          type: 'consumption',
-          amount: -fromPurchased,
-          source: 'purchased',
-          description: operationLabel,
-          user_id: user.id,
-          balance_after: credits.purchased_balance - fromPurchased,
-        });
-      }
-      if (transactions.length > 0) {
-        await supabase.from('billing_credit_transactions').insert(transactions);
-      }
+      const remaining = consumption.remaining ?? 0;
+      return jsonResponse({
+        error: `Not enough AI credits (${remaining} remaining, need ${chargedCredits}). Purchase more credits or upgrade your plan.`,
+        code: 'INSUFFICIENT_CREDITS',
+        remaining,
+      }, 402);
     }
+
+    const refund = async (reason: string) => {
+      const { error: refundErr } = await supabase.rpc('refund_credits', {
+        p_tenant_id: tenantId,
+        p_from_monthly: consumption.from_monthly ?? 0,
+        p_from_purchased: consumption.from_purchased ?? 0,
+        p_description: String(operationLabel).slice(0, 150),
+        p_metadata: { reason, model: chosenModel, user_id: user.id },
+      });
+      if (refundErr) console.error('refund_credits failed:', refundErr);
+    };
 
     // 6. Forward to OpenRouter
     const openRouterBody: Record<string, unknown> = {
       model: chosenModel,
       messages,
-      max_tokens: Math.min(maxTokens, 8000),
-      temperature: Math.max(0, Math.min(temperature, 2)),
+      max_tokens: safeMaxTokens,
+      temperature: safeTemperature,
       stream: !isJsonMode,
     };
     if (isJsonMode) {
       openRouterBody.response_format = { type: 'json_object' };
     }
 
-    const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    let openRouterResponse: Response;
+    try {
+      openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -339,17 +354,30 @@ Deno.serve(async (req) => {
         'X-Title': 'Trackbliss',
       },
       body: JSON.stringify(openRouterBody),
-    });
+      });
+    } catch (fetchErr) {
+      console.error('OpenRouter request failed:', fetchErr);
+      await refund('upstream_unreachable');
+      return jsonResponse({ error: 'AI service unreachable' }, 502);
+    }
 
     if (!openRouterResponse.ok) {
       const errorText = await openRouterResponse.text();
       console.error('OpenRouter API error:', openRouterResponse.status, errorText);
+      await refund(`upstream_${openRouterResponse.status}`);
       return jsonResponse({ error: `AI service error: ${openRouterResponse.status}` }, 502);
     }
 
     // 7a. JSON mode: return parsed response body
     if (isJsonMode) {
-      const json = await openRouterResponse.json();
+      let json: unknown;
+      try {
+        json = await openRouterResponse.json();
+      } catch (parseErr) {
+        console.error('OpenRouter returned invalid JSON:', parseErr);
+        await refund('upstream_invalid_json');
+        return jsonResponse({ error: 'AI service returned an invalid response' }, 502);
+      }
       return jsonResponse(json, 200);
     }
 
@@ -365,8 +393,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('openrouter-proxy error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return jsonResponse({ error: msg }, 500);
+    return jsonResponse({ error: 'Internal error' }, 500);
   }
 });
 

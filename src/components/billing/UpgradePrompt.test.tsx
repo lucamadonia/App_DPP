@@ -16,6 +16,14 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }))
 
+// Mock native purchase gate (web by default)
+const { mockNativeHidesPurchases } = vi.hoisted(() => ({
+  mockNativeHidesPurchases: vi.fn(() => false),
+}))
+vi.mock('@/lib/checkout', () => ({
+  nativeHidesPurchases: mockNativeHidesPurchases,
+}))
+
 import { UpgradePrompt } from './UpgradePrompt'
 
 describe('UpgradePrompt', () => {
@@ -130,5 +138,18 @@ describe('UpgradePrompt', () => {
 
     // Assert - the outermost div should have the custom class
     expect(container.firstChild).toHaveClass('my-custom-class')
+  })
+
+  it('renders no upgrade CTA in the native apps (store payment policies)', () => {
+    mockNativeHidesPurchases.mockReturnValue(true)
+
+    render(<UpgradePrompt variant="credits" message="No AI credits remaining" />)
+
+    expect(screen.getByText('No AI credits remaining')).toBeInTheDocument()
+    expect(screen.getByText('Plan changes are managed by your administrator.')).toBeInTheDocument()
+    expect(screen.queryByText('View Plans')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+
+    mockNativeHidesPurchases.mockReturnValue(false)
   })
 })

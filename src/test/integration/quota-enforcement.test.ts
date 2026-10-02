@@ -8,7 +8,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   mockSupabase,
   mockSupabaseTable,
-  mockSupabaseAuth,
   clearSupabaseMocks,
   mockGetCurrentTenantId,
 } from '@/test/mocks/supabase'
@@ -36,6 +35,10 @@ import {
   invalidateEntitlementCache,
 } from '@/services/supabase/billing'
 import { createReturn } from '@/services/supabase/returns'
+
+// The shared Supabase mock has no rpc(); attach one for the credit RPCs.
+const mockRpc = vi.fn()
+;(mockSupabase as unknown as { rpc: typeof mockRpc }).rpc = mockRpc
 
 describe('Quota Enforcement Integration', () => {
   beforeEach(() => {
@@ -191,91 +194,41 @@ describe('Quota Enforcement Integration', () => {
   })
 
   // ==========================================
-  // AI Credit Enforcement
+  // AI Credit Enforcement (server-side atomic RPC)
   // ==========================================
   describe('AI Credits - Enforcement', () => {
-    it('blocks AI operation when 0 credits available', async () => {
-      // Arrange - No monthly or purchased credits
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 3,
-          monthly_used: 3,
-          purchased_balance: 0,
-          total_consumed: 3,
-        },
+    it('blocks AI operation when the RPC reports no credits', async () => {
+      mockRpc.mockResolvedValue({
+        data: { success: false, code: 'INSUFFICIENT_CREDITS', remaining: 0 },
         error: null,
       })
 
-      // Act - Try to consume 3 credits for compliance check
       const result = await consumeCredits(3, 'compliance_check')
 
-      // Assert
       expect(result.success).toBe(false)
       expect(result.remaining).toBe(0)
     })
 
-    it('allows AI operation when sufficient monthly credits', async () => {
-      // Arrange - 20 monthly credits remaining
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 25,
-          monthly_used: 5,
-          purchased_balance: 0,
-          total_consumed: 5,
-        },
-        error: null,
-      })
-      mockSupabaseTable('billing_credit_transactions', { data: null, error: null })
-      mockSupabaseAuth('getUser', { data: { user: { id: 'u-1' } } })
+    it('allows AI operation when the RPC deducts credits', async () => {
+      mockRpc.mockResolvedValue({ data: { success: true, remaining: 17 }, error: null })
 
-      // Act
       const result = await consumeCredits(3, 'compliance_check')
 
-      // Assert
       expect(result.success).toBe(true)
-      expect(result.remaining).toBe(17) // 20 - 3
-    })
-
-    it('uses purchased credits when monthly exhausted', async () => {
-      // Arrange - 0 monthly, 100 purchased
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 3,
-          monthly_used: 3,
-          purchased_balance: 100,
-          total_consumed: 3,
-        },
-        error: null,
-      })
-      mockSupabaseTable('billing_credit_transactions', { data: null, error: null })
-      mockSupabaseAuth('getUser', { data: { user: { id: 'u-1' } } })
-
-      // Act
-      const result = await consumeCredits(3, 'compliance_check')
-
-      // Assert
-      expect(result.success).toBe(true)
-      expect(result.remaining).toBe(97) // 0 monthly + 97 purchased
+      expect(result.remaining).toBe(17)
+      expect(mockRpc).toHaveBeenCalledWith('consume_credits', expect.objectContaining({ p_amount: 3 }))
     })
 
     it('blocks when requesting more credits than total available', async () => {
-      // Arrange - 2 monthly + 1 purchased = 3 total, requesting 5
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 25,
-          monthly_used: 23,
-          purchased_balance: 1,
-          total_consumed: 23,
-        },
+      mockRpc.mockResolvedValue({
+        data: { success: false, code: 'INSUFFICIENT_CREDITS', remaining: 3 },
         error: null,
       })
 
-      // Act
       const result = await consumeCredits(5, 'compliance_check')
 
-      // Assert
       expect(result.success).toBe(false)
-      expect(result.remaining).toBe(3) // 2 monthly + 1 purchased
+      expect(result.remaining).toBe(3)
     })
   })
 

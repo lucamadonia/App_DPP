@@ -371,8 +371,12 @@ export async function getCreditBalance(tenantId?: string): Promise<CreditBalance
 
 /**
  * Consume credits for an AI operation.
- * Deducts from monthly first, then purchased.
- * Returns success status and remaining balance.
+ *
+ * Runs through the atomic SECURITY DEFINER RPC `consume_credits`
+ * (monthly first, then purchased; row-locked, so parallel calls cannot
+ * double-spend). Clients have no direct write access to billing_credits.
+ * Note: AI calls through the openrouter-proxy Edge Function are charged
+ * server-side — do not consume again on the client for those.
  */
 export async function consumeCredits(
   amount: number,
@@ -381,131 +385,39 @@ export async function consumeCredits(
 ): Promise<{ success: boolean; remaining: number }> {
   const tid = await getCurrentTenantId();
   if (!tid) return { success: false, remaining: 0 };
+  if (!Number.isInteger(amount) || amount < 1) return { success: false, remaining: 0 };
 
-  // Get fresh credit data (bypass cache)
-  const { data: credits } = await supabase
-    .from('billing_credits')
-    .select('*')
-    .eq('tenant_id', tid)
-    .single();
+  const { data, error } = await supabase.rpc('consume_credits', {
+    p_amount: amount,
+    p_description: operation,
+    p_metadata: metadata || {},
+  });
 
-  if (!credits) return { success: false, remaining: 0 };
-
-  const monthlyRemaining = Math.max(0, credits.monthly_allowance - credits.monthly_used);
-  const totalAvailable = monthlyRemaining + credits.purchased_balance;
-
-  if (totalAvailable < amount) {
-    return { success: false, remaining: totalAvailable };
+  if (error || !data) {
+    if (error) console.error('Failed to consume credits:', error);
+    return { success: false, remaining: 0 };
   }
 
-  // Determine how much from each source
-  const fromMonthly = Math.min(amount, monthlyRemaining);
-  const fromPurchased = amount - fromMonthly;
-
-  // Update credits atomically
-  const { error } = await supabase
-    .from('billing_credits')
-    .update({
-      monthly_used: credits.monthly_used + fromMonthly,
-      purchased_balance: credits.purchased_balance - fromPurchased,
-      total_consumed: credits.total_consumed + amount,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('tenant_id', tid);
-
-  if (error) {
-    console.error('Failed to consume credits:', error);
-    return { success: false, remaining: totalAvailable };
-  }
-
-  // Log transaction(s)
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData?.user?.id;
-  const newTotal = totalAvailable - amount;
-
-  const transactions = [];
-  if (fromMonthly > 0) {
-    transactions.push({
-      tenant_id: tid,
-      type: 'consume',
-      amount: -fromMonthly,
-      balance_after: newTotal,
-      source: 'monthly',
-      description: operation,
-      metadata: metadata || {},
-      user_id: userId,
-    });
-  }
-  if (fromPurchased > 0) {
-    transactions.push({
-      tenant_id: tid,
-      type: 'consume',
-      amount: -fromPurchased,
-      balance_after: newTotal,
-      source: 'purchased',
-      description: operation,
-      metadata: metadata || {},
-      user_id: userId,
-    });
-  }
-
-  if (transactions.length > 0) {
-    await supabase.from('billing_credit_transactions').insert(transactions);
-  }
-
-  // Invalidate cache
+  const result = data as { success?: boolean; remaining?: number };
   invalidateEntitlementCache();
-
-  return { success: true, remaining: newTotal };
+  return { success: Boolean(result.success), remaining: Number(result.remaining ?? 0) };
 }
 
 /**
  * Refund credits (e.g., on failed AI call).
- * Credits go back to monthly first (if there was monthly usage), then purchased.
+ *
+ * Refunds are granted exclusively server-side (openrouter-proxy refunds a
+ * failed upstream call via the service-role-only `refund_credits` RPC), so
+ * a client can never add credits to its own balance. This client function
+ * only refreshes the cached balance and is kept for API compatibility.
  */
 export async function refundCredits(
   amount: number,
   operation: string,
 ): Promise<void> {
-  const tid = await getCurrentTenantId();
-  if (!tid) return;
-
-  const { data: credits } = await supabase
-    .from('billing_credits')
-    .select('*')
-    .eq('tenant_id', tid)
-    .single();
-
-  if (!credits) return;
-
-  // Refund to monthly first
-  const monthlyRefund = Math.min(amount, credits.monthly_used);
-  const purchasedRefund = amount - monthlyRefund;
-
-  await supabase
-    .from('billing_credits')
-    .update({
-      monthly_used: credits.monthly_used - monthlyRefund,
-      purchased_balance: credits.purchased_balance + purchasedRefund,
-      total_consumed: Math.max(0, credits.total_consumed - amount),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('tenant_id', tid);
-
-  // Log refund
-  const { data: userData } = await supabase.auth.getUser();
-  const totalAfter = (credits.monthly_allowance - credits.monthly_used + monthlyRefund) + credits.purchased_balance + purchasedRefund;
-
-  await supabase.from('billing_credit_transactions').insert({
-    tenant_id: tid,
-    type: 'refund',
-    amount,
-    balance_after: totalAfter,
-    source: 'monthly',
-    description: `Refund: ${operation}`,
-    user_id: userData?.user?.id,
-  });
-
+  if (import.meta.env.DEV) {
+    console.info(`[billing] refund of ${amount} credit(s) for "${operation}" is handled server-side`);
+  }
   invalidateEntitlementCache();
 }
 

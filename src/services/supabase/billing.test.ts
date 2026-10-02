@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   mockSupabase,
   mockSupabaseTable,
-  mockSupabaseAuth,
   clearSupabaseMocks,
   mockGetCurrentTenantId,
 } from '@/test/mocks/supabase'
@@ -44,6 +43,10 @@ import {
 } from './billing'
 
 import { PLAN_CONFIGS } from '@/types/billing'
+
+// The shared Supabase mock has no rpc(); attach one for the credit RPCs.
+const mockRpc = vi.fn()
+;(mockSupabase as unknown as { rpc: typeof mockRpc }).rpc = mockRpc
 
 describe('Billing Service', () => {
   beforeEach(() => {
@@ -362,139 +365,79 @@ describe('Billing Service', () => {
   })
 
   // ==========================================
-  // consumeCredits
+  // consumeCredits (atomic RPC)
   // ==========================================
   describe('consumeCredits', () => {
-    it('deducts from monthly credits first', async () => {
+    it('consumes through the consume_credits RPC and returns the remaining balance', async () => {
       // Arrange
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 25,
-          monthly_used: 10,
-          purchased_balance: 50,
-          total_consumed: 10,
-        },
-        error: null,
-      })
-      mockSupabaseTable('billing_credit_transactions', { data: null, error: null })
-      mockSupabaseAuth('getUser', { data: { user: { id: 'u-1' } } })
+      mockRpc.mockResolvedValue({ data: { success: true, remaining: 60 }, error: null })
 
       // Act
-      const result = await consumeCredits(5, 'compliance_check')
+      const result = await consumeCredits(5, 'compliance_check', { productId: 'p-1' })
 
       // Assert
-      expect(result.success).toBe(true)
-      // monthly remaining was 15, after consuming 5 -> 10 remaining
-      // total = 10 monthly remaining + 50 purchased = 60
-      expect(result.remaining).toBe(60)
-    })
-
-    it('falls back to purchased when monthly exhausted', async () => {
-      // Arrange
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 25,
-          monthly_used: 23,
-          purchased_balance: 50,
-          total_consumed: 23,
-        },
-        error: null,
+      expect(mockRpc).toHaveBeenCalledWith('consume_credits', {
+        p_amount: 5,
+        p_description: 'compliance_check',
+        p_metadata: { productId: 'p-1' },
       })
-      mockSupabaseTable('billing_credit_transactions', { data: null, error: null })
-      mockSupabaseAuth('getUser', { data: { user: { id: 'u-1' } } })
-
-      // Act - consuming 5: 2 from monthly, 3 from purchased
-      const result = await consumeCredits(5, 'compliance_check')
-
-      // Assert
-      expect(result.success).toBe(true)
-      // monthly remaining was 2, purchased was 50 -> after: 0 monthly + 47 purchased = 47
-      expect(result.remaining).toBe(47)
+      expect(result).toEqual({ success: true, remaining: 60 })
     })
 
-    it('returns failure when not enough credits', async () => {
-      // Arrange
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 3,
-          monthly_used: 3,
-          purchased_balance: 0,
-          total_consumed: 3,
-        },
+    it('never writes billing_credits directly from the client', async () => {
+      mockRpc.mockResolvedValue({ data: { success: true, remaining: 1 }, error: null })
+
+      await consumeCredits(1, 'test')
+
+      expect(mockSupabase.from).not.toHaveBeenCalledWith('billing_credits')
+      expect(mockSupabase.from).not.toHaveBeenCalledWith('billing_credit_transactions')
+    })
+
+    it('returns failure when the RPC reports insufficient credits', async () => {
+      mockRpc.mockResolvedValue({
+        data: { success: false, code: 'INSUFFICIENT_CREDITS', remaining: 2 },
         error: null,
       })
 
-      // Act
       const result = await consumeCredits(5, 'compliance_check')
 
-      // Assert
-      expect(result.success).toBe(false)
-      expect(result.remaining).toBe(0)
+      expect(result).toEqual({ success: false, remaining: 2 })
     })
 
-    it('returns failure when no tenant ID', async () => {
-      // Arrange
+    it('returns failure when the RPC errors', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'boom' } })
+
+      const result = await consumeCredits(1, 'test')
+
+      expect(result).toEqual({ success: false, remaining: 0 })
+    })
+
+    it('returns failure without calling the RPC when no tenant ID', async () => {
       mockGetCurrentTenantId.mockResolvedValue(null as unknown as string)
 
-      // Act
       const result = await consumeCredits(1, 'test')
 
-      // Assert
-      expect(result.success).toBe(false)
-      expect(result.remaining).toBe(0)
+      expect(result).toEqual({ success: false, remaining: 0 })
+      expect(mockRpc).not.toHaveBeenCalled()
     })
 
-    it('returns failure when no credit record exists', async () => {
-      // Arrange
-      mockSupabaseTable('billing_credits', { data: null, error: null })
-
-      // Act
-      const result = await consumeCredits(1, 'test')
-
-      // Assert
-      expect(result.success).toBe(false)
+    it('rejects non-positive or fractional amounts locally', async () => {
+      expect(await consumeCredits(0, 'test')).toEqual({ success: false, remaining: 0 })
+      expect(await consumeCredits(1.5, 'test')).toEqual({ success: false, remaining: 0 })
+      expect(mockRpc).not.toHaveBeenCalled()
     })
   })
 
   // ==========================================
-  // refundCredits
+  // refundCredits (server-side only)
   // ==========================================
   describe('refundCredits', () => {
-    it('refunds to monthly first when monthly was used', async () => {
-      // Arrange
-      mockSupabaseTable('billing_credits', {
-        data: {
-          monthly_allowance: 25,
-          monthly_used: 10,
-          purchased_balance: 50,
-          total_consumed: 10,
-        },
-        error: null,
-      })
-      mockSupabaseTable('billing_credit_transactions', { data: null, error: null })
-      mockSupabaseAuth('getUser', { data: { user: { id: 'u-1' } } })
-
-      // Act - refund 3: all to monthly since monthly_used=10
+    it('does not grant credits from the client', async () => {
       await refundCredits(3, 'failed_ai_call')
 
-      // Assert - verify update was called on billing_credits
-      expect(mockSupabase.from).toHaveBeenCalledWith('billing_credits')
-    })
-
-    it('does nothing when no tenant ID', async () => {
-      // Arrange
-      mockGetCurrentTenantId.mockResolvedValue(null as unknown as string)
-
-      // Act & Assert - should not throw
-      await refundCredits(5, 'test')
-    })
-
-    it('does nothing when no credit record', async () => {
-      // Arrange
-      mockSupabaseTable('billing_credits', { data: null, error: null })
-
-      // Act & Assert - should not throw
-      await refundCredits(5, 'test')
+      expect(mockRpc).not.toHaveBeenCalled()
+      expect(mockSupabase.from).not.toHaveBeenCalledWith('billing_credits')
+      expect(mockSupabase.from).not.toHaveBeenCalledWith('billing_credit_transactions')
     })
   })
 
