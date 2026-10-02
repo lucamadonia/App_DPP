@@ -31,6 +31,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { isServiceRoleRequest } from '../_shared/service-auth.ts';
 import { postToMailHub } from '../_shared/mail-hub.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -55,8 +56,9 @@ Deno.serve(async (req) => {
   // Authorization header (sourced from vault). Reject anyone else.
   const authHeader = req.headers.get('authorization');
   if (!authHeader) return json({ error: 'missing_authorization' }, 401);
-  const token = authHeader.replace('Bearer ', '');
-  if (!isServiceRoleJWT(token)) {
+  // Exact (constant-time) service-role key compare; never trust an unverified
+  // role claim (SEC-14). Same vault-key precondition as notify-dispatch.
+  if (!isServiceRoleRequest(req)) {
     return json({ error: 'forbidden_service_role_required' }, 403);
   }
 
@@ -230,19 +232,6 @@ async function resolveTenantOwner(supabase: any, tenantId: string): Promise<Tena
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isServiceRoleJWT(token: string): boolean {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
-    const claim = JSON.parse(atob(padded));
-    return claim.role === 'service_role';
-  } catch {
-    return false;
-  }
-}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

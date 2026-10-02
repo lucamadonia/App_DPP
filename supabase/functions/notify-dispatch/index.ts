@@ -57,7 +57,7 @@
  * Deploy with verify_jwt = true (supabase/config.toml).
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isServiceRoleRequest } from '../_shared/service-auth.ts';
 import { renderStoredTemplate, sanitizePublicText, type ServerRenderVars } from '../_shared/email-template-render.ts';
 
@@ -265,8 +265,7 @@ function plainTextToHtml(text: string): string {
  * Variables come from metadata.vars (built server-side by
  * public_enqueue_notification) and are HTML-escaped by the renderer.
  */
-// deno-lint-ignore no-explicit-any
-async function renderServerSide(supabase: any, row: any, meta: Record<string, unknown>) {
+async function renderServerSide(supabase: SupabaseClient, row: { id: string; tenant_id: string; template: string }, meta: Record<string, unknown>) {
   try {
     const { data: template } = await supabase
       .from('rh_email_templates')
@@ -301,12 +300,10 @@ async function renderServerSide(supabase: any, row: any, meta: Record<string, un
   }
 }
 
-// deno-lint-ignore no-explicit-any
-async function markSent(supabase: any, id: string) {
+async function markSent(supabase: SupabaseClient, id: string) {
   await supabase.from('rh_notifications').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', id);
 }
-// deno-lint-ignore no-explicit-any
-async function markFailed(supabase: any, id: string, meta: unknown, reason: string) {
+async function markFailed(supabase: SupabaseClient, id: string, meta: unknown, reason: string) {
   await supabase.from('rh_notifications')
     .update({ status: 'failed', metadata: { ...(meta as Record<string, unknown> || {}), error: reason } })
     .eq('id', id);

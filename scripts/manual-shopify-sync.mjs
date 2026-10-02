@@ -6,7 +6,8 @@
  * without depending on the broken edge-function cron.
  *
  * What it does:
- *   1) Reads access_token + shopDomain from tenants.settings.shopifyIntegration
+ *   1) Reads shopDomain from tenants.settings.shopifyIntegration and the access
+ *      token from tenant_secrets (provider 'shopify')
  *   2) GET /orders.json?status=any&created_at_min=… from Shopify Admin API
  *   3) Upserts commerce_orders (REAL total_price from Shopify, not item sum)
  *   4) Deletes + re-inserts commerce_order_items linked to the order
@@ -57,8 +58,10 @@ const SINCE = '2026-04-01T00:00:00Z';
 // 1) Load Shopify creds
 const tenantRow = await db('GET', `/rest/v1/tenants?select=settings&id=eq.${TENANT}`);
 const integ = tenantRow[0].settings.shopifyIntegration;
+// Since migration 20261001b the access token lives in tenant_secrets (service role only).
+const secretRows = await db('GET', `/rest/v1/tenant_secrets?select=secrets&provider=eq.shopify&tenant_id=eq.${TENANT}`);
 const SHOP = integ.shopDomain;
-const TOKEN = integ.accessToken;
+const TOKEN = secretRows?.[0]?.secrets?.accessToken;
 const API_VERSION = integ.apiVersion || '2024-10';
 
 console.log(`Shop: ${SHOP}, API: ${API_VERSION}`);

@@ -210,7 +210,7 @@ export async function createIdeaInvite(params: {
     if (typeof trigger === 'function') {
       await trigger(tenantId, 'feedback_idea_invite', {
         customerName: params.partnerName,
-        customerEmail: params.partnerEmail,
+        recipientEmail: params.partnerEmail,
         feedbackUrl: inviteUrl,
       });
     }

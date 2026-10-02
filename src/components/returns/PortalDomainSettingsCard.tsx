@@ -118,7 +118,9 @@ export function PortalDomainSettingsCard({
 
     const saveResult = await updatePortalDomainSettings(domainSettings);
     if (!saveResult.success) {
-      showStatus(saveResult.error || 'Failed to save', 'error');
+      // Server-side uniqueness guard (migration 20261001b, code 23505).
+      const domainTaken = /portal domain already in use/i.test(saveResult.error || '');
+      showStatus(domainTaken ? t('This domain is already used by another account.') : (saveResult.error || 'Failed to save'), 'error');
       setIsRegistering(false);
       return;
     }

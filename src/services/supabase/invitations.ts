@@ -9,7 +9,35 @@ import { invokeEdgeFunction } from '@/lib/edge-function';
 import type { Invitation } from '@/types/database';
 
 type WriteResult = { success: boolean; error?: string };
-type InviteResult = WriteResult & { emailSent?: boolean; userAlreadyExists?: boolean };
+type InviteResult = WriteResult & {
+  emailSent?: boolean;
+  userAlreadyExists?: boolean;
+  /** Interpolation values for `error` when it is a translation key (settings ns). */
+  errorParams?: Record<string, number | string>;
+};
+
+export const SEAT_LIMIT_ERROR = 'User limit reached ({{current}}/{{limit}}). Upgrade your plan to invite more users.';
+export const INVITE_RATE_LIMIT_ERROR = 'Too many invitations. Please try again later.';
+
+/** Map structured invite-user errors (403 seat_limit, 429 rate_limited). */
+function mapInviteError(fnError: Error): InviteResult | null {
+  const body = (fnError as Error & { body?: unknown }).body as
+    | { error?: string; current?: number; limit?: number }
+    | null
+    | undefined;
+  const code = body?.error ?? fnError.message;
+  if (code === 'seat_limit') {
+    return {
+      success: false,
+      error: SEAT_LIMIT_ERROR,
+      errorParams: { current: body?.current ?? 0, limit: body?.limit ?? 0 },
+    };
+  }
+  if (code === 'rate_limited') {
+    return { success: false, error: INVITE_RATE_LIMIT_ERROR };
+  }
+  return null;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformInvitation(row: any): Invitation {
@@ -84,6 +112,20 @@ export async function createInvitation(invitation: {
   );
 
   if (fnError) {
+    const mapped = mapInviteError(fnError);
+    if (mapped) {
+      // The server refused the invitation (seat limit / rate limit): withdraw
+      // the row we just inserted so it does not linger as "pending".
+      if (mapped.error === SEAT_LIMIT_ERROR) {
+        await supabase
+          .from('invitations')
+          .update({ status: 'cancelled' })
+          .eq('tenant_id', tenantId)
+          .eq('email', invitation.email)
+          .eq('status', 'pending');
+      }
+      return mapped;
+    }
     // Invitation record exists but email failed — still return success with warning
     console.error('invite-user edge function error:', fnError);
     return { success: true, emailSent: false, userAlreadyExists: false };
@@ -139,6 +181,8 @@ export async function resendInvitation(id: string): Promise<InviteResult> {
   );
 
   if (fnError) {
+    const mapped = mapInviteError(fnError);
+    if (mapped) return mapped;
     console.error('invite-user edge function error (resend):', fnError);
     return { success: true, emailSent: false, userAlreadyExists: false };
   }

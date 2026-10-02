@@ -463,7 +463,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     <Button
                       type="button"
                       variant="link"
-                      className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+                      className="inline-flex min-h-11 items-center px-1 h-auto text-xs text-muted-foreground hover:text-primary"
                       onClick={() => setCurrentView('forgot')}
                     >
                       {t('Forgot password?')}
@@ -488,7 +488,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               {currentView === 'signin' ? t("Don't have an account?") : t("Already have an account?")}{' '}
               <Button
                 variant="link"
-                className="p-0 h-auto text-primary"
+                className="inline-flex min-h-11 items-center px-1 h-auto text-primary"
                 onClick={() => setCurrentView(currentView === 'signin' ? 'signup' : 'signin')}
               >
                 {currentView === 'signin' ? t('Sign Up') : t('Sign In')}

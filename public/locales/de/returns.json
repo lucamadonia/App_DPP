@@ -1196,5 +1196,10 @@
   "Unresolved for days": "Seit Tagen offen",
   "Measured from return creation. Closed returns are excluded.": "Gemessen ab Erstellung der Retoure. Abgeschlossene Retouren sind ausgeschlossen.",
   "Runs once per exceeded ticket resolution deadline.": "Wird einmal pro überschrittener Lösungsfrist eines Tickets ausgeführt.",
-  "Time zone": "Zeitzone"
+  "Time zone": "Zeitzone",
+  "Please enter the email address you used for this return.": "Bitte gib die E-Mail-Adresse ein, die du für diese Retoure verwendet hast.",
+  "Too many attempts. Please try again later.": "Zu viele Versuche. Bitte versuche es später erneut.",
+  "Your return could not be submitted. Please try again later.": "Deine Retoure konnte nicht übermittelt werden. Bitte versuche es später erneut.",
+  "This portal does not exist or is no longer available. Please check the link you received from the shop.": "Dieses Portal existiert nicht oder ist nicht mehr verfügbar. Bitte prüfen Sie den Link, den Sie vom Shop erhalten haben.",
+  "This domain is already used by another account.": "Diese Domain wird bereits von einem anderen Konto verwendet."
 }

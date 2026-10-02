@@ -186,7 +186,6 @@ export {
   deactivateUser,
   reactivateUser,
   getAdminCount,
-  inviteUser,
   removeUserFromTenant,
   type Profile,
 } from './profiles';
@@ -444,7 +443,9 @@ export {
   publicCreateBatch,
   publicMarkDataRequestSubmitted,
   publicMarkDataRequestInProgress,
+  verifySupplierDataRequestPassword,
 } from './supplier-data-portal';
+export type { SupplierDataPasswordCheck } from './supplier-data-portal';
 
 // Market Entry Requirements
 export {

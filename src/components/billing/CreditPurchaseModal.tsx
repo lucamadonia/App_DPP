@@ -20,7 +20,7 @@ import { CREDIT_PACKS, type CreditPack } from '@/types/billing';
 import { createCheckoutSession } from '@/services/supabase/billing';
 import { getCreditPackPriceId } from '@/config/stripe-prices';
 import { getAuthOrigin } from '@/lib/platform';
-import { openCheckoutUrl, iosHidesPurchases } from '@/lib/checkout';
+import { openCheckoutUrl, nativeHidesPurchases } from '@/lib/checkout';
 
 interface CreditPurchaseModalProps {
   open: boolean;
@@ -74,10 +74,11 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
     }
   };
 
-  // No purchase path on iOS — see iosHidesPurchases() and App Store 3.1.1.
+  // No purchase path in the native apps — see nativeHidesPurchases()
+  // (App Store 3.1.1 / Google Play Payments policy).
   // Rendering nothing is deliberate: the callers that open this modal are
   // themselves hidden in that build, so this is a second line of defence.
-  if (iosHidesPurchases()) return null;
+  if (nativeHidesPurchases()) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

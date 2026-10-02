@@ -8,7 +8,8 @@
  *  3. Does our local cache of registered webhooks match?
  *  4. Have any webhooks been arriving lately, and did they pass HMAC?
  *
- * Reads tenant credentials from `tenants.settings.shopifyIntegration` via the
+ * Reads tenant settings from `tenants.settings.shopifyIntegration` and the access
+ * token from `tenant_secrets` (provider 'shopify') via the
  * service role key in `.env`. Edit `TENANT_ID` below to point at the tenant
  * you want to inspect. Output is plain text — pipe to `more` on Windows or
  * `less` on macOS/Linux for long results.
@@ -39,7 +40,11 @@ if (!tenant?.[0]) {
   console.log(`No tenant found for id ${TENANT_ID}`);
   process.exit(1);
 }
-const integ = tenant[0].settings?.shopifyIntegration;
+// Since migration 20261001b the access token lives in tenant_secrets (service role only).
+const secretRows = await db(`/rest/v1/tenant_secrets?select=secrets&provider=eq.shopify&tenant_id=eq.${TENANT_ID}`);
+const integ = tenant[0].settings?.shopifyIntegration
+  ? { ...tenant[0].settings.shopifyIntegration, accessToken: secretRows?.[0]?.secrets?.accessToken }
+  : undefined;
 if (!integ?.accessToken) {
   console.log(`Tenant ${tenant[0].name}: no Shopify integration configured`);
   process.exit(0);

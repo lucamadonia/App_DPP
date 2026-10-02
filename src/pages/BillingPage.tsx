@@ -42,7 +42,7 @@ import type { BillingPlan, ModuleId, BillingInvoice } from '@/types/billing';
 import { MODULE_CONFIGS } from '@/types/billing';
 import { getPlanPriceId, getModulePriceId } from '@/config/stripe-prices';
 import { getAuthOrigin } from '@/lib/platform';
-import { openCheckoutUrl, iosHidesPurchases } from '@/lib/checkout';
+import { openCheckoutUrl, nativeHidesPurchases } from '@/lib/checkout';
 
 export function BillingPage() {
   const { t, i18n } = useTranslation('billing');
@@ -212,11 +212,11 @@ export function BillingPage() {
   const currentPlan = entitlements.plan;
   const allModuleIds = Object.keys(MODULE_CONFIGS) as ModuleId[];
 
-  // App Store guideline 3.1.1: digital goods must go through In-App Purchase.
-  // Rather than implementing IAP for plans and credits, the iOS build shows the
-  // current plan and credit balance only — no prices, no upgrade paths, no
-  // checkout. Plans are managed on the web. Android keeps Stripe.
-  if (iosHidesPurchases()) {
+  // App Store guideline 3.1.1 / Google Play Payments policy: digital goods must
+  // go through store billing. Rather than implementing it for plans and credits,
+  // the native builds (iOS and Android) show the current plan and credit balance
+  // only — no prices, no upgrade paths, no checkout. Plans are managed on the web.
+  if (nativeHidesPurchases()) {
     return (
       <div className="space-y-6">
         <div>

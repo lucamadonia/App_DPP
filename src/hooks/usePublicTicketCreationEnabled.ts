@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { TenantSettings } from '@/types/database';
+import { getPublicTenantById } from '@/services/supabase/public-tenant';
 
 interface UsePublicTicketCreationEnabledResult {
   enabled: boolean;
@@ -25,21 +24,10 @@ export function usePublicTicketCreationEnabled(tenantId: string | null | undefin
       }
 
       try {
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('settings')
-          .eq('id', tenantId)
-          .single();
-
-        if (tenant?.settings) {
-          // Non-null by the guard above; the cast is what stops TS narrowing.
-          const settings = tenant.settings as TenantSettings;
-          const customerPortalSettings = settings.returnsHub?.customerPortal;
-          const createTicketsEnabled = customerPortalSettings?.features?.createTickets ?? false;
-          setEnabled(createTicketsEnabled);
-        } else {
-          setEnabled(false);
-        }
+        // Public pages cannot read `tenants` directly; use the allow-list RPC.
+        const tenant = await getPublicTenantById(tenantId);
+        const customerPortalSettings = tenant?.settings?.returnsHub?.customerPortal;
+        setEnabled(customerPortalSettings?.features?.createTickets ?? false);
       } catch (error) {
         console.error('Error checking public ticket creation feature:', error);
         setEnabled(false);

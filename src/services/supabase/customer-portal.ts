@@ -12,6 +12,7 @@ import type { CustomerPortalProfile, CustomerDashboardStats, CustomerReturnInput
 import { generateReturnNumber, generateTicketNumber } from '@/lib/return-number';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 import { getAuthOrigin } from '@/lib/platform';
+import { getPublicTenantById, getPublicTenantBySlug } from './public-tenant';
 
 // ============================================
 // AUTH HELPERS
@@ -379,15 +380,9 @@ export async function createCustomerReturn(
   const ctx = await getCustomerContext();
   if (!ctx) return { success: false, error: 'Not authenticated' };
 
-  // Get tenant prefix
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('id', ctx.tenantId)
-    .single();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prefix = (tenant?.settings as any)?.returnsHub?.prefix || 'RET';
+  // Get tenant prefix (customer accounts cannot read `tenants` directly)
+  const tenant = await getPublicTenantById(ctx.tenantId);
+  const prefix = tenant?.settings.returnsHub?.prefix || 'RET';
   const returnNumber = generateReturnNumber(prefix);
 
   // Get customer email for metadata
@@ -841,11 +836,7 @@ export interface CustomerPortalBrandingResult {
 }
 
 export async function getCustomerPortalBranding(tenantSlug: string): Promise<CustomerPortalBrandingResult | null> {
-  const { data } = await supabaseAnon
-    .from('tenants')
-    .select('id, name, settings')
-    .eq('slug', tenantSlug)
-    .single();
+  const data = await getPublicTenantBySlug(tenantSlug);
 
   if (!data) return null;
 
@@ -882,18 +873,8 @@ export async function getCustomerPortalBranding(tenantSlug: string): Promise<Cus
  * Check if public ticket creation is enabled for a tenant
  */
 export async function isPublicTicketCreationEnabled(tenantId: string): Promise<boolean> {
-  const { data: tenant } = await supabaseAnon
-    .from('tenants')
-    .select('settings')
-    .eq('id', tenantId)
-    .single();
-
-  if (!tenant?.settings) return false;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = tenant.settings as any;
-  const customerPortalSettings = settings.returnsHub?.customerPortal;
-  return customerPortalSettings?.features?.createTickets ?? false;
+  const tenant = await getPublicTenantById(tenantId);
+  return tenant?.settings.returnsHub?.customerPortal?.features?.createTickets ?? false;
 }
 
 /**
@@ -1051,14 +1032,10 @@ export async function createPublicReturnTicket(params: {
   const { tenantSlug, email, subject, message, returnNumber } = params;
 
   // 1. Resolve tenant ID from slug
-  const { data: tenant, error: tenantError } = await supabaseAnon
-    .from('tenants')
-    .select('id')
-    .eq('slug', tenantSlug)
-    .single();
+  const tenant = await getPublicTenantBySlug(tenantSlug);
 
-  if (tenantError || !tenant) {
-    console.error('Error resolving tenant:', tenantError);
+  if (!tenant) {
+    console.error('Error resolving tenant for slug:', tenantSlug);
     return { success: false, error: 'Portal not found' };
   }
 
@@ -1106,18 +1083,13 @@ export async function createPublicReturnTicket(params: {
   let returnId: string | undefined = undefined;
 
   if (returnNumber) {
-    const { data: returnRecord, error: returnError } = await supabaseAnon
-      .from('rh_returns')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .eq('return_number', returnNumber)
-      .single();
-
-    if (returnError) {
-      console.warn('Return not found for return_number:', returnNumber, returnError);
+    // anon has no table access to rh_returns since migration 20261001c; the RPC
+    // also enforces that this e-mail owns the return.
+    const { publicResolveReturnId } = await import('./returns');
+    returnId = await publicResolveReturnId(returnNumber, normalizedEmail, tenantId);
+    if (!returnId) {
       // Continue without linking - customer might have typo or return doesn't exist
-    } else if (returnRecord) {
-      returnId = returnRecord.id;
+      console.warn('Return not linked (not found or e-mail mismatch):', returnNumber);
     }
   }
 

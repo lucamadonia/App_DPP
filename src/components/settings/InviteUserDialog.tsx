@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mail, Shield, Loader2, AlertTriangle, Info } from 'lucide-react';
+import { Mail, Shield, Loader2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,43 +33,33 @@ export function InviteUserDialog({ open, onOpenChange, onInvited }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [info, setInfo] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!email) return;
     setIsSubmitting(true);
     setError(null);
     setInfo(null);
-    setWarning(null);
 
     const result = await createInvitation({ email, role, name: name || undefined, message: message || undefined });
 
     if (result.success) {
-      if (result.userAlreadyExists) {
-        setInfo(t('User already has an account and was added to your organization directly.'));
-      } else if (result.emailSent === false) {
-        setWarning(t('Invitation created, but the email could not be sent. The user can still register manually.'));
-      }
+      // invite-user answers identically for new and existing accounts (no
+      // account-existence oracle), so the dialog shows one neutral message.
+      setInfo(t('Invitation saved. If this address does not have an account yet, the person will receive an email. People who already have an account cannot join through an invitation yet. Please contact support.'));
 
       setEmail('');
       setRole('viewer');
       setName('');
       setMessage('');
 
-      // Show feedback briefly before closing if there's a notice
-      if (result.userAlreadyExists || result.emailSent === false) {
-        setTimeout(() => {
-          onOpenChange(false);
-          onInvited();
-          setInfo(null);
-          setWarning(null);
-        }, 3000);
-      } else {
+      // Show the notice briefly before closing
+      setTimeout(() => {
         onOpenChange(false);
         onInvited();
-      }
+        setInfo(null);
+      }, 3000);
     } else {
-      setError(result.error || t('Failed to send invitation'));
+      setError(result.error ? t(result.error, result.errorParams) : t('Failed to send invitation'));
     }
     setIsSubmitting(false);
   };
@@ -152,12 +142,6 @@ export function InviteUserDialog({ open, onOpenChange, onInvited }: Props) {
             </div>
           )}
 
-          {warning && (
-            <div className="flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-200">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              {warning}
-            </div>
-          )}
         </div>
 
         <DialogFooter>

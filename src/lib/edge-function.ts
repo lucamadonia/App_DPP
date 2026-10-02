@@ -102,9 +102,13 @@ export async function invokeEdgeFunction<T = unknown>(
     return { data: retryResult.data as T, error: null };
   }
 
-  // Non-401 error
+  // Non-401 error. Keep HTTP status and parsed body so callers can map
+  // structured errors (e.g. { error: 'seat_limit', current, limit }).
   if (result.error) {
-    return { data: null, error: new Error(result.error) };
+    return {
+      data: null,
+      error: Object.assign(new Error(result.error), { status: result.status, body: result.data as unknown }),
+    };
   }
 
   return { data: result.data as T, error: null };

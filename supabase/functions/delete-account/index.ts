@@ -86,7 +86,7 @@
  * appleid.apple.com > "Sign in with Apple".
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { deleteOrganization } from './organization.ts';
 import { readAppleTokenInput, revokeAppleTokens, type AppleTokenInput } from './apple-revoke.ts';
 
@@ -309,8 +309,7 @@ Deno.serve(async (req) => {
  * dialog into "delete organisation and account" mode.
  */
 async function handleLastAdmin(
-  // deno-lint-ignore no-explicit-any
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseClient,
   userId: string,
   tenantId: string,
   opts: { wantsOrganizationDeletion: boolean; confirmOrganizationName: string },

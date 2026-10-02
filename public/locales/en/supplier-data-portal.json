@@ -172,5 +172,8 @@
   "{{count}} products": "{{count}} products",
   "Product {{current}} of {{total}}": "Product {{current}} of {{total}}",
   "{{filled}} of {{total}} fields across {{count}} products": "{{filled}} of {{total}} fields across {{count}} products",
-  "Loading products...": "Loading products..."
+  "Loading products...": "Loading products...",
+  "Too many failed attempts. Please try again in 15 minutes.": "Too many failed attempts. Please try again in 15 minutes.",
+  "This data request is no longer active": "This data request is no longer active",
+  "The password could not be checked. Please try again.": "The password could not be checked. Please try again."
 }

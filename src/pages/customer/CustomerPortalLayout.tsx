@@ -15,10 +15,7 @@ import { FONT_FAMILY_MAP, GOOGLE_FONT_URLS, BORDER_RADIUS_MAP } from '@/lib/dpp-
 function CustomerPortalContent() {
   const { t, i18n } = useTranslation('customer-portal');
   const portal = useCustomerPortal();
-  const { tenantSlug, tenantName, branding, isAuthenticated, isLoading } = portal;
-  // `tenantNotFound` is exposed by CustomerPortalContext once the provider
-  // tracks an unresolved slug; read defensively so this layout works either way.
-  const tenantNotFound = 'tenantNotFound' in portal && portal.tenantNotFound === true;
+  const { tenantSlug, tenantName, branding, isAuthenticated, isLoading, tenantNotFound } = portal;
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Portal branding (page/header/card colours) is designed for light

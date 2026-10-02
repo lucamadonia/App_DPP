@@ -5,7 +5,7 @@
  * Pattern: shopify-sync (CORS → JWT → Tenant → Billing Gate → Dispatch)
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   getTenantSecrets,
   mergeTenantSecrets,
@@ -1793,8 +1793,7 @@ function normalizeTrackingEvents(raw: any): Array<{ timestamp: string; location?
  * cached snapshot (possibly []) instead.
  */
 async function claimPublicTrackingPoll(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: SupabaseClient,
   table: 'rh_returns' | 'wh_shipments',
   rowId: string,
   polledAt: string | null | undefined,
@@ -2017,7 +2016,7 @@ function getDHLReturnsBaseUrl(settings: any): string {
  * QR / PDF / both via labelType. If a label already exists, it's cleared first
  * so the customer can switch format (the abandoned DHL label is free/unused).
  */
-async function handlePublicCreateReturnLabel(supabase: any, params?: Record<string, unknown>) {
+async function handlePublicCreateReturnLabel(supabase: SupabaseClient, params?: Record<string, unknown>) {
   const returnNumber = String(params?.return_number || params?.returnNumber || '').trim();
   const email = String(params?.email || '').trim().toLowerCase();
   const ALLOWED = ['SHIPMENT_LABEL', 'QR_LABEL', 'BOTH'];
@@ -2060,7 +2059,7 @@ async function handlePublicCreateReturnLabel(supabase: any, params?: Record<stri
   return await handleCreateReturnLabel(supabase, ret.tenant_id, { returnId: ret.id, labelType });
 }
 
-async function handleCreateReturnLabel(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+async function handleCreateReturnLabel(supabase: SupabaseClient, tenantId: string, params?: Record<string, unknown>) {
   if (!params?.returnId) return json({ error: 'Missing returnId' }, 400);
   const returnId = params.returnId as string;
 

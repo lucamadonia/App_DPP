@@ -248,7 +248,7 @@ export async function resendFeedbackRequest(id: string): Promise<{ success: bool
     const origin = getPublicBaseUrl();
     await trigger(req.tenant_id, 'feedback_reminder', {
       customerName: req.customer_name,
-      customerEmail: req.customer_email,
+      recipientEmail: req.customer_email,
       feedbackUrl: `${origin}/feedback/${req.token}`,
       shipmentNumber: req.wh_shipments?.shipment_number,
     });

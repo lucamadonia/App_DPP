@@ -2,6 +2,7 @@ import { createContext, useEffect, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { getCustomerPortalBranding, getCustomerProfile, getCustomerReturnReasons } from '@/services/supabase/customer-portal';
+import { lookupPublicTenantBySlug } from '@/services/supabase/public-tenant-lookup';
 import { applyPrimaryColor, applyFavicon } from '@/lib/dynamic-theme';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 import type { CustomerPortalProfile } from '@/types/customer-portal';
@@ -25,6 +26,8 @@ export interface CustomerPortalContextType {
   portalSettings: CustomerPortalSettings;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True once the slug is known not to resolve to a tenant (definite empty result). */
+  tenantNotFound: boolean;
   customerProfile: CustomerPortalProfile | null;
   reasons: RhReturnReason[];
   refreshProfile: () => Promise<boolean>;
@@ -48,6 +51,7 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
   const [portalSettings, setPortalSettings] = useState<CustomerPortalSettings>(DEFAULT_CUSTOMER_PORTAL_SETTINGS);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [tenantNotFound, setTenantNotFound] = useState(false);
   const [customerProfile, setCustomerProfile] = useState<CustomerPortalProfile | null>(null);
   const [reasons, setReasons] = useState<RhReturnReason[]>([]);
 
@@ -95,12 +99,20 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
       }
 
       if (!tenantSlug) {
+        setTenantNotFound(true);
         setIsLoading(false);
         return;
       }
       try {
         const result = await getCustomerPortalBranding(tenantSlug);
+        if (!result) {
+          // getCustomerPortalBranding() returns null for an unknown slug AND
+          // for a failed request; only a definite empty result is "not found".
+          const lookup = await lookupPublicTenantBySlug(tenantSlug);
+          setTenantNotFound(lookup.status === 'not_found');
+        }
         if (result) {
+          setTenantNotFound(false);
           setTenantId(result.tenantId);
           setTenantName(result.name);
           setBranding(result.branding);
@@ -168,6 +180,7 @@ export function CustomerPortalProvider({ children, tenantOverride }: CustomerPor
         portalSettings,
         isAuthenticated,
         isLoading,
+        tenantNotFound,
         customerProfile,
         reasons,
         refreshProfile,

@@ -45,7 +45,11 @@ for (const t of tenants) {
   p('  shopDomain:', si.shopDomain);
   p('  shopName:', si.shopName);
   p('  apiVersion:', si.apiVersion);
-  p('  accessToken present:', !!si.accessToken);
+  // Since migration 20261001b the token lives in tenant_secrets (service role only).
+  const { data: secretRow } = await supabase
+    .from('tenant_secrets').select('secrets')
+    .eq('tenant_id', t.id).eq('provider', 'shopify').maybeSingle();
+  p('  accessToken present:', !!secretRow?.secrets?.accessToken);
   p('  connectedAt:', si.connectedAt);
   console.log('  syncConfig:', JSON.stringify(si.syncConfig, null, 2).split('\n').map(l => '    ' + l).join('\n'));
 

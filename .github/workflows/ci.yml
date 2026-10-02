@@ -119,7 +119,7 @@ jobs:
       # --max-warnings pins the count. Adding one more is a build failure, so the
       # number can only go down. Lower it whenever you fix a batch.
       - name: Lint
-        run: npx eslint . --max-warnings 386
+        run: npx eslint . --max-warnings 385
 
       - name: Unit tests
         run: npm run test:run

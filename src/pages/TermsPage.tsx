@@ -32,11 +32,11 @@ export function TermsPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50 pt-[var(--safe-top)]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link
             to="/landing"
-            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+            className="flex min-h-11 items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             {t('backToHome')}
@@ -44,7 +44,7 @@ export function TermsPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={cycleLang}
-              className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+              className="flex min-h-11 items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
             >
               <Globe className="h-4 w-4" />
               {LANG_LABELS[i18n.language] ?? 'English'}

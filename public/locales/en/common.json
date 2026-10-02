@@ -183,7 +183,6 @@
   "Type {{email}} to confirm.": "Type {{email}} to confirm.",
   "Delete permanently": "Delete permanently",
   "Deleting...": "Deleting...",
-  "You are the last administrator of this organisation. Assign the administrator role to another user before deleting your account.": "You are the last administrator of this organisation. Assign the administrator role to another user before deleting your account.",
   "The email address does not match.": "The email address does not match.",
   "No account was found for this session.": "No account was found for this session.",
   "The account could not be deleted. Please try again or contact support.": "The account could not be deleted. Please try again or contact support.",
@@ -205,5 +204,15 @@
   "Returns, support tickets and supplier data all live in the same account.": "Returns, support tickets and supplier data all live in the same account.",
   "You can replay this tour anytime under Help & Support.": "You can replay this tour anytime under Help & Support.",
   "Your profile data has already been removed. Only the login itself is left, and deleting it completes the process.": "Your profile data has already been removed. Only the login itself is left, and deleting it completes the process.",
-  "Continue": "Continue"
+  "Continue": "Continue",
+  "You are the last administrator of this organisation. Deleting your account also deletes the organisation.": "You are the last administrator of this organisation. Deleting your account also deletes the organisation.",
+  "Other users still belong to this organisation. Remove them under Settings > Users, or make one of them an administrator, before deleting the organisation.": "Other users still belong to this organisation. Remove them under Settings > Users, or make one of them an administrator, before deleting the organisation.",
+  "The organisation name does not match.": "The organisation name does not match.",
+  "Your subscription could not be cancelled, so nothing was deleted. Please try again or contact support.": "Your subscription could not be cancelled, so nothing was deleted. Please try again or contact support.",
+  "Delete organisation and account": "Delete organisation and account",
+  "The organisation {{name}} with all products, passports, documents, returns, tickets and files": "The organisation {{name}} with all products, passports, documents, returns, tickets and files",
+  "Customer portal accounts of your customers": "Customer portal accounts of your customers",
+  "Your subscription is cancelled immediately; there is no refund for the current period": "Your subscription is cancelled immediately; there is no refund for the current period",
+  "Invoices already issued remain with our payment provider because of statutory retention periods.": "Invoices already issued remain with our payment provider because of statutory retention periods.",
+  "Type the organisation name {{name}} to confirm.": "Type the organisation name {{name}} to confirm."
 }

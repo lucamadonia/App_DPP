@@ -8,6 +8,8 @@
  * with a service-role client.
  */
 
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 export type TenantSecretProvider = 'dhl' | 'internetmarke' | 'shopify';
 
 export interface DHLSecrets { apiKey?: string; username?: string; password?: string }
@@ -26,8 +28,7 @@ const ALLOWED_KEYS: Record<TenantSecretProvider, string[]> = {
 };
 
 /** Read one provider's secrets for a tenant. Returns {} when none stored. */
-// deno-lint-ignore no-explicit-any
-export async function getTenantSecrets<T = Record<string, string>>(supabase: any, tenantId: string, provider: TenantSecretProvider): Promise<T> {
+export async function getTenantSecrets<T = Record<string, string>>(supabase: SupabaseClient, tenantId: string, provider: TenantSecretProvider): Promise<T> {
   const { data, error } = await supabase
     .from('tenant_secrets')
     .select('secrets')
@@ -46,8 +47,7 @@ export async function getTenantSecrets<T = Record<string, string>>(supabase: any
  * non-empty string value are written, so a partial form save never wipes a
  * stored secret. Returns an error message or null.
  */
-// deno-lint-ignore no-explicit-any
-export async function mergeTenantSecrets(supabase: any, tenantId: string, provider: TenantSecretProvider, values: Record<string, unknown>): Promise<string | null> {
+export async function mergeTenantSecrets(supabase: SupabaseClient, tenantId: string, provider: TenantSecretProvider, values: Record<string, unknown>): Promise<string | null> {
   const patch: Record<string, string> = {};
   for (const key of ALLOWED_KEYS[provider]) {
     const v = values[key];
@@ -70,8 +70,7 @@ export async function mergeTenantSecrets(supabase: any, tenantId: string, provid
 }
 
 /** Tenant IDs that have stored secrets for a provider (cron fan-out). */
-// deno-lint-ignore no-explicit-any
-export async function tenantIdsWithSecrets(supabase: any, provider: TenantSecretProvider, requiredKey: string): Promise<string[]> {
+export async function tenantIdsWithSecrets(supabase: SupabaseClient, provider: TenantSecretProvider, requiredKey: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('tenant_secrets')
     .select('tenant_id, secrets')

@@ -183,7 +183,6 @@
   "Type {{email}} to confirm.": "Geben Sie zur Bestätigung {{email}} ein.",
   "Delete permanently": "Endgültig löschen",
   "Deleting...": "Wird gelöscht...",
-  "You are the last administrator of this organisation. Assign the administrator role to another user before deleting your account.": "Sie sind die letzte Administratorin bzw. der letzte Administrator dieser Organisation. Weisen Sie die Administratorrolle einer anderen Person zu, bevor Sie Ihr Konto löschen.",
   "The email address does not match.": "Die E-Mail-Adresse stimmt nicht überein.",
   "No account was found for this session.": "Für diese Sitzung wurde kein Konto gefunden.",
   "The account could not be deleted. Please try again or contact support.": "Das Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut oder wenden Sie sich an den Support.",
@@ -205,5 +204,15 @@
   "Returns, support tickets and supplier data all live in the same account.": "Retouren, Support-Tickets und Lieferantendaten laufen im selben Konto.",
   "You can replay this tour anytime under Help & Support.": "Den Rundgang findest du jederzeit unter Hilfe & Support.",
   "Your profile data has already been removed. Only the login itself is left, and deleting it completes the process.": "Ihre Profildaten wurden bereits entfernt. Es besteht nur noch der Zugang selbst; mit dem Löschen wird der Vorgang abgeschlossen.",
-  "Continue": "Weiter"
+  "Continue": "Weiter",
+  "You are the last administrator of this organisation. Deleting your account also deletes the organisation.": "Sie sind die letzte Administratorin bzw. der letzte Administrator dieser Organisation. Mit Ihrem Konto wird auch die Organisation gelöscht.",
+  "Other users still belong to this organisation. Remove them under Settings > Users, or make one of them an administrator, before deleting the organisation.": "Dieser Organisation gehören noch weitere Benutzer an. Entfernen Sie diese unter Einstellungen > Benutzer oder machen Sie eine Person zur Administratorin bzw. zum Administrator, bevor Sie die Organisation löschen.",
+  "The organisation name does not match.": "Der Name der Organisation stimmt nicht überein.",
+  "Your subscription could not be cancelled, so nothing was deleted. Please try again or contact support.": "Ihr Abonnement konnte nicht gekündigt werden, daher wurde nichts gelöscht. Bitte versuchen Sie es erneut oder wenden Sie sich an den Support.",
+  "Delete organisation and account": "Organisation und Konto löschen",
+  "The organisation {{name}} with all products, passports, documents, returns, tickets and files": "Die Organisation {{name}} mit allen Produkten, Pässen, Dokumenten, Retouren, Tickets und Dateien",
+  "Customer portal accounts of your customers": "Kundenportal-Konten Ihrer Kundinnen und Kunden",
+  "Your subscription is cancelled immediately; there is no refund for the current period": "Ihr Abonnement wird sofort gekündigt; für den laufenden Zeitraum erfolgt keine Erstattung",
+  "Invoices already issued remain with our payment provider because of statutory retention periods.": "Bereits ausgestellte Rechnungen verbleiben aufgrund gesetzlicher Aufbewahrungsfristen bei unserem Zahlungsanbieter.",
+  "Type the organisation name {{name}} to confirm.": "Geben Sie zur Bestätigung den Namen der Organisation {{name}} ein."
 }

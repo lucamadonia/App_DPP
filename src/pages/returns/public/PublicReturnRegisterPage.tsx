@@ -188,6 +188,7 @@ export function PublicReturnRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [returnNumber, setReturnNumber] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const canProceed = () => {
     switch (state.step) {
@@ -242,6 +243,7 @@ export function PublicReturnRegisterPage() {
   const handleSubmit = async () => {
     if (!tenantSlug) return;
     setSubmitting(true);
+    setSubmitError('');
 
     const result = await publicCreateReturn(tenantSlug, {
       orderNumber: state.orderNumber || undefined,
@@ -275,6 +277,9 @@ export function PublicReturnRegisterPage() {
         sendReturnCreatedEvent(result.returnNumber);
       }
       setSubmitted(true);
+    } else {
+      // e.g. rate-limited or rejected by public_create_return
+      setSubmitError(t('Your return could not be submitted. Please try again later.'));
     }
     setSubmitting(false);
   };
@@ -369,7 +374,7 @@ export function PublicReturnRegisterPage() {
       {/* Back to Portal */}
       <button
         onClick={() => navigate(portalPath)}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
         {t('Back to Overview')}
@@ -392,6 +397,12 @@ export function PublicReturnRegisterPage() {
           </WizardStepTransition>
         </CardContent>
       </Card>
+
+      {submitError && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {submitError}
+        </p>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between mt-6">

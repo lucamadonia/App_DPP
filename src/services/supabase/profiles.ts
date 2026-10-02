@@ -140,43 +140,6 @@ export async function updateCurrentProfile(
 }
 
 /**
- * Invite a new user to the tenant
- * Note: This creates the profile entry, the actual invite is handled by Supabase Auth
- */
-export async function inviteUser(
-  email: string,
-  role: 'admin' | 'editor' | 'viewer' = 'viewer'
-): Promise<{ success: boolean; error?: string }> {
-  const tenantId = await getCurrentTenantId();
-  if (!tenantId) {
-    return { success: false, error: 'No tenant set' };
-  }
-
-  // Billing quota check
-  const { checkQuota } = await import('./billing');
-  const quota = await checkQuota('admin_user', { tenantId });
-  if (!quota.allowed) {
-    return { success: false, error: `Admin user limit reached (${quota.current}/${quota.limit}). Please upgrade your plan.` };
-  }
-
-  // Use Supabase Auth to invite the user
-  const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-    data: {
-      tenant_id: tenantId,
-      role: role,
-    },
-  });
-
-  if (inviteError) {
-    // If admin API is not available, try regular invite
-    console.warn('Admin invite failed, user may need to sign up manually:', inviteError);
-    return { success: false, error: 'Einladungsfunktion nicht verfügbar. Benutzer muss sich selbst registrieren.' };
-  }
-
-  return { success: true };
-}
-
-/**
  * Update a user's role with last-admin protection
  */
 export async function updateProfileRole(

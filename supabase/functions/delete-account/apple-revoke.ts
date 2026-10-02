@@ -72,7 +72,7 @@ export async function revokeAppleTokens(user: AuthUserLike, input: AppleTokenInp
   try {
     for (const clientId of clientIds) {
       const clientSecret = await buildClientSecret(teamId, keyId, privateKey, clientId);
-      const grant = input.appleAuthorizationCode
+      const grant: Record<string, string> = input.appleAuthorizationCode
         ? { grant_type: 'authorization_code', code: input.appleAuthorizationCode }
         : { grant_type: 'refresh_token', refresh_token: input.appleRefreshToken! };
 

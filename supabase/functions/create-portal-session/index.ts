@@ -15,6 +15,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
+import { isAllowedRedirectUrl } from '../_shared/stripe-catalog.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -72,12 +73,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'No Stripe customer found. Please subscribe first.' }, 400);
     }
 
-    const { returnUrl } = await req.json();
+    const body = await req.json().catch(() => ({} as { returnUrl?: unknown }));
+    const returnUrl = body?.returnUrl || req.headers.get('origin') || '';
+    // Only app origins: an unchecked return_url is an open redirect.
+    if (!isAllowedRedirectUrl(returnUrl)) {
+      return jsonResponse({ error: 'Redirect URL not allowed' }, 400);
+    }
 
     // Create portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: tenant.stripe_customer_id,
-      return_url: returnUrl || req.headers.get('origin') || '',
+      return_url: returnUrl as string,
     });
 
     return jsonResponse({ url: session.url });

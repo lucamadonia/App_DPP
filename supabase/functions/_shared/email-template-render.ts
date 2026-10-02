@@ -265,8 +265,8 @@ export function sanitizePublicText(raw: unknown, max: number): string {
       .replace(/(https?:\/\/|www\.)\S*/gi, ' ')
       .replace(/\S+@\S+/g, ' ')
       .replace(/\S+\.[a-z]{2,}\S*/gi, ' ');
-  // deno-lint-ignore no-control-regex
-  const noCtrl = String(raw ?? '').replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
+  // \p{Cc} = U+0000-U+001F and U+007F-U+009F (C0/C1 control characters).
+  const noCtrl = String(raw ?? '').replace(/\p{Cc}/gu, ' ');
   return once(once(noCtrl).replace(/[^\p{L}\p{N}_ .,;:!?()'/%+-]/gu, ' '))
     .replace(/\s+/g, ' ')
     .trim()

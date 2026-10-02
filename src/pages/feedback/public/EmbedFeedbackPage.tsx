@@ -119,15 +119,10 @@ export function EmbedFeedbackPage() {
   // Pull tenant name lazily (cosmetic only)
   useEffect(() => {
     if (!tenantSlug) return;
-    import('@/lib/supabase').then(({ supabase }) =>
-      supabase
-        .from('tenants')
-        .select('name')
-        .eq('slug', tenantSlug)
-        .single()
-        .then(({ data }) => {
-          if (data?.name) setTenantName(data.name);
-        }),
+    import('@/services/supabase/public-tenant').then(({ getPublicTenantBySlug }) =>
+      getPublicTenantBySlug(tenantSlug).then((t) => {
+        if (t?.name) setTenantName(t.name);
+      }),
     );
   }, [tenantSlug]);
 

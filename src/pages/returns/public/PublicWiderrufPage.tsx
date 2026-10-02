@@ -37,6 +37,7 @@ const COPY: Record<Lang, {
   doneReference: string;
   doneMail: string;
   error: string;
+  rateLimited: string;       // HTTP 429 (only unverified declarations)
 }> = {
   de: {
     heading: 'Vertrag widerrufen',
@@ -55,6 +56,7 @@ const COPY: Record<Lang, {
     doneReference: 'Vorgangsnummer',
     doneMail: 'Eine Eingangsbestätigung mit Datum und Uhrzeit ist an deine E-Mail-Adresse unterwegs.',
     error: 'Es ist ein Fehler aufgetreten. Bitte versuche es erneut.',
+    rateLimited: 'Zu viele Anfragen. Bitte versuche es später noch einmal.',
   },
   en: {
     heading: 'Withdraw from contract',
@@ -73,6 +75,7 @@ const COPY: Record<Lang, {
     doneReference: 'Reference',
     doneMail: 'An acknowledgement of receipt with date and time is on its way to your email address.',
     error: 'Something went wrong. Please try again.',
+    rateLimited: 'Too many requests. Please try again later.',
   },
 };
 
@@ -119,7 +122,8 @@ export function PublicWiderrufPage() {
       });
       const result = data as { success?: boolean; reference?: string } | null;
       if (fnError || !result?.success) {
-        setError(t.error);
+        const status = (fnError as { context?: { status?: number } } | null)?.context?.status;
+        setError(status === 429 ? t.rateLimited : t.error);
         return;
       }
       setReference(result.reference || '');

@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 // Restore-Script nach Disconnect/Reinstall:
 //   - Alle 10 Product-Mappings neu anlegen (auto_batch=true, is_active=true)
 //   - Location-Mapping für "Beim Steinernen Kreuz 19" wiederherstellen
-// Voraussetzung: der NEUE shpat_-Token ist bereits in tenants.settings.shopifyIntegration eingetragen
+// Voraussetzung: der NEUE shpat_-Token ist bereits in tenant_secrets (provider 'shopify') gespeichert
 
 const env = Object.fromEntries(
   readFileSync('.env', 'utf8').split(/\r?\n/).filter(l => l && !l.startsWith('#'))
@@ -39,7 +39,11 @@ const { data: tenant } = await supabase
   .from('tenants').select('id, settings').eq('slug', 'myfambliss_gmbh').maybeSingle();
 if (!tenant) { console.error('Tenant not found'); process.exit(1); }
 const tenantId = tenant.id;
-const sh = tenant.settings?.shopifyIntegration;
+// Since migration 20261001b the access token lives in tenant_secrets (service role only).
+const { data: secretRow } = await supabase
+  .from('tenant_secrets').select('secrets')
+  .eq('tenant_id', tenantId).eq('provider', 'shopify').maybeSingle();
+const sh = { ...(tenant.settings?.shopifyIntegration || {}), accessToken: secretRow?.secrets?.accessToken };
 if (!sh?.shopDomain || !sh?.accessToken) { console.error('Shopify not connected — erst im DPP verbinden'); process.exit(1); }
 if (!sh.accessToken.startsWith('shpat_')) {
   console.error(`FEHLER: Gespeicherter Token beginnt mit "${sh.accessToken.substring(0, 6)}", erwartet "shpat_".`);

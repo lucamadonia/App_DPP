@@ -14,7 +14,11 @@ const slug = 'myfambliss_gmbh';
 const { data: tenant } = await supabase.from('tenants').select('id, settings').eq('slug', slug).maybeSingle();
 if (!tenant) { console.error('Tenant not found'); process.exit(1); }
 
-const shopify = tenant.settings?.shopifyIntegration;
+// Since migration 20261001b the access token lives in tenant_secrets (service role only).
+const { data: secretRow } = await supabase
+  .from('tenant_secrets').select('secrets')
+  .eq('tenant_id', tenant.id).eq('provider', 'shopify').maybeSingle();
+const shopify = { ...(tenant.settings?.shopifyIntegration || {}), accessToken: secretRow?.secrets?.accessToken };
 if (!shopify?.shopDomain || !shopify?.accessToken) { console.error('Shopify not configured'); process.exit(1); }
 
 const apiVer = shopify.apiVersion || '2024-10';

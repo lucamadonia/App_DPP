@@ -1196,5 +1196,10 @@
   "Unresolved for days": "Unresolved for days",
   "Measured from return creation. Closed returns are excluded.": "Measured from return creation. Closed returns are excluded.",
   "Runs once per exceeded ticket resolution deadline.": "Runs once per exceeded ticket resolution deadline.",
-  "Time zone": "Time zone"
+  "Time zone": "Time zone",
+  "Please enter the email address you used for this return.": "Please enter the email address you used for this return.",
+  "Too many attempts. Please try again later.": "Too many attempts. Please try again later.",
+  "Your return could not be submitted. Please try again later.": "Your return could not be submitted. Please try again later.",
+  "This portal does not exist or is no longer available. Please check the link you received from the shop.": "This portal does not exist or is no longer available. Please check the link you received from the shop.",
+  "This domain is already used by another account.": "This domain is already used by another account."
 }

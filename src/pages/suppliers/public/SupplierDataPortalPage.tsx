@@ -69,11 +69,22 @@ import {
   publicSubmitBatchData,
   publicCreateBatch,
   publicMarkDataRequestSubmitted,
-  publicMarkDataRequestInProgress,
+  verifySupplierDataRequestPassword,
+  type SupplierDataPasswordCheck,
 } from '@/services/supabase/supplier-data-portal';
 import { PRODUCT_FIELD_GROUPS, BATCH_FIELD_GROUPS } from '@/lib/supplier-data-fields';
 import type { PublicSupplierDataRequestResult, FieldDefinition, FieldGroup } from '@/types/supplier-data-portal';
 import type { LucideIcon } from 'lucide-react';
+
+// ─── Password Error Messages ──────────────────────────────────────────────
+// Values are i18n keys of the 'supplier-data-portal' namespace
+const PASSWORD_ERROR_KEYS: Record<Exclude<SupplierDataPasswordCheck, 'ok'>, string> = {
+  invalid: 'Incorrect password',
+  locked: 'Too many failed attempts. Please try again in 15 minutes.',
+  inactive: 'This data request is no longer active',
+  expired: 'This data request has expired',
+  error: 'The password could not be checked. Please try again.',
+};
 
 // ─── Category Icon Map ────────────────────────────────────────────────────
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -556,7 +567,7 @@ export function SupplierDataPortalPage() {
 
   // Password gate
   const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
+  const [passwordError, setPasswordError] = useState<Exclude<SupplierDataPasswordCheck, 'ok'> | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordHash, setPasswordHash] = useState('');
 
@@ -653,13 +664,12 @@ export function SupplierDataPortalPage() {
     if (!requestInfo || !accessCode) return;
 
     const hash = await hashPassword(passwordInput);
-    if (hash === requestInfo.dataRequest.passwordHash) {
+    // Server-side check; also moves the request to in_progress
+    const check = await verifySupplierDataRequestPassword(accessCode, hash);
+    if (check === 'ok') {
       setPasswordHash(hash);
       setIsAuthenticated(true);
-      setPasswordError(false);
-
-      // Mark as in_progress
-      publicMarkDataRequestInProgress(accessCode);
+      setPasswordError(null);
 
       // Load all products data
       setIsLoadingProducts(true);
@@ -668,7 +678,7 @@ export function SupplierDataPortalPage() {
       const batchesMap: Record<string, Record<string, unknown>[]> = {};
 
       for (const product of productsToLoad) {
-        const data = await publicGetProductForDataRequest(accessCode, product.id);
+        const data = await publicGetProductForDataRequest(accessCode, product.id, hash);
         if (data) {
           productDataMap[product.id] = snakeToCamel(data.product);
           batchesMap[product.id] = data.batches.map(b => snakeToCamel(b));
@@ -679,7 +689,7 @@ export function SupplierDataPortalPage() {
       setAllBatches(batchesMap);
       setIsLoadingProducts(false);
     } else {
-      setPasswordError(true);
+      setPasswordError(check);
     }
   };
 
@@ -1080,13 +1090,13 @@ export function SupplierDataPortalPage() {
                   <Input
                     type="password"
                     value={passwordInput}
-                    onChange={e => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                    onChange={e => { setPasswordInput(e.target.value); setPasswordError(null); }}
                     onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
                     placeholder={t('Enter Password')}
                     autoFocus
                   />
                   {passwordError && (
-                    <p className="text-sm text-destructive">{t('Incorrect password')}</p>
+                    <p className="text-sm text-destructive" role="alert">{t(PASSWORD_ERROR_KEYS[passwordError])}</p>
                   )}
                 </div>
 

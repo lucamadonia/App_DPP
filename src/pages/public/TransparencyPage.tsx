@@ -264,7 +264,7 @@ const CARBON_RATING_COLORS: Record<string, { bg: string; text: string; ring: str
 
 const FONT_MAP: Record<string, { url: string; heading: string; body: string; cssClass: string }> = {
   'dm-serif': {
-    url: 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap',
+    url: '/fonts/dpp/tp-dm-serif.css',
     heading: "'DM Serif Display', Georgia, serif",
     body: "'DM Sans', system-ui, sans-serif",
     cssClass: 'tp-heading',
@@ -276,25 +276,25 @@ const FONT_MAP: Record<string, { url: string; heading: string; body: string; css
     cssClass: 'tp-system',
   },
   inter: {
-    url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+    url: '/fonts/dpp/inter.css',
     heading: "'Inter', system-ui, sans-serif",
     body: "'Inter', system-ui, sans-serif",
     cssClass: 'tp-inter',
   },
   poppins: {
-    url: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+    url: '/fonts/dpp/poppins.css',
     heading: "'Poppins', system-ui, sans-serif",
     body: "'Poppins', system-ui, sans-serif",
     cssClass: 'tp-poppins',
   },
   playfair: {
-    url: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap',
+    url: '/fonts/dpp/tp-playfair.css',
     heading: "'Playfair Display', Georgia, serif",
     body: "'DM Sans', system-ui, sans-serif",
     cssClass: 'tp-playfair',
   },
   merriweather: {
-    url: 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap',
+    url: '/fonts/dpp/tp-merriweather.css',
     heading: "'Merriweather', Georgia, serif",
     body: "'DM Sans', system-ui, sans-serif",
     cssClass: 'tp-merriweather',
@@ -557,8 +557,6 @@ export function TransparencyPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: pageBg, color: textColor, '--tp-primary': primary, '--tp-primary-light': primaryLight, '--tp-primary-mid': primaryMid, '--tp-primary-dark': primaryDark, '--tp-card-bg': cardBg, '--tp-card-radius': cardRadius, '--tp-card-shadow': cardShadow, '--tp-border': borderColor, '--tp-text-muted': textMuted } as CSSProperties}>
       {/* ---- Load fonts ---- */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       {fontConfig.url && <link href={fontConfig.url} rel="stylesheet" />}
 
       <style>{`

@@ -19,8 +19,7 @@
  * hash them with hashKey() so the counter table holds no personal data.
  */
 
-// deno-lint-ignore no-explicit-any
-type SupabaseLike = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: any; error: any }> };
+type SupabaseLike = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
 
 export interface RateLimitRule {
   /** Unique counter name, e.g. `widerruf:ip:<hash>`. */
@@ -99,7 +98,10 @@ export async function checkRateLimit(
       p_cost: rule.cost ?? 1,
     });
     if (error) throw error;
-    const row = Array.isArray(data) ? data[0] : data;
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { allowed?: boolean; retry_after_seconds?: unknown }
+      | null
+      | undefined;
     if (!row) throw new Error('rate_limit_hit returned no row');
     return {
       allowed: row.allowed === true,

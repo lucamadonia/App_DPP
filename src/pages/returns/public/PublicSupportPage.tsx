@@ -81,7 +81,7 @@ export function PublicSupportPage() {
       <div className="max-w-2xl mx-auto px-4 pt-4">
         <button
           onClick={() => navigate(portalPath)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           {t('Back to Overview')}
