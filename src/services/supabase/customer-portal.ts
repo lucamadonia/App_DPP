@@ -97,16 +97,29 @@ export async function customerSendMagicLink(
 ): Promise<{ success: boolean; error?: string }> {
   const redirectUrl = `${getAuthOrigin()}/customer/${tenantSlug}/auth/callback`;
   const locale = (typeof navigator !== 'undefined' ? navigator.language : 'en').slice(0, 2).toLowerCase();
+  // shouldCreateUser: false — the magic link only signs in existing accounts.
+  // Without it an unknown e-mail fell through handle_new_user's admin path and
+  // got a brand-new admin tenant instead of a customer account (re-audit
+  // RLS-9). New customers register through customerSignUp().
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: redirectUrl,
       data: { locale },
+      shouldCreateUser: false,
     },
   });
 
+  // Unknown e-mail: answer like a sent link so the form is no account oracle.
+  if (error && isSignupDisabledError(error)) return { success: true };
   if (error) return { success: false, error: error.message };
   return { success: true };
+}
+
+function isSignupDisabledError(error: { message?: string; code?: string }): boolean {
+  return error.code === 'otp_disabled'
+    || error.code === 'signup_disabled'
+    || /signups? not allowed/i.test(error.message || '');
 }
 
 // ============================================
