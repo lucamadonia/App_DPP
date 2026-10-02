@@ -1,12 +1,35 @@
 /**
  * Supabase Edge Function: send-email
  *
- * Sends emails via SMTP (all-inkl mailbox). Can be triggered by:
- * 1. Database Webhook on INSERT into rh_notifications (payload.record)
- * 2. Direct invocation from client via supabase.functions.invoke (payload.record)
+ * Sends one rh_notifications row via SMTP (tenant_smtp_config or the platform
+ * all-inkl mailbox). INTERNAL ONLY — called by notify-dispatch with
+ *   Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+ *   body: { notificationId }
  *
- * Deployment:
- *   supabase functions deploy send-email --no-verify-jwt
+ * Security (go-live hardening, SEC-03/SRE-02): the function used to accept a
+ * full `record` from any caller (open SMTP relay). It now
+ *   - requires an exact service-role bearer token (the anon key is a valid JWT
+ *     too, so verify_jwt alone is not enough),
+ *   - ignores everything in the body except the notification id and re-loads
+ *     recipient/subject/content/tenant from the database,
+ *   - claims the row atomically (claim_rh_notification 'smtp') so it is never
+ *     delivered twice.
+ * Browsers must NOT call this function; insert an rh_notifications row instead.
+ *   - never falls back to the platform sender for an enabled-but-incomplete
+ *     tenant SMTP config, and caps platform-sender mails of non-paying
+ *     tenants at send time (tenant_mail_tier + smtp:platform:* buckets),
+ *   - refuses empty / unrendered (render='server') rows.
+ *
+ * ROLLOUT ORDER (mandatory, docs/releases/golive-20261001-mail-rollout.md):
+ *   1. migration 20261001d (claim_rh_notification, tenant_mail_tier,
+ *      rate_limit_hit) — without it every call 500s 'claim_failed' and the
+ *      row stays 'pending',
+ *   2. vault 'service_role_jwt' == SUPABASE_SERVICE_ROLE_KEY check, then deploy
+ *      this function TOGETHER with notify-dispatch,
+ *   3. then the frontend.
+ *
+ * Deployment: verify_jwt = true (see supabase/config.toml)
+ *   node scripts/deploy-edge-function.mjs send-email
  *
  * Required Supabase Secrets:
  *   - SMTP_HOST              e.g. w0208d95.kasserver.com
@@ -21,6 +44,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 import { logToCentralLog } from '../_shared/mail-hub.ts';
+import { isServiceRoleRequest } from '../_shared/service-auth.ts';
+import { enforceRateLimits } from '../_shared/rate-limit.ts';
+
+/** Platform-sender (noreply@trackbliss.eu) budget per non-paying tenant. */
+const PLATFORM_FREE_HOURLY = 60;
+const PLATFORM_FREE_DAILY = 300;
 
 const SMTP_HOST = Deno.env.get('SMTP_HOST') || '';
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '465', 10);
@@ -49,7 +78,7 @@ function wrapPlainTextAsHtml(body: string, senderName: string): string {
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
   <div style="border-bottom: 2px solid #3B82F6; padding-bottom: 16px; margin-bottom: 24px;">
-    ${senderName ? `<strong style="font-size: 18px;">${senderName}</strong>` : ''}
+    ${senderName ? `<strong style="font-size: 18px;">${senderName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong>` : ''}
   </div>
   <div style="line-height: 1.6;">
     ${escapedBody}
@@ -68,32 +97,64 @@ async function markFailed(id: string, existingMetadata: Record<string, unknown> 
     .eq('id', id);
 }
 
-Deno.serve(async (req) => {
-  try {
-    const payload = await req.json();
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+}
 
-    // Support both webhook format (payload.record) and direct invocation
-    const record = payload?.record ?? payload;
-    if (!record || !record.id) {
-      return new Response(JSON.stringify({ error: 'No valid record in payload' }), { status: 400 });
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+Deno.serve(async (req) => {
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  if (!isServiceRoleRequest(req)) return json({ error: 'Forbidden' }, 403);
+
+  try {
+    const payload = await req.json().catch(() => null);
+
+    // Only the id is taken from the request. `record.id` is still accepted so
+    // an older notify-dispatch deployment keeps working during rollout, but
+    // every other field of a posted record is ignored.
+    const notificationId = String(payload?.notificationId ?? payload?.record?.id ?? '');
+    if (!UUID_RE.test(notificationId)) {
+      return json({ error: 'notificationId required' }, 400);
     }
 
-    // Only process email notifications that are pending
-    if (record.channel !== 'email' || record.status !== 'pending') {
-      return new Response(JSON.stringify({ skipped: true }), { status: 200 });
+    const { data: claimed, error: claimError } = await supabase
+      .rpc('claim_rh_notification', { p_id: notificationId, p_stage: 'smtp' });
+    if (claimError) {
+      console.error('send-email claim failed:', claimError.message);
+      return json({ error: 'claim_failed' }, 500);
+    }
+    const record = Array.isArray(claimed) ? claimed[0] : claimed;
+    // Not pending, unknown id, or already claimed by another run.
+    if (!record) return json({ skipped: true });
+
+    if (record.channel !== 'email') {
+      return json({ skipped: true });
     }
 
     const recipientEmail = record.recipient_email;
     if (!recipientEmail) {
       await markFailed(record.id, record.metadata, 'No recipient email');
-      return new Response(JSON.stringify({ error: 'No recipient email' }), { status: 200 });
+      return json({ error: 'No recipient email' });
+    }
+
+    // Safety net for the rollout order: a render='server' row (queued by
+    // public_enqueue_notification) has no subject/content until the NEW
+    // notify-dispatch renders it. Never send such a row (or any empty mail)
+    // as "Notification" with an empty body.
+    if (!String(record.content || '').trim()) {
+      const reason = record.metadata?.render === 'server' ? 'unrendered_server_row' : 'empty_content';
+      await markFailed(record.id, record.metadata, reason);
+      return json({ skipped: true, reason });
     }
 
     // We defer the "is SMTP configured" check until after potential per-tenant
     // override resolution, so tenants with their own SMTP can still send even
     // if platform SMTP secrets are not set.
 
-    const senderName = (record.metadata?.senderName as string | undefined) || DEFAULT_FROM_NAME;
+    // Display name only: strip header-breaking characters (CR/LF, quotes, <>).
+    const rawSenderName = typeof record.metadata?.senderName === 'string' ? record.metadata.senderName : '';
+    const senderName = rawSenderName.replace(/[\r\n"<>]/g, ' ').trim().slice(0, 100) || DEFAULT_FROM_NAME;
     const isHtml = record.metadata?.isHtml === true;
 
     // Phase 6: Per-tenant SMTP override
@@ -110,7 +171,16 @@ Deno.serve(async (req) => {
         .eq('tenant_id', record.tenant_id)
         .eq('enabled', true)
         .maybeSingle();
-      if (cfg && cfg.host && cfg.username && cfg.password_encrypted && cfg.from_address) {
+      const complete = !!cfg && [cfg.host, cfg.username, cfg.password_encrypted, cfg.from_address]
+        .every((v) => typeof v === 'string' && v.trim() !== '');
+      if (cfg && !complete) {
+        // Enabled but incomplete tenant SMTP: the tenant asked for its own
+        // mailbox. Never silently fall back to the platform sender
+        // (noreply@trackbliss.eu) — that was a free-tier cap bypass.
+        await markFailed(record.id, record.metadata, 'tenant_smtp_incomplete');
+        return json({ error: 'tenant_smtp_incomplete' });
+      }
+      if (cfg && complete) {
         tenantSmtp = {
           host: cfg.host,
           port: cfg.port || 465,
@@ -123,17 +193,39 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Platform-sender quota for non-paying tenants, enforced at SEND time:
+    // insert-time caps can be raced (complete SMTP config while queueing →
+    // blank it before delivery), this cannot. Generous enough for portal
+    // confirmations and cron mails of a small free tenant.
+    if (!tenantSmtp && record.tenant_id) {
+      const { data: tier, error: tierError } = await supabase
+        .rpc('tenant_mail_tier', { p_tenant_id: record.tenant_id });
+      if (tierError) console.error('send-email tenant_mail_tier failed:', tierError.message);
+      if (tier !== 'paid') {
+        // Fail open on counter errors: the insert-time guard still applies and
+        // a transient DB error must not drop a customer's mail.
+        const verdict = await enforceRateLimits(supabase, [
+          { bucket: `smtp:platform:h:${record.tenant_id}`, limit: PLATFORM_FREE_HOURLY, windowSeconds: 3600 },
+          { bucket: `smtp:platform:d:${record.tenant_id}`, limit: PLATFORM_FREE_DAILY, windowSeconds: 86400 },
+        ], { failOpen: true });
+        if (!verdict.allowed) {
+          await markFailed(record.id, record.metadata, 'platform_quota_exceeded');
+          return json({ error: 'platform_quota_exceeded' });
+        }
+      }
+    }
+
     const effectiveHost = tenantSmtp?.host || SMTP_HOST;
     const effectivePort = tenantSmtp?.port ?? SMTP_PORT;
     const effectiveUser = tenantSmtp?.username || SMTP_USER;
     const effectivePass = tenantSmtp?.password || SMTP_PASS;
     const effectiveFromAddress = tenantSmtp?.from_address || SMTP_FROM;
-    const effectiveFromName = tenantSmtp?.from_name || senderName;
+    const effectiveFromName = (tenantSmtp?.from_name || senderName).replace(/[\r\n"<>]/g, ' ').trim();
     const effectiveUseTls = tenantSmtp?.use_tls ?? useTls;
 
     if (!effectiveHost || !effectiveUser || !effectivePass) {
       await markFailed(record.id, record.metadata, 'SMTP credentials not configured (platform default is empty and tenant has no custom config)');
-      return new Response(JSON.stringify({ error: 'SMTP credentials not configured' }), { status: 200 });
+      return json({ error: 'SMTP credentials not configured' });
     }
 
     const fromAddress = effectiveFromName
@@ -159,7 +251,7 @@ Deno.serve(async (req) => {
       await client.send({
         from: fromAddress,
         to: recipientEmail,
-        subject: record.subject || 'Notification',
+        subject: String(record.subject || 'Notification').replace(/[\r\n]+/g, ' '),
         html: htmlBody,
       });
     } catch (sendErr) {
@@ -196,7 +288,7 @@ Deno.serve(async (req) => {
 
     if (sendError) {
       await markFailed(record.id, record.metadata, sendError);
-      return new Response(JSON.stringify({ error: sendError }), { status: 200 });
+      return json({ error: 'smtp_send_failed' });
     }
 
     await supabase
@@ -204,9 +296,9 @@ Deno.serve(async (req) => {
       .update({ status: 'sent', sent_at: new Date().toISOString() })
       .eq('id', record.id);
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return json({ success: true });
   } catch (err) {
     console.error('send-email error:', err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return json({ error: 'internal_error' }, 500);
   }
 });

@@ -1,10 +1,14 @@
 /**
- * Send an email to a customer via the tenant's SMTP (send-email Edge Function).
+ * Send an email to a customer via the tenant's SMTP.
  *
  * Flow:
- *   UI → createRhNotification(channel='email', status='pending')
- *     → DB webhook triggers send-email Edge Function
- *     → SMTP (noreply@trackbliss.eu) delivers, row updated to status='sent'
+ *   UI → sendCustomerEmail() inserts rh_notifications (status='pending',
+ *        recipient_email set)
+ *     → AFTER INSERT trigger → notify-dispatch (server-side)
+ *     → send-email (SMTP) or Family-Joy hub delivers, row updated to 'sent'
+ *
+ * The browser never calls send-email directly: it is service-role only
+ * (go-live hardening SEC-03, it used to be an open relay).
  */
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
@@ -16,8 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { createRhNotification } from '@/services/supabase/rh-notifications';
-import { supabase } from '@/lib/supabase';
+import { sendCustomerEmail } from '@/services/supabase/rh-notification-trigger';
 import { toast } from 'sonner';
 import type { CrmCustomer } from '@/services/supabase/crm-analytics';
 
@@ -117,40 +120,16 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
     }
     setSending(true);
     try {
-      // 1. Log notification row (status=pending, customerId-linked)
-      const res = await createRhNotification({
+      // Queue the mail; delivery runs server-side (trigger → notify-dispatch).
+      const res = await sendCustomerEmail({
         customerId: customer.id,
-        channel: 'email',
+        recipientEmail: customer.email,
+        subject: subject.trim(),
+        message: body.trim(),
         template: templateKey === 'free' ? undefined : templateKey,
-        subject: subject.trim(),
-        content: body.trim(),
-        metadata: {
-          senderName: 'Trackbliss',
-          isHtml: false,
-          recipientEmail: customer.email,
-        } as Record<string, unknown>,
       });
-      if (!res.success || !res.id) {
+      if (!res.success || !res.notificationId) {
         toast.error(res.error || 'E-Mail konnte nicht in die Versand-Warteschlange gestellt werden.');
-        return;
-      }
-
-      // 2. Invoke send-email Edge Function directly — no Database Webhook needed
-      const record = {
-        id: res.id,
-        channel: 'email',
-        status: 'pending',
-        recipient_email: customer.email,
-        subject: subject.trim(),
-        content: body.trim(),
-        metadata: {
-          senderName: 'Trackbliss',
-          isHtml: false,
-        },
-      };
-      const { error: invokeErr } = await supabase.functions.invoke('send-email', { body: { record } });
-      if (invokeErr) {
-        toast.error(`Versand fehlgeschlagen: ${invokeErr.message}`);
         return;
       }
 

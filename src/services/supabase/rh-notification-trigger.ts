@@ -121,7 +121,9 @@ async function isDuplicate(
  *  when the caller didn't bother to pass them. Tenants can override per-call. */
 /** Base URL of the public app that serves the return-tracking page. Matches the
  *  convention used by the shipment mails (see wh-shipments.ts). The route
- *  `/returns/track/:returnNumber` auto-loads the return (email optional). */
+ *  `/returns/track/:returnNumber` pre-fills the return number; the customer
+ *  must enter the e-mail used for the return (public_track_return requires it)
+ *  unless the link also carries `?email=`. */
 const RETURN_TRACKING_BASE = 'https://dpp-app.fambliss.eu';
 
 /** Build the customer-facing return-tracking URL for the {{trackingUrl}} button. */
@@ -294,9 +296,21 @@ export async function triggerEmailNotification(
   }
 }
 
+/** Events an anonymous visitor may queue (see public_enqueue_notification). */
+const PUBLIC_QUEUE_EVENTS = new Set<string>(['return_confirmed', 'return_cancelled', 'ticket_created']);
+
 /**
- * Trigger an email notification from the public portal (no auth).
- * Uses tenantId directly instead of getCurrentTenantId().
+ * Trigger an email notification for a given tenant.
+ *
+ * Two paths (go-live hardening SEC-04, anon can no longer write rh_notifications):
+ *   - Signed-in tenant user (admin flows: shipment lifecycle, feedback mails):
+ *     renders client-side and inserts the row with the authenticated client,
+ *     exactly like triggerEmailNotification but for an explicit tenantId.
+ *   - Anonymous visitor (returns portal, customer support form): calls the
+ *     public_enqueue_notification RPC with only the event + return/ticket
+ *     reference. The server derives the recipient, enforces rate limits and
+ *     renders the tenant template (notify-dispatch) — the browser can no
+ *     longer choose recipient, subject or HTML.
  */
 export async function triggerPublicEmailNotification(
   tenantId: string,
@@ -304,95 +318,197 @@ export async function triggerPublicEmailNotification(
   ctx: NotificationContext
 ): Promise<{ success: boolean; skipped?: boolean; error?: string }> {
   try {
-    // Check template — per-template enabled flag is the only gate
-    const template = await getRhEmailTemplateByTenantId(tenantId, eventType);
-    if (!template || !template.enabled) {
-      console.warn(`[notification-trigger] Public: Template "${eventType}" ${!template ? 'not found' : 'is disabled'} — skipping`);
-      return { success: true, skipped: true };
+    // Tenant members of THIS tenant render + insert themselves. Everyone else
+    // (anonymous visitors, customer-portal sessions) goes through the RPC.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const ownTenantId = sessionData?.session ? await getCurrentTenantId() : null;
+    if (ownTenantId && ownTenantId === tenantId) {
+      const result = await triggerTenantEmailNotification(tenantId, eventType, ctx);
+      if (result.success || !PUBLIC_QUEUE_EVENTS.has(eventType)) return result;
+      // Insert refused (e.g. RLS) — fall back to the server-side queue.
     }
-
-    // Resolve email locale from settings. WICHTIG: Der anon-Read auf
-    // tenants.settings kann an der (2026-06 verschärften) RLS scheitern —
-    // dann ist rhSettings undefined und der Fallback greift. Fallback MUSS
-    // 'de' sein (DACH-Tenant): mit 'en' bekamen deutsche Kunden die
-    // englische return_confirmed-Mail (Realfall 15.06.2026). Sauberer wäre
-    // eine SECURITY-DEFINER-RPC, die nur emailLocale liefert — bewusst
-    // aufgeschoben, der 'de'-Default deckt den Tenant korrekt ab.
-    const { data: tenant } = await supabaseAnon
-      .from('tenants')
-      .select('settings')
-      .eq('id', tenantId)
-      .single();
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rhSettings = (tenant?.settings as any)?.returnsHub;
-    const emailLocale = rhSettings?.notifications?.emailLocale || 'de';
-
-    // Localize the reason label and default the tracking-button URL (so the
-    // "Retoure verfolgen" button isn't a dead href="") before rendering.
-    const lctx: NotificationContext = {
-      ...ctx,
-      reason: resolveDisplayReason(ctx, emailLocale),
-      trackingUrl: ctx.trackingUrl || buildReturnTrackingUrl(ctx.returnNumber),
-    };
-
-    // Render subject (locale-aware) and body
-    const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
-    const localeContent = designConfig?.locales?.[emailLocale];
-    const subjectToRender = localeContent?.subjectTemplate || template.subjectTemplate;
-    const renderedSubject = renderTemplate(subjectToRender, lctx);
-
-    let renderedBody: string;
-    if (designConfig?.blocks?.length) {
-      renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), lctx);
-    } else if (template.htmlTemplate) {
-      renderedBody = renderTemplate(template.htmlTemplate, lctx);
-    } else {
-      renderedBody = renderTemplate(template.bodyTemplate, lctx);
-    }
-
-    // Dedup: 60s for returns/tickets, 365d for shipment/engagement events
-    if (await isDuplicate(supabaseAnon, eventType, ctx.recipientEmail, ctx.returnId, ctx.ticketId, ctx.shipmentId)) {
-      console.log(`[notification-trigger] Public dedup: "${eventType}" to "${ctx.recipientEmail}" already sent recently — skipping`);
-      return { success: true, skipped: true };
-    }
-
-    // Create notification record (use anon client for public context)
-    const notificationPayload = {
-      tenant_id: tenantId,
-      return_id: ctx.returnId || null,
-      ticket_id: ctx.ticketId || null,
-      customer_id: ctx.customerId || null,
-      wh_shipment_id: ctx.shipmentId || null,
-      channel: 'email',
-      template: eventType,
-      recipient_email: ctx.recipientEmail,
-      subject: renderedSubject,
-      content: renderedBody,
-      status: 'pending',
-      metadata: {
-        senderName: rhSettings?.notifications?.senderName || '',
-        isHtml: true,
-        locale: emailLocale,
-        ...(ctx.shipmentNumber && { shipment_number: ctx.shipmentNumber }),
-      },
-    };
-
-    const { error } = await supabaseAnon
-      .from('rh_notifications')
-      .insert(notificationPayload)
-      .select('id')
-      .single();
-
-    if (error) {
-      console.error('Failed to create public email notification:', error);
-      return { success: false, error: error.message };
-    }
-
-    // Delivery handled server-side by the AFTER INSERT trigger → notify-dispatch.
-    return { success: true };
+    return await enqueuePublicEmailNotification(tenantId, eventType, ctx);
   } catch (err) {
     console.error('triggerPublicEmailNotification error:', err);
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/** Anonymous path: server-side queueing via RPC (no client-supplied content). */
+async function enqueuePublicEmailNotification(
+  tenantId: string,
+  eventType: RhNotificationEventType,
+  ctx: NotificationContext
+): Promise<{ success: boolean; skipped?: boolean; error?: string }> {
+  if (!PUBLIC_QUEUE_EVENTS.has(eventType)) {
+    console.warn(`[notification-trigger] Public: event "${eventType}" cannot be queued without a session — skipping`);
+    return { success: true, skipped: true };
+  }
+
+  const { data, error } = await supabaseAnon.rpc('public_enqueue_notification', {
+    p_tenant_id: tenantId,
+    p_event_type: eventType,
+    p_return_id: ctx.returnId || null,
+    p_return_number: ctx.returnId ? null : ctx.returnNumber || null,
+    p_ticket_id: ctx.ticketId || null,
+    p_ticket_number: ctx.ticketId ? null : ctx.ticketNumber || null,
+  });
+
+  if (error) {
+    console.error('Failed to queue public email notification:', error);
+    return { success: false, error: error.message };
+  }
+
+  const result = (data || {}) as { ok?: boolean; skipped?: string; reason?: string };
+  if (result.ok === false) {
+    console.warn(`[notification-trigger] Public: "${eventType}" not queued (${result.reason || 'unknown'})`);
+    return { success: false, error: result.reason || 'not_queued' };
+  }
+  return { success: true, skipped: !!result.skipped };
+}
+
+/** Signed-in path: client-side render + authenticated insert for an explicit tenant. */
+async function triggerTenantEmailNotification(
+  tenantId: string,
+  eventType: RhNotificationEventType,
+  ctx: NotificationContext
+): Promise<{ success: boolean; skipped?: boolean; error?: string }> {
+  // Check template — per-template enabled flag is the only gate
+  const template = await getRhEmailTemplateByTenantId(tenantId, eventType);
+  if (!template || !template.enabled) {
+    console.warn(`[notification-trigger] Template "${eventType}" ${!template ? 'not found' : 'is disabled'} — skipping`);
+    return { success: true, skipped: true };
+  }
+
+  // Resolve email locale from settings. Fallback 'de' (DACH tenant): with 'en'
+  // German customers got the English return_confirmed mail (15.06.2026).
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rhSettings = (tenant?.settings as any)?.returnsHub;
+  const emailLocale = rhSettings?.notifications?.emailLocale || 'de';
+
+  // Localize the reason label and default the tracking-button URL (so the
+  // "Retoure verfolgen" button isn't a dead href="") before rendering.
+  const lctx: NotificationContext = {
+    ...ctx,
+    reason: resolveDisplayReason(ctx, emailLocale),
+    trackingUrl: ctx.trackingUrl || buildReturnTrackingUrl(ctx.returnNumber),
+  };
+
+  // Render subject (locale-aware) and body
+  const designConfig = template.designConfig as unknown as EmailDesignConfig | undefined;
+  const localeContent = designConfig?.locales?.[emailLocale];
+  const subjectToRender = localeContent?.subjectTemplate || template.subjectTemplate;
+  const renderedSubject = renderTemplate(subjectToRender, lctx);
+
+  let renderedBody: string;
+  if (designConfig?.blocks?.length) {
+    renderedBody = renderTemplate(renderEmailHtml(designConfig, '', emailLocale), lctx);
+  } else if (template.htmlTemplate) {
+    renderedBody = renderTemplate(template.htmlTemplate, lctx);
+  } else {
+    renderedBody = renderTemplate(template.bodyTemplate, lctx);
+  }
+
+  // Dedup: 60s for returns/tickets, 365d for shipment/engagement events
+  if (await isDuplicate(supabase, eventType, ctx.recipientEmail, ctx.returnId, ctx.ticketId, ctx.shipmentId)) {
+    console.log(`[notification-trigger] Dedup: "${eventType}" to "${ctx.recipientEmail}" already sent recently — skipping`);
+    return { success: true, skipped: true };
+  }
+
+  const notificationPayload = {
+    tenant_id: tenantId,
+    return_id: ctx.returnId || null,
+    ticket_id: ctx.ticketId || null,
+    customer_id: ctx.customerId || null,
+    wh_shipment_id: ctx.shipmentId || null,
+    channel: 'email',
+    template: eventType,
+    recipient_email: ctx.recipientEmail,
+    subject: renderedSubject,
+    content: renderedBody,
+    status: 'pending',
+    metadata: {
+      senderName: rhSettings?.notifications?.senderName || '',
+      isHtml: true,
+      locale: emailLocale,
+      ...(ctx.shipmentNumber && { shipment_number: ctx.shipmentNumber }),
+    },
+  };
+
+  // Generate the id client-side: no read-back needed after the insert.
+  const { error } = await supabase
+    .from('rh_notifications')
+    .insert({ id: crypto.randomUUID(), ...notificationPayload });
+
+  if (error) {
+    console.error('Failed to create email notification:', error);
+    return { success: false, error: error.message };
+  }
+
+  // Delivery handled server-side by the AFTER INSERT trigger → notify-dispatch.
+  return { success: true };
+}
+
+/**
+ * Send a free-text email to a CRM customer (SendEmailDialog). Queues a
+ * plain-text rh_notifications row with the recipient set; the AFTER INSERT
+ * trigger → notify-dispatch → send-email / Family-Joy delivers it. The browser
+ * never calls send-email directly (it is service-role only).
+ */
+export async function sendCustomerEmail(params: {
+  customerId: string;
+  recipientEmail: string;
+  subject: string;
+  message: string;
+  template?: string;
+}): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+  try {
+    const recipientEmail = params.recipientEmail?.trim();
+    if (!recipientEmail) return { success: false, error: 'No recipient email' };
+    if (!params.subject?.trim() || !params.message?.trim()) {
+      return { success: false, error: 'Subject and message are required' };
+    }
+
+    const tenantId = await getCurrentTenantId();
+    if (!tenantId) return { success: false, error: 'No tenant set' };
+
+    const settings = await getReturnsHubSettings();
+    const id = crypto.randomUUID();
+    const { error } = await supabase.from('rh_notifications').insert({
+      id,
+      tenant_id: tenantId,
+      customer_id: params.customerId || null,
+      channel: 'email',
+      // Always 'custom_message': the hub sends the passthrough body for it
+      // (same as sendCustomShipmentEmail); the CRM preset goes into metadata.
+      template: 'custom_message',
+      recipient_email: recipientEmail,
+      subject: params.subject.trim(),
+      content: params.message.trim(),
+      status: 'pending',
+      metadata: {
+        senderName: settings.notifications?.senderName || 'Trackbliss',
+        isHtml: false,
+        locale: settings.notifications?.emailLocale || 'de',
+        custom: true,
+        kind: 'crm_customer_email',
+        ...(params.template && { crmTemplate: params.template }),
+      },
+    });
+
+    if (error) {
+      console.error('Failed to queue customer email:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, notificationId: id };
+  } catch (err) {
+    console.error('sendCustomerEmail error:', err);
     return { success: false, error: 'Unexpected error' };
   }
 }

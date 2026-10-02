@@ -21,9 +21,45 @@
  *   MAIL_HUB_URL                              — https://bkaaepzqejzdczivquoh.supabase.co/functions/v1/mail-event-receiver
  *   MAIL_HUB_SECRET                           — same value as Family-Joy MAIL_EVENT_RECEIVER_SECRET
  *   MAIL_HUB_TENANT_IDS (optional)            — CSV of Fambliss tenant UUIDs; default = MYFAMBLISS GmbH
+ *
+ * Security (go-live hardening, SEC-04/SEC-14):
+ *   - Auth is an exact (constant-time) compare of the bearer token with the
+ *     service-role key — not a decoded, unverified role claim.
+ *   - Each row is claimed atomically (claim_rh_notification 'dispatch'), so a
+ *     duplicate trigger/replay can never send twice.
+ *   - Rows queued by anonymous visitors (public_enqueue_notification) carry
+ *     metadata.render='server' and NO content. They are rendered here from the
+ *     tenant's stored template with HTML-escaped variables, so client-authored
+ *     HTML never reaches Family-Joy or SMTP.
+ *   - send-email only receives { notificationId } and re-loads the row itself.
+ *
+ * DEPLOY PRECONDITION (SEC-14): the only production caller is the
+ * rh_notifications AFTER INSERT trigger (20260602b), which sends the vault
+ * secret 'service_role_jwt' as bearer token. That value must byte-equal
+ * SUPABASE_SERVICE_ROLE_KEY or the optional SERVICE_ROLE_JWT secret, or every
+ * mail gets 403 (visible only in net._http_response + the error log below) and
+ * rows stay 'pending'. Before deploying:
+ *   1. SQL editor: SELECT md5(decrypted_secret) FROM vault.decrypted_secrets
+ *        WHERE name = 'service_role_jwt';
+ *   2. Compare with md5 of the project's service_role key (Dashboard > API).
+ *   3. If they differ: supabase secrets set SERVICE_ROLE_JWT=<vault value>.
+ *   After deploy: insert one test row and confirm status leaves 'pending'.
+ *
+ * ROLLOUT ORDER (mandatory, docs/releases/golive-20261001-mail-rollout.md):
+ *   1. migration 20261001d (claim_rh_notification, tenant_mail_tier,
+ *      public_enqueue_notification) — without it every mail 500s 'claim_failed'
+ *      and stays 'pending'.
+ *   2. vault 'service_role_jwt' check above, then deploy THIS function and
+ *      send-email together.
+ *   3. then the frontend. An OLD notify-dispatch cannot render the
+ *      render='server' rows the new frontend queues and would send empty mails.
+ *
+ * Deploy with verify_jwt = true (supabase/config.toml).
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { isServiceRoleRequest } from '../_shared/service-auth.ts';
+import { renderStoredTemplate, sanitizePublicText, type ServerRenderVars } from '../_shared/email-template-render.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -50,8 +86,12 @@ function mailHubAllowsTenant(tenantId: unknown): boolean {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
 
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !isServiceRoleJWT(authHeader.replace('Bearer ', ''))) {
+  if (!isServiceRoleRequest(req)) {
+    // Logged loudly: the only legitimate caller is the pg_net trigger. If this
+    // fires for trigger calls, the vault secret 'service_role_jwt' differs from
+    // SUPABASE_SERVICE_ROLE_KEY — set the SERVICE_ROLE_JWT secret to the vault
+    // value, otherwise every transactional mail stays 'pending'.
+    console.error('[notify-dispatch] 403: bearer token is not the service-role key (check vault service_role_jwt vs SUPABASE_SERVICE_ROLE_KEY / SERVICE_ROLE_JWT)');
     return json({ error: 'Forbidden — service role required' }, 403);
   }
 
@@ -60,18 +100,29 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
     const notificationId = (body as { notificationId?: string }).notificationId;
-    if (!notificationId) return json({ error: 'missing notificationId' }, 400);
+    if (!notificationId || typeof notificationId !== 'string') return json({ error: 'missing notificationId' }, 400);
 
-    const { data: row, error } = await supabase
+    const { data: peek, error } = await supabase
       .from('rh_notifications')
-      .select('*')
+      .select('id, channel, status')
       .eq('id', notificationId)
       .maybeSingle();
 
-    if (error) return json({ error: `load failed: ${error.message}` }, 500);
-    if (!row) return json({ error: 'not_found' }, 404);
-    if (row.channel !== 'email') return json({ ok: true, skipped: 'not_email' });
-    if (row.status !== 'pending') return json({ ok: true, skipped: `status_${row.status}` });
+    if (error) return json({ error: 'load_failed' }, 500);
+    if (!peek) return json({ error: 'not_found' }, 404);
+    if (peek.channel !== 'email') return json({ ok: true, skipped: 'not_email' });
+    if (peek.status !== 'pending') return json({ ok: true, skipped: `status_${peek.status}` });
+
+    // Atomic claim: only one dispatcher run may handle a row.
+    const { data: claimed, error: claimError } = await supabase
+      .rpc('claim_rh_notification', { p_id: notificationId, p_stage: 'dispatch' });
+    if (claimError) {
+      console.error(`[notify-dispatch] claim failed for ${notificationId}:`, claimError.message);
+      return json({ error: 'claim_failed' }, 500);
+    }
+    const row = Array.isArray(claimed) ? claimed[0] : claimed;
+    if (!row) return json({ ok: true, skipped: 'already_claimed' });
+
     if (!row.recipient_email) {
       await markFailed(supabase, row.id, row.metadata, 'no_recipient_email');
       return json({ ok: true, skipped: 'no_recipient_email' });
@@ -79,6 +130,22 @@ Deno.serve(async (req) => {
 
     const meta = (row.metadata || {}) as Record<string, unknown>;
     const useHub = mailHubAllowsTenant(row.tenant_id) && !!MAIL_HUB_URL && !!MAIL_HUB_SECRET;
+
+    // Public-portal rows: render the tenant template server-side. Never trust
+    // stored content for these (there is none; anon cannot write rows).
+    if (meta.render === 'server') {
+      const rendered = await renderServerSide(supabase, row, meta);
+      if (!rendered) {
+        await markFailed(supabase, row.id, row.metadata, 'server_render_failed');
+        return json({ ok: true, skipped: 'server_render_failed' });
+      }
+      row.subject = rendered.subject;
+      row.content = rendered.html;
+      await supabase
+        .from('rh_notifications')
+        .update({ subject: rendered.subject, content: rendered.html })
+        .eq('id', row.id);
+    }
 
     // Fambliss corporate-design override. The generic Returns-Hub email
     // templates (formal "Sehr geehrte(r)", grey card) don't match the Fambliss
@@ -127,6 +194,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Never deliver an empty mail (e.g. an unrendered render='server' row).
+    if (!String(row.content || '').trim()) {
+      await markFailed(supabase, row.id, row.metadata, 'empty_content');
+      return json({ ok: true, skipped: 'empty_content' });
+    }
+
     if (useHub) {
       const ok = await postToFamilyJoy({
         eventType: row.template,
@@ -136,8 +209,10 @@ Deno.serve(async (req) => {
         context: {
           // Trackbliss renders its own templates → pass the rendered output
           // through; the receiver sends it as-is (no Family-Joy template needed).
+          // Plain-text rows (isHtml !== true, e.g. CRM "Kunde kontaktieren")
+          // are escaped first so they can never inject markup into the hub mail.
           renderedSubject: row.subject || '',
-          renderedHtml: row.content || '',
+          renderedHtml: meta.isHtml === true ? (row.content || '') : plainTextToHtml(row.content || ''),
         },
         metadata: {
           shipment_id: row.wh_shipment_id,
@@ -164,15 +239,67 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
       },
-      body: JSON.stringify({ record: row }),
+      // Only the id: send-email re-loads and claims the row itself.
+      body: JSON.stringify({ notificationId: row.id }),
     });
     const ok = res.ok;
     return json({ ok, via: useHub ? 'send-email(fallback)' : 'send-email', status: res.status });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return json({ error: msg }, 500);
+    console.error('[notify-dispatch] unexpected error:', err);
+    return json({ error: 'internal_error' }, 500);
   }
 });
+
+/** Escape plain text and keep line breaks (hub passthrough of plain-text rows). */
+function plainTextToHtml(text: string): string {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\r?\n/g, '<br>');
+}
+
+/**
+ * Render a public-portal row from the tenant's stored rh_email_templates entry.
+ * Variables come from metadata.vars (built server-side by
+ * public_enqueue_notification) and are HTML-escaped by the renderer.
+ */
+// deno-lint-ignore no-explicit-any
+async function renderServerSide(supabase: any, row: any, meta: Record<string, unknown>) {
+  try {
+    const { data: template } = await supabase
+      .from('rh_email_templates')
+      .select('enabled, subject_template, body_template, html_template, design_config')
+      .eq('tenant_id', row.tenant_id)
+      .eq('event_type', row.template)
+      .maybeSingle();
+    if (!template || template.enabled === false) return null;
+    const locale = meta.locale === 'en' ? 'en' : 'de';
+    const rawVars = (meta.vars && typeof meta.vars === 'object' ? meta.vars : {}) as Record<string, unknown>;
+    const vars: ServerRenderVars = {};
+    const keys = ['customerName', 'firstName', 'returnNumber', 'status', 'reason', 'reasonCategory', 'ticketNumber', 'subject', 'trackingUrl'] as const;
+    // Visitor-controlled free text: strip URLs/domains and shorten again here
+    // (the RPC already does this; defence in depth for older queued rows).
+    const freeTextMax: Partial<Record<(typeof keys)[number], number>> = {
+      customerName: 60, firstName: 60, reason: 200, reasonCategory: 60, subject: 80,
+    };
+    const isPublic = meta.origin === 'public';
+    for (const key of keys) {
+      const v = rawVars[key];
+      if (typeof v !== 'string') continue;
+      const max = freeTextMax[key];
+      // Plain code-like values (e.g. reason keys such as 'wrong_size') cannot
+      // carry a URL and must keep their underscores for the label lookup.
+      const isCode = /^[a-z0-9_]{1,60}$/i.test(v);
+      vars[key] = isPublic && max && !isCode ? sanitizePublicText(v, max) : v.slice(0, 500);
+    }
+    return renderStoredTemplate(template, vars, locale);
+  } catch (err) {
+    console.error(`[notify-dispatch] server render failed for ${row.id}:`, err);
+    return null;
+  }
+}
 
 // deno-lint-ignore no-explicit-any
 async function markSent(supabase: any, id: string) {
@@ -237,19 +364,6 @@ async function hmacHex(secret: string, body: string): Promise<string> {
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function isServiceRoleJWT(token: string): boolean {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
-    const claim = JSON.parse(atob(padded));
-    return claim.role === 'service_role';
-  } catch {
-    return false;
-  }
 }
 
 function json(body: unknown, status = 200) {

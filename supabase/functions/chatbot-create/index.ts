@@ -1,10 +1,35 @@
+/**
+ * Supabase Edge Function: chatbot-create
+ *
+ * Creates a return or a support ticket on behalf of the support chatbot.
+ * Callable with the public anon key (verify_jwt = true in supabase/config.toml).
+ *
+ * Abuse protection (go-live hardening SEC-10/SRE-16):
+ *   - Optional shared secret: when CHATBOT_SHARED_SECRET is set, every request
+ *     must send it in the `x-chatbot-secret` header (server-to-server bots).
+ *   - Persistent rate limits per IP (CHATBOT_IP_LIMIT_PER_HOUR, default 60 —
+ *     raise it if the bot calls from one fixed server IP), per email (10/h,
+ *     5 tickets/day) and per tenant (200/h).
+ *   - Returns only create a customer record AFTER order + email were verified.
+ *   - Request bodies are no longer logged (PII).
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  enforceRateLimits,
+  getClientIp,
+  hashKey,
+  rateLimitedResponse,
+  timingSafeEqual,
+} from '../_shared/rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, apikey, x-client-info, content-type, x-chatbot-secret',
 };
+
+const CHATBOT_SHARED_SECRET = Deno.env.get('CHATBOT_SHARED_SECRET') || '';
+const IP_LIMIT_PER_HOUR = Math.max(1, parseInt(Deno.env.get('CHATBOT_IP_LIMIT_PER_HOUR') || '60', 10) || 60);
 
 const ALPHANUMERIC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -51,6 +76,13 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
+  if (CHATBOT_SHARED_SECRET) {
+    const provided = req.headers.get('x-chatbot-secret') || '';
+    if (!provided || !timingSafeEqual(provided, CHATBOT_SHARED_SECRET)) {
+      return jsonResponse({ error: 'Forbidden' }, 403);
+    }
+  }
+
   let body: {
     request_type?: string;
     email?: string;
@@ -66,9 +98,6 @@ Deno.serve(async (req) => {
   } catch {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
-
-  // DEBUG: log full request body so we can see what Rebecca sent
-  console.log('[chatbot-create] incoming body:', JSON.stringify(body));
 
   const requestType = (body.request_type || '').trim().toLowerCase();
   const email = (body.email || '').trim().toLowerCase();
@@ -166,6 +195,26 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // Persistent throttling (fails open on a counter outage so the bot keeps
+    // working; the limits only target floods).
+    const emailHash = await hashKey(email);
+    const rules = [
+      { bucket: `chatbot:ip:${await hashKey(getClientIp(req))}`, limit: IP_LIMIT_PER_HOUR, windowSeconds: 3600 },
+      { bucket: `chatbot:email:${emailHash}`, limit: 10, windowSeconds: 3600 },
+      { bucket: `chatbot:tenant:${tenantSlug.slice(0, 80)}`, limit: 200, windowSeconds: 3600 },
+    ];
+    if (requestType === 'ticket') {
+      rules.push({ bucket: `chatbot:tickets:${emailHash}`, limit: 5, windowSeconds: 86400 });
+    }
+    const verdict = await enforceRateLimits(supabase, rules, { failOpen: true });
+    if (!verdict.allowed) {
+      return rateLimitedResponse(
+        verdict.retryAfterSeconds,
+        corsHeaders,
+        'Zu viele Anfragen. Bitte versuche es später noch einmal.',
+      );
+    }
+
     // Resolve tenant
     const { data: tenant } = await supabase
       .from('tenants')
@@ -177,17 +226,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, message: 'Tenant nicht gefunden.' }, 404);
     }
 
-    // Find or create customer (shared for both flows)
+    if (requestType === 'return') {
+      // The customer record is created inside createReturn, only after the
+      // order number and email were verified.
+      return await createReturn(supabase, tenant, orderNumber, email, description, desiredSolution);
+    }
+
     const customerId = await findOrCreateCustomer(supabase, tenant.id, email, orderNumber);
     if (!customerId) {
       return jsonResponse({ error: 'Failed to find or create customer record' }, 500);
     }
-
-    if (requestType === 'return') {
-      return await createReturn(supabase, tenant, customerId, orderNumber, email, description, desiredSolution);
-    } else {
-      return await createTicket(supabase, tenant, customerId, email, description, subject, category, orderNumber);
-    }
+    return await createTicket(supabase, tenant, customerId, email, description, subject, category, orderNumber);
   } catch (err) {
     console.error('Unexpected error:', err);
     return jsonResponse({ error: 'Internal server error' }, 500);
@@ -252,7 +301,6 @@ async function findOrCreateCustomer(
 async function createReturn(
   supabase: any,
   tenant: any,
-  customerId: string,
   orderNumber: string,
   email: string,
   description: string,
@@ -296,6 +344,12 @@ async function createReturn(
       message: `Für Bestellung #${orderNumber} existiert bereits eine offene Retoure: ${existing.return_number} (Status: ${existing.status}).`,
       data: { return_number: existing.return_number, status: existing.status },
     }, 200);
+  }
+
+  // Order + email verified: now it is safe to find or create the customer.
+  const customerId = await findOrCreateCustomer(supabase, tenant.id, email, orderNumber);
+  if (!customerId) {
+    return jsonResponse({ error: 'Failed to find or create customer record' }, 500);
   }
 
   // Fetch order items

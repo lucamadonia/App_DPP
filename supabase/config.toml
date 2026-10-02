@@ -1,5 +1,52 @@
 project_id = "trackbliss"
 
+# =============================================================================
+# Edge Function gateway auth (verify_jwt) — reviewed manifest.
+#
+# Every directory under supabase/functions/ needs an explicit entry here
+# (scripts/check-edge-jwt-drift.mjs enforces it in CI; deploy-edge-function.mjs
+# refuses to deploy a function without one).
+#
+# verify_jwt = true is the default. Note that the public anon key IS a valid
+# JWT, so true only keeps out callers without any Supabase key; functions that
+# must be internal-only additionally check the service-role key themselves
+# (_shared/service-auth.ts).
+#
+# verify_jwt = false ONLY for endpoints called without a Supabase JWT that do
+# their own authentication (provider signature / shared secret / signed state)
+# or are deliberately public and throttled. Each one is commented below.
+#
+# Not listed on purpose: mail-hub-forward. It is a deprecated open signed relay
+# (SEC-15) and must be deleted, not deployed; without an entry the deploy script
+# refuses it.
+# =============================================================================
+
+[functions.address-validation]
+verify_jwt = true
+
+[functions.admin-api]
+verify_jwt = true
+
+# Supabase Auth "send email" hook: called by GoTrue without a user JWT.
+# Authenticated by the Standard Webhooks signature (SEND_EMAIL_HOOK_SECRET).
+[functions.auth-email-hook]
+verify_jwt = false
+
+[functions.chatbot-create]
+verify_jwt = true
+
+[functions.chatbot-create-return]
+verify_jwt = true
+
+[functions.chatbot-lookup]
+verify_jwt = true
+
+[functions.chatbot-order-lookup]
+verify_jwt = true
+
+[functions.chatbot-return-lookup]
+verify_jwt = true
+
 # Provider callbacks arrive without a Supabase JWT. This function validates the
 # signed OAuth state and authenticates every non-callback action internally.
 [functions.commerce-channel-oauth]
@@ -7,6 +54,78 @@ verify_jwt = false
 
 [functions.commerce-etsy-sync]
 verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.create-portal-session]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.dhl-shipping]
+verify_jwt = true
+
+# Cron (pg_net + vault service-role JWT): gateway verifies the signature.
+[functions.engagement-mail-cron]
+verify_jwt = true
+
+# Fambliss Partner Portal webhook: no Supabase JWT. Authenticated by the
+# x-webhook-secret header (INFLUENCER_SYNC_SECRET, fails closed when unset).
+[functions.influencer-sync]
+verify_jwt = false
+
+[functions.invite-user]
+verify_jwt = true
+
+[functions.manage-vercel-domain]
+verify_jwt = true
+
+# Internal: called only by the rh_notifications AFTER INSERT trigger with the
+# service-role JWT; additionally checks the exact service-role key.
+# DEPLOY PRECONDITION: vault secret 'service_role_jwt' must equal
+# SUPABASE_SERVICE_ROLE_KEY, else set the SERVICE_ROLE_JWT edge secret to the
+# vault value (see the notify-dispatch header) — otherwise all mails get 403.
+[functions.notify-dispatch]
+verify_jwt = true
+
+[functions.openrouter-proxy]
+verify_jwt = true
+
+# Public: deliberately public, cacheable read-only GET API for external DPP
+# consumers (no caller in src/). CORS allows only content-type, so callers
+# cannot send a Supabase key; live deployment (v17) runs verify_jwt=false.
+[functions.public-products]
+verify_jwt = false
+
+# Internal: called only by notify-dispatch with the service-role key (exact
+# compare in code). Was deployed with verify_jwt=false = open relay (SEC-03).
+[functions.send-email]
+verify_jwt = true
+
+[functions.shopify-sync]
+verify_jwt = true
+
+# Shopify webhooks carry no Supabase JWT. Authenticated by the
+# X-Shopify-Hmac-Sha256 signature over the raw body.
+[functions.shopify-webhook]
+verify_jwt = false
+
+# Stripe webhooks carry no Supabase JWT. Authenticated by the
+# Stripe-Signature header (STRIPE_WEBHOOK_SECRET).
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Cron (pg_net + vault service-role JWT): gateway verifies the signature.
+[functions.trial-ending-cron]
+verify_jwt = true
+
+# Public, login-free § 356a BGB withdrawal button (also reachable from shop
+# pages without a Supabase session). Throttled per IP/email/tenant via
+# rate_limit_counters, optional Turnstile (TURNSTILE_SECRET_KEY).
+[functions.widerruf-request]
+verify_jwt = false
 
 [functions.workflow-webhooks]
 verify_jwt = true
