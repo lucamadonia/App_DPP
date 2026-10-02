@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
  * once per session and do a soft reload — the user gets a fresh index.html with
  * the new chunk hashes and never sees the broken-page flash.
  */
-function isChunkLoadError(error: unknown): boolean {
+export function isChunkLoadError(error: unknown): boolean {
   if (!error) return false;
   const msg = error instanceof Error ? error.message : String(error);
   return (
@@ -25,7 +25,7 @@ function isChunkLoadError(error: unknown): boolean {
 
 /** Idempotent: only ever reload once per page life. */
 let didReloadForChunkError = false;
-function reloadOnceForChunkError() {
+export function reloadOnceForChunkError() {
   if (didReloadForChunkError) return;
   didReloadForChunkError = true;
   // Use replace() so reload bypasses the back-stack
@@ -58,14 +58,37 @@ interface State {
   error: Error | null;
 }
 
-function ErrorFallbackContent({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
+/**
+ * Raw error messages can leak internals (SQL fragments, table names, stack
+ * hints) to end customers, so they are only rendered in development builds.
+ */
+const SHOW_ERROR_DETAILS = import.meta.env.DEV;
+
+export interface ErrorFallbackContentProps {
+  error: Error | null;
+  onRetry: () => void;
+  /**
+   * `screen` fills the viewport (top-level boundary). `section` sits inside an
+   * existing layout (sidebar/header stay usable) and only takes the content area.
+   */
+  variant?: 'screen' | 'section';
+}
+
+export function ErrorFallbackContent({ error, onRetry, variant = 'screen' }: ErrorFallbackContentProps) {
   const { t } = useTranslation('common');
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div
+      role="alert"
+      className={
+        variant === 'screen'
+          ? 'flex min-h-screen items-center justify-center bg-background p-6'
+          : 'flex min-h-[50vh] w-full items-center justify-center p-6'
+      }
+    >
       <div className="w-full max-w-md rounded-xl border bg-card p-8 text-center shadow-lg">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-          <AlertCircle className="h-6 w-6 text-destructive" />
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
         </div>
         <h2 className="mb-2 text-xl font-semibold text-foreground">
           {t('Something went wrong')}
@@ -73,12 +96,15 @@ function ErrorFallbackContent({ error, onRetry }: { error: Error | null; onRetry
         <p className="mb-6 text-sm text-muted-foreground">
           {t('An unexpected error occurred. Please try again.')}
         </p>
-        {error && (
-          <pre className="mb-6 max-h-32 overflow-auto rounded-md bg-muted p-3 text-left text-xs text-muted-foreground">
+        {SHOW_ERROR_DETAILS && error && (
+          <pre
+            data-testid="error-details"
+            className="mb-6 max-h-32 overflow-auto rounded-md bg-muted p-3 text-left text-xs text-muted-foreground"
+          >
             {error.message}
           </pre>
         )}
-        <div className="flex gap-3 justify-center">
+        <div className="flex flex-wrap gap-3 justify-center">
           <Button onClick={onRetry}>
             {t('Try again')}
           </Button>

@@ -13,6 +13,7 @@ import { BrandingProvider } from '@/contexts/BrandingContext';
 import { BillingProvider } from '@/contexts/BillingContext';
 import { queryClient } from '@/lib/query-client';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { useCustomDomainDetection } from '@/hooks/useCustomDomainDetection';
 import { useTheme } from '@/hooks/use-theme';
 import { CustomDomainPortal } from '@/components/CustomDomainPortal';
@@ -284,7 +285,10 @@ function AppLayout() {
         <AppHeader onSearch={() => setPaletteOpen(true)} />
         <main className="flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app">
           <SwipeBackLayer>
-            <AnimatedOutlet />
+            {/* A crashing page keeps the sidebar/header usable. */}
+            <RouteErrorBoundary name="app" variant="section">
+              <AnimatedOutlet />
+            </RouteErrorBoundary>
           </SwipeBackLayer>
         </main>
         <MobileBottomNav />
@@ -325,7 +329,9 @@ function CustomDomainGate() {
     if (resolution) {
       return (
         <BrowserRouter>
-          <CustomDomainPortal resolution={resolution} />
+          <RouteErrorBoundary name="custom-domain">
+            <CustomDomainPortal resolution={resolution} />
+          </RouteErrorBoundary>
         </BrowserRouter>
       );
     }
@@ -395,7 +401,7 @@ function NormalAppRoutes() {
         <Route path="auth/reset-password" element={<ResetPasswordPage />} />
 
         {/* Public pages without sidebar */}
-        <Route element={<PublicLayout />}>
+        <Route element={<RouteErrorBoundary name="public"><PublicLayout /></RouteErrorBoundary>}>
           <Route path="p/:gtin/:serial" element={<PublicCustomerPage />} />
           <Route path="01/:gtin/21/:serial" element={<PublicCustomerPage />} />
           <Route path="p/:gtin/:serial/customs" element={<PublicCustomsPage />} />
@@ -423,7 +429,7 @@ function NormalAppRoutes() {
         <Route path="embed/feedback/:tenantSlug" element={<EmbedFeedbackPage />} />
 
         {/* Public Returns Portal (no auth, shared layout) */}
-        <Route element={<ReturnsPortalLayout />}>
+        <Route element={<RouteErrorBoundary name="returns-portal"><ReturnsPortalLayout /></RouteErrorBoundary>}>
           <Route path="returns/portal/:tenantSlug" element={<PublicReturnPortalPage />} />
           <Route path="returns/register/:tenantSlug" element={<PublicReturnRegisterPage />} />
           <Route path="returns/support/:tenantSlug" element={<PublicSupportPage />} />
@@ -455,7 +461,7 @@ function NormalAppRoutes() {
         <Route path="suppliers/data/:accessCode/submitted" element={<SupplierDataSubmittedPage />} />
 
         {/* Customer Portal (tenant-branded, own auth) */}
-        <Route path="customer/:tenantSlug" element={<CustomerPortalLayout />}>
+        <Route path="customer/:tenantSlug" element={<RouteErrorBoundary name="customer-portal"><CustomerPortalLayout /></RouteErrorBoundary>}>
           {/* Public customer pages (no customer auth needed) */}
           <Route path="login" element={<CustomerLoginPage />} />
           <Route path="register" element={<CustomerRegisterPage />} />

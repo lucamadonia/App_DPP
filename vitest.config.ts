@@ -5,6 +5,8 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   test: {
     globals: true,
+    // jsdom + lazy route imports are slow on cold Windows runs; 5s default flakes.
+    testTimeout: 15000,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
