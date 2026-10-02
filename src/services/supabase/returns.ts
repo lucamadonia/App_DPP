@@ -8,6 +8,7 @@ import type { RhReturn, ReturnStatus, ReturnsFilter, PaginatedResult, ReturnsHub
 import { generateReturnNumber } from '@/lib/return-number';
 import type { TenantSettings } from '@/types/database';
 import { triggerEmailNotification, triggerPublicEmailNotification } from './rh-notification-trigger';
+import { getPublicTenantBySlug } from './public-tenant';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformReturn(row: any): RhReturn {
@@ -366,7 +367,45 @@ export async function rejectReturn(
   return updateReturnStatus(id, 'REJECTED', reason, actorId);
 }
 
-const CANCELLABLE_STATUSES: ReturnStatus[] = ['CREATED', 'PENDING_APPROVAL', 'APPROVED', 'LABEL_GENERATED'];
+// ============================================
+// PUBLIC RPC HELPERS
+// ============================================
+// Anon has no direct table access on rh_returns / rh_return_items /
+// rh_return_timeline (migration 20261001c_public_returns_rpc.sql). All public
+// flows go through SECURITY DEFINER RPCs.
+
+interface PublicRpcResult {
+  success?: boolean;
+  error?: string;
+}
+
+const PUBLIC_RPC_ERRORS: Record<string, string> = {
+  not_found: 'Return not found',
+  not_cancellable: 'Return cannot be cancelled in current status',
+  rate_limited: 'Too many requests. Please try again later.',
+  tenant_not_found: 'Tenant not found',
+  invalid_email: 'Invalid email address',
+  invalid_solution: 'Invalid desired solution',
+  invalid_items: 'Invalid return items',
+  invalid_payload: 'Invalid return data',
+};
+
+function publicRpcErrorMessage(code?: string): string {
+  return (code && PUBLIC_RPC_ERRORS[code]) || code || 'Request failed';
+}
+
+interface PublicReturnItem {
+  id: string;
+  name: string;
+  quantity: number;
+  condition?: string;
+  photos: string[];
+}
+
+/** tenantSlug -> tenantId, filled by publicCreateReturn (used for photo paths). */
+const publicTenantIdBySlug = new Map<string, string>();
+/** returnNumber -> items, filled by publicTrackReturn (used by publicGetReturnItems). */
+const publicTrackedItems = new Map<string, PublicReturnItem[]>();
 
 export async function cancelReturn(
   id: string,
@@ -376,54 +415,38 @@ export async function cancelReturn(
   return updateReturnStatus(id, 'CANCELLED', reason || 'Return cancelled', actorId);
 }
 
+/**
+ * Public (anon) cancellation. Ownership (return number + e-mail), the
+ * cancellable-status check, the status change and the timeline entry all
+ * happen server-side in the SECURITY DEFINER RPC `public_cancel_return`.
+ */
 export async function publicCancelReturn(
   returnNumber: string,
   email: string,
   reason: string
 ): Promise<{ success: boolean; error?: string }> {
-  // Find return by number
-  const { data: ret } = await supabaseAnon
-    .from('rh_returns')
-    .select('id, status, tenant_id, metadata')
-    .eq('return_number', returnNumber.trim())
-    .single();
-
-  if (!ret) return { success: false, error: 'Return not found' };
-
-  // Verify email matches
-  const meta = ret.metadata as Record<string, unknown> | null;
-  if (!meta?.email || meta.email !== email) {
-    return { success: false, error: 'Email does not match' };
-  }
-
-  // Check cancellable status
-  if (!CANCELLABLE_STATUSES.includes(ret.status as ReturnStatus)) {
-    return { success: false, error: 'Return cannot be cancelled in current status' };
-  }
-
-  // Update status
-  const { error: updateError } = await supabaseAnon
-    .from('rh_returns')
-    .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
-    .eq('id', ret.id);
-
-  if (updateError) return { success: false, error: updateError.message };
-
-  // Add timeline entry
-  await supabaseAnon.from('rh_return_timeline').insert({
-    id: crypto.randomUUID(),
-    return_id: ret.id,
-    tenant_id: ret.tenant_id,
-    status: 'CANCELLED',
-    comment: reason,
-    actor_type: 'customer',
+  const { data, error } = await supabaseAnon.rpc('public_cancel_return', {
+    p_return_number: returnNumber.trim(),
+    p_email: email.trim(),
+    p_reason: reason,
   });
 
+  if (error) {
+    console.error('[publicCancelReturn] RPC failed:', error.message);
+    return { success: false, error: error.message };
+  }
+
+  const res = (data || {}) as PublicRpcResult & { tenant_id?: string; customer_name?: string | null };
+  if (!res.success || !res.tenant_id) {
+    return { success: false, error: publicRpcErrorMessage(res.error) };
+  }
+
   // Trigger email notification
-  triggerPublicEmailNotification(ret.tenant_id, 'return_cancelled', {
-    recipientEmail: email,
-    customerName: (meta?.customerName as string) || undefined,
-    firstName: (meta?.customerName as string)?.split(' ')[0],
+  const customerName = res.customer_name || undefined;
+  triggerPublicEmailNotification(res.tenant_id, 'return_cancelled', {
+    recipientEmail: email.trim(),
+    customerName,
+    firstName: customerName?.split(' ')[0],
     returnNumber,
     status: 'CANCELLED',
     reason,
@@ -471,197 +494,167 @@ export async function publicCreateReturn(
     shipmentNumber?: string;
   }
 ): Promise<{ success: boolean; returnNumber?: string; error?: string }> {
-  // Get tenant by slug
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('id, settings')
-    .eq('slug', tenantSlug)
-    .single();
-
-  if (!tenant) return { success: false, error: 'Tenant not found' };
-
-  const prefix = (tenant.settings as TenantSettings | null)?.returnsHub?.prefix || 'RET';
-  const rn = generateReturnNumber(prefix);
-
-  const { data: ret, error } = await supabase
-    .from('rh_returns')
-    .insert({
-      tenant_id: tenant.id,
-      return_number: rn,
-      status: 'CREATED',
-      order_id: data.orderNumber || null,
-      reason_category: data.reasonCategory || null,
-      reason_text: data.reasonText || null,
-      desired_solution: data.desiredSolution,
-      shipping_method: data.shippingMethod,
-      priority: 'normal',
-      metadata: {
-        source: 'public_portal',
-        email: data.email,
-        // Set when the public wizard pre-filtered items via the shipment
-        // lookup — lets the operator jump straight back to the underlying
-        // wh_shipments row without re-matching by email.
-        ...(data.shipmentToken && { tracking_token: data.shipmentToken }),
-        ...(data.shipmentNumber && { shipment_number: data.shipmentNumber }),
-        ...(data.shippingAddress && {
-          customerName: data.shippingAddress.name,
-          shippingCompany: data.shippingAddress.company || undefined,
-          shippingStreet: data.shippingAddress.street,
-          shippingCity: data.shippingAddress.city,
-          shippingPostalCode: data.shippingAddress.postalCode,
-          shippingCountry: data.shippingAddress.country,
-        }),
-      },
-    })
-    .select('id')
-    .single();
-
-  if (error || !ret) {
-    console.error('Failed to create public return:', error);
-    return { success: false, error: error?.message || 'Insert failed' };
-  }
-
-  // Add items
-  for (const item of data.items.filter(i => i.name.trim())) {
-    await supabase.from('rh_return_items').insert({
-      return_id: ret.id,
-      tenant_id: tenant.id,
-      product_id: item.productId || null,
-      name: item.name,
-      quantity: item.quantity,
-      condition: item.condition || null,
-    });
-  }
-
-  // Add timeline entry
-  await supabase.from('rh_return_timeline').insert({
-    return_id: ret.id,
-    tenant_id: tenant.id,
-    status: 'CREATED',
-    comment: 'Return registered via customer portal',
-    actor_type: 'customer',
-  });
-
-  // Create or find customer, store address
-  const addressEntry = data.shippingAddress ? {
-    type: 'shipping',
-    name: data.shippingAddress.name,
-    company: data.shippingAddress.company || undefined,
-    street: data.shippingAddress.street,
-    postalCode: data.shippingAddress.postalCode,
-    city: data.shippingAddress.city,
-    country: data.shippingAddress.country,
-  } : null;
-
-  // Look up existing customer via SECURITY DEFINER RPC — anon has no direct
-  // SELECT on rh_customers anymore (the RPC returns only the customer id).
-  const { data: existingCustomerId } = await supabase.rpc('public_lookup_customer', {
-    p_tenant_id: tenant.id,
-    p_email: data.email,
-  });
-
-  let customerId: string | null = (existingCustomerId as string | null) || null;
-
-  if (!customerId) {
-    const newCustomerId = crypto.randomUUID();
-    const { error: custErr } = await supabase.from('rh_customers').insert({
-      id: newCustomerId,
-      tenant_id: tenant.id,
+  // Server-side: tenant resolution (by slug), validation, status CREATED,
+  // return number, items, timeline, customer lookup/creation + linking and
+  // rate limiting all happen inside the SECURITY DEFINER RPC.
+  // The return_created workflow event is captured by the DB trigger
+  // `workflow_capture` (durable workflows), so no client-side engine call.
+  // Only server_execution rules run there; migration 20261001c moves active
+  // return_* rules to server execution (anon cannot run the browser engine).
+  const { data: rpcData, error } = await supabaseAnon.rpc('public_create_return', {
+    p_tenant_id: null,
+    p_payload: {
+      tenantSlug,
       email: data.email,
-      name: data.shippingAddress?.name || null,
-      addresses: addressEntry ? [addressEntry] : [],
-    });
-    if (!custErr) customerId = newCustomerId;
+      orderNumber: data.orderNumber || null,
+      reasonCategory: data.reasonCategory || null,
+      reasonText: data.reasonText || null,
+      desiredSolution: data.desiredSolution,
+      shippingMethod: data.shippingMethod,
+      shippingAddress: data.shippingAddress || null,
+      shipmentToken: data.shipmentToken || null,
+      shipmentNumber: data.shipmentNumber || null,
+      items: data.items
+        .filter((i) => i.name.trim())
+        .map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          condition: i.condition || null,
+          productId: i.productId || null,
+        })),
+    },
+  });
+
+  if (error) {
+    console.error('Failed to create public return:', error);
+    return { success: false, error: error.message };
   }
 
-  // Link customer to return
-  if (customerId) {
-    await supabase.from('rh_returns').update({ customer_id: customerId }).eq('id', ret.id);
+  const res = (rpcData || {}) as PublicRpcResult & {
+    return_id?: string;
+    return_number?: string;
+    tenant_id?: string;
+  };
+  if (!res.success || !res.return_number || !res.tenant_id || !res.return_id) {
+    return { success: false, error: publicRpcErrorMessage(res.error) };
   }
+
+  publicTenantIdBySlug.set(tenantSlug, res.tenant_id);
 
   // Trigger confirmation email via public notification
   const confirmName = data.shippingAddress?.name || undefined;
-  triggerPublicEmailNotification(tenant.id, 'return_confirmed', {
-    recipientEmail: data.email,
+  triggerPublicEmailNotification(res.tenant_id, 'return_confirmed', {
+    recipientEmail: data.email.trim(),
     customerName: confirmName,
     firstName: confirmName ? confirmName.split(' ')[0] : undefined,
-    returnNumber: rn,
+    returnNumber: res.return_number,
     // Free text (if any) goes in `reason`; the category is localized to a
     // readable label by the notification trigger so the mail never shows a
     // bare slug like "Reason: other".
     reason: data.reasonText || undefined,
     reasonCategory: data.reasonCategory,
-    returnId: ret.id,
+    returnId: res.return_id,
   }).catch((err) => console.error('Public notification trigger failed:', err));
 
-  // Fire workflow event for public return creation (fire-and-forget)
-  import('./rh-workflow-engine').then(({ executeWorkflowsForEvent }) => {
-    executeWorkflowsForEvent('return_created', {
-      tenantId: tenant.id,
-      eventType: 'return_created',
-      returnId: ret.id,
-    });
-  }).catch(console.error);
-
-  return { success: true, returnNumber: rn };
+  return { success: true, returnNumber: res.return_number };
 }
 
+type PublicTimelineEntry = {
+  id: string;
+  returnId: string;
+  tenantId: string;
+  status: string;
+  comment?: string;
+  actorType: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+/**
+ * Public tracking. Requires return number AND the e-mail used for the return;
+ * the RPC returns a customer-safe projection only (no internal notes, customs
+ * data, metadata or assignment).
+ */
 export async function publicTrackReturn(
   returnNumber: string,
   email?: string
-): Promise<{ returnData: RhReturn | null; timeline: Array<{ id: string; returnId: string; tenantId: string; status: string; comment?: string; actorType: string; metadata: Record<string, unknown>; createdAt: string }> }> {
-  const { data: ret, error: retError } = await supabaseAnon
-    .from('rh_returns')
-    .select('*')
-    .eq('return_number', returnNumber.trim())
-    .single();
+): Promise<{
+  returnData: RhReturn | null;
+  timeline: PublicTimelineEntry[];
+  items?: PublicReturnItem[];
+  tenantSlug?: string;
+}> {
+  const number = returnNumber.trim();
+  const mail = email?.trim();
+  if (!number || !mail) return { returnData: null, timeline: [] };
 
-  if (retError) {
-    console.error('[publicTrackReturn] Query error:', retError.message, retError.code, retError.details);
-  }
+  const { data, error } = await supabaseAnon.rpc('public_track_return', {
+    p_return_number: number,
+    p_email: mail,
+  });
 
-  if (!ret) return { returnData: null, timeline: [] };
-
-  // Verify email if provided
-  const meta = ret.metadata as Record<string, unknown> | null;
-  if (email && meta?.email && meta.email !== email) {
+  if (error) {
+    console.error('[publicTrackReturn] RPC error:', error.message, error.code);
     return { returnData: null, timeline: [] };
   }
+  if (!data) return { returnData: null, timeline: [] };
 
-  // Transform but strip internal data
-  const transformed = transformReturn(ret);
-  transformed.internalNotes = undefined;
-  transformed.customsData = undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = data as any;
+  const transformed = transformReturn(row);
   transformed.metadata = {};
 
-  // Load timeline
-  const { data: tlData } = await supabaseAnon
-    .from('rh_return_timeline')
-    .select('*')
-    .eq('return_id', ret.id)
-    .order('created_at', { ascending: true });
-
-  const timeline = (tlData || []).map((row: any) => ({
-    id: row.id,
-    returnId: row.return_id,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const timeline: PublicTimelineEntry[] = (row.timeline || []).map((t: any) => ({
+    id: t.id,
+    returnId: row.id,
     tenantId: row.tenant_id,
-    status: row.status,
-    comment: row.comment || undefined,
-    actorType: row.actor_type || 'system',
+    status: t.status,
+    comment: t.comment || undefined,
+    actorType: t.actor_type || 'system',
     metadata: {},
-    createdAt: row.created_at,
+    createdAt: t.created_at,
   }));
 
-  return { returnData: transformed, timeline };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items: PublicReturnItem[] = (row.items || []).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    condition: item.condition || undefined,
+    photos: item.photos || [],
+  }));
+  publicTrackedItems.set(number, items);
+  if (row.return_number) publicTrackedItems.set(row.return_number, items);
+
+  return {
+    returnData: transformed,
+    timeline,
+    items,
+    tenantSlug: row.tenant_slug || undefined,
+  };
+}
+
+/**
+ * Public: resolve a return id for linking (e.g. a public support ticket).
+ * Anon has no table access to rh_returns, so this goes through
+ * public_track_return, which also enforces that the e-mail owns the return.
+ * Returns undefined when not found, e-mail mismatch, rate-limited or when the
+ * return belongs to a different tenant.
+ */
+export async function publicResolveReturnId(
+  returnNumber: string,
+  email: string,
+  tenantId?: string
+): Promise<string | undefined> {
+  const { returnData } = await publicTrackReturn(returnNumber, email);
+  if (!returnData) return undefined;
+  if (tenantId && returnData.tenantId !== tenantId) return undefined;
+  return returnData.id;
 }
 
 export async function publicGetTenantName(tenantSlug: string): Promise<string> {
-  const { data } = await supabaseAnon
-    .from('tenants')
-    .select('name')
-    .eq('slug', tenantSlug)
-    .single();
-  return data?.name || '';
+  return (await getPublicTenantBySlug(tenantSlug))?.name || '';
 }
 
 export async function publicGetTenantBranding(tenantSlug: string): Promise<{
@@ -670,12 +663,7 @@ export async function publicGetTenantBranding(tenantSlug: string): Promise<{
   logoUrl: string;
   embedAllowedDomains?: string[];
 } | null> {
-  const { data } = await supabaseAnon
-    .from('tenants')
-    .select('name, settings')
-    .eq('slug', tenantSlug)
-    .single();
-
+  const data = await getPublicTenantBySlug(tenantSlug);
   if (!data) return null;
 
   const settings = data.settings as TenantSettings | null;
@@ -695,16 +683,16 @@ export async function publicUploadReturnPhoto(
   returnId: string,
   file: File
 ): Promise<{ success: boolean; path?: string; error?: string }> {
-  const { data: tenant } = await supabaseAnon
-    .from('tenants')
-    .select('id')
-    .eq('slug', tenantSlug)
-    .single();
+  // Prefer the tenant id returned by public_create_return (no anon tenant read).
+  let tenantId = publicTenantIdBySlug.get(tenantSlug);
+  if (!tenantId) {
+    tenantId = (await getPublicTenantBySlug(tenantSlug))?.id;
+  }
 
-  if (!tenant) return { success: false, error: 'Tenant not found' };
+  if (!tenantId) return { success: false, error: 'Tenant not found' };
 
   const ext = file.name.split('.').pop() || 'jpg';
-  const filePath = `${tenant.id}/${returnId}/${Date.now()}.${ext}`;
+  const filePath = `${tenantId}/${returnId}/${Date.now()}.${ext}`;
 
   const { error } = await supabaseAnon.storage
     .from('return-photos')
@@ -718,33 +706,18 @@ export async function publicUploadReturnPhoto(
   return { success: true, path: filePath };
 }
 
-export async function publicGetReturnItems(returnNumber: string): Promise<Array<{
-  id: string;
-  name: string;
-  quantity: number;
-  condition?: string;
-  photos: string[];
-}>> {
-  const { data: ret } = await supabaseAnon
-    .from('rh_returns')
-    .select('id')
-    .eq('return_number', returnNumber.trim())
-    .single();
-
-  if (!ret) return [];
-
-  const { data: items } = await supabaseAnon
-    .from('rh_return_items')
-    .select('id, name, quantity, condition, photos')
-    .eq('return_id', ret.id);
-
-  return (items || []).map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    quantity: item.quantity,
-    condition: item.condition || undefined,
-    photos: item.photos || [],
-  }));
+/**
+ * Items of a publicly tracked return. Anon has no table access anymore, so
+ * this either reuses the items loaded by the last publicTrackReturn() call or,
+ * when an e-mail is given, re-tracks via the RPC.
+ */
+export async function publicGetReturnItems(returnNumber: string, email?: string): Promise<PublicReturnItem[]> {
+  const number = returnNumber.trim();
+  const cached = publicTrackedItems.get(number);
+  if (cached) return cached;
+  if (!email) return [];
+  const result = await publicTrackReturn(number, email);
+  return result.items || [];
 }
 
 export async function getReturnStats(): Promise<ReturnsHubStats> {
