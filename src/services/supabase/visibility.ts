@@ -5,7 +5,7 @@
  */
 
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import { gtinCandidates } from '@/lib/barcode-parser';
+import { getPublicDppProduct } from './products';
 import type { VisibilityConfigV2, VisibilityConfigV3, FieldVisibilityConfig } from '@/types/visibility';
 import { defaultVisibilityConfigV2, defaultVisibilityConfigV3, migrateVisibilityV2toV3 } from '@/types/visibility';
 
@@ -182,99 +182,15 @@ export async function copyVisibilitySettingsToProduct(
 }
 
 /**
- * Get visibility settings for a public product view (by GTIN/Serial)
- * This bypasses tenant check since it's for public access.
- * Two-step lookup: find product by GTIN, then batch by serial_number.
- * Falls back to legacy direct product lookup for backwards compatibility.
- * Auto-migrates V2 to V3 when loading.
+ * Get visibility settings for a public product view (by GTIN/Serial).
+ * Resolved server-side by get_public_dpp_product (migration 20261001i):
+ * product row -> tenant row -> defaults, V2 auto-migrated to V3. Public code
+ * never reads visibility_settings directly (no anon access after stage 2).
  */
 export async function getPublicVisibilitySettings(
   gtin: string,
   serial: string
 ): Promise<VisibilityConfigV3> {
-  let productId: string | null = null;
-  let tenantId: string | null = null;
-
-  // Step 1: Find products by GTIN (accept GS1-128 / GTIN-14 variants)
-  const candidates = gtinCandidates(gtin);
-  const lookupGtins = candidates.length > 0 ? candidates : [gtin];
-  const { data: productRows } = await supabase
-    .from('products')
-    .select('id, tenant_id')
-    .in('gtin', lookupGtins);
-
-  if (productRows && productRows.length > 0) {
-    // Step 2: Try to find a batch with the given serial number
-    for (const row of productRows) {
-      const { data: batchRow } = await supabase
-        .from('product_batches')
-        .select('id')
-        .eq('product_id', row.id)
-        .eq('serial_number', serial)
-        .single();
-
-      if (batchRow) {
-        productId = row.id;
-        tenantId = row.tenant_id;
-        break;
-      }
-    }
-
-    // Fallback: legacy lookup (serial_number on products table)
-    if (!productId) {
-      const { data: legacyProduct } = await supabase
-        .from('products')
-        .select('id, tenant_id')
-        .in('gtin', lookupGtins)
-        .eq('serial_number', serial)
-        .single();
-
-      if (legacyProduct) {
-        productId = legacyProduct.id;
-        tenantId = legacyProduct.tenant_id;
-      }
-    }
-  }
-
-  if (!productId || !tenantId) {
-    return defaultVisibilityConfigV3;
-  }
-
-  const product = { id: productId, tenant_id: tenantId };
-
-  // Try product-specific settings first
-  const { data: productSettings } = await supabase
-    .from('visibility_settings')
-    .select('*')
-    .eq('tenant_id', product.tenant_id)
-    .eq('product_id', product.id)
-    .single();
-
-  if (productSettings) {
-    const config = transformVisibilitySettings(productSettings);
-    // Auto-migrate V2 to V3
-    if (config.version === 2) {
-      return migrateVisibilityV2toV3(config as VisibilityConfigV2);
-    }
-    return config as VisibilityConfigV3;
-  }
-
-  // Fall back to tenant settings
-  const { data: tenantSettings } = await supabase
-    .from('visibility_settings')
-    .select('*')
-    .eq('tenant_id', product.tenant_id)
-    .is('product_id', null)
-    .single();
-
-  if (tenantSettings) {
-    const config = transformVisibilitySettings(tenantSettings);
-    // Auto-migrate V2 to V3
-    if (config.version === 2) {
-      return migrateVisibilityV2toV3(config as VisibilityConfigV2);
-    }
-    return config as VisibilityConfigV3;
-  }
-
-  return defaultVisibilityConfigV3;
+  const result = await getPublicDppProduct(gtin, serial, 'consumer');
+  return result?.visibility ?? defaultVisibilityConfigV3;
 }

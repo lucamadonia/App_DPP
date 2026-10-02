@@ -129,7 +129,8 @@ export async function getBatchById(id: string): Promise<ProductBatch | null> {
 }
 
 /**
- * Get a batch by product_id and serial_number (for public DPP lookup)
+ * Get a batch by product_id and serial_number (tenant-scoped via RLS; public
+ * DPP pages use get_public_dpp_product instead)
  */
 export async function getBatchByProductAndSerial(
   productId: string,

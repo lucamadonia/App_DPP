@@ -4,9 +4,10 @@
  * CRUD-Operationen für Produkte mit RLS (Row Level Security)
  */
 
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
-import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides, PackagingType, SubstanceOfConcern, AuthorizedRepresentative, DppResponsible } from '@/types/product';
+import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
+import type { Product, ProductBatch, Material, Certification, CarbonFootprint, RecyclabilityInfo, SupplyChainEntry, TranslatableProductFields, AggregationOverrides, PackagingType, SubstanceOfConcern, AuthorizedRepresentative, DppResponsible, ProductComponent } from '@/types/product';
 import type { ProductRegistrations, SupportResources } from '@/types/database';
+import { defaultVisibilityConfigV3, type VisibilityConfigV3 } from '@/types/visibility';
 
 // Transform database row to Product type (master data only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,26 +121,6 @@ function mergeProductWithBatch(product: Product & { tenantId: string }, batch: a
     packagingWidthCm: batch.packaging_width_cm != null ? Number(batch.packaging_width_cm) : product.packagingWidthCm,
     packagingDepthCm: batch.packaging_depth_cm != null ? Number(batch.packaging_depth_cm) : product.packagingDepthCm,
   };
-}
-
-/**
- * Enrich product.imageUrl from product_images table if the legacy field is empty.
- * Picks the primary image first, otherwise the first image by sort_order.
- */
-async function enrichImageUrl(product: Product & { tenantId?: string }, productId: string): Promise<void> {
-  if (product.imageUrl) return;
-
-  const { data: images } = await supabase
-    .from('product_images')
-    .select('url, is_primary')
-    .eq('product_id', productId)
-    .order('is_primary', { ascending: false })
-    .order('sort_order', { ascending: true })
-    .limit(1);
-
-  if (images && images.length > 0) {
-    product.imageUrl = images[0].url;
-  }
 }
 
 export interface ProductListItem {
@@ -268,99 +249,132 @@ export async function getProductsByIds(ids: string[]): Promise<Product[]> {
   return data.map(transformProduct);
 }
 
+// ============================================
+// PUBLIC DPP (anon) - server-filtered RPC only
+// ============================================
+
+export type PublicDppView = 'consumer' | 'customs';
+
+export interface PublicDppResult {
+  product: Product & { tenantId: string };
+  tenantId: string;
+  /** Effective Visibility V3 config the server filtered the payload with. */
+  visibility: VisibilityConfigV3;
+}
+
+const SERIAL_MAX_LEN = 200;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformPublicComponent(row: any): ProductComponent {
+  const p = row.component_product;
+  return {
+    id: row.id,
+    parentProductId: row.parent_product_id,
+    componentProductId: row.component_product_id,
+    quantity: row.quantity,
+    sortOrder: row.sort_order || 0,
+    componentProduct: p
+      ? {
+          id: p.id,
+          name: p.name || '',
+          gtin: p.gtin,
+          manufacturer: p.manufacturer || '',
+          category: p.category || '',
+          imageUrl: p.image_url || undefined,
+          materials: p.materials || [],
+          carbonFootprint: p.carbon_footprint || undefined,
+          recyclability: p.recyclability || { recyclablePercentage: 0, instructions: '', disposalMethods: [] },
+          netWeight: p.net_weight != null ? Number(p.net_weight) : undefined,
+          grossWeight: p.gross_weight != null ? Number(p.gross_weight) : undefined,
+        }
+      : undefined,
+  };
+}
+
 /**
- * Get a product by GTIN and serial number (for public DPP view)
- * Two-step lookup: find product by GTIN, then batch by serial_number, then merge.
- * Falls back to legacy direct product lookup for backwards compatibility.
+ * Turn a get_public_dpp_product payload into the Product shape the DPP
+ * templates use. Exported for tests.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function transformPublicDppPayload(payload: any): PublicDppResult | null {
+  if (!payload || typeof payload !== 'object' || !payload.product || !payload.tenant_id) return null;
+  const row = payload.product;
+  // Hidden text fields are simply absent; keep the strings templates expect.
+  let product = transformProduct({
+    ...row,
+    name: row.name ?? '',
+    manufacturer: row.manufacturer ?? '',
+    category: row.category ?? '',
+    description: row.description ?? '',
+  });
+  if (payload.batch) {
+    product = mergeProductWithBatch(product, payload.batch);
+  }
+  const supplyChain = Array.isArray(payload.supply_chain) ? payload.supply_chain : [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  product.supplyChain = supplyChain.map((sc: any) => ({
+    step: sc.step,
+    location: sc.location,
+    country: sc.country,
+    date: sc.date,
+    description: sc.description,
+    processType: sc.process_type || undefined,
+    transportMode: sc.transport_mode || undefined,
+    status: sc.status || undefined,
+    emissionsKg: sc.emissions_kg != null ? Number(sc.emissions_kg) : undefined,
+  }));
+  if (product.productType === 'set') {
+    const components = Array.isArray(payload.components) ? payload.components : [];
+    product.components = components.map(transformPublicComponent);
+  }
+  const fields = payload.visibility?.fields;
+  const visibility: VisibilityConfigV3 = {
+    version: 3,
+    fields: fields && typeof fields === 'object' ? fields : defaultVisibilityConfigV3.fields,
+  };
+  return { product, tenantId: payload.tenant_id, visibility };
+}
+
+/**
+ * Public DPP lookup (/p/:gtin/:serial, /01/:gtin/21/:serial, + /customs).
+ * Goes exclusively through the SECURITY DEFINER RPC get_public_dpp_product
+ * (migration 20261001i), which resolves batch serial -> legacy serial and
+ * applies Visibility V3 for the requested view server-side. Public pages
+ * never read products / product_batches / supply_chain_entries /
+ * product_components / product_images / visibility_settings directly.
+ */
+export async function getPublicDppProduct(
+  gtin: string,
+  serial: string,
+  view: PublicDppView = 'consumer'
+): Promise<PublicDppResult | null> {
+  if (!gtin || !serial || serial.length > SERIAL_MAX_LEN) return null;
+  const { gtinCandidates } = await import('@/lib/barcode-parser');
+  const candidates = gtinCandidates(gtin);
+  const gtins = (candidates.length > 0 ? candidates : [gtin]).slice(0, 10);
+  const { data, error } = await supabaseAnon.rpc('get_public_dpp_product', {
+    p_gtins: gtins,
+    p_serial: serial,
+    p_view: view === 'customs' ? 'customs' : 'consumer',
+  });
+  if (error) {
+    console.warn('[public-dpp] get_public_dpp_product failed:', error.message);
+    return null;
+  }
+  return transformPublicDppPayload(data);
+}
+
+/**
+ * Get a product by GTIN and serial number (for public DPP view).
+ * Thin wrapper around getPublicDppProduct() for existing callers.
  */
 export async function getProductByGtinSerial(
   gtin: string,
-  serial: string
+  serial: string,
+  view: PublicDppView = 'consumer'
 ): Promise<(Product & { tenantId: string }) | null> {
-  // Step 1: Find the product by GTIN (accept EAN-13 / GTIN-14 / GS1-AI variants)
-  const { gtinCandidates } = await import('@/lib/barcode-parser');
-  const candidates = gtinCandidates(gtin);
-  const { data: productRows, error: productError } = await supabase
-    .from('products')
-    .select('*')
-    .in('gtin', candidates.length > 0 ? candidates : [gtin]);
-
-  if (productError || !productRows || productRows.length === 0) {
-    return null;
-  }
-
-  // Step 2: Try to find a batch with the given serial number
-  for (const productRow of productRows) {
-    const { data: batchRow } = await supabase
-      .from('product_batches')
-      .select('*')
-      .eq('product_id', productRow.id)
-      .eq('serial_number', serial)
-      .single();
-
-    if (batchRow) {
-      // Found batch - merge product + batch
-      const product = transformProduct(productRow);
-      const merged = mergeProductWithBatch(product, batchRow);
-
-      // Load supply chain entries (product-level + batch-level)
-      const { data: supplyChain } = await supabase
-        .from('supply_chain_entries')
-        .select('*')
-        .eq('product_id', productRow.id)
-        .order('step', { ascending: true });
-
-      if (supplyChain) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        merged.supplyChain = supplyChain.map((sc: any) => ({
-          step: sc.step,
-          location: sc.location,
-          country: sc.country,
-          date: sc.date,
-          description: sc.description,
-          processType: sc.process_type || undefined,
-          transportMode: sc.transport_mode || undefined,
-          status: sc.status || undefined,
-          emissionsKg: sc.emissions_kg != null ? Number(sc.emissions_kg) : undefined,
-        }));
-      }
-
-      await enrichImageUrl(merged, productRow.id);
-      return merged;
-    }
-  }
-
-  // Fallback: legacy lookup (product has serial_number directly)
-  const legacyRow = productRows.find(p => p.serial_number === serial);
-  if (legacyRow) {
-    const product = transformProduct(legacyRow);
-
-    const { data: supplyChain } = await supabase
-      .from('supply_chain_entries')
-      .select('*')
-      .eq('product_id', legacyRow.id)
-      .order('step', { ascending: true });
-
-    if (supplyChain) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      product.supplyChain = supplyChain.map((sc: any) => ({
-        step: sc.step,
-        location: sc.location,
-        country: sc.country,
-        date: sc.date,
-        description: sc.description,
-        processType: sc.process_type || undefined,
-        transportMode: sc.transport_mode || undefined,
-        status: sc.status || undefined,
-        emissionsKg: sc.emissions_kg != null ? Number(sc.emissions_kg) : undefined,
-      }));
-    }
-
-    await enrichImageUrl(product, legacyRow.id);
-    return product;
-  }
-
-  return null;
+  const result = await getPublicDppProduct(gtin, serial, view);
+  return result?.product ?? null;
 }
 
 /**

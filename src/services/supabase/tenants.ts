@@ -4,7 +4,7 @@
  * CRUD-Operationen für Mandanten (Tenants) mit RLS (Row Level Security)
  */
 
-import { supabase, getCurrentTenantId } from '@/lib/supabase';
+import { supabase, supabaseAnon, getCurrentTenantId } from '@/lib/supabase';
 import { gtinCandidates } from '@/lib/barcode-parser';
 import { getPublicTenantById } from './public-tenant';
 import type { Tenant, TenantSettings, BrandingSettings, QRCodeDomainSettings, DPPDesignSettings } from '@/types/database';
@@ -324,84 +324,71 @@ export async function getPublicTenantBranding(tenantId: string): Promise<Brandin
   return branding;
 }
 
+// Public DPP tenant resolution: (GTIN candidates, serial) -> tenant id via the
+// SECURITY DEFINER RPC resolve_public_dpp_product (20261001f). The DPP tables
+// are not anon-readable after stage 2. One in-flight/cached promise per key so
+// PublicLayout (branding + QR + design) resolves once per page view.
+const PUBLIC_DPP_TENANT_TTL_MS = 60_000;
+const publicDppTenantCache = new Map<string, { at: number; promise: Promise<string | null> }>();
+
+export async function resolvePublicDppTenantId(gtin: string, serial: string): Promise<string | null> {
+  if (!gtin || !serial || serial.length > 200) return null;
+  const key = `${gtin}|${serial}`;
+  const hit = publicDppTenantCache.get(key);
+  if (hit && Date.now() - hit.at < PUBLIC_DPP_TENANT_TTL_MS) return hit.promise;
+  const promise = (async () => {
+    try {
+      const candidates = gtinCandidates(gtin);
+      const { data, error } = await supabaseAnon.rpc('resolve_public_dpp_product', {
+        p_gtins: (candidates.length > 0 ? candidates : [gtin]).slice(0, 10),
+        p_serial: serial,
+      });
+      if (error) {
+        console.warn('[public-dpp] resolve_public_dpp_product failed:', error.message);
+        publicDppTenantCache.delete(key);
+        return null;
+      }
+      const tenantId = (data as { tenant_id?: string } | null)?.tenant_id;
+      return typeof tenantId === 'string' ? tenantId : null;
+    } catch (err) {
+      console.warn('[public-dpp] resolve_public_dpp_product failed:', err);
+      publicDppTenantCache.delete(key);
+      return null;
+    }
+  })();
+  publicDppTenantCache.set(key, { at: Date.now(), promise });
+  return promise;
+}
+
 /**
  * Get branding for a product's tenant (for public pages)
- * Finds the tenant based on GTIN/Serial
+ * Resolves batch serial first, then legacy products.serial_number.
  */
 export async function getPublicBrandingByProduct(
   gtin: string,
   serial: string
 ): Promise<BrandingSettings | null> {
-  // First find the product to get its tenant_id (accept GS1-128 / GTIN-14 variants)
-  const candidates = gtinCandidates(gtin);
-  const { data: product, error: productError } = await supabase
-    .from('products')
-    .select('tenant_id')
-    .in('gtin', candidates.length > 0 ? candidates : [gtin])
-    .eq('serial_number', serial)
-    .single();
-
-  if (productError || !product) {
-    console.error('Failed to find product for branding:', productError);
+  const tenantId = await resolvePublicDppTenantId(gtin, serial);
+  if (!tenantId) {
     return null;
   }
-
-  return getPublicTenantBranding(product.tenant_id);
+  return getPublicTenantBranding(tenantId);
 }
 
 /**
  * Get QR code settings for a product's tenant (for public pages)
- * Returns the dppTemplate and other QR settings
- * Uses two-step lookup: find product by GTIN, then batch by serial_number
+ * Returns the dppTemplate and other QR settings.
  */
 export async function getPublicTenantQRSettings(
   gtin: string,
   serial: string
 ): Promise<QRCodeDomainSettings | null> {
   try {
-    // Step 1: Find products by GTIN (accept GS1-128 / GTIN-14 variants)
-    const candidates = gtinCandidates(gtin);
-    const { data: productRows } = await supabase
-      .from('products')
-      .select('id, tenant_id')
-      .in('gtin', candidates.length > 0 ? candidates : [gtin]);
-
-    if (!productRows || productRows.length === 0) {
-      return null;
-    }
-
-    let tenantId: string | null = null;
-
-    // Step 2: Try to find a batch with the given serial number
-    for (const row of productRows) {
-      const { data: batchRow } = await supabase
-        .from('product_batches')
-        .select('id')
-        .eq('product_id', row.id)
-        .eq('serial_number', serial)
-        .single();
-
-      if (batchRow) {
-        tenantId = row.tenant_id;
-        break;
-      }
-    }
-
-    // Fallback: legacy lookup (serial_number on products table)
-    if (!tenantId) {
-      const legacyProduct = productRows.find(
-        (p) => (p as unknown as { serial_number?: string }).serial_number === serial
-      );
-      if (legacyProduct) {
-        tenantId = legacyProduct.tenant_id;
-      }
-    }
-
+    const tenantId = await resolvePublicDppTenantId(gtin, serial);
     if (!tenantId) {
       return null;
     }
-
-    // Step 3: Fetch tenant settings via the public RPC (allow-listed fields)
+    // Allow-listed tenant settings via the public RPC
     const data = await getPublicTenantById(tenantId);
     return data?.settings?.qrCode || null;
   } catch (error) {
@@ -482,56 +469,17 @@ export async function updateDPPDesignSettings(
 
 /**
  * Get DPP design settings for a product's tenant (for public pages)
- * Uses two-step lookup: find product by GTIN, then batch by serial_number
  */
 export async function getPublicTenantDPPDesign(
   gtin: string,
   serial: string
 ): Promise<DPPDesignSettings | null> {
   try {
-    // Step 1: Find products by GTIN (accept GS1-128 / GTIN-14 variants)
-    const candidates = gtinCandidates(gtin);
-    const { data: productRows } = await supabase
-      .from('products')
-      .select('id, tenant_id')
-      .in('gtin', candidates.length > 0 ? candidates : [gtin]);
-
-    if (!productRows || productRows.length === 0) {
-      return null;
-    }
-
-    let tenantId: string | null = null;
-
-    // Step 2: Try to find a batch with the given serial number
-    for (const row of productRows) {
-      const { data: batchRow } = await supabase
-        .from('product_batches')
-        .select('id')
-        .eq('product_id', row.id)
-        .eq('serial_number', serial)
-        .single();
-
-      if (batchRow) {
-        tenantId = row.tenant_id;
-        break;
-      }
-    }
-
-    // Fallback: legacy lookup (serial_number on products table)
-    if (!tenantId) {
-      const legacyProduct = productRows.find(
-        (p) => (p as unknown as { serial_number?: string }).serial_number === serial
-      );
-      if (legacyProduct) {
-        tenantId = legacyProduct.tenant_id;
-      }
-    }
-
+    const tenantId = await resolvePublicDppTenantId(gtin, serial);
     if (!tenantId) {
       return null;
     }
-
-    // Step 3: Fetch tenant DPP design via the public RPC (allow-listed fields)
+    // Allow-listed tenant settings via the public RPC
     const data = await getPublicTenantById(tenantId);
     return data?.settings?.dppDesign || null;
   } catch (error) {

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { type Product } from '@/types/product';
 import { type VisibilityConfigV2, type VisibilityConfigV3, defaultVisibilityConfigV3 } from '@/types/visibility';
-import { getProductByGtinSerial, getPublicVisibilitySettings, getProductComponentsPublic } from '@/services/supabase';
-import { getPublicTenantQRSettings, getPublicTenantDPPDesign } from '@/services/supabase/tenants';
+import { getPublicDppProduct, type PublicDppView } from '@/services/supabase/products';
+import { getPublicTenantById } from '@/services/supabase/public-tenant';
 import type { DPPDesignSettings, DPPTemplateName, SupportResources } from '@/types/database';
 
 /**
@@ -48,7 +48,12 @@ export function getTranslatedProduct(product: Product, locale: string): Product 
 
 export type DPPTemplate = DPPTemplateName;
 
-export function usePublicProduct(gtin?: string, serial?: string) {
+/**
+ * Load a public DPP (consumer or customs view). All product data comes from the
+ * server-filtered RPC get_public_dpp_product (Visibility V3 applied per view);
+ * tenant QR/design settings come from the allow-listed get_public_tenant_by_id.
+ */
+export function usePublicProduct(gtin?: string, serial?: string, view: PublicDppView = 'consumer') {
   const [product, setProduct] = useState<Product | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [visibilityV2, setVisibilityV2] = useState<VisibilityConfigV2 | VisibilityConfigV3 | null>(null);
@@ -59,6 +64,8 @@ export function usePublicProduct(gtin?: string, serial?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
       if (!gtin || !serial) {
         setLoading(false);
@@ -68,23 +75,16 @@ export function usePublicProduct(gtin?: string, serial?: string) {
       setLoading(true);
 
       try {
-        const apiProduct = await getProductByGtinSerial(gtin, serial);
+        const result = await getPublicDppProduct(gtin, serial, view);
+        if (cancelled) return;
 
-        // If this is a set, load components
-        if (apiProduct?.productType === 'set' && apiProduct.id) {
-          const components = await getProductComponentsPublic(apiProduct.id);
-          apiProduct.components = components;
-        }
+        setProduct(result?.product ?? null);
+        setTenantId(result?.tenantId ?? null);
+        setVisibilityV2(result?.visibility ?? defaultVisibilityConfigV3);
 
-        setProduct(apiProduct);
-        setTenantId(apiProduct?.tenantId || null);
-
-        const [visibility, qrSettings, designSettings] = await Promise.all([
-          getPublicVisibilitySettings(gtin, serial),
-          getPublicTenantQRSettings(gtin, serial),
-          getPublicTenantDPPDesign(gtin, serial),
-        ]);
-        setVisibilityV2(visibility);
+        const tenant = result?.tenantId ? await getPublicTenantById(result.tenantId) : null;
+        if (cancelled) return;
+        const qrSettings = tenant?.settings?.qrCode;
         if (qrSettings) {
           // Legacy fallback: use dppTemplate if specific ones aren't set
           const fallback = (qrSettings.dppTemplate as DPPTemplate) || 'modern';
@@ -92,8 +92,9 @@ export function usePublicProduct(gtin?: string, serial?: string) {
           setDppTemplateCustomer((qrSettings.dppTemplateCustomer as DPPTemplate) || fallback);
           setDppTemplateCustoms((qrSettings.dppTemplateCustoms as DPPTemplate) || fallback);
         }
-        setDppDesign(designSettings);
+        setDppDesign(tenant?.settings?.dppDesign || null);
       } catch (error) {
+        if (cancelled) return;
         console.error('Error loading product data:', error);
         setProduct(null);
         setVisibilityV2(defaultVisibilityConfigV3);
@@ -103,7 +104,10 @@ export function usePublicProduct(gtin?: string, serial?: string) {
     }
 
     loadData();
-  }, [gtin, serial]);
+    return () => {
+      cancelled = true;
+    };
+  }, [gtin, serial, view]);
 
   return { product, tenantId, visibilityV2, dppTemplate, dppTemplateCustomer, dppTemplateCustoms, dppDesign, loading };
 }

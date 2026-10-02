@@ -19,7 +19,7 @@ import { TemplateCustom } from '@/components/public/TemplateCustom';
 export function PublicCustomsPage() {
   const { t } = useTranslation('dpp');
   const { gtin, serial } = useParams();
-  const { product, tenantId, visibilityV2, dppTemplateCustoms, dppDesign, loading } = usePublicProduct(gtin, serial);
+  const { product, tenantId, visibilityV2, dppTemplateCustoms, dppDesign, loading } = usePublicProduct(gtin, serial, 'customs');
 
   if (loading) {
     return (
