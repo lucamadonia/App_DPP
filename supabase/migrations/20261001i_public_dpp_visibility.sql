@@ -44,6 +44,11 @@
 --     _guard_same_tenant_product_refs on product_batches,
 --     supply_chain_entries, product_components and product_images rejects
 --     references to products / batches of another tenant (all roles).
+--   * DPP-HIJACK-1: a GTIN (incl. its EAN-13/GTIN-14 lookup forms) can only
+--     be used by one tenant (trigger products_gtin_owner, all roles);
+--     products/product_batches.created_at are server-owned for client roles;
+--     resolve_public_dpp_product never picks between tenants by age and
+--     fails closed when a GTIN + serial matches several tenants (section 6).
 --
 -- This migration is ADDITIVE: it does not remove any table policy. The
 -- blanket anon SELECT policies are removed by the staged script
@@ -338,11 +343,28 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------
--- 2b. resolve_public_dpp_product: batch must belong to the product's tenant
+-- 2b. resolve_public_dpp_product: batch must belong to the product's tenant,
+--     and a GTIN + serial that matches several tenants is never resolved
+--     by a client-controlled tie-breaker (DPP-HIJACK-1)
 -- ---------------------------------------------------------------------
 -- Replaces the 20261001f version (same signature; CREATE OR REPLACE keeps
 -- the grants). Without the tenant equality a foreign tenant's batch row
 -- pointing at this product would win (the batch path is tried first).
+--
+-- Candidates from both paths (batch serial, legacy products.serial_number)
+-- are collected together:
+--   * all candidates belong to ONE tenant: same order as before (batch path
+--     first, then the GTIN exactly as scanned, then age, then id);
+--   * candidates of SEVERAL tenants: only the legacy exact match
+--     (products.gtin = the scanned GTIN p_gtins[1] AND products.serial_number
+--     = p_serial, unique via UNIQUE(gtin, serial_number)) is accepted, and
+--     only if it is a single tenant. Otherwise NULL + LOG (fail closed, like
+--     get_public_tenant_by_domain). Before, the batch path won across all
+--     tenants and ties were broken by products.created_at, which the client
+--     could write, so any tenant could take over a victim's QR codes by
+--     creating a product with the victim's GTIN.
+-- New cross-tenant GTIN duplicates are rejected by products_gtin_owner
+-- (section 6); this function is the backstop for rows written before it.
 CREATE OR REPLACE FUNCTION public.resolve_public_dpp_product(p_gtins text[], p_serial text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -354,28 +376,50 @@ DECLARE
   v_product_id uuid;
   v_tenant_id uuid;
   v_batch_id uuid;
+  v_multi boolean;
+  v_legacy_exact boolean;
+  v_primary text;
 BEGIN
   IF p_gtins IS NULL OR cardinality(p_gtins) = 0 OR cardinality(p_gtins) > 10
      OR p_serial IS NULL OR length(p_serial) = 0 OR length(p_serial) > 200 THEN
     RETURN NULL;
   END IF;
+  -- The client sends gtinCandidates(urlGtin): the URL GTIN comes first.
+  v_primary := p_gtins[1];
 
-  SELECT p.id, p.tenant_id, b.id INTO v_product_id, v_tenant_id, v_batch_id
-  FROM public.products p
-  JOIN public.product_batches b ON b.product_id = p.id AND b.tenant_id = p.tenant_id
-  WHERE p.gtin = ANY (p_gtins) AND b.serial_number = p_serial
-  ORDER BY p.created_at, b.created_at
+  SELECT c.product_id, c.tenant_id, c.batch_id, c.multi,
+         (c.path = 1 AND c.exact AND NOT c.legacy_exact_multi)
+  INTO v_product_id, v_tenant_id, v_batch_id, v_multi, v_legacy_exact
+  FROM (
+    SELECT x.*,
+           (min(x.tenant_id::text) OVER () <> max(x.tenant_id::text) OVER ()) AS multi,
+           coalesce(min(x.tenant_id::text) FILTER (WHERE x.path = 1 AND x.exact) OVER ()
+                    <> max(x.tenant_id::text) FILTER (WHERE x.path = 1 AND x.exact) OVER (), false)
+             AS legacy_exact_multi
+    FROM (
+      SELECT p.id AS product_id, p.tenant_id, b.id AS batch_id, 0 AS path,
+             coalesce(p.gtin = v_primary, false) AS exact, p.created_at AS p_created, b.created_at AS b_created
+      FROM public.products p
+      JOIN public.product_batches b ON b.product_id = p.id AND b.tenant_id = p.tenant_id
+      WHERE p.gtin = ANY (p_gtins) AND b.serial_number = p_serial
+      UNION ALL
+      SELECT p.id, p.tenant_id, NULL::uuid, 1,
+             coalesce(p.gtin = v_primary, false), p.created_at, NULL::timestamptz
+      FROM public.products p
+      WHERE p.gtin = ANY (p_gtins) AND p.serial_number = p_serial
+    ) x
+  ) c
+  ORDER BY (c.multi AND c.path = 1 AND c.exact) DESC, c.path, c.exact DESC,
+           c.p_created, c.b_created, c.product_id, c.batch_id
   LIMIT 1;
 
   IF v_product_id IS NULL THEN
-    SELECT p.id, p.tenant_id INTO v_product_id, v_tenant_id
-    FROM public.products p
-    WHERE p.gtin = ANY (p_gtins) AND p.serial_number = p_serial
-    ORDER BY p.created_at
-    LIMIT 1;
+    RETURN NULL;
   END IF;
 
-  IF v_product_id IS NULL THEN
+  IF v_multi AND NOT v_legacy_exact THEN
+    RAISE LOG 'resolve_public_dpp_product: serial % for GTINs % matches products of several tenants; not resolved',
+      p_serial, p_gtins;
     RETURN NULL;
   END IF;
 
@@ -697,3 +741,204 @@ END $$;
 --   UNION ALL SELECT 'supply_chain_entries.batch', s.id FROM supply_chain_entries s JOIN product_batches b ON b.id = s.batch_id WHERE b.tenant_id <> s.tenant_id
 --   UNION ALL SELECT 'product_components', c.id FROM product_components c JOIN products p ON p.id IN (c.parent_product_id, c.component_product_id) WHERE p.tenant_id <> c.tenant_id
 --   UNION ALL SELECT 'product_images', i.id FROM product_images i JOIN products p ON p.id = i.product_id WHERE p.tenant_id <> i.tenant_id;
+
+-- ---------------------------------------------------------------------
+-- 6. DPP-HIJACK-1: a GTIN belongs to one tenant; created_at is server-owned
+-- ---------------------------------------------------------------------
+-- UNIQUE(gtin, serial_number) does not stop a second tenant from creating a
+-- product with the same GTIN (NULL or another serial) and then batches with
+-- the victim's serials. The public resolver matches GTINs across all
+-- tenants, so a GTIN must be exclusive to one tenant.
+--
+-- "Same GTIN" follows the lookup forms the client generates
+-- (src/lib/barcode-parser.ts buildGtinCandidates): a product GTIN x
+-- conflicts with every stored GTIN that one scanned URL GTIN s can match
+-- together with x, i.e. the union of candidates(s) over all s with
+-- x IN candidates(s). Keep _dpp_gtin_candidates in sync with the client.
+
+-- Mirror of buildGtinCandidates().
+CREATE OR REPLACE FUNCTION public._dpp_gtin_candidates(p_gtin text)
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN p_gtin IS NULL OR p_gtin = '' THEN ARRAY[]::text[]
+    WHEN length(p_gtin) = 14 THEN ARRAY[p_gtin, substr(p_gtin, 2), left(p_gtin, 13)]
+    WHEN length(p_gtin) = 13 THEN ARRAY[p_gtin, '0' || p_gtin, p_gtin || '0']
+    WHEN length(p_gtin) = 8 THEN ARRAY[p_gtin, lpad(p_gtin, 13, '0'), lpad(p_gtin, 14, '0')]
+    ELSE ARRAY[p_gtin]
+  END
+$$;
+
+-- Every scanned form s whose candidates contain p_gtin (inverse of the above).
+CREATE OR REPLACE FUNCTION public._dpp_gtin_scan_forms(p_gtin text)
+RETURNS text[]
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public
+AS $$
+DECLARE
+  v text[];
+  d int;
+BEGIN
+  IF p_gtin IS NULL OR p_gtin = '' THEN
+    RETURN ARRAY[]::text[];
+  END IF;
+  v := ARRAY[p_gtin];
+  IF length(p_gtin) = 13 THEN
+    FOR d IN 0..9 LOOP
+      -- 14-digit s with substr(s, 2) = x or left(s, 13) = x
+      v := array_append(array_append(v, d::text || p_gtin), p_gtin || d::text);
+    END LOOP;
+    IF left(p_gtin, 5) = '00000' THEN
+      v := array_append(v, substr(p_gtin, 6));      -- 8-digit s: lpad(s, 13) = x
+    END IF;
+  ELSIF length(p_gtin) = 14 THEN
+    IF left(p_gtin, 1) = '0' THEN
+      v := array_append(v, substr(p_gtin, 2));      -- 13-digit s: '0' || s = x
+    END IF;
+    IF right(p_gtin, 1) = '0' THEN
+      v := array_append(v, left(p_gtin, 13));       -- 13-digit s: s || '0' = x
+    END IF;
+    IF left(p_gtin, 6) = '000000' THEN
+      v := array_append(v, substr(p_gtin, 7));      -- 8-digit s: lpad(s, 14) = x
+    END IF;
+  END IF;
+  RETURN v;
+END;
+$$;
+
+-- All stored GTIN values that would be served by the same scan as p_gtin.
+CREATE OR REPLACE FUNCTION public._dpp_gtin_conflict_set(p_gtin text)
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT coalesce(array_agg(DISTINCT u.c), ARRAY[]::text[])
+  FROM unnest(public._dpp_gtin_scan_forms(p_gtin)) AS s(form)
+  CROSS JOIN LATERAL unnest(public._dpp_gtin_candidates(s.form)) AS u(c)
+$$;
+
+-- Enforced for every role (service role included), like
+-- _guard_same_tenant_product_refs: a GTIN shared across tenants is never
+-- legitimate for the public resolver. Existing duplicates are not touched
+-- (only writes that set or move a GTIN are checked); see the footer query.
+CREATE OR REPLACE FUNCTION public._guard_products_gtin_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_form text;
+BEGIN
+  IF NEW.gtin IS NULL OR btrim(NEW.gtin) = '' THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'UPDATE' AND NEW.gtin IS NOT DISTINCT FROM OLD.gtin
+     AND NEW.tenant_id IS NOT DISTINCT FROM OLD.tenant_id THEN
+    RETURN NEW;
+  END IF;
+
+  -- Serialize concurrent writers of overlapping GTINs: two conflicting
+  -- GTINs always share a scan form. Locks are taken in a fixed order.
+  FOR v_form IN
+    SELECT f FROM unnest(public._dpp_gtin_scan_forms(NEW.gtin)) AS f
+    ORDER BY hashtextextended('dpp-gtin:' || f, 0)
+  LOOP
+    PERFORM pg_advisory_xact_lock(hashtextextended('dpp-gtin:' || v_form, 0));
+  END LOOP;
+
+  IF EXISTS (
+    SELECT 1 FROM public.products p
+    WHERE p.gtin = ANY (public._dpp_gtin_conflict_set(NEW.gtin))
+      AND p.tenant_id <> NEW.tenant_id
+  ) THEN
+    RAISE EXCEPTION 'GTIN % is already registered by another organization', NEW.gtin
+      USING ERRCODE = '23505',
+            HINT = 'A GTIN can only be used by one organization. Contact support if you own this GTIN.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- products.created_at / product_batches.created_at are server-owned for
+-- client roles (anon, authenticated): now() on INSERT, unchanged on UPDATE.
+-- service_role, migrations and SECURITY DEFINER functions keep their value.
+-- Not SECURITY DEFINER on purpose: current_user must be the caller's role.
+CREATE OR REPLACE FUNCTION public._dpp_server_owned_created_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF current_user IN ('anon', 'authenticated') THEN
+    IF TG_OP = 'INSERT' THEN
+      NEW.created_at := now();
+    ELSE
+      NEW.created_at := OLD.created_at;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public._dpp_gtin_candidates(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public._dpp_gtin_scan_forms(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public._dpp_gtin_conflict_set(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public._guard_products_gtin_owner() FROM PUBLIC;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public._dpp_gtin_candidates(text) FROM anon, authenticated';
+    EXECUTE 'REVOKE ALL ON FUNCTION public._dpp_gtin_scan_forms(text) FROM anon, authenticated';
+    EXECUTE 'REVOKE ALL ON FUNCTION public._dpp_gtin_conflict_set(text) FROM anon, authenticated';
+    EXECUTE 'REVOKE ALL ON FUNCTION public._guard_products_gtin_owner() FROM anon, authenticated';
+  END IF;
+END $$;
+
+DROP TRIGGER IF EXISTS products_gtin_owner ON public.products;
+CREATE TRIGGER products_gtin_owner
+  BEFORE INSERT OR UPDATE OF gtin, tenant_id ON public.products
+  FOR EACH ROW EXECUTE FUNCTION public._guard_products_gtin_owner();
+
+DROP TRIGGER IF EXISTS products_server_created_at ON public.products;
+CREATE TRIGGER products_server_created_at
+  BEFORE INSERT OR UPDATE OF created_at ON public.products
+  FOR EACH ROW EXECUTE FUNCTION public._dpp_server_owned_created_at();
+
+DROP TRIGGER IF EXISTS product_batches_server_created_at ON public.product_batches;
+CREATE TRIGGER product_batches_server_created_at
+  BEFORE INSERT OR UPDATE OF created_at ON public.product_batches
+  FOR EACH ROW EXECUTE FUNCTION public._dpp_server_owned_created_at();
+
+-- Report pre-existing cross-tenant GTIN duplicates (exact value). They are
+-- not changed here: who owns the GTIN must be decided by a person (runbook).
+-- Until then the resolver refuses to pick a tenant for a shared GTIN +
+-- serial unless the scanned GTIN + serial is a legacy exact match.
+DO $$
+DECLARE
+  v_n int;
+BEGIN
+  SELECT count(*) INTO v_n FROM (
+    SELECT p.gtin FROM public.products p
+    WHERE p.gtin IS NOT NULL AND btrim(p.gtin) <> ''
+    GROUP BY p.gtin HAVING count(DISTINCT p.tenant_id) > 1
+  ) d;
+  IF v_n > 0 THEN
+    RAISE WARNING 'DPP-HIJACK-1: % GTIN value(s) are used by more than one tenant; review them with the footer query of 20261001i', v_n;
+  END IF;
+END $$;
+
+-- Post-apply check (read-only, expected 0 rows). Lists GTINs shared by
+-- several tenants, including lookup-equivalent forms (EAN-13 vs GTIN-14):
+--   SELECT a.gtin, a.tenant_id, a.id AS product_id, a.created_at, b.gtin AS other_gtin, b.tenant_id AS other_tenant
+--   FROM products a JOIN products b
+--     ON b.gtin = ANY (_dpp_gtin_conflict_set(a.gtin)) AND b.tenant_id <> a.tenant_id
+--   WHERE a.gtin IS NOT NULL AND btrim(a.gtin) <> ''
+--   ORDER BY a.gtin, a.created_at;
+-- For each hit, keep the GTIN at the tenant that owns it (GS1 company
+-- prefix / first legitimate use) and clear or correct it at the other one.

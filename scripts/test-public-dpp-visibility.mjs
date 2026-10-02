@@ -88,6 +88,10 @@ CREATE POLICY "legacy anon docs" ON documents FOR SELECT TO anon USING (visibili
 CREATE POLICY "docs tenant" ON documents FOR SELECT USING (tenant_id = get_user_tenant_id());
 -- schema.sql 'Editors can create batches' (role check simplified): checks only the row's tenant_id.
 CREATE POLICY "Editors can create batches" ON product_batches FOR INSERT WITH CHECK (tenant_id = get_user_tenant_id());
+CREATE POLICY "Editors can update batches" ON product_batches FOR UPDATE USING (tenant_id = get_user_tenant_id());
+CREATE POLICY "Editors can create products" ON products FOR INSERT WITH CHECK (tenant_id = get_user_tenant_id());
+CREATE POLICY "Editors can update products" ON products FOR UPDATE USING (tenant_id = get_user_tenant_id())
+  WITH CHECK (tenant_id = get_user_tenant_id());
 
 GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
@@ -372,6 +376,84 @@ r = await as('anon', null, `SELECT resolve_public_dpp_product($1::text[], $2) AS
 expect('injection: resolve on legacy serial returns no batch_id', r.ok && r.rows[0].r.product_id === PL
   && r.rows[0].r.batch_id === null, r);
 
+// ---- DPP-HIJACK-1: foreign product reusing the victim's GTIN ---------------------------
+// GTIN helper mirrors the client candidate generation.
+for (const g of [EAN, '0' + EAN, '40063813339310', '12345670']) {
+  r = await db.query(`SELECT _dpp_gtin_candidates($1) AS c`, [g]);
+  expect(`_dpp_gtin_candidates(${g}) == gtinCandidates()`, JSON.stringify([...r.rows[0].c].sort())
+    === JSON.stringify(gtinCandidates(g).sort()), { sql: r.rows[0].c, js: gtinCandidates(g) });
+}
+for (const [label, gtin] of [['exact', EAN], ['GTIN-14 padded', '0' + EAN], ['EAN-13 + trailing digit', EAN + '0'],
+  ['other EAN-13 sharing a scan form', '1' + EAN.slice(0, 12)]]) {
+  r = await as('authenticated', U2, `INSERT INTO products (tenant_id, name, gtin, serial_number, created_at)
+    VALUES ('${T2}', 'FAKE - call +49 000 for refund', $1, NULL, '2000-01-01') RETURNING id`, [gtin]);
+  expect(`hijack: foreign tenant cannot create product with victim GTIN (${label})`,
+    !r.ok && /already registered by another organization/.test(r.err), r);
+}
+r = await as('authenticated', U2, `UPDATE products SET gtin = '${EAN}' WHERE id = '${PX}' RETURNING id`);
+expect('hijack: foreign tenant cannot move its product onto the victim GTIN', !r.ok && /already registered/.test(r.err), r);
+r = await as('authenticated', U2, `UPDATE products SET name = 'Foreign v2' WHERE id = '${PX}' RETURNING id`);
+expect('hijack guard: unrelated update of own product still works', r.ok && r.rows.length === 1, r);
+r = await as('authenticated', U1, `INSERT INTO products (tenant_id, name, gtin, serial_number, created_at)
+  VALUES ('${T1}', 'Lampe Variante', '${EAN}', 'MASTER-2', '2000-01-01') RETURNING id, created_at`);
+expect('hijack guard: owner tenant can reuse its own GTIN', r.ok && r.rows.length === 1, r);
+expect('created_at: client value ignored on product INSERT', r.ok && new Date(r.rows[0].created_at).getFullYear() > 2020, r.rows);
+const PV = r.ok ? r.rows[0].id : null;
+r = await as('authenticated', U1, `UPDATE products SET created_at = '2000-01-01' WHERE id = '${P}' RETURNING created_at`);
+expect('created_at: client cannot rewrite product created_at', r.ok && new Date(r.rows[0].created_at).getFullYear() > 2020, r);
+r = await as('authenticated', U1, `INSERT INTO product_batches (tenant_id, product_id, serial_number, created_at)
+  VALUES ('${T1}', '${P}', 'SN-TS', '2000-01-01') RETURNING created_at`);
+expect('created_at: client value ignored on batch INSERT', r.ok && new Date(r.rows[0].created_at).getFullYear() > 2020, r);
+r = await as('authenticated', U1, `UPDATE product_batches SET created_at = '2000-01-01' WHERE id = '${B1}' RETURNING created_at`);
+expect('created_at: client cannot rewrite batch created_at', r.ok && new Date(r.rows[0].created_at).getFullYear() > 2020, r);
+{
+  const rr = await db.query(`INSERT INTO products (tenant_id, name, gtin, created_at) VALUES ('${T1}', 'Import', '4006381339999', '2001-01-01') RETURNING created_at`);
+  expect('created_at: service/migration writes keep their value', new Date(rr.rows[0].created_at).getFullYear() === 2001, rr.rows);
+  let err = null;
+  try { await db.query(`INSERT INTO products (tenant_id, name, gtin) VALUES ('${T2}', 'Svc', '${EAN}')`); } catch (e) { err = e.message; }
+  expect('hijack guard applies to service/owner writes too', /already registered/.test(err || ''), err);
+}
+await db.exec(`DELETE FROM product_batches WHERE serial_number = 'SN-TS'; DELETE FROM products WHERE id = '${PV}' OR gtin = '4006381339999';`);
+
+// Pre-existing cross-tenant GTIN rows (written before the trigger): exactly the
+// reported attack. T2 product with the victim GTIN, NULL serial, old created_at,
+// own batches carrying the victim's legacy serial and the victim's batch serial.
+const PH = '00000000-0000-0000-0000-0000000000e1';
+const PH2 = '00000000-0000-0000-0000-0000000000e2';
+await db.exec(`SET session_replication_role = replica;
+INSERT INTO products (id, tenant_id, name, gtin, serial_number, created_at) VALUES
+  ('${PH}', '${T2}', 'FAKE - call +49 000 for refund', '4006381333948', NULL, '2000-01-01'),
+  ('${PH2}', '${T2}', 'FAKE - call +49 000 for refund', '${EAN}', NULL, '2000-01-01');
+INSERT INTO product_batches (tenant_id, product_id, serial_number, created_at) VALUES
+  ('${T2}', '${PH}', 'LEG-1', '2000-01-01'), ('${T2}', '${PH2}', 'SN-2', '2000-01-01'),
+  ('${T2}', '${PH2}', 'ONLY-T2', '2000-01-01');
+SET session_replication_role = origin;`);
+l = await dpp('anon', '4006381333948', 'LEG-1', 'consumer');
+expect('hijack (legacy data): victim legacy serial still resolves to victim', l?.product?.id === PL && l.tenant_id === T1
+  && !JSON.stringify(l).includes('FAKE'), l);
+r = await as('anon', null, `SELECT resolve_public_dpp_product($1::text[], $2) AS r`, [gtinCandidates(EAN), 'SN-2']);
+expect('hijack (legacy data): shared GTIN + batch serial fails closed', r.ok && r.rows[0].r === null, r);
+expect('hijack (legacy data): get_public_dpp_product returns null, not the attacker',
+  (await dpp('anon', EAN, 'SN-2', 'consumer')) === null);
+r = await as('anon', null, `SELECT resolve_public_dpp_product($1::text[], $2) AS r`, [gtinCandidates('0' + EAN), 'SN-2']);
+expect('hijack (legacy data): GTIN-14 route fails closed too', r.ok && r.rows[0].r === null, r);
+c = await dpp('anon', EAN, 'SN-1', 'consumer');
+expect('hijack (legacy data): unaffected victim serial still served', c?.product?.id === P && c.tenant_id === T1, c?.tenant_id);
+r = await as('anon', null, `SELECT resolve_public_dpp_product($1::text[], $2) AS r`, [gtinCandidates(EAN), 'ONLY-T2']);
+expect('single-tenant match still resolves (attacker-only serial)', r.ok && r.rows[0].r?.tenant_id === T2, r);
+// Legacy serial of another tenant under a lookup-equivalent (non-exact) GTIN: no winner.
+await db.exec(`SET session_replication_role = replica;
+INSERT INTO products (tenant_id, name, gtin, serial_number, created_at) VALUES ('${T2}', 'FAKE', '0${EAN}', 'SN-1', '2000-01-01');
+SET session_replication_role = origin;`);
+r = await as('anon', null, `SELECT resolve_public_dpp_product($1::text[], $2) AS r`, [gtinCandidates(EAN), 'SN-1']);
+expect('hijack (legacy data): non-exact foreign legacy serial makes the lookup fail closed', r.ok && r.rows[0].r === null, r);
+await db.exec(`DELETE FROM products WHERE gtin = '0${EAN}' AND tenant_id = '${T2}';
+SET session_replication_role = replica;
+DELETE FROM product_batches WHERE product_id IN ('${PH}', '${PH2}'); DELETE FROM products WHERE id IN ('${PH}', '${PH2}');
+SET session_replication_role = origin;`);
+c = await dpp('anon', EAN, 'SN-2', 'consumer');
+expect('after cleanup: victim batch serial resolves to victim again', c?.product?.id === P && c.batch?.serial_number === 'SN-2', c);
+
 // ---- stage 2 -----------------------------------------------------------------------------
 await db.exec(stage2);
 await db.exec(stage2); // idempotency
@@ -403,6 +485,8 @@ expect('stage 2: /p/ consumer RPC still works for anon', c?.product?.id === P &&
 expect('stage 2: /01/ customs RPC still works for anon', k?.product?.customs_value === 42.5, k?.product);
 c = await dpp('authenticated', EAN, 'SN-1', 'consumer', U2);
 expect('stage 2: RPC works for a logged-in user of another tenant', c?.product?.id === P, c);
+r = await as('authenticated', U2, `INSERT INTO products (tenant_id, name, gtin, serial_number) VALUES ('${T2}', 'FAKE', '${EAN}', NULL)`);
+expect('stage 2: GTIN guard still sees other tenants (SECURITY DEFINER)', !r.ok && /already registered/.test(r.err), r);
 s = await dpp('anon', '4006381333955', 'SET-1', 'consumer');
 expect('stage 2: set components still served via RPC', s.components[0].component_product.name === 'Comp', s.components);
 

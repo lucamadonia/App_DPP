@@ -24,6 +24,14 @@
  *   MAIL_HUB_SECRET             — same value as Family-Joy MAIL_EVENT_RECEIVER_SECRET
  *   TRACKBLISS_PUBLIC_URL       — optional override, defaults to https://dpp-app.fambliss.eu
  *   FAMBLISS_SHOP_URL           — optional, defaults to https://shop.fambliss.de
+ *   MAIL_HUB_TENANT_IDS         — optional CSV of Fambliss tenant UUIDs; default = MYFAMBLISS GmbH
+ *
+ * Tenant gate (FINAL-EF-01): these mails are Fambliss-branded (Fambliss
+ * sender, shop.fambliss.de links) and go through the Family-Joy hub, so only
+ * tenants on the MAIL_HUB_TENANT_IDS allowlist (same list and default as
+ * notify-dispatch / widerruf-request) are scanned. Shipments of every other
+ * SaaS tenant are never read for these actions and their recipients are
+ * never sent to the hub.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -37,6 +45,19 @@ const TRACKBLISS_PUBLIC_URL = (Deno.env.get('TRACKBLISS_PUBLIC_URL') || 'https:/
 const FAMBLISS_SHOP_URL = (Deno.env.get('FAMBLISS_SHOP_URL') || 'https://shop.fambliss.de').replace(/\/+$/, '');
 
 const FEEDBACK_DELAY_DAYS = 7;
+
+// Same allowlist and default as notify-dispatch / widerruf-request: only
+// Fambliss' own tenants may send through the Family-Joy hub.
+const DEFAULT_FAMBLISS_TENANT_ID = '522f6254-f73c-4a26-b1e9-662035194bc5';
+const MAIL_HUB_TENANT_IDS = (Deno.env.get('MAIL_HUB_TENANT_IDS') || DEFAULT_FAMBLISS_TENANT_ID)
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+function mailHubAllowsTenant(tenantId: unknown): boolean {
+  const tid = typeof tenantId === 'string' ? tenantId.trim().toLowerCase() : '';
+  return tid.length > 0 && MAIL_HUB_TENANT_IDS.includes(tid);
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -174,36 +195,41 @@ async function fireFeedbackDay7(supabase: any): Promise<FireResult> {
 
   if (modErr) {
     console.warn('[engagement-cron] billing_module_subscriptions query failed:', modErr.message);
-    // Fail open: continue scanning all tenants. The mail trigger will still
-    // skip per-tenant if the rh_email_templates row is disabled.
+    // Fail open on the module gate only: continue with all mail-hub
+    // allowlisted tenants (never with every tenant).
   }
 
-  const eligibleTenants = new Set<string>((modSubs || []).map((r: { tenant_id: string }) => r.tenant_id));
+  // Only mail-hub tenants (FINAL-EF-01). When the module table failed to load
+  // we fail open on the MODULE gate only, never on the mail-hub allowlist.
+  const eligibleTenants = new Set<string>(
+    (modErr ? MAIL_HUB_TENANT_IDS : (modSubs || []).map((r: { tenant_id: string }) => r.tenant_id))
+      .filter((tid: string) => mailHubAllowsTenant(tid)),
+  );
   result.tenantsEligible = eligibleTenants.size;
+  if (eligibleTenants.size === 0) {
+    // No allowlisted tenant has feedback_starter — nothing to do.
+    return result;
+  }
 
-  // 3. Find candidate shipments. We do NOT filter by tenant when the module
-  // table failed to load (fail-open above); the trigger gate inside the mail
-  // path acts as a second backstop.
-  let q = supabase
+  // 3. Find candidate shipments of the eligible tenants.
+  const { data: shipments, error: shipErr } = await supabase
     .from('wh_shipments')
     .select('id, tenant_id, recipient_email, recipient_name, shipment_number, delivered_at')
     .eq('status', 'delivered')
     .gte('delivered_at', cutoffStart.toISOString())
     .lte('delivered_at', cutoffEnd.toISOString())
-    .not('recipient_email', 'is', null);
-
-  if (modSubs && eligibleTenants.size > 0) {
-    q = q.in('tenant_id', Array.from(eligibleTenants));
-  } else if (modSubs && eligibleTenants.size === 0) {
-    // Module table loaded but no tenant has feedback_starter — nothing to do.
-    return result;
-  }
-
-  const { data: shipments, error: shipErr } = await q;
+    .not('recipient_email', 'is', null)
+    .in('tenant_id', Array.from(eligibleTenants));
   if (shipErr) throw new Error(`wh_shipments query failed: ${shipErr.message}`);
 
-  for (const ship of shipments || []) {
+  for (const ship of (shipments || []) as ShipmentRow[]) {
     result.scanned++;
+    // Defense in depth: never post a non-allowlisted tenant's recipient.
+    if (!mailHubAllowsTenant(ship.tenant_id)) {
+      result.skipped++;
+      result.details.push({ shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'skipped', reason: 'tenant_not_on_mail_hub' });
+      continue;
+    }
     const outcome = await processShipment(supabase, ship);
     result.details.push(outcome);
     if (outcome.outcome === 'fired') result.fired++;
@@ -255,10 +281,9 @@ async function fireEngagementDay(
     delayDays: config.delayDays,
     windowStart: cutoffStart.toISOString(),
     windowEnd: cutoffEnd.toISOString(),
-    // Engagement day_1/14/30 fire for ALL tenants — no module gate.
-    // (The original feedback path gates on feedback_starter; the broader
-    //  engagement series is part of every customer journey.)
-    tenantsEligible: 0,
+    // Engagement day_1/14/30 have no module gate, but they are Fambliss mails
+    // via the Family-Joy hub: only MAIL_HUB_TENANT_IDS tenants (FINAL-EF-01).
+    tenantsEligible: MAIL_HUB_TENANT_IDS.length,
     scanned: 0,
     fired: 0,
     skipped: 0,
@@ -266,18 +291,27 @@ async function fireEngagementDay(
     details: [],
   };
 
+  if (MAIL_HUB_TENANT_IDS.length === 0) return result;
+
   const { data: shipments, error: shipErr } = await supabase
     .from('wh_shipments')
     .select('id, tenant_id, recipient_email, recipient_name, shipment_number, delivered_at')
     .eq('status', 'delivered')
     .gte('delivered_at', cutoffStart.toISOString())
     .lte('delivered_at', cutoffEnd.toISOString())
-    .not('recipient_email', 'is', null);
+    .not('recipient_email', 'is', null)
+    .in('tenant_id', MAIL_HUB_TENANT_IDS);
 
   if (shipErr) throw new Error(`wh_shipments query failed: ${shipErr.message}`);
 
   for (const ship of (shipments || []) as ShipmentRow[]) {
     result.scanned++;
+    // Defense in depth: never post a non-allowlisted tenant's recipient.
+    if (!mailHubAllowsTenant(ship.tenant_id)) {
+      result.skipped++;
+      result.details.push({ shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'skipped', reason: 'tenant_not_on_mail_hub' });
+      continue;
+    }
     const firstName = (ship.recipient_name || '').trim().split(/\s+/)[0] || 'Kunde';
     // sourceEventId is deterministic — receiver-side dedup catches re-runs
     // even within the same UTC day if pg_cron retries or if the cron job
