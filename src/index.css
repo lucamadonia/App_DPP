@@ -460,12 +460,31 @@ html, body {
 .animate-landing-morph { animation: landing-morph 8s ease-in-out infinite; }
 .animate-landing-pulse-dot { animation: landing-pulse-dot 2s ease-in-out infinite; }
 
-/* Landing Page v2 — Utility Classes */
-.landing-glass {
-  backdrop-filter: blur(24px);
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+/* Landing Page v2 — Utility Classes
+   .landing-glass lives in @layer components so Tailwind utilities on the same
+   element (bg-white/90, dark:bg-slate-900/70 ...) win. Unlayered, this rule beat
+   every utility and painted 70% white behind the dark hero's white text. */
+@layer components {
+  .landing-glass {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  }
+  .dark .landing-glass {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(148, 163, 184, 0.14);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+  /* Glass for dark surfaces (hero, dark sections): no white wash, light edge. */
+  .landing-glass-dark {
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 50px -12px rgba(2, 6, 23, 0.6);
+  }
 }
 .landing-gradient-text {
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
@@ -524,6 +543,29 @@ html, body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: landing-text-shimmer 4s linear infinite;
+}
+/* Shimmer for dark backgrounds: the base is a readable brand gradient
+   (blue -> violet -> cyan) and a white highlight band sweeps across it, so the
+   word is legible in every frame instead of only inside the moving band. */
+.landing-text-shimmer-light {
+  background:
+    linear-gradient(100deg, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%, transparent 100%),
+    linear-gradient(90deg, #60a5fa 0%, #a78bfa 50%, #22d3ee 100%);
+  background-size: 250% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: landing-text-shimmer-sweep 5s ease-in-out infinite;
+  filter: drop-shadow(0 0 28px rgba(139, 92, 246, 0.35));
+}
+@keyframes landing-text-shimmer-sweep {
+  0% { background-position: 150% 0, 0 0; }
+  60%, 100% { background-position: -50% 0, 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-text-shimmer,
+  .landing-text-shimmer-light { animation: none; }
 }
 
 /* Spring-like scale entrance with overshoot */

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingOldVsNew } from '@/components/landing/LandingOldVsNew';
@@ -21,34 +22,52 @@ import { LandingFooter } from '@/components/landing/LandingFooter';
 
 function GlowDivider() {
   return (
-    <div className="py-2">
+    <div className="hidden py-2 md:block">
       <div className="landing-glow-divider max-w-4xl" />
     </div>
   );
 }
 
+/**
+ * Deep-dive demos (editor, workflow, QR, visibility, supply chain, stats) need
+ * a wide canvas and made the phone page ~31,600px tall. Below md they are
+ * skipped so the mobile story stays: hero -> problem -> outcomes -> DPP -> AI
+ * -> comparison -> scenarios -> returns -> pricing -> FAQ -> CTA.
+ */
+function DesktopOnly({ children }: { children: ReactNode }) {
+  return <div className="hidden md:block">{children}</div>;
+}
+
 export function LandingPage() {
   return (
-    <div className="min-h-screen scroll-smooth bg-white dark:bg-slate-950">
+    <div className="min-h-screen scroll-smooth bg-white dark:bg-slate-950 [&_section[id]]:scroll-mt-16">
       <LandingNavbar />
       <LandingHero />
       <LandingOldVsNew />
       <LandingOutcomes />
       <LandingDPPShowcase />
-      <LandingSupplyChain />
+      <DesktopOnly>
+        <LandingSupplyChain />
+      </DesktopOnly>
       <GlowDivider />
       <LandingAISection />
       <LandingVsCompetitors />
       <LandingTestimonials />
-      <LandingReturnFlow />
+      <DesktopOnly>
+        <LandingReturnFlow />
+      </DesktopOnly>
       <LandingReturnsHub />
       <GlowDivider />
-      <LandingWorkflowShowcase />
-      <LandingEmailEditor />
-      <LandingQRSection />
-      <LandingVisibility />
+      <DesktopOnly>
+        <LandingWorkflowShowcase />
+        <LandingEmailEditor />
+        <LandingQRSection />
+        <LandingVisibility />
+      </DesktopOnly>
       <GlowDivider />
-      <LandingStats />
+      <DesktopOnly>
+        <LandingStats />
+      </DesktopOnly>
       <LandingPricing />
       <LandingFAQ />
       <LandingCTA />

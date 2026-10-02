@@ -211,6 +211,29 @@ function Cell({
   );
 }
 
+/** Compact cell for the stacked mobile matrix (no horizontal scrolling). */
+function MiniCell({ value, isTrackbliss, t }: { value: CellValue; isTrackbliss: boolean; t: (k: string) => string }) {
+  if (value.kind === 'cross') {
+    return <X className="h-4 w-4 text-rose-400" aria-label={t('vsCompetitors.a11y.no')} />;
+  }
+  if (value.kind === 'partial') {
+    return <CircleDot className="h-4 w-4 text-amber-400" aria-label={t('vsCompetitors.a11y.partial')} />;
+  }
+  if (value.kind === 'check' && !(isTrackbliss && value.label)) {
+    return <Check className="h-4 w-4 text-emerald-400" aria-label={t('vsCompetitors.a11y.yes')} />;
+  }
+  const label = value.kind === 'text' || value.kind === 'check' ? value.label : undefined;
+  return (
+    <span
+      className={`block text-center text-[10px] font-semibold leading-tight ${
+        isTrackbliss ? 'text-white' : 'text-slate-400'
+      }`}
+    >
+      {label ? t(`vsCompetitors.values.${label}`) : null}
+    </span>
+  );
+}
+
 export function LandingVsCompetitors() {
   const { t } = useTranslation('landing');
   const navigate = useNavigate();
@@ -239,7 +262,7 @@ export function LandingVsCompetitors() {
     <section
       ref={sectionRef}
       id="vs-competitors"
-      className="relative overflow-hidden bg-slate-950 py-24 text-white"
+      className="relative overflow-clip bg-slate-950 py-24 text-white"
     >
       {/* Ambient blobs */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
@@ -325,48 +348,45 @@ export function LandingVsCompetitors() {
           </div>
         </div>
 
-        {/* Matrix - Mobile (horizontal scroll) */}
-        <div className="relative mt-12 lg:hidden">
-          <div className="relative overflow-x-auto">
-            <div className="flex min-w-max">
-              {/* Capability labels column (sticky left) */}
-              <div className="sticky left-0 z-20 bg-slate-950 pr-3">
-                <div className="h-[88px]" />
-                {CAPABILITIES.map((cap) => (
-                  <div
-                    key={cap.key}
-                    className="flex h-24 items-center border-t border-slate-800/70 pr-2 text-xs font-medium text-slate-400"
-                  >
-                    {t(`vsCompetitors.capabilities.${cap.key}`)}
-                  </div>
-                ))}
+        {/* Matrix - Mobile/Tablet: stacked capability cards, all five vendors
+            visible at once (the old horizontal scroller clipped the Trackbliss
+            column and hid the rest behind a swipe hint). */}
+        <div className="mt-12 lg:hidden">
+          <div className="sticky top-16 z-20 -mx-4 grid grid-cols-5 gap-1 border-b border-white/10 bg-slate-950/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+            {COMPETITORS.map((c) => (
+              <div key={c.id} className="flex flex-col items-center gap-1">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-bold text-white shadow ${c.colorClass}`}>
+                  {c.initials}
+                </div>
+                <span className={`text-center text-[10px] font-semibold leading-tight ${c.id === 'trackbliss' ? 'text-white' : 'text-slate-400'}`}>
+                  {t(`vsCompetitors.brands.${c.id}`)}
+                </span>
               </div>
-              {/* Competitor columns */}
-              {COMPETITORS.map((c) => (
-                <div
-                  key={c.id}
-                  className={`flex w-[140px] snap-center flex-col ${
-                    c.id === 'trackbliss'
-                      ? 'rounded-2xl bg-gradient-to-b from-blue-500/15 via-violet-500/10 to-blue-500/15 ring-1 ring-violet-500/40'
-                      : ''
-                  }`}
-                >
-                  <div className="flex h-[88px] items-center justify-center px-2 py-4">
-                    <CompetitorLogo c={c} t={t} />
-                  </div>
-                  {CAPABILITIES.map((cap) => (
+            ))}
+          </div>
+          <ul className="mt-4 space-y-3">
+            {CAPABILITIES.map((cap) => (
+              <li key={cap.key} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="mb-2.5 text-sm font-semibold text-slate-200">
+                  {t(`vsCompetitors.capabilities.${cap.key}`)}
+                </p>
+                <div className="grid grid-cols-5 gap-1">
+                  {COMPETITORS.map((c) => (
                     <div
-                      key={cap.key}
-                      className="flex h-24 items-center justify-center border-t border-slate-800/70 px-2 py-3"
+                      key={c.id}
+                      className={`flex min-h-10 items-center justify-center rounded-lg px-1 py-1.5 ${
+                        c.id === 'trackbliss'
+                          ? 'bg-gradient-to-br from-blue-500/30 to-violet-500/30 ring-1 ring-violet-400/50'
+                          : 'bg-white/[0.03]'
+                      }`}
                     >
-                      <Cell value={cap.values[c.id]} isTrackbliss={c.id === 'trackbliss'} t={t} />
+                      <MiniCell value={cap.values[c.id]} isTrackbliss={c.id === 'trackbliss'} t={t} />
                     </div>
                   ))}
                 </div>
-              ))}
-            </div>
-          </div>
-          <p className="mt-3 text-center text-xs text-slate-500">{t('vsCompetitors.scrollHint')}</p>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Footer */}

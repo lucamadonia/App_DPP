@@ -1,30 +1,18 @@
 import { useTranslation } from 'react-i18next';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
-import { Star, Quote, Building2, Users } from 'lucide-react';
+import { Building2, Cpu, Info, Lightbulb, Shirt, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 
-const testimonials = [
-  {
-    key: 'testimonial1',
-    avatar: 'bg-blue-500',
-    initials: 'MK',
-    stars: 5,
-    companySize: '50-200',
-  },
-  {
-    key: 'testimonial2',
-    avatar: 'bg-emerald-500',
-    initials: 'SB',
-    stars: 5,
-    companySize: '200-500',
-  },
-  {
-    key: 'testimonial3',
-    avatar: 'bg-violet-500',
-    initials: 'JR',
-    stars: 5,
-    companySize: '10-50',
-  },
-];
+/**
+ * Illustrative scenarios, NOT customer quotes. The previous version showed
+ * named people, companies and 5-star ratings without any real source, which is
+ * an unfair-commercial-practice risk (UWG Annex no. 23b/23c). Until real,
+ * approved pilot quotes exist, every card is labelled as an example scenario.
+ */
+const scenarios = [
+  { key: 'testimonial1', icon: Shirt, accent: 'from-blue-500 to-indigo-500', companySize: '50–200' },
+  { key: 'testimonial2', icon: Cpu, accent: 'from-emerald-500 to-teal-500', companySize: '200–500' },
+  { key: 'testimonial3', icon: ShoppingBag, accent: 'from-violet-500 to-fuchsia-500', companySize: '10–50' },
+] as const;
 
 export function LandingTestimonials() {
   const { t } = useTranslation('landing');
@@ -33,90 +21,77 @@ export function LandingTestimonials() {
   return (
     <section className="py-24 bg-white">
       <div ref={ref} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div
-          className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${
+          className={`text-center max-w-3xl mx-auto mb-14 transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
         >
           <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-4 py-1.5 text-sm font-medium text-blue-700 mb-4">
-            <Quote className="h-4 w-4" />
+            <Lightbulb className="h-4 w-4" />
             {t('testimonials.badge')}
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
             {t('testimonials.headline')}
           </h2>
-          <p className="mt-4 text-lg text-slate-600">
-            {t('testimonials.subtitle')}
-          </p>
+          <p className="mt-4 text-lg text-slate-600">{t('testimonials.subtitle')}</p>
         </div>
 
-        {/* Testimonial Cards */}
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-          {testimonials.map((item, i) => (
-            <div
-              key={item.key}
-              className={`relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm landing-card-hover transition-all duration-500 ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-              }`}
-              style={{ transitionDelay: `${200 + i * 150}ms` }}
-            >
-              {/* Quote Icon */}
-              <Quote className="h-8 w-8 text-blue-100 mb-4" />
+          {scenarios.map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <article
+                key={item.key}
+                className={`relative flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm landing-card-hover transition-all duration-500 ${
+                  isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                }`}
+                style={{ transitionDelay: `${200 + i * 150}ms` }}
+              >
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${item.accent} text-white shadow-md`}>
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {t('testimonials.scenarioLabel')}
+                  </span>
+                </div>
 
-              {/* Stars */}
-              <div className="flex gap-0.5 mb-4">
-                {Array.from({ length: item.stars }).map((_, s) => (
-                  <Star
-                    key={s}
-                    className="h-4 w-4 text-amber-400 fill-amber-400"
-                  />
-                ))}
-              </div>
+                <h3 className="text-base font-semibold text-slate-900">
+                  {t(`testimonials.${item.key}.persona`)}
+                </h3>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="h-3 w-3" aria-hidden="true" />
+                    {t(`testimonials.${item.key}.industry`)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" aria-hidden="true" />
+                    {t('testimonials.employees', { range: item.companySize })}
+                  </span>
+                </div>
 
-              {/* Quote Text */}
-              <p className="text-slate-700 leading-relaxed mb-6">
-                "{t(`testimonials.${item.key}.quote`)}"
-              </p>
-
-              {/* Metric Highlight */}
-              <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 mb-6">
-                <p className="text-sm font-semibold text-blue-700">
-                  {t(`testimonials.${item.key}.metric`)}
+                <p className="mt-4 flex-1 leading-relaxed text-slate-700">
+                  {t(`testimonials.${item.key}.scenario`)}
                 </p>
-              </div>
 
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full ${item.avatar} text-white text-sm font-bold`}
-                >
-                  {item.initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {t(`testimonials.${item.key}.name`)}
+                <div className="mt-6 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-violet-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600/80">
+                    {t('testimonials.outcomeLabel')}
                   </p>
-                  <p className="text-xs text-slate-500">
-                    {t(`testimonials.${item.key}.role`)}
+                  <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                    <TrendingUp className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                    {t(`testimonials.${item.key}.metric`)}
                   </p>
                 </div>
-              </div>
-
-              {/* Company Info */}
-              <div className="mt-4 flex items-center gap-3 text-xs text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {t(`testimonials.${item.key}.industry`)}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {item.companySize}
-                </span>
-              </div>
-            </div>
-          ))}
+              </article>
+            );
+          })}
         </div>
+
+        <p className="mx-auto mt-8 flex max-w-2xl items-start justify-center gap-2 text-center text-xs text-slate-500">
+          <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+          <span>{t('testimonials.disclaimer')}</span>
+        </p>
       </div>
     </section>
   );

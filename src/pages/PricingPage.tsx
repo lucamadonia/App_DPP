@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { PLAN_CONFIGS, MODULE_CONFIGS, CREDIT_PACKS } from '@/types/billing';
 import type { BillingPlan, ModuleId } from '@/types/billing';
+import { formatEur } from '@/components/landing/landing-format';
 import {
   Check, X, ArrowLeft, ArrowRight, Globe, Sparkles, Zap, Crown,
   ShieldCheck, CreditCard, Clock, RotateCcw, Building2, Users,
@@ -51,6 +52,7 @@ const LANG_LABELS: Record<string, string> = { en: 'English', de: 'Deutsch', el: 
 
 export function PricingPage() {
   const { t, i18n } = useTranslation('landing');
+  const eur = (amount: number) => formatEur(amount, i18n.language);
   const { t: tLegal } = useTranslation('legal');
   const navigate = useNavigate();
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly');
@@ -211,7 +213,7 @@ export function PricingPage() {
                         isEnterprise ? 'text-violet-700' :
                         'text-slate-900'
                       }`}>
-                        {plan === 'free' ? t('pricing.free') : `\u20AC${price}`}
+                        {plan === 'free' ? t('pricing.free') : eur(price)}
                       </span>
                       {plan !== 'free' && (
                         <span className="text-slate-500 text-sm">{t('pricing.perMonth')}</span>
@@ -285,30 +287,35 @@ export function PricingPage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Sticky feature column + compact cells so all three plans fit at 390px. */}
+          <div className="relative overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-slate-200">
-                  <th className="text-left py-4 px-4 font-semibold text-slate-700 w-2/5">{t('pricing.comparison.feature')}</th>
-                  <th className="text-center py-4 px-4 font-semibold text-slate-700 w-1/5">Free</th>
-                  <th className="text-center py-4 px-4 font-semibold text-blue-600 w-1/5 bg-blue-50/50 rounded-t-lg">Pro</th>
-                  <th className="text-center py-4 px-4 font-semibold text-violet-600 w-1/5">Enterprise</th>
+                <tr className="border-b-2 border-slate-200 bg-slate-50/80">
+                  <th scope="col" className="sticky left-0 z-10 w-2/5 bg-slate-50 py-4 pl-3 pr-2 text-left font-semibold text-slate-700 sm:px-4">{t('pricing.comparison.feature')}</th>
+                  <th scope="col" className="w-1/5 px-1.5 py-4 text-center font-semibold text-slate-700 sm:px-4">Free</th>
+                  <th scope="col" className="w-1/5 bg-blue-50/60 px-1.5 py-4 text-center font-semibold text-blue-600 sm:px-4">Pro</th>
+                  <th scope="col" className="w-1/5 px-1.5 py-4 text-center font-semibold text-violet-600 sm:px-4">Enterprise</th>
                 </tr>
               </thead>
               <tbody>
                 {FEATURE_ROWS.map((row) => (
-                  <tr key={row.key} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 text-slate-700">{t(`pricingPage.featureRow.${row.key}`)}</td>
+                  <tr key={row.key} className="border-b border-slate-100 last:border-0">
+                    <th scope="row" className="sticky left-0 z-10 bg-white py-3 pl-3 pr-2 text-left font-normal text-slate-700 sm:px-4">{t(`pricingPage.featureRow.${row.key}`)}</th>
                     {(['free', 'pro', 'enterprise'] as const).map((plan) => {
                       const val = row[plan];
                       const isPro = plan === 'pro';
                       return (
-                        <td key={plan} className={`text-center py-3 px-4 ${isPro ? 'bg-blue-50/30' : ''}`}>
+                        <td key={plan} className={`px-1.5 py-3 text-center sm:px-4 ${isPro ? 'bg-blue-50/40' : ''}`}>
                           {typeof val === 'boolean' ? (
                             val ? <Check className="h-4 w-4 text-emerald-500 mx-auto" /> : <X className="h-4 w-4 text-slate-300 mx-auto" />
                           ) : (
-                            <span className="text-slate-700 font-medium">
-                              {val === 'unlimited' ? t('pricing.comparison.unlimited') : val}
+                            <span className="text-xs font-medium text-slate-700 sm:text-sm">
+                              {val === 'unlimited'
+                                ? t('pricing.comparison.unlimited')
+                                : val
+                                    .replace(/\/mo$/, t('pricing.perMonth'))
+                                    .replace(/\/product$/, t('pricingPage.perProductShort'))}
                             </span>
                           )}
                         </td>
@@ -358,7 +365,7 @@ export function PricingPage() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-bold text-slate-900">
-                      {'\u20AC'}{config.priceMonthly}
+                      {eur(config.priceMonthly)}
                       <span className="text-xs font-normal text-slate-500">{t('pricing.addons.perMonth')}</span>
                     </span>
                   </div>
@@ -392,11 +399,11 @@ export function PricingPage() {
                   {pack.credits} <span className="text-xs font-normal text-slate-500">{t('pricing.credits.credits')}</span>
                 </p>
                 <p className="text-xl font-bold text-slate-900 mt-2">
-                  {'\u20AC'}{pack.priceEur}
+                  {eur(pack.priceEur)}
                   <span className="text-xs font-normal text-slate-500 ml-1">{t('pricing.credits.oneTime')}</span>
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {'\u20AC'}{pack.pricePerCredit.toFixed(3)} {t('pricing.credits.perCredit')}
+                  {eur(pack.pricePerCredit)} {t('pricing.credits.perCredit')}
                 </p>
               </div>
             ))}
@@ -444,7 +451,7 @@ export function PricingPage() {
               <div className="rounded-xl bg-white border border-slate-200 p-4 text-center">
                 <p className="text-xs text-slate-500 mb-1">{t('pricingPage.roi.moneySaved')}</p>
                 <p className="text-2xl font-bold text-emerald-600">
-                  {'\u20AC'}{Math.round(netSavings > 0 ? netSavings : 0).toLocaleString()}
+                  {eur(Math.round(netSavings > 0 ? netSavings : 0))}
                 </p>
                 <p className="text-xs text-slate-500">{t('pricingPage.roi.perMonth')}</p>
               </div>
@@ -456,7 +463,7 @@ export function PricingPage() {
                 {t(`pricing.plan.${recommendedPlan}.name`)}
                 {recommendedPlan !== 'free' && (
                   <span className="text-sm font-normal text-slate-500 ml-2">
-                    {'\u20AC'}{planCost}{t('pricing.perMonth')}
+                    {eur(planCost)}{t('pricing.perMonth')}
                   </span>
                 )}
               </p>

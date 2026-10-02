@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
+import { formatEur } from './landing-format';
 import { PLAN_CONFIGS, MODULE_CONFIGS, CREDIT_PACKS } from '@/types/billing';
 import type { BillingPlan, ModuleId } from '@/types/billing';
 import { Check, X, RotateCcw, Building2, Users, Globe, Sparkles, Zap, Crown, ArrowRight, ShieldCheck, CreditCard, Clock } from 'lucide-react';
@@ -36,9 +37,10 @@ const moduleKeyMap: Record<ModuleId, string> = {
 };
 
 export function LandingPricing() {
-  const { t } = useTranslation('landing');
+  const { t, i18n } = useTranslation('landing');
   const navigate = useNavigate();
   const { ref, isVisible } = useScrollReveal();
+  const eur = (amount: number) => formatEur(amount, i18n.language);
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly');
 
   const getPrice = (plan: BillingPlan) => {
@@ -57,9 +59,9 @@ export function LandingPricing() {
   };
 
   return (
-    <section id="pricing" className="relative py-24 overflow-hidden" ref={ref}>
+    <section id="pricing" className="relative isolate py-24 overflow-hidden" ref={ref}>
       {/* Background */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-white to-slate-50/50" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-white to-slate-50" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 h-[500px] w-[800px] rounded-full bg-blue-100/30 blur-3xl" />
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -172,7 +174,7 @@ export function LandingPricing() {
                         isEnterprise ? 'text-violet-700' :
                         'text-slate-900'
                       }`}>
-                        {plan === 'free' ? t('pricing.free') : `€${price}`}
+                        {plan === 'free' ? t('pricing.free') : eur(price)}
                       </span>
                       {plan !== 'free' && (
                         <span className="text-slate-500 text-sm">
@@ -277,7 +279,7 @@ export function LandingPricing() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-bold text-slate-900">
-                      €{config.priceMonthly}
+                      {eur(config.priceMonthly)}
                       <span className="text-xs font-normal text-slate-500">{t('pricing.addons.perMonth')}</span>
                     </span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium text-slate-600">
@@ -320,11 +322,11 @@ export function LandingPricing() {
                   {pack.credits} <span className="text-xs font-normal text-slate-500">{t('pricing.credits.credits')}</span>
                 </p>
                 <p className="text-xl font-bold text-slate-900 mt-2">
-                  €{pack.priceEur}
+                  {eur(pack.priceEur)}
                   <span className="text-xs font-normal text-slate-500 ml-1">{t('pricing.credits.oneTime')}</span>
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  €{pack.pricePerCredit.toFixed(3)} {t('pricing.credits.perCredit')}
+                  {eur(pack.pricePerCredit)} {t('pricing.credits.perCredit')}
                 </p>
               </div>
             ))}
@@ -341,20 +343,21 @@ export function LandingPricing() {
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full max-w-4xl mx-auto text-sm">
+          {/* Sticky feature column; columns are compact enough to fit 390px. */}
+          <div className="relative mx-auto max-w-4xl overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700 w-1/3">{t('pricing.comparison.feature')}</th>
-                  <th className="text-center py-3 px-4 font-semibold text-slate-700">Free</th>
-                  <th className="text-center py-3 px-4 font-semibold text-blue-600">Pro</th>
-                  <th className="text-center py-3 px-4 font-semibold text-violet-600">Enterprise</th>
+                <tr className="border-b border-slate-200 bg-slate-50/80">
+                  <th scope="col" className="sticky left-0 z-10 w-[38%] bg-slate-50 py-3 pl-3 pr-2 text-left font-semibold text-slate-700 sm:px-4">{t('pricing.comparison.feature')}</th>
+                  <th scope="col" className="px-1.5 py-3 text-center font-semibold text-slate-700 sm:px-4">Free</th>
+                  <th scope="col" className="bg-blue-50/60 px-1.5 py-3 text-center font-semibold text-blue-600 sm:px-4">Pro</th>
+                  <th scope="col" className="px-1.5 py-3 text-center font-semibold text-violet-600 sm:px-4">Enterprise</th>
                 </tr>
               </thead>
               <tbody>
                 {[
                   { key: 'products', free: '5', pro: '50', enterprise: t('pricing.comparison.unlimited') },
-                  { key: 'aiCredits', free: '3/mo', pro: '25/mo', enterprise: '100/mo' },
+                  { key: 'aiCredits', free: `3${t('pricing.perMonth')}`, pro: `25${t('pricing.perMonth')}`, enterprise: `100${t('pricing.perMonth')}` },
                   { key: 'dppTemplates', free: '3', pro: '11', enterprise: '11 + CSS' },
                   { key: 'adminUsers', free: '1', pro: '5', enterprise: '25' },
                   { key: 'storage', free: '100 MB', pro: '2 GB', enterprise: '20 GB' },
@@ -362,16 +365,16 @@ export function LandingPricing() {
                   { key: 'whiteLabel', free: false, pro: false, enterprise: true },
                   { key: 'visibilityTiers', free: '1', pro: '2', enterprise: '3' },
                 ].map((row) => (
-                  <tr key={row.key} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 text-slate-700">{t(`pricing.comparison.row.${row.key}`)}</td>
+                  <tr key={row.key} className="border-b border-slate-100 last:border-0">
+                    <th scope="row" className="sticky left-0 z-10 bg-white py-3 pl-3 pr-2 text-left font-normal text-slate-700 sm:px-4">{t(`pricing.comparison.row.${row.key}`)}</th>
                     {(['free', 'pro', 'enterprise'] as const).map((plan) => {
                       const val = row[plan];
                       return (
-                        <td key={plan} className="text-center py-3 px-4">
+                        <td key={plan} className={`px-1.5 py-3 text-center sm:px-4 ${plan === 'pro' ? 'bg-blue-50/40' : ''}`}>
                           {typeof val === 'boolean' ? (
                             val ? <Check className="h-4 w-4 text-emerald-500 mx-auto" /> : <X className="h-4 w-4 text-slate-300 mx-auto" />
                           ) : (
-                            <span className="text-slate-700 font-medium">{val}</span>
+                            <span className="text-xs font-medium text-slate-700 sm:text-sm">{val}</span>
                           )}
                         </td>
                       );

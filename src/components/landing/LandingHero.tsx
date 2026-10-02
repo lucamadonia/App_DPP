@@ -29,19 +29,38 @@ const REGULATIONS = [
   { key: 'regPPWR', score: 85, color: '#06b6d4' },
 ] as const;
 
+// Product facts only (no customer averages or speed claims we cannot source):
+// 3 analysis phases, 14 finding categories and 11 DPP templates all exist in
+// the codebase (use-compliance-check, FindingCategory, Template*.tsx).
 const CRED_STATS = [
-  { to: 87, suffix: '%', key: 'creds.score', icon: TrendingUp, decimals: 0 },
-  { to: 2.3, suffix: 's', key: 'creds.time', icon: Sparkles, decimals: 1 },
+  { to: 3, suffix: '', key: 'creds.phases', icon: Sparkles, decimals: 0 },
+  { to: 14, suffix: '', key: 'creds.areas', icon: TrendingUp, decimals: 0 },
   { to: 11, suffix: '', key: 'creds.templates', icon: ShieldCheck, decimals: 0 },
 ] as const;
 
-const FLOATING_CHIPS = [
-  { key: 'chip.espr', icon: ShieldCheck, color: '#3b82f6', top: '12%', left: '6%', delay: '0s' },
-  { key: 'chip.reach', icon: FlaskConical, color: '#8b5cf6', top: '68%', left: '4%', delay: '1.8s' },
-  { key: 'chip.gs1', icon: QrCode, color: '#06b6d4', top: '22%', right: '4%', delay: '0.8s' },
-  { key: 'chip.gpsr', icon: AlertTriangle, color: '#f59e0b', top: '78%', right: '8%', delay: '2.6s' },
-  { key: 'chip.battery', icon: BatteryCharging, color: '#10b981', top: '46%', left: '2%', delay: '3.2s' },
-] as const;
+// Chips orbit the score card (positions are relative to the card wrapper, not
+// the whole hero) so they can never land on the headline, badge or stats.
+// Straddling chips show from 2xl (>= 1536px); side chips need more room (see below).
+const FLOATING_CHIPS: {
+  key: string;
+  icon: typeof ShieldCheck;
+  color: string;
+  position: React.CSSProperties;
+  delay: string;
+  /** Sits fully outside the card's right edge, so it needs a wide gutter. */
+  outside?: boolean;
+}[] = [
+  // Top/bottom chips straddle the card border above/below its text; side
+  // chips sit fully outside the right edge. At 1536px with a classic Windows
+  // scrollbar (~17px) the gutter right of the card is only ~151px, too narrow
+  // for the ~155px 'GS1 Digital Link' chip (it got clipped by the hero's
+  // overflow-hidden), so side chips appear from 1600px (gutter >= ~183px).
+  { key: 'chip.espr', icon: ShieldCheck, color: '#3b82f6', position: { top: '-1.25rem', left: '1.5rem' }, delay: '0s' },
+  { key: 'chip.gs1', icon: QrCode, color: '#06b6d4', position: { top: '14%', left: 'calc(100% + 0.75rem)' }, delay: '0.8s', outside: true },
+  { key: 'chip.battery', icon: BatteryCharging, color: '#10b981', position: { top: '46%', left: 'calc(100% + 0.75rem)' }, delay: '3.2s', outside: true },
+  { key: 'chip.reach', icon: FlaskConical, color: '#8b5cf6', position: { bottom: '-1.25rem', left: '1.5rem' }, delay: '1.8s' },
+  { key: 'chip.gpsr', icon: AlertTriangle, color: '#f59e0b', position: { bottom: '-1.25rem', right: '1.5rem' }, delay: '2.6s' },
+];
 
 const PARTICLES = [
   { size: 4, color: 'bg-blue-400/60', top: '18%', left: '22%', delay: '0s' },
@@ -64,7 +83,7 @@ function AnimatedCounter({
   duration?: number;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: '-10%' });
+  const inView = useInView(ref, { once: true });
   const reduced = useReducedMotion();
   const [val, setVal] = useState(0);
 
@@ -216,7 +235,7 @@ function LiveScoreWidget({ t }: { t: (k: string) => string }) {
         transformPerspective: 1200,
         transformStyle: 'preserve-3d',
       }}
-      className="landing-glass relative rounded-3xl border border-white/10 bg-white/[0.04] p-7 shadow-2xl shadow-blue-900/20 backdrop-blur-xl"
+      className="landing-glass-dark relative rounded-3xl p-6 sm:p-7"
     >
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500/10 via-transparent to-violet-500/10" />
       <div className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-white/10 via-transparent to-transparent" />
@@ -228,7 +247,7 @@ function LiveScoreWidget({ t }: { t: (k: string) => string }) {
               <span className="absolute inline-flex h-full w-full animate-landing-pulse-dot rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-300">
               {t('hero.scoreWidget.title')}
             </span>
           </div>
@@ -253,7 +272,7 @@ function LiveScoreWidget({ t }: { t: (k: string) => string }) {
           ))}
         </div>
 
-        <div className="mt-7 flex items-center gap-2 border-t border-white/5 pt-4 text-xs text-slate-500">
+        <div className="mt-7 flex items-center gap-2 border-t border-white/10 pt-4 text-xs text-slate-400">
           <Sparkles className="h-3.5 w-3.5 text-violet-400" />
           <span>{t('hero.scoreWidget.analyzed')}</span>
         </div>
@@ -268,40 +287,50 @@ function FloatingChip({
   color,
   position,
   delay,
+  outside = false,
 }: {
   label: string;
   icon: typeof ShieldCheck;
   color: string;
   position: React.CSSProperties;
   delay: string;
+  outside?: boolean;
 }) {
   return (
     <div
-      className="landing-glass absolute z-10 hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 shadow-xl backdrop-blur-lg animate-landing-float lg:flex"
+      aria-hidden="true"
+      className={`landing-glass-dark absolute z-20 hidden items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 animate-landing-float ${
+        outside ? 'min-[1600px]:flex' : '2xl:flex'
+      }`}
       style={{ ...position, animationDelay: delay, borderLeft: `2px solid ${color}` }}
     >
       <Icon className="h-3.5 w-3.5" style={{ color }} />
-      <span className="text-xs font-semibold text-slate-200">{label}</span>
+      <span className="text-xs font-semibold text-slate-100">{label}</span>
     </div>
   );
 }
 
 function PainStat({ value }: { value: string }) {
-  const first = value.charAt(0);
-  const rest = value.slice(1);
+  // "10k+ SKUs" -> big "10k+", small "SKUs". Splitting after the first
+  // character used to render "1" + "0k+ SKUs", which read like a typo.
+  const match = value.match(/^([\d.,]+[a-zA-Z]{0,2}\+?)\s+(.*)$/);
+  const figure = match ? match[1] : value;
+  const label = match ? match[2] : '';
   return (
-    <div className="flex items-baseline font-bold tracking-tight text-white">
-      <span className="text-4xl sm:text-5xl leading-none bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent">
-        {first}
+    <div className="flex items-baseline gap-2 font-bold tracking-tight text-white">
+      <span className="text-4xl leading-none bg-gradient-to-br from-white to-slate-300 bg-clip-text text-transparent sm:text-5xl">
+        {figure}
       </span>
-      <span className="text-2xl sm:text-3xl leading-none text-slate-300">{rest}</span>
+      {label && <span className="text-lg leading-none text-slate-300 sm:text-xl">{label}</span>}
     </div>
   );
 }
 
 function ScrollCue({ text }: { text: string }) {
   return (
-    <div className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-3 md:flex">
+    // Only on tall viewports: on a 900px laptop the hero content reaches the
+    // bottom edge and the cue text collided with the stats row.
+    <div className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-3 [@media(min-width:768px)_and_(min-height:1080px)]:flex">
       <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">{text}</span>
       <div className="relative h-12 w-px overflow-hidden bg-white/10">
         <motion.div
@@ -352,22 +381,6 @@ export function LandingHero() {
         />
       ))}
 
-      {FLOATING_CHIPS.map((c) => {
-        const position: React.CSSProperties = { top: c.top };
-        if ('left' in c && c.left) position.left = c.left;
-        if ('right' in c && c.right) position.right = c.right;
-        return (
-          <FloatingChip
-            key={c.key}
-            label={t(`hero.${c.key}`)}
-            icon={c.icon}
-            color={c.color}
-            position={position}
-            delay={c.delay}
-          />
-        );
-      })}
-
       <div className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8 lg:py-28">
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-7">
@@ -375,14 +388,14 @@ export function LandingHero() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="landing-glass inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-lg"
+              className="landing-glass-dark inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-slate-200"
             >
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-landing-pulse-dot rounded-full bg-blue-400 opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-500" />
               </span>
-              <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
-              {t('hero.eyebrow')}
+              <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0 text-blue-400" />
+              <span className="truncate">{t('hero.eyebrow')}</span>
             </motion.div>
 
             <motion.h1
@@ -394,7 +407,7 @@ export function LandingHero() {
               <span className="block bg-gradient-to-br from-white via-white to-slate-400 bg-clip-text text-transparent">
                 {t('hero.headline').replace(t('hero.headlineHighlight'), '').replace(/\.\s*$/, '').trim()}
               </span>
-              <span className="mt-1 block landing-text-shimmer">
+              <span className="mt-1 block pb-2 landing-text-shimmer-light">
                 {t('hero.headlineHighlight')}.
               </span>
             </motion.h1>
@@ -403,7 +416,7 @@ export function LandingHero() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: 'easeOut', delay: 0.3 }}
-              className="mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg"
+              className="mt-6 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg"
             >
               {t('hero.sub1')}
             </motion.p>
@@ -419,7 +432,7 @@ export function LandingHero() {
               <PainStat value={t('hero.painStat.regs')} />
               <div className="hidden h-12 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent sm:block" />
               <PainStat value={t('hero.painStat.weeks')} />
-              <span className="ml-auto hidden text-sm font-medium italic text-slate-500 sm:inline">
+              <span className="ml-auto hidden text-sm font-medium italic text-slate-400 sm:inline">
                 {t('hero.painStat.label')}
               </span>
             </motion.div>
@@ -446,7 +459,7 @@ export function LandingHero() {
                 whileTap={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="landing-glass inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-7 py-3.5 text-base font-semibold text-white backdrop-blur-lg transition-colors hover:bg-white/[0.08]"
+                className="landing-glass-dark inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-semibold text-white transition-colors hover:border-white/25"
               >
                 <PlayCircle className="h-4 w-4 text-violet-300" />
                 {t('hero.cta.secondary')}
@@ -472,8 +485,24 @@ export function LandingHero() {
             </motion.div>
           </div>
 
-          <div className="lg:col-span-5">
+          <div className="relative lg:col-span-5">
+            {/* Brand glow behind the score card */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-gradient-to-tr from-blue-600/30 via-violet-600/25 to-cyan-500/25 blur-3xl"
+            />
             <LiveScoreWidget t={t} />
+            {FLOATING_CHIPS.map((c) => (
+              <FloatingChip
+                key={c.key}
+                label={t(`hero.${c.key}`)}
+                icon={c.icon}
+                color={c.color}
+                position={c.position}
+                delay={c.delay}
+                outside={c.outside}
+              />
+            ))}
           </div>
         </div>
       </div>

@@ -165,7 +165,7 @@ function CleanDashboardMockup({ inView }: { inView: boolean }) {
           <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400">GTIN 4061234 · {t('oldVsNew.new.batch')}</div>
         </div>
         <span className="hidden rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300 sm:inline">
-          Verified
+          {t('oldVsNew.new.verified')}
         </span>
       </div>
 
@@ -290,18 +290,20 @@ export function LandingOldVsNew() {
                     initial={reduced ? false : { opacity: 0, y: 8 }}
                     animate={inView ? { opacity: 1, y: 0 } : undefined}
                     transition={{ delay: reduced ? 0 : 0.4 + i * 0.08, duration: 0.4 }}
-                    className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/5 p-3"
+                    className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 sm:items-center"
                   >
                     <div className="flex-shrink-0 rounded-lg bg-rose-500/10 p-1.5 text-rose-400">
                       <X className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                      <Icon aria-hidden="true" className="h-4 w-4 text-rose-300/60 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-white">{t(`oldVsNew.pain.${item.key}.title`)}</span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Icon aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-rose-300/60" />
+                        <span className="text-sm font-semibold text-white">{t(`oldVsNew.pain.${item.key}.title`)}</span>
+                      </div>
+                      <span className="w-fit flex-shrink-0 rounded-full bg-rose-500/15 px-2.5 py-1 font-mono text-[10px] font-semibold text-rose-300">
+                        {t(`oldVsNew.pain.${item.key}.badge`)}
+                      </span>
                     </div>
-                    <span className="flex-shrink-0 rounded-full bg-rose-500/15 px-2.5 py-1 font-mono text-[10px] font-semibold text-rose-300">
-                      {t(`oldVsNew.pain.${item.key}.badge`)}
-                    </span>
                   </motion.li>
                 );
               })}
@@ -342,20 +344,22 @@ export function LandingOldVsNew() {
                     initial={reduced ? false : { opacity: 0, y: 8 }}
                     animate={inView ? { opacity: 1, y: 0 } : undefined}
                     transition={{ delay: reduced ? 0 : 0.6 + i * 0.08, duration: 0.4 }}
-                    className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3"
+                    className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 sm:items-center"
                   >
                     <div className="flex-shrink-0 rounded-lg bg-emerald-500/15 p-1.5 text-emerald-600 dark:text-emerald-400">
                       <Check className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                      <Icon aria-hidden="true" className="h-4 w-4 text-emerald-500/70 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {t(`oldVsNew.win.${item.key}.title`)}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Icon aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-emerald-500/70" />
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {t(`oldVsNew.win.${item.key}.title`)}
+                        </span>
+                      </div>
+                      <span className="w-fit flex-shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        {t(`oldVsNew.win.${item.key}.badge`)}
                       </span>
                     </div>
-                    <span className="flex-shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
-                      {t(`oldVsNew.win.${item.key}.badge`)}
-                    </span>
                   </motion.li>
                 );
               })}

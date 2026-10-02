@@ -381,7 +381,7 @@ export function LandingOutcomes() {
   ];
 
   return (
-    <section id="features" className="relative overflow-hidden py-24 bg-white dark:bg-slate-950">
+    <section id="features" className="relative isolate overflow-hidden py-24 bg-white dark:bg-slate-950">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-400/5 blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-violet-400/5 blur-3xl" />
