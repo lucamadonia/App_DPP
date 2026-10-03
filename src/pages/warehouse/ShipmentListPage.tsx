@@ -513,20 +513,20 @@ export function ShipmentListPage() {
     }
   }
 
-  // Manual tracking refresh (triggers the same poll as the 8h cron)
+  // Manual tracking refresh for the caller's own tenant. The all-tenant cron
+  // action requires the service-role key and must never be called from the browser.
   const [refreshing, setRefreshing] = useState(false);
   async function handleTrackingRefresh() {
     setRefreshing(true);
     try {
       const { data, error } = await invokeEdgeFunction<{
-        success: boolean;
-        tenantsScanned?: number;
-        perTenant?: Array<{ result?: { total: number; delivered: number; inTransit: number; noChange: number; errors: number } }>;
-      }>('dhl-shipping', { action: 'poll_all_tenants_cron' });
+        total?: number; delivered?: number; inTransit?: number; noChange?: number; errors?: number;
+        skipped?: boolean; error?: string;
+      }>('dhl-shipping', { action: 'poll_all_tracking' });
       if (error) throw new Error(error.message);
-      const my = (data?.perTenant || []).find((_, i) => i === (data?.perTenant?.length ?? 0) - 1)?.result;
-      const summary = my
-        ? `${my.total} shipments, ${my.delivered} delivered, ${my.inTransit} in transit, ${my.noChange} unchanged`
+      if (data?.error) throw new Error(data.error);
+      const summary = data && typeof data.total === 'number'
+        ? `${data.total} shipments, ${data.delivered ?? 0} delivered, ${data.inTransit ?? 0} in transit, ${data.noChange ?? 0} unchanged`
         : t('Tracking refreshed');
       toast.success(summary);
       refreshAll();
