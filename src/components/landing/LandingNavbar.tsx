@@ -119,7 +119,7 @@ export function LandingNavbar() {
     <>
       <nav
         aria-label={t('nav.ariaMain')}
-        className={`fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)] transition-[background-color,box-shadow,border-color] duration-300 ${
+        className={`fixed inset-x-0 top-0 z-50 pt-[var(--safe-top)] transition-[background-color,box-shadow,border-color] duration-300 ${
           onDark
             ? 'border-b border-transparent bg-transparent'
             : 'landing-glass border-b border-slate-200/70 shadow-sm dark:border-white/10'
@@ -243,7 +243,7 @@ export function LandingNavbar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="absolute right-0 top-[calc(4rem+env(safe-area-inset-top))] max-h-[calc(100dvh-4rem-env(safe-area-inset-top))] w-[min(300px,92vw)] overflow-y-auto rounded-bl-2xl border-l border-slate-200 bg-white/95 pb-[var(--safe-bottom)] shadow-xl backdrop-blur-xl animate-landing-reveal dark:border-white/10 dark:bg-slate-900/95">
+          <div className="absolute right-0 top-[calc(4rem+var(--safe-top))] max-h-[calc(100dvh-4rem-var(--safe-top))] w-[min(300px,92vw)] overflow-y-auto rounded-bl-2xl border-l border-slate-200 bg-white/95 pb-[var(--safe-bottom)] shadow-xl backdrop-blur-xl animate-landing-reveal dark:border-white/10 dark:bg-slate-900/95">
             <div className="space-y-1 p-4">
               {allLinks.map((link) => (
                 <button

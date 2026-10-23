@@ -9,6 +9,7 @@ import { getOwnTenantSecretStatus } from './tenants';
 import type {
   DHLSettingsPublic,
   DHLLabelResponse,
+  DHLLabelResult,
   DHLTrackingEvent,
   DHLReturnLabelResponse,
   DeutschePostLetterProduct,
@@ -21,7 +22,7 @@ async function callDHL(action: string, params?: Record<string, unknown>): Promis
     console.error(`[DHL] ${action} error:`, error.message);
     throw error;
   }
-  if (data?.error) {
+  if (data?.error && !(action === 'create_label' && data.requiresConfirmation === true)) {
     if (data.dhlRequest) console.error(`[DHL] Request payload:`, JSON.stringify(data.dhlRequest, null, 2));
     if (data.dhlResponse) console.error(`[DHL] DHL response:`, JSON.stringify(data.dhlResponse, null, 2));
     throw new Error(data.error as string);
@@ -179,13 +180,14 @@ export async function createDHLLabel(
   shipmentId: string,
   product?: string,
   weightGramsOverride?: number,
-): Promise<DHLLabelResponse> {
+  confirmKleinpaket = false,
+): Promise<DHLLabelResult> {
   // Client-side billing gate
   const { hasModule } = await import('./billing');
   const hasPro = await hasModule('warehouse_professional') || await hasModule('warehouse_business');
   if (!hasPro) throw new Error('Warehouse Professional or Business module required');
 
-  return await callDHL('create_label', { shipmentId, product, weightGramsOverride });
+  return await callDHL('create_label', { shipmentId, product, weightGramsOverride, confirmKleinpaket });
 }
 
 /**

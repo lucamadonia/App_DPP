@@ -87,6 +87,15 @@ export interface DHLLabelResponse {
   validationMessages?: { property: string; message: string; state: 'Warning' | 'Error' }[];
 }
 
+/** Read-only preflight response when DHL would create a Kleinpaket label. */
+export interface DHLKleinpaketConfirmation {
+  requiresConfirmation: true;
+  product: 'V62KP';
+  weightGrams: number;
+}
+
+export type DHLLabelResult = DHLLabelResponse | DHLKleinpaketConfirmation;
+
 export interface DHLTrackingEvent {
   timestamp: string;
   location?: string;

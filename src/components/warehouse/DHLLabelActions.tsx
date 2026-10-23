@@ -23,7 +23,7 @@ import {
   getDeutschePostLetterProducts,
 } from '@/services/supabase/dhl-carrier';
 import { DHL_PRODUCT_LABELS } from '@/types/dhl';
-import type { DeutschePostLetterProduct, DHLParcelProduct } from '@/types/dhl';
+import type { DeutschePostLetterProduct, DHLLabelResponse, DHLParcelProduct } from '@/types/dhl';
 import type { WhShipment } from '@/types/warehouse';
 
 interface DHLLabelActionsProps {
@@ -36,6 +36,8 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
   const [creating, setCreating] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [showKleinpaketConfirmation, setShowKleinpaketConfirmation] = useState(false);
+  const [pendingWeightGrams, setPendingWeightGrams] = useState<number | null>(null);
   const [weightGramsInput, setWeightGramsInput] = useState('');
   const [shippingMethod, setShippingMethod] = useState<'parcel' | 'letter'>('parcel');
   const [hasParcelCredentials, setHasParcelCredentials] = useState(false);
@@ -97,6 +99,23 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
     setShowPrintDialog(true);
   };
 
+  const finishLabelCreation = (result: DHLLabelResponse, method: 'parcel' | 'letter') => {
+    const selectedLetter = letterProducts.find((product) => product.productCode === letterProductCode);
+    const productName = method === 'letter'
+      ? selectedLetter?.name || t('Deutsche Post Brief')
+      : result.product
+      ? t(DHL_PRODUCT_LABELS[result.product as DHLParcelProduct] ?? result.product)
+      : '';
+    toast.success(productName ? t('Label created — {{product}}', { product: productName }) : t('Label Created Successfully'));
+    result.validationMessages?.forEach((msg) => {
+      if (msg.state === 'Warning') toast.warning(msg.message);
+    });
+    setShowKleinpaketConfirmation(false);
+    setPendingWeightGrams(null);
+    setShowPrintDialog(false);
+    onUpdate();
+  };
+
   const handleConfirmPrint = async () => {
     const grams = Number(weightGramsInput);
     if (!Number.isFinite(grams) || grams <= 0) {
@@ -114,21 +133,29 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
       const result = shippingMethod === 'letter'
         ? await createDeutschePostLetterLabel(shipment.id, letterProductCode, override)
         : await createDHLLabel(shipment.id, undefined, override);
-      // Surface which product the system auto-selected (e.g. Kleinpaket when it fit).
-      const selectedLetter = letterProducts.find((product) => product.productCode === letterProductCode);
-      const productName = shippingMethod === 'letter'
-        ? selectedLetter?.name || t('Deutsche Post Brief')
-        : result.product
-        ? t(DHL_PRODUCT_LABELS[result.product as DHLParcelProduct] ?? result.product)
-        : '';
-      toast.success(productName ? t('Label created — {{product}}', { product: productName }) : t('Label Created Successfully'));
-      if (result.validationMessages?.length) {
-        result.validationMessages.forEach(msg => {
-          if (msg.state === 'Warning') toast.warning(msg.message);
-        });
+      if (!('success' in result)) {
+        setPendingWeightGrams(grams);
+        setShowKleinpaketConfirmation(true);
+        return;
       }
-      setShowPrintDialog(false);
-      onUpdate();
+      finishLabelCreation(result, shippingMethod);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error creating label');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleKleinpaketDecision = async (product: 'V01PAK' | 'V62KP') => {
+    if (pendingWeightGrams === null) return;
+    setCreating(true);
+    try {
+      const override = pendingWeightGrams !== shipment.totalWeightGrams ? pendingWeightGrams : undefined;
+      const result = await createDHLLabel(shipment.id, product, override, product === 'V62KP');
+      if (!('success' in result)) {
+        throw new Error(t('Confirm the DHL product before buying the label.'));
+      }
+      finishLabelCreation(result, 'parcel');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error creating label');
     } finally {
@@ -195,8 +222,46 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
           {t('Create shipping label')}
         </Button>
 
-        <Dialog open={showPrintDialog} onOpenChange={(o) => !creating && setShowPrintDialog(o)}>
+        <Dialog open={showPrintDialog} onOpenChange={(open) => {
+          if (creating) return;
+          setShowPrintDialog(open);
+          if (!open) {
+            setShowKleinpaketConfirmation(false);
+            setPendingWeightGrams(null);
+          }
+        }}>
           <DialogContent className="sm:max-w-md">
+            {showKleinpaketConfirmation ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{t('Really create a DHL Kleinpaket label?')}</DialogTitle>
+                  <DialogDescription>
+                    {t('This shipment fits the DHL Kleinpaket limits. No label has been purchased yet.')}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2 text-sm">
+                  <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+                    {t('Kleinpaket covers loss or damage up to €20. DHL Paket covers up to €500. Check the value of the contents before choosing.')}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {t('Confirmed shipping weight: {{grams}} g. Kleinpaket also requires an actual packed size of at most 35.3 × 25 × 8 cm.', { grams: pendingWeightGrams })}
+                  </p>
+                </div>
+                <DialogFooter className="flex-col gap-2 sm:flex-col">
+                  <Button className="w-full" variant="outline" disabled={creating} onClick={() => void handleKleinpaketDecision('V01PAK')}>
+                    {t('Buy DHL Paket label instead')}
+                  </Button>
+                  <Button disabled={creating} onClick={() => void handleKleinpaketDecision('V62KP')} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black">
+                    {creating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                    {t('Yes, buy Kleinpaket label')}
+                  </Button>
+                  <Button className="w-full" variant="ghost" disabled={creating} onClick={() => setShowKleinpaketConfirmation(false)}>
+                    {t('Back')}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {shippingMethod === 'letter'
@@ -316,6 +381,8 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
                   : t('Print with {{kg}} kg', { kg: weightKgPreview ?? '?' })}
               </Button>
             </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </>

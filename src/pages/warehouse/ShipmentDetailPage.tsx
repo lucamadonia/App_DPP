@@ -967,7 +967,7 @@ export function ShipmentDetailPage() {
                 const zone = getShippingZone(homeCountry, shipment.shippingCountry);
                 const est = estimateShippingPrice(homeCountry, shipment.shippingCountry, shipment.totalWeightGrams);
                 const isIntl = zone !== 'domestic';
-                const product = isIntl ? 'V53WPAK' : 'V01PAK';
+                const product = shipment.carrierLabelData?.dhlProduct;
                 const zoneLabel = zone === 'domestic' ? t('Domestic') : zone === 'eu' ? t('EU') : t('Worldwide');
                 return (
                   <div className={`rounded-md border px-3 py-2 mt-2 text-xs space-y-1 ${
@@ -981,7 +981,7 @@ export function ShipmentDetailPage() {
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold">{t('DHL product')}</span>
-                      <span className="font-mono">{product}</span>
+                      <span className={product ? 'font-mono' : ''}>{product || t('Chosen when creating the label')}</span>
                     </div>
                     {est && (
                       <div className="flex items-center justify-between gap-2">
