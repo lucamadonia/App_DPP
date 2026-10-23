@@ -22,7 +22,7 @@ async function callDHL(action: string, params?: Record<string, unknown>): Promis
     console.error(`[DHL] ${action} error:`, error.message);
     throw error;
   }
-  if (data?.error) {
+  if (data?.error && !(action === 'create_label' && data.requiresConfirmation === true)) {
     if (data.dhlRequest) console.error(`[DHL] Request payload:`, JSON.stringify(data.dhlRequest, null, 2));
     if (data.dhlResponse) console.error(`[DHL] DHL response:`, JSON.stringify(data.dhlResponse, null, 2));
     throw new Error(data.error as string);

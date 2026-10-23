@@ -674,7 +674,12 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
   // The initial call is a read-only preflight for Kleinpaket. The caller must
   // explicitly confirm the lower-liability product before a paid DHL order.
   if (product === 'V62KP' && params.confirmKleinpaket !== true) {
-    return json({ requiresConfirmation: true, product, weightGrams: effectiveWeightGrams });
+    return json({
+      error: 'Confirm DHL Kleinpaket before buying a label',
+      requiresConfirmation: true,
+      product,
+      weightGrams: effectiveWeightGrams,
+    });
   }
   const labelFormat = settings.labelFormat || 'PDF_A4';
   const weightKg = effectiveWeightGrams / 1000;
