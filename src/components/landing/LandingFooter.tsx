@@ -54,7 +54,7 @@ export function LandingFooter() {
   ];
 
   return (
-    <footer className="relative overflow-hidden bg-slate-950 pt-16 pb-[calc(2rem+env(safe-area-inset-bottom))] text-slate-400">
+    <footer className="relative overflow-hidden bg-slate-950 pt-16 pb-[calc(2rem+var(--safe-bottom))] text-slate-400">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
       <div aria-hidden="true" className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[48rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px]" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
