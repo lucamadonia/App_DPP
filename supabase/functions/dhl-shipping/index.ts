@@ -612,6 +612,9 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     .single();
 
   if (shipErr || !shipment) return json({ error: 'Shipment not found' }, 404);
+  if (shipment.tracking_number || shipment.status === 'label_created') {
+    return json({ error: 'A shipping label already exists for this shipment' }, 409);
+  }
 
   // 3. Validate. Accept a per-request weight override so the user can tweak
   //    it right before printing without having to re-open step 3 of the wizard.
@@ -630,16 +633,6 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     return json({ error: 'Complete shipping address is required' }, 400);
   }
 
-  // If the caller passed an override, persist it so the shipment record stays
-  // in sync with the weight the label was actually printed with.
-  if (weightOverride && weightOverride !== shipment.total_weight_grams) {
-    await supabase
-      .from('wh_shipments')
-      .update({ total_weight_grams: weightOverride })
-      .eq('id', shipmentId)
-      .eq('tenant_id', tenantId);
-  }
-
   // 4. Build DHL order request.
   //    Auto-pick the product: V01PAK (national) only works for DEU→DEU.
   //    For any other destination we fall back to V53WPAK (Paket International).
@@ -648,6 +641,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
   const consigneeCountry = mapCountryToISO3(shipment.shipping_country);
   const isInternational = shipperCountry !== consigneeCountry;
   const configuredProduct = settings.defaultProduct || 'V01PAK';
+  let kleinpaketEligible: boolean | undefined;
   let autoProduct: string;
   if (isInternational) {
     // National defaults (V01PAK parcel, V62KP Kleinpaket) can't cross borders —
@@ -657,19 +651,30 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     // Domestic + Kleinpaket activated: auto-detect whether the package fits the
     // Kleinpaket envelope (≤ 35.3×25×8 cm, ≤ 1 kg). Fits → cheaper Kleinpaket,
     // else → standard parcel. Never silently ship oversize as Kleinpaket.
-    const fits = await isKleinpaketEligible(supabase, shipmentId, effectiveWeightGrams);
-    autoProduct = fits ? 'V62KP' : 'V01PAK';
+    kleinpaketEligible = await isKleinpaketEligible(supabase, shipmentId, effectiveWeightGrams);
+    autoProduct = kleinpaketEligible ? 'V62KP' : 'V01PAK';
   } else {
     autoProduct = configuredProduct;
   }
   // An explicit caller-supplied product always wins over auto-detection.
   const product = (params.product as string) || autoProduct;
+  if (product === 'V62KP') {
+    kleinpaketEligible ??= !isInternational && await isKleinpaketEligible(supabase, shipmentId, effectiveWeightGrams);
+    if (!kleinpaketEligible) {
+      return json({ error: 'This shipment does not fit DHL Kleinpaket (max. 1 kg, 35.3 × 25 × 8 cm)' }, 400);
+    }
+  }
   // Each product needs its own activated participation (Teilnahme) → own billing
   // number. Resolve it and fail fast with a clear message if it's missing,
   // instead of letting DHL return its opaque "product unknown" fault.
   const billingNumber = billingNumberForProduct(product, settings);
   if (!billingNumber) {
     return json({ error: missingBillingNumberMessage(product) });
+  }
+  // The initial call is a read-only preflight for Kleinpaket. The caller must
+  // explicitly confirm the lower-liability product before a paid DHL order.
+  if (product === 'V62KP' && params.confirmKleinpaket !== true) {
+    return json({ requiresConfirmation: true, product, weightGrams: effectiveWeightGrams });
   }
   const labelFormat = settings.labelFormat || 'PDF_A4';
   const weightKg = effectiveWeightGrams / 1000;
@@ -793,6 +798,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
       label_url: signedUrl || labelUrl,
       carrier_label_data: carrierLabelData,
       status: 'label_created',
+      total_weight_grams: effectiveWeightGrams,
     })
     .eq('id', shipmentId)
     .eq('tenant_id', tenantId);
