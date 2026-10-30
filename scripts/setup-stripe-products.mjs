@@ -41,6 +41,11 @@ if (!STRIPE_SECRET_KEY) {
   process.exit(1);
 }
 
+// Project code in the Stripe account shared by the MYFAMBLISS apps
+// (see supabase/functions/_shared/stripe-project.ts). Spread into every
+// product and price below via the definitions' metadata.
+const PROJECT = 'TRACK';
+
 // Stripe API helper
 async function stripeRequest(endpoint, body) {
   const res = await fetch(`https://api.stripe.com/v1/${endpoint}`, {
@@ -87,7 +92,7 @@ const PLANS = [
     },
     monthlyPriceCents: 4900,
     yearlyPriceCents: 46800, // €468/yr = €39/mo
-    metadata: { trackbliss_plan: 'pro' },
+    metadata: { project: PROJECT, trackbliss_plan: 'pro' },
   },
   {
     id: 'enterprise',
@@ -98,7 +103,7 @@ const PLANS = [
     },
     monthlyPriceCents: 14900,
     yearlyPriceCents: 142800, // €1428/yr = €119/mo
-    metadata: { trackbliss_plan: 'enterprise' },
+    metadata: { project: PROJECT, trackbliss_plan: 'enterprise' },
   },
 ];
 
@@ -111,7 +116,7 @@ const MODULES = [
       de: '50 Retouren/Monat, 5 Standard-E-Mail-Vorlagen',
     },
     monthlyPriceCents: 2900,
-    metadata: { trackbliss_module: 'returns_hub_starter' },
+    metadata: { project: PROJECT, trackbliss_module: 'returns_hub_starter' },
   },
   {
     id: 'returns_hub_professional',
@@ -121,7 +126,7 @@ const MODULES = [
       de: '300 Retouren/Monat, Tickets, alle E-Mail-Vorlagen, 5 Workflow-Regeln, Lese-API',
     },
     monthlyPriceCents: 6900,
-    metadata: { trackbliss_module: 'returns_hub_professional' },
+    metadata: { project: PROJECT, trackbliss_module: 'returns_hub_professional' },
   },
   {
     id: 'returns_hub_business',
@@ -131,7 +136,7 @@ const MODULES = [
       de: 'Unbegrenzte Retouren, Webhooks, voller API-Zugriff, unbegrenzte Workflows',
     },
     monthlyPriceCents: 14900,
-    metadata: { trackbliss_module: 'returns_hub_business' },
+    metadata: { project: PROJECT, trackbliss_module: 'returns_hub_business' },
   },
   {
     id: 'supplier_portal',
@@ -141,7 +146,7 @@ const MODULES = [
       de: 'Lieferanten zur Selbstregistrierung und Datenverwaltung einladen',
     },
     monthlyPriceCents: 1900,
-    metadata: { trackbliss_module: 'supplier_portal' },
+    metadata: { project: PROJECT, trackbliss_module: 'supplier_portal' },
   },
   {
     id: 'customer_portal',
@@ -151,7 +156,7 @@ const MODULES = [
       de: 'Self-Service-Portal für Kunden — Retouren, Tickets, Profil',
     },
     monthlyPriceCents: 2900,
-    metadata: { trackbliss_module: 'customer_portal' },
+    metadata: { project: PROJECT, trackbliss_module: 'customer_portal' },
   },
   {
     id: 'custom_domain',
@@ -161,7 +166,7 @@ const MODULES = [
       de: 'Portal unter eigener Domain mit vollem White-Label-Branding bereitstellen',
     },
     monthlyPriceCents: 1900,
-    metadata: { trackbliss_module: 'custom_domain' },
+    metadata: { project: PROJECT, trackbliss_module: 'custom_domain' },
   },
 ];
 
@@ -174,7 +179,7 @@ const CREDIT_PACKS = [
       de: '50 AI-Credits für Compliance-Prüfungen und Analysen — verfallen nie',
     },
     priceCents: 900,
-    metadata: { trackbliss_credits: '50', trackbliss_credit_pack: 'small' },
+    metadata: { project: PROJECT, trackbliss_credits: '50', trackbliss_credit_pack: 'small' },
   },
   {
     id: 'credits_medium',
@@ -184,7 +189,7 @@ const CREDIT_PACKS = [
       de: '200 AI-Credits für Compliance-Prüfungen und Analysen — verfallen nie',
     },
     priceCents: 2900,
-    metadata: { trackbliss_credits: '200', trackbliss_credit_pack: 'medium' },
+    metadata: { project: PROJECT, trackbliss_credits: '200', trackbliss_credit_pack: 'medium' },
   },
   {
     id: 'credits_large',
@@ -194,7 +199,7 @@ const CREDIT_PACKS = [
       de: '500 AI-Credits für Compliance-Prüfungen und Analysen — verfallen nie',
     },
     priceCents: 5900,
-    metadata: { trackbliss_credits: '500', trackbliss_credit_pack: 'large' },
+    metadata: { project: PROJECT, trackbliss_credits: '500', trackbliss_credit_pack: 'large' },
   },
 ];
 

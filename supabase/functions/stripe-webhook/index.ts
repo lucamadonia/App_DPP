@@ -23,6 +23,11 @@
  *   - Idempotency: every event id is claimed in `stripe_events`; credit
  *     grants are additionally idempotent per checkout session
  *     (grant_purchased_credits RPC).
+ *   - Shared Stripe account (_shared/stripe-project.ts): events whose object
+ *     is tagged metadata.project != TRACK are acknowledged with 200 and
+ *     ignored before any DB write or mail. Untagged (legacy) objects are
+ *     processed only when they resolve to a tenant via Stripe ids in our DB;
+ *     unresolvable ones are ignored with 200 (never 5xx, never by email).
  *
  * Deployment (MUST ship together with migration 20261001e and the new
  * create-checkout-session + openrouter-proxy):
@@ -45,6 +50,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
 import { postToMailHub } from '../_shared/mail-hub.ts';
+import { eventProjectScope, type ProjectScope, STRIPE_PROJECT } from '../_shared/stripe-project.ts';
 import { verifyStripeEvent } from './verify.ts';
 import { subscriptionGrantsAccess, sumPurchasedCredits } from './entitlements.ts';
 import {
@@ -97,6 +103,14 @@ Deno.serve(async (req) => {
     return new Response('Webhook signature verification failed', { status: 400 });
   }
 
+  // Shared Stripe account: other apps' events reach this endpoint too.
+  // Acknowledge them without claiming, DB writes, Stripe calls or mails.
+  const scope = eventProjectScope(event);
+  if (scope === 'foreign') {
+    console.log(`Ignoring ${event.type} (${event.id}): object belongs to another project (not ${STRIPE_PROJECT})`);
+    return json({ received: true, ignored: 'foreign_project' });
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // Idempotency: claim the event id before doing any work.
@@ -119,7 +133,7 @@ Deno.serve(async (req) => {
   console.log(`Processing Stripe event: ${event.type} (${event.id})`);
 
   try {
-    await dispatchEvent(supabase, event);
+    await dispatchEvent(supabase, event, scope);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Webhook handler error:', msg);
@@ -136,11 +150,11 @@ Deno.serve(async (req) => {
   return json({ received: true });
 });
 
-async function dispatchEvent(supabase: Db, event: Stripe.Event): Promise<void> {
+async function dispatchEvent(supabase: Db, event: Stripe.Event, scope: ProjectScope): Promise<void> {
   switch (event.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded':
-      await handleCheckoutCompleted(supabase, event.data.object as Stripe.Checkout.Session, event.id);
+      await handleCheckoutCompleted(supabase, event.data.object as Stripe.Checkout.Session, event.id, scope);
       break;
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
@@ -196,19 +210,23 @@ async function handleCheckoutCompleted(
   supabase: Db,
   session: Stripe.Checkout.Session,
   stripeEventId: string,
+  scope: ProjectScope,
 ) {
   const customerId = customerIdOf(session.customer);
   const { tenantId, linkExpected } = await resolveTenant(stripe, supabase, customerId);
   if (!tenantId) {
-    if (!linkExpected) {
+    if (!linkExpected || scope !== 'own') {
       // Checkout not created by Trackbliss (Payment Link, dashboard, other
       // Fambliss product in the shared Stripe account) — not ours. Finish as
       // processed so Stripe does not retry or disable the endpoint.
-      console.warn(`Ignoring checkout ${session.id}: customer ${customerId ?? '(none)'} has no tenant link`);
+      // Untagged (legacy) sessions are never retried either: a 5xx makes
+      // Stripe retry for days and can disable the endpoint.
+      console.warn(`Ignoring checkout ${session.id}: customer ${customerId ?? '(none)'} has no tenant link (${scope})`);
       return;
     }
-    // Tenant link expected but not resolvable: fail so Stripe retries and
-    // the stripe_events row shows the paid-but-unmapped checkout.
+    // A Trackbliss-tagged checkout whose tenant link is expected but not
+    // resolvable: fail so Stripe retries and the stripe_events row shows
+    // the paid-but-unmapped checkout.
     throw new Error(`No tenant for Stripe customer ${customerId} (session ${session.id})`);
   }
   if (session.metadata?.tenant_id && session.metadata.tenant_id !== tenantId) {
@@ -366,11 +384,18 @@ async function handleSubscriptionDeleted(
  */
 async function handleTrialWillEnd(supabase: Db, subscription: Stripe.Subscription) {
   const customerId = customerIdOf(subscription.customer) as string;
-  const { data: tenant } = await supabase
+  const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
     .select('id')
     .eq('stripe_customer_id', customerId)
     .maybeSingle();
+  if (tenantErr) throw new Error(`tenant lookup failed: ${tenantErr.message}`);
+  // Only remind customers of a Trackbliss tenant, never another app's
+  // customer in the shared Stripe account.
+  if (!tenant?.id) {
+    console.warn(`Ignoring trial_will_end for ${subscription.id}: customer ${customerId} has no tenant link`);
+    return;
+  }
 
   try {
     const customer = await stripe.customers.retrieve(customerId);
@@ -392,7 +417,7 @@ async function handleTrialWillEnd(supabase: Db, subscription: Stripe.Subscriptio
         upgrade_url: `${portalUrl()}/account/billing`,
       },
       metadata: {
-        tenant_id: tenant?.id ?? null,
+        tenant_id: tenant.id,
         stripe_subscription_id: subscription.id,
         stripe_customer_id: customerId,
         trigger_source: 'stripe.customer.subscription.trial_will_end',
