@@ -6,6 +6,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'https://esm.sh/stripe@14?target=deno';
 import { PLAN_MONTHLY_CREDITS } from '../_shared/stripe-catalog.ts';
+import { projectScope } from '../_shared/stripe-project.ts';
 import {
   deriveSubscriptionEntitlements,
   mapSubscriptionStatus,
@@ -40,7 +41,9 @@ export interface TenantResolution {
  * tenants.stripe_customer_id (unique, server-written). Fallback: the
  * customer's own metadata.tenant_id — written by create-checkout-session
  * when it created the customer — accepted only when that tenant has no
- * other Stripe customer linked yet. Transient errors (DB, Stripe API) throw.
+ * other Stripe customer linked yet, and only when the customer is not tagged
+ * with another project of the shared Stripe account. Matching by email is
+ * deliberately never done. Transient errors (DB, Stripe API) throw.
  */
 export async function resolveTenant(
   stripe: Stripe,
@@ -58,6 +61,9 @@ export async function resolveTenant(
 
   const customer = await stripe.customers.retrieve(customerId);
   if (!customer || customer.deleted) return { tenantId: null, linkExpected: false };
+  if (projectScope((customer as Stripe.Customer).metadata) === 'foreign') {
+    return { tenantId: null, linkExpected: false };
+  }
   const metaTenant = (customer as Stripe.Customer).metadata?.tenant_id;
   if (!metaTenant || !/^[0-9a-f-]{36}$/i.test(metaTenant)) return { tenantId: null, linkExpected: false };
 
