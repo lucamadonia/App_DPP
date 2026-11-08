@@ -46,7 +46,15 @@ test('every product wizard step fits a narrow phone', async ({ page }) => {
   const main = page.locator('.app-content');
   for (let step = 0; step < 12; step++) {
     await waitForAppScreen(page);
-    expect(await main.evaluate(el => el.scrollWidth - el.clientWidth), `wizard step ${step + 1}`).toBeLessThanOrEqual(2);
+    const layout = await main.evaluate(el => ({
+      overflow: el.scrollWidth - el.clientWidth,
+      step: el.querySelector('[data-form-step]')?.getAttribute('data-form-step'),
+      overflowingElements: [...el.querySelectorAll<HTMLElement>('*')]
+        .filter(child => child.getBoundingClientRect().right > el.getBoundingClientRect().right + 2)
+        .map(child => ({ tag: child.tagName, className: child.className?.toString(), text: child.innerText?.slice(0, 80), right: child.getBoundingClientRect().right }))
+        .slice(0, 15),
+    }));
+    expect(layout.overflow, `wizard step ${step + 1}: ${JSON.stringify(layout)}`).toBeLessThanOrEqual(2);
     const next = page.locator('.app-action-bar').getByRole('button', { name: /Weiter|Next/, exact: true });
     if (!await next.count()) {
       await expect(page.locator('.app-action-bar').getByRole('button', { name: /Produkt erstellen|Create Product/ })).toBeVisible();
