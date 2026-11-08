@@ -22,15 +22,21 @@ test('product wizard preserves input across steps and rotation', async ({ page }
   await page.screenshot({ path: testInfo.outputPath('product-form-portrait.png') });
 });
 
-test('product detail tabs scroll to the selected destination', async ({ page }) => {
+test('product detail tabs remain reachable and fit a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto(`/products/${fixtureId}`, { waitUntil: 'networkidle' });
   await waitForAppScreen(page);
   const tabs = page.getByRole('tablist').first();
-  const last = tabs.getByRole('tab').last();
-  await last.click();
-  await expect(last).toHaveAttribute('aria-selected', 'true');
-  await expect(last).toBeInViewport();
+  const destinations = tabs.getByRole('tab');
+  for (let index = 0; index < await destinations.count(); index++) {
+    const destination = destinations.nth(index);
+    await destination.click();
+    await expect(destination).toHaveAttribute('aria-selected', 'true');
+    await expect(destination).toBeInViewport();
+    await page.waitForLoadState('networkidle');
+    await waitForAppScreen(page);
+    expect(await page.locator('.app-content').evaluate(el => el.scrollWidth - el.clientWidth), await destination.getAttribute('aria-label') ?? '').toBeLessThanOrEqual(2);
+  }
 });
 
 test('every product wizard step fits a narrow phone', async ({ page }) => {
@@ -86,10 +92,10 @@ test('editing product rich text survives a form step change', async ({ page }) =
   const editor = page.locator('.tiptap[contenteditable="true"]').first();
   await expect(editor).toBeVisible();
   await editor.fill('Mobile Beschreibung bleibt erhalten.');
-  const actions = page.locator('.app-action-bar');
-  await actions.getByRole('button', { name: /Weiter|Next/, exact: true }).click();
+  // iPad uses the inline form toolbar; phones use its fixed counterpart.
+  await page.getByRole('button', { name: /Weiter|Next/, exact: true }).click();
   await expect(page.locator('[data-form-step]')).toHaveAttribute('data-form-step', 'images');
-  await actions.getByRole('button', { name: /Zurück|Back/, exact: true }).click();
+  await page.getByRole('button', { name: /Zurück|Back/, exact: true }).and(page.locator('[data-variant="outline"]')).click();
   await expect(editor).toHaveText('Mobile Beschreibung bleibt erhalten.');
 });
 

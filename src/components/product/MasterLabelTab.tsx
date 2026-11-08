@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -72,7 +72,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
   const [importerOverrideId, setImporterOverrideId] = useState<string | null>(null);
 
   const productGroup = detectProductGroup(product.category);
-  const liveBatches = batches.filter(b => b.status === 'live' || b.status === 'draft');
+  const liveBatches = useMemo(() => batches.filter(b => b.status === 'live' || b.status === 'draft'), [batches]);
 
   // Load countries for target country dropdown
   useEffect(() => {
@@ -266,9 +266,9 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
+      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_auto]">
         {/* Left: Configuration */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Product Group Badge */}
           <Card>
             <CardHeader>
@@ -279,7 +279,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
               <CardDescription>{t('ml.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-muted-foreground">{t('ml.detectedGroup')}</span>
                 <Badge variant="secondary">{t(`ml.group.${productGroup}`)}</Badge>
               </div>
@@ -388,7 +388,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         </div>
 
         {/* Right: Preview */}
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex min-w-0 flex-col items-center gap-3">
           <p className="text-sm font-medium text-muted-foreground">{t('ml.preview')}</p>
           {isAssembling ? (
             <div className="w-[280px] h-[396px] bg-muted/50 rounded-lg border flex items-center justify-center">
@@ -397,7 +397,7 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
           ) : (
             <MasterLabelPreview data={labelData} />
           )}
-          <p className="text-xs text-muted-foreground">{t('ml.previewNote')}</p>
+          <p className="max-w-full text-center text-xs text-muted-foreground">{t('ml.previewNote')}</p>
         </div>
       </div>
     </div>

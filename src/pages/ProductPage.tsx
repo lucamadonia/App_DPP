@@ -973,7 +973,7 @@ export function ProductPage() {
           {/* Supplier Data Requests */}
           <Card className="mt-6">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <ExternalLink className="h-5 w-5 text-primary" />
