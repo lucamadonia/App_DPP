@@ -160,7 +160,7 @@ export function InventoryDriftPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="rounded-xl bg-gradient-to-br from-amber-500/20 to-rose-500/20 p-2 sm:p-2.5">
             <FileWarning className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
@@ -174,7 +174,7 @@ export function InventoryDriftPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full xl:w-auto">
           <Button variant="outline" onClick={load} disabled={loading} className="flex-1 sm:flex-none min-h-11 sm:min-h-9 active:scale-[0.97] transition-transform">
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             {t('Refresh')}

@@ -14,6 +14,7 @@ import { defaultVisibilityConfigV3, type VisibilityConfigV3 } from '@/types/visi
 function transformProduct(row: any): Product & { tenantId: string } {
   return {
     id: row.id,
+    status: row.status === 'live' || row.status === 'archived' ? row.status : 'draft',
     tenantId: row.tenant_id,
     name: row.name,
     manufacturer: row.manufacturer,

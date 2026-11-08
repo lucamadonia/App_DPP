@@ -20,7 +20,7 @@ export async function installAppFixture(context: BrowserContext) {
     billing_credits: [{ monthly_allowance: 1000, monthly_used: 0, purchased_balance: 1000 }],
     products: [product],
     product_batches: [{ id: fixtureId, product_id: fixtureId, serial_number: 'QA-BATCH', status: 'live', quantity: 20, created_at: createdAt, products: product }],
-    countries: [{ id: fixtureId, code: 'DE', name: 'Germany', name_de: 'Deutschland', alpha2: 'DE', is_active: true }],
+    countries: [{ id: fixtureId, code: 'DE', name: 'Germany', name_de: 'Deutschland', alpha2: 'DE', is_active: true, authorities: [], regulations: [] }],
     wh_locations: [{ id: fixtureId, tenant_id: tenantId, name: 'Beispiellager', code: 'QA', type: 'warehouse', is_active: true, zones: [], created_at: createdAt }],
     wh_stock_levels: [{ id: fixtureId, tenant_id: tenantId, product_id: fixtureId, batch_id: fixtureId, location_id: fixtureId, quantity_available: 20, quantity_reserved: 0, products: product }],
     wh_shipments: [{ id: fixtureId, tenant_id: tenantId, shipment_number: 'SHP-20261108-QA1234', status: 'draft', recipient_type: 'customer', recipient_name: 'Testperson mit langem Empfängernamen', shipping_street: 'Beispielstrasse 123', shipping_city: 'Berlin', shipping_postal_code: '12345', shipping_country: 'DE', total_items: 2, priority: 'normal', created_at: createdAt, updated_at: createdAt }],

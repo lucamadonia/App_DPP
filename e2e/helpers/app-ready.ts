@@ -8,7 +8,12 @@ export async function waitForAppScreen(page: Page) {
     if (!main || main.innerText.trim().length < 8) return false;
     let element = main.querySelector<HTMLElement>('h1, h2, [data-slot="card"], [role="alert"]') ?? main.firstElementChild;
     while (element && element !== main) {
-      if (Number(getComputedStyle(element).opacity) < 0.99) return false;
+      const style = getComputedStyle(element);
+      if (Number(style.opacity) < 0.99) return false;
+      if (style.transform !== 'none') {
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        if (Math.abs(matrix.m41) > 0.5 || Math.abs(matrix.m42) > 0.5 || Math.abs(matrix.m11 - 1) > 0.001 || Math.abs(matrix.m22 - 1) > 0.001) return false;
+      }
       element = element.parentElement;
     }
     return true;

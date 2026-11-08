@@ -924,5 +924,8 @@
   "Product deleted": "Product deleted",
   "Error deleting product": "Error deleting product",
   "Delete Product": "Delete Product",
-  "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.": "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone."
+  "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.": "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.",
+  "Product export failed. Please try again.": "Product export failed. Please try again.",
+  "Review compliance checks and documents before publishing.": "Review compliance checks and documents before publishing.",
+  "Open compliance check": "Open compliance check"
 }

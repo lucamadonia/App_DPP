@@ -127,7 +127,7 @@ function ExpertCard({ id, icon, name, description, specialty, index, onSelect }:
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
     >
       {/* Outer holographic border on hover */}
-      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+      <div className="absolute inset-0 overflow-hidden rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <div className="absolute inset-0 rounded-3xl bg-[conic-gradient(from_0deg,transparent_0%,#3b82f6_20%,#8b5cf6_40%,#06b6d4_60%,transparent_80%)] animate-holo-spin blur-sm" />
       </div>
 
@@ -157,7 +157,7 @@ function ExpertCard({ id, icon, name, description, specialty, index, onSelect }:
         </div>
 
         {/* Name */}
-        <h3 className="relative text-lg sm:text-xl font-bold tracking-tight mb-1.5">
+        <h3 className="relative min-w-0 break-words text-lg sm:text-xl font-bold tracking-tight mb-1.5">
           {name}
         </h3>
 
@@ -346,7 +346,7 @@ export function AILogisticsHubPage() {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:gap-6 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
               {(Object.keys(expertConfig) as WarehouseExpertId[]).map((id, idx) => {
                 const cfg = expertConfig[id];
                 return (

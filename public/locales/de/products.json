@@ -40,7 +40,7 @@
   "Production Date": "Produktionsdatum",
   "Overrides": "Überschreibungen",
   "Inherited": "Geerbt",
-  "Public DPP": "Öffentlicher DPP",
+  "Public DPP": "Öffentlicher Produktpass",
   "Duplicate": "Duplizieren",
   "Material Composition": "Materialzusammensetzung",
   "Share and origin of used materials": "Anteil und Herkunft der verwendeten Materialien",
@@ -924,5 +924,8 @@
   "Product deleted": "Produkt gelöscht",
   "Error deleting product": "Fehler beim Löschen des Produkts",
   "Delete Product": "Produkt löschen",
-  "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.": "Möchten Sie „{{name}}“ wirklich löschen? Alle Chargen werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
+  "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.": "Möchten Sie „{{name}}“ wirklich löschen? Alle Chargen werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+  "Product export failed. Please try again.": "Der Produktexport ist fehlgeschlagen. Bitte versuche es erneut.",
+  "Review compliance checks and documents before publishing.": "Prüfe Compliance-Analysen und Dokumente vor der Veröffentlichung.",
+  "Open compliance check": "Compliance-Prüfung öffnen"
 }

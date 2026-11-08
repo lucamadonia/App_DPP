@@ -64,7 +64,7 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
             <ImageIcon className="h-5 w-5 text-primary" />
             {t('Product Images')}

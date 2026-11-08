@@ -64,6 +64,35 @@ test('save draft submits the entered product through the existing service', asyn
   await expect(page).toHaveURL(new RegExp(`/products/${fixtureId}$`));
 });
 
+test('product export downloads the loaded product and its batches', async ({ page }) => {
+  await page.goto(`/products/${fixtureId}`, { waitUntil: 'networkidle' });
+  await waitForAppScreen(page);
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^(Exportieren|Export)$/ }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe(`product-${fixtureId}.json`);
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  expect(JSON.parse(Buffer.concat(chunks).toString('utf8'))).toMatchObject({
+    product: { id: fixtureId, status: 'live' },
+    batches: [{ id: fixtureId, serialNumber: 'QA-BATCH' }],
+  });
+});
+
+test('editing product rich text survives a form step change', async ({ page }) => {
+  await page.goto(`/products/${fixtureId}/edit`, { waitUntil: 'networkidle' });
+  await waitForAppScreen(page);
+  const editor = page.locator('.tiptap[contenteditable="true"]').first();
+  await expect(editor).toBeVisible();
+  await editor.fill('Mobile Beschreibung bleibt erhalten.');
+  const actions = page.locator('.app-action-bar');
+  await actions.getByRole('button', { name: /Weiter|Next/, exact: true }).click();
+  await expect(page.locator('[data-form-step]')).toHaveAttribute('data-form-step', 'images');
+  await actions.getByRole('button', { name: /Zurück|Back/, exact: true }).click();
+  await expect(editor).toHaveText('Mobile Beschreibung bleibt erhalten.');
+});
+
 test('native keyboard clears navigation and keeps shipment actions above it', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/warehouse/shipments/new', { waitUntil: 'networkidle' });

@@ -157,15 +157,15 @@ export function BatchDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to={`/products/${productId}?tab=batches`}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground font-mono">{batch.serialNumber}</h1>
               <Badge variant="secondary" className={status.className}>
                 <status.icon className="mr-1 h-3 w-3" />
@@ -184,11 +184,11 @@ export function BatchDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link to={`/products/${productId}?tab=ai-check&batchId=${batchId}`}>
               <BrainCircuit className="mr-2 h-4 w-4" />
-              AI Check
+              {t('AI Check', { ns: 'compliance' })}
             </Link>
           </Button>
           <Button variant="outline" asChild>
@@ -200,23 +200,19 @@ export function BatchDetailPage() {
           <Button variant="outline" asChild>
             <Link to={`/products/${productId}/batches/new?duplicate=${batchId}`}>
               <Copy className="mr-2 h-4 w-4" />
-              Duplicate
+              {t('Duplicate', { ns: 'common' })}
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <a
-              href={`/p/${product.gtin}/${batch.serialNumber}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link to={`/p/${product.gtin}/${batch.serialNumber}`}>
               <ExternalLink className="mr-2 h-4 w-4" />
-              Public DPP
-            </a>
+              {t('Public DPP')}
+            </Link>
           </Button>
           <Button asChild>
             <Link to={`/products/${productId}/batches/${batchId}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              {t('Edit', { ns: 'common' })}
             </Link>
           </Button>
         </div>
@@ -226,9 +222,9 @@ export function BatchDetailPage() {
       <Card>
         <CardContent className="py-4">
           <div className="flex items-center gap-4">
-            <Package className="h-5 w-5 text-muted-foreground" />
-            <div className="flex items-center gap-6 text-sm">
-              <Link to={`/products/${productId}`} className="font-medium hover:text-primary hover:underline">
+            <Package className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Link to={`/products/${productId}`} className="break-words font-medium hover:text-primary hover:underline">
                 {product.name}
               </Link>
               <code className="font-mono text-muted-foreground">{product.gtin}</code>

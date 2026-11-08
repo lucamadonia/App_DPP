@@ -903,6 +903,7 @@ export function ProductFormPage() {
           <AnimatePresence mode="wait">
           <MotionDiv
             key={currentStepId}
+            data-form-step={currentStepId}
             {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate', exit: 'exit' })}
             className="space-y-6"
           >
@@ -1481,7 +1482,7 @@ export function ProductFormPage() {
 
               {/* Section 1: Product Materials */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-medium">{t('Product Materials')}</h3>
                   <Button variant="outline" size="sm" onClick={addMaterial}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -1490,7 +1491,7 @@ export function ProductFormPage() {
                 </div>
                 <div className="space-y-4">
                   {formData.materials.map((material, index) => (
-                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
+                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 p-4 border rounded-lg">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">{t('Material')}</label>
                         <Input
@@ -1585,7 +1586,7 @@ export function ProductFormPage() {
 
               {/* Section 3: Packaging Materials */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-medium flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
                     {t('Packaging Materials')}
@@ -1597,7 +1598,7 @@ export function ProductFormPage() {
                 </div>
                 <div className="space-y-4">
                   {formData.packagingMaterials.map((material, index) => (
-                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
+                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 p-4 border rounded-lg">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">{t('Material')}</label>
                         <Input
@@ -1836,12 +1837,12 @@ export function ProductFormPage() {
               {CERTIFICATION_CATEGORIES.map((category) => (
                 <div key={category.label}>
                   <h3 className="font-medium mb-3">{t(category.label)}</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {category.options.map((opt) => {
                       const certEntry = formData.certifications.find(c => c.name === opt.name);
                       const isChecked = Boolean(certEntry);
                       return (
-                        <div key={opt.name} className="border rounded-lg">
+                        <div key={opt.name} className="min-w-0 border rounded-lg">
                           <label className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50">
                             <input
                               type="checkbox"
@@ -1859,9 +1860,9 @@ export function ProductFormPage() {
                                   }));
                                 }
                               }}
-                              className="h-4 w-4 rounded border-gray-300"
+                              className="h-4 w-4 shrink-0 rounded border-gray-300"
                             />
-                            <span className="font-medium">{opt.name}</span>
+                            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{opt.name}</span>
                           </label>
                           {isChecked && certEntry && (
                             <div className="px-4 pb-4 grid gap-3 sm:grid-cols-2">
@@ -2932,7 +2933,7 @@ export function ProductFormPage() {
 
               {/* External Suppliers */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-medium">{t('External Suppliers')}</h3>
                   <Button variant="outline" size="sm" onClick={addSupplierAssignment}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -2951,7 +2952,7 @@ export function ProductFormPage() {
                 ) : (
                   <div className="space-y-4">
                     {selectedSuppliers.map((assignment, index) => (
-                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-7 p-4 border rounded-lg">
+                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 2xl:grid-cols-7 p-4 border rounded-lg">
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-sm font-medium">{t('Supplier')}</label>
                           <Select

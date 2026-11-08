@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem, blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { formatDate, formatCurrency } from '@/lib/format';
+import { saveOrShare } from '@/lib/download-file';
 import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
@@ -23,7 +24,6 @@ import {
   MapPin,
   Truck,
   CheckCircle2,
-  AlertTriangle,
   Loader2,
   Layers,
   Plus,
@@ -117,6 +117,7 @@ export function ProductPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
   const [batchToDelete, setBatchToDelete] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Ancillary data loaded via inline useQuery
   const { data: allProducts = [] } = useProducts();
@@ -217,7 +218,22 @@ export function ProductPage() {
     );
   }
 
-  const complianceScore = 95;
+  const productStatus = batchStatusConfig[product.status ?? 'draft'];
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await saveOrShare({
+        filename: `product-${product.id}.json`,
+        mime: 'application/json',
+        content: JSON.stringify({ product, batches }, null, 2),
+        shareTitle: product.name,
+      });
+    } catch {
+      toast.error(t('Product export failed. Please try again.'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const batchColumns: ResponsiveTableColumn<(typeof batches)[number]>[] = [
     {
@@ -423,21 +439,21 @@ export function ProductPage() {
     <div className="space-y-6">
       {/* Header */}
       <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4"
         {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/products">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
-              <Badge className="bg-success text-success-foreground">
-                <CheckCircle2 className="mr-1 h-3 w-3" />
-                {t('Live', { ns: 'common' })}
+              <Badge variant="secondary" className={productStatus.className}>
+                <productStatus.icon className="mr-1 h-3 w-3" />
+                {t(productStatus.label, { ns: 'common' })}
               </Badge>
               {product.productType === 'set' && (
                 <Badge variant="outline" className="border-primary text-primary">
@@ -456,7 +472,7 @@ export function ProductPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link to={`/products/${id}/batches/new`}>
               <Plus className="mr-2 h-4 w-4" />
@@ -469,7 +485,7 @@ export function ProductPage() {
               {t('QR Code')}
             </Link>
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport} disabled={isExporting || batchesLoading}>
             <Download className="mr-2 h-4 w-4" />
             {t('Export')}
           </Button>
@@ -485,27 +501,17 @@ export function ProductPage() {
       {/* Compliance Status Bar */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-success" />
-                <span className="font-medium">{t('Compliance Status')}</span>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2 font-medium">
+                <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
+                {t('Compliance Status')}
               </div>
-              <div className="flex items-center gap-2">
-                <Progress value={complianceScore} className="h-2 w-48" />
-                <AnimatedCounter value={complianceScore} suffix="%" className="text-sm font-medium text-success" />
-              </div>
+              <p className="text-sm text-muted-foreground">{t('Review compliance checks and documents before publishing.')}</p>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                {t('{{count}} fulfilled', { count: 12 })}
-              </span>
-              <span className="flex items-center gap-1">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                {t('{{count}} pending', { count: 1 })}
-              </span>
-            </div>
+            <Button variant="outline" onClick={() => setActiveTab('ai-check')}>
+              {t('Open compliance check')}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -513,11 +519,11 @@ export function ProductPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="stammdaten" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="stammdaten" aria-label={t('Master Data')} className="flex items-center gap-2 flex-shrink-0">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Master Data')}</span>
           </TabsTrigger>
-          <TabsTrigger value="batches" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="batches" aria-label={t('Batches')} className="flex items-center gap-2 flex-shrink-0">
             <Layers className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Batches')}</span>
             {batches.length > 0 && (
@@ -525,7 +531,7 @@ export function ProductPage() {
             )}
           </TabsTrigger>
           {product.productType === 'set' && (
-            <TabsTrigger value="components" className="flex items-center gap-2 flex-shrink-0">
+            <TabsTrigger value="components" aria-label={t('Components')} className="flex items-center gap-2 flex-shrink-0">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">{t('Components')}</span>
               {components.length > 0 && (
@@ -533,39 +539,39 @@ export function ProductPage() {
               )}
             </TabsTrigger>
           )}
-          <TabsTrigger value="nachhaltigkeit" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="nachhaltigkeit" aria-label={t('Sustainability')} className="flex items-center gap-2 flex-shrink-0">
             <Leaf className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Sustainability')}</span>
           </TabsTrigger>
-          <TabsTrigger value="konformitaet" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="konformitaet" aria-label={t('Compliance')} className="flex items-center gap-2 flex-shrink-0">
             <ShieldCheck className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Compliance')}</span>
           </TabsTrigger>
-          <TabsTrigger value="dokumente" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="dokumente" aria-label={t('Documents')} className="flex items-center gap-2 flex-shrink-0">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Documents')}</span>
           </TabsTrigger>
-          <TabsTrigger value="support" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="support" aria-label={t('Support')} className="flex items-center gap-2 flex-shrink-0">
             <Headphones className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Support')}</span>
           </TabsTrigger>
-          <TabsTrigger value="lieferanten" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="lieferanten" aria-label={t('Suppliers')} className="flex items-center gap-2 flex-shrink-0">
             <Truck className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Suppliers')}</span>
           </TabsTrigger>
-          <TabsTrigger value="qr" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="qr" aria-label={t('QR & Access')} className="flex items-center gap-2 flex-shrink-0">
             <QrCode className="h-4 w-4" />
             <span className="hidden sm:inline">{t('QR & Access')}</span>
           </TabsTrigger>
-          <TabsTrigger value="master-label" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="master-label" aria-label={t('Master Label')} className="flex items-center gap-2 flex-shrink-0">
             <Tag className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Master Label')}</span>
           </TabsTrigger>
-          <TabsTrigger value="historie" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="historie" aria-label={t('History')} className="flex items-center gap-2 flex-shrink-0">
             <History className="h-4 w-4" />
             <span className="hidden sm:inline">{t('History')}</span>
           </TabsTrigger>
-          <TabsTrigger value="ai-check" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="ai-check" aria-label={t('AI Check', { ns: 'compliance' })} className="flex items-center gap-2 flex-shrink-0">
             <BrainCircuit className="h-4 w-4" />
             <span className="hidden sm:inline">{t('AI Check', { ns: 'compliance' })}</span>
           </TabsTrigger>

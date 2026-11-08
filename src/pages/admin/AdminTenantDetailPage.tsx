@@ -344,7 +344,7 @@ export function AdminTenantDetailPage() {
           </div>
           <p className="text-muted-foreground text-sm font-mono">{tenant.slug}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="outline"
