@@ -29,13 +29,13 @@ export function StickyBottomBar({
       {/* Mobile: fixed bottom bar */}
       {createPortal(<div
         className={cn(
-          'fixed inset-x-0 bottom-0 border-t border-border bg-background/95 backdrop-blur-md px-4 py-3',
+          'app-action-bar fixed inset-x-0 border-t border-border bg-background/95 backdrop-blur-md px-4 py-3',
           'flex items-center justify-between gap-2',
           'pb-[calc(var(--safe-bottom)+0.75rem)]',
           alwaysVisible ? 'flex' : 'flex md:hidden',
           className
         )}
-        style={{ zIndex, ...style }}
+        style={{ zIndex, bottom: 'var(--kb-h, 0px)', ...style }}
         {...rest}
       >
         {children}

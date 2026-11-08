@@ -270,14 +270,14 @@ export function AILogisticsHubPage() {
       <div className="relative min-h-[calc(100dvh-4rem)]">
         <HubBackdrop variant="hero" />
 
-        <div className="relative container mx-auto max-w-6xl px-4 py-8 sm:py-12 lg:py-16 space-y-10 sm:space-y-12">
+        <div className="relative container mx-auto max-w-6xl px-0 py-4 sm:px-4 sm:py-12 lg:py-16 space-y-6 sm:space-y-12">
           {/* Epic Hero */}
-          <div className="space-y-6 animate-fade-in-up">
+          <div className="space-y-4 sm:space-y-6 animate-fade-in-up">
             {/* Status bar */}
-            <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-full bg-card/60 backdrop-blur-md border border-border/60 text-xs font-mono">
+            <div className="inline-flex max-w-full flex-wrap items-center gap-2 px-3 py-2 rounded-2xl bg-card/60 backdrop-blur-md border border-border/60 text-xs font-mono">
               <LiveDot />
               <span className="text-muted-foreground uppercase tracking-[0.2em]">
-                {t('4 AI Agents Online', { defaultValue: '4 AI Agents Online' })}
+                {t('{{count}} AI advisors', { count: Object.keys(expertConfig).length })}
               </span>
               <div className="h-3 w-px bg-border" />
               <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
@@ -298,12 +298,12 @@ export function AILogisticsHubPage() {
                 </div>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.95]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.95]">
                 <span className="animate-text-shimmer-fast">
                   {t('AI Logistics Hub')}
                 </span>
               </h1>
-              <p className="max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+              <p className="max-w-2xl text-sm sm:text-lg text-muted-foreground leading-relaxed">
                 {t('Expert AI advisors for your warehouse operations')}
               </p>
             </div>
@@ -374,7 +374,7 @@ export function AILogisticsHubPage() {
   const cfg = expertConfig[selectedExpert];
 
   return (
-    <div className="relative flex flex-col h-[calc(100dvh-4rem)] overflow-hidden">
+    <div className="relative flex min-w-0 flex-col h-[calc(var(--app-visible-height,100dvh)-9rem)] min-h-64 overflow-hidden">
       <HubBackdrop variant="chat" />
 
       {/* Chat Header - Command Bar */}
@@ -581,13 +581,13 @@ export function AILogisticsHubPage() {
                     onKeyDown={handleKeyDown}
                     placeholder={t('Enter your question...')}
                     disabled={isStreaming}
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70 disabled:opacity-50 py-1.5 px-1"
+                    className="min-w-0 min-h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 disabled:opacity-50 py-1.5 px-1"
                   />
 
                   <button
                     onClick={() => handleSend()}
                     disabled={!input.trim() || isStreaming}
-                    className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 text-white disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:shadow-lg enabled:hover:shadow-blue-500/40 enabled:hover:scale-105 transition-all duration-200 shrink-0 cursor-pointer group/btn"
+                    className="relative flex items-center justify-center h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 text-white disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:shadow-lg enabled:hover:shadow-blue-500/40 enabled:hover:scale-105 transition-all duration-200 shrink-0 cursor-pointer group/btn"
                     aria-label={t('Send', { defaultValue: 'Send' })}
                   >
                     <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />

@@ -956,5 +956,8 @@
   "Not now": "Not now",
   "Leave {{current}} and join": "Leave {{current}} and join",
   "Accept and join {{tenant}}": "Accept and join {{tenant}}",
-  "This organization has reached the user limit of its plan. Ask the person who invited you to upgrade the plan or free up a seat.": "This organization has reached the user limit of its plan. Ask the person who invited you to upgrade the plan or free up a seat."
+  "This organization has reached the user limit of its plan. Ask the person who invited you to upgrade the plan or free up a seat.": "This organization has reached the user limit of its plan. Ask the person who invited you to upgrade the plan or free up a seat.",
+  "API access is not available in this version.": "API access is not available in this version.",
+  "Manage your connected shops in the Commerce Hub.": "Manage your connected shops in the Commerce Hub.",
+  "Open Commerce Hub": "Open Commerce Hub"
 }

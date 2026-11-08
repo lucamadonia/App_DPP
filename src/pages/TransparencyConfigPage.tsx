@@ -488,7 +488,7 @@ export function TransparencyConfigPage() {
           {/* Color Scheme */}
           <div className="space-y-2">
             <Label>Color Scheme</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {([
                 { value: 'light' as TransparencyColorScheme, icon: Sun, label: 'Light' },
                 { value: 'dark' as TransparencyColorScheme, icon: Moon, label: 'Dark' },
@@ -512,7 +512,7 @@ export function TransparencyConfigPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="design-primary">Primary Color</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.primaryColor || '#3B82F6'}
@@ -530,7 +530,7 @@ export function TransparencyConfigPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="design-accent">Accent Color</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.accentColor || '#06B6D4'}
@@ -548,7 +548,7 @@ export function TransparencyConfigPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="design-bg">Page Background</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.pageBackground || '#fafaf9'}
@@ -566,7 +566,7 @@ export function TransparencyConfigPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="design-card-bg">Card Background</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.cardBackground || '#ffffff'}
@@ -613,7 +613,7 @@ export function TransparencyConfigPage() {
           {/* Hero Style */}
           <div className="space-y-2">
             <Label>Hero Style</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {([
                 { value: 'gradient' as TransparencyHeroStyle, label: 'Gradient' },
                 { value: 'solid' as TransparencyHeroStyle, label: 'Solid' },
@@ -651,7 +651,7 @@ export function TransparencyConfigPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Card Corners</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {([
                   { value: 'sharp' as TransparencyCardStyle, label: 'Sharp' },
                   { value: 'rounded' as TransparencyCardStyle, label: 'Rounded' },
@@ -671,7 +671,7 @@ export function TransparencyConfigPage() {
             </div>
             <div className="space-y-2">
               <Label>Card Shadow</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {([
                   { value: 'none' as const, label: 'None' },
                   { value: 'subtle' as const, label: 'Subtle' },
@@ -722,7 +722,7 @@ export function TransparencyConfigPage() {
             {/* Public URL */}
             <div className="space-y-2">
               <Label>Public URL</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Input
                   readOnly
                   value={`${getPublicBaseUrl()}/transparency/${tenantSlug}`}
@@ -777,7 +777,7 @@ export function TransparencyConfigPage() {
             {/* API Endpoint */}
             <div className="space-y-2">
               <Label>API Endpoint (JSON)</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Input
                   readOnly
                   value={`${getPublicBaseUrl()}/api/v1/public/products?tenant=${tenantSlug}`}

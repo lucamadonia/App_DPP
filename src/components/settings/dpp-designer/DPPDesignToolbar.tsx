@@ -30,7 +30,7 @@ export function DPPDesignToolbar({
   const { t } = useTranslation('settings');
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-20">
       {/* View Toggle */}
       <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
         <button

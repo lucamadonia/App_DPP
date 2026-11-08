@@ -587,7 +587,7 @@ export function QRGeneratorPage() {
         </Card>
       ) : (
       <>
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 min-w-0 gap-6 lg:grid-cols-3">
         {/* Product Selection */}
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -684,7 +684,7 @@ export function QRGeneratorPage() {
         {/* QR Code Preview & Settings */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <CardTitle>{t('QR Code Generator')}</CardTitle>
                 <CardDescription>
@@ -1553,12 +1553,12 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
           </div>
 
           {/* Product Selection for Batch */}
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
               <div
                 key={product.id}
                 onClick={() => toggleProductSelection(product.id)}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors flex items-center gap-3 ${
+                className={`min-w-0 p-3 rounded-lg border cursor-pointer transition-colors flex items-center gap-3 ${
                   selectedProducts.includes(product.id)
                     ? 'border-primary bg-primary/5 ring-1 ring-primary'
                     : 'hover:bg-muted/50'

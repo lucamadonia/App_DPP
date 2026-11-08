@@ -803,7 +803,7 @@ export function DPPDesignTab() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>{t('Border Radius')}</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(['none', 'small', 'medium', 'large', 'full'] as DPPBorderRadius[]).map(r => (
                 <button
                   key={r}
@@ -826,7 +826,7 @@ export function DPPDesignTab() {
 
           <div className="space-y-2">
             <Label>{t('Shadow Depth')}</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(['none', 'subtle', 'medium', 'strong'] as DPPShadowDepth[]).map(s => (
                 <button
                   key={s}
@@ -849,7 +849,7 @@ export function DPPDesignTab() {
 
           <div className="space-y-2">
             <Label>{t('Border Style')}</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(['none', 'thin', 'thick'] as DPPBorderStyle[]).map(b => (
                 <button
                   key={b}
@@ -893,7 +893,7 @@ export function DPPDesignTab() {
               return (
                 <div
                   key={sectionId}
-                  className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg"
+                  className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg"
                 >
                   <div className="flex flex-col gap-0.5">
                     <button
@@ -913,11 +913,11 @@ export function DPPDesignTab() {
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex min-w-0 items-center gap-2 flex-1">
                     {section.icon}
                     <span className="font-medium text-sm">{t(section.labelKey)}</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex w-full flex-wrap items-center gap-4 sm:w-auto">
                     <div className="flex items-center gap-2">
                       <Label className="text-xs text-muted-foreground">{t('Visible')}</Label>
                       <Switch

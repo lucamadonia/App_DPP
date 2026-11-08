@@ -298,7 +298,7 @@ export function CommerceHubPage() {
       {/* Sample data CTA — only when no real data yet */}
       {!loading && connections.length === 0 && (
         <Card className="overflow-hidden border-dashed bg-gradient-to-br from-primary/[0.04] to-transparent p-6">
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
             <div className="rounded-xl bg-primary/10 p-3 text-primary">
               <Sparkles className="h-6 w-6" />
             </div>
@@ -307,7 +307,7 @@ export function CommerceHubPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {t('No channels connected yet? Seed 30 lifelike orders across 6 platforms to preview the wall display in 30 seconds.')}
               </p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   disabled={seeding}

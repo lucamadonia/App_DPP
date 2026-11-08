@@ -263,16 +263,16 @@ export function CompliancePage() {
         <TabsContent value="checklist" className="space-y-4" key={activeTab === 'checklist' ? 'checklist' : undefined}>
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>{t('Compliance Check')}</CardTitle>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex min-w-0 gap-2">
+                  <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder={t('Search...', { ns: 'common' })}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 w-64"
+                      className="pl-9 w-full sm:w-64"
                     />
                   </div>
                   <Button variant="outline" size="icon">

@@ -36,7 +36,7 @@ export function SupplierDetailFinanceTab({ supplier, spend, products, getProduct
             <h4 className="flex items-center gap-1 text-sm font-medium">
               <DollarSign className="h-4 w-4" /> {t('Supplier Spend')}
             </h4>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
               <div className="rounded-lg border bg-card p-2">
                 <p className="text-xs text-muted-foreground">{t('Total Spend')}</p>
                 <p className="text-sm font-bold tabular-nums">{formatCurrency(spend.totalSpend, spend.currency, locale)}</p>

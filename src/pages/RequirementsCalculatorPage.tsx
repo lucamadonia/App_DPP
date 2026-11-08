@@ -485,7 +485,7 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
               {/* Target Audience */}
               <div className="space-y-2">
                 <Label>{t('Target Audience')} *</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {[
                     { value: 'b2c', label: 'Consumer (B2C)' },
                     { value: 'b2b', label: 'Business (B2B)' },

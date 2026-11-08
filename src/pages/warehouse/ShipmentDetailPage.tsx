@@ -1018,9 +1018,9 @@ export function ShipmentDetailPage() {
 
               {/* Umverpackung (Karton) */}
               <div className="border-t pt-3 mt-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-muted-foreground text-sm shrink-0">{t('Umverpackung')}</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto">
                     <Select
                       value={shipment.packagingTypeId || 'none'}
                       onValueChange={async (v) => {
@@ -1033,7 +1033,7 @@ export function ShipmentDetailPage() {
                         }
                       }}
                     >
-                      <SelectTrigger className="w-[200px] h-8 text-sm">
+                      <SelectTrigger className="w-full sm:w-[200px] h-8 text-sm">
                         <SelectValue placeholder={t('Kein Karton')} />
                       </SelectTrigger>
                       <SelectContent>

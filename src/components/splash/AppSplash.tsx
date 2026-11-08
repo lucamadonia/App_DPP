@@ -52,14 +52,17 @@ export function AppSplash({ ready, budget, children }: AppSplashProps) {
   // Hand off from the native/boot splash once React has actually painted.
   useEffect(() => {
     let raf2 = 0;
+    let cancelled = false;
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(async () => {
-        await document.fonts?.ready?.catch(() => undefined);
+        // The logo is an image. Waiting for every font can strand the opaque
+        // boot layer indefinitely when a font request stalls offline.
         await hideNativeSplash();
-        removeBootSplash();
+        if (!cancelled) removeBootSplash();
       });
     });
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
     };
@@ -88,6 +91,8 @@ export function AppSplash({ ready, budget, children }: AppSplashProps) {
           <motion.div
             key="app-splash"
             className="fixed inset-0 z-[9998] flex items-center justify-center overflow-hidden"
+            data-testid="app-splash"
+            aria-hidden="true"
             style={{ background: '#0F172A' }}
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}

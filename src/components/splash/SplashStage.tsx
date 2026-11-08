@@ -1,5 +1,4 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { spring } from '@/lib/motion';
 import type { MotionBudget } from '@/hooks/use-motion-budget';
 
 export interface SplashStageProps {
@@ -64,6 +63,29 @@ export function SplashStage({ logoSrc, budget, showWordmark }: SplashStageProps)
           exactly the position and size of the #boot-splash logo in index.html
           (96px, dead centre). Only light travels across it. */}
       <div className="relative flex flex-col items-center">
+        {/* Quiet passport rings resolve around the stationary launch mark. */}
+        {rich && (
+          <div aria-hidden className="splash-orbits pointer-events-none absolute left-1/2 top-1/2 size-64 -translate-x-1/2 -translate-y-1/2">
+            <motion.div
+              className="absolute inset-0 rounded-full border border-blue-300/10"
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.65, ease: 'easeOut' }}
+            />
+            <motion.div
+              className="absolute inset-7 rounded-full border border-cyan-200/15"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.55, delay: 0.08, ease: 'easeOut' }}
+            />
+            <motion.span
+              className="absolute left-1/2 top-7 size-1.5 -translate-x-1/2 rounded-full bg-cyan-200 shadow-[0_0_16px_#67e8f9]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.8 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
+            />
+          </div>
+        )}
         <div className="relative size-24 overflow-hidden">
           <motion.img
             src={logoSrc}
@@ -71,9 +93,7 @@ export function SplashStage({ logoSrc, budget, showWordmark }: SplashStageProps)
             width={96}
             height={96}
             className="size-24 object-contain"
-            initial={prefersReduced ? false : { scale: 0.92, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={spring.gentle}
+            initial={false}
           />
           {rich && (
             <span
@@ -89,10 +109,10 @@ export function SplashStage({ logoSrc, budget, showWordmark }: SplashStageProps)
 
         {showWordmark && (
           <motion.span
-            className="absolute top-[calc(100%+0.75rem)] text-sm font-semibold tracking-[0.2em] text-slate-400"
-            initial={prefersReduced ? false : { opacity: 0, y: 6, filter: 'blur(6px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
+            className="absolute top-[calc(100%+5.5rem)] text-xs font-medium tracking-[0.3em] text-slate-400"
+            initial={prefersReduced ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1, ease: 'easeOut' }}
           >
             TRACKBLISS
           </motion.span>

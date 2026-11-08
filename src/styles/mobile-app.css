@@ -1,0 +1,127 @@
+/* App-level adaptations live here; shared shadcn primitives stay untouched. */
+:root {
+  --app-visible-height: calc(100dvh - var(--kb-h, 0px));
+}
+
+[data-slot="tabs"],
+[data-slot="tabs-content"],
+[data-slot="card"] {
+  min-width: 0;
+}
+
+.app-content {
+  scroll-padding-block: 5rem 7rem;
+}
+
+[data-native="true"] [data-slot="sidebar-wrapper"] {
+  height: var(--app-visible-height);
+  min-height: 0;
+}
+
+[data-native="true"] .admin-shell {
+  height: var(--app-visible-height);
+  min-height: 0;
+}
+
+[data-native="true"] [data-slot="sidebar-inset"] {
+  min-height: 0;
+}
+
+[data-native="true"] .app-content {
+  padding-left: max(1rem, var(--safe-left));
+  padding-right: max(1rem, var(--safe-right));
+}
+
+[data-keyboard-open] .app-tab-bar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-keyboard-open] .app-action-bar {
+  padding-bottom: 0.75rem;
+}
+
+/* A bottom sheet must fit above the keyboard, including on a landscape phone.
+   Raw centered dialogs (e.g. the photo viewer) retain their centered layout. */
+[data-keyboard-open] [data-slot="dialog-content"].bottom-0,
+[data-keyboard-open] .app-drawer.bottom-0 {
+  bottom: var(--kb-h);
+  max-height: calc(var(--app-visible-height) - var(--safe-top) - 1rem) !important;
+}
+
+@media (max-width: 767px) {
+  [data-slot="button"] { max-width: 100%; white-space: normal; height: auto; min-height: 44px; }
+  [data-slot="accordion-trigger"] { min-width: 0; overflow-wrap: anywhere; }
+  [data-slot="tabs-list"][data-orientation="horizontal"] {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 48px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 4px;
+    scrollbar-width: none;
+  }
+
+  [data-slot="tabs-list"][data-orientation="horizontal"] > [role="tab"] {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding-inline: 0.875rem;
+  }
+
+  [data-slot="dialog-content"] {
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 1rem);
+    max-height: calc(var(--app-visible-height) - var(--safe-top) - 1rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 3rem;
+  }
+
+  [data-slot="dialog-content"].bottom-0 {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.25rem;
+    padding-top: 2.75rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+    animation-duration: 220ms;
+  }
+
+  [data-slot="dialog-content"].bottom-0::before {
+    content: '';
+    position: absolute;
+    top: 0.625rem;
+    left: calc(50% - 1.125rem);
+    width: 2.25rem;
+    height: 0.25rem;
+    border-radius: 1rem;
+    background: var(--muted-foreground);
+    opacity: 0.3;
+  }
+
+  [data-slot="dialog-header"] { padding-right: 1.5rem; }
+  [data-slot="popover-content"] { max-width: calc(100vw - 2rem); }
+  [data-slot="select-content"] { max-width: calc(100vw - 2rem); }
+  [data-slot="select-item"] { white-space: normal; overflow-wrap: anywhere; }
+
+  .app-content h1 { overflow-wrap: anywhere; text-wrap: balance; }
+  .app-content :is(.text-\[8px\], .text-\[9px\], .text-\[10px\]) { font-size: 11px; }
+  .app-action-bar { gap: 0.5rem; }
+  .app-action-bar > * { min-width: 0; }
+  .app-tab-bar { box-shadow: 0 -8px 28px rgb(15 23 42 / 0.04); }
+}
+
+@media (pointer: coarse) {
+  [data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"] {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  [data-slot="button"], [data-slot="dialog-close"] { min-width: 44px; }
+  [data-slot="button"] { transition-property: background-color, color, box-shadow, transform; }
+  [data-slot="button"]:active:not(:disabled) { transform: scale(0.98); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="button"]:active:not(:disabled) { transform: none; }
+}

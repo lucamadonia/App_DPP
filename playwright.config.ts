@@ -27,8 +27,8 @@ export default defineConfig({
 
   projects: [
     {
-      // iPhone SE is the smallest realistic device (375x667). If a page fits
-      // here it fits everywhere; starting wider would hide the failures.
+      // This preset is the first-generation SE (320x568), a deliberately
+      // strict layout stress test. Interaction tests also use 375/390px.
       name: 'iPhone SE',
       use: { ...devices['iPhone SE'] },
     },
@@ -42,7 +42,7 @@ export default defineConfig({
 
   // `vite preview` serves the production build, which is what ships. A dev
   // server would test un-minified output with different CSS ordering.
-  webServer: {
+  webServer: process.env.E2E_BASE_URL ? undefined : {
     command: 'npm run preview -- --port 4173',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,

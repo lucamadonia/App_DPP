@@ -17,6 +17,12 @@ const isCapacitorBuild = process.env.CAPACITOR_BUILD === '1'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    {
+      name: 'native-launch-background',
+      transformIndexHtml: (html) => isCapacitorBuild
+        ? html.replace('<html lang="de">', '<html lang="de" data-native="true">')
+        : html,
+    },
     react(),
     tailwindcss(),
     ...(isCapacitorBuild

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@/lib/format';
-import { useLocale } from '@/hooks/use-locale';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TenantWhitelabelSelfService } from '@/components/settings/TenantWhitelabelSelfService';
 import { blurIn, useReducedMotion } from '@/lib/motion';
@@ -14,11 +13,8 @@ import {
   Key,
   Save,
   Upload,
-  Plus,
   Trash2,
-  Copy,
   Eye,
-  EyeOff,
   Loader2,
   RefreshCw,
   Check,
@@ -43,10 +39,6 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ResponsiveTable,
-  type ResponsiveTableColumn,
-} from '@/components/ui/responsive-table';
-import {
   getCurrentTenant,
   updateCurrentTenant,
   uploadBrandingAsset,
@@ -62,17 +54,8 @@ import { CustomDomainWizard } from '@/components/settings/CustomDomainWizard';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { getPublicBaseUrl } from '@/lib/platform';
 
-const apiKeys = [
-  { id: '1', name: 'ERP Integration', key: 'dpp_live_sk_...7x9a', created: '2024-06-15', lastUsed: '2026-01-27' },
-  { id: '2', name: 'Shopify Connector', key: 'dpp_live_sk_...3b2c', created: '2024-09-01', lastUsed: '2026-01-25' },
-];
-
-type ApiKeyRow = (typeof apiKeys)[number];
-
 export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const { t } = useTranslation('settings');
-  const locale = useLocale();
-  const [showApiKey, setShowApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingBranding, setIsSavingBranding] = useState(false);
@@ -421,73 +404,6 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
       </div>
     );
   }
-
-  const apiKeyColumns: ResponsiveTableColumn<ApiKeyRow>[] = [
-    {
-      id: 'name',
-      header: t('Name'),
-      className: 'font-medium',
-      mobilePriority: 'title',
-      cell: (key) => key.name,
-    },
-    {
-      id: 'key',
-      header: t('API Key'),
-      mobilePriority: 'subtitle',
-      cell: (key) => (
-        <div className="flex items-center gap-2">
-          <code className="font-mono text-sm">
-            {showApiKey === key.id ? 'dpp_live_sk_a1b2c3d4e5f6g7h8i9j0' : key.key}
-          </code>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setShowApiKey(showApiKey === key.id ? null : key.id)}
-          >
-            {showApiKey === key.id ? (
-              <EyeOff className="h-3 w-3" />
-            ) : (
-              <Eye className="h-3 w-3" />
-            )}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6">
-            <Copy className="h-3 w-3" />
-          </Button>
-        </div>
-      ),
-    },
-    {
-      id: 'created',
-      header: t('Created'),
-      className: 'text-muted-foreground',
-      hideBelow: 'md',
-      mobilePriority: 'meta',
-      mobileLabel: t('Created'),
-      cell: (key) => formatDate(key.created, locale),
-    },
-    {
-      id: 'lastUsed',
-      header: t('Last Used'),
-      className: 'text-muted-foreground',
-      hideBelow: 'md',
-      mobilePriority: 'meta',
-      mobileLabel: t('Last Used'),
-      cell: (key) => formatDate(key.lastUsed, locale),
-    },
-    {
-      id: 'actions',
-      header: '',
-      className: 'w-[100px]',
-      mobilePriority: 'meta',
-      cell: () => (
-        <Button variant="ghost" size="sm" className="text-destructive">
-          <Trash2 className="mr-2 h-4 w-4" />
-          {t('Delete')}
-        </Button>
-      ),
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -1526,46 +1442,17 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           <UsersTab />
         </TabsContent>
 
-        {/* API-Keys */}
-        <TabsContent value="api" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
+        {/* Never present fabricated API credentials or inactive actions as live features. */}
+        <TabsContent value="api" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{t('API-Keys')}</CardTitle>
-                  <CardDescription>
-                    {t('Manage API keys for integrations (ERP, shop systems)')}
-                  </CardDescription>
-                </div>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('New API Key')}
-                </Button>
-              </div>
+              <CardTitle>{t('API-Keys')}</CardTitle>
+              <CardDescription>{t('API access is not available in this version.')}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveTable
-                data={apiKeys}
-                columns={apiKeyColumns}
-                rowKey={(key) => key.id}
-                className="border-0 bg-transparent rounded-none"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('API Documentation')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 rounded-lg bg-muted font-mono text-sm">
-                <p className="text-muted-foreground"># Base URL</p>
-                <p>https://api.dpp-manager.de/v1</p>
-                <p className="text-muted-foreground mt-4"># Authentication</p>
-                <p>Authorization: Bearer {'<API_KEY>'}</p>
-              </div>
-              <Button variant="outline" className="mt-4">
-                {t('Full Documentation')}
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{t('Manage your connected shops in the Commerce Hub.')}</p>
+              <Button variant="outline" asChild>
+                <Link to="/commerce">{t('Open Commerce Hub')}</Link>
               </Button>
             </CardContent>
           </Card>

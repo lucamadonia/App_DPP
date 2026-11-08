@@ -108,7 +108,7 @@ export function PageContainer({
   const body = (
     <Component
       className={cn(
-        'mx-auto w-full',
+        'mx-auto min-w-0 w-full',
         padding && 'px-4 sm:px-6 lg:px-8',
         sizeMap[size],
         stack && 'space-y-6 sm:space-y-8',
@@ -148,7 +148,7 @@ export function PageContainer({
             )}
             {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
           </div>
-          {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+          {actions && <div className="flex min-w-0 max-w-full flex-wrap gap-2">{actions}</div>}
         </motion.div>
       )}
 

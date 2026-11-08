@@ -956,5 +956,8 @@
   "Not now": "Nicht jetzt",
   "Leave {{current}} and join": "{{current}} verlassen und beitreten",
   "Accept and join {{tenant}}": "Annehmen und {{tenant}} beitreten",
-  "This organization has reached the user limit of its plan. Ask the person who invited you to upgrade the plan or free up a seat.": "Diese Organisation hat das Benutzerlimit ihres Tarifs erreicht. Bitte die Person, die dich eingeladen hat, den Tarif zu erweitern oder einen Platz freizugeben."
+  "This organization has reached the user limit of its plan. Ask the person who invited you to upgrade the plan or free up a seat.": "Diese Organisation hat das Benutzerlimit ihres Tarifs erreicht. Bitte die Person, die dich eingeladen hat, den Tarif zu erweitern oder einen Platz freizugeben.",
+  "API access is not available in this version.": "Der API-Zugang ist in dieser Version noch nicht verfügbar.",
+  "Manage your connected shops in the Commerce Hub.": "Deine verbundenen Shops verwaltest du im Commerce Hub.",
+  "Open Commerce Hub": "Commerce Hub öffnen"
 }

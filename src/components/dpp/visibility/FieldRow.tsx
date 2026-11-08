@@ -49,7 +49,7 @@ export function FieldRow({
       </div>
 
       {/* Toggles Container */}
-      <div className="flex gap-4 md:contents">
+      <div className="flex flex-wrap gap-4 md:contents">
         <VisibilitySwitch
           level="consumer"
           checked={consumerVisible}

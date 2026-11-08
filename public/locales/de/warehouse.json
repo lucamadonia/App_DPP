@@ -2088,5 +2088,11 @@
   "Tracking refreshed": "Tracking aktualisiert",
   "Refreshing...": "Wird aktualisiert...",
   "Refresh tracking": "Tracking aktualisieren",
-  "Shopify sync pending or failed": "Shopify-Synchronisierung ausstehend oder fehlgeschlagen"
+  "Shopify sync pending or failed": "Shopify-Synchronisierung ausstehend oder fehlgeschlagen",
+  "{{count}} AI advisors": "{{count}} KI-Berater",
+  "Logistics Command Center": "Deine Logistikzentrale",
+  "Instant Analysis": "Sofortige Analyse",
+  "Context-Aware": "Kennt deine Lagerdaten",
+  "Real-Time Data": "Aktuelle Daten",
+  "Choose your specialist": "Wähle deinen Spezialisten"
 }

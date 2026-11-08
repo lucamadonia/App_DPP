@@ -45,7 +45,7 @@ export function MobileDrawer({
   footer,
   className,
   maxWidth = 'min(88vw, 400px)',
-  maxHeight = '90vh',
+  maxHeight = '90dvh',
   showCloseButton = true,
 }: MobileDrawerProps) {
   const isMobile = useIsMobile();
@@ -60,7 +60,7 @@ export function MobileDrawer({
         side={resolvedSide}
         showCloseButton={showCloseButton}
         className={cn(
-          'flex flex-col gap-0 p-0',
+          'app-drawer flex flex-col gap-0 p-0',
           isBottomOrTop
             ? 'rounded-t-2xl'
             : 'w-[var(--drawer-max-width)] sm:max-w-none',

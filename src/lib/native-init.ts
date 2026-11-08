@@ -50,8 +50,10 @@ export async function syncStatusBar(theme: 'light' | 'dark'): Promise<void> {
  */
 export function initNativeShell(): () => void {
   if (!isNative()) return () => {};
+  document.documentElement.dataset.native = 'true';
   const disposeKeyboard = initNativeKeyboard();
   return () => {
     disposeKeyboard();
+    delete document.documentElement.dataset.native;
   };
 }

@@ -77,6 +77,18 @@ describe('AppSplash handoff', () => {
     expect(screen.getByText('app content')).toBeInTheDocument();
   });
 
+  it('hands off even when font loading never settles', async () => {
+    const original = Object.getOwnPropertyDescriptor(document, 'fonts');
+    Object.defineProperty(document, 'fonts', { configurable: true, value: { ready: new Promise(() => {}) } });
+    try {
+      render(<AppSplash ready budget="full"><div>app</div></AppSplash>);
+      await waitFor(() => expect(calls).toContain('removeBootSplash'));
+    } finally {
+      if (original) Object.defineProperty(document, 'fonts', original);
+      else Reflect.deleteProperty(document, 'fonts');
+    }
+  });
+
   it('does not tear anything down synchronously on mount', () => {
     render(
       <AppSplash ready={false} budget="full">

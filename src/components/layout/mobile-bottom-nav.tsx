@@ -114,7 +114,7 @@ export function MobileBottomNav() {
     <>
       <nav
         className={cn(
-          'fixed inset-x-0 bottom-0 z-30 md:hidden',
+          'app-tab-bar fixed inset-x-0 bottom-0 z-30 md:hidden',
           'border-t border-border bg-background/95 backdrop-blur-lg',
           'pb-[var(--safe-bottom)]'
         )}
@@ -132,7 +132,7 @@ export function MobileBottomNav() {
                   onClick={() => haptic.light()}
                   className={cn(
                     'flex h-full touch-target flex-col items-center justify-center gap-0.5',
-                    'text-[10px] font-medium transition-colors',
+                    'text-[11px] font-medium transition-colors',
                     active ? 'text-primary' : 'text-muted-foreground',
                     locked && 'opacity-55'
                   )}
@@ -178,7 +178,7 @@ export function MobileBottomNav() {
               aria-expanded={moreOpen}
               className={cn(
                 'flex h-full w-full touch-target flex-col items-center justify-center gap-0.5',
-                'text-[10px] font-medium transition-colors',
+                'text-[11px] font-medium transition-colors',
                 moreActive || moreOpen ? 'text-primary' : 'text-muted-foreground'
               )}
             >

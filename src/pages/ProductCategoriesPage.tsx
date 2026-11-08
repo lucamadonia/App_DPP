@@ -530,11 +530,11 @@ export function ProductCategoriesPage() {
               <Card key={category.id} className="overflow-hidden">
                 <Accordion type="single" collapsible>
                   <AccordionItem value={category.id} className="border-none">
-                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/50">
-                      <div className="flex items-center gap-4 text-left w-full">
+                      <AccordionTrigger className="px-3 sm:px-6 py-4 hover:no-underline hover:bg-muted/50">
+                        <div className="flex min-w-0 items-center gap-3 text-left w-full">
                         <IconTile icon={getCategoryIcon(category.id, category.name)} size="lg" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-semibold">{category.name}</h3>
                             <Badge variant="secondary">{subcategories.length} {t('Products')}</Badge>
                           </div>

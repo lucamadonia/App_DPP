@@ -15,7 +15,8 @@ const config: CapacitorConfig = {
   appName: 'Trackbliss',
   webDir: 'dist',
   ios: {
-    contentInset: 'always',
+    // CSS owns safe-area insets; automatic UIKit insets would apply them twice.
+    contentInset: 'never',
     // Deliberately NOT renamed to 'Trackbliss'. This names the Xcode SCHEME,
     // and `cap add ios` always generates one called "App" - Capacitor does not
     // rename it. Pointing this at a scheme that does not exist breaks

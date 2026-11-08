@@ -366,7 +366,7 @@ export function GoodsReceiptPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
                       <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Batch ordered')}</div>
                       <div className="text-base sm:text-lg font-semibold">{batchTotal}</div>
@@ -495,7 +495,7 @@ export function GoodsReceiptPage() {
                       <Box className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                       {t('Warehouse Capacity')}
                     </div>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                       <div className="rounded-md bg-muted/50 p-2 sm:p-2.5 text-center">
                         <div className="text-[10px] sm:text-xs text-muted-foreground">{t('Currently Used')}</div>
                         <div className="text-sm sm:text-lg font-semibold">{formatVolumeM3(locationUsedM3)}</div>
@@ -734,7 +734,7 @@ export function GoodsReceiptPage() {
                   </div>
                 </div>
                 <Separator />
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-1.5 sm:p-2">
                     <div className="text-base sm:text-lg font-bold text-green-600">{goodQuantity}</div>
                     <div className="text-[9px] sm:text-[10px] text-green-700/70">{t('Good Condition')}</div>

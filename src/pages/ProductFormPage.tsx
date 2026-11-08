@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { StickyBottomBar } from '@/components/layout/sticky-bottom-bar';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages, createSupplier, getCountries, createCategory, addSubcategoryToCategory } from '@/services/supabase';
 import { getCurrentTenant } from '@/services/supabase/tenants';
 import { getCurrentTenantId } from '@/lib/supabase';
@@ -619,7 +620,7 @@ export function ProductFormPage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (saveDraft = false) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -773,8 +774,9 @@ export function ProductFormPage() {
               await addProductComponent(result.id, components[i].productId, components[i].quantity);
             }
           }
-          // Redirect to create first batch for this product
-          navigate(`/products/${result.id}/batches/new`);
+          // A saved draft can be resumed later; completing the wizard proceeds
+          // to its first batch as before.
+          navigate(saveDraft ? `/products/${result.id}` : `/products/${result.id}/batches/new`);
         } else if (result.success) {
           navigate('/products');
         } else {
@@ -3058,16 +3060,16 @@ export function ProductFormPage() {
       </Card>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={prevStep} disabled={currentStep === 0}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('Back')}
+      <StickyBottomBar className="flex-wrap">
+        <Button variant="outline" onClick={prevStep} disabled={currentStep === 0} aria-label={t('Back')}>
+          <ArrowLeft className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">{t('Back')}</span>
         </Button>
 
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Save className="mr-2 h-4 w-4" />
-            {t('Save as Draft')}
+        <div className="flex min-w-0 flex-1 flex-wrap justify-end gap-2">
+          <Button variant="outline" onClick={() => handleSubmit(true)} disabled={isSubmitting || !formData.name.trim()} aria-label={isEditMode ? t('Save Changes') : t('Save as Draft')}>
+            <Save className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{isEditMode ? t('Save Changes') : t('Save as Draft')}</span>
           </Button>
 
           {currentStep < steps.length - 1 ? (
@@ -3076,7 +3078,7 @@ export function ProductFormPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
+            <Button onClick={() => handleSubmit()} disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -3086,7 +3088,7 @@ export function ProductFormPage() {
             </Button>
           )}
         </div>
-      </div>
+      </StickyBottomBar>
 
       {submitError && (
         quotaReached ? (

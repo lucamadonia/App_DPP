@@ -306,9 +306,9 @@ export function BatchFormPage() {
       {product && (
         <Card>
           <CardContent className="py-4">
-            <div className="flex items-center gap-4">
-              <Layers className="h-5 w-5 text-primary" />
-              <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-start gap-3">
+              <Layers className="h-5 w-5 shrink-0 text-primary" />
+              <div className="grid min-w-0 gap-3 text-sm sm:grid-cols-3">
                 <div>
                   <span className="text-muted-foreground">Product: </span>
                   <span className="font-medium">{product.name}</span>

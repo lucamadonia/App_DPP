@@ -37,7 +37,7 @@ export function CategorySection({
   return (
     <AccordionItem value={category} className="border rounded-lg">
       <AccordionTrigger className="px-4 py-3 hover:no-underline group">
-        <div className="flex items-center justify-between w-full pr-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 w-full pr-2">
           <div className="flex items-center gap-3">
             <div className="text-left">
               <div className="font-medium">{category}</div>
@@ -69,7 +69,7 @@ export function CategorySection({
 
           {/* Mobile: 2x2 Grid with large Touch Targets */}
           <div className="flex flex-col gap-2 md:hidden">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -89,7 +89,7 @@ export function CategorySection({
                 {t('Consumer OFF')}
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button
                 variant="outline"
                 size="sm"

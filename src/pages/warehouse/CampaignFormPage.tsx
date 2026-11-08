@@ -171,9 +171,9 @@ export function CampaignFormPage() {
       </div>
 
       {/* Form */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 min-w-0 gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Main fields */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="min-w-0 lg:col-span-2 space-y-6">
           <Card className="hover:shadow-md transition-all duration-200">
             <CardHeader>
               <CardTitle className="text-base">{t('Campaign Details')}</CardTitle>
