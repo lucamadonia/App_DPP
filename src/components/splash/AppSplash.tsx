@@ -100,7 +100,7 @@ export function AppSplash({ ready, budget, children }: AppSplashProps) {
             onClick={() => setSkipped(true)}
           >
             <SplashStage
-              logoSrc={branding.logo || '/trackbliss-logo.png'}
+              logoSrc={branding.logo || '/icons/icon-256.png'}
               budget={budget}
               // A white-label tenant's mark stands alone; stamping our wordmark
               // under it would undo the point of white-labelling.

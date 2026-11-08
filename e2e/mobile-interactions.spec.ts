@@ -59,6 +59,11 @@ test('native keyboard clears navigation and keeps shipment actions above it', as
     document.documentElement.removeAttribute('data-keyboard-open');
     document.documentElement.style.setProperty('--kb-h', '0px');
   });
+  // The form keeps its action toolbar after dismissal; tab navigation returns
+  // when leaving the form, rather than showing through the translucent toolbar.
+  await expect(page.locator('.app-tab-bar')).toBeHidden();
+  await expect.poll(() => actions.evaluate(el => Math.round(el.getBoundingClientRect().bottom))).toBe(844);
+  await page.goto('/products', { waitUntil: 'networkidle' });
   await expect(page.locator('.app-tab-bar')).toBeVisible();
 });
 

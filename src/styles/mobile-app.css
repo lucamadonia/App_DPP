@@ -50,6 +50,9 @@
 }
 
 @media (max-width: 767px) {
+  /* Forms use the action bar as their bottom toolbar; do not show a second
+     navigation bar underneath its translucent surface. The header retains Back. */
+  body:has(.app-action-bar) .app-tab-bar { visibility: hidden; pointer-events: none; }
   [data-slot="button"] { max-width: 100%; white-space: normal; height: auto; min-height: 44px; }
   [data-slot="accordion-trigger"] { min-width: 0; overflow-wrap: anywhere; }
   [data-slot="tabs-list"][data-orientation="horizontal"] {
