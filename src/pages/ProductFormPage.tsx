@@ -2033,7 +2033,7 @@ export function ProductFormPage() {
 
                 {/* Authorized Representative */}
                 <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-base">{t('Authorized Representative')}</Label>
                     {!formData.authorizedRepresentative && (
                       <Button
@@ -2099,7 +2099,7 @@ export function ProductFormPage() {
                           }))}
                         />
                       </div>
-                      <div className="col-span-2 space-y-1">
+                      <div className="md:col-span-2 space-y-1">
                         <Label className="text-xs">{t('Address')}</Label>
                         <Input
                           placeholder={t('Full Address')}
@@ -2110,7 +2110,7 @@ export function ProductFormPage() {
                           }))}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Button
                           type="button"
                           variant="ghost"
@@ -2127,7 +2127,7 @@ export function ProductFormPage() {
 
                 {/* DPP Responsible */}
                 <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-base">{t('DPP Responsible Person')}</Label>
                     {!formData.dppResponsible && (
                       <Button
@@ -2234,7 +2234,7 @@ export function ProductFormPage() {
                 </div>
 
                 <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-base">{t('SVHC Substances List')}</Label>
                     <Button
                       type="button"

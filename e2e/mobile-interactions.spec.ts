@@ -60,9 +60,12 @@ test('every product wizard step fits a narrow phone', async ({ page }) => {
       await expect(page.locator('.app-action-bar').getByRole('button', { name: /Produkt erstellen|Create Product/ })).toBeVisible();
       return;
     }
-    const before = await main.innerText();
+    // Header text changes before AnimatePresence has replaced the form body.
+    // Measure only after the next step itself has mounted.
+    const formStep = page.locator('[data-form-step]');
+    const before = await formStep.getAttribute('data-form-step');
     await next.click();
-    await expect(main).not.toHaveText(before);
+    await expect(formStep).not.toHaveAttribute('data-form-step', before!);
     await page.waitForLoadState('networkidle');
   }
   throw new Error('Product wizard did not reach its final step');
