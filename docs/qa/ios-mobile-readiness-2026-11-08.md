@@ -45,7 +45,8 @@ Alle Datenanfragen der neuen angemeldeten Tests werden lokal beantwortet; sonsti
 - Das native App-Dokument wird fixiert; der Arbeitsbereich ist der einzige vertikale Scroller. Horizontales Scrollen bleibt auf dafür vorgesehene Tabellen und Tabs begrenzt.
 - Pull-to-refresh prüft den tatsächlichen scrollenden Vorfahren statt des stets bei null stehenden Dokuments. Abgebrochene und seitliche Gesten lösen keine Aktualisierung aus.
 - Neue WebKit-Regressionen aktivieren Bewegung ausdrücklich. Frühere reine Layoutprüfungen verwendeten reduzierte Bewegung und konnten den Drag-Fehler dadurch nicht erkennen. Ein zusätzlicher Komponententest prüft die verzögerte Übergabe des Startbilds.
-- Lokale Splash-Tests: sechs bestanden. Gezielte Codeprüfung der geänderten Dateien: erfolgreich. Vollständiger Release-/CI-Stand wird nach dem neuen Lauf ergänzt.
+- Die Randgeste hat eine eigene, 24 Pixel breite Berührungsfläche über dem Seitenabstand. Nur dort wird horizontale Touch-Bewegung übernommen. Abgebrochene Gesten navigieren nicht zurück. Der Test wartet auf die tatsächlich dargestellte Bewegung, bevor er den Finger löst.
+- Lokale Splash-Tests: sechs bestanden. Gezielte Codeprüfung der geänderten Dateien: erfolgreich. Die vollständige CI für `d21ca1d` bestand 414 Unit-Tests und 338 WebKit-Tests, meldete jedoch zwei Fehler zur Randgeste. Der parallel angelaufene Release 25 wurde vor dem Upload abgebrochen. Nach der Korrektur bestanden lokal alle **14 Gestentests in WebKit** auf beiden Geräteprofilen, einschließlich Rücknavigation, Abbruch, festem Header und stabilen Seiten. Vollständiger Release-/CI-Stand wird nach dem neuen Lauf ergänzt.
 
 ## Apple-Einrichtung und TestFlight
 

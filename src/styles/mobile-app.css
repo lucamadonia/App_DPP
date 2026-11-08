@@ -20,6 +20,19 @@
   overscroll-behavior-x: none;
 }
 
+/* Reach the physical edge across main's padding. Only this narrow strip owns
+   horizontal touch motion; lists, tables and sliders keep normal gestures. */
+.app-back-edge {
+  position: absolute;
+  inset-block: 0;
+  left: calc(-1 * max(var(--app-gutter), var(--safe-left)));
+  width: 24px;
+  z-index: 20;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* The authenticated app has one vertical scroller. Pinning the outer document
    prevents WKWebView from moving the entire shell behind that inner scroller.
    Public/onboarding pages retain their own document scrolling. */

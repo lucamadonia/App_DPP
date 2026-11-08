@@ -43,7 +43,10 @@ export function SwipeBackLayer({ children }: SwipeBackLayerProps) {
         className="pointer-events-none absolute inset-0 -z-10 bg-foreground"
         style={{ opacity: backdropOpacity }}
       />
-      <motion.div {...dragProps} className="app-swipe-content min-w-0 max-w-full">{children}</motion.div>
+      <motion.div {...dragProps} className="app-swipe-content relative min-w-0 max-w-full">
+        {enabled && <div className="app-back-edge" aria-hidden />}
+        {children}
+      </motion.div>
     </div>
   );
 }

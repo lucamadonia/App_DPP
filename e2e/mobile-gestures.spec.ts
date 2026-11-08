@@ -17,6 +17,7 @@ for (const path of ['/warehouse/shipments', '/warehouse/inventory', '/products/n
     await page.mouse.move(160, 250);
     await page.mouse.down();
     await page.mouse.move(300, 255, { steps: 12 });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const during = await content.boundingBox();
     expect(Math.abs(during!.x - origin!.x)).toBeLessThanOrEqual(1);
     await page.mouse.up();
@@ -46,9 +47,13 @@ test('native shell keeps its header fixed while the shipment list scrolls', asyn
 test('back from a directly opened shipment list stays inside the app', async ({ page }) => {
   await page.goto('/warehouse/shipments', { waitUntil: 'networkidle' });
   await waitForAppScreen(page);
-  await page.mouse.move(20, 250);
+  const content = page.locator('.app-swipe-content');
+  const before = await content.boundingBox();
+  await page.mouse.move(5, 250);
   await page.mouse.down();
   await page.mouse.move(250, 255, { steps: 18 });
+  // Wait for the rendered drag, not merely for protocol input delivery.
+  await expect.poll(async () => (await content.boundingBox())!.x - before!.x).toBeGreaterThan(80);
   await page.mouse.up();
   await expect(page).toHaveURL(/\/warehouse$/);
   await waitForAppScreen(page);
@@ -67,5 +72,20 @@ test('a downward pull in the middle of shipments does not shift the list', async
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect.poll(async () => (await heading.boundingBox())!.y).toBe(before!.y);
   await heading.dispatchEvent('pointercancel', { pointerType: 'touch', pointerId: 11, bubbles: true });
+  await expect(page).toHaveURL(/\/warehouse\/shipments$/);
+});
+
+test('a cancelled edge gesture returns the page without navigating', async ({ page }) => {
+  await page.goto('/warehouse/shipments', { waitUntil: 'networkidle' });
+  await waitForAppScreen(page);
+  const content = page.locator('.app-swipe-content');
+  const before = await content.boundingBox();
+  await page.mouse.move(5, 250);
+  await page.mouse.down();
+  await page.mouse.move(220, 250, { steps: 18 });
+  await expect.poll(async () => (await content.boundingBox())!.x - before!.x).toBeGreaterThan(80);
+  await content.dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: 220, clientY: 250, bubbles: true });
+  await page.mouse.up();
+  await expect.poll(async () => Math.abs((await content.boundingBox())!.x - before!.x)).toBeLessThan(1);
   await expect(page).toHaveURL(/\/warehouse\/shipments$/);
 });

@@ -50,20 +50,24 @@ export function useSwipeBack({ enabled, onCommit }: SwipeBackOptions) {
       armed.current = e.clientX <= EDGE_ZONE_PX;
       // Disabling commit is not enough: automatic drag listeners already move
       // the entire page before onDragEnd. Start the drag only at the edge.
-      if (armed.current) controls.start(e);
+      if (armed.current) {
+        e.preventDefault();
+        controls.start(e);
+      }
     },
     [enabled, controls]
   );
 
   const onDragEnd = useCallback(
-    (_: unknown, info: PanInfo) => {
+    (event: unknown, info: PanInfo) => {
       if (!armed.current) {
         void animate(x, 0, spring.snappy);
         return;
       }
       const width = typeof window !== 'undefined' ? window.innerWidth : 400;
-      const commit =
-        info.offset.x > width * COMMIT_RATIO || info.velocity.x > COMMIT_VELOCITY;
+      const cancelled = (event as PointerEvent | null)?.type === 'pointercancel';
+      const commit = !cancelled &&
+        (info.offset.x > width * COMMIT_RATIO || info.velocity.x > COMMIT_VELOCITY);
       if (commit) {
         haptic.light();
         onCommit();
