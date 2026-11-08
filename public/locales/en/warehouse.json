@@ -2094,5 +2094,10 @@
   "Instant Analysis": "Instant Analysis",
   "Context-Aware": "Context-Aware",
   "Real-Time Data": "Real-Time Data",
-  "Choose your specialist": "Choose your specialist"
+  "Choose your specialist": "Choose your specialist",
+  "Customer could not be loaded": "Customer could not be loaded",
+  "Customer not found": "Customer not found",
+  "Please try loading the customer again.": "Please try loading the customer again.",
+  "This customer is no longer available.": "This customer is no longer available.",
+  "Back to customers": "Back to customers"
 }

@@ -63,12 +63,12 @@ export function CategorySection({
       <AccordionContent className="px-4 pb-4">
         {/* Bulk Toggle Bar */}
         <div className="mb-3 pb-3 border-b">
-          <span className="text-xs text-muted-foreground mb-2 block md:inline md:mr-2">
+          <span className="text-xs text-muted-foreground mb-2 block 2xl:inline 2xl:mr-2">
             {t('Bulk toggle')}:
           </span>
 
           {/* Mobile: 2x2 Grid with large Touch Targets */}
-          <div className="flex flex-col gap-2 md:hidden">
+          <div className="flex flex-col gap-2 2xl:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button
                 variant="outline"
@@ -112,7 +112,7 @@ export function CategorySection({
           </div>
 
           {/* Desktop: Inline Buttons */}
-          <div className="hidden md:flex md:items-center md:gap-2">
+          <div className="hidden 2xl:flex 2xl:items-center 2xl:gap-2">
             <Button
               variant="outline"
               size="sm"

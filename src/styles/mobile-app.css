@@ -1,12 +1,18 @@
 /* App-level adaptations live here; shared shadcn primitives stay untouched. */
 :root {
   --app-visible-height: calc(100dvh - var(--kb-h, 0px));
+  --app-gutter: 1rem;
+}
+
+@media (min-width: 640px) {
+  :root { --app-gutter: 1.5rem; }
 }
 
 [data-slot="tabs"],
 [data-slot="tabs-content"],
 [data-slot="card"] {
   min-width: 0;
+  max-width: 100%;
 }
 
 .app-content {
@@ -28,8 +34,8 @@
 }
 
 [data-native="true"] .app-content {
-  padding-left: max(1rem, var(--safe-left));
-  padding-right: max(1rem, var(--safe-right));
+  padding-left: max(var(--app-gutter), var(--safe-left));
+  padding-right: max(var(--app-gutter), var(--safe-right));
 }
 
 [data-keyboard-open] .app-tab-bar {
@@ -49,11 +55,13 @@
   max-height: calc(var(--app-visible-height) - var(--safe-top) - 1rem) !important;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
+  [data-slot="tabs"][data-orientation="horizontal"] { width: 100%; }
   /* Forms use the action bar as their bottom toolbar; do not show a second
      navigation bar underneath its translucent surface. The header retains Back. */
   body:has(.app-action-bar) .app-tab-bar { visibility: hidden; pointer-events: none; }
   [data-slot="button"] { max-width: 100%; white-space: normal; height: auto; min-height: 44px; }
+  [data-slot="select-trigger"], [data-slot="input"], [data-slot="textarea"] { max-width: 100%; }
   [data-slot="accordion-trigger"] { min-width: 0; overflow-wrap: anywhere; }
   [data-slot="tabs-list"][data-orientation="horizontal"] {
     display: flex;

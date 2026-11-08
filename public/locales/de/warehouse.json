@@ -2094,5 +2094,10 @@
   "Instant Analysis": "Sofortige Analyse",
   "Context-Aware": "Kennt deine Lagerdaten",
   "Real-Time Data": "Aktuelle Daten",
-  "Choose your specialist": "Wähle deinen Spezialisten"
+  "Choose your specialist": "Wähle deinen Spezialisten",
+  "Customer could not be loaded": "Kunde konnte nicht geladen werden",
+  "Customer not found": "Kunde nicht gefunden",
+  "Please try loading the customer again.": "Bitte versuche erneut, den Kunden zu laden.",
+  "This customer is no longer available.": "Dieser Kunde ist nicht mehr verfügbar.",
+  "Back to customers": "Zur Kundenübersicht"
 }

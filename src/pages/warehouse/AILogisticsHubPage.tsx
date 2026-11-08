@@ -27,7 +27,7 @@ import { EXPERT_SUGGESTED_QUESTIONS, type WarehouseExpertId } from '@/services/o
 
 function HubBackdrop({ variant = 'hero' }: { variant?: 'hero' | 'chat' }) {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 overflow-clip [contain:paint]" aria-hidden="true">
       {/* Grid */}
       <div className="absolute inset-0 hub-grid-bg opacity-60 animate-grid-drift" />
       {/* Radial fade to hide grid edges */}

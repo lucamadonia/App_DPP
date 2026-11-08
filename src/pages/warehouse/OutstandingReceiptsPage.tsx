@@ -170,7 +170,7 @@ export function OutstandingReceiptsPage() {
   // Toolbar filter content (inline on desktop, bottom drawer on mobile)
   // -------------------------------------------------------------------------
   const filtersNode = (
-    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-3">
+    <div className="flex flex-col xl:flex-row xl:items-center gap-4 xl:gap-3">
       <div className="space-y-1.5 md:space-y-0">
         <Label className="md:sr-only text-xs text-muted-foreground">{t('Receipt status')}</Label>
         <div

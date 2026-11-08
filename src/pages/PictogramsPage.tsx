@@ -434,9 +434,9 @@ export function PictogramsPage() {
         )}
 
         {/* ── Filters ────────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
-            <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+            <div className="relative min-w-0 flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -446,10 +446,10 @@ export function PictogramsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
               <Select value={filterYear} onValueChange={setFilterYear}>
-                <SelectTrigger className="w-[170px]">
+                <SelectTrigger className="w-full sm:w-[170px]">
                   <SelectValue placeholder={t('pictograms.regulationYear', 'Regulation Year')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -460,7 +460,7 @@ export function PictogramsPage() {
                 </SelectContent>
               </Select>
               <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-[170px]">
+                <SelectTrigger className="w-full sm:w-[170px]">
                   <SelectValue placeholder={t('pictograms.category', 'Category')} />
                 </SelectTrigger>
                 <SelectContent>

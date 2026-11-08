@@ -145,7 +145,7 @@ export function CompliancePage() {
       <div className="space-y-6">
       {/* Stats */}
       <MotionDiv
-        className="grid gap-4 md:grid-cols-4"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
         {...(!prefersReduced && { variants: gridStagger, initial: 'initial', animate: 'animate' })}
       >
         <GlassCard {...(!prefersReduced && { variants: gridItem })}>
@@ -304,16 +304,16 @@ export function CompliancePage() {
                     return (
                       <MotionDiv
                         key={score.productId}
-                        className="flex items-center justify-between p-4 rounded-lg border"
+                        className="flex min-w-0 flex-col gap-4 p-4 rounded-lg border xl:flex-row xl:items-center xl:justify-between"
                         {...(!prefersReduced && { variants: staggerItem })}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${config.className}`}>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.className}`}>
                             <config.icon className="h-5 w-5" />
                           </div>
-                          <div>
-                            <p className="font-medium">{score.productName}</p>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                          <div className="min-w-0">
+                            <p className="break-words font-medium">{score.productName}</p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
                               <span>{t('Documents')}: {score.documentScore}%</span>
                               <span>{t('Checklists')}: {score.checklistScore}%</span>
                               <span>{t('Certificates')}: {score.certificateScore}%</span>

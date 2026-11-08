@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { installAppFixture, fixtureId } from './helpers/app-fixture';
+import { waitForAppScreen } from './helpers/app-ready';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.describe.configure({ timeout: 90_000 });
@@ -24,11 +25,33 @@ test('product wizard preserves input across steps and rotation', async ({ page }
 test('product detail tabs scroll to the selected destination', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto(`/products/${fixtureId}`, { waitUntil: 'networkidle' });
+  await waitForAppScreen(page);
   const tabs = page.getByRole('tablist').first();
   const last = tabs.getByRole('tab').last();
   await last.click();
   await expect(last).toHaveAttribute('aria-selected', 'true');
   await expect(last).toBeInViewport();
+});
+
+test('every product wizard step fits a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto('/products/new', { waitUntil: 'networkidle' });
+  await page.getByPlaceholder(/Eco Sneaker Pro/).fill('Mobiler Produktpass');
+  const main = page.locator('.app-content');
+  for (let step = 0; step < 12; step++) {
+    await waitForAppScreen(page);
+    expect(await main.evaluate(el => el.scrollWidth - el.clientWidth), `wizard step ${step + 1}`).toBeLessThanOrEqual(2);
+    const next = page.locator('.app-action-bar').getByRole('button', { name: /Weiter|Next/, exact: true });
+    if (!await next.count()) {
+      await expect(page.locator('.app-action-bar').getByRole('button', { name: /Produkt erstellen|Create Product/ })).toBeVisible();
+      return;
+    }
+    const before = await main.innerText();
+    await next.click();
+    await expect(main).not.toHaveText(before);
+    await page.waitForLoadState('networkidle');
+  }
+  throw new Error('Product wizard did not reach its final step');
 });
 
 test('save draft submits the entered product through the existing service', async ({ page }) => {

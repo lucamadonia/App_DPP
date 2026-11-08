@@ -13,4 +13,6 @@ export async function waitForAppScreen(page: Page) {
     }
     return true;
   }, undefined, { timeout: 15_000 });
+  await expect(page.locator('.app-content [data-slot="skeleton"]')).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: /^(Something went wrong|Etwas ist schiefgelaufen)$/ })).toHaveCount(0);
 }

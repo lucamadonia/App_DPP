@@ -451,7 +451,7 @@ export function ProductCategoriesPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -540,7 +540,7 @@ export function ProductCategoriesPage() {
                           </div>
                           <p className="text-sm text-muted-foreground">{category.description}</p>
                         </div>
-                        <div className="hidden md:flex flex-wrap gap-1 max-w-xs justify-end">
+                        <div className="hidden xl:flex flex-wrap gap-1 max-w-xs justify-end">
                           {regulations.slice(0, 3).map(reg => (
                             <Badge key={reg} variant="outline" className="text-xs">
                               {reg}

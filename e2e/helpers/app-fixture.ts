@@ -10,7 +10,7 @@ export async function installAppFixture(context: BrowserContext) {
   const expires = Math.floor(Date.now() / 1000) + 86400;
   const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: fixtureId, aud: 'authenticated', role: 'authenticated', exp: expires }].map(v => Buffer.from(JSON.stringify(v)).toString('base64url')).join('.') + '.isolated-fixture';
   const session = { access_token: token, refresh_token: 'local-only', token_type: 'bearer', expires_at: expires, expires_in: 86400, user };
-  const product = { id: fixtureId, tenant_id: tenantId, name: 'Reisetasche mit einem besonders langen Produktnamen', manufacturer: 'Mobile QA', gtin: '4006381333931', serial_number: 'QA-001', category: 'Textiles', description: 'Isolierte Beispieldaten für mobile Ansichten.', status: 'active', created_at: createdAt, updated_at: createdAt, materials: [], certifications: [], product_batches: [], product_components: [] };
+  const product = { id: fixtureId, tenant_id: tenantId, name: 'Reisetasche mit einem besonders langen Produktnamen', manufacturer: 'Mobile QA', gtin: '4006381333931', serial_number: 'QA-001', category: 'Textiles', description: 'Isolierte Beispieldaten für mobile Ansichten.', status: 'live', created_at: createdAt, updated_at: createdAt, materials: [], certifications: [], product_batches: [], product_components: [] };
   const rows: Record<string, unknown> = {
     user, token: session,
     profiles: [{ id: fixtureId, tenant_id: tenantId, email: user.email, full_name: 'Mobile QA', role: 'admin', is_super_admin: true, admin_role: 'super_admin' }],
@@ -19,7 +19,7 @@ export async function installAppFixture(context: BrowserContext) {
     billing_module_subscriptions: ['returns_hub_business', 'warehouse_business', 'commerce_hub_business', 'feedback_business'].map(module_id => ({ module_id, status: 'active' })),
     billing_credits: [{ monthly_allowance: 1000, monthly_used: 0, purchased_balance: 1000 }],
     products: [product],
-    product_batches: [{ id: fixtureId, product_id: fixtureId, serial_number: 'QA-BATCH', status: 'active', quantity: 20, created_at: createdAt, products: product }],
+    product_batches: [{ id: fixtureId, product_id: fixtureId, serial_number: 'QA-BATCH', status: 'live', quantity: 20, created_at: createdAt, products: product }],
     countries: [{ id: fixtureId, code: 'DE', name: 'Germany', name_de: 'Deutschland', alpha2: 'DE', is_active: true }],
     wh_locations: [{ id: fixtureId, tenant_id: tenantId, name: 'Beispiellager', code: 'QA', type: 'warehouse', is_active: true, zones: [], created_at: createdAt }],
     wh_stock_levels: [{ id: fixtureId, tenant_id: tenantId, product_id: fixtureId, batch_id: fixtureId, location_id: fixtureId, quantity_available: 20, quantity_reserved: 0, products: product }],
@@ -38,6 +38,15 @@ export async function installAppFixture(context: BrowserContext) {
       result = { success: true, data: operation === 'get_platform_stats'
         ? { totalTenants: 0, totalUsers: 0, totalProducts: 0, activeReturns: 0, paidTenants: 0, mrr: 0, recentSignups7d: 0, aiCreditsUsedMonth: 0, planDistribution: { free: 0, pro: 0, enterprise: 0 } }
         : [] };
+      if (operation === 'list_audit_log') result = { success: true, data: { entries: [], total: 0 } };
+      if (operation === 'get_tenant') result = { success: true, data: {
+        id: tenantId, name: 'Mobiles Beispielunternehmen', slug: 'mobile-qa', createdAt,
+        address: null, country: 'DE', eori: null, vat: null, stripeCustomerId: null,
+        plan: 'enterprise', activeModules: [], userCount: 1, productCount: 1,
+        monthlyAllowance: 1000, monthlyUsed: 0, purchasedBalance: 1000,
+        settings: {}, users: [], creditTransactions: [], invoices: [],
+        usage: { products: 1, documents: 0, adminUsers: 1, returns: 0, tickets: 0, suppliers: 0 },
+      } };
     }
     const single = route.request().headers().accept?.includes('object+json');
     const body = single && Array.isArray(result) ? result[0] ?? null : result;

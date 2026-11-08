@@ -56,7 +56,8 @@ export function DPPVisibilitySettingsPageV3() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['Basic Data'])
   );
-  const isMobile = useIsMobile();
+  // Three editing panels need more space than the standard app navigation.
+  const isMobile = useIsMobile(1440);
   const [leftSheetOpen, setLeftSheetOpen] = useState(false);
   const [rightSheetOpen, setRightSheetOpen] = useState(false);
 
@@ -307,7 +308,7 @@ export function DPPVisibilitySettingsPageV3() {
 
   return (
     <MotionDiv
-      className="h-screen flex flex-col"
+      className="flex min-w-0 min-h-96 h-[calc(var(--app-visible-height)-8rem)] flex-col"
       {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}
     >
       <HeaderToolbar
@@ -354,7 +355,7 @@ export function DPPVisibilitySettingsPageV3() {
         )}
 
         {/* Main Canvas (always visible) */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-w-0 flex-1">
           <MainCanvas
             config={config}
             searchQuery={searchQuery}

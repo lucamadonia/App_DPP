@@ -18,6 +18,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : 4,
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
   timeout: 30_000,
+  expect: { timeout: 15_000 },
 
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4173',

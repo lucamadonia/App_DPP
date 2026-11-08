@@ -19,6 +19,9 @@ for (const path of routes) {
   test(`${path} fits the app viewport`, async ({ page }, testInfo) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => {
+      if (message.type() === 'error' && /\[(RouteErrorBoundary|ErrorBoundary)/.test(message.text())) errors.push(message.text());
+    });
     await page.goto(path, { waitUntil: 'networkidle' });
     await expect(page).not.toHaveURL(/\/login/);
     await waitForAppScreen(page);

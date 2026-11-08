@@ -36,7 +36,7 @@ export function FieldRow({
         'flex flex-col gap-3',
 
         // Desktop: Horizontal Grid
-        'md:grid md:grid-cols-[1fr_200px_200px] md:gap-4 md:items-center',
+        '2xl:grid 2xl:grid-cols-[minmax(0,1fr)_200px_200px] 2xl:gap-4 2xl:items-center',
 
         isSearchMatch && 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-700'
       )}
@@ -49,7 +49,7 @@ export function FieldRow({
       </div>
 
       {/* Toggles Container */}
-      <div className="flex flex-wrap gap-4 md:contents">
+      <div className="flex flex-wrap gap-4 2xl:contents">
         <VisibilitySwitch
           level="consumer"
           checked={consumerVisible}
