@@ -140,11 +140,11 @@ export function MobileBottomNav() {
                 >
                   {active &&
                     (prefersReduced ? (
-                      <span className="absolute left-1/2 top-0 h-0.5 w-10 -translate-x-1/2 rounded-full bg-primary" />
+                      <span className="absolute left-1/2 top-1 h-8 w-12 -translate-x-1/2 rounded-xl bg-primary/10" />
                     ) : (
                       <motion.span
                         layoutId="mobile-nav-active-indicator"
-                        className="absolute left-1/2 top-0 h-0.5 w-10 -translate-x-1/2 rounded-full bg-primary"
+                        className="absolute left-1/2 top-1 h-8 w-12 -translate-x-1/2 rounded-xl bg-primary/10"
                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       />
                     ))}

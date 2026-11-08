@@ -17,6 +17,29 @@
 
 .app-content {
   scroll-padding-block: 5rem 7rem;
+  overscroll-behavior-x: none;
+}
+
+/* The authenticated app has one vertical scroller. Pinning the outer document
+   prevents WKWebView from moving the entire shell behind that inner scroller.
+   Public/onboarding pages retain their own document scrolling. */
+html[data-native="true"]:has(.app-content),
+[data-native="true"] body:has(.app-content) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+[data-native="true"] body:has(.app-content) {
+  position: fixed;
+  inset: 0;
+}
+
+[data-native="true"] body:has(.app-content) #root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 [data-native="true"] [data-slot="sidebar-wrapper"] {

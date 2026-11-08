@@ -11,9 +11,13 @@ import { isNative } from './platform';
 import { initNativeKeyboard } from './native-keyboard';
 
 /** Remove the pre-React splash markup from index.html. */
-export function removeBootSplash(): void {
+export function removeBootSplash(immediate = false): void {
   const el = document.getElementById('boot-splash');
   if (!el) return;
+  if (immediate) {
+    el.remove();
+    return;
+  }
   el.style.transition = 'opacity 180ms ease-out';
   el.style.opacity = '0';
   window.setTimeout(() => el.remove(), 200);

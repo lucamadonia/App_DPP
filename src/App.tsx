@@ -286,7 +286,7 @@ function AppLayout() {
         <ImpersonationBanner />
         <PendingInvitationsBanner />
         <AppHeader onSearch={() => setPaletteOpen(true)} />
-        <main className="app-content min-w-0 flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app">
+        <main className="app-content min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 pb-app">
           <SwipeBackLayer>
             {/* A crashing page keeps the sidebar/header usable. */}
             <RouteErrorBoundary name="app" variant="section">

@@ -11,7 +11,7 @@
  * launcher crops the outer ring to whatever mask the device uses.
  */
 import sharp from 'sharp';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -82,6 +82,11 @@ async function main() {
     await writeFile(path.join(OUT, `icon-${size}.png`), await opaqueIcon(MASTER, size, 0.72));
   }
   await writeFile(path.join(OUT, 'apple-touch-icon.png'), await opaqueIcon(MASTER, 180, 0.72));
+
+  // Xcode consumes its catalog directly; generating public/resources assets
+  // alone leaves the installed iPhone app with the old Capacitor icon.
+  await copyFile(path.join(OUT, 'icon-1024.png'), 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
+  await copyFile(path.join(OUT, 'icon-256.png'), 'ios/App/App/Assets.xcassets/LaunchMark.imageset/launch-mark.png');
 
   // --- Capacitor assets pipeline sources ---
   // `npx @capacitor/assets generate` picks these up and produces every native

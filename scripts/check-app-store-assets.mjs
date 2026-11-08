@@ -7,6 +7,33 @@ const failures = [];
 const fail = (message) => failures.push(message);
 const read = (file) => readFileSync(file, 'utf8').trim();
 
+// Validate the actual Xcode asset catalog, not just metadata/screenshots. A
+// correctly sized Capacitor placeholder or a flat launch image can still ship.
+for (const [catalog, reference] of [
+  ['AppIcon.appiconset', 'public/icons/icon-1024.png'],
+  ['LaunchMark.imageset', 'public/icons/icon-256.png'],
+]) {
+  const directory = path.join('ios/App/App/Assets.xcassets', catalog);
+  const contents = JSON.parse(read(path.join(directory, 'Contents.json')));
+  const image = contents.images.find((entry) => entry.filename);
+  const target = image && path.join(directory, image.filename);
+  if (!target || !existsSync(target)) {
+    fail(`Missing native brand image in ${catalog}`);
+    continue;
+  }
+  const [nativePixels, brandPixels] = await Promise.all([
+    sharp(target).ensureAlpha().raw().toBuffer(),
+    sharp(reference).ensureAlpha().raw().toBuffer(),
+  ]);
+  if (!nativePixels.equals(brandPixels)) fail(`${catalog} does not contain the current Trackbliss brand image`);
+  if (catalog === 'AppIcon.appiconset') {
+    const metadata = await sharp(target).metadata();
+    if (metadata.width !== 1024 || metadata.height !== 1024 || metadata.hasAlpha) {
+      fail('The iOS app icon must be an opaque 1024 x 1024 PNG');
+    }
+  }
+}
+
 const metadataLimits = {
   'name.txt': 30,
   'subtitle.txt': 30,

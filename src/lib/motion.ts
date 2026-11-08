@@ -236,19 +236,16 @@ export { useReducedMotion };
 // Directional route transitions (mobile)
 // ---------------------------------------------------------------------------
 /**
- * iOS-style push/pop. The outgoing page parallaxes to -25% while the incoming
- * page slides over it, which is what makes a WebView read as a native stack.
- *
- * Requires `AnimatePresence mode="popLayout"` plus `position: relative` on the
- * outlet wrapper and `position: absolute; inset: 0` on the exiting page —
- * otherwise the two pages stack vertically mid-transition.
+ * Directional entrance for the incoming route. Short travel preserves context
+ * without sliding an entire screen outside the working viewport. The router
+ * keeps only the incoming form mounted so no input can land in an exiting copy.
  *
  * Only transform/opacity animate, so this stays on the compositor.
  */
 export const routeVariants: Variants = {
   initial: (direction: 'push' | 'pop' | 'switch') => {
-    if (direction === 'push') return { x: '100%', opacity: 1 };
-    if (direction === 'pop') return { x: '-25%', opacity: 0.6 };
+    if (direction === 'push') return { x: 24, opacity: 0 };
+    if (direction === 'pop') return { x: -16, opacity: 0 };
     return { opacity: 0, x: 0 };
   },
   animate: { x: 0, opacity: 1 },

@@ -1,0 +1,60 @@
+.app-launch-stage {
+  --launch-duration: 1200ms;
+  --launch-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  width: 128px;
+  height: 128px;
+  isolation: isolate;
+}
+
+.app-launch-mark {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  overflow: hidden;
+  border-radius: 28px;
+  box-shadow: 0 0 0 1px rgb(148 163 184 / 12%), 0 20px 60px rgb(0 0 0 / 20%);
+}
+
+.app-launch-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.app-launch-aura {
+  position: absolute;
+  inset: -150px;
+  z-index: -2;
+  background: radial-gradient(ellipse at 30% 35%, rgb(59 130 246 / 30%), transparent 55%), radial-gradient(ellipse at 70% 65%, rgb(34 211 238 / 20%), transparent 60%);
+  animation: launch-aura var(--launch-duration) var(--launch-ease) both;
+}
+
+.app-launch-orbit {
+  position: absolute;
+  inset: -58px;
+  z-index: -1;
+  border: 1px solid rgb(125 211 252 / 14%);
+  border-radius: 50%;
+  animation: launch-orbit var(--launch-duration) var(--launch-ease) both;
+}
+
+.app-launch-orbit-inner { position: absolute; inset: 20px; border: 1px solid rgb(165 180 252 / 10%); border-radius: 50%; }
+.app-launch-orbit-light { position: absolute; left: calc(50% - 3px); top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #a5f3fc; box-shadow: 0 0 18px #22d3ee; }
+.app-launch-glint { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 20%, rgb(255 255 255 / 24%) 48%, transparent 70%); animation: launch-glint var(--launch-duration) var(--launch-ease) both; }
+
+.app-launch-wordmark { position: absolute; top: calc(100% + 78px); left: -90px; right: -90px; text-align: center; color: #f8fafc; font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -0.035em; animation: launch-wordmark var(--launch-duration) var(--launch-ease) both; }
+.app-launch-subtitle { display: block; margin-top: 12px; color: #94a3b8; font-size: 9px; font-weight: 500; letter-spacing: 0.24em; }
+.app-launch-stage[data-active="false"] * { animation-play-state: paused; }
+
+@keyframes launch-aura { from { opacity: 0.2; transform: scale(0.75); } to { opacity: 1; transform: scale(1); } }
+@keyframes launch-orbit { from { opacity: 0; transform: scale(0.8) rotate(-70deg); } to { opacity: 1; transform: scale(1) rotate(35deg); } }
+@keyframes launch-glint { 0%, 15% { opacity: 0; transform: translateX(-100%); } 35% { opacity: 1; } 100% { opacity: 0; transform: translateX(100%); } }
+@keyframes launch-wordmark { 0%, 10% { opacity: 0; transform: translateY(10px); } 65%, 100% { opacity: 1; transform: translateY(0); } }
+
+.app-launch-stage[data-reduced="true"] * { animation: none; transform: none; }
+.app-launch-stage[data-reduced="true"] .app-launch-glint { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .app-launch-stage * { animation: none; transform: none; }
+  .app-launch-glint { display: none; }
+}
+@media (max-height: 430px) {
+  .app-launch-wordmark { top: calc(100% + 24px); font-size: 23px; }
+  .app-launch-subtitle { margin-top: 6px; }
+}

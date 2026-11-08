@@ -5,7 +5,7 @@
  * holds 60fps inside a WebView.
  */
 import { useCallback, useRef } from 'react';
-import { useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
+import { useDragControls, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
 import { spring } from '@/lib/motion';
 import { haptic } from '@/lib/haptics';
 
@@ -30,6 +30,7 @@ export interface SwipeBackOptions {
  */
 export function useSwipeBack({ enabled, onCommit }: SwipeBackOptions) {
   const x = useMotionValue(0);
+  const controls = useDragControls();
   const armed = useRef(false);
 
   /** Shadow of the page underneath, fading as the current page slides away. */
@@ -42,13 +43,16 @@ export function useSwipeBack({ enabled, onCommit }: SwipeBackOptions) {
         return;
       }
       const target = e.target as HTMLElement | null;
-      if (target?.closest('[data-no-swipe-back]')) {
+      if (target?.closest('[data-no-swipe-back], button, a, input, textarea, select, [role="tab"], [contenteditable="true"]')) {
         armed.current = false;
         return;
       }
       armed.current = e.clientX <= EDGE_ZONE_PX;
+      // Disabling commit is not enough: automatic drag listeners already move
+      // the entire page before onDragEnd. Start the drag only at the edge.
+      if (armed.current) controls.start(e);
     },
-    [enabled]
+    [enabled, controls]
   );
 
   const onDragEnd = useCallback(
@@ -63,6 +67,7 @@ export function useSwipeBack({ enabled, onCommit }: SwipeBackOptions) {
       if (commit) {
         haptic.light();
         onCommit();
+        x.set(0);
       } else {
         void animate(x, 0, spring.snappy);
       }
@@ -77,6 +82,8 @@ export function useSwipeBack({ enabled, onCommit }: SwipeBackOptions) {
     backdropOpacity,
     dragProps: {
       drag: enabled ? ('x' as const) : (false as const),
+      dragListener: false,
+      dragControls: controls,
       dragDirectionLock: true,
       dragConstraints: { left: 0, right: 0 },
       dragElastic: { left: 0, right: 0.9 },

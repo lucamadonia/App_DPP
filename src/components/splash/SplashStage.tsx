@@ -1,139 +1,33 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import type { MotionBudget } from '@/hooks/use-motion-budget';
 
 export interface SplashStageProps {
   logoSrc: string;
   budget: MotionBudget;
-  /** Show the wordmark. Suppressed for white-label tenants, whose mark stands alone. */
+  active: boolean;
   showWordmark: boolean;
 }
 
-/**
- * Everything visual about the splash.
- *
- * Split out of AppSplash so the sequencing — which is the fragile part, and the
- * only reason the three-stage handoff looks gapless — does not get buried under
- * decoration.
- *
- * Deliberately no photograph here. Decoding a 1080x1920 backdrop costs 20-60 ms
- * of main thread on a mid-range Android, and it would land exactly while React
- * is mounting the router tree and AuthProvider is restoring the session. Every
- * cold start would pay it. Photography belongs in the journey, which is seen
- * once and has a Next button to preload behind.
- *
- * Nothing here is awaited and nothing gates the handoff. All four layers are
- * declarative and compositor-only (transform / opacity).
- */
-export function SplashStage({ logoSrc, budget, showWordmark }: SplashStageProps) {
+/** Local brand assets and compositor-only motion, started after native handoff. */
+export function SplashStage({ logoSrc, budget, active, showWordmark }: SplashStageProps) {
   const prefersReduced = useReducedMotion();
-  const rich = budget === 'full' && !prefersReduced;
-
   return (
-    <>
-      {/* Aurora. Painted as radial gradients rather than blurred divs: a 64px
-          filter: blur() on a viewport-sized element is the single most
-          expensive thing to ask of an Android WebView during boot, and the
-          gradient is already soft. */}
-      {budget !== 'minimal' && (
-        <>
-          <motion.div
-            aria-hidden
-            className="fr-aurora -left-1/4 -top-1/4 size-[80vmax]"
-            style={{
-              background: 'radial-gradient(circle, rgba(59,130,246,0.22), transparent 62%)',
-            }}
-            initial={prefersReduced ? false : { x: -24, y: -12, scale: 0.94 }}
-            animate={{ x: 0, y: 0, scale: 1 }}
-            transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-          />
-          <motion.div
-            aria-hidden
-            className="fr-aurora -bottom-1/4 -right-1/4 size-[70vmax]"
-            style={{
-              background: 'radial-gradient(circle, rgba(139,92,246,0.18), transparent 62%)',
-            }}
-            initial={prefersReduced ? false : { x: 24, y: 12, scale: 0.94 }}
-            animate={{ x: 0, y: 0, scale: 1 }}
-            transition={{ duration: 1.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          />
-        </>
-      )}
-
-      {/* The logo MUST NOT move. The whole gapless illusion is that it lands at
-          exactly the position and size of the #boot-splash logo in index.html
-          (96px, dead centre). Only light travels across it. */}
-      <div className="relative flex flex-col items-center">
-        {/* Quiet passport rings resolve around the stationary launch mark. */}
-        {rich && (
-          <div aria-hidden className="splash-orbits pointer-events-none absolute left-1/2 top-1/2 size-64 -translate-x-1/2 -translate-y-1/2">
-            <motion.div
-              className="absolute inset-0 rounded-full border border-blue-300/10"
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.65, ease: 'easeOut' }}
-            />
-            <motion.div
-              className="absolute inset-7 rounded-full border border-cyan-200/15"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.55, delay: 0.08, ease: 'easeOut' }}
-            />
-            <motion.span
-              className="absolute left-1/2 top-7 size-1.5 -translate-x-1/2 rounded-full bg-cyan-200 shadow-[0_0_16px_#67e8f9]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.8 }}
-              transition={{ duration: 0.3, delay: 0.15 }}
-            />
-          </div>
-        )}
-        <div className="relative size-24 overflow-hidden">
-          <motion.img
-            src={logoSrc}
-            alt=""
-            width={96}
-            height={96}
-            className="size-24 object-contain"
-            initial={false}
-          />
-          {rich && (
-            <span
-              aria-hidden
-              className="fr-sweep pointer-events-none absolute inset-y-0 w-1/3"
-              style={{
-                background:
-                  'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
-              }}
-            />
-          )}
+    <div className="app-launch-stage" data-active={active} data-reduced={!!prefersReduced || budget === 'reduced'}>
+      <div className="app-launch-aura" aria-hidden />
+      <div className="app-launch-orbit" aria-hidden>
+        <div className="app-launch-orbit-inner" />
+        <span className="app-launch-orbit-light" />
+      </div>
+      <div className="app-launch-mark">
+        <img src={logoSrc} alt="" width={128} height={128} draggable={false} />
+        <span className="app-launch-glint" aria-hidden />
+      </div>
+      {showWordmark && (
+        <div className="app-launch-wordmark">
+          <span>Trackbliss</span>
+          <span className="app-launch-subtitle">PRODUCT PASSPORT</span>
         </div>
-
-        {showWordmark && (
-          <motion.span
-            className="absolute top-[calc(100%+5.5rem)] text-xs font-medium tracking-[0.3em] text-slate-400"
-            initial={prefersReduced ? false : { opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1, ease: 'easeOut' }}
-          >
-            TRACKBLISS
-          </motion.span>
-        )}
-      </div>
-
-      {/* Progress hairline. The biggest win for *perceived* speed: the same
-          550 ms reads as intent rather than as a hang. Purely decorative — it
-          is never wired to real progress, and the parent's fade takes it out. */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"
-        style={{ marginBottom: 'var(--safe-bottom)' }}
-      >
-        <div
-          className="fr-hairline h-full w-full"
-          style={{
-            background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4)',
-          }}
-        />
-      </div>
-    </>
+      )}
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion'
 import './i18n'
 import './index.css'
 import './styles/mobile-app.css'
+import './styles/app-splash.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
