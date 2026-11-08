@@ -23,11 +23,11 @@ export function ProductEarFields({ product, onChange }: Props) {
   const isElectronic = product.isElectronic ?? false;
 
   return (
-    <Card>
+    <Card className="[overflow-wrap:anywhere]">
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Zap className="h-4 w-4" />
-          EAR / ElektroG (Stiftung Elektro-Altgeräte-Register)
+        <CardTitle className="text-base flex items-start gap-2">
+          <Zap className="h-4 w-4 shrink-0" />
+          <span className="min-w-0">EAR / ElektroG (Stiftung Elektro-Altgeräte-Register)</span>
         </CardTitle>
         <CardDescription>
           Pflicht für Elektro- und Elektronik-Geräte: monatliche Meldung bis zum 15. an die Stiftung EAR.
@@ -94,7 +94,7 @@ export function ProductEarFields({ product, onChange }: Props) {
             {/* Battery */}
             <div className="pt-2 border-t border-border/50 space-y-3">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <div className="text-sm font-medium">Enthält Batterie / Akku</div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Pflichtangabe für BattG. Wenn ja, bitte Gewicht der Batterie pro Stück angeben.
@@ -124,7 +124,7 @@ export function ProductEarFields({ product, onChange }: Props) {
             {/* B2B Flag */}
             <div className="flex items-start justify-between gap-3 pt-2 border-t border-border/50">
               <div className="min-w-0">
-                <div className="text-sm font-medium flex items-center gap-1.5">
+                <div className="text-sm font-medium flex flex-wrap items-center gap-1.5">
                   Nur an Geschäftskunden (B2B)
                   <Badge variant="outline" className="text-[10px]">EAR-Spalte</Badge>
                 </div>
