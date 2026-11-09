@@ -188,7 +188,7 @@ export function ReturnsReportsPage() {
               ) : (
                 <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
                   <motion.div variants={gridItem}>
-                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
                       <CardContent className="pt-4 text-center">
                         <p className="text-3xl font-bold"><AnimatedCounter value={stats?.refundVolume ?? 0} prefix={'\u20AC'} decimals={2} /></p>
                         <p className="text-sm text-muted-foreground">{t('Total Refunds')}</p>
@@ -196,7 +196,7 @@ export function ReturnsReportsPage() {
                     </Card>
                   </motion.div>
                   <motion.div variants={gridItem}>
-                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
                       <CardContent className="pt-4 text-center">
                         <p className="text-3xl font-bold"><AnimatedCounter value={refundsCount} /></p>
                         <p className="text-sm text-muted-foreground">{t('Refunds Processed')}</p>
@@ -204,7 +204,7 @@ export function ReturnsReportsPage() {
                     </Card>
                   </motion.div>
                   <motion.div variants={gridItem}>
-                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+                    <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
                       <CardContent className="pt-4 text-center">
                         <p className="text-3xl font-bold"><AnimatedCounter value={avgRefund} prefix={'\u20AC'} decimals={2} /></p>
                         <p className="text-sm text-muted-foreground">{t('Average Refund')}</p>

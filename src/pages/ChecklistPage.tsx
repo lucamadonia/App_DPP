@@ -612,8 +612,8 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
                 />
               )}
             </div>
-            <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
-              <span>{t('{{completed}} of {{total}} mandatory items completed', { completed: completedMandatory.length, total: mandatoryItems.length })}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-sm text-muted-foreground">
+              <span className="min-w-0">{t('{{completed}} of {{total}} mandatory items completed', { completed: completedMandatory.length, total: mandatoryItems.length })}</span>
               {progress === 100 ? (
                 <Badge className="bg-success text-success-foreground">
                   <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -684,15 +684,15 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
                 <Card>
                   <CollapsibleTrigger className="w-full">
                     <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <CategoryIcon className="h-5 w-5 text-primary" />
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-base flex min-w-0 flex-wrap items-center gap-2 text-left">
+                          <CategoryIcon className="h-5 w-5 shrink-0 text-primary" />
                           {category}
                           <Badge variant="secondary">
                             {completedCount}/{categoryItems.length}
                           </Badge>
                         </CardTitle>
-                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200" />
+                        <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200" />
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>

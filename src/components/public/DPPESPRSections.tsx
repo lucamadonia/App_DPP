@@ -59,7 +59,7 @@ export function DPPESPRSections({
     if (!hasImporter && !hasAuthRep && !hasDppResp) return null;
 
     return (
-      <div key="economic-operators" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="economic-operators" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Building2 className="h-5 w-5 text-primary" />
@@ -162,7 +162,7 @@ export function DPPESPRSections({
     if (!isFieldVisible('substancesOfConcern') || !product.substancesOfConcern?.length) return null;
 
     return (
-      <div key="svhc" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="svhc" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-orange-500/10">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
@@ -227,7 +227,7 @@ export function DPPESPRSections({
     if (!hasRecycled && !hasEnergy && !hasDurability && !hasRepair && !hasDisassembly && !hasEOL) return null;
 
     return (
-      <div key="durability" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="durability" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-green-500/10">
             <Zap className="h-5 w-5 text-green-500" />
@@ -269,7 +269,7 @@ export function DPPESPRSections({
                   </div>
                   <div className="mt-2 h-2 bg-muted/50 rounded-full overflow-hidden">
                     <div
-                      className="h-full transition-all rounded-full"
+                      className="h-full transition-[width] rounded-full"
                       style={{
                         width: `${product.repairabilityScore}%`,
                         background: `linear-gradient(to right, ${primaryColor}, ${primaryColor}dd)`,
@@ -319,7 +319,7 @@ export function DPPESPRSections({
     if (!hasCE && !hasDoC && !hasManual && !hasReports) return null;
 
     return (
-      <div key="conformity" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="conformity" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-blue-500/10">
             <ShieldCheck className="h-5 w-5 text-blue-500" />
@@ -409,7 +409,7 @@ export function DPPESPRSections({
     if (!isFieldVisible('safetyInformation') || !product.safetyInformation) return null;
 
     return (
-      <div key="safety" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="safety" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-red-500/10">
             <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -434,7 +434,7 @@ export function DPPESPRSections({
     if (!isFieldVisible('dppRegistryId') || !product.dppRegistryId) return null;
 
     return (
-      <div key="registry" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="registry" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-indigo-500/10">
             <Award className="h-5 w-5 text-indigo-500" />

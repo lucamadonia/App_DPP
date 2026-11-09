@@ -34,7 +34,7 @@ export function LandingReturnsHub() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-[box-shadow,background-color,color] ${
                 activeTab === tab.key
                   ? 'bg-white text-slate-900 shadow-lg'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
@@ -212,7 +212,7 @@ function PortalTab({ t }: { t: (key: string) => string }) {
           { name: 'Denim Jacket (M)', sku: 'DJ-002-M', selected: false },
           { name: 'Wool Sweater (S)', sku: 'WS-003-S', selected: true },
         ].map((item) => (
-          <div key={item.sku} className={`rounded-xl border p-3 flex items-center gap-3 transition-all ${
+          <div key={item.sku} className={`rounded-xl border p-3 flex items-center gap-3 transition-[background-color,border-color] ${
             item.selected ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 bg-slate-900'
           }`}>
             <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${

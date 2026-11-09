@@ -55,7 +55,7 @@ export function WarehouseKPICard({
 
   return (
     <Card
-      className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`hover:-translate-y-0.5 hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <CardContent className="pt-4 pb-3 px-3 sm:pt-5 sm:pb-4 sm:px-4">

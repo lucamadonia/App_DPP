@@ -121,7 +121,7 @@ export function CreateCustomerDialog({ open, onOpenChange, onCreated }: CreateCu
           <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
           <div className="relative px-6 pt-6 pb-5 flex items-center gap-4">
             <div className="relative">
-              <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-background transition-all duration-300">
+              <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-background transition-colors duration-200">
                 {previewInitials}
               </div>
               <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background border-2 border-primary flex items-center justify-center">

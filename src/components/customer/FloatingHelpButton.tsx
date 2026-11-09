@@ -57,9 +57,10 @@ export function FloatingHelpButton() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+          className="fixed bottom-[calc(1.5rem+var(--safe-bottom))] right-[calc(1.5rem+var(--safe-right))] z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg hover:shadow-xl transition-[scale,box-shadow] duration-200 ease-out hover:scale-105 active:scale-95"
           style={{ backgroundColor: primaryColor }}
           title={t('Need help?')}
+          aria-label={t('Need help?')}
         >
           <MessageCircleQuestion className="h-6 w-6" />
         </button>
@@ -67,10 +68,10 @@ export function FloatingHelpButton() {
 
       {/* Slide-out panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 sm:w-96 rounded-xl shadow-2xl border overflow-hidden animate-fade-in-up" style={{ backgroundColor: branding.cardBackground }}>
+        <div className="fixed bottom-[calc(1rem+var(--safe-bottom))] right-[calc(1rem+var(--safe-right))] sm:bottom-[calc(1.5rem+var(--safe-bottom))] sm:right-[calc(1.5rem+var(--safe-right))] z-50 w-[calc(100vw-2rem-var(--safe-left)-var(--safe-right))] max-w-96 max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))] flex flex-col rounded-xl shadow-2xl border overflow-hidden animate-fade-in-up" style={{ backgroundColor: branding.cardBackground }}>
           {/* Header */}
           <div
-            className="px-4 py-3 flex items-center justify-between text-white"
+            className="shrink-0 pl-4 pr-1.5 py-1.5 flex items-center justify-between text-white"
             style={{ backgroundColor: primaryColor }}
           >
             <div className="flex items-center gap-2">
@@ -79,14 +80,15 @@ export function FloatingHelpButton() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="hover:bg-white/20 rounded p-1 transition-colors"
+              className="flex h-11 w-11 items-center justify-center hover:bg-white/20 rounded-lg transition-colors"
+              aria-label={t('Close', { ns: 'common' })}
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-3 overflow-y-auto overscroll-contain">
             {submitted ? (
               <div className="text-center py-6 space-y-2">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full mx-auto bg-green-100">

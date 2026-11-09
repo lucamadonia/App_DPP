@@ -529,7 +529,7 @@ export function DPPDesignTab() {
               <button
                 key={key}
                 onClick={() => applyPreset(key)}
-                className={`relative p-4 rounded-lg border-2 text-left transition-all hover:shadow-md ${
+                className={`relative p-4 rounded-lg border-2 text-left transition-[box-shadow,border-color] hover:shadow-md ${
                   designForm.preset === key ? 'border-primary ring-2 ring-primary/20' : 'border-muted hover:border-muted-foreground/30'
                 }`}
               >
@@ -711,7 +711,7 @@ export function DPPDesignTab() {
                     <button
                       key={style}
                       onClick={() => updateHero('style', style)}
-                      className={`p-3 rounded-lg border text-center text-sm transition-all ${
+                      className={`p-3 rounded-lg border text-center text-sm transition-[background-color,border-color] ${
                         resolved.hero.style === style
                           ? 'border-primary bg-primary/5 font-medium'
                           : 'border-muted hover:border-muted-foreground/30'
@@ -808,7 +808,7 @@ export function DPPDesignTab() {
                 <button
                   key={r}
                   onClick={() => updateCards('borderRadius', r)}
-                  className={`flex-1 p-2 flex flex-col items-center gap-1.5 rounded-lg border transition-all ${
+                  className={`flex-1 p-2 flex flex-col items-center gap-1.5 rounded-lg border transition-[background-color,border-color] ${
                     resolved.cards.borderRadius === r
                       ? 'border-primary bg-primary/5'
                       : 'border-muted hover:border-muted-foreground/30'
@@ -831,7 +831,7 @@ export function DPPDesignTab() {
                 <button
                   key={s}
                   onClick={() => updateCards('shadowDepth', s)}
-                  className={`flex-1 p-2 flex flex-col items-center gap-1.5 rounded-lg border transition-all ${
+                  className={`flex-1 p-2 flex flex-col items-center gap-1.5 rounded-lg border transition-[box-shadow,background-color,border-color] ${
                     resolved.cards.shadowDepth === s
                       ? 'border-primary bg-primary/5'
                       : 'border-muted hover:border-muted-foreground/30'
@@ -1154,7 +1154,7 @@ function TemplateSelectionCard({
                 <button
                   key={tmpl.value}
                   onClick={() => setTemplateCustomer(tmpl.value)}
-                  className={`rounded-lg border-2 text-left transition-all text-sm overflow-hidden ${
+                  className={`rounded-lg border-2 text-left transition-[box-shadow,background-color,border-color] text-sm overflow-hidden ${
                     templateCustomer === tmpl.value
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-muted hover:border-muted-foreground/30'
@@ -1181,7 +1181,7 @@ function TemplateSelectionCard({
                 <button
                   key={tmpl.value}
                   onClick={() => setTemplateCustoms(tmpl.value)}
-                  className={`rounded-lg border-2 text-left transition-all text-sm overflow-hidden ${
+                  className={`rounded-lg border-2 text-left transition-[box-shadow,background-color,border-color] text-sm overflow-hidden ${
                     templateCustoms === tmpl.value
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-muted hover:border-muted-foreground/30'

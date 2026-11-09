@@ -31,7 +31,7 @@ export function PlatformCard({ platform, connection, locked, onConnect, onSync, 
 
   return (
     <article
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-lg"
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:border-primary/40 hover:shadow-lg"
       data-status={connection?.status || 'available'}
     >
       {/* Gradient ribbon */}

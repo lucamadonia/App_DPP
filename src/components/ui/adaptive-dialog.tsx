@@ -4,6 +4,7 @@ import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useDragDismiss } from "@/lib/motion-gestures"
 import {
   Dialog,
   DialogClose,
@@ -32,15 +33,34 @@ function AdaptiveDialogContent({
   className,
   children,
   showCloseButton = true,
+  ref,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
   const isMobile = useIsMobile()
+  const closeRef = React.useRef<HTMLButtonElement>(null)
+  // Dismiss through Radix's own close path so onOpenChange fires exactly as
+  // for the X button; callers that block closing keep that control.
+  const dismiss = React.useCallback(() => closeRef.current?.click(), [])
+  const { ref: dragRef, handlers: dragHandlers } = useDragDismiss({
+    onDismiss: dismiss,
+    enabled: isMobile,
+  })
+
+  const setContentRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      dragRef.current = node
+      if (typeof ref === "function") ref(node)
+      else if (ref) ref.current = node
+    },
+    [dragRef, ref]
+  )
 
   if (!isMobile) {
     return (
       <DesktopDialogContent
+        ref={ref}
         className={className}
         showCloseButton={showCloseButton}
         {...props}
@@ -62,8 +82,20 @@ function AdaptiveDialogContent({
           "max-w-none overflow-y-auto rounded-b-none sm:max-w-none sm:rounded-b-none"
         )}
         {...props}
+        ref={setContentRef}
+        {...dragHandlers}
       >
+        {/* Grabber: visual cue and drag handle. Sits in the top padding. */}
+        <div
+          data-drag-handle
+          className="-mx-6 -mt-6 mb-[-0.5rem] flex h-6 shrink-0 items-end justify-center"
+          aria-hidden="true"
+        >
+          <div className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
+        </div>
         {children}
+        {/* Hidden programmatic close for drag-dismiss (and no X button case). */}
+        <DialogPrimitive.Close ref={closeRef} className="hidden" tabIndex={-1} aria-hidden="true" />
         {/* Guarantees clearance of the home indicator regardless of caller padding. */}
         <div className="h-[var(--safe-bottom)] shrink-0" aria-hidden="true" />
         {showCloseButton && (

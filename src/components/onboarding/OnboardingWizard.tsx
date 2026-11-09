@@ -357,7 +357,7 @@ function StepBranding({
               key={color}
               onClick={() => onChange({ ...data, primaryColor: color })}
               className={cn(
-                'h-10 w-10 rounded-lg border-2 transition-all',
+                'h-10 w-10 rounded-lg border-2 transition-[color,background-color,border-color,box-shadow,opacity,scale,translate] duration-150 ease-out',
                 data.primaryColor === color
                   ? 'border-foreground scale-110 ring-2 ring-foreground/20'
                   : 'border-transparent hover:scale-105',

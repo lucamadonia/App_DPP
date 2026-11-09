@@ -361,7 +361,7 @@ export function GoodsReceiptPage() {
                     </div>
                     <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${fullyReceived ? 'bg-green-500' : 'bg-primary'}`}
+                        className={`h-full rounded-full transition-[width] duration-500 ${fullyReceived ? 'bg-green-500' : 'bg-primary'}`}
                         style={{ width: `${Math.min(100, Math.round((alreadyReceived / batchTotal) * 100))}%` }}
                       />
                     </div>
@@ -479,7 +479,7 @@ export function GoodsReceiptPage() {
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${exceedsBatch ? 'bg-yellow-500' : afterPercent >= 100 ? 'bg-green-500' : 'bg-primary'}`}
+                      className={`h-full rounded-full transition-[width] duration-300 ${exceedsBatch ? 'bg-yellow-500' : afterPercent >= 100 ? 'bg-green-500' : 'bg-primary'}`}
                       style={{ width: `${Math.min(100, afterPercent)}%` }}
                     />
                   </div>
@@ -519,7 +519,7 @@ export function GoodsReceiptPage() {
                         </div>
                         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${
+                            className={`h-full rounded-full transition-[width] duration-300 ${
                               currentFillPercent > 100 ? 'bg-red-500' : currentFillPercent >= 80 ? 'bg-yellow-500' : 'bg-primary'
                             }`}
                             style={{ width: `${Math.min(100, currentFillPercent)}%` }}
@@ -535,7 +535,7 @@ export function GoodsReceiptPage() {
                         </div>
                         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${
+                            className={`h-full rounded-full transition-[width] duration-300 ${
                               capacityAnalysis.status === 'over_capacity' ? 'bg-red-500' :
                               capacityAnalysis.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
                             }`}
@@ -756,7 +756,7 @@ export function GoodsReceiptPage() {
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${afterPercent >= 100 ? 'bg-green-500' : 'bg-primary'}`}
+                        className={`h-full rounded-full transition-[width] duration-500 ${afterPercent >= 100 ? 'bg-green-500' : 'bg-primary'}`}
                         style={{ width: `${Math.min(100, afterPercent)}%` }}
                       />
                     </div>

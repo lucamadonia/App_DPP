@@ -366,14 +366,14 @@ export function CompliancePage() {
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                         <FileText className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium">{entry.action}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+                          <p className="font-medium break-words">{entry.action}</p>
                           <span className="text-sm text-muted-foreground">
                             {formatDate(entry.createdAt, locale)}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground mt-1 break-words [overflow-wrap:anywhere]">
                           {entry.entityType}
                           {entry.details && Object.keys(entry.details).length > 0 && (
                             <> · {JSON.stringify(entry.details).substring(0, 100)}</>

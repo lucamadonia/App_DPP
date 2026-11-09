@@ -505,7 +505,7 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
                 <div className="flex items-center gap-2">
                   <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary rounded-full transition-all"
+                      className="h-full bg-primary rounded-full transition-[width] duration-300"
                       style={{ width: `${(supportResources.repairInfo.repairabilityScore / 10) * 100}%` }}
                     />
                   </div>

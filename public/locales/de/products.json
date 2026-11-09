@@ -927,5 +927,18 @@
   "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.": "Möchten Sie „{{name}}“ wirklich löschen? Alle Chargen werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
   "Product export failed. Please try again.": "Der Produktexport ist fehlgeschlagen. Bitte versuche es erneut.",
   "Review compliance checks and documents before publishing.": "Prüfe Compliance-Analysen und Dokumente vor der Veröffentlichung.",
-  "Open compliance check": "Compliance-Prüfung öffnen"
+  "Open compliance check": "Compliance-Prüfung öffnen",
+  "Notes": "Notizen",
+  "Batch Information": "Chargeninformationen",
+  "Public DPP Links": "Öffentliche DPP-Links",
+  "Open Customer View": "Kundenansicht öffnen",
+  "Open Customs View": "Zollansicht öffnen",
+  "Delete Batch": "Charge löschen",
+  "This action cannot be undone. The product itself will not be affected.": "Diese Aktion kann nicht rückgängig gemacht werden. Das Produkt selbst bleibt unverändert.",
+  "Customer View": "Kundenansicht",
+  "Customs View": "Zollansicht",
+  "Override": "Überschrieben",
+  "Danger Zone": "Gefahrenbereich",
+  "Delete this batch": "Diese Charge löschen",
+  "Links to the public Digital Product Passport for this batch": "Links zum öffentlichen Digitalen Produktpass dieser Charge"
 }

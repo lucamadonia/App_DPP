@@ -303,7 +303,7 @@ export function PortalDesignTab({ settings, setSettings, saving, onSave }: Porta
                     key={style}
                     type="button"
                     onClick={() => updateBranding({ loginStyle: style })}
-                    className={`relative p-3 border-2 rounded-lg text-left transition-all ${
+                    className={`relative p-3 border-2 rounded-lg text-left transition-[border-color,background-color,box-shadow] duration-150 ${
                       portal.branding.loginStyle === style
                         ? 'border-primary bg-primary/5'
                         : 'border-muted hover:border-muted-foreground/30'

@@ -188,7 +188,7 @@ export function PaywallModal({
               </div>
               <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-amber-500 transition-all"
+                  className="h-full rounded-full bg-amber-500 transition-[width,background-color]"
                   style={{ width: '100%' }}
                 />
               </div>

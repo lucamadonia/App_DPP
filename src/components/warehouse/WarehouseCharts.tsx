@@ -90,7 +90,7 @@ export function StockMovementChart({ data }: { data: StockMovementData[] }) {
                 cy={dot.y}
                 r={hovered === i ? 4 : 0}
                 fill="var(--primary)"
-                className="transition-all duration-150"
+                className="transition-[r] duration-150"
               />
             ))}
             {dots.map((dot, i) => (

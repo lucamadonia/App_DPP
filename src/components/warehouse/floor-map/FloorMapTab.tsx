@@ -709,7 +709,7 @@ export function FloorMapTab({ location, stock, loading, onSaveZones, onStockChan
           animation: 'fade-in 0.2s ease',
         }}
       >
-        <div className="p-2 sm:p-4 h-full overflow-hidden">
+        <div className="h-full overflow-hidden p-2 sm:p-4 pt-[calc(var(--safe-top)+0.5rem)] pb-[calc(var(--safe-bottom)+0.5rem)]">
           {content}
         </div>
       </div>

@@ -203,12 +203,12 @@ export function TransparencyConfigPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <Globe className="h-5 w-5 text-primary" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight">Transparency Page</h1>
             <p className="text-sm text-muted-foreground">
               Configure the public product transparency page
@@ -278,8 +278,8 @@ export function TransparencyConfigPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <Label>Require Order Number</Label>
               <p className="text-xs text-muted-foreground">
                 {accessControl.enabled
@@ -443,7 +443,7 @@ export function TransparencyConfigPage() {
           {/* Theme Presets */}
           <div className="space-y-2">
             <Label>Theme Preset</Label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+            <div className="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-7 gap-2">
               {(Object.entries(TRANSPARENCY_THEME_PRESETS) as [TransparencyThemePreset, typeof TRANSPARENCY_THEME_PRESETS[TransparencyThemePreset]][]).map(([key, preset]) => (
                 <button
                   key={key}
@@ -509,7 +509,7 @@ export function TransparencyConfigPage() {
           </div>
 
           {/* Colors */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="design-primary">Primary Color</Label>
               <div className="flex flex-wrap gap-2">
@@ -648,7 +648,7 @@ export function TransparencyConfigPage() {
           )}
 
           {/* Card Style */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Card Corners</Label>
               <div className="flex flex-wrap gap-2">
@@ -693,8 +693,8 @@ export function TransparencyConfigPage() {
           </div>
 
           {/* Show Powered By */}
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <Label>Show &quot;Powered by Trackbliss&quot;</Label>
               <p className="text-xs text-muted-foreground">Display branding in the footer</p>
             </div>

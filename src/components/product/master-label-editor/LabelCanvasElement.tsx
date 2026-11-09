@@ -526,7 +526,7 @@ export function LabelCanvasElement({
 
   return (
     <div
-      className={`relative group transition-all duration-100 ${
+      className={`relative group transition duration-100 ${
         isDragging
           ? 'opacity-40'
           : isSelected

@@ -66,7 +66,7 @@ export function QuantityStepper({
           {label}
         </div>
       )}
-      <div className={`flex items-center gap-0 rounded-xl border ${styles.ring} focus-within:ring-2 transition-all`}>
+      <div className={`flex items-center gap-0 rounded-xl border ${styles.ring} focus-within:ring-2 transition-[color,background-color,border-color,box-shadow,opacity,transform]`}>
         <button
           type="button"
           onClick={decrement}

@@ -527,7 +527,7 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
               {hasElectronics && (
                 <div className="space-y-2 pl-6">
                   <Label>{t('Operating Voltage')}</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {[
                       { value: 'none', label: 'None / Battery' },
                       { value: 'low', label: 'Low Voltage (<50V AC)' },
@@ -537,9 +537,10 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
                         key={option.value}
                         variant={voltage === option.value ? 'default' : 'outline'}
                         size="sm"
+                        className="h-auto min-h-8 whitespace-normal text-left"
                         onClick={() => setVoltage(option.value as 'low' | 'high' | 'none')}
                       >
-                        {option.label}
+                        {t(option.label)}
                       </Button>
                     ))}
                   </div>
@@ -559,7 +560,7 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
               {hasBattery && (
                 <div className="space-y-2 pl-6">
                   <Label>{t('Battery Type')}</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {[
                       { value: 'removable', label: 'Removable' },
                       { value: 'integrated', label: 'Built-in' },
@@ -569,9 +570,10 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
                         key={option.value}
                         variant={batteryType === option.value ? 'default' : 'outline'}
                         size="sm"
+                        className="h-auto min-h-8 whitespace-normal text-left"
                         onClick={() => setBatteryType(option.value as 'integrated' | 'removable' | 'external')}
                       >
-                        {option.label}
+                        {t(option.label)}
                       </Button>
                     ))}
                   </div>
@@ -667,7 +669,7 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
                             <div
                               key={pm.id}
                               onClick={() => togglePackagingMaterial(pm.id)}
-                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                              className={`p-3 rounded-lg border cursor-pointer transition ${
                                 selectedPackagingMaterials.includes(pm.id)
                                   ? 'border-primary bg-primary/10 ring-1 ring-primary'
                                   : 'hover:bg-muted/50 hover:border-muted-foreground/30'
@@ -960,7 +962,7 @@ export function RequirementsCalculatorPage({ aiEnabled }: RequirementsCalculator
                           )}
 
                           {req.links && req.links.length > 0 && (
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               {req.links.map(link => (
                                 <Button key={link.url} variant="outline" size="sm" asChild>
                                   <a href={link.url} target="_blank" rel="noopener noreferrer">

@@ -2099,5 +2099,8 @@
   "Customer not found": "Kunde nicht gefunden",
   "Please try loading the customer again.": "Bitte versuche erneut, den Kunden zu laden.",
   "This customer is no longer available.": "Dieser Kunde ist nicht mehr verfügbar.",
-  "Back to customers": "Zur Kundenübersicht"
+  "Back to customers": "Zur Kundenübersicht",
+  "Pick a Trackbliss product for each variant, then save below.": "Wähle für jede Variante ein Trackbliss-Produkt und speichere unten.",
+  "Save {{count}} mappings_one": "{{count}} Zuordnung speichern",
+  "Save {{count}} mappings_other": "{{count}} Zuordnungen speichern"
 }

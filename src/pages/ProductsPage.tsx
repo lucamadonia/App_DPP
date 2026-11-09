@@ -124,7 +124,7 @@ function KPICard({
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200',
+        'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition duration-200',
         'hover:shadow-sm cursor-pointer',
         active
           ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
@@ -533,7 +533,12 @@ export function ProductsPage() {
                 <Card className="overflow-hidden transition-colors hover:bg-muted/30">
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      <Link to={`/products/${product.id}`} className="shrink-0">
+                      <Link
+                        to={`/products/${product.id}`}
+                        className="-m-1 flex size-11 shrink-0 items-center justify-center"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      >
                         <ProductThumb src={product.imageUrl} name={product.name} />
                       </Link>
                       <Link
@@ -578,7 +583,8 @@ export function ProductsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 shrink-0 cursor-pointer"
+                            className="-mr-1.5 -mt-1 size-11 shrink-0 cursor-pointer"
+                            aria-label={tCommon('Actions')}
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -713,7 +719,8 @@ export function ProductsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity cursor-pointer"
+                                aria-label={tCommon('Actions')}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>

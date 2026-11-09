@@ -532,7 +532,7 @@ export function ReturnDetailPage() {
           <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
           <div className="flex-1 space-y-2">
             <div className="h-6 bg-muted rounded w-48 animate-pulse" />
-            <div className="h-4 bg-muted rounded w-72 animate-pulse" />
+            <div className="h-4 bg-muted rounded w-full max-w-72 animate-pulse" />
           </div>
         </div>
         <Card>
@@ -607,11 +607,11 @@ export function ReturnDetailPage() {
       </Card>
 
       {/* Quick Actions Bar */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Label className="text-sm text-muted-foreground whitespace-nowrap">{t('Priority')}:</Label>
+      <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
+        <div className="flex w-full sm:w-auto items-center gap-2">
+          <Label className="w-24 sm:w-auto shrink-0 text-sm text-muted-foreground whitespace-nowrap">{t('Priority')}:</Label>
           <Select value={returnData.priority} onValueChange={(v) => handlePriorityChange(v as ReturnPriority)} disabled={actionLoading}>
-            <SelectTrigger className="w-[130px] h-8 text-sm">
+            <SelectTrigger className="flex-1 min-w-0 sm:flex-none sm:w-[130px] h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -621,10 +621,10 @@ export function ReturnDetailPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-sm text-muted-foreground whitespace-nowrap">{t('Assigned to')}:</Label>
+        <div className="flex w-full sm:w-auto items-center gap-2">
+          <Label className="w-24 sm:w-auto shrink-0 text-sm text-muted-foreground whitespace-nowrap truncate">{t('Assigned to')}:</Label>
           <Select value={returnData.assignedTo || '__unassigned'} onValueChange={handleAssigneeChange} disabled={actionLoading}>
-            <SelectTrigger className="w-[180px] h-8 text-sm">
+            <SelectTrigger className="flex-1 min-w-0 sm:flex-none sm:w-[180px] h-8 text-sm">
               <SelectValue placeholder={t('Unassigned')} />
             </SelectTrigger>
             <SelectContent>
@@ -655,7 +655,7 @@ export function ReturnDetailPage() {
                   onClick={() => !isDisabled && setActiveTab(stage.id)}
                   disabled={isDisabled}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center',
+                    'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-[color,background-color,box-shadow] duration-150 whitespace-nowrap flex-1 justify-center',
                     activeTab === stage.id
                       ? 'bg-background shadow-sm text-foreground ring-1 ring-border'
                       : isCompleted
@@ -1466,11 +1466,11 @@ function RefundTab({ returnData, activeStageIndex, actionLoading, refundAmount, 
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-end gap-3 flex-wrap">
-              <div className="space-y-1 flex-1 max-w-xs">
+              <div className="space-y-1 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
                 <label className="text-xs text-muted-foreground">{t('Refund Amount')} (€)</label>
                 <input type="number" step="0.01" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={refundAmount} onChange={(e) => onRefundAmountChange(e.target.value)} placeholder="0.00" />
               </div>
-              <div className="space-y-1 w-[200px]">
+              <div className="space-y-1 w-full sm:w-[200px]">
                 <label className="text-xs text-muted-foreground">{t('Refund Method')}</label>
                 <Select value={refundMethod} onValueChange={onRefundMethodChange}>
                   <SelectTrigger className="h-9">

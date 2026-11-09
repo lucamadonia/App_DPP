@@ -99,7 +99,7 @@ function EditableField({ label, value, editing, editValue, onChange }: {
       {editing ? (
         <Input value={editValue} onChange={(e) => onChange(e.target.value)} className="sm:max-w-[200px] h-8 text-sm" />
       ) : (
-        <span className="text-sm sm:text-right">{value || '—'}</span>
+        <span className="text-sm sm:text-right [overflow-wrap:anywhere]">{value || '—'}</span>
       )}
     </div>
   );
@@ -921,7 +921,7 @@ export function ShipmentDetailPage() {
                     value={editFields.carrier || ''}
                     onValueChange={(v) => setEditFields(f => ({ ...f, carrier: v }))}
                   >
-                    <SelectTrigger className="max-w-[200px] h-8 text-sm">
+                    <SelectTrigger className="min-w-0 flex-1 max-w-[200px] h-8 text-sm">
                       <SelectValue placeholder={t('Spediteur wählen')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -937,10 +937,10 @@ export function ShipmentDetailPage() {
               <div className="flex justify-between items-center gap-2">
                 <span className="text-muted-foreground text-sm shrink-0">{t('Tracking Number')}</span>
                 {editingShipping ? (
-                  <Input value={editFields.trackingNumber || ''} onChange={(e) => setEditFields(f => ({ ...f, trackingNumber: e.target.value }))} className="max-w-[200px] h-8 text-sm" />
+                  <Input value={editFields.trackingNumber || ''} onChange={(e) => setEditFields(f => ({ ...f, trackingNumber: e.target.value }))} className="min-w-0 flex-1 max-w-[200px] h-8 text-sm" />
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <span className="font-mono text-sm">{shipment.trackingNumber || '—'}</span>
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span className="font-mono text-sm break-all">{shipment.trackingNumber || '—'}</span>
                     {shipment.trackingNumber && (
                       <>
                         <Button
@@ -1398,7 +1398,7 @@ export function ShipmentDetailPage() {
 
       {/* Action Bar */}
       {!isTerminal && (
-        <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t -mx-4 px-3 py-2 sm:-mx-6 sm:px-6 sm:py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="sticky bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))] md:bottom-0 z-20 bg-background/95 backdrop-blur border-t -mx-4 px-3 py-2 sm:-mx-6 sm:px-6 sm:py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
           <div className="flex gap-2">
             {prevStatus && currentIdx > 0 && (
               <Button variant="outline" size="sm" onClick={() => handleStatusChange(prevStatus)} disabled={statusUpdating}>

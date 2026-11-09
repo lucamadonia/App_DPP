@@ -131,7 +131,7 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
 
                 {/* Overlay controls */}
                 {!readOnly && (
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100 pointer-coarse:bg-transparent pointer-coarse:items-end pointer-coarse:justify-end pointer-coarse:p-1.5 transition-opacity flex items-center justify-center gap-2">
                     <Button
                       size="icon"
                       variant="secondary"

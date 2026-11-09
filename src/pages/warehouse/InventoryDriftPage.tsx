@@ -37,7 +37,7 @@ function StatCard({ label, value, icon: Icon, color, bg, loading }: {
 }) {
   const animated = useAnimatedNumber(loading ? 0 : value);
   return (
-    <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 h-full">
+    <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 hover:-translate-y-0.5 h-full">
       <CardContent className="pt-4 sm:pt-5 pb-3 sm:pb-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`rounded-lg p-2 sm:p-2.5 ${bg}`}>

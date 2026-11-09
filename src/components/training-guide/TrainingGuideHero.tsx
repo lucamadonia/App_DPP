@@ -20,9 +20,9 @@ export function TrainingGuideHero({ completedCount, totalCount, percentage }: Tr
       {/* Gradient mesh bg */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-violet-50/50 to-emerald-50/30" />
-        <div className="absolute top-[-30%] left-[-10%] h-[400px] w-[400px] rounded-full bg-blue-400/15 blur-3xl animate-landing-gradient-mesh" />
-        <div className="absolute top-[10%] right-[-10%] h-[350px] w-[350px] rounded-full bg-violet-400/10 blur-3xl animate-landing-gradient-mesh [animation-delay:3s]" />
-        <div className="absolute bottom-[-20%] left-[40%] h-[300px] w-[300px] rounded-full bg-emerald-400/10 blur-3xl animate-landing-gradient-mesh [animation-delay:5s]" />
+        <div className="absolute top-[-30%] left-[-10%] h-64 w-64 sm:h-[400px] sm:w-[400px] rounded-full bg-blue-400/15 blur-3xl animate-landing-gradient-mesh" />
+        <div className="absolute top-[10%] right-[-10%] h-56 w-56 sm:h-[350px] sm:w-[350px] rounded-full bg-violet-400/10 blur-3xl animate-landing-gradient-mesh [animation-delay:3s]" />
+        <div className="absolute bottom-[-20%] left-[40%] h-48 w-48 sm:h-[300px] sm:w-[300px] rounded-full bg-emerald-400/10 blur-3xl animate-landing-gradient-mesh [animation-delay:5s]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(226,232,240,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(226,232,240,0.2)_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
 
@@ -62,7 +62,7 @@ export function TrainingGuideHero({ completedCount, totalCount, percentage }: Tr
                     strokeDasharray={circumference}
                     strokeDashoffset={offset}
                     transform="rotate(-90 46 46)"
-                    className="transition-all duration-1000 ease-out"
+                    className="transition-[stroke-dashoffset] duration-500 ease-out"
                   />
                   <defs>
                     <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">

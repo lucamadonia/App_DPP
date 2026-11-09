@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { syncStatusBar } from '@/lib/native-init';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -11,6 +12,8 @@ function getSystemTheme(): 'light' | 'dark' {
 function applyTheme(theme: Theme) {
   const resolved = theme === 'system' ? getSystemTheme() : theme;
   document.documentElement.classList.toggle('dark', resolved === 'dark');
+  // Status bar text must contrast with the page behind it (no-op on web).
+  void syncStatusBar(resolved);
 }
 
 export function useTheme() {

@@ -100,7 +100,7 @@ export function StarRating({
               }
             }}
             className={cn(
-              'relative rounded-full p-1 transition-all duration-200',
+              'relative rounded-full p-1 transition-[color,background-color,border-color,box-shadow,opacity,scale,translate] duration-200 ease-out',
               'hover:scale-110 active:scale-95',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
               isSelected && 'animate-in zoom-in-95',

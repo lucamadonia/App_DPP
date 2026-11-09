@@ -81,7 +81,7 @@ export function PhotoUploadStep({ photos, onPhotosChange }: PhotoUploadStepProps
 
       {/* Drop zone */}
       <div
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
+        className={`border-2 border-dashed rounded-xl p-8 text-center transition-[border-color,background-color] duration-150 cursor-pointer ${
           isDragging
             ? 'border-primary bg-primary/5 scale-[1.02]'
             : photos.length >= MAX_PHOTOS

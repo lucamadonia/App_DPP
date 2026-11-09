@@ -834,7 +834,7 @@ export function ProductFormPage() {
             {steps.map((step, index) => (
               <div
                 key={step.id}
-                className={`flex items-center gap-2 ${
+                className={`flex shrink-0 items-center gap-2 ${
                   index <= currentStep ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
@@ -857,6 +857,9 @@ export function ProductFormPage() {
               </div>
             ))}
           </div>
+          {steps[currentStep] && (
+            <p className="sm:hidden mb-2 text-sm font-medium text-primary">{t(steps[currentStep].title)}</p>
+          )}
           <Progress value={progress} className="h-2" />
         </CardContent>
       </Card>
@@ -1299,12 +1302,12 @@ export function ProductFormPage() {
               {/* Product Type Toggle */}
               <div className="md:col-span-2 space-y-2">
                 <label className="text-sm font-medium">{t('Product Type')}</label>
-                <div className="flex gap-3">
+                <div className="flex flex-col min-[400px]:flex-row gap-3">
                   <button
                     type="button"
                     onClick={() => setProductType('single')}
                     className={cn(
-                      'flex-1 p-3 rounded-lg border-2 text-left transition-all',
+                      'flex-1 p-3 rounded-lg border-2 text-left transition',
                       productType === 'single'
                         ? 'border-primary bg-primary/5'
                         : 'border-muted hover:border-muted-foreground/25'
@@ -1319,7 +1322,7 @@ export function ProductFormPage() {
                     type="button"
                     onClick={() => setProductType('set')}
                     className={cn(
-                      'flex-1 p-3 rounded-lg border-2 text-left transition-all',
+                      'flex-1 p-3 rounded-lg border-2 text-left transition',
                       productType === 'set'
                         ? 'border-primary bg-primary/5'
                         : 'border-muted hover:border-muted-foreground/25'
@@ -1457,7 +1460,7 @@ export function ProductFormPage() {
                         type="button"
                         onClick={() => setAggregationOverrides(prev => ({ ...prev, [field]: !prev[field] }))}
                         className={cn(
-                          'flex items-center gap-2 p-2 rounded-md border text-xs transition-all',
+                          'flex items-center gap-2 p-2 rounded-md border text-xs transition',
                           aggregationOverrides[field]
                             ? 'border-amber-300 bg-amber-50 text-amber-800'
                             : 'border-muted bg-background text-muted-foreground'
@@ -1959,7 +1962,7 @@ export function ProductFormPage() {
               {/* Section 1: Identification & Economic Operators */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
+                  <Building2 className="h-5 w-5 shrink-0 text-primary" />
                   <h3 className="text-lg font-semibold">{t('Identification & Economic Operators')}</h3>
                 </div>
 
@@ -2769,11 +2772,11 @@ export function ProductFormPage() {
                 <div className="space-y-2">
                   <h4 className="font-medium">{t('Uploaded Documents')}</h4>
                   {uploadedDocs.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">{doc.name}</p>
+                    <div key={index} className="flex items-center justify-between gap-2 p-3 border rounded-lg">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium break-all">{doc.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {doc.size} · {doc.category} · {doc.visibility}
                           </p>

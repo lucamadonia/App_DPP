@@ -391,11 +391,11 @@ export function MasterLabelTab({ product, batches, productSuppliers }: MasterLab
         <div className="flex min-w-0 flex-col items-center gap-3">
           <p className="text-sm font-medium text-muted-foreground">{t('ml.preview')}</p>
           {isAssembling ? (
-            <div className="w-[280px] h-[396px] bg-muted/50 rounded-lg border flex items-center justify-center">
+            <div className="w-full max-w-[280px] aspect-[280/396] bg-muted/50 rounded-lg border flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <MasterLabelPreview data={labelData} />
+            <div className="max-w-full overflow-x-auto"><MasterLabelPreview data={labelData} /></div>
           )}
           <p className="max-w-full text-center text-xs text-muted-foreground">{t('ml.previewNote')}</p>
         </div>

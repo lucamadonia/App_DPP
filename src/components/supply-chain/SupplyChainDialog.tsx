@@ -148,7 +148,7 @@ export function SupplyChainDialog({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>{t('Step')}</Label>
                 <Input
@@ -194,7 +194,7 @@ export function SupplyChainDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>{t('Date')}</Label>
                 <Input
@@ -252,7 +252,7 @@ export function SupplyChainDialog({
                       key={key}
                       type="button"
                       onClick={() => updateForm('process_type', isSelected ? undefined : key)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-xs ${
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition text-xs ${
                         isSelected
                           ? `${classes.bg} ${classes.text} ${classes.border}`
                           : 'border-transparent bg-muted/30 hover:bg-muted/50'
@@ -266,7 +266,7 @@ export function SupplyChainDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>{t('Status')}</Label>
                 <Select
@@ -298,7 +298,7 @@ export function SupplyChainDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>{t('Risk Level')}</Label>
                 <Select
@@ -351,7 +351,7 @@ export function SupplyChainDialog({
                       key={key}
                       type="button"
                       onClick={() => updateForm('transport_mode', isSelected ? undefined : key)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-xs ${
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition text-xs ${
                         isSelected
                           ? 'bg-primary/10 text-primary border-primary'
                           : 'border-transparent bg-muted/30 hover:bg-muted/50'
@@ -365,7 +365,7 @@ export function SupplyChainDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>{t('Cost (optional)')}</Label>
                 <Input

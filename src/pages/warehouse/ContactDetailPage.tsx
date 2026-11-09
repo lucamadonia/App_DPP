@@ -290,7 +290,7 @@ export function ContactDetailPage() {
 
       {/* ── KPI Row ───────────────────────────────────────────────────── */}
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-        <Card className="hover:shadow-md transition-all duration-200">
+        <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
           <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
             <div className="rounded-lg bg-blue-100 p-2 sm:p-2.5 dark:bg-blue-900/30">
               <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
@@ -301,7 +301,7 @@ export function ContactDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
+        <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
           <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
             <div className="rounded-lg bg-green-100 p-2 sm:p-2.5 dark:bg-green-900/30">
               <Package className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -312,7 +312,7 @@ export function ContactDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
+        <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
           <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
             <div className="rounded-lg bg-amber-100 p-2 sm:p-2.5 dark:bg-amber-900/30">
               <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />

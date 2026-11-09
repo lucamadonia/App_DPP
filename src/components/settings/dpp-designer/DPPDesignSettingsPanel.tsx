@@ -655,7 +655,7 @@ export function DPPDesignSettingsPanel({
                   <button
                     key={key}
                     onClick={() => applyPreset(key)}
-                    className={`p-2 rounded-lg border text-left transition-all ${
+                    className={`p-2 rounded-lg border text-left transition ${
                       designForm.preset === key ? 'border-primary ring-1 ring-primary/20' : 'border-muted hover:border-muted-foreground/30'
                     }`}
                   >
@@ -664,7 +664,7 @@ export function DPPDesignSettingsPanel({
                         <div key={i} className="w-4 h-4 rounded-full" style={{ backgroundColor: c }} />
                       ))}
                     </div>
-                    <p className="text-xs font-medium">{t(preset.name)}</p>
+                    <p className="text-xs font-medium truncate">{t(preset.name)}</p>
                   </button>
                 ))}
               </div>
@@ -754,7 +754,7 @@ export function DPPDesignSettingsPanel({
               <div className="flex gap-1.5">
                 {(['none', 'small', 'medium', 'large', 'full'] as DPPBorderRadius[]).map(r => (
                   <button key={r} onClick={() => updateCards('borderRadius', r)}
-                    className={`flex-1 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition-all ${
+                    className={`flex-1 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition ${
                       resolved.cards.borderRadius === r ? 'border-primary bg-primary/5' : 'border-muted'
                     }`}>
                     <div className="w-6 h-6 bg-muted border" style={{ borderRadius: BORDER_RADIUS_MAP[r] }} />
@@ -769,7 +769,7 @@ export function DPPDesignSettingsPanel({
               <div className="flex gap-1.5">
                 {(['none', 'subtle', 'medium', 'strong'] as DPPShadowDepth[]).map(s => (
                   <button key={s} onClick={() => updateCards('shadowDepth', s)}
-                    className={`flex-1 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition-all ${
+                    className={`flex-1 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition ${
                       resolved.cards.shadowDepth === s ? 'border-primary bg-primary/5' : 'border-muted'
                     }`}>
                     <div className="w-6 h-6 bg-white rounded-md" style={{ boxShadow: SHADOW_MAP[s] }} />

@@ -119,13 +119,13 @@ export function SupplyChainProductCard({
 
   return (
     <div
-      className={`rounded-xl border border-l-4 ${borderColor} bg-card overflow-hidden transition-all duration-300`}
+      className={`rounded-xl border border-l-4 ${borderColor} bg-card overflow-hidden transition duration-300`}
     >
       {/* Header - always visible */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center gap-3 p-3 sm:gap-4 sm:p-4 text-left hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-2 flex-shrink-0">
           {isExpanded ? (
@@ -137,8 +137,8 @@ export function SupplyChainProductCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold truncate">{productName}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+            <span className="font-semibold truncate min-w-0 max-w-full">{productName}</span>
             <Badge variant="secondary" className="text-xs flex-shrink-0">
               {entries.length} {t('Supply Chain Steps')}
             </Badge>
@@ -154,11 +154,11 @@ export function SupplyChainProductCard({
 
       {/* Expanded content */}
       <div
-        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`transition-[max-height,opacity] duration-300 ease-in-out overflow-hidden ${
           isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="border-t px-4 py-2">
+        <div className="border-t px-3 sm:px-4 py-2">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -192,7 +192,7 @@ export function SupplyChainProductCard({
                           <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                           <span className="truncate max-w-[120px]">{entry.location}</span>
                           {supplierName && (
-                            <span className="text-xs text-muted-foreground ml-1">
+                            <span className="text-xs text-muted-foreground ml-1 whitespace-nowrap">
                               ({supplierName})
                             </span>
                           )}

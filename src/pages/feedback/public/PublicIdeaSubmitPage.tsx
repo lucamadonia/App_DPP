@@ -202,7 +202,7 @@ export function PublicIdeaSubmitPage() {
                       key={c.id}
                       type="button"
                       onClick={() => setCategory(c.id)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-[border-color,background-color,color] duration-150 ${
                         selected
                           ? 'border-2 bg-card shadow-md scale-105'
                           : 'border bg-card/50 hover:bg-card'
@@ -351,7 +351,7 @@ function IdeaSuccess({
   const firstName = (partnerName || '').split(' ')[0];
   return (
     <div className="max-w-md mx-auto px-4 pt-16 text-center">
-      <div className="h-24 w-24 mx-auto rounded-full bg-emerald-500 flex items-center justify-center shadow-lg animate-in zoom-in-95 duration-500">
+      <div className="h-24 w-24 mx-auto rounded-full bg-emerald-500 flex items-center justify-center shadow-lg animate-in zoom-in-95 duration-300">
         <Check className="h-12 w-12 text-white" strokeWidth={3} />
       </div>
       <h1 className="mt-6 text-2xl sm:text-3xl font-bold">

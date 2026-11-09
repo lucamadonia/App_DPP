@@ -156,7 +156,7 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
         {/* Header */}
         <div className="relative overflow-hidden border-b">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
-          <div className="relative px-6 pt-6 pb-4">
+          <div className="relative pl-4 pr-12 sm:pl-6 pt-6 pb-4">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md">
                 <Mail className="h-5 w-5" />
@@ -180,10 +180,10 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto overscroll-contain">
           {/* Template picker */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex-1 min-w-[220px]">
+            <div className="min-w-0 basis-full sm:basis-auto sm:flex-1 sm:min-w-[220px]">
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5 block">
                 Vorlage
               </Label>
@@ -197,7 +197,7 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
               </Select>
             </div>
 
-            <div className="flex rounded-md border bg-muted/40 p-0.5 self-end">
+            <div className="flex rounded-md border bg-muted/40 p-0.5 self-end ml-auto sm:ml-0">
               <button
                 type="button"
                 onClick={() => setTab('edit')}
@@ -255,11 +255,11 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
             <div className="border rounded-lg overflow-hidden bg-background">
               <div className="border-b bg-muted/50 px-4 py-2 text-xs font-mono text-muted-foreground space-y-0.5">
                 <div><span className="font-semibold text-foreground">Von:</span> noreply@trackbliss.eu</div>
-                <div><span className="font-semibold text-foreground">An:</span> {customer.email}</div>
-                <div><span className="font-semibold text-foreground">Betreff:</span> {subject || <em>kein Betreff</em>}</div>
+                <div className="break-all"><span className="font-semibold text-foreground">An:</span> {customer.email}</div>
+                <div className="break-words"><span className="font-semibold text-foreground">Betreff:</span> {subject || <em>kein Betreff</em>}</div>
               </div>
               <div
-                className="p-6 text-sm leading-relaxed prose prose-sm max-w-none"
+                className="p-4 sm:p-6 text-sm leading-relaxed prose prose-sm max-w-none break-words"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) || '<em class="text-muted-foreground">Noch kein Inhalt</em>' }}
               />
             </div>
@@ -267,7 +267,7 @@ export function SendEmailDialog({ open, onOpenChange, customer, onSent }: SendEm
         </div>
 
         {/* Footer */}
-        <div className="border-t bg-muted/30 px-6 py-3 flex items-center justify-between gap-2">
+        <div className="border-t bg-muted/30 px-4 sm:px-6 py-3 pb-[max(0.75rem,var(--safe-bottom))] sm:pb-3 flex items-center justify-between gap-2">
           <p className="text-[11px] text-muted-foreground hidden sm:block">
             Versand erfolgt über deinen SMTP (noreply@trackbliss.eu)
           </p>

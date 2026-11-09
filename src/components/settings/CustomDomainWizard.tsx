@@ -224,12 +224,12 @@ export function CustomDomainWizard({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
               {DNS_PROVIDERS.map((provider) => (
                 <button
                   key={provider.id}
                   onClick={() => { setSelectedProvider(provider); setStep('add-cname'); }}
-                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:bg-muted/50 ${
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-[background-color,border-color] text-left hover:bg-muted/50 ${
                     selectedProvider?.id === provider.id
                       ? 'border-primary bg-primary/5'
                       : 'border-border'

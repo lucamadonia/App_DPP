@@ -29,7 +29,7 @@ export function BulkModeControls({
           type="button"
           onClick={onToggle}
           className={`
-            flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all
+            flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform]
             ${bulkMode
               ? `bg-${accentColor}-500/20 text-${accentColor}-400 border border-${accentColor}-500/40 shadow-lg shadow-${accentColor}-500/10`
               : 'bg-white/5 text-slate-400 hover:text-slate-300 hover:bg-white/10 border border-white/5'

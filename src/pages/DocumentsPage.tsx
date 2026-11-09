@@ -560,16 +560,16 @@ export function DocumentsPage() {
       <div className="space-y-4">
 
       {/* Main layout: Sidebar + Content */}
-      <div className="flex gap-0 rounded-lg border bg-card overflow-hidden" style={{ minHeight: '600px' }}>
+      <div className="flex flex-col md:flex-row gap-0 rounded-lg border bg-card overflow-hidden md:min-h-[600px]">
         {/* Sidebar — desktop: inline, mobile: sheet */}
         {isMobile ? (
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="m-2 h-8 w-8 shrink-0 md:hidden">
+              <Button variant="ghost" size="icon" className="m-2 mb-0 h-8 w-8 shrink-0 self-start md:hidden">
                 <PanelLeftOpen className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[260px] p-0">
+            <SheetContent side="left" className="w-[min(85vw,300px)] p-0">
               {sidebarContent}
             </SheetContent>
           </Sheet>
@@ -582,7 +582,7 @@ export function DocumentsPage() {
         )}
 
         {/* Content area */}
-        <div className="flex-1 min-w-0 p-4 space-y-4">
+        <div className="flex-1 min-w-0 p-3 sm:p-4 space-y-4">
           {/* Sidebar toggle (desktop) + context breadcrumb / Mobile context label */}
           {!isMobile ? (
             <div className="flex items-center gap-2">
@@ -909,7 +909,7 @@ export function DocumentsPage() {
                 onChange={handleFileSelect}
               />
               {selectedFile && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground break-all">
                   {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                 </p>
               )}
@@ -918,7 +918,7 @@ export function DocumentsPage() {
             {/* AI Classification Button */}
             {selectedFile && (
               <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-950/40 dark:to-violet-950/40 p-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-start gap-2 min-w-0">
                     <Sparkles className="size-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
                     <div className="min-w-0">

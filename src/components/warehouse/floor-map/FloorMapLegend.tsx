@@ -45,7 +45,7 @@ export function FloorMapLegend({
         return (
           <button
             key={type}
-            className="flex items-center gap-1.5 shrink-0 rounded-md px-1.5 py-0.5 transition-all hover:bg-muted/50"
+            className="flex items-center gap-1.5 shrink-0 rounded-md px-1.5 py-0.5 transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:bg-muted/50"
             style={{
               outline: isActive ? `2px solid ${colors.stroke}` : 'none',
               outlineOffset: '1px',

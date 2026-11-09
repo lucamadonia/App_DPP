@@ -128,7 +128,7 @@ function GovernmentConsumerView({ data, product, tenantId }: ConsumerViewProps) 
                     <td className="py-2">{m.name}</td>
                     <td className="py-2 text-right">{m.percentage}%</td>
                     <td className="py-2 text-center">{m.recyclable ? t('Yes') : t('No')}</td>
-                    {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || 'â€”'}</td>}
+                    {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '—'}</td>}
                   </tr>
                 ))}
               </tbody>

@@ -379,7 +379,7 @@ export function LandingOldVsNew() {
           </p>
           <button
             onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 hover:shadow-violet-600/40"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-[translate,box-shadow,background-color,color] hover:-translate-y-0.5 hover:shadow-violet-600/40"
           >
             {t('oldVsNew.cta')}
             <ArrowRight className="h-4 w-4" />

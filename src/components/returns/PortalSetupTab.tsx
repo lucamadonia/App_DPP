@@ -310,7 +310,7 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
               <p className="text-2xl font-bold">{settings.usage.returnsThisMonth} <span className="text-sm font-normal text-muted-foreground">{t('of {{max}} included', { max: settings.maxReturnsPerMonth })}</span></p>
               <div className="h-2 bg-muted-foreground/10 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${usageColor} rounded-full transition-all duration-700`}
+                  className={`h-full ${usageColor} rounded-full transition-[width] duration-300 ease-out`}
                   style={{ width: `${usagePercent}%` }}
                 />
               </div>

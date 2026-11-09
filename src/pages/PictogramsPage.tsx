@@ -540,7 +540,7 @@ export function PictogramsPage() {
         {!isLoading && pictograms.length === 0 && (
           <div
             className={cn(
-              'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-20 px-6 transition-all duration-200',
+              'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-20 px-6 transition duration-200',
               isDragOver
                 ? 'border-primary bg-primary/5 scale-[1.01]'
                 : 'border-muted-foreground/20 hover:border-muted-foreground/30',
@@ -619,7 +619,7 @@ export function PictogramsPage() {
               return (
                 <Card
                   key={pic.id}
-                  className="group overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-stagger-fade-in"
+                  className="group overflow-hidden transition duration-200 hover:shadow-md hover:-translate-y-0.5 animate-stagger-fade-in"
                   style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                 >
                   {/* Image area with checkerboard for transparency */}
@@ -651,7 +651,7 @@ export function PictogramsPage() {
                     </div>
 
                     {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-2">
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100 pointer-coarse:bg-transparent pointer-coarse:backdrop-blur-none pointer-coarse:items-end pointer-coarse:justify-end pointer-coarse:p-1.5 transition-opacity duration-200 flex items-center justify-center gap-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button size="icon" variant="outline" className="h-9 w-9 shadow-sm" onClick={() => startEdit(pic)}>
@@ -728,7 +728,7 @@ export function PictogramsPage() {
               return (
                 <div
                   key={pic.id}
-                  className="group flex items-center gap-4 rounded-lg border bg-card px-4 py-3 hover:shadow-sm transition-all duration-150 animate-stagger-fade-in"
+                  className="group flex items-center gap-4 rounded-lg border bg-card px-4 py-3 hover:shadow-sm transition duration-150 animate-stagger-fade-in"
                   style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
                 >
                   {/* Thumbnail */}
@@ -777,7 +777,7 @@ export function PictogramsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(pic)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
@@ -811,7 +811,7 @@ export function PictogramsPage() {
               {!uploadFile ? (
                 <div
                   className={cn(
-                    'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-10 cursor-pointer transition-all duration-200',
+                    'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-10 cursor-pointer transition duration-200',
                     isDragOver
                       ? 'border-primary bg-primary/5 scale-[1.02]'
                       : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30',

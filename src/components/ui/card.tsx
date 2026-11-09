@@ -2,12 +2,39 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * Hover lift is opt-in: only cards that actually do something on click move.
+ * A card is treated as interactive when it has an `onClick`, an interactive
+ * `role`, `data-interactive`, or sits directly inside a link/button. Static
+ * cards staying still is what makes the interactive ones read as tappable.
+ */
+const interactiveCardClasses =
+  "cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 motion-reduce:hover:translate-y-0"
+
+const parentHoverClasses =
+  "[@media(hover:hover)]:[:is(a,button):hover>&]:-translate-y-0.5 [@media(hover:hover)]:[:is(a,button):hover>&]:shadow-md motion-reduce:[:is(a,button):hover>&]:translate-y-0"
+
+function Card({
+  className,
+  ...props
+}: React.ComponentProps<"div"> & { "data-interactive"?: boolean | "true" | "false" }) {
+  const dataInteractive = props["data-interactive"]
+  const interactive =
+    dataInteractive === true ||
+    dataInteractive === "true" ||
+    (dataInteractive !== false &&
+      dataInteractive !== "false" &&
+      (typeof props.onClick === "function" ||
+        props.role === "button" ||
+        props.role === "link"))
+
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition-[translate,box-shadow] duration-200 ease-out",
+        parentHoverClasses,
+        interactive && interactiveCardClasses,
         className
       )}
       {...props}

@@ -304,7 +304,7 @@ export function MobileRuleEditor({
             <div style={{ paddingLeft: depth * 16 }}>
               <Card
                 className={cn(
-                  'p-3 gap-2 cursor-pointer transition-all',
+                  'p-3 gap-2 cursor-pointer transition-[border-color,background-color,box-shadow] duration-150',
                   selectedNodeId === node.id && 'ring-2 ring-primary'
                 )}
                 onClick={() => onSelectNode(node.id)}

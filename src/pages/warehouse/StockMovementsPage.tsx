@@ -523,7 +523,7 @@ export function StockMovementsPage() {
                     variants={tileItem}
                     whileTap={whileTap}
                     onClick={() => setCategoryFilter(active ? 'all' : c.key)}
-                    className={`text-left rounded-lg border p-3 min-h-[44px] transition-all hover:shadow-sm cursor-pointer ${
+                    className={`text-left rounded-lg border p-3 min-h-[44px] transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:shadow-sm cursor-pointer ${
                       active ? 'border-primary ring-1 ring-primary' : 'hover:border-foreground/20'
                     }`}
                   >

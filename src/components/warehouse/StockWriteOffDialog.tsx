@@ -291,7 +291,7 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
                     key={r.key}
                     type="button"
                     onClick={() => setReason(r.key)}
-                    className={`group relative flex items-start gap-3 rounded-lg border p-3 text-left transition-all cursor-pointer min-w-0 ${
+                    className={`group relative flex items-start gap-3 rounded-lg border p-3 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] cursor-pointer min-w-0 ${
                       active
                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                         : 'hover:border-foreground/30 hover:bg-muted/40'

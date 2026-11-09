@@ -100,7 +100,7 @@ export function ScanResultCard({
                 type="button"
                 onClick={() => onSelectBatch?.(b)}
                 className={`
-                  w-full text-left rounded-xl px-4 py-3 transition-all
+                  w-full text-left rounded-xl px-4 py-3 transition-[color,background-color,border-color,box-shadow,opacity,transform]
                   bg-white/5 hover:bg-${accentColor}-500/10 border border-white/5 hover:border-${accentColor}-500/30
                 `}
               >

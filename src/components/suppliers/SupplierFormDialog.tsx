@@ -116,7 +116,7 @@ export function SupplierFormDialog({ open, mode, supplier, countries, onOpenChan
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-2rem)] sm:max-h-[90vh] sm:max-w-4xl overflow-y-auto pb-0">
           <DialogHeader>
             <DialogTitle>{mode === 'create' ? t('New Supplier') : t('Edit Supplier')}</DialogTitle>
           </DialogHeader>
@@ -498,7 +498,7 @@ export function SupplierFormDialog({ open, mode, supplier, countries, onOpenChan
             </TabsContent>
           </Tabs>
 
-          <DialogFooter>
+          <DialogFooter className="sticky bottom-0 z-10 -mx-6 border-t bg-background px-6 pt-3 pb-[max(1rem,var(--safe-bottom))]">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               <X className="mr-2 h-4 w-4" />{t('Cancel', { ns: 'common' })}
             </Button>

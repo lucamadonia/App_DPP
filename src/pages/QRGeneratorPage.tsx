@@ -614,17 +614,17 @@ export function QRGeneratorPage() {
                       : 'hover:bg-muted/50'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-xs font-mono text-muted-foreground">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium break-words">{product.name}</p>
+                      <p className="text-xs font-mono text-muted-foreground break-all">
                         GTIN: {product.gtin}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {product.batchCount} {product.batchCount === 1 ? 'Batch' : 'Batches'}
+                        {product.batchCount} {product.batchCount === 1 ? t('Batch') : t('Batches')}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                    <Badge variant="outline" className="text-xs shrink-0 max-w-[40%] truncate">{product.category}</Badge>
                   </div>
                 </div>
               ))}
@@ -658,16 +658,16 @@ export function QRGeneratorPage() {
                               : 'hover:bg-muted/50'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <code className="font-mono font-medium">{batch.serialNumber}</code>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <code className="font-mono font-medium break-all">{batch.serialNumber}</code>
                               {batch.batchNumber && (
                                 <span className="text-xs text-muted-foreground ml-2">
-                                  Batch {batch.batchNumber}
+                                  {t('Batch')} {batch.batchNumber}
                                 </span>
                               )}
                             </div>
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-xs shrink-0">
                               {batch.status}
                             </Badge>
                           </div>
@@ -685,9 +685,9 @@ export function QRGeneratorPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <CardTitle>{t('QR Code Generator')}</CardTitle>
-                <CardDescription>
+                <CardDescription className="break-words">
                   {selectedProduct
                     ? `${selectedProduct.name}${selectedBatch ? ` · ${selectedBatch.serialNumber}` : ''}`
                     : t('No product selected')}
@@ -750,7 +750,7 @@ export function QRGeneratorPage() {
                           />
                         </MotionDiv>
                       ) : (
-                        <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
+                        <div className="flex items-center justify-center bg-muted rounded w-full max-w-[200px] aspect-square">
                           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                       )}
@@ -786,7 +786,7 @@ export function QRGeneratorPage() {
                           />
                         </MotionDiv>
                       ) : (
-                        <div className="flex items-center justify-center bg-muted rounded w-[200px] h-[200px]">
+                        <div className="flex items-center justify-center bg-muted rounded w-full max-w-[200px] aspect-square">
                           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                       )}
@@ -1408,7 +1408,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                       {/* Modern */}
                       <div
                         onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'modern' })}
-                        className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
+                        className={`relative p-4 border rounded-lg cursor-pointer transition ${
                           localDomainSettings.dppTemplate === 'modern'
                             ? 'border-primary bg-primary/5 ring-2 ring-primary'
                             : 'hover:bg-muted/50 hover:border-muted-foreground/30'
@@ -1433,7 +1433,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                       {/* Classic */}
                       <div
                         onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'classic' })}
-                        className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
+                        className={`relative p-4 border rounded-lg cursor-pointer transition ${
                           localDomainSettings.dppTemplate === 'classic'
                             ? 'border-primary bg-primary/5 ring-2 ring-primary'
                             : 'hover:bg-muted/50 hover:border-muted-foreground/30'
@@ -1458,7 +1458,7 @@ app.get('/01/:gtin/21/:serial', (req, res) => {
                       {/* Compact */}
                       <div
                         onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'compact' })}
-                        className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
+                        className={`relative p-4 border rounded-lg cursor-pointer transition ${
                           localDomainSettings.dppTemplate === 'compact'
                             ? 'border-primary bg-primary/5 ring-2 ring-primary'
                             : 'hover:bg-muted/50 hover:border-muted-foreground/30'

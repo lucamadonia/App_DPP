@@ -155,7 +155,7 @@ function KPICard({ item, compact }: { item: KPIItem; compact: boolean }) {
           : undefined
       }
       className={cn(
-        'gap-0 transition-all',
+        'gap-0 transition-[transform,translate,box-shadow] duration-200 ease-out',
         compact ? 'py-3' : 'py-4 sm:py-5',
         interactive &&
           'cursor-pointer hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'

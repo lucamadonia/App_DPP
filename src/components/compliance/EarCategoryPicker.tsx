@@ -35,7 +35,7 @@ export function EarCategoryPicker({ value, onChange, className }: Props) {
             key={c}
             onClick={() => onChange(c)}
             className={cn(
-              'relative cursor-pointer transition-all p-3 hover:bg-muted/50 active:scale-[0.98]',
+              'relative cursor-pointer transition p-3 hover:bg-muted/50 active:scale-[0.98]',
               selected && 'ring-2 ring-primary shadow-md bg-primary/5',
             )}
             role="radio"

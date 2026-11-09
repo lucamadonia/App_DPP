@@ -36,7 +36,7 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
             <div key={i} className="flex flex-col items-center relative z-10" style={{ width: `${100 / totalSteps}%` }}>
               <div className="relative">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-[border-color,background-color,color] duration-200 ${
                     isCompleted
                       ? 'bg-primary border-primary text-primary-foreground'
                       : isCurrent

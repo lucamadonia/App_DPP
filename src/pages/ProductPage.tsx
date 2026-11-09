@@ -472,7 +472,7 @@ export function ProductPage() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button variant="outline" asChild>
             <Link to={`/products/${id}/batches/new`}>
               <Plus className="mr-2 h-4 w-4" />
@@ -588,10 +588,10 @@ export function ProductPage() {
                 <CardTitle>{t('Product Information')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4 [&>div]:min-w-0">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('Product Name')}</p>
-                    <p className="font-medium">{product.name}</p>
+                    <p className="font-medium break-words">{product.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t('Manufacturer')}</p>
@@ -599,7 +599,7 @@ export function ProductPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t('GTIN/EAN')}</p>
-                    <code className="font-mono text-sm">{product.gtin}</code>
+                    <code className="font-mono text-sm break-all">{product.gtin}</code>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t('Category')}</p>
@@ -701,8 +701,8 @@ export function ProductPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
                   <CardTitle className="flex items-center gap-2">
                     <Layers className="h-5 w-5 text-primary" />
                     {t('Batches')}
@@ -903,14 +903,14 @@ export function ProductPage() {
                     const cost = supplierCosts.find(c => c.supplierId === sp.supplier_id);
                     return (
                       <div key={sp.id}>
-                        <div className="flex items-center justify-between p-4 rounded-lg border">
-                          <div className="flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-lg border">
+                          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                               <Truck className="h-5 w-5 text-primary" />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{sp.supplier_name}</p>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <p className="font-medium break-words">{sp.supplier_name}</p>
                                 {sp.is_primary && (
                                   <Badge variant="secondary">{t('Primary Supplier')}</Badge>
                                 )}
@@ -920,7 +920,7 @@ export function ProductPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-6 text-sm">
+                          <div className="flex items-center gap-4 sm:gap-6 text-sm">
                             {sp.lead_time_days != null && (
                               <div className="text-right">
                                 <p className="text-muted-foreground">{t('Lead Time')}</p>
@@ -938,7 +938,7 @@ export function ProductPage() {
                           </div>
                         </div>
                         {cost && (
-                          <div className="ml-14 mt-1 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+                          <div className="sm:ml-14 mt-1 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
                             <div>
                               <p className="text-xs text-muted-foreground">{t('Total Batches')}</p>
                               <p className="font-medium">{cost.totalBatches}</p>
@@ -1045,8 +1045,8 @@ export function ProductPage() {
                 {batches.length > 0 ? (
                   batches.slice(0, 5).map((batch) => (
                     <div key={batch.id} className="p-3 rounded-lg border space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{batch.serialNumber}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium min-w-0 break-all">{batch.serialNumber}</span>
                         <Badge variant="secondary" className={batchStatusConfig[batch.status].className}>
                           {batchStatusConfig[batch.status].label}
                         </Badge>
@@ -1112,9 +1112,9 @@ export function ProductPage() {
                       <div key={index} className="relative pl-10">
                         <div className="absolute left-2 w-5 h-5 bg-primary rounded-full border-4 border-background" />
                         <div className="p-4 rounded-lg border">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">
-                              Step {entry.step}: {entry.description}
+                          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2">
+                            <span className="font-medium min-w-0 break-words">
+                              {t('Step', { ns: 'settings' })} {entry.step}: {entry.description}
                             </span>
                             <span className="text-sm text-muted-foreground">
                               {formatDate(entry.date, locale)}

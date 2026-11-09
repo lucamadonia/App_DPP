@@ -126,21 +126,21 @@ export function ChannelDetailPage() {
       </Button>
 
       {/* Hero header */}
-      <Card className="relative overflow-hidden p-6">
+      <Card className="relative overflow-hidden p-4 sm:p-6">
         <div
           aria-hidden
           className="absolute -right-12 -top-12 h-44 w-44 rounded-full opacity-20 blur-3xl"
           style={{ background: desc.brandColor }}
         />
         <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <PlatformIcon platform={conn.platform} size={36} badge />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display text-2xl font-bold">{desc.label}</h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-xl font-bold sm:text-2xl">{desc.label}</h1>
                 <StatusPill status={conn.status} />
               </div>
-              <div className="mt-1 text-sm text-muted-foreground">
+              <div className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
                 {conn.accountLabel} {conn.accountUrl && (
                   <a href={conn.accountUrl} className="ml-1 inline-flex items-center gap-1 underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
                     {conn.accountUrl}
@@ -166,7 +166,7 @@ export function ChannelDetailPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 md:grid-cols-4">
           <SmallStat label={t('Auto sync')} value={conn.autoSyncEnabled ? t('On') : t('Off')} />
           <SmallStat label={t('Interval')} value={`${conn.syncIntervalMinutes} min`} />
           <SmallStat label={t('Last sync')} value={conn.lastIncrementalSyncAt ? new Date(conn.lastIncrementalSyncAt).toLocaleString() : '—'} />
@@ -182,7 +182,32 @@ export function ChannelDetailPage() {
         </TabsList>
 
         <TabsContent value="orders" className="mt-4">
-          <Card className="overflow-hidden">
+          {/* Mobile: stacked order cards */}
+          <Card className="divide-y md:hidden">
+            {orders.length === 0 && (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t('No orders yet from this channel.')}</div>
+            )}
+            {orders.map((o) => (
+              <div key={o.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{o.externalOrderNumber || o.externalOrderId.slice(0, 12)}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {o.customerName || o.customerEmail || '—'} · {o.customerCountryName || o.customerCountry || '—'}
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {new Date(o.placedAt).toLocaleString()}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-semibold tabular-nums">
+                    {new Intl.NumberFormat('de-DE', { style: 'currency', currency: o.currency }).format(o.totalAmount)}
+                  </div>
+                  <div className="text-xs text-muted-foreground tabular-nums">{o.itemCount} {t('Items')}</div>
+                </div>
+              </div>
+            ))}
+          </Card>
+          <Card className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/50">
                 <tr>
@@ -223,16 +248,16 @@ export function ChannelDetailPage() {
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t('No sync events recorded yet.')}</div>
             )}
             {events.map((e) => (
-              <div key={e.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3">
+              <div key={e.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
                 <span className={[
                   'h-2 w-2 rounded-full',
                   e.severity === 'error' ? 'bg-rose-500' : e.severity === 'warning' ? 'bg-amber-500' : e.severity === 'success' ? 'bg-emerald-500' : 'bg-sky-500',
                 ].join(' ')} />
-                <div>
-                  <div className="text-sm font-medium">{e.title}</div>
-                  {e.description && <div className="text-xs text-muted-foreground">{e.description}</div>}
+                <div className="min-w-0">
+                  <div className="text-sm font-medium [overflow-wrap:anywhere]">{e.title}</div>
+                  {e.description && <div className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{e.description}</div>}
                 </div>
-                <div className="text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</div>
+                <div className="col-start-2 text-xs text-muted-foreground sm:col-start-auto sm:whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</div>
               </div>
             ))}
           </Card>
@@ -240,15 +265,15 @@ export function ChannelDetailPage() {
 
         <TabsContent value="settings" className="mt-4">
           <Card className="space-y-5 p-5">
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
                 <Label className="text-sm font-medium">{t('Automatic sync')}</Label>
                 <p className="text-xs text-muted-foreground">{t('Pull new orders, products and inventory automatically.')}</p>
               </div>
               <Switch checked={conn.autoSyncEnabled} onCheckedChange={handleToggleSync} disabled={busy} />
             </div>
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
                 <Label className="text-sm font-medium">{t('Auto-match by GTIN')}</Label>
                 <p className="text-xs text-muted-foreground">{t('Link order line items to your DPP catalog by GTIN automatically.')}</p>
               </div>
@@ -270,7 +295,7 @@ export function ChannelDetailPage() {
               <div className="font-semibold uppercase tracking-wider text-muted-foreground">{t('Required Scopes')}</div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {conn.scopes.map((s) => (
-                  <code key={s} className="rounded bg-background px-1.5 py-0.5 text-[10px]">{s}</code>
+                  <code key={s} className="rounded bg-background px-1.5 py-0.5 text-[10px] break-all">{s}</code>
                 ))}
               </div>
             </div>
@@ -285,7 +310,7 @@ function SmallStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className="mt-0.5 font-display text-base font-semibold">{value}</div>
+      <div className="mt-0.5 font-display text-sm font-semibold [overflow-wrap:anywhere] sm:text-base">{value}</div>
     </div>
   );
 }

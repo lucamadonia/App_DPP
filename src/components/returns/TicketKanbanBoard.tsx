@@ -33,15 +33,15 @@ export function TicketKanbanBoard({ tickets, onStatusChange }: TicketKanbanBoard
   tickets.forEach((tk, i) => ticketIndexMap.set(tk.id, i));
 
   return (
-    <div className="overflow-x-auto lg:overflow-x-visible">
-      <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] lg:grid-flow-row lg:grid-cols-5 gap-4">
+    <div className="-mx-4 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-px-4 px-4 pb-2 sm:mx-0 sm:px-0 sm:scroll-px-0 lg:overflow-x-visible lg:snap-none">
+      <div className="grid grid-flow-col auto-cols-[min(85vw,280px)] sm:auto-cols-[minmax(260px,1fr)] lg:grid-flow-row lg:grid-cols-5 gap-3 sm:gap-4">
         {columns.map((col) => {
         const colTickets = tickets.filter((tk) => tk.status === col.status);
         return (
-          <div key={col.status} className="space-y-2">
+          <div key={col.status} className="space-y-2 min-w-0 snap-start">
             <div className={`border-t-4 ${col.color} rounded-t`}>
               <div className="flex items-center justify-between px-2 py-2">
-                <span className="text-sm font-medium">{t(TICKET_STATUS_LABELS[col.status])}</span>
+                <span className="text-sm font-medium truncate">{t(TICKET_STATUS_LABELS[col.status])}</span>
                 <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                   {colTickets.length}
                 </span>
@@ -53,21 +53,21 @@ export function TicketKanbanBoard({ tickets, onStatusChange }: TicketKanbanBoard
                 return (
                   <Card
                     key={ticket.id}
-                    className={`cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${
+                    className={`cursor-pointer hover:-translate-y-0.5 hover:shadow-md ${
                       cardVisibility[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                     }`}
-                    style={{ transition: 'opacity 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.2s ease' }}
+                    style={{ transition: 'opacity 0.3s ease-out, translate 0.2s ease-out, box-shadow 0.2s ease' }}
                     onClick={() => navigate(`/returns/tickets/${ticket.id}`)}
                   >
                     <CardContent className="p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-muted-foreground">{ticket.ticketNumber}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-mono text-muted-foreground truncate">{ticket.ticketNumber}</span>
                         <TicketPriorityBadge priority={ticket.priority} />
                       </div>
-                      <p className="text-sm font-medium line-clamp-2">{ticket.subject}</p>
-                      <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium line-clamp-2 break-words">{ticket.subject}</p>
+                      <div className="flex items-center justify-between gap-2">
                         {ticket.assignedTo ? (
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
                             {ticket.assignedTo.charAt(0).toUpperCase()}
                           </div>
                         ) : (

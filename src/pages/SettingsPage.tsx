@@ -664,7 +664,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     className="hidden"
                   />
                   <div
-                    className={`relative h-52 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                    className={`relative h-52 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-[background-color,border-color] overflow-hidden ${
                       logoDragOver
                         ? 'border-primary bg-primary/5'
                         : brandingForm.logo
@@ -711,7 +711,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   {logoUploadError && (
                     <p className="text-xs text-destructive">{t('Upload failed')}: {logoUploadError}</p>
                   )}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">{t('PNG, JPG, SVG up to 2MB')}</p>
                     {brandingForm.logo && (
                       <Button
@@ -782,7 +782,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     className="hidden"
                   />
                   <div
-                    className={`relative h-32 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                    className={`relative h-32 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-[background-color,border-color] overflow-hidden ${
                       faviconDragOver
                         ? 'border-primary bg-primary/5'
                         : brandingForm.favicon
@@ -828,7 +828,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   {faviconUploadError && (
                     <p className="text-xs text-destructive">{t('Upload failed')}: {faviconUploadError}</p>
                   )}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">{t('PNG, SVG, ICO up to 2MB')}</p>
                     {brandingForm.favicon && (
                       <Button
@@ -967,7 +967,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       onClick={() =>
                         setBrandingForm((prev) => ({ ...prev, primaryColor: color }))
                       }
-                      className={`relative h-9 w-9 min-w-[36px] rounded-lg transition-all ${
+                      className={`relative h-9 w-9 min-w-[36px] rounded-lg transition-[scale,box-shadow] ${
                         brandingForm.primaryColor === color
                           ? 'ring-2 ring-offset-2 ring-foreground scale-110'
                           : 'hover:scale-105'
@@ -1277,7 +1277,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           {domainForm.resolver === 'custom' && (
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="font-medium">{t('CNAME Setup Wizard')}</h4>
                     <p className="text-sm text-muted-foreground">

@@ -33,10 +33,10 @@ function HubBackdrop({ variant = 'hero' }: { variant?: 'hero' | 'chat' }) {
       {/* Radial fade to hide grid edges */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--background)_85%)]" />
       {/* Floating orbs */}
-      <div className="absolute -top-24 -left-16 h-[380px] w-[380px] rounded-full bg-blue-500/20 blur-3xl animate-orb-float" />
-      <div className="absolute top-1/3 -right-24 h-[420px] w-[420px] rounded-full bg-violet-500/15 blur-3xl animate-orb-float-alt" />
+      <div className="absolute -top-24 -left-16 h-56 w-56 sm:h-[380px] sm:w-[380px] rounded-full bg-blue-500/20 blur-3xl animate-orb-float" />
+      <div className="absolute top-1/3 -right-24 h-64 w-64 sm:h-[420px] sm:w-[420px] rounded-full bg-violet-500/15 blur-3xl animate-orb-float-alt" />
       {variant === 'hero' && (
-        <div className="absolute bottom-0 left-1/3 h-[320px] w-[320px] rounded-full bg-cyan-400/15 blur-3xl animate-orb-float" style={{ animationDelay: '-7s' }} />
+        <div className="absolute bottom-0 left-1/3 h-52 w-52 sm:h-[320px] sm:w-[320px] rounded-full bg-cyan-400/15 blur-3xl animate-orb-float" style={{ animationDelay: '-7s' }} />
       )}
     </div>
   );
@@ -177,7 +177,7 @@ function ExpertCard({ id, icon, name, description, specialty, index, onSelect }:
           <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
             {t('Start Chat')}
           </span>
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-md shadow-blue-500/30 group-hover:shadow-lg group-hover:shadow-violet-500/40 group-hover:scale-110 transition-all duration-300">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-md shadow-blue-500/30 group-hover:shadow-lg group-hover:shadow-violet-500/40 group-hover:scale-110 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300">
             <ArrowUp className="h-4 w-4 rotate-45" />
           </div>
         </div>
@@ -487,7 +487,7 @@ export function AILogisticsHubPage() {
                       <button
                         key={q}
                         onClick={() => handleSend(t(q))}
-                        className="group relative text-xs px-3 py-2 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-all duration-200 cursor-pointer animate-fade-in-up"
+                        className="group relative text-xs px-3 py-2 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 cursor-pointer animate-fade-in-up"
                         style={{ animationDelay: `${150 + i * 80}ms`, animationFillMode: 'both' }}
                       >
                         <span className="inline-flex items-center gap-1.5">
@@ -565,7 +565,7 @@ export function AILogisticsHubPage() {
                 {/* Glowing animated ring when focused */}
                 <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-blue-500/0 via-blue-500/30 to-violet-500/0 opacity-0 group-focus-within:opacity-100 blur-sm transition-opacity duration-300" />
 
-                <div className="relative flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md px-2 sm:px-3 py-1.5 focus-within:border-blue-500/60 focus-within:shadow-lg focus-within:shadow-blue-500/10 transition-all duration-200">
+                <div className="relative flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md px-2 sm:px-3 py-1.5 focus-within:border-blue-500/60 focus-within:shadow-lg focus-within:shadow-blue-500/10 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
                   {/* Command prefix */}
                   <div className="hidden sm:flex items-center gap-1 pl-1 pr-2 border-r border-border/60">
                     <Command className="h-3.5 w-3.5 text-muted-foreground" />
@@ -587,7 +587,7 @@ export function AILogisticsHubPage() {
                   <button
                     onClick={() => handleSend()}
                     disabled={!input.trim() || isStreaming}
-                    className="relative flex items-center justify-center h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 text-white disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:shadow-lg enabled:hover:shadow-blue-500/40 enabled:hover:scale-105 transition-all duration-200 shrink-0 cursor-pointer group/btn"
+                    className="relative flex items-center justify-center h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 text-white disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:shadow-lg enabled:hover:shadow-blue-500/40 enabled:hover:scale-105 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 shrink-0 cursor-pointer group/btn"
                     aria-label={t('Send', { defaultValue: 'Send' })}
                   >
                     <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />

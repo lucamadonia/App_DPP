@@ -12,11 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { relativeTime } from '@/lib/animations';
-import { pageVariants, pageTransition, gridStagger, gridItem, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
+import { pageVariants, pageTransition, gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
 import { getRhCustomer, getRhCustomerReturns, updateRhCustomer } from '@/services/supabase';
 import { supabase } from '@/lib/supabase';
 import type { RhCustomer, RhReturn } from '@/types/returns-hub';
@@ -189,22 +190,24 @@ export function CustomerDetailPage() {
 
   return (
     <Wrapper className="space-y-6" {...wrapperProps as any}>
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/returns/customers')}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <Button variant="ghost" size="icon" className="shrink-0" aria-label={t('Back')} onClick={() => navigate('/returns/customers')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{t('360° Customer View')}</h1>
-          <p className="text-muted-foreground">{fullName}</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-balance">{t('360° Customer View')}</h1>
+          <p className="text-muted-foreground truncate">{fullName}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/returns/new')}>
-          <Plus className="h-4 w-4 mr-1" />
-          {t('New Return')}
-        </Button>
-        <Button variant="outline" onClick={openEdit}>
-          <Pencil className="h-4 w-4 mr-2" />
-          {t('Edit Customer')}
-        </Button>
+        <div className="flex w-full sm:w-auto gap-2">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => navigate('/returns/new')}>
+            <Plus className="h-4 w-4 mr-1" />
+            {t('New Return')}
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={openEdit}>
+            <Pencil className="h-4 w-4 mr-2" />
+            {t('Edit Customer')}
+          </Button>
+        </div>
       </div>
 
       {prefersReduced ? (
@@ -213,17 +216,17 @@ export function CustomerDetailPage() {
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Customer Profile')}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
                   {fullName.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-medium">{fullName}</p>
+                <div className="min-w-0">
+                  <p className="font-medium break-words">{fullName}</p>
                   {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
                 </div>
               </div>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" />{customer.email}</div>
-                {customer.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{customer.phone}</div>}
+                <div className="flex items-center gap-2 min-w-0"><Mail className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="break-all">{customer.email}</span></div>
+                {customer.phone && <div className="flex items-center gap-2 min-w-0"><Phone className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="break-all">{customer.phone}</span></div>}
               </div>
               {customer.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 pt-2">
@@ -237,16 +240,16 @@ export function CustomerDetailPage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center p-3 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold">{customer.returnStats.totalReturns}</p>
+                  <p className="text-xl sm:text-2xl font-bold tabular-nums break-words">{customer.returnStats.totalReturns}</p>
                   <p className="text-xs text-muted-foreground">{t('Total Returns')}</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold">{'\u20AC'}{customer.returnStats.totalValue.toFixed(2)}</p>
+                  <p className="text-xl sm:text-2xl font-bold tabular-nums break-words">{'\u20AC'}{customer.returnStats.totalValue.toFixed(2)}</p>
                   <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
                 </div>
               </div>
               <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold">{customer.returnStats.returnRate.toFixed(1)}%</p>
+                <p className="text-xl sm:text-2xl font-bold tabular-nums break-words">{customer.returnStats.returnRate.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground">{t('Return Rate')}</p>
               </div>
             </CardContent>
@@ -272,21 +275,21 @@ export function CustomerDetailPage() {
       ) : (
         <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
           <motion.div variants={gridItem}>
-            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Customer Profile')}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
                     {fullName.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-medium">{fullName}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{fullName}</p>
                     {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" />{customer.email}</div>
-                  {customer.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{customer.phone}</div>}
+                  <div className="flex items-center gap-2 min-w-0"><Mail className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="break-all">{customer.email}</span></div>
+                  {customer.phone && <div className="flex items-center gap-2 min-w-0"><Phone className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="break-all">{customer.phone}</span></div>}
                 </div>
                 {customer.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 pt-2">
@@ -297,28 +300,28 @@ export function CustomerDetailPage() {
             </Card>
           </motion.div>
           <motion.div variants={gridItem}>
-            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Return Statistics')}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-center p-3 rounded-lg bg-muted">
-                    <p className="text-2xl font-bold"><AnimatedCounter value={customer.returnStats.totalReturns} /></p>
+                    <p className="text-xl sm:text-2xl font-bold tabular-nums break-words"><AnimatedCounter value={customer.returnStats.totalReturns} /></p>
                     <p className="text-xs text-muted-foreground">{t('Total Returns')}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-muted">
-                    <p className="text-2xl font-bold"><AnimatedCounter value={customer.returnStats.totalValue} prefix={'\u20AC'} decimals={2} /></p>
+                    <p className="text-xl sm:text-2xl font-bold tabular-nums break-words"><AnimatedCounter value={customer.returnStats.totalValue} prefix={'\u20AC'} decimals={2} /></p>
                     <p className="text-xs text-muted-foreground">{t('Total Value')}</p>
                   </div>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold"><AnimatedCounter value={customer.returnStats.returnRate} suffix="%" decimals={1} /></p>
+                  <p className="text-xl sm:text-2xl font-bold tabular-nums break-words"><AnimatedCounter value={customer.returnStats.returnRate} suffix="%" decimals={1} /></p>
                   <p className="text-xs text-muted-foreground">{t('Return Rate')}</p>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
           <motion.div variants={gridItem}>
-            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm">{t('Risk Score')}</CardTitle></CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-4">
                 <div className="relative">
@@ -403,7 +406,7 @@ export function CustomerDetailPage() {
       ) : (
         <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={gridStagger} initial="initial" animate="animate">
           <motion.div variants={gridItem}>
-            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" /> {t('Portal Status')}</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -430,7 +433,7 @@ export function CustomerDetailPage() {
             </Card>
           </motion.div>
           <motion.div variants={gridItem}>
-            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" /> {t('Lifecycle')}</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -447,7 +450,7 @@ export function CustomerDetailPage() {
             </Card>
           </motion.div>
           <motion.div variants={gridItem}>
-            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+            <Card className="hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow] duration-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Heart className="h-4 w-4" /> {t('Communication')}</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -484,56 +487,42 @@ export function CustomerDetailPage() {
                   description={t('This customer has no return history')}
                 />
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="pb-2 font-medium">{t('Return Number')}</th>
-                        <th className="pb-2 font-medium">{t('Status')}</th>
-                        <th className="pb-2 font-medium">{t('Date')}</th>
-                        <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
-                      </tr>
-                    </thead>
-                    {prefersReduced ? (
-                      <tbody>
-                        {returns.map((ret) => (
-                          <tr
-                            key={ret.id}
-                            className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
-                            onClick={() => navigate(`/returns/${ret.id}`)}
-                          >
-                            <td className="py-2.5 relative">
-                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                              <span className="text-primary hover:underline font-medium pl-2">{ret.returnNumber}</span>
-                            </td>
-                            <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
-                            <td className="py-2.5 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
-                            <td className="py-2.5 text-right font-medium">{ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '\u2014'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    ) : (
-                      <motion.tbody variants={staggerContainer} initial="initial" animate="animate">
-                        {returns.map((ret) => (
-                          <motion.tr
-                            key={ret.id}
-                            variants={staggerItem}
-                            className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
-                            onClick={() => navigate(`/returns/${ret.id}`)}
-                          >
-                            <td className="py-2.5 relative">
-                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                              <span className="text-primary hover:underline font-medium pl-2">{ret.returnNumber}</span>
-                            </td>
-                            <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
-                            <td className="py-2.5 text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</td>
-                            <td className="py-2.5 text-right font-medium">{ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '\u2014'}</td>
-                          </motion.tr>
-                        ))}
-                      </motion.tbody>
-                    )}
-                  </table>
-                </div>
+                <ResponsiveTable
+                  data={returns}
+                  rowKey={(ret) => ret.id}
+                  rowHref={(ret) => `/returns/${ret.id}`}
+                  columns={[
+                      {
+                        id: 'number',
+                        header: t('Return Number'),
+                        mobilePriority: 'title',
+                        cell: (ret) => <span className="text-primary font-medium break-all">{ret.returnNumber}</span>,
+                      },
+                      {
+                        id: 'status',
+                        header: t('Status'),
+                        mobilePriority: 'badge',
+                        cell: (ret) => <ReturnStatusBadge status={ret.status} />,
+                      },
+                      {
+                        id: 'date',
+                        header: t('Date'),
+                        mobilePriority: 'subtitle',
+                        cell: (ret) => <span className="text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</span>,
+                      },
+                      {
+                        id: 'refund',
+                        header: t('Refund Amount'),
+                        className: 'text-right',
+                        mobilePriority: 'meta',
+                        cell: (ret) => (
+                          <span className="font-medium tabular-nums">
+                            {ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '\u2014'}
+                          </span>
+                        ),
+                      },
+                    ]}
+                />
               )}
             </CardContent>
           </Card>

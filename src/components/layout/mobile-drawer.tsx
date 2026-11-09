@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDragDismiss } from '@/lib/motion-gestures';
 
 type DrawerSide = 'auto' | 'right' | 'bottom' | 'left' | 'top';
 
@@ -53,10 +54,20 @@ export function MobileDrawer({
     side === 'auto' ? (isMobile ? 'bottom' : 'right') : side;
 
   const isBottomOrTop = resolvedSide === 'bottom' || resolvedSide === 'top';
+  const isBottom = resolvedSide === 'bottom';
+
+  const close = React.useCallback(() => onOpenChange(false), [onOpenChange]);
+  // Fling or pull the grabber/header down to close, like a native sheet.
+  const { ref: dragRef, handlers: dragHandlers } = useDragDismiss({
+    onDismiss: close,
+    enabled: isBottom,
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        ref={dragRef}
+        {...dragHandlers}
         side={resolvedSide}
         showCloseButton={showCloseButton}
         className={cn(
@@ -73,8 +84,12 @@ export function MobileDrawer({
           } as React.CSSProperties
         }
       >
-        {isBottomOrTop && resolvedSide === 'bottom' && (
-          <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+        {isBottom && (
+          // Generous hit strip around the visible bar: the bar is the cue,
+          // the whole strip is the handle.
+          <div data-drag-handle className="flex h-5 w-full shrink-0 items-end justify-center" aria-hidden="true">
+            <div className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
+          </div>
         )}
         {(title || description) && (
           <SheetHeader className="border-b px-4 pb-3 pt-4">

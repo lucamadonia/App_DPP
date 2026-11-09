@@ -116,7 +116,7 @@ export function CategoryFeatureStep({
                   aria-pressed={isSelected}
                   className={cn(
                     'w-full min-h-[76px] flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3',
-                    'transition-all duration-200 hover:border-primary/50 hover:shadow-sm',
+                    'transition-[color,background-color,border-color,box-shadow,opacity,scale,translate] duration-200 ease-out hover:border-primary/50 hover:shadow-sm',
                     isSelected
                       ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                       : 'border-border bg-card'

@@ -32,7 +32,7 @@ export function DPPDisplayModeSelector({ options, value, onChange, columns = 3 }
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`p-2.5 rounded-lg border text-left text-sm transition-all ${
+          className={`p-2.5 rounded-lg border text-left text-sm transition ${
             value === opt.value
               ? 'border-primary bg-primary/5 ring-1 ring-primary/20 scale-[1.02]'
               : 'border-muted hover:border-muted-foreground/30'

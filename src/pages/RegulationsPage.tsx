@@ -404,19 +404,19 @@ export function RegulationsPage() {
                     key={country.code}
                     {...(!prefersReduced && { variants: staggerItem })}
                     onClick={() => setSelectedCountry(country.code === selectedCountry ? null : country.code)}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    className={`p-4 rounded-lg border cursor-pointer transition ${
                       selectedCountry === country.code
                         ? 'border-primary bg-primary/5 shadow-md'
                         : 'hover:bg-muted/50 hover:border-muted-foreground/20'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <span className="text-3xl">{country.flag}</span>
-                        <div>
-                          <p className="font-medium">{country.name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium break-words">{country.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {country.regulations} Regulations
+                            {t('{{count}} Regulations', { count: country.regulations })}
                           </p>
                         </div>
                       </div>
@@ -533,17 +533,17 @@ export function RegulationsPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <CardTitle>{t('EU-wide Regulations')}</CardTitle>
                   <CardDescription>
                     {t('Valid in all EU member states - Click on a regulation for details')}
                   </CardDescription>
                 </div>
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64 sm:shrink-0">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search..."
+                    placeholder={t('Search...', { ns: 'common' })}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -694,9 +694,9 @@ export function RegulationsPage() {
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Calendar className="h-6 w-6 text-primary" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium">{item.product}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-1">
+                          <p className="font-medium break-words">{item.product}</p>
                           <Badge variant={daysRemaining < 365 ? 'destructive' : daysRemaining < 730 ? 'default' : 'secondary'}>
                             {daysRemaining} {t('Days')}
                           </Badge>

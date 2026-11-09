@@ -49,7 +49,7 @@ export function LabelElementInsertHandle({ onInsert }: LabelElementInsertHandleP
     <div className="flex justify-center py-0.5 opacity-0 group-hover/section:opacity-100 hover:opacity-100 transition-opacity">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="h-8 w-10 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center hover:scale-110 transition-all">
+          <button className="h-8 w-10 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center hover:scale-110 transition">
             <Plus className="h-4 w-4" />
           </button>
         </PopoverTrigger>

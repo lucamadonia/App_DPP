@@ -29,7 +29,7 @@ export function FieldRow({
   return (
     <div
       className={cn(
-        'p-3 rounded-lg border transition-all',
+        'p-3 rounded-lg border transition',
         'hover:border-primary/50 hover:shadow-sm',
 
         // Mobile: Vertical Stack

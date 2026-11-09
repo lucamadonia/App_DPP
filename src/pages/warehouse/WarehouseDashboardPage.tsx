@@ -195,7 +195,7 @@ export function WarehouseDashboardPage() {
         {kpis.map((kpi, i) => (
           <div
             key={kpi.label}
-            className={`transition-all duration-300 ${kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+            className={`transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 ${kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
           >
             <WarehouseKPICard {...kpi} loading={loading} />
           </div>
@@ -434,7 +434,7 @@ export function WarehouseDashboardPage() {
                     return (
                       <div
                         key={tx.id}
-                        className={`relative flex items-center gap-3 rounded-md p-2 -ml-6 pl-6 hover:bg-muted/50 transition-all duration-200 ${
+                        className={`relative flex items-center gap-3 rounded-md p-2 -ml-6 pl-6 hover:bg-muted/50 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 ${
                           txVisible[i] ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
                         }`}
                         style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out' }}

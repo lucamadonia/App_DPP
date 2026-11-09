@@ -431,7 +431,7 @@ function CommerceHubLocked() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/[0.06] via-transparent to-transparent">
-        <div className="grid items-center gap-6 p-8 md:grid-cols-[auto_1fr] md:p-12">
+        <div className="grid items-center gap-6 p-8 md:grid-cols-[auto_minmax(0,1fr)] md:p-12">
           <div className="rounded-3xl bg-primary/10 p-6 text-primary">
             <ShoppingBag className="h-12 w-12" />
           </div>

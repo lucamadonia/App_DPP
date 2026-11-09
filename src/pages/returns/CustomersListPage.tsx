@@ -9,13 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { PaginationBar } from '@/components/returns/PaginationBar';
 import { CustomerGridCard } from '@/components/returns/CustomerGridCard';
-import { pageVariants, pageTransition, gridStagger, gridItem, staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
+import { pageVariants, pageTransition, gridStagger, gridItem, useReducedMotion } from '@/lib/motion';
 import { getRhCustomers, createRhCustomer } from '@/services/supabase';
 import type { RhCustomer, PaginatedResult } from '@/types/returns-hub';
 
@@ -70,6 +71,53 @@ export function CustomersListPage() {
 
   const riskColor = (score: number) =>
     score >= 70 ? 'bg-red-100 text-red-800' : score >= 40 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+
+  const columns: ResponsiveTableColumn<RhCustomer>[] = [
+    {
+      id: 'customer',
+      header: t('Customer'),
+      mobilePriority: 'title',
+      cell: (c) => (
+        <span className="font-medium text-primary break-words">
+          {[c.firstName, c.lastName].filter(Boolean).join(' ') || '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'email',
+      header: t('Email'),
+      mobilePriority: 'subtitle',
+      cell: (c) => <span className="text-muted-foreground break-all">{c.email}</span>,
+    },
+    {
+      id: 'company',
+      header: t('Company'),
+      hideBelow: 'lg',
+      mobilePriority: 'meta',
+      cell: (c) => c.company || '—',
+    },
+    {
+      id: 'returns',
+      header: t('Total Returns'),
+      className: 'text-center',
+      mobilePriority: 'meta',
+      cell: (c) => <span className="tabular-nums">{c.returnStats.totalReturns}</span>,
+    },
+    {
+      id: 'value',
+      header: t('Total Value'),
+      className: 'text-right',
+      mobilePriority: 'meta',
+      cell: (c) => <span className="tabular-nums">{'€'}{c.returnStats.totalValue.toFixed(2)}</span>,
+    },
+    {
+      id: 'risk',
+      header: t('Risk Score'),
+      className: 'text-center',
+      mobilePriority: 'badge',
+      cell: (c) => <Badge variant="outline" className={riskColor(c.riskScore)}>{c.riskScore}</Badge>,
+    },
+  ];
 
   const openDialog = () => {
     setEmail('');
@@ -139,8 +187,8 @@ export function CustomersListPage() {
 
   return (
     <Wrapper className="space-y-6" {...wrapperProps as any}>
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">{t('Customer List')}</h1>
           <p className="text-muted-foreground">{t('Manage return customers')}</p>
         </div>
@@ -163,11 +211,12 @@ export function CustomersListPage() {
                 onKeyDown={(e) => e.key === 'Enter' && (setPage(1), load())}
               />
             </div>
-            <div className="flex border rounded-md">
+            <div className="flex self-start border rounded-md">
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
                 className="rounded-r-none"
+                aria-label={t('Table view')}
                 onClick={() => setViewMode('table')}
               >
                 <LayoutList className="h-4 w-4" />
@@ -176,6 +225,7 @@ export function CustomersListPage() {
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
                 className="rounded-l-none"
+                aria-label={t('Grid view')}
                 onClick={() => setViewMode('grid')}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -215,53 +265,12 @@ export function CustomersListPage() {
             </>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left">
-                      <th className="pb-2 font-medium">{t('Customer')}</th>
-                      <th className="pb-2 font-medium">{t('Email')}</th>
-                      <th className="pb-2 font-medium">{t('Company')}</th>
-                      <th className="pb-2 font-medium text-center">{t('Total Returns')}</th>
-                      <th className="pb-2 font-medium text-right">{t('Total Value')}</th>
-                      <th className="pb-2 font-medium text-center">{t('Risk Score')}</th>
-                    </tr>
-                  </thead>
-                  {prefersReduced ? (
-                    <tbody>
-                      {result.data.map((cust) => {
-                        const name = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
-                        return (
-                          <tr key={cust.id} className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors" onClick={() => navigate(`/returns/customers/${cust.id}`)}>
-                            <td className="py-3 relative"><div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" /><span className="text-primary font-medium pl-2">{name}</span></td>
-                            <td className="py-3 text-muted-foreground">{cust.email}</td>
-                            <td className="py-3">{cust.company || '—'}</td>
-                            <td className="py-3 text-center">{cust.returnStats.totalReturns}</td>
-                            <td className="py-3 text-right">{'\u20AC'}{cust.returnStats.totalValue.toFixed(2)}</td>
-                            <td className="py-3 text-center"><Badge variant="outline" className={riskColor(cust.riskScore)}>{cust.riskScore}</Badge></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  ) : (
-                    <motion.tbody variants={staggerContainer} initial="initial" animate="animate">
-                      {result.data.map((cust) => {
-                        const name = [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
-                        return (
-                          <motion.tr key={cust.id} variants={staggerItem} className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors" onClick={() => navigate(`/returns/customers/${cust.id}`)}>
-                            <td className="py-3 relative"><div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" /><span className="text-primary font-medium pl-2">{name}</span></td>
-                            <td className="py-3 text-muted-foreground">{cust.email}</td>
-                            <td className="py-3">{cust.company || '—'}</td>
-                            <td className="py-3 text-center">{cust.returnStats.totalReturns}</td>
-                            <td className="py-3 text-right">{'\u20AC'}{cust.returnStats.totalValue.toFixed(2)}</td>
-                            <td className="py-3 text-center"><Badge variant="outline" className={riskColor(cust.riskScore)}>{cust.riskScore}</Badge></td>
-                          </motion.tr>
-                        );
-                      })}
-                    </motion.tbody>
-                  )}
-                </table>
-              </div>
+              <ResponsiveTable
+                data={result.data}
+                columns={columns}
+                rowKey={(c) => c.id}
+                rowHref={(c) => `/returns/customers/${c.id}`}
+              />
               <PaginationBar page={page} totalPages={result.totalPages} onPageChange={setPage} />
             </>
           )}
@@ -283,7 +292,7 @@ export function CustomersListPage() {
                 placeholder="customer@example.com"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t('First Name')}</Label>
                 <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -293,7 +302,7 @@ export function CustomersListPage() {
                 <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t('Phone')}</Label>
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} />

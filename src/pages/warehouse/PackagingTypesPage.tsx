@@ -601,7 +601,7 @@ export function PackagingTypesPage() {
                 <Label htmlFor="tracked" className="font-medium">{t('Bestand tracken')}</Label>
               </div>
               {form.stock_tracked && (
-                <div className="grid grid-cols-[1fr_1fr] gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="threshold">{t('Warnschwelle')}</Label>
                     <Input

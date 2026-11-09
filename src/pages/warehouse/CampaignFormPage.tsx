@@ -174,7 +174,7 @@ export function CampaignFormPage() {
       <div className="grid grid-cols-1 min-w-0 gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Main fields */}
         <div className="min-w-0 lg:col-span-2 space-y-6">
-          <Card className="hover:shadow-md transition-all duration-200">
+          <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
             <CardHeader>
               <CardTitle className="text-base">{t('Campaign Details')}</CardTitle>
             </CardHeader>
@@ -302,7 +302,7 @@ export function CampaignFormPage() {
 
         {/* Sidebar - Product Picker */}
         <div className="space-y-6">
-          <Card className="hover:shadow-md transition-all duration-200">
+          <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
             <CardHeader>
               <CardTitle className="text-base">
                 {t('Campaign Products')}

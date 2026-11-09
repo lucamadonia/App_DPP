@@ -113,7 +113,7 @@ export function PublicIdeaBoardPage() {
         </header>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
           <StatCard label="Gesamt" value={totalCount} />
           <StatCard label="In Prüfung" value={inProgressCount} accent />
           <StatCard label="Umgesetzt ✨" value={doneCount} />
@@ -160,7 +160,7 @@ export function PublicIdeaBoardPage() {
                         onClick={() => handleVote(idea)}
                         disabled={!voteToken || voting === idea.id}
                         className={cn(
-                          'flex flex-col items-center justify-center rounded-lg border-2 shrink-0 w-14 h-14 transition-all',
+                          'flex flex-col items-center justify-center rounded-lg border-2 shrink-0 w-14 h-14 transition-[border-color,background-color,color] duration-150',
                           isVoted
                             ? 'bg-primary text-primary-foreground border-primary scale-105'
                             : 'bg-card hover:bg-muted border-border',
@@ -223,9 +223,9 @@ export function PublicIdeaBoardPage() {
 function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <Card className={accent ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-900/10' : ''}>
-      <CardContent className="p-3 text-center">
+      <CardContent className="p-2.5 sm:p-3 text-center">
         <div className="text-2xl font-bold tabular-nums">{value}</div>
-        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-xs text-muted-foreground text-balance">{label}</div>
       </CardContent>
     </Card>
   );

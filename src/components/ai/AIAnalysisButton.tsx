@@ -20,7 +20,7 @@ export function AIAnalysisButton({ onClick, isStreaming, hasResult }: AIAnalysis
         onClick();
       }}
       disabled={isStreaming}
-      className="relative overflow-hidden gap-1.5 w-full sm:w-auto bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white border-0 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 transition-all duration-300"
+      className="relative overflow-hidden gap-1.5 w-full sm:w-auto bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white border-0 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 transition duration-300"
     >
       {/* Shimmer overlay */}
       {!isStreaming && (

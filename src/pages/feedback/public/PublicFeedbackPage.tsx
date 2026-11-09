@@ -228,7 +228,7 @@ export function PublicFeedbackPage() {
           return (
             <Card
               key={item.request_id}
-              className={`overflow-hidden rounded-2xl border-border/60 shadow-sm transition-all duration-300 ${
+              className={`overflow-hidden rounded-2xl border-border/60 shadow-sm transition-[box-shadow] duration-200 ${
                 hasRating ? 'ring-2 ring-offset-2 shadow-xl' : 'hover:shadow-md'
               }`}
               style={hasRating ? { borderColor: primaryColor, '--tw-ring-color': primaryColor } as React.CSSProperties : undefined}
@@ -239,7 +239,7 @@ export function PublicFeedbackPage() {
                   <img
                     src={item.product_image}
                     alt={item.product_name}
-                    className="h-full w-full object-cover transition-transform duration-700 ease-out hover:scale-[1.04]"
+                    className="h-full w-full object-cover transition-[scale] duration-300 ease-out hover:scale-[1.04]"
                   />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
                   {item.variant_title && (
@@ -304,7 +304,7 @@ export function PublicFeedbackPage() {
 
                 {/* Rating-tailored follow-up — appears as soon as rated */}
                 {hasRating && (
-                  <div className="space-y-3 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="space-y-3 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {r.rating >= 4 ? (
                       <div className="space-y-2">
                         <label className="block text-sm font-medium">
@@ -760,14 +760,14 @@ function SuccessState({ customerName, tenantName, tenantSlug }: { customerName?:
         <div className="absolute inset-0 -z-10 flex items-center justify-center">
           <div className="h-32 w-32 rounded-full bg-primary/10 animate-pulse" />
         </div>
-        <div className="h-24 w-24 mx-auto rounded-full bg-emerald-500 flex items-center justify-center shadow-lg animate-in zoom-in-95 duration-500">
+        <div className="h-24 w-24 mx-auto rounded-full bg-emerald-500 flex items-center justify-center shadow-lg animate-in zoom-in-95 duration-300">
           <Check className="h-12 w-12 text-white" strokeWidth={3} />
         </div>
       </div>
-      <h1 className="mt-6 text-2xl sm:text-3xl font-bold animate-in fade-in slide-in-from-bottom-2 duration-700">
+      <h1 className="mt-6 text-2xl sm:text-3xl font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
         Danke{firstName ? `, ${firstName}` : ''}!
       </h1>
-      <p className="mt-3 text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-700 delay-100">
+      <p className="mt-3 text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100">
         Deine Bewertung wurde gesendet. {tenantName} prüft sie und veröffentlicht sie in Kürze.
       </p>
       {tenantSlug && (

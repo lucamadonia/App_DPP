@@ -15,7 +15,7 @@ export function ScannerModeToggle({ mode, onChange }: ScannerModeToggleProps) {
         type="button"
         onClick={() => onChange('in')}
         className={`
-          flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300
+          flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300
           ${mode === 'in'
             ? 'bg-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/20 border border-emerald-500/30'
             : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
@@ -29,7 +29,7 @@ export function ScannerModeToggle({ mode, onChange }: ScannerModeToggleProps) {
         type="button"
         onClick={() => onChange('out')}
         className={`
-          flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300
+          flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300
           ${mode === 'out'
             ? 'bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/20 border border-blue-500/30'
             : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'

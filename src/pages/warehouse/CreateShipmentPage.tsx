@@ -819,7 +819,7 @@ export function CreateShipmentPage() {
                 <div className="relative">
                   <div
                     className={`
-                      flex items-center justify-center rounded-2xl transition-all duration-300
+                      flex items-center justify-center rounded-2xl transition-[color,background-color,border-color,box-shadow,opacity,transform,width,height] duration-300
                       ${isActive
                         ? `h-11 w-11 sm:h-12 sm:w-12 bg-gradient-to-br ${s.color} shadow-lg shadow-blue-500/30 scale-110`
                         : isDone
@@ -910,7 +910,7 @@ export function CreateShipmentPage() {
                     key={rt.value}
                     type="button"
                     onClick={() => setRecipientType(rt.value as RecipientType)}
-                    className={`relative rounded-xl border-2 p-3 text-left transition-all duration-200 ${
+                    className={`relative rounded-xl border-2 p-3 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 ${
                       isSelected
                         ? 'border-transparent bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg scale-[1.02]'
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 hover:-translate-y-0.5'
@@ -946,7 +946,7 @@ export function CreateShipmentPage() {
                     key={p.value}
                     type="button"
                     onClick={() => setPriority(p.value as ShipmentPriority)}
-                    className={`relative rounded-xl border-2 py-2.5 px-3 text-center transition-all duration-200 ${
+                    className={`relative rounded-xl border-2 py-2.5 px-3 text-center transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 ${
                       isSelected
                         ? `border-transparent bg-slate-900 dark:bg-slate-100 ring-2 ${p.ringColor} shadow-lg scale-[1.02]`
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600'
@@ -1337,7 +1337,7 @@ export function CreateShipmentPage() {
               <button
                 type="button"
                 onClick={addItem}
-                className="w-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 py-4 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all flex items-center justify-center gap-2"
+                className="w-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 py-4 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-[color,background-color,border-color,box-shadow,opacity,transform] flex items-center justify-center gap-2"
               >
                 <Plus className="h-4 w-4" />
                 {t('Add Item')}
@@ -1348,7 +1348,7 @@ export function CreateShipmentPage() {
                 <button
                   type="button"
                   onClick={() => setBundlePickerOpen(true)}
-                  className="w-full rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-800 py-4 text-sm font-semibold text-amber-700 dark:text-amber-400 hover:border-amber-500 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-800 py-4 text-sm font-semibold text-amber-700 dark:text-amber-400 hover:border-amber-500 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-[color,background-color,border-color,box-shadow,opacity,transform] flex items-center justify-center gap-2"
                 >
                   <PackagePlus className="h-4 w-4" />
                   {t('Insert Set')}
@@ -1370,7 +1370,7 @@ export function CreateShipmentPage() {
                       key={b.id}
                       type="button"
                       onClick={() => void insertBundle(b)}
-                      className="w-full text-left rounded-xl border p-3 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
+                      className="w-full text-left rounded-xl border p-3 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-[color,background-color,border-color,box-shadow,opacity,transform]"
                     >
                       <div className="font-medium text-sm break-words">{b.shopifyProductTitle}</div>
                       <div className="text-xs text-muted-foreground mb-2">
@@ -1473,7 +1473,7 @@ export function CreateShipmentPage() {
                     key={sl.v}
                     type="button"
                     onClick={() => setServiceLevel(serviceLevel === sl.v ? '' : sl.v)}
-                    className={`rounded-xl border-2 py-2.5 text-xs font-semibold transition-all ${
+                    className={`rounded-xl border-2 py-2.5 text-xs font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform] ${
                       serviceLevel === sl.v
                         ? 'border-transparent bg-gradient-to-br from-blue-500 to-violet-500 text-white shadow-md'
                         : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
@@ -1647,22 +1647,27 @@ export function CreateShipmentPage() {
             subtitle={`${items.length} ${t('Items')} · ${totalUnits} ${t('Total Units')}`}
             gradient="from-violet-500 to-fuchsia-500"
           >
-            <div className="-mx-2 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800/40">
-              <table className="w-full text-sm">
+            <div className="-mx-2 rounded-xl overflow-x-auto overscroll-x-contain bg-slate-50 dark:bg-slate-800/40">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('Product')}</th>
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 hidden sm:table-cell">{t('Batch')}</th>
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 hidden md:table-cell">{t('Location')}</th>
-                    <th className="text-right px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('Quantity')}</th>
+                    <th className="w-20 text-right px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('Quantity')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, idx) => (
                     <tr key={idx} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
-                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">{item.productName || '—'}</td>
-                      <td className="px-3 py-2.5 hidden sm:table-cell font-mono text-xs text-slate-600 dark:text-slate-400">{item.batchSerial || '—'}</td>
-                      <td className="px-3 py-2.5 hidden md:table-cell text-slate-600 dark:text-slate-400">{item.locationName || '—'}</td>
+                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100 break-words [overflow-wrap:anywhere]">
+                        {item.productName || '—'}
+                        {item.batchSerial && (
+                          <span className="block sm:hidden font-mono text-[11px] font-normal text-slate-500 dark:text-slate-400 truncate">{item.batchSerial}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 hidden sm:table-cell font-mono text-xs text-slate-600 dark:text-slate-400 truncate">{item.batchSerial || '—'}</td>
+                      <td className="px-3 py-2.5 hidden md:table-cell text-slate-600 dark:text-slate-400 truncate">{item.locationName || '—'}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums font-bold text-slate-900 dark:text-slate-100">{item.quantity}</td>
                     </tr>
                   ))}
@@ -1759,7 +1764,7 @@ export function CreateShipmentPage() {
               size="lg"
               onClick={() => goToStep(step + 1)}
               disabled={!canAdvance}
-              className="rounded-xl h-11 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 disabled:from-slate-400 disabled:to-slate-400 text-white shadow-lg shadow-blue-500/30 disabled:shadow-none transition-all"
+              className="rounded-xl h-11 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 disabled:from-slate-400 disabled:to-slate-400 text-white shadow-lg shadow-blue-500/30 disabled:shadow-none transition-[color,background-color,border-color,box-shadow,opacity,transform]"
             >
               {t('Continue', { ns: 'common' })}
               <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -1769,7 +1774,7 @@ export function CreateShipmentPage() {
               size="lg"
               onClick={handleSubmit}
               disabled={loading}
-              className="rounded-xl h-11 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-white shadow-lg shadow-emerald-500/30 transition-all"
+              className="rounded-xl h-11 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-white shadow-lg shadow-emerald-500/30 transition-[color,background-color,border-color,box-shadow,opacity,transform]"
             >
               {loading ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />

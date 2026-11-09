@@ -78,7 +78,7 @@ export function ScanSessionPanel({
             <div
               key={entry.id}
               className={`
-                flex items-center gap-3 px-5 py-2.5 transition-all
+                flex items-center gap-3 px-5 py-2.5 transition-[color,background-color,border-color,box-shadow,opacity,transform]
                 ${entry.undone ? 'opacity-30 line-through' : ''}
                 ${i === 0 ? 'animate-scan-history-in' : ''}
               `}

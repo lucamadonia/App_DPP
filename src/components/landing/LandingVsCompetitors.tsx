@@ -395,14 +395,14 @@ export function LandingVsCompetitors() {
           <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => navigate('/login')}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/40 transition-all hover:-translate-y-0.5 hover:shadow-violet-600/50"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/40 transition-[translate,box-shadow,background-color,color] hover:-translate-y-0.5 hover:shadow-violet-600/50"
             >
               {t('vsCompetitors.footer.primaryCta')}
               <ArrowRight className="h-4 w-4" />
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition-[background-color,border-color,color] hover:bg-white/10"
             >
               {t('vsCompetitors.footer.secondaryCta')}
             </button>

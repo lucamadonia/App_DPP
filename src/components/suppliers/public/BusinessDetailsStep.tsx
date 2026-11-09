@@ -131,7 +131,7 @@ export function BusinessDetailsStep({ form, onEditStep }: BusinessDetailsStepPro
 
         {/* Company Basics Review */}
         <div className="rounded-lg border p-4 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h5 className="font-medium">{t('Company Basics')}</h5>
             <Button
               type="button"
@@ -155,7 +155,7 @@ export function BusinessDetailsStep({ form, onEditStep }: BusinessDetailsStepPro
 
         {/* Address Review */}
         <div className="rounded-lg border p-4 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h5 className="font-medium">{t('Address Information')}</h5>
             <Button
               type="button"
@@ -193,7 +193,7 @@ export function BusinessDetailsStep({ form, onEditStep }: BusinessDetailsStepPro
 
         {/* Legal & Banking Review */}
         <div className="rounded-lg border p-4 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h5 className="font-medium">{t('Legal & Banking Information')}</h5>
             <Button
               type="button"

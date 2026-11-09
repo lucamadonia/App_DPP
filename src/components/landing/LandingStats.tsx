@@ -43,7 +43,7 @@ export function LandingStats() {
           {stats.map((stat, i) => (
             <div
               key={stat.key}
-              className={`text-center rounded-2xl border border-slate-200/80 bg-white p-5 landing-3d-card transition-all duration-500 ${
+              className={`text-center rounded-2xl border border-slate-200/80 bg-white p-5 landing-3d-card transition-[opacity,translate] duration-500 ${
                 triggered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               }`}
               style={{ transitionDelay: `${i * 80}ms` }}

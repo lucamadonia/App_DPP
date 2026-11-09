@@ -66,7 +66,7 @@ export function LandingPricing() {
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Heading */}
-        <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+        <div className={`text-center mb-14 transition-[opacity,translate] duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-4 py-1.5 text-sm font-medium text-blue-700 mb-4">
             <Sparkles className="h-4 w-4" />
             {t('pricing.headline')}
@@ -80,11 +80,11 @@ export function LandingPricing() {
         </div>
 
         {/* Monthly / Yearly Toggle */}
-        <div className={`flex justify-center mb-14 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <div className={`flex justify-center mb-14 transition-[opacity,translate,box-shadow] duration-500 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <div className="relative inline-flex items-center rounded-full bg-slate-100 p-1 shadow-inner">
             <button
               onClick={() => setInterval('monthly')}
-              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-[box-shadow,background-color,color] duration-300 ${
                 interval === 'monthly'
                   ? 'bg-white text-slate-900 shadow-md'
                   : 'text-slate-600 hover:text-slate-900'
@@ -94,7 +94,7 @@ export function LandingPricing() {
             </button>
             <button
               onClick={() => setInterval('yearly')}
-              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-[box-shadow,background-color,color] duration-300 flex items-center gap-2 ${
                 interval === 'yearly'
                   ? 'bg-white text-slate-900 shadow-md'
                   : 'text-slate-600 hover:text-slate-900'
@@ -118,7 +118,7 @@ export function LandingPricing() {
             return (
               <div
                 key={plan}
-                className={`relative rounded-2xl flex flex-col transition-all duration-500 ${
+                className={`relative rounded-2xl flex flex-col transition-[opacity,translate] duration-500 ${
                   isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                 } ${isPro ? 'landing-3d-card' : 'landing-card-hover'}`}
                 style={{ transitionDelay: `${200 + i * 120}ms` }}
@@ -208,7 +208,7 @@ export function LandingPricing() {
                   {/* CTA */}
                   <button
                     onClick={() => navigate('/login')}
-                    className={`w-full rounded-xl py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 group ${
+                    className={`w-full rounded-xl py-3 text-sm font-semibold transition-[scale,box-shadow,background-color,color] flex items-center justify-center gap-2 group ${
                       isPro
                         ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98]'
                         : isEnterprise
@@ -228,7 +228,7 @@ export function LandingPricing() {
         </div>
 
         {/* Trust Signals */}
-        <div className={`flex flex-wrap justify-center gap-6 mt-10 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '500ms' }}>
+        <div className={`flex flex-wrap justify-center gap-6 mt-10 transition-[opacity,translate] duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '500ms' }}>
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <CreditCard className="h-4 w-4 text-emerald-500" />
             {t('pricing.trust.noCreditCard')}
@@ -244,7 +244,7 @@ export function LandingPricing() {
         </div>
 
         {/* Add-on Modules */}
-        <div className={`mt-24 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '600ms' }}>
+        <div className={`mt-24 transition-[opacity,translate] duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '600ms' }}>
           <div className="text-center mb-10">
             <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
               {t('pricing.addons.headline')}
@@ -261,7 +261,7 @@ export function LandingPricing() {
               return (
                 <div
                   key={mod.id}
-                  className={`group rounded-xl border border-slate-200 bg-white p-5 landing-3d-card transition-all duration-500 ${
+                  className={`group rounded-xl border border-slate-200 bg-white p-5 landing-3d-card transition-[opacity,translate] duration-500 ${
                     isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                   }`}
                   style={{ transitionDelay: `${700 + i * 80}ms` }}
@@ -293,7 +293,7 @@ export function LandingPricing() {
         </div>
 
         {/* AI Credit Packs */}
-        <div className={`mt-20 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '900ms' }}>
+        <div className={`mt-20 transition-[opacity,translate] duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '900ms' }}>
           <div className="text-center mb-10">
             <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
               {t('pricing.credits.headline')}
@@ -307,7 +307,7 @@ export function LandingPricing() {
             {CREDIT_PACKS.map((pack, i) => (
               <div
                 key={pack.id}
-                className={`group rounded-xl border border-slate-200 bg-white p-6 text-center landing-3d-card transition-all duration-500 ${
+                className={`group rounded-xl border border-slate-200 bg-white p-6 text-center landing-3d-card transition-[opacity,translate] duration-500 ${
                   isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
                 style={{ transitionDelay: `${1000 + i * 80}ms` }}
@@ -333,7 +333,7 @@ export function LandingPricing() {
           </div>
         </div>
         {/* Feature Comparison Table */}
-        <div className={`mt-20 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '1100ms' }}>
+        <div className={`mt-20 transition-[opacity,translate] duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: '1100ms' }}>
           <div className="text-center mb-10">
             <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
               {t('pricing.comparison.headline')}

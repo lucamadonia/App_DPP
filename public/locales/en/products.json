@@ -927,5 +927,18 @@
   "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.": "Are you sure you want to delete \"{{name}}\"? All batches will also be deleted. This action cannot be undone.",
   "Product export failed. Please try again.": "Product export failed. Please try again.",
   "Review compliance checks and documents before publishing.": "Review compliance checks and documents before publishing.",
-  "Open compliance check": "Open compliance check"
+  "Open compliance check": "Open compliance check",
+  "Notes": "Notes",
+  "Batch Information": "Batch Information",
+  "Public DPP Links": "Public DPP Links",
+  "Open Customer View": "Open Customer View",
+  "Open Customs View": "Open Customs View",
+  "Delete Batch": "Delete Batch",
+  "This action cannot be undone. The product itself will not be affected.": "This action cannot be undone. The product itself will not be affected.",
+  "Customer View": "Customer View",
+  "Customs View": "Customs View",
+  "Override": "Override",
+  "Danger Zone": "Danger Zone",
+  "Delete this batch": "Delete this batch",
+  "Links to the public Digital Product Passport for this batch": "Links to the public Digital Product Passport for this batch"
 }

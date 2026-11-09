@@ -393,7 +393,7 @@ export function SmartPackingCard({
                   key={rec.carton.id}
                   type="button"
                   onClick={() => onPickCarton?.(rec.carton.id)}
-                  className={`relative rounded-xl border p-2.5 text-left transition-all ${
+                  className={`relative rounded-xl border p-2.5 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] ${
                     !rec.fits
                       ? 'border-rose-500/30 bg-rose-500/5 opacity-60'
                       : isBest
@@ -426,12 +426,12 @@ export function SmartPackingCard({
 
         {/* Package facts */}
         {pkgInput && (
-          <section className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+          <section className="grid grid-cols-3 gap-1.5 sm:gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 sm:p-3 text-center">
             <div>
               <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
                 <Ruler className="h-3 w-3" /> L×B×H
               </div>
-              <div className="text-xs font-semibold text-white mt-0.5">
+              <div className="text-xs font-semibold text-white mt-0.5 [overflow-wrap:anywhere]">
                 {pkgInput.lengthCm}×{pkgInput.widthCm}×{pkgInput.heightCm} cm
               </div>
             </div>

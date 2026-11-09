@@ -356,7 +356,7 @@ export function OutstandingReceiptsPage() {
   // KPI cards
   // -------------------------------------------------------------------------
   const kpiCardClass =
-    'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md h-full';
+    'transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md h-full';
 
   return (
     <PageContainer

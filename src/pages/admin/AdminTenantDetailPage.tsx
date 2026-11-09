@@ -368,7 +368,7 @@ export function AdminTenantDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+        <TabsList className="flex w-full justify-start overflow-x-auto lg:grid lg:grid-cols-7">
           <TabsTrigger value="overview" className="gap-1"><Building2 className="h-3 w-3 hidden sm:block" />{t('Overview')}</TabsTrigger>
           <TabsTrigger value="billing" className="gap-1"><CreditCard className="h-3 w-3 hidden sm:block" />{t('Billing')}</TabsTrigger>
           <TabsTrigger value="users" className="gap-1"><Users className="h-3 w-3 hidden sm:block" />{t('Users')}</TabsTrigger>

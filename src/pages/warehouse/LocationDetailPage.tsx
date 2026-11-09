@@ -98,7 +98,7 @@ function KPICard({
 }) {
   const animated = useAnimatedNumber(value);
   return (
-    <Card className="hover:shadow-md transition-all duration-200">
+    <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
       <CardContent className="flex items-center gap-3 sm:gap-4 pt-4 sm:pt-6">
         <div className="rounded-lg bg-primary/10 p-2 sm:p-3">
           <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -651,7 +651,7 @@ export function LocationDetailPage() {
                     : '';
                 const furnitureCount = zone.furniture?.length ?? 0;
                 return (
-                  <Card key={zone.code} className="hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                  <Card key={zone.code} className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 hover:-translate-y-0.5">
                     <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 flex flex-row items-start justify-between gap-2">
                       <div className="min-w-0">
                         <CardTitle className="text-sm sm:text-base truncate">

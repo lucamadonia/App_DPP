@@ -165,7 +165,7 @@ function PaletteItem({
     <button
       draggable
       onDragStart={handleDragStart}
-      className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-muted/60 border border-transparent hover:border-muted-foreground/15 transition-all group cursor-grab active:cursor-grabbing"
+      className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-muted/60 border border-transparent hover:border-muted-foreground/15 transition-[color,background-color,border-color,box-shadow,opacity,transform] group cursor-grab active:cursor-grabbing"
       onClick={onAdd}
       title={`${label} (${entry.defaultSize.w}×${entry.defaultSize.h})`}
     >

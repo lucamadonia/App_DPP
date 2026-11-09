@@ -141,7 +141,7 @@ function GeoCountryList({ points, maxOrders }: { points: CommerceGeoPoint[]; max
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3"
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3"
               >
                 <span aria-hidden className="text-xl leading-none">
                   {flagEmoji(p.country)}

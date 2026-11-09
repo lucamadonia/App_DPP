@@ -105,13 +105,13 @@ function CustomerPortalContent() {
           color: branding.headerTextColor,
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] h-16 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {isAuthenticated && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden min-h-11 min-w-11"
+                className="md:hidden min-h-11 min-w-11 shrink-0"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 aria-label={sidebarOpen ? t('Close menu', { ns: 'common' }) : t('Open menu', { ns: 'common' })}
                 aria-expanded={sidebarOpen}
@@ -121,24 +121,24 @@ function CustomerPortalContent() {
             )}
             <Link
               to={tenantSlug && !window.location.hostname.includes(tenantSlug) ? `/customer/${tenantSlug}` : '/portal'}
-              className="flex min-h-11 items-center gap-3 hover:opacity-80 transition-opacity"
+              className="flex min-w-0 min-h-11 items-center gap-3 hover:opacity-80 transition-opacity"
             >
               {logoUrl ? (
-                <img src={logoUrl} alt={tenantName} className="h-9 w-auto max-w-[120px] rounded-lg object-contain" />
+                <img src={logoUrl} alt={tenantName} className="h-9 w-auto max-w-[96px] sm:max-w-[120px] shrink-0 rounded-lg object-contain" />
               ) : (
                 <div
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white"
                   style={{ backgroundColor: primaryColor }}
                 >
                   <Package className="h-5 w-5" />
                 </div>
               )}
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold" style={{ color: branding.headerTextColor }}>
+              <div className="flex min-w-0 flex-col">
+                <span className="text-sm font-semibold truncate" style={{ color: branding.headerTextColor }}>
                   {branding.portalTitle || tenantName || t('Customer Portal')}
                 </span>
                 {tenantName && branding.portalTitle && (
-                  <span className="text-xs opacity-60">
+                  <span className="text-xs opacity-60 truncate">
                     {tenantName}
                   </span>
                 )}
@@ -149,7 +149,7 @@ function CustomerPortalContent() {
             variant="outline"
             size="sm"
             onClick={toggleLanguage}
-            className="gap-1.5 min-h-11 min-w-11"
+            className="gap-1.5 min-h-11 min-w-11 shrink-0"
             title={currentLang === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}
           >
             <Languages className="h-4 w-4" aria-hidden="true" />
@@ -164,9 +164,9 @@ function CustomerPortalContent() {
           {/* Sidebar (mobile overlay) */}
           {sidebarOpen && (
             <div className="fixed inset-0 z-40 md:hidden" onClick={() => setSidebarOpen(false)}>
-              <div className="absolute inset-0 bg-black/50" />
+              <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
               <aside
-                className="absolute left-0 top-[calc(4rem+var(--safe-top))] bottom-0 w-64 border-r shadow-lg"
+                className="absolute left-0 top-[calc(4rem+var(--safe-top))] bottom-0 w-[min(16rem,85vw)] overflow-y-auto overscroll-contain border-r shadow-lg pl-[var(--safe-left)] pb-[var(--safe-bottom)] animate-in slide-in-from-left duration-200"
                 style={{
                   backgroundColor: branding.sidebarBackground,
                   color: branding.sidebarTextColor,
@@ -180,7 +180,7 @@ function CustomerPortalContent() {
 
           {/* Sidebar (desktop) */}
           <aside
-            className="hidden md:block w-56 border-r shrink-0 sticky top-16 h-[calc(100dvh-4rem)] overflow-y-auto"
+            className="hidden md:block w-56 border-r shrink-0 sticky top-[calc(4rem+var(--safe-top))] h-[calc(100dvh-4rem-var(--safe-top))] overflow-y-auto"
             style={{
               backgroundColor: branding.sidebarBackground,
               color: branding.sidebarTextColor,
@@ -190,7 +190,7 @@ function CustomerPortalContent() {
           </aside>
 
           {/* Content */}
-          <main className="flex-1 p-4 sm:p-6 overflow-auto">
+          <main className="flex-1 min-w-0 py-4 pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] pb-[calc(5.5rem+var(--safe-bottom))] sm:py-6 sm:pb-[calc(5.5rem+var(--safe-bottom))] md:pl-6 md:pr-[max(1.5rem,var(--safe-right))] md:pb-6 overflow-auto">
             <Outlet />
           </main>
 
@@ -208,8 +208,8 @@ function CustomerPortalContent() {
         className="border-t py-4 pb-[calc(1rem+var(--safe-bottom))]"
         style={{ backgroundColor: branding.cardBackground }}
       >
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-          <div className="flex flex-col sm:flex-row items-center gap-2">
+        <div className="max-w-7xl mx-auto pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
             {branding.showPoweredBy !== false && (
               <span>Powered by Trackbliss</span>
             )}

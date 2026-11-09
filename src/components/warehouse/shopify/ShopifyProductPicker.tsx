@@ -129,7 +129,7 @@ export function ShopifyProductPicker({ products, existingMaps, onClose, onMapped
         <DialogHeader>
           <DialogTitle className="text-sm sm:text-base">{t('Shopify Products')}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            {t('Select product...')} — Wähle für mehrere Varianten ein Trackbliss-Produkt, dann klicke unten auf Speichern.
+            {t('Pick a Trackbliss product for each variant, then save below.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -151,7 +151,7 @@ export function ShopifyProductPicker({ products, existingMaps, onClose, onMapped
                   const isSelected = !!selectedProductMap[variant.id];
                   return (
                     <TableRow key={variant.id} className={isMapped ? 'opacity-50' : isSelected ? 'bg-green-50 dark:bg-green-950/20' : ''}>
-                      <TableCell className="font-medium text-xs sm:text-sm">{product.title}</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm whitespace-normal break-words min-w-[8rem]">{product.title}</TableCell>
                       <TableCell className="hidden md:table-cell text-xs sm:text-sm">{variant.title !== 'Default Title' ? variant.title : '—'}</TableCell>
                       <TableCell className="hidden lg:table-cell text-xs font-mono">{variant.sku || '—'}</TableCell>
                       <TableCell className="hidden lg:table-cell text-xs font-mono">{variant.barcode || '—'}</TableCell>
@@ -192,7 +192,7 @@ export function ShopifyProductPicker({ products, existingMaps, onClose, onMapped
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {pendingCount > 0 ? `${pendingCount} Mapping${pendingCount > 1 ? 's' : ''} speichern` : 'Speichern'}
+            {pendingCount > 0 ? t('Save {{count}} mappings', { count: pendingCount }) : t('Save')}
           </Button>
         </DialogFooter>
       </DialogContent>

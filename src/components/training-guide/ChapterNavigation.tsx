@@ -96,7 +96,7 @@ export function ChapterNavigation({ completed }: ChapterNavigationProps) {
               ref={(el) => { pillRefs.current[id] = el; }}
               onClick={() => scrollToChapter(id)}
               className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all',
+                'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-[box-shadow,background-color,color]',
                 isActive
                   ? 'bg-blue-50 text-blue-700 ring-2 ring-blue-200 animate-guide-pill-active'
                   : isDone
