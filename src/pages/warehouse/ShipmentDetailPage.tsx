@@ -1398,8 +1398,8 @@ export function ShipmentDetailPage() {
 
       {/* Action Bar */}
       {!isTerminal && (
-        <div className="sticky bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))] md:bottom-0 z-20 bg-background/95 backdrop-blur border-t -mx-4 px-3 py-2 sm:-mx-6 sm:px-6 sm:py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-          <div className="flex gap-2">
+        <div className="mt-2 rounded-xl border bg-card p-3 flex flex-col gap-2 md:mt-0 md:rounded-none md:border-x-0 md:border-b-0 md:sticky md:bottom-0 md:z-20 md:bg-background/95 md:backdrop-blur md:-mx-6 md:px-6 md:py-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex gap-2 empty:hidden">
             {prevStatus && currentIdx > 0 && (
               <Button variant="outline" size="sm" onClick={() => handleStatusChange(prevStatus)} disabled={statusUpdating}>
                 <ArrowLeft className="mr-1 h-3.5 w-3.5" />
@@ -1407,7 +1407,7 @@ export function ShipmentDetailPage() {
               </Button>
             )}
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 md:flex md:flex-wrap [&>*]:w-full md:[&>*]:w-auto">
             {shipment.carrier === 'DHL' && (
               <DHLLabelActions shipment={shipment} onUpdate={reloadShipment} />
             )}
