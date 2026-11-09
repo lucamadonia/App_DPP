@@ -15,9 +15,8 @@ import { LayoutGrid, List, Plus, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
+import { FormActions } from '@/components/ui/form-layout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import { EmptyState, ErrorState } from '@/components/ui/state-feedback';
@@ -34,7 +33,7 @@ import { gridStagger, useReducedMotion } from '@/lib/motion';
 import { relativeTime } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { InfluencerFields } from '@/components/warehouse/InfluencerFields';
+import { ContactCreateWizard, ContactFormSections } from '@/components/warehouse/ContactFormFields';
 import {
   ContactActionCard,
   ContactActionCardSkeleton,
@@ -446,98 +445,35 @@ export function ContactsListPage() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto pb-0">
             <DialogHeader>
               <DialogTitle>{editing ? t('Edit Contact') : t('Add Contact')}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              {/* Contact Type */}
-              <div className="space-y-2">
-                <Label>{t('Contact Type')}</Label>
-                <Select
-                  value={form.type || 'b2b'}
-                  onValueChange={(v) => setForm({ ...form, type: v as WhContactType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="b2b">{t('B2B')}</SelectItem>
-                    <SelectItem value="b2c">{t('B2C')}</SelectItem>
-                    <SelectItem value="supplier">{t('Supplier')}</SelectItem>
-                    <SelectItem value="influencer">{t('Influencer')}</SelectItem>
-                    <SelectItem value="other">{t('Other')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('Contact Name')}</Label>
-                  <Input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Company')}</Label>
-                  <Input value={form.companyName || ''} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('Email')}</Label>
-                  <Input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Phone')}</Label>
-                  <Input value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Street')}</Label>
-                <Input value={form.street || ''} onChange={(e) => setForm({ ...form, street: e.target.value })} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>{t('Postal Code')}</Label>
-                  <Input value={form.postalCode || ''} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('City')}</Label>
-                  <Input value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Country')}</Label>
-                  <Input value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('Customer Number')}</Label>
-                  <Input value={form.customerNumber || ''} onChange={(e) => setForm({ ...form, customerNumber: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('VAT ID')}</Label>
-                  <Input value={form.vatId || ''} onChange={(e) => setForm({ ...form, vatId: e.target.value })} />
-                </div>
-              </div>
-              {/* Influencer fields (conditional) */}
-              {form.type === 'influencer' && (
-                <InfluencerFields
+            {editing ? (
+              <>
+                <ContactFormSections
                   form={form}
-                  onChange={(updates) => setForm({ ...form, ...updates })}
+                  onChange={(updates) => setForm((prev) => ({ ...prev, ...updates }))}
                 />
-              )}
-              <div className="space-y-2">
-                <Label>{t('Notes')}</Label>
-                <Textarea value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
-              <Button onClick={handleSave} disabled={!form.contactName || saving}>
-                {saving ? t('Saving...', { ns: 'common' }) : t('Save', { ns: 'common' })}
-              </Button>
-            </DialogFooter>
+                <FormActions sticky="dialog">
+                  <Button variant="ghost" onClick={() => setDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
+                  <Button onClick={handleSave} disabled={!form.contactName || saving}>
+                    {saving ? t('Saving...', { ns: 'common' }) : t('Save', { ns: 'common' })}
+                  </Button>
+                </FormActions>
+              </>
+            ) : (
+              <ContactCreateWizard
+                form={form}
+                onChange={(updates) => setForm((prev) => ({ ...prev, ...updates }))}
+                onCancel={() => setDialogOpen(false)}
+                onFinish={handleSave}
+                finishing={saving}
+              />
+            )}
           </DialogContent>
         </Dialog>
+
       </div>
     </PageContainer>
   );

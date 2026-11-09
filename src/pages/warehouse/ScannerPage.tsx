@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -375,8 +376,10 @@ export function ScannerPage() {
   const accentColor = mode === 'in' ? 'emerald' : 'blue';
   const accent = ACCENT_CLASSES[accentColor];
 
-  return (
-    <div className="fixed inset-0 z-40 bg-slate-950 text-white flex flex-col">
+  // Portal to <body>: route wrappers create stacking contexts that would
+  // otherwise let the app header paint over this full-screen tool.
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col">
       {/* Hidden scanner input */}
       <input {...inputProps} />
 
@@ -385,7 +388,7 @@ export function ScannerPage() {
         <button
           type="button"
           onClick={() => navigate('/warehouse')}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="flex items-center justify-center gap-2 px-3 py-2 min-h-11 min-w-11 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">{t('Back')}</span>
@@ -400,7 +403,7 @@ export function ScannerPage() {
           type="button"
           onClick={() => setCameraOpen(!cameraOpen)}
           className={`
-            flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors
+            flex items-center justify-center gap-2 px-3 py-2 min-h-11 min-w-11 rounded-xl text-sm transition-colors
             ${cameraOpen
               ? accent.cameraActive
               : 'text-slate-400 hover:text-white hover:bg-white/10'
@@ -609,6 +612,7 @@ export function ScannerPage() {
         }}
         onClose={() => setBulkSetupOpen(false)}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

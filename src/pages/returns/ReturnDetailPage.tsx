@@ -16,6 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { FormField, InputAffix } from '@/components/ui/form-layout';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
 import { StatusPipeline } from '@/components/returns/public/StatusPipeline';
 import { AnimatedTimeline } from '@/components/returns/public/AnimatedTimeline';
@@ -867,20 +869,20 @@ export function ReturnDetailPage() {
               <span className="text-muted-foreground">{t('Original Amount')}</span>
               <span className="font-medium">€{(returnData.refundAmount || 0).toFixed(2)}</span>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm">{t('Deduction Amount')} (€)</Label>
-              <input type="number" step="0.01" min="0" max={returnData.refundAmount || undefined} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} placeholder="0.00" />
-            </div>
+            <FormField label={t('Deduction Amount')} htmlFor="deduction-amount" required>
+              <InputAffix suffix="€">
+                <Input id="deduction-amount" type="number" inputMode="decimal" step="0.01" min="0" max={returnData.refundAmount || undefined} value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} placeholder="0.00" />
+              </InputAffix>
+            </FormField>
             {deductionAmount && Number(deductionAmount) > 0 && (
               <div className="flex justify-between text-sm font-medium">
                 <span>{t('Final Refund Amount')}</span>
                 <span className="text-green-600">€{Math.max(0, (returnData.refundAmount || 0) - Number(deductionAmount)).toFixed(2)}</span>
               </div>
             )}
-            <div className="space-y-1.5">
-              <Label className="text-sm">{t('Deduction Reason')}</Label>
-              <Textarea placeholder={t('Enter deduction reason...')} value={deductionReason} onChange={(e) => setDeductionReason(e.target.value)} required />
-            </div>
+            <FormField label={t('Deduction Reason')} htmlFor="deduction-reason" required>
+              <Textarea id="deduction-reason" placeholder={t('Enter deduction reason...')} value={deductionReason} onChange={(e) => setDeductionReason(e.target.value)} required />
+            </FormField>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeductionDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
@@ -898,11 +900,10 @@ export function ReturnDetailPage() {
             <DialogDescription>{t('This will reject the return after inspection. The customer will be notified.')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm">{t('Rejection Reason')}</Label>
-              <Textarea placeholder={t('Enter rejection reason...')} value={inspRejectReason} onChange={(e) => setInspRejectReason(e.target.value)} required />
-            </div>
-            <div className="flex items-center gap-2">
+            <FormField label={t('Rejection Reason')} htmlFor="insp-reject-reason" required>
+              <Textarea id="insp-reject-reason" placeholder={t('Enter rejection reason...')} value={inspRejectReason} onChange={(e) => setInspRejectReason(e.target.value)} required />
+            </FormField>
+            <div className="flex min-h-11 items-center gap-2">
               <Checkbox id="return-to-customer" checked={inspReturnToCustomer} onCheckedChange={(v) => setInspReturnToCustomer(!!v)} />
               <Label htmlFor="return-to-customer" className="text-sm cursor-pointer flex items-center gap-1.5">
                 <Undo2 className="h-3.5 w-3.5" />
@@ -1346,10 +1347,9 @@ function InspectionTab({ returnData, activeStageIndex, inspCondition, inspNotes,
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs">{t('Condition')}</Label>
+              <FormField label={t('Condition')} htmlFor="insp-condition" required>
                 <Select value={inspCondition} onValueChange={(v) => onConditionChange(v as ItemCondition)}>
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger id="insp-condition" className="w-full">
                     <SelectValue placeholder={t('Select condition')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1358,11 +1358,10 @@ function InspectionTab({ returnData, activeStageIndex, inspCondition, inspNotes,
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">{t('Inspection Notes')}</Label>
-                <Textarea className="min-h-[70px] text-sm" value={inspNotes} onChange={(e) => onNotesChange(e.target.value)} placeholder={t('Enter inspection notes...')} />
-              </div>
+              </FormField>
+              <FormField label={t('Inspection Notes')} htmlFor="insp-notes" optional>
+                <Textarea id="insp-notes" className="min-h-[70px] text-sm" value={inspNotes} onChange={(e) => onNotesChange(e.target.value)} placeholder={t('Enter inspection notes...')} />
+              </FormField>
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="secondary" onClick={onSave} disabled={inspSaving || !inspCondition}>

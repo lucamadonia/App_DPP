@@ -31,10 +31,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { FormSection, FormGrid, FormField, InputAffix, ChoiceCards, FormToggleRow, OptionalDisclosure } from '@/components/ui/form-layout';
+import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import type { SupportResources, VideoLink, FAQItem, SparePart } from '@/types/database';
 
@@ -79,34 +79,34 @@ function SortableFAQItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="border rounded-lg overflow-hidden"
+      className="overflow-hidden rounded-lg border bg-card"
     >
-      <div className="flex items-start gap-3 p-4">
+      <div className="flex items-start gap-2 p-3 sm:gap-3 sm:p-4">
         {/* Drag handle + number */}
         {!readOnly && (
-          <div
-            className="flex flex-col items-center gap-1 pt-1 cursor-grab active:cursor-grabbing"
+          <button
+            type="button"
+            aria-label={t('Drag to reorder')}
+            className="-ml-1 flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted active:cursor-grabbing pointer-coarse:size-11"
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
+            <GripVertical className="h-4 w-4" />
+          </button>
         )}
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+        <div className="mt-1.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground tabular-nums">
           {index + 1}
         </div>
-        <div className="flex-1 space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">{t('Question')}</label>
+        <div className="min-w-0 flex-1 space-y-4">
+          <FormField label={t('Question')}>
             <Input
               value={item.question}
               onChange={(e) => onUpdateQuestion(e.target.value)}
               placeholder={t('Enter question...')}
               disabled={readOnly}
             />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">{t('Answer')}</label>
+          </FormField>
+          <FormField label={t('Answer')}>
             <RichTextEditor
               value={item.answer}
               onChange={onUpdateAnswer}
@@ -115,10 +115,10 @@ function SortableFAQItem({
               minHeight="5rem"
               compact
             />
-          </div>
+          </FormField>
         </div>
         {!readOnly && (
-          <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={onRemove}>
+          <Button variant="ghost" size="icon" className="shrink-0 pointer-coarse:size-11" aria-label={t('Delete', { ns: 'common' })} onClick={onRemove}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         )}
@@ -194,303 +194,292 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
     update('spareParts', spareParts.map((p: SparePart, i: number) => i === index ? { ...p, [field]: value } : p));
   };
 
+  const activeMeta = sections.find(s => s.id === activeSection) ?? sections[0];
+
   return (
     <div className="space-y-6">
-      {/* Section navigation */}
-      <div className="flex flex-wrap gap-2">
-        {sections.map(section => (
-          <Badge
-            key={section.id}
-            variant={activeSection === section.id ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => setActiveSection(section.id)}
-          >
-            <section.icon className="mr-1 h-3 w-3" />
-            {section.label}
-          </Badge>
-        ))}
+      {/* Section navigation — scrolls horizontally on phones instead of wrapping */}
+      <div
+        role="tablist"
+        aria-label={t('Support')}
+        className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {sections.map(section => {
+          const isActive = activeSection === section.id;
+          return (
+            <button
+              key={section.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveSection(section.id)}
+              className={cn(
+                'inline-flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 text-sm font-medium outline-none pointer-coarse:min-h-11',
+                'transition-[background-color,border-color,color] duration-150 ease-out focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                isActive
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <section.icon className="size-4" aria-hidden="true" />
+              {section.label}
+            </button>
+          );
+        })}
       </div>
 
+      <div role="tabpanel" aria-label={activeMeta.label}>
       {/* Instructions */}
       {activeSection === 'instructions' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              {t('Customer Instructions')}
-            </CardTitle>
-            <CardDescription>{t('Usage instructions and assembly guides')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('Usage Instructions')}</label>
-              <RichTextEditor
-                value={supportResources.instructions || ''}
-                onChange={(html) => update('instructions', html)}
-                placeholder={t('Enter usage instructions...')}
-                disabled={readOnly}
-                minHeight="8rem"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('Assembly Guide')}</label>
-              <RichTextEditor
-                value={supportResources.assemblyGuide || ''}
-                onChange={(html) => update('assemblyGuide', html)}
-                placeholder={t('Enter assembly/installation guide...')}
-                disabled={readOnly}
-                minHeight="6rem"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <FormSection
+          title={t('Customer Instructions')}
+          description={t('Usage instructions and assembly guides')}
+          icon={BookOpen}
+          layout="stacked"
+          variant="plain"
+        >
+          <FormField label={t('Usage Instructions')}>
+            <RichTextEditor
+              value={supportResources.instructions || ''}
+              onChange={(html) => update('instructions', html)}
+              placeholder={t('Enter usage instructions...')}
+              disabled={readOnly}
+              minHeight="6rem"
+            />
+          </FormField>
+          <OptionalDisclosure
+            label={t('Assembly Guide')}
+            filledCount={supportResources.assemblyGuide && supportResources.assemblyGuide !== '<p></p>' ? 1 : 0}
+          >
+            <RichTextEditor
+              value={supportResources.assemblyGuide || ''}
+              onChange={(html) => update('assemblyGuide', html)}
+              placeholder={t('Enter assembly/installation guide...')}
+              disabled={readOnly}
+              minHeight="6rem"
+            />
+          </OptionalDisclosure>
+        </FormSection>
       )}
 
       {/* Videos */}
       {activeSection === 'videos' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Video className="h-5 w-5 text-primary" />
-                  {t('Video Links')}
-                </CardTitle>
-                <CardDescription>{t('Tutorial and product videos')}</CardDescription>
-              </div>
-              {!readOnly && (
-                <Button variant="outline" size="sm" onClick={addVideo}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('Add Video')}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {videos.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                {t('No videos added yet')}
-              </p>
-            ) : (
-              videos.map((video: VideoLink, index: number) => (
-                <div key={index} className="grid gap-3 grid-cols-1 sm:grid-cols-4 p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Title')}</label>
+        <FormSection
+          title={t('Video Links')}
+          description={t('Tutorial and product videos')}
+          icon={Video}
+          layout="stacked"
+          variant="plain"
+          aside={!readOnly && (
+            <Button variant="outline" size="sm" className="pointer-coarse:min-h-11" onClick={addVideo}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('Add Video')}
+            </Button>
+          )}
+        >
+          {videos.length === 0 ? (
+            <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+              {t('No videos added yet')}
+            </p>
+          ) : (
+            videos.map((video: VideoLink, index: number) => (
+              <div key={index} className="rounded-lg border bg-card p-4">
+                <FormGrid cols={6}>
+                  <FormField label={t('Title')} span={2}>
                     <Input
                       value={video.title}
                       onChange={(e) => updateVideo(index, 'title', e.target.value)}
                       placeholder={t('Video title')}
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-medium">{t('URL')}</label>
+                  </FormField>
+                  <FormField label={t('URL')} span={4}>
                     <Input
+                      type="url"
+                      inputMode="url"
                       value={video.url}
                       onChange={(e) => updateVideo(index, 'url', e.target.value)}
                       placeholder="https://youtube.com/watch?v=..."
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1 space-y-1">
-                      <label className="text-xs font-medium">{t('Type')}</label>
-                      <Select
-                        value={video.type}
-                        onValueChange={(v) => updateVideo(index, 'type', v)}
-                        disabled={readOnly}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="youtube">YouTube</SelectItem>
-                          <SelectItem value="vimeo">Vimeo</SelectItem>
-                          <SelectItem value="direct">{t('Direct Link')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {!readOnly && (
-                      <Button variant="ghost" size="icon" onClick={() => removeVideo(index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                  {video.url && (
-                    <div className="sm:col-span-4">
-                      <a
-                        href={video.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        {t('Open video')}
-                      </a>
-                    </div>
+                  </FormField>
+                  <FormField label={t('Type')} span="full">
+                    <ChoiceCards
+                      value={video.type}
+                      onValueChange={(v) => updateVideo(index, 'type', v)}
+                      columns={3}
+                      disabled={readOnly}
+                      options={[
+                        { value: 'youtube', label: 'YouTube' },
+                        { value: 'vimeo', label: 'Vimeo' },
+                        { value: 'direct', label: t('Direct Link') },
+                      ]}
+                    />
+                  </FormField>
+                </FormGrid>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  {video.url ? (
+                    <a
+                      href={video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-9 items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {t('Open video')}
+                    </a>
+                  ) : <span />}
+                  {!readOnly && (
+                    <Button variant="ghost" size="icon" className="pointer-coarse:size-11" aria-label={t('Delete', { ns: 'common' })} onClick={() => removeVideo(index)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   )}
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            ))
+          )}
+        </FormSection>
       )}
 
       {/* FAQ */}
       {activeSection === 'faq' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <HelpCircle className="h-5 w-5 text-primary" />
-                  {t('Frequently Asked Questions')}
-                </CardTitle>
-                {faq.length > 1 && !readOnly && (
-                  <CardDescription className="flex items-center gap-1 mt-1">
-                    <GripVertical className="h-3 w-3" />
-                    {t('Drag to reorder')}
-                  </CardDescription>
-                )}
-              </div>
-              {!readOnly && (
-                <Button variant="outline" size="sm" onClick={addFAQ}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('Add Question')}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {faq.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                {t('No FAQ entries yet')}
-              </p>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleFAQDragEnd}
+        <FormSection
+          title={t('Frequently Asked Questions')}
+          description={faq.length > 1 && !readOnly ? t('Drag to reorder') : undefined}
+          icon={HelpCircle}
+          layout="stacked"
+          variant="plain"
+          aside={!readOnly && (
+            <Button variant="outline" size="sm" className="pointer-coarse:min-h-11" onClick={addFAQ}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('Add Question')}
+            </Button>
+          )}
+        >
+          {faq.length === 0 ? (
+            <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+              {t('No FAQ entries yet')}
+            </p>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleFAQDragEnd}
+            >
+              <SortableContext
+                items={faq.map((_: FAQItem, i: number) => `faq-${i}`)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={faq.map((_: FAQItem, i: number) => `faq-${i}`)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-4">
-                    {faq.map((item: FAQItem, index: number) => (
-                      <SortableFAQItem
-                        key={`faq-${index}`}
-                        item={item}
-                        index={index}
-                        onUpdateQuestion={(v) => updateFAQ(index, 'question', v)}
-                        onUpdateAnswer={(v) => updateFAQ(index, 'answer', v)}
-                        onRemove={() => removeFAQ(index)}
-                        readOnly={readOnly}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            )}
-          </CardContent>
-        </Card>
+                <div className="space-y-3">
+                  {faq.map((item: FAQItem, index: number) => (
+                    <SortableFAQItem
+                      key={`faq-${index}`}
+                      item={item}
+                      index={index}
+                      onUpdateQuestion={(v) => updateFAQ(index, 'question', v)}
+                      onUpdateAnswer={(v) => updateFAQ(index, 'answer', v)}
+                      onRemove={() => removeFAQ(index)}
+                      readOnly={readOnly}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </FormSection>
       )}
 
       {/* Warranty */}
       {activeSection === 'warranty' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              {t('Warranty Information')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('Warranty Duration (Months)')}</label>
+        <FormSection title={t('Warranty Information')} icon={Shield} layout="stacked" variant="plain">
+          <FormGrid cols={2}>
+            <FormField label={t('Warranty Duration')} span="full">
+              <InputAffix suffix={t('months')}>
                 <Input
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={supportResources.warranty?.durationMonths || ''}
                   onChange={(e) => update('warranty', {
                     ...supportResources.warranty,
                     durationMonths: parseInt(e.target.value) || undefined,
                   })}
-                  placeholder="e.g. 24"
+                  placeholder="24"
                   disabled={readOnly}
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('Contact Email')}</label>
-                <Input
-                  type="email"
-                  value={supportResources.warranty?.contactEmail || ''}
-                  onChange={(e) => update('warranty', {
-                    ...supportResources.warranty,
-                    contactEmail: e.target.value,
-                  })}
-                  placeholder="warranty@example.com"
-                  disabled={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('Contact Phone')}</label>
-                <Input
-                  value={supportResources.warranty?.contactPhone || ''}
-                  onChange={(e) => update('warranty', {
-                    ...supportResources.warranty,
-                    contactPhone: e.target.value,
-                  })}
-                  placeholder="+49 123 456789"
-                  disabled={readOnly}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium">{t('Warranty Terms')}</label>
-                <RichTextEditor
-                  value={supportResources.warranty?.terms || ''}
-                  onChange={(html) => update('warranty', {
-                    ...supportResources.warranty,
-                    terms: html,
-                  })}
-                  placeholder={t('Enter warranty terms and conditions...')}
-                  disabled={readOnly}
-                  minHeight="6rem"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </InputAffix>
+            </FormField>
+            <FormField label={t('Contact Email')} optional>
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={supportResources.warranty?.contactEmail || ''}
+                onChange={(e) => update('warranty', {
+                  ...supportResources.warranty,
+                  contactEmail: e.target.value,
+                })}
+                placeholder="warranty@example.com"
+                disabled={readOnly}
+              />
+            </FormField>
+            <FormField label={t('Contact Phone')} optional>
+              <Input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={supportResources.warranty?.contactPhone || ''}
+                onChange={(e) => update('warranty', {
+                  ...supportResources.warranty,
+                  contactPhone: e.target.value,
+                })}
+                placeholder="+49 123 456789"
+                disabled={readOnly}
+              />
+            </FormField>
+            <FormField label={t('Warranty Terms')} optional span="full">
+              <RichTextEditor
+                value={supportResources.warranty?.terms || ''}
+                onChange={(html) => update('warranty', {
+                  ...supportResources.warranty,
+                  terms: html,
+                })}
+                placeholder={t('Enter warranty terms and conditions...')}
+                disabled={readOnly}
+                minHeight="6rem"
+              />
+            </FormField>
+          </FormGrid>
+        </FormSection>
       )}
 
       {/* Repair */}
       {activeSection === 'repair' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-primary" />
-              {t('Repair Information')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('Repair Guide')}</label>
-              <RichTextEditor
-                value={supportResources.repairInfo?.repairGuide || ''}
-                onChange={(html) => update('repairInfo', {
-                  ...supportResources.repairInfo,
-                  repairGuide: html,
-                })}
-                placeholder={t('Enter repair instructions...')}
-                disabled={readOnly}
-                minHeight="6rem"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('Repairability Score')} (1-10)</label>
+        <FormSection title={t('Repair Information')} icon={Wrench} layout="stacked" variant="plain">
+          <FormField label={t('Repair Guide')}>
+            <RichTextEditor
+              value={supportResources.repairInfo?.repairGuide || ''}
+              onChange={(html) => update('repairInfo', {
+                ...supportResources.repairInfo,
+                repairGuide: html,
+              })}
+              placeholder={t('Enter repair instructions...')}
+              disabled={readOnly}
+              minHeight="6rem"
+            />
+          </FormField>
+          <FormField
+            label={t('Repairability Score')}
+            optional
+            labelAside={supportResources.repairInfo?.repairabilityScore ? (
+              <span className="tabular-nums font-medium text-foreground">{supportResources.repairInfo.repairabilityScore}/10</span>
+            ) : undefined}
+            hint={t('1 = hard to repair, 10 = easy to repair')}
+          >
+            <InputAffix suffix="/ 10">
               <Input
                 type="number"
+                inputMode="numeric"
                 min="1"
                 max="10"
                 value={supportResources.repairInfo?.repairabilityScore || ''}
@@ -498,126 +487,114 @@ export function ProductSupportTab({ supportResources, onChange, readOnly }: Prop
                   ...supportResources.repairInfo,
                   repairabilityScore: parseInt(e.target.value) || undefined,
                 })}
-                placeholder="e.g. 7"
+                placeholder="7"
                 disabled={readOnly}
               />
-              {supportResources.repairInfo?.repairabilityScore && (
-                <div className="flex items-center gap-2">
-                  <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-[width] duration-300"
-                      style={{ width: `${(supportResources.repairInfo.repairabilityScore / 10) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium">
-                    {supportResources.repairInfo.repairabilityScore}/10
-                  </span>
-                </div>
-              )}
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('Authorized Service Centers')}</label>
-              <p className="text-xs text-muted-foreground">{t('One per line')}</p>
-              <textarea
-                className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={(supportResources.repairInfo?.serviceCenters || []).join('\n')}
-                onChange={(e) => update('repairInfo', {
-                  ...supportResources.repairInfo,
-                  serviceCenters: e.target.value.split('\n').filter(Boolean),
-                })}
-                placeholder={t('Service Center Name, City')}
-                disabled={readOnly}
+            </InputAffix>
+          </FormField>
+          {supportResources.repairInfo?.repairabilityScore && (
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out"
+                style={{ width: `${(supportResources.repairInfo.repairabilityScore / 10) * 100}%` }}
               />
             </div>
-          </CardContent>
-        </Card>
+          )}
+          <FormField label={t('Authorized Service Centers')} optional hint={t('One per line')}>
+            <Textarea
+              value={(supportResources.repairInfo?.serviceCenters || []).join('\n')}
+              onChange={(e) => update('repairInfo', {
+                ...supportResources.repairInfo,
+                serviceCenters: e.target.value.split('\n').filter(Boolean),
+              })}
+              placeholder={t('Service Center Name, City')}
+              disabled={readOnly}
+              rows={3}
+            />
+          </FormField>
+        </FormSection>
       )}
 
       {/* Spare Parts */}
       {activeSection === 'spareParts' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  {t('Spare Parts')}
-                </CardTitle>
-                <CardDescription>{t('Available replacement parts')}</CardDescription>
-              </div>
-              {!readOnly && (
-                <Button variant="outline" size="sm" onClick={addSparePart}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('Add Part')}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {spareParts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                {t('No spare parts listed')}
-              </p>
-            ) : (
-              spareParts.map((part: SparePart, index: number) => (
-                <div key={index} className="grid gap-3 grid-cols-2 sm:grid-cols-5 p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Part Name')}</label>
+        <FormSection
+          title={t('Spare Parts')}
+          description={t('Available replacement parts')}
+          icon={Package}
+          layout="stacked"
+          variant="plain"
+          aside={!readOnly && (
+            <Button variant="outline" size="sm" className="pointer-coarse:min-h-11" onClick={addSparePart}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('Add Part')}
+            </Button>
+          )}
+        >
+          {spareParts.length === 0 ? (
+            <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+              {t('No spare parts listed')}
+            </p>
+          ) : (
+            spareParts.map((part: SparePart, index: number) => (
+              <div key={index} className="rounded-lg border bg-card p-4">
+                <FormGrid cols={6}>
+                  <FormField label={t('Part Name')} span={3}>
                     <Input
                       value={part.name}
                       onChange={(e) => updateSparePart(index, 'name', e.target.value)}
                       placeholder={t('e.g. Battery')}
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Part Number')}</label>
+                  </FormField>
+                  <FormField label={t('Part Number')} optional span={3}>
                     <Input
                       value={part.partNumber || ''}
                       onChange={(e) => updateSparePart(index, 'partNumber', e.target.value)}
-                      placeholder="e.g. BAT-001"
+                      placeholder="BAT-001"
+                      className="font-mono"
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Price')}</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={part.price || ''}
-                      onChange={(e) => updateSparePart(index, 'price', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Available')}</label>
-                    <div className="flex items-center h-9 gap-2">
-                      <input
-                        type="checkbox"
-                        checked={part.available !== false}
-                        onChange={(e) => updateSparePart(index, 'available', e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300"
+                  </FormField>
+                  <FormField label={t('Price')} optional span={3}>
+                    <InputAffix suffix={part.currency || 'EUR'}>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={part.price || ''}
+                        onChange={(e) => updateSparePart(index, 'price', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
                         disabled={readOnly}
                       />
-                      <span className="text-sm">{part.available !== false ? t('In stock') : t('Out of stock')}</span>
-                    </div>
-                  </div>
-                  {!readOnly && (
-                    <div className="flex items-end">
-                      <Button variant="ghost" size="icon" onClick={() => removeSparePart(index)}>
+                    </InputAffix>
+                  </FormField>
+                  <div className="flex items-end gap-2 @md:col-span-3">
+                    <FormToggleRow
+                      label={part.available !== false ? t('In stock') : t('Out of stock')}
+                      htmlFor={`spare-available-${index}`}
+                      className="flex-1"
+                    >
+                      <Switch
+                        id={`spare-available-${index}`}
+                        checked={part.available !== false}
+                        onCheckedChange={(v) => updateSparePart(index, 'available', v)}
+                        disabled={readOnly}
+                      />
+                    </FormToggleRow>
+                    {!readOnly && (
+                      <Button variant="ghost" size="icon" className="mb-1 shrink-0 pointer-coarse:size-11" aria-label={t('Delete', { ns: 'common' })} onClick={() => removeSparePart(index)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                    )}
+                  </div>
+                </FormGrid>
+              </div>
+            ))
+          )}
+        </FormSection>
       )}
+      </div>
     </div>
   );
 }

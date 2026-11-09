@@ -185,7 +185,7 @@ export function OutstandingReceiptsPage() {
               onClick={() => setReceiptFilter(opt.value)}
               aria-pressed={receiptFilter === opt.value}
               className={cn(
-                'flex-1 md:flex-none h-11 md:h-8 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                'flex-1 md:flex-none h-11 md:pointer-fine:h-8 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                 receiptFilter === opt.value
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -419,8 +419,8 @@ export function OutstandingReceiptsPage() {
             <Card className={kpiCardClass}>
               <CardContent className="pt-4 pb-3 px-4 space-y-1">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  {t('Overall progress')}
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <span className="min-w-0 hyphens-auto break-words">{t('Overall progress')}</span>
                 </div>
                 <div className="text-2xl font-bold">
                   {loading ? (

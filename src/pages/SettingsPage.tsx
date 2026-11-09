@@ -31,12 +31,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { FormSections, FormSection, FormGrid, FormField, FormActions, FormSectionNav, FormToggleRow, ChoiceCards } from '@/components/ui/form-layout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   getCurrentTenant,
@@ -59,6 +60,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingBranding, setIsSavingBranding] = useState(false);
+  const [brandingSection, setBrandingSection] = useState('identity');
   const [brandingSaved, setBrandingSaved] = useState(false);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [products, setProducts] = useState<ProductListItem[]>([]);
@@ -446,26 +448,34 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
         {/* Company Profile */}
         <TabsContent value="company" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Company Data')}</CardTitle>
-              <CardDescription>
-                {t('This information will be displayed in your DPPs')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Company Name')} *</label>
+          <FormSections>
+            <FormSection
+              title={t('Company Data')}
+              description={t('This information will be displayed in your DPPs')}
+              icon={Building2}
+            >
+              <FormGrid cols={2}>
+                <FormField label={t('Company Name')} htmlFor="company-name" required>
                   <Input
+                    id="company-name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Your Company Inc."
+                    autoComplete="organization"
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Portal Slug')}</label>
+                </FormField>
+                <FormField
+                  label={t('Portal Slug')}
+                  htmlFor="company-slug"
+                  error={slugError}
+                  hint={
+                    <>
+                      {t('Used in portal URLs')}: /returns/portal/<span className="font-medium text-foreground">{formData.slug || '...'}</span>
+                    </>
+                  }
+                >
                   <Input
+                    id="company-slug"
                     value={formData.slug}
                     onChange={(e) => {
                       const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -474,56 +484,38 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     }}
                     placeholder="my_company"
                     className="font-mono"
+                    autoCapitalize="none"
+                    spellCheck={false}
                   />
-                  {slugError && <p className="text-xs text-destructive">{slugError}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    {t('Used in portal URLs')}: /returns/portal/<span className="font-medium">{formData.slug || '...'}</span>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('EORI Number')}</label>
+                </FormField>
+                <FormField label={t('Address')} htmlFor="company-address" span="full">
                   <Input
-                    value={formData.eori}
-                    onChange={(e) => setFormData({ ...formData, eori: e.target.value })}
-                    placeholder="DE123456789012345"
-                    className="font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Address')}</label>
-                  <Input
+                    id="company-address"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="123 Main Street, New York, NY 10001"
+                    autoComplete="street-address"
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Country')}</label>
+                </FormField>
+                <FormField label={t('Country')} htmlFor="company-country">
                   <Input
+                    id="company-country"
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                     placeholder="United States"
+                    autoComplete="country-name"
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('VAT ID')}</label>
-                  <Input
-                    value={formData.vat}
-                    onChange={(e) => setFormData({ ...formData, vat: e.target.value })}
-                    placeholder="DE123456789"
-                    className="font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Plan')}</label>
-                  <div className="flex items-center gap-2">
+                </FormField>
+                <div className="min-w-0">
+                  <p className="mb-2 text-sm font-medium leading-5">{t('Plan')}</p>
+                  <div className="flex h-9 items-center pointer-coarse:h-11">
                     <Badge
                       className={
                         tenant?.plan === 'enterprise'
                           ? 'bg-primary'
                           : tenant?.plan === 'pro'
                           ? 'bg-success'
-                          : 'bg-muted'
+                          : 'bg-muted text-muted-foreground'
                       }
                     >
                       {tenant?.plan === 'enterprise'
@@ -532,53 +524,75 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                         ? 'Pro'
                         : 'Free'}
                     </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {tenant?.plan === 'free' && '(Upgrade for more features)'}
-                    </span>
                   </div>
                 </div>
-              </div>
+              </FormGrid>
+            </FormSection>
 
-              <Separator />
+            <FormSection
+              title={t('Legal & customs IDs')}
+              description={t('Used on customs documents and the customs view of your DPPs.')}
+            >
+              <FormGrid cols={2}>
+                <FormField label={t('EORI Number')} htmlFor="company-eori" optional>
+                  <Input
+                    id="company-eori"
+                    value={formData.eori}
+                    onChange={(e) => setFormData({ ...formData, eori: e.target.value })}
+                    placeholder="DE123456789012345"
+                    className="font-mono"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                  />
+                </FormField>
+                <FormField label={t('VAT ID')} htmlFor="company-vat" optional>
+                  <Input
+                    id="company-vat"
+                    value={formData.vat}
+                    onChange={(e) => setFormData({ ...formData, vat: e.target.value })}
+                    placeholder="DE123456789"
+                    className="font-mono"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                  />
+                </FormField>
+              </FormGrid>
+            </FormSection>
 
-              <div>
-                <h3 className="font-medium mb-4">{t('Responsible Person (EU Regulation)')}</h3>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('Name')}</label>
-                    <Input placeholder="Dr. Jane Smith" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('Email')}</label>
-                    <Input placeholder="compliance@your-company.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('Phone')}</label>
-                    <Input placeholder="+49 30 123456789" />
-                  </div>
-                </div>
-              </div>
+            <FormSection
+              title={t('Responsible Person (EU Regulation)')}
+              description={t('Contact for market surveillance authorities.')}
+            >
+              <FormGrid cols={2}>
+                <FormField label={t('Name')} htmlFor="responsible-name" span="full">
+                  <Input id="responsible-name" placeholder="Dr. Jane Smith" autoComplete="name" />
+                </FormField>
+                <FormField label={t('Email')} htmlFor="responsible-email">
+                  <Input id="responsible-email" type="email" inputMode="email" placeholder="compliance@your-company.com" autoComplete="email" />
+                </FormField>
+                <FormField label={t('Phone')} htmlFor="responsible-phone">
+                  <Input id="responsible-phone" type="tel" inputMode="tel" placeholder="+49 30 123456789" autoComplete="tel" />
+                </FormField>
+              </FormGrid>
+            </FormSection>
 
-              <Separator />
-
-              <div>
-                <h3 className="font-medium mb-2 flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  {t('Product Languages')}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {t('Configure which languages are available for product content')}
-                </p>
-                <div className="flex flex-wrap gap-2 mb-3">
+            <FormSection
+              title={t('Product Languages')}
+              description={t('Configure which languages are available for product content')}
+              icon={Globe}
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
                   {(tenant?.settings?.productLanguages || ['en', 'de']).map((lang) => {
                     const langInfo = LANGUAGE_OPTIONS[lang];
                     return (
-                      <Badge key={lang} variant="secondary" className="gap-1.5">
-                        <span className="uppercase text-xs font-bold">{lang}</span>
+                      <Badge key={lang} variant="secondary" className="h-9 gap-1.5 pl-3 pr-1">
+                        <span className="uppercase text-xs font-semibold">{lang}</span>
                         {langInfo?.label || lang}
                         <button
                           type="button"
-                          className="ml-1 hover:text-destructive"
+                          aria-label={t('Remove', { ns: 'common' })}
+                          className="ml-0.5 inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-destructive"
                           onClick={async () => {
                             const current = tenant?.settings?.productLanguages || ['en', 'de'];
                             if (current.length <= 1) return;
@@ -588,7 +602,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                             if (refreshed) setTenant(refreshed);
                           }}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3.5 w-3.5" />
                         </button>
                       </Badge>
                     );
@@ -605,7 +619,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     if (refreshed) setTenant(refreshed);
                   }}
                 >
-                  <SelectTrigger className="w-60">
+                  <SelectTrigger className="w-full sm:w-60" aria-label={t('Add Language')}>
                     <SelectValue placeholder={t('Add Language')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -613,26 +627,26 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       .filter(([code]) => !(tenant?.settings?.productLanguages || ['en', 'de']).includes(code))
                       .map(([code, info]) => (
                         <SelectItem key={code} value={code}>
-                          <span className="uppercase text-xs font-bold mr-2">{code}</span>
+                          <span className="uppercase text-xs font-semibold mr-2">{code}</span>
                           {info.label}
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
               </div>
+            </FormSection>
+          </FormSections>
 
-              <div className="flex justify-end">
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  {t('Save', { ns: 'common' })}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <FormActions sticky="page">
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {t('Save', { ns: 'common' })}
+            </Button>
+          </FormActions>
 
           {/* Danger Zone — in-app account deletion (App Store guideline 5.1.1(v)) */}
           <DeleteAccountCard redirectTo="/login" />
@@ -640,18 +654,33 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
         {/* Branding */}
         <TabsContent value="branding" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
-          {/* Self-Service Whitelabel (subdomain, custom domain info, brand, SMTP) */}
-          <TenantWhitelabelSelfService />
+          <FormSectionNav
+            label={t('App Branding')}
+            value={brandingSection}
+            onValueChange={setBrandingSection}
+            sections={[
+              { id: 'identity', label: t('Brand Identity'), icon: Palette },
+              { id: 'favicon', label: t('Favicon'), icon: Globe },
+              { id: 'color', label: t('Theme Color'), icon: Palette },
+              { id: 'preview', label: t('Live Preview'), icon: Eye },
+              { id: 'whitelabel', label: t('Whitelabel'), icon: Building2 },
+            ]}
+          >
+          {brandingSection === 'whitelabel' && (
+            /* Self-Service Whitelabel (subdomain, custom domain info, brand, SMTP) — saves on its own */
+            <TenantWhitelabelSelfService />
+          )}
 
-          {/* Card 1: Brand Identity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Brand Identity')}</CardTitle>
-              <CardDescription>
-                {t('Customize the appearance of your DPP application')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          {brandingSection !== 'whitelabel' && (
+          <FormSections>
+          {/* Section 1: Brand Identity */}
+          {brandingSection === 'identity' && (
+          <FormSection
+            layout="stacked"
+            title={t('Brand Identity')}
+            description={t('Customize the appearance of your DPP application')}
+            icon={Palette}
+          >
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Logo Drag & Drop Zone */}
                 <div className="space-y-3">
@@ -700,8 +729,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                     )}
                     {/* Success overlay */}
                     {logoUploadSuccess && (
-                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
-                        <div className="flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                      <div className="absolute inset-0 bg-success/10 flex items-center justify-center">
+                        <div className="flex items-center gap-2 bg-success text-success-foreground px-3 py-1.5 rounded-full text-sm font-medium">
                           <Check className="h-4 w-4" />
                           {t('Uploaded!')}
                         </div>
@@ -759,18 +788,16 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </FormSection>
+          )}
 
-          {/* Card 2: Favicon */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Favicon')}</CardTitle>
-              <CardDescription>
-                {t('The small icon displayed in browser tabs')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          {/* Section 2: Favicon */}
+          {brandingSection === 'favicon' && (
+          <FormSection
+            layout="stacked"
+            title={t('Favicon')}
+            description={t('The small icon displayed in browser tabs')}
+          >
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Favicon Drag & Drop Zone */}
                 <div className="space-y-3">
@@ -817,8 +844,8 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       </>
                     )}
                     {faviconUploadSuccess && (
-                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
-                        <div className="flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                      <div className="absolute inset-0 bg-success/10 flex items-center justify-center">
+                        <div className="flex items-center gap-2 bg-success text-success-foreground px-3 py-1.5 rounded-full text-sm font-medium">
                           <Check className="h-4 w-4" />
                           {t('Uploaded!')}
                         </div>
@@ -896,18 +923,17 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </FormSection>
+          )}
 
-          {/* Card 3: Theme Color */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Theme Color')}</CardTitle>
-              <CardDescription>
-                {t('Pick a color or choose from presets')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          {/* Section 3: Theme Color */}
+          {brandingSection === 'color' && (
+          <FormSection
+            layout="stacked"
+            title={t('Theme Color')}
+            description={t('Pick a color or choose from presets')}
+          >
+            <div className="space-y-6">
               <div className="flex flex-wrap items-end gap-4">
                 <div className="space-y-2">
                   <Label>{t('Choose Color')}</Label>
@@ -918,14 +944,16 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       onChange={(e) =>
                         setBrandingForm((prev) => ({ ...prev, primaryColor: e.target.value }))
                       }
-                      className="h-12 w-16 rounded border cursor-pointer"
+                      aria-label={t('Choose Color')}
+                      className="h-11 w-14 rounded-md border bg-background p-1 cursor-pointer"
                     />
                     <Input
                       value={brandingForm.primaryColor || '#3B82F6'}
                       onChange={(e) =>
                         setBrandingForm((prev) => ({ ...prev, primaryColor: e.target.value }))
                       }
-                      className="font-mono w-28 h-12"
+                      className="font-mono w-28 h-11"
+                      aria-label={t('Choose Color')}
                       placeholder="#3B82F6"
                     />
                   </div>
@@ -937,7 +965,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   onClick={() =>
                     setBrandingForm((prev) => ({ ...prev, primaryColor: '#3B82F6' }))
                   }
-                  className="h-9"
+                  className="h-11"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   {t('Reset to Default Color')}
@@ -967,7 +995,10 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                       onClick={() =>
                         setBrandingForm((prev) => ({ ...prev, primaryColor: color }))
                       }
-                      className={`relative h-9 w-9 min-w-[36px] rounded-lg transition-[scale,box-shadow] ${
+                      type="button"
+                      aria-label={name}
+                      aria-pressed={brandingForm.primaryColor === color}
+                      className={`relative h-11 w-11 rounded-lg transition-[scale,box-shadow] duration-150 ease-out ${
                         brandingForm.primaryColor === color
                           ? 'ring-2 ring-offset-2 ring-foreground scale-110'
                           : 'hover:scale-105'
@@ -982,16 +1013,18 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </FormSection>
+          )}
 
-          {/* Card 4: Live Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Live Preview')}</CardTitle>
-              <CardDescription>{t('This is how your branding appears across the app')}</CardDescription>
-            </CardHeader>
-            <CardContent>
+          {/* Section 4: Live Preview (+ public page test links) */}
+          {brandingSection === 'preview' && (
+          <>
+          <FormSection
+            title={t('Live Preview')}
+            description={t('This is how your branding appears across the app')}
+            layout="stacked"
+          >
               <div className="grid gap-4 md:grid-cols-2">
                 {/* Sidebar Mockup */}
                 <div className="rounded-lg border overflow-hidden bg-slate-900 text-white">
@@ -1093,21 +1126,16 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </FormSection>
 
-          {/* Card 5: Test Public Pages */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                {t('Test Public Pages')}
-              </CardTitle>
-              <CardDescription>
-                {t('See how your branding looks for end consumers')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Section 5: Test Public Pages */}
+          <FormSection
+            layout="stacked"
+            title={t('Test Public Pages')}
+            description={t('See how your branding looks for end consumers')}
+            icon={Eye}
+          >
+            <div className="space-y-4">
               {sampleProduct ? (
                 <>
                   <p className="text-sm text-muted-foreground">
@@ -1142,156 +1170,209 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <Info className="mx-auto h-8 w-8 opacity-30 mb-2" />
-                  <p>{t('Create a product first to test the public pages.')}</p>
+                  <p className="text-sm">{t('Create a product first to test the public pages.')}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </FormSection>
+          </>
+          )}
+          </FormSections>
+          )}
+          </FormSectionNav>
 
-          <div className="flex justify-end">
+          {brandingSection !== 'whitelabel' && (
+          <FormActions sticky="page">
             <Button onClick={handleSaveBranding} disabled={isSavingBranding}>
               {isSavingBranding ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : brandingSaved ? (
-                <Check className="mr-2 h-4 w-4 text-green-500" />
+                <Check className="mr-2 h-4 w-4" />
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
               {brandingSaved ? t('Saved!') : t('Save Branding')}
             </Button>
-          </div>
+          </FormActions>
+          )}
         </TabsContent>
 
         {/* Domain */}
         <TabsContent value="domain" className="space-y-6 animate-in fade-in-0 slide-in-from-right-2 duration-300">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('URL Resolver')}</CardTitle>
-              <CardDescription>
-                {t('Choose how QR code URLs for your products should be resolved')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <h4 className="text-sm font-medium flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                  <Info className="h-4 w-4" />
-                  {t('Why use a custom domain?')}
-                </h4>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  {t('With a custom domain you have full control over your DPP URLs. You can set up your own resolver that redirects QR codes to your product pages.')}
-                </p>
+          <FormSections>
+            <FormSection
+              title={t('URL Resolver')}
+              description={t('Choose how QR code URLs for your products should be resolved')}
+              icon={Globe}
+            >
+              <div className="space-y-5">
+                <ChoiceCards
+                  aria-label={t('URL Resolver')}
+                  name="resolver-settings"
+                  columns={1}
+                  value={domainForm.resolver}
+                  onValueChange={(v) =>
+                    setDomainForm({ ...domainForm, resolver: v, useCustomDomain: v === 'custom' })
+                  }
+                  options={[
+                    {
+                      value: 'gs1' as const,
+                      label: (
+                        <span className="flex flex-wrap items-center gap-2">
+                          {t('GS1 Digital Link Resolver')}
+                          <Badge variant="secondary">{t('Recommended')}</Badge>
+                        </span>
+                      ),
+                      description: (
+                        <>
+                          {t('Uses the official GS1 Resolver (id.gs1.org)')}
+                          <span className="mt-1 block font-mono text-xs break-all">https://id.gs1.org/01/GTIN/21/SERIAL</span>
+                        </>
+                      ),
+                    },
+                    {
+                      value: 'local' as const,
+                      label: (
+                        <span className="flex flex-wrap items-center gap-2">
+                          {t('Local Product Pages')}
+                          <Badge variant="secondary">{t('Built-in')}</Badge>
+                        </span>
+                      ),
+                      description: (
+                        <>
+                          {t('Uses the built-in public DPP pages of this application')}
+                          <span className="mt-1 block font-mono text-xs break-all">{getPublicBaseUrl()}/p/GTIN/SERIAL</span>
+                        </>
+                      ),
+                    },
+                    {
+                      value: 'custom' as const,
+                      label: (
+                        <span className="flex flex-wrap items-center gap-2">
+                          {t('Custom Domain')}
+                          <Badge variant="outline">{t('Custom')}</Badge>
+                        </span>
+                      ),
+                      description: t('Use your own domain for DPP URLs'),
+                    },
+                  ]}
+                />
+
+                <div className="flex gap-3 rounded-lg border bg-muted/40 p-3 sm:p-4">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t('Why use a custom domain?')}</p>
+                    <p className="mt-1 text-xs text-pretty text-muted-foreground">
+                      {t('With a custom domain you have full control over your DPP URLs. You can set up your own resolver that redirects QR codes to your product pages.')}
+                    </p>
+                  </div>
+                </div>
               </div>
+            </FormSection>
 
-              <div className="grid gap-3">
-                {/* GS1 Option */}
-                <label
-                  className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    domainForm.resolver === 'gs1'
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="resolver-settings"
-                    value="gs1"
-                    checked={domainForm.resolver === 'gs1'}
-                    onChange={() => setDomainForm({ ...domainForm, resolver: 'gs1', useCustomDomain: false })}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium flex items-center gap-2">
-                      {t('GS1 Digital Link Resolver')}
-                      <Badge variant="secondary">{t('Recommended')}</Badge>
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('Uses the official GS1 Resolver (id.gs1.org)')}
-                    </p>
-                    <p className="text-xs font-mono mt-1 text-muted-foreground">
-                      https://id.gs1.org/01/GTIN/21/SERIAL
-                    </p>
-                  </div>
-                </label>
+            {/* Custom Domain Settings */}
+            {domainForm.resolver === 'custom' && (
+              <FormSection
+                title={t('Domain Configuration')}
+                description={t('Configure your own domain for DPP URLs')}
+              >
+                <div className="space-y-5">
+                  <FormGrid cols={2}>
+                    <FormField
+                      label={t('Your Domain')}
+                      htmlFor="customDomain"
+                      required
+                      error={domainError}
+                      hint={t('Enter the domain only, without https://')}
+                    >
+                      <Input
+                        id="customDomain"
+                        placeholder="e.g. dpp.your-company.com"
+                        value={domainForm.customDomain}
+                        onChange={(e) => handleDomainChange(e.target.value)}
+                        inputMode="url"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                      />
+                    </FormField>
+                    <FormField
+                      label={t('Path Prefix')}
+                      htmlFor="pathPrefix"
+                      optional
+                      error={pathPrefixError}
+                      hint={t('Inserted between the domain and product path')}
+                    >
+                      <Input
+                        id="pathPrefix"
+                        placeholder="e.g. products or passport"
+                        value={domainForm.pathPrefix}
+                        onChange={(e) => handlePathPrefixChange(e.target.value)}
+                        autoCapitalize="none"
+                        spellCheck={false}
+                      />
+                    </FormField>
+                  </FormGrid>
 
-                {/* Local Option */}
-                <label
-                  className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    domainForm.resolver === 'local'
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="resolver-settings"
-                    value="local"
-                    checked={domainForm.resolver === 'local'}
-                    onChange={() => setDomainForm({ ...domainForm, resolver: 'local', useCustomDomain: false })}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium flex items-center gap-2">
-                      {t('Local Product Pages')}
-                      <Badge variant="default">{t('Built-in')}</Badge>
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('Uses the built-in public DPP pages of this application')}
-                    </p>
-                    <p className="text-xs font-mono mt-1 text-muted-foreground">
-                      {getPublicBaseUrl()}/p/GTIN/SERIAL
-                    </p>
-                  </div>
-                </label>
+                  <FormToggleRow htmlFor="useHttps" label={t('Use HTTPS (recommended)')} controlPosition="start">
+                    <Checkbox
+                      id="useHttps"
+                      checked={domainForm.useHTTPS}
+                      onCheckedChange={(checked: boolean) =>
+                        setDomainForm({ ...domainForm, useHTTPS: checked })
+                      }
+                    />
+                  </FormToggleRow>
 
-                {/* Custom Domain Option */}
-                <label
-                  className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    domainForm.resolver === 'custom'
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="resolver-settings"
-                    value="custom"
-                    checked={domainForm.resolver === 'custom'}
-                    onChange={() => setDomainForm({ ...domainForm, resolver: 'custom', useCustomDomain: true })}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium flex items-center gap-2">
-                      {t('Custom Domain')}
-                      <Badge variant="outline">{t('Custom')}</Badge>
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('Use your own domain for DPP URLs')}
-                    </p>
-                  </div>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Connect Custom Domain Wizard */}
-          {domainForm.resolver === 'custom' && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h4 className="font-medium">{t('CNAME Setup Wizard')}</h4>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-3 rounded-lg border border-dashed p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <p className="text-sm text-muted-foreground text-pretty">
                       {t('Step-by-step guide to connect your domain via CNAME record')}
                     </p>
+                    <Button variant="outline" className="shrink-0" onClick={() => setDomainWizardOpen(true)}>
+                      <Globe className="mr-2 h-4 w-4" />
+                      {t('CNAME Setup Wizard')}
+                    </Button>
                   </div>
-                  <Button variant="outline" onClick={() => setDomainWizardOpen(true)}>
-                    <Globe className="mr-2 h-4 w-4" />
-                    {t('Connect Custom Domain')}
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </FormSection>
+            )}
+
+            {/* Current Configuration */}
+            <FormSection title={t('Current Configuration')} description={t('URL Preview')}>
+              <dl className="grid gap-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">{t('Resolver')}</dt>
+                  <dd className="font-medium text-right">
+                    {domainForm.resolver === 'gs1' && t('GS1 Digital Link')}
+                    {domainForm.resolver === 'local' && t('Local Product Pages')}
+                    {domainForm.resolver === 'custom' && t('Custom Domain')}
+                  </dd>
+                </div>
+                {domainForm.resolver === 'custom' && domainForm.customDomain && (
+                  <>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted-foreground">{t('Domain')}</dt>
+                      <dd className="font-mono text-right break-all">{domainForm.customDomain}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted-foreground">{t('Protocol')}</dt>
+                      <dd>{domainForm.useHTTPS ? 'HTTPS' : 'HTTP'}</dd>
+                    </div>
+                    {domainForm.pathPrefix && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">{t('Path Prefix')}</dt>
+                        <dd className="font-mono">/{domainForm.pathPrefix}</dd>
+                      </div>
+                    )}
+                  </>
+                )}
+                <Separator className="my-2" />
+                <div className="flex flex-col gap-1">
+                  <dt className="text-muted-foreground">{t('Example URL')}</dt>
+                  <dd className="rounded-md bg-muted/50 px-3 py-2 font-mono text-xs break-all">{getPreviewUrl()}</dd>
+                </div>
+              </dl>
+            </FormSection>
+          </FormSections>
 
           <CustomDomainWizard
             open={domainWizardOpen}
@@ -1303,124 +1384,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             }}
           />
 
-          {/* Custom Domain Settings */}
-          {domainForm.resolver === 'custom' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('Domain Configuration')}</CardTitle>
-                <CardDescription>
-                  {t('Configure your own domain for DPP URLs')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {/* Domain Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="customDomain">{t('Your Domain')} *</Label>
-                    <Input
-                      id="customDomain"
-                      placeholder="e.g. dpp.your-company.com"
-                      value={domainForm.customDomain}
-                      onChange={(e) => handleDomainChange(e.target.value)}
-                      className={domainError ? 'border-destructive' : ''}
-                    />
-                    {domainError ? (
-                      <p className="text-xs text-destructive">{domainError}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        {t('Enter the domain only, without https://')}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Path Prefix */}
-                  <div className="space-y-2">
-                    <Label htmlFor="pathPrefix">{t('Path Prefix (optional)')}</Label>
-                    <Input
-                      id="pathPrefix"
-                      placeholder="e.g. products or passport"
-                      value={domainForm.pathPrefix}
-                      onChange={(e) => handlePathPrefixChange(e.target.value)}
-                      className={pathPrefixError ? 'border-destructive' : ''}
-                    />
-                    {pathPrefixError ? (
-                      <p className="text-xs text-destructive">{pathPrefixError}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        {t('Inserted between the domain and product path')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* HTTPS Toggle */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="useHttps"
-                    checked={domainForm.useHTTPS}
-                    onCheckedChange={(checked: boolean) =>
-                      setDomainForm({ ...domainForm, useHTTPS: checked })
-                    }
-                  />
-                  <Label htmlFor="useHttps">{t('Use HTTPS (recommended)')}</Label>
-                </div>
-
-                {/* URL Preview */}
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <Label className="text-sm font-medium">{t('URL Preview')}</Label>
-                  <p className="font-mono text-sm break-all mt-2 text-muted-foreground">
-                    {getPreviewUrl()}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Current Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('Current Configuration')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-muted/30 rounded-lg border">
-                <div className="grid gap-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t('Resolver')}:</span>
-                    <span className="font-medium">
-                      {domainForm.resolver === 'gs1' && t('GS1 Digital Link')}
-                      {domainForm.resolver === 'local' && t('Local Product Pages')}
-                      {domainForm.resolver === 'custom' && t('Custom Domain')}
-                    </span>
-                  </div>
-                  {domainForm.resolver === 'custom' && domainForm.customDomain && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('Domain')}:</span>
-                        <span className="font-mono">{domainForm.customDomain}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('Protocol')}:</span>
-                        <span>{domainForm.useHTTPS ? 'HTTPS' : 'HTTP'}</span>
-                      </div>
-                      {domainForm.pathPrefix && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t('Path Prefix')}:</span>
-                          <span className="font-mono">/{domainForm.pathPrefix}</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <Separator className="my-2" />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t('Example URL')}:</span>
-                    <span className="font-mono text-xs break-all">{getPreviewUrl()}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
+          <FormActions sticky="page">
             <Button
               onClick={handleSaveDomain}
               disabled={isSavingDomain || (domainForm.resolver === 'custom' && !!domainError)}
@@ -1428,13 +1392,13 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               {isSavingDomain ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : domainSaved ? (
-                <Check className="mr-2 h-4 w-4 text-green-500" />
+                <Check className="mr-2 h-4 w-4" />
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
               {domainSaved ? t('Saved!') : t('Save Domain Settings')}
             </Button>
-          </div>
+          </FormActions>
         </TabsContent>
 
         {/* Users */}
@@ -1444,18 +1408,18 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
 
         {/* Never present fabricated API credentials or inactive actions as live features. */}
         <TabsContent value="api" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('API-Keys')}</CardTitle>
-              <CardDescription>{t('API access is not available in this version.')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <FormSection
+            title={t('API-Keys')}
+            description={t('API access is not available in this version.')}
+            icon={Key}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">{t('Manage your connected shops in the Commerce Hub.')}</p>
               <Button variant="outline" asChild>
                 <Link to="/commerce">{t('Open Commerce Hub')}</Link>
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </FormSection>
         </TabsContent>
       </Tabs>
     </div>

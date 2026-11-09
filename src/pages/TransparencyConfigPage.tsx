@@ -18,7 +18,7 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { FormSection, FormGrid, FormField, FormToggleRow, FormActions, FormSectionNav } from '@/components/ui/form-layout';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -39,9 +39,9 @@ interface MergedProduct {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  live: { label: 'Live', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-  draft: { label: 'Draft', className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  archived: { label: 'Archived', className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' },
+  live: { label: 'Live', className: 'bg-success/10 text-success border-success/20' },
+  draft: { label: 'Draft', className: 'bg-warning/10 text-warning border-warning/20' },
+  archived: { label: 'Archived', className: 'bg-muted text-muted-foreground border-border' },
 };
 
 export function TransparencyConfigPage() {
@@ -53,6 +53,7 @@ export function TransparencyConfigPage() {
   const [pageTitle, setPageTitle] = useState('');
   const [pageDescription, setPageDescription] = useState('');
   const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [section, setSection] = useState('page');
   const [design, setDesign] = useState<TransparencyDesignSettings>({ ...DEFAULT_TRANSPARENCY_DESIGN });
   const [accessControl, setAccessControl] = useState<TransparencyAccessControl>({ ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL });
   const [hasChanges, setHasChanges] = useState(false);
@@ -215,90 +216,92 @@ export function TransparencyConfigPage() {
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={!hasChanges || saving} size="sm">
-          {saving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Save
-        </Button>
       </div>
 
+      <FormSectionNav
+        label="Transparency Page"
+        value={section}
+        onValueChange={setSection}
+        sections={[
+          { id: 'page', label: 'Page', icon: Globe },
+          { id: 'access', label: 'Access', icon: accessControl.enabled ? Lock : Unlock },
+          { id: 'products', label: 'Products', icon: Package, badge: undefined },
+          { id: 'design', label: 'Design', icon: Palette },
+          ...(tenantSlug ? [{ id: 'share', label: 'Share & Embed', icon: Code }] : []),
+        ]}
+      >
       {/* Page Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Page Settings</CardTitle>
-          <CardDescription>
-            Override the default title and description shown on the transparency page.
-            Leave empty to use defaults.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="page-title">Page Title</Label>
+      {section === 'page' && (
+      <FormSection
+        layout="stacked"
+        title="Page Settings"
+        description="Override the default title and description shown on the transparency page. Leave empty to use defaults."
+      >
+        <FormGrid cols={2}>
+          <FormField label="Page Title" htmlFor="page-title" optional span="full">
             <Input
               id="page-title"
               value={pageTitle}
               onChange={(e) => { setPageTitle(e.target.value); markChanged(); }}
               placeholder="e.g. Product Transparency"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="page-desc">Page Description</Label>
+          </FormField>
+          <FormField label="Page Description" htmlFor="page-desc" optional span="full">
             <Textarea
               id="page-desc"
               value={pageDescription}
               onChange={(e) => { setPageDescription(e.target.value); markChanged(); }}
               placeholder="e.g. Materials, certificates & packaging — everything at a glance"
-              rows={2}
+              rows={3}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero-img">Hero Image URL</Label>
+          </FormField>
+          <FormField label="Hero Image URL" htmlFor="hero-img" optional span="full">
             <Input
               id="hero-img"
+              type="url"
+              inputMode="url"
               value={heroImageUrl}
               onChange={(e) => { setHeroImageUrl(e.target.value); markChanged(); }}
               placeholder="https://..."
             />
-          </div>
-        </CardContent>
-      </Card>
+          </FormField>
+        </FormGrid>
+      </FormSection>
+      )}
 
       {/* Access Control */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            {accessControl.enabled ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-            Access Control
-          </CardTitle>
-          <CardDescription>
-            Restrict access to the transparency page by requiring a valid order number.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <Label>Require Order Number</Label>
-              <p className="text-xs text-muted-foreground">
-                {accessControl.enabled
-                  ? 'Visitors must enter a valid order number to view products'
-                  : 'Anyone with the link can view the transparency page'}
-              </p>
-            </div>
+      {section === 'access' && (
+      <FormSection
+        layout="stacked"
+        icon={accessControl.enabled ? Lock : Unlock}
+        title="Access Control"
+        description="Restrict access to the transparency page by requiring a valid order number."
+      >
+        <div className="space-y-5">
+          <FormToggleRow
+            htmlFor="require-order"
+            label="Require Order Number"
+            description={accessControl.enabled
+              ? 'Visitors must enter a valid order number to view products'
+              : 'Anyone with the link can view the transparency page'}
+          >
             <Switch
+              id="require-order"
+              aria-describedby="require-order-description"
               checked={accessControl.enabled}
               onCheckedChange={(checked) => {
                 setAccessControl((prev) => ({ ...prev, enabled: checked }));
                 markChanged();
               }}
             />
-          </div>
+          </FormToggleRow>
           {accessControl.enabled && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="order-prefix">Order Number Prefix</Label>
+              <FormField
+                label="Order Number Prefix"
+                htmlFor="order-prefix"
+                hint={<>The visitor's order number must start with this prefix. E.g. if you set &quot;FB&quot;, order numbers like &quot;FB-20240301-001&quot; or &quot;FB12345&quot; will be accepted.</>}
+              >
                 <Input
                   id="order-prefix"
                   value={accessControl.orderPrefix}
@@ -310,37 +313,34 @@ export function TransparencyConfigPage() {
                   placeholder="e.g. 1234 or FB"
                   maxLength={10}
                   className="font-mono"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                 />
-                <p className="text-xs text-muted-foreground">
-                  The visitor's order number must start with this prefix. E.g. if you set &quot;FB&quot;,
-                  order numbers like &quot;FB-20240301-001&quot; or &quot;FB12345&quot; will be accepted.
-                </p>
-              </div>
+              </FormField>
               {accessControl.orderPrefix && (
                 <div className="rounded-lg border bg-muted/30 p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Preview</p>
                   <p className="text-sm">
-                    Accepted: <code className="bg-emerald-500/10 text-emerald-700 px-1.5 py-0.5 rounded text-xs font-mono">{accessControl.orderPrefix}20240301-001</code>
+                    Accepted: <code className="bg-success/10 text-success px-1.5 py-0.5 rounded text-xs font-mono">{accessControl.orderPrefix}20240301-001</code>
                   </p>
                   <p className="text-sm mt-1">
-                    Rejected: <code className="bg-red-500/10 text-red-700 px-1.5 py-0.5 rounded text-xs font-mono">XX9999</code>
+                    Rejected: <code className="bg-destructive/10 text-destructive px-1.5 py-0.5 rounded text-xs font-mono">XX9999</code>
                   </p>
                 </div>
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
+      )}
 
       {/* Products */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Products</CardTitle>
-          <CardDescription>
-            {enabledCount} of {allProducts.length} products enabled for the transparency page
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {section === 'products' && (
+      <FormSection
+        layout="stacked"
+        title="Products"
+        description={<>{enabledCount} of {allProducts.length} products enabled for the transparency page</>}
+      >
           {allProducts.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No products found. Create products first.
@@ -383,7 +383,7 @@ export function TransparencyConfigPage() {
                     </div>
 
                     {/* Status */}
-                    <Badge variant="outline" className={`shrink-0 text-[11px] ${status.className}`}>
+                    <Badge variant="outline" className={`shrink-0 text-xs ${status.className}`}>
                       {status.label}
                     </Badge>
 
@@ -425,21 +425,18 @@ export function TransparencyConfigPage() {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </FormSection>
+      )}
 
       {/* Design */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Design
-          </CardTitle>
-          <CardDescription>
-            Customize the look and feel of your transparency page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      {section === 'design' && (
+      <FormSection
+        layout="stacked"
+        icon={Palette}
+        title="Design"
+        description="Customize the look and feel of your transparency page."
+      >
+        <div className="space-y-6">
           {/* Theme Presets */}
           <div className="space-y-2">
             <Label>Theme Preset</Label>
@@ -476,7 +473,7 @@ export function TransparencyConfigPage() {
                     <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: preset.primaryColor || '#3B82F6' }} />
                     <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: preset.pageBackground }} />
                   </div>
-                  <span className="text-[10px] font-medium">{preset.label}</span>
+                  <span className="text-xs font-medium">{preset.label}</span>
                   {design.preset === key && (
                     <Check className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />
                   )}
@@ -604,7 +601,7 @@ export function TransparencyConfigPage() {
                   }`}
                 >
                   <span className={`text-lg ${preview}`}>Aa</span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
                 </button>
               ))}
             </div>
@@ -703,22 +700,19 @@ export function TransparencyConfigPage() {
               onCheckedChange={(checked) => { setDesign((d) => ({ ...d, showPoweredBy: checked })); markChanged(); }}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
+      )}
 
       {/* Share & Embed */}
-      {tenantSlug && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Code className="h-4 w-4" />
-              Share & Embed
-            </CardTitle>
-            <CardDescription>
-              Preview your transparency page or embed it on your website.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {section === 'share' && tenantSlug && (
+        <FormSection
+          layout="stacked"
+          icon={Code}
+          title="Share & Embed"
+          description="Preview your transparency page or embed it on your website."
+        >
+          <div className="space-y-4">
             {/* Public URL */}
             <div className="space-y-2">
               <Label>Public URL</Label>
@@ -795,9 +789,21 @@ export function TransparencyConfigPage() {
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </FormSection>
       )}
+      </FormSectionNav>
+
+      <FormActions sticky="page" dirty={hasChanges}>
+        <Button onClick={handleSave} disabled={!hasChanges || saving}>
+          {saving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          Save
+        </Button>
+      </FormActions>
     </div>
   );
 }

@@ -37,6 +37,7 @@ import {
   Smartphone,
   Upload,
   Trash2 as TrashIcon,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,14 +46,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { FormSections, FormSection, FormGrid, FormField, InputAffix, ChoiceCards, FormToggleRow, FormActions } from '@/components/ui/form-layout';
 import {
   Accordion,
   AccordionContent,
@@ -919,257 +915,241 @@ export function QRGeneratorPage() {
               </TabsContent>
 
               {/* QR Settings Tab */}
-              <TabsContent value="settings" className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {/* Size */}
-                  <div className="space-y-4">
-                    <h3 className="font-medium flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      {t('Size')}
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[128, 256, 512, 1024].map((size) => (
-                        <Button
-                          key={size}
-                          variant={qrSettings.size === size ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setQRSettings({ ...qrSettings, size })}
-                        >
-                          {size}px
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={qrSettings.size}
-                        onChange={(e) => setQRSettings({ ...qrSettings, size: parseInt(e.target.value) || 256 })}
-                        className="w-24"
-                        min={64}
-                        max={2048}
-                      />
-                      <span className="text-sm text-muted-foreground">px (custom)</span>
-                    </div>
-                  </div>
-
-                  {/* Error Correction */}
-                  <div className="space-y-4">
-                    <h3 className="font-medium flex items-center gap-2">
-                      <Layers className="h-4 w-4" />
-                      {t('Error Correction')}
-                    </h3>
-                    <Select
-                      value={qrSettings.errorCorrection}
-                      onValueChange={(value: 'L' | 'M' | 'Q' | 'H') =>
-                        setQRSettings({ ...qrSettings, errorCorrection: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="L">{t('L - Low (7%)')}</SelectItem>
-                        <SelectItem value="M">{t('M - Medium (15%)')}</SelectItem>
-                        <SelectItem value="Q">{t('Q - Quartile (25%)')}</SelectItem>
-                        <SelectItem value="H">{t('H - High (30%)')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {t('Higher correction = larger QR code, but better readability when damaged')}
-                    </p>
-                  </div>
-
-                  {/* Colors */}
-                  <div className="space-y-4">
-                    <h3 className="font-medium flex items-center gap-2">
-                      <Palette className="h-4 w-4" />
-                      {t('Colors')}
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">{t('Foreground')}</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={localDomainSettings.foregroundColor || '#000000'}
-                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, foregroundColor: e.target.value })}
-                            className="h-10 w-10 rounded border cursor-pointer"
-                          />
-                          <Input
-                            value={localDomainSettings.foregroundColor || '#000000'}
-                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, foregroundColor: e.target.value })}
-                            className="font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">{t('Background')}</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={localDomainSettings.backgroundColor || '#FFFFFF'}
-                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, backgroundColor: e.target.value })}
-                            className="h-10 w-10 rounded border cursor-pointer"
-                          />
-                          <Input
-                            value={localDomainSettings.backgroundColor || '#FFFFFF'}
-                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, backgroundColor: e.target.value })}
-                            className="font-mono"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Margin */}
-                  <div className="space-y-4">
-                    <h3 className="font-medium">{t('Margin (Quiet Zone)')}</h3>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={qrSettings.margin}
-                        onChange={(e) => setQRSettings({ ...qrSettings, margin: parseInt(e.target.value) || 0 })}
-                        className="w-24"
-                        min={0}
-                        max={10}
-                      />
-                      <span className="text-sm text-muted-foreground">{t('Modules')}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('At least 2 modules are recommended for optimal readability')}
-                    </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Advanced Options */}
-                <div className="space-y-4">
-                  <h3 className="font-medium">{t('Advanced Options')}</h3>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="includeText"
-                      checked={qrSettings.includeText}
-                      onCheckedChange={(checked: boolean) =>
-                        setQRSettings({ ...qrSettings, includeText: checked })
-                      }
+              <TabsContent value="settings">
+                <FormSections divided>
+                  <FormSection title={t('Size')} icon={Settings} variant="plain">
+                    <ChoiceCards
+                      value={String(qrSettings.size)}
+                      onValueChange={(v) => setQRSettings({ ...qrSettings, size: parseInt(v) })}
+                      columns={4}
+                      aria-label={t('Size')}
+                      options={[128, 256, 512, 1024].map((size) => ({ value: String(size), label: <span className="tabular-nums">{size} px</span> }))}
                     />
-                    <Label htmlFor="includeText">{t('Show text below QR code')}</Label>
-                  </div>
-                  {qrSettings.includeText && (
-                    <div className="space-y-2">
-                      <Label htmlFor="customText">{t('Text below QR code')}</Label>
-                      <Input
-                        id="customText"
-                        placeholder={selectedProduct?.gtin || 'e.g. product name or GTIN'}
-                        value={qrSettings.customText}
-                        onChange={(e) => setQRSettings({ ...qrSettings, customText: e.target.value })}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t('Leave empty for automatic GTIN display')}
-                      </p>
-                    </div>
-                  )}
-
-                  <Separator />
-
-                  {/* Logo overlay */}
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="logoEnabled"
-                      checked={qrSettings.logoEnabled}
-                      onCheckedChange={(checked: boolean) =>
-                        setQRSettings({ ...qrSettings, logoEnabled: checked })
-                      }
-                    />
-                    <Label htmlFor="logoEnabled">{t('Embed logo in QR code')}</Label>
-                  </div>
-
-                  {qrSettings.logoEnabled && (
-                    <div className="space-y-4 pl-4 border-l-2 border-muted">
-                      {/* Branding logo hint */}
-                      {branding.logo && !qrSettings.logoUrl && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                          <img src={branding.logo} alt="Company logo" className="h-8 w-8 object-contain rounded" loading="lazy" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{t('Company logo')}</p>
-                            <p className="text-xs text-muted-foreground">{t('From branding settings')}</p>
-                          </div>
-                          <Badge variant="secondary">{t('Active')}</Badge>
-                        </div>
-                      )}
-
-                      {/* Custom logo upload */}
-                      <div className="space-y-2">
-                        <Label>{t('Custom logo (optional)')}</Label>
-                        <input
-                          type="file"
-                          ref={logoUploadRef}
-                          accept="image/png,image/jpeg,image/svg+xml"
-                          onChange={handleLogoFileUpload}
-                          className="hidden"
+                    <FormGrid cols={2}>
+                    <FormField label={t('Custom size')} htmlFor="qr-size">
+                      <InputAffix suffix="px">
+                        <Input
+                          id="qr-size"
+                          type="number"
+                          inputMode="numeric"
+                          className="tabular-nums"
+                          value={qrSettings.size}
+                          onChange={(e) => setQRSettings({ ...qrSettings, size: parseInt(e.target.value) || 256 })}
+                          min={64}
+                          max={2048}
                         />
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => logoUploadRef.current?.click()}>
-                            <Upload className="mr-2 h-4 w-4" />
-                            {t('Upload custom logo')}
-                          </Button>
-                          {qrSettings.logoUrl && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setQRSettings({ ...qrSettings, logoUrl: '' })}
-                              className="text-destructive"
-                            >
-                              <TrashIcon className="mr-1 h-3 w-3" />
-                              {t('Remove', { ns: 'common' })}
+                      </InputAffix>
+                    </FormField>
+                    <FormField
+                      label={t('Margin (Quiet Zone)')}
+                      htmlFor="qr-margin"
+                      hint={t('At least 2 modules are recommended for optimal readability')}
+                      
+                    >
+                      <InputAffix suffix={t('Modules')}>
+                        <Input
+                          id="qr-margin"
+                          type="number"
+                          inputMode="numeric"
+                          className="tabular-nums"
+                          value={qrSettings.margin}
+                          onChange={(e) => setQRSettings({ ...qrSettings, margin: parseInt(e.target.value) || 0 })}
+                          min={0}
+                          max={10}
+                        />
+                      </InputAffix>
+                    </FormField>
+                    </FormGrid>
+                  </FormSection>
+
+                  <FormSection
+                    title={t('Error Correction')}
+                    description={t('Higher correction = larger QR code, but better readability when damaged')}
+                    icon={Layers}
+                    variant="plain"
+                  >
+                    <ChoiceCards<'L' | 'M' | 'Q' | 'H'>
+                      value={qrSettings.errorCorrection}
+                      onValueChange={(value) => setQRSettings({ ...qrSettings, errorCorrection: value })}
+                      columns={2}
+                      aria-label={t('Error Correction')}
+                      options={[
+                        { value: 'L', label: t('L - Low (7%)') },
+                        { value: 'M', label: t('M - Medium (15%)') },
+                        { value: 'Q', label: t('Q - Quartile (25%)') },
+                        { value: 'H', label: t('H - High (30%)') },
+                      ]}
+                    />
+                  </FormSection>
+
+                  <FormSection title={t('Colors')} icon={Palette} variant="plain">
+                    <FormGrid cols={2}>
+                      <FormField label={t('Foreground')} htmlFor="qr-fg">
+                        <InputAffix
+                          variant="addon"
+                          prefix={
+                            <input
+                              type="color"
+                              aria-label={t('Foreground')}
+                              value={localDomainSettings.foregroundColor || '#000000'}
+                              onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, foregroundColor: e.target.value })}
+                              className="size-7 cursor-pointer appearance-none rounded-sm border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-sm [&::-webkit-color-swatch]:border [&::-webkit-color-swatch-wrapper]:p-0"
+                            />
+                          }
+                        >
+                          <Input
+                            id="qr-fg"
+                            value={localDomainSettings.foregroundColor || '#000000'}
+                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, foregroundColor: e.target.value })}
+                            className="font-mono uppercase"
+                            spellCheck={false}
+                          />
+                        </InputAffix>
+                      </FormField>
+                      <FormField label={t('Background')} htmlFor="qr-bg">
+                        <InputAffix
+                          variant="addon"
+                          prefix={
+                            <input
+                              type="color"
+                              aria-label={t('Background')}
+                              value={localDomainSettings.backgroundColor || '#FFFFFF'}
+                              onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, backgroundColor: e.target.value })}
+                              className="size-7 cursor-pointer appearance-none rounded-sm border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-sm [&::-webkit-color-swatch]:border [&::-webkit-color-swatch-wrapper]:p-0"
+                            />
+                          }
+                        >
+                          <Input
+                            id="qr-bg"
+                            value={localDomainSettings.backgroundColor || '#FFFFFF'}
+                            onChange={(e) => setLocalDomainSettings({ ...localDomainSettings, backgroundColor: e.target.value })}
+                            className="font-mono uppercase"
+                            spellCheck={false}
+                          />
+                        </InputAffix>
+                      </FormField>
+                    </FormGrid>
+                  </FormSection>
+
+
+                  <FormSection title={t('Advanced Options')} icon={SlidersHorizontal} variant="plain">
+                    <FormToggleRow label={t('Show text below QR code')} htmlFor="includeText">
+                      <Switch
+                        id="includeText"
+                        checked={qrSettings.includeText}
+                        onCheckedChange={(checked: boolean) =>
+                          setQRSettings({ ...qrSettings, includeText: checked })
+                        }
+                      />
+                    </FormToggleRow>
+                    {qrSettings.includeText && (
+                      <FormField label={t('Text below QR code')} htmlFor="customText" hint={t('Leave empty for automatic GTIN display')}>
+                        <Input
+                          id="customText"
+                          placeholder={selectedProduct?.gtin || 'e.g. product name or GTIN'}
+                          value={qrSettings.customText}
+                          onChange={(e) => setQRSettings({ ...qrSettings, customText: e.target.value })}
+                        />
+                      </FormField>
+                    )}
+
+                    <FormToggleRow label={t('Embed logo in QR code')} htmlFor="logoEnabled">
+                      <Switch
+                        id="logoEnabled"
+                        checked={qrSettings.logoEnabled}
+                        onCheckedChange={(checked: boolean) =>
+                          setQRSettings({ ...qrSettings, logoEnabled: checked })
+                        }
+                      />
+                    </FormToggleRow>
+
+                    {qrSettings.logoEnabled && (
+                      <div className="space-y-5 rounded-lg border bg-muted/30 p-4">
+                        {/* Branding logo hint */}
+                        {branding.logo && !qrSettings.logoUrl && (
+                          <div className="flex items-center gap-3 rounded-lg border bg-background p-3">
+                            <img src={branding.logo} alt="Company logo" className="h-8 w-8 object-contain rounded" loading="lazy" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{t('Company logo')}</p>
+                              <p className="text-xs text-muted-foreground">{t('From branding settings')}</p>
+                            </div>
+                            <Badge variant="secondary">{t('Active')}</Badge>
+                          </div>
+                        )}
+
+                        {/* Custom logo upload */}
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">{t('Custom logo (optional)')}</p>
+                          <input
+                            type="file"
+                            ref={logoUploadRef}
+                            accept="image/png,image/jpeg,image/svg+xml"
+                            onChange={handleLogoFileUpload}
+                            className="hidden"
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outline" size="sm" className="pointer-coarse:min-h-11" onClick={() => logoUploadRef.current?.click()}>
+                              <Upload className="mr-2 h-4 w-4" />
+                              {t('Upload custom logo')}
                             </Button>
+                            {qrSettings.logoUrl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setQRSettings({ ...qrSettings, logoUrl: '' })}
+                                className="text-destructive pointer-coarse:min-h-11"
+                              >
+                                <TrashIcon className="mr-1 h-3 w-3" />
+                                {t('Remove', { ns: 'common' })}
+                              </Button>
+                            )}
+                          </div>
+                          {qrSettings.logoUrl && (
+                            <div className="flex items-center gap-2">
+                              <img src={qrSettings.logoUrl} alt="Custom logo" className="h-8 w-8 object-contain rounded border" loading="lazy" />
+                              <Badge>{t('Custom logo active')}</Badge>
+                            </div>
+                          )}
+                          {!branding.logo && !qrSettings.logoUrl && (
+                            <p className="text-xs text-muted-foreground">
+                              {t('Upload a logo or set one in branding settings')}
+                            </p>
                           )}
                         </div>
-                        {qrSettings.logoUrl && (
-                          <div className="flex items-center gap-2">
-                            <img src={qrSettings.logoUrl} alt="Custom logo" className="h-8 w-8 object-contain rounded border" loading="lazy" />
-                            <Badge>{t('Custom logo active')}</Badge>
+
+                        {/* Logo size slider */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <label htmlFor="qr-logo-size" className="font-medium">{t('Logo size')}</label>
+                            <span className="tabular-nums text-muted-foreground">{qrSettings.logoSize}%</span>
                           </div>
-                        )}
-                        {!branding.logo && !qrSettings.logoUrl && (
-                          <p className="text-xs text-muted-foreground">
-                            {t('Upload a logo or set one in branding settings')}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Logo size slider */}
-                      <div className="space-y-2">
-                        <Label>{t('Logo size')}: {qrSettings.logoSize}%</Label>
-                        <input
-                          type="range"
-                          min={10}
-                          max={30}
-                          value={qrSettings.logoSize}
-                          onChange={(e) => setQRSettings({ ...qrSettings, logoSize: parseInt(e.target.value) })}
-                          className="w-full accent-primary"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>10%</span>
-                          <span>20%</span>
-                          <span>30%</span>
+                          <input
+                            id="qr-logo-size"
+                            type="range"
+                            min={10}
+                            max={30}
+                            value={qrSettings.logoSize}
+                            onChange={(e) => setQRSettings({ ...qrSettings, logoSize: parseInt(e.target.value) })}
+                            className="h-11 w-full accent-primary"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                            <span>10%</span>
+                            <span>20%</span>
+                            <span>30%</span>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Info: error correction */}
-                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-1.5">
-                          <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                        {/* Info: error correction */}
+                        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                          <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
                           {t('Error correction is automatically set to H (30%) when a logo is embedded to ensure scannability.')}
                         </p>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </FormSection>
+                </FormSections>
 
-                {/* Presets */}
-                <div className="flex gap-2">
+                <FormActions className="mt-6">
                   <Button
                     variant="outline"
                     onClick={() => setQRSettings(defaultQRSettings)}
@@ -1177,327 +1157,198 @@ export function QRGeneratorPage() {
                     <RefreshCw className="mr-2 h-4 w-4" />
                     {t('Reset', { ns: 'common' })}
                   </Button>
-                </div>
+                </FormActions>
               </TabsContent>
 
               {/* Domain Settings Tab */}
-              <TabsContent value="domain" className="space-y-6">
-                <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h4 className="text-sm font-medium flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                    <Info className="h-4 w-4" />
-                    {t('Why use your own domain?')}
-                  </h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    {t('With your own domain you have full control over your DPP URLs. You can set up your own resolver that redirects QR codes to your product pages.')}
-                  </p>
+              <TabsContent value="domain">
+                <div className="mb-6 flex items-start gap-3 rounded-lg border bg-muted/40 p-4">
+                  <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <div>
+                    <h4 className="text-sm font-medium">{t('Why use your own domain?')}</h4>
+                    <p className="mt-1 text-sm text-pretty text-muted-foreground">
+                      {t('With your own domain you have full control over your DPP URLs. You can set up your own resolver that redirects QR codes to your product pages.')}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-6">
+                <FormSections divided>
                   {/* URL Resolver Selection */}
-                  <div className="space-y-4">
-                    <Label className="text-base font-medium">{t('URL Resolver')}</Label>
-                    <div className="grid gap-3">
-                      <label
-                        className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                          localDomainSettings.resolver === 'gs1'
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'hover:bg-muted/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="resolver"
-                          value="gs1"
-                          checked={localDomainSettings.resolver === 'gs1'}
-                          onChange={() => setLocalDomainSettings({ ...localDomainSettings, resolver: 'gs1', useCustomDomain: false })}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium flex items-center gap-2">
-                            {t('GS1 Digital Link Resolver')}
-                            <Badge variant="secondary">{t('Recommended')}</Badge>
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {t('Uses the official GS1 Resolver (id.gs1.org)')}
-                          </p>
-                          <p className="text-xs font-mono mt-1 text-muted-foreground">
-                            https://id.gs1.org/01/GTIN/21/SERIAL
-                          </p>
-                        </div>
-                      </label>
+                  <FormSection title={t('URL Resolver')} icon={Globe} variant="plain">
+                    <ChoiceCards<'gs1' | 'local' | 'custom'>
+                      value={localDomainSettings.resolver}
+                      onValueChange={(v) => setLocalDomainSettings({ ...localDomainSettings, resolver: v, useCustomDomain: v === 'custom' })}
+                      columns={1}
+                      aria-label={t('URL Resolver')}
+                      options={[
+                        {
+                          value: 'gs1',
+                          label: <span className="flex flex-wrap items-center gap-2">{t('GS1 Digital Link Resolver')}<Badge variant="secondary">{t('Recommended')}</Badge></span>,
+                          description: <>{t('Uses the official GS1 Resolver (id.gs1.org)')}<span className="mt-1 block font-mono [overflow-wrap:anywhere]">https://id.gs1.org/01/GTIN/21/SERIAL</span></>,
+                        },
+                        {
+                          value: 'local',
+                          label: <span className="flex flex-wrap items-center gap-2">{t('Local Product Pages')}<Badge variant="outline">{t('New')}</Badge></span>,
+                          description: <>{t('Uses the built-in public DPP pages of this application')}<span className="mt-1 block font-mono [overflow-wrap:anywhere]">{getPublicBaseUrl()}/p/GTIN/SERIAL</span></>,
+                        },
+                        {
+                          value: 'custom',
+                          label: t('Custom Domain'),
+                          description: t('Use your own domain for DPP URLs'),
+                        },
+                      ]}
+                    />
 
-                      <label
-                        className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                          localDomainSettings.resolver === 'local'
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'hover:bg-muted/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="resolver"
-                          value="local"
-                          checked={localDomainSettings.resolver === 'local'}
-                          onChange={() => setLocalDomainSettings({ ...localDomainSettings, resolver: 'local', useCustomDomain: false })}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium flex items-center gap-2">
-                            {t('Local Product Pages')}
-                            <Badge variant="default">{t('New')}</Badge>
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {t('Uses the built-in public DPP pages of this application')}
-                          </p>
-                          <p className="text-xs font-mono mt-1 text-muted-foreground">
-                            {getPublicBaseUrl()}/p/GTIN/SERIAL
-                          </p>
-                        </div>
-                      </label>
+                    {/* Custom Domain Settings */}
+                    {localDomainSettings.resolver === 'custom' && (
+                      <div className="space-y-5 rounded-lg border bg-muted/30 p-4">
+                        <FormField
+                          label={t('Your Domain')}
+                          htmlFor="qr-domain"
+                          required
+                          error={domainError || undefined}
+                          hint={t('Enter domain only without https://')}
+                        >
+                          <InputAffix prefix={localDomainSettings.useHTTPS ? 'https://' : 'http://'} variant="addon">
+                            <Input
+                              id="qr-domain"
+                              inputMode="url"
+                              autoCapitalize="none"
+                              spellCheck={false}
+                              placeholder="dpp.your-company.com"
+                              value={localDomainSettings.customDomain}
+                              onChange={(e) => handleDomainChange(e.target.value)}
+                            />
+                          </InputAffix>
+                        </FormField>
 
-                      <label
-                        className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                          localDomainSettings.resolver === 'custom'
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'hover:bg-muted/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="resolver"
-                          value="custom"
-                          checked={localDomainSettings.resolver === 'custom'}
-                          onChange={() => setLocalDomainSettings({ ...localDomainSettings, resolver: 'custom', useCustomDomain: true })}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium flex items-center gap-2">
-                            {t('Custom Domain')}
-                            <Badge variant="outline">{t('Custom')}</Badge>
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {t('Use your own domain for DPP URLs')}
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
+                        <FormField
+                          label={t('Path Prefix')}
+                          htmlFor="qr-path-prefix"
+                          optional
+                          error={pathPrefixError || undefined}
+                          hint={t('Inserted between domain and GS1 path')}
+                        >
+                          <InputAffix prefix="/" variant="addon">
+                            <Input
+                              id="qr-path-prefix"
+                              autoCapitalize="none"
+                              spellCheck={false}
+                              placeholder="products"
+                              value={localDomainSettings.pathPrefix}
+                              onChange={(e) => handlePathPrefixChange(e.target.value)}
+                            />
+                          </InputAffix>
+                        </FormField>
 
-                  {/* Custom Domain Settings */}
-                  {localDomainSettings.resolver === 'custom' && (
-                    <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                      <div className="space-y-2">
-                        <Label>{t('Your Domain')} *</Label>
-                        <Input
-                          placeholder="e.g. dpp.your-company.com"
-                          value={localDomainSettings.customDomain}
-                          onChange={(e) => handleDomainChange(e.target.value)}
-                          className={domainError ? 'border-destructive' : ''}
-                        />
-                        {domainError ? (
-                          <p className="text-xs text-destructive">{domainError}</p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            {t('Enter domain only without https://')}
-                          </p>
+                        <FormToggleRow label={t('Use HTTPS (recommended)')} htmlFor="useHttps">
+                          <Switch
+                            id="useHttps"
+                            checked={localDomainSettings.useHTTPS}
+                            onCheckedChange={(checked: boolean) =>
+                              setLocalDomainSettings({ ...localDomainSettings, useHTTPS: checked })
+                            }
+                          />
+                        </FormToggleRow>
+
+                        {/* Preview */}
+                        {selectedProduct && (
+                          <div className="rounded-md border bg-background p-3">
+                            <p className="text-xs text-muted-foreground">{t('URL Preview')}:</p>
+                            <p className="mt-1 break-all font-mono text-sm">
+                              {generateDPPUrl(activeGtin, activeSerial)}
+                            </p>
+                          </div>
                         )}
                       </div>
+                    )}
 
-                      <div className="space-y-2">
-                        <Label>{t('Path Prefix (optional)')}</Label>
-                        <Input
-                          placeholder="e.g. products or passport"
-                          value={localDomainSettings.pathPrefix}
-                          onChange={(e) => handlePathPrefixChange(e.target.value)}
-                          className={pathPrefixError ? 'border-destructive' : ''}
-                        />
-                        {pathPrefixError ? (
-                          <p className="text-xs text-destructive">{pathPrefixError}</p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            {t('Inserted between domain and GS1 path')}
-                          </p>
-                        )}
-                      </div>
+                    {/* DNS Setup Guide */}
+                    {localDomainSettings.resolver === 'custom' && localDomainSettings.customDomain && (
+                      <Accordion type="single" collapsible>
+                        <AccordionItem value="setup">
+                          <AccordionTrigger>
+                            <span className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              {t('Setup Guide')}
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-4 text-sm">
+                              <div>
+                                <h5 className="font-medium mb-2">{t('1. Create DNS Record')}</h5>
+                                <p className="text-muted-foreground">
+                                  {t('Create a CNAME or A record for your subdomain:')}
+                                </p>
+                                <code className="block mt-1 p-2 bg-muted rounded text-xs">
+                                  {localDomainSettings.customDomain} CNAME your-dpp-server.com
+                                </code>
+                              </div>
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="useHttps"
-                          checked={localDomainSettings.useHTTPS}
-                          onCheckedChange={(checked: boolean) =>
-                            setLocalDomainSettings({ ...localDomainSettings, useHTTPS: checked })
-                          }
-                        />
-                        <Label htmlFor="useHttps">{t('Use HTTPS (recommended)')}</Label>
-                      </div>
+                              <div>
+                                <h5 className="font-medium mb-2">{t('2. SSL Certificate')}</h5>
+                                <p className="text-muted-foreground">
+                                  {t("Make sure a valid SSL certificate for HTTPS is available (e.g. via Let's Encrypt).")}
+                                </p>
+                              </div>
 
-                      {/* Preview */}
-                      {selectedProduct && (
-                        <div className="p-3 bg-background rounded border">
-                          <Label className="text-xs text-muted-foreground">{t('URL Preview')}:</Label>
-                          <p className="font-mono text-sm break-all mt-1">
-                            {generateDPPUrl(activeGtin, activeSerial)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* DNS Setup Guide */}
-                  {localDomainSettings.resolver === 'custom' && localDomainSettings.customDomain && (
-                    <Accordion type="single" collapsible>
-                      <AccordionItem value="setup">
-                        <AccordionTrigger>
-                          <span className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            {t('Setup Guide')}
-                          </span>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="space-y-4 text-sm">
-                            <div>
-                              <h5 className="font-medium mb-2">{t('1. Create DNS Record')}</h5>
-                              <p className="text-muted-foreground">
-                                {t('Create a CNAME or A record for your subdomain:')}
-                              </p>
-                              <code className="block mt-1 p-2 bg-muted rounded text-xs">
-                                {localDomainSettings.customDomain} CNAME your-dpp-server.com
-                              </code>
-                            </div>
-
-                            <div>
-                              <h5 className="font-medium mb-2">{t('2. SSL Certificate')}</h5>
-                              <p className="text-muted-foreground">
-                                {t("Make sure a valid SSL certificate for HTTPS is available (e.g. via Let's Encrypt).")}
-                              </p>
-                            </div>
-
-                            <div>
-                              <h5 className="font-medium mb-2">{t('3. Set up Resolver')}</h5>
-                              <p className="text-muted-foreground">
-                                {t('Your server must parse GS1 Digital Link URLs and redirect to the corresponding product page.')}
-                              </p>
-                              <code className="block mt-1 p-2 bg-muted rounded text-xs whitespace-pre">
+                              <div>
+                                <h5 className="font-medium mb-2">{t('3. Set up Resolver')}</h5>
+                                <p className="text-muted-foreground">
+                                  {t('Your server must parse GS1 Digital Link URLs and redirect to the corresponding product page.')}
+                                </p>
+                                <code className="block mt-1 p-2 bg-muted rounded text-xs whitespace-pre overflow-x-auto">
 {`// Example Express.js Route
 app.get('/01/:gtin/21/:serial', (req, res) => {
   const { gtin, serial } = req.params;
   // Find product and display DPP
   res.redirect(\`/product/\${gtin}?serial=\${serial}\`);
 });`}
-                              </code>
+                                </code>
+                              </div>
                             </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    )}
+                  </FormSection>
 
                   {/* DPP Template Selection */}
-                  <Separator />
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-base font-medium flex items-center gap-2">
-                        <LayoutTemplate className="h-4 w-4" />
-                        {t('DPP Page Template')}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t('Choose the design template for your public product pages')}
-                      </p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {/* Modern */}
-                      <div
-                        onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'modern' })}
-                        className={`relative p-4 border rounded-lg cursor-pointer transition ${
-                          localDomainSettings.dppTemplate === 'modern'
-                            ? 'border-primary bg-primary/5 ring-2 ring-primary'
-                            : 'hover:bg-muted/50 hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center text-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                            <Sparkles className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{t('Modern')}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {t('Hero header, glassmorphism cards, animations')}
-                            </p>
-                          </div>
-                          {localDomainSettings.dppTemplate === 'modern' && (
-                            <Badge variant="default" className="text-xs">{t('Active')}</Badge>
-                          )}
-                        </div>
-                      </div>
+                  <FormSection
+                    title={t('DPP Page Template')}
+                    description={t('Choose the design template for your public product pages')}
+                    icon={LayoutTemplate}
+                    variant="plain"
+                  >
+                    <ChoiceCards
+                      value={localDomainSettings.dppTemplate}
+                      onValueChange={(v) => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: v as typeof localDomainSettings.dppTemplate })}
+                      columns={3}
+                      aria-label={t('DPP Page Template')}
+                      options={[
+                        { value: 'modern', label: t('Modern'), description: t('Hero header, glassmorphism cards, animations'), icon: Sparkles },
+                        { value: 'classic', label: t('Classic'), description: t('Clean cards, structured sections, professional'), icon: BookOpen },
+                        { value: 'compact', label: t('Compact'), description: t('Tab layout, mobile-first, minimal whitespace'), icon: Smartphone },
+                      ]}
+                    />
+                  </FormSection>
+                </FormSections>
 
-                      {/* Classic */}
-                      <div
-                        onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'classic' })}
-                        className={`relative p-4 border rounded-lg cursor-pointer transition ${
-                          localDomainSettings.dppTemplate === 'classic'
-                            ? 'border-primary bg-primary/5 ring-2 ring-primary'
-                            : 'hover:bg-muted/50 hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center text-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                            <BookOpen className="h-5 w-5 text-foreground/70" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{t('Classic')}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {t('Clean cards, structured sections, professional')}
-                            </p>
-                          </div>
-                          {localDomainSettings.dppTemplate === 'classic' && (
-                            <Badge variant="default" className="text-xs">{t('Active')}</Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Compact */}
-                      <div
-                        onClick={() => setLocalDomainSettings({ ...localDomainSettings, dppTemplate: 'compact' })}
-                        className={`relative p-4 border rounded-lg cursor-pointer transition ${
-                          localDomainSettings.dppTemplate === 'compact'
-                            ? 'border-primary bg-primary/5 ring-2 ring-primary'
-                            : 'hover:bg-muted/50 hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center text-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                            <Smartphone className="h-5 w-5 text-foreground/70" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{t('Compact')}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {t('Tab layout, mobile-first, minimal whitespace')}
-                            </p>
-                          </div>
-                          {localDomainSettings.dppTemplate === 'compact' && (
-                            <Badge variant="default" className="text-xs">{t('Active')}</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Save Button */}
+                <FormActions className="mt-6">
                   <Button
                     onClick={saveDomainSettings}
-                    className="w-full"
                     disabled={isSavingDomain || (localDomainSettings.resolver === 'custom' && !!domainError)}
                   >
                     {isSavingDomain ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : domainSaved ? (
-                      <Check className="mr-2 h-4 w-4 text-green-500" />
+                      <Check className="mr-2 h-4 w-4" />
                     ) : (
                       <Save className="mr-2 h-4 w-4" />
                     )}
                     {domainSaved ? t('Saved!') : t('Save Domain Settings')}
                   </Button>
-                </div>
+                </FormActions>
               </TabsContent>
             </Tabs>
           </CardContent>

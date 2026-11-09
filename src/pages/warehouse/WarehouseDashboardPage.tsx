@@ -285,7 +285,7 @@ export function WarehouseDashboardPage() {
                       <div className="flex items-center justify-between text-sm">
                         <Link
                           to={`/warehouse/locations/${loc.locationId}`}
-                          className="font-medium hover:underline truncate transition-colors"
+                          className="-my-3 py-3 font-medium hover:underline truncate transition-colors"
                         >
                           {loc.locationName}
                           {loc.locationCode ? ` (${loc.locationCode})` : ''}
@@ -300,7 +300,7 @@ export function WarehouseDashboardPage() {
                       </div>
                       {capacityUnits > 0 && (
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="text-[10px] text-muted-foreground w-8 sm:w-10 shrink-0">{t('Units')}</span>
+                          <span className="text-xs text-muted-foreground w-16 shrink-0">{t('Units')}</span>
                           <Progress
                             value={Math.min(fillUnits, 100)}
                             className={`h-1.5 flex-1 ${capacityColor(fillUnits)}`}
@@ -312,7 +312,7 @@ export function WarehouseDashboardPage() {
                       )}
                       {!capacityUnits && (
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="text-[10px] text-muted-foreground w-8 sm:w-10 shrink-0">{t('Units')}</span>
+                          <span className="text-xs text-muted-foreground w-16 shrink-0">{t('Units')}</span>
                           <span className="text-[10px] text-muted-foreground tabular-nums">
                             {loc.totalUnits.toLocaleString()} {t('units')}
                           </span>
@@ -320,7 +320,7 @@ export function WarehouseDashboardPage() {
                       )}
                       {hasVolume && (
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="text-[10px] text-muted-foreground w-8 sm:w-10 shrink-0">{t('Volume')}</span>
+                          <span className="text-xs text-muted-foreground w-16 shrink-0">{t('Volume')}</span>
                           <Progress
                             value={Math.min(fillVol, 100)}
                             className={`h-1.5 flex-1 ${capacityColor(fillVol)}`}

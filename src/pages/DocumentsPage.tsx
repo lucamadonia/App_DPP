@@ -5,7 +5,6 @@ import { useLocale } from '@/hooks/use-locale';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Search,
-  Upload,
   FileText,
   FileImage,
   CheckCircle2,
@@ -20,6 +19,9 @@ import {
   PanelLeftOpen,
   Sparkles,
   UploadCloud,
+  FileUp,
+  X,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,11 +49,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/adaptive-dialog';
-import { Label } from '@/components/ui/label';
+import { FormGrid, FormField, ChoiceCards } from '@/components/ui/form-layout';
+import { FormWizard } from '@/components/ui/form-wizard';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -141,6 +144,7 @@ export function DocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploadDragOver, setIsUploadDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -294,7 +298,16 @@ export function DocumentsPage() {
 
   // Select file
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    applySelectedFile(event.target.files?.[0]);
+  }
+
+  function clearSelectedFile() {
+    setSelectedFile(null);
+    setAiResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function applySelectedFile(file: File | undefined) {
     if (file) {
       setSelectedFile(file);
       setAiResult(null); // reset previous AI result for fresh file
@@ -891,7 +904,7 @@ export function DocumentsPage() {
 
       {/* Upload Dialog */}
       <Dialog open={isUploadDialogOpen} onOpenChange={(open) => { if (!open) closeUploadDialog(); }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto pb-0">
           <DialogHeader>
             <DialogTitle>{t('Add Document')}</DialogTitle>
             <DialogDescription>
@@ -899,270 +912,289 @@ export function DocumentsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-2">
-              <Label>{t('Select File')}</Label>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-                onChange={handleFileSelect}
-              />
-              {selectedFile && (
-                <p className="text-xs text-muted-foreground break-all">
-                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                </p>
-              )}
-            </div>
-
-            {/* AI Classification Button */}
-            {selectedFile && (
-              <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-950/40 dark:to-violet-950/40 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-start gap-2 min-w-0">
-                    <Sparkles className="size-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {t('AI Auto-Classification')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedFile.type.startsWith('image/') || selectedFile.type === 'application/pdf'
-                          ? t('Uses Vision AI (4 credits)')
-                          : t('Uses Text AI (2 credits)')}
-                      </p>
+          <FormWizard
+            variant="dialog"
+            onCancel={closeUploadDialog}
+            onFinish={handleCreateDocument}
+            finishing={isUploading}
+            finishLabel={isUploading ? t('Uploading...') : selectedFile ? t('Upload') : t('Add')}
+            steps={[
+              {
+                id: 'file',
+                title: t('File'),
+                description: t('Pick the file. AI can fill in the details for you.'),
+                icon: FileUp,
+                content: (
+                  <>
+                    <div className="space-y-2">
+                      <input
+                        id="doc-file"
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+                        onChange={handleFileSelect}
+                        className="peer sr-only"
+                      />
+                      {selectedFile ? (
+                        <div className="flex min-h-14 items-center gap-3 rounded-xl border bg-muted/30 p-3">
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
+                            <FileText className="size-5" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{selectedFile.name}</p>
+                            <p className="text-xs tabular-nums text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 shrink-0"
+                            aria-label={t('Remove', { ns: 'common' })}
+                            onClick={clearSelectedFile}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <label
+                          htmlFor="doc-file"
+                          onDragOver={(e) => { e.preventDefault(); setIsUploadDragOver(true); }}
+                          onDragLeave={() => setIsUploadDragOver(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsUploadDragOver(false);
+                            applySelectedFile(e.dataTransfer.files?.[0]);
+                          }}
+                          className={cn(
+                            'flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center',
+                            'transition-[border-color,background-color] duration-150 ease-out',
+                            'peer-focus-visible:border-ring peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50',
+                            isUploadDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/40'
+                          )}
+                        >
+                          <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
+                            <FileUp className="size-5" />
+                          </span>
+                          <span className="text-sm font-medium">{t('Choose a file or drag it here')}</span>
+                          <span className="text-xs text-muted-foreground">{t('PDF, images or Word documents')} · {t('max. 50 MB')}</span>
+                        </label>
+                      )}
+                      <p className="text-xs text-muted-foreground">{t('Optional – you can also add a document without a file.')}</p>
                     </div>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={aiResult ? 'outline' : 'default'}
-                    onClick={handleClassifyWithAI}
-                    disabled={isClassifying}
-                  >
-                    {isClassifying ? (
-                      <>
-                        <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                        {t('Analyzing...')}
-                      </>
-                    ) : aiResult ? (
-                      <>
-                        <Sparkles className="size-3.5 mr-1.5" />
-                        {t('Re-classify')}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="size-3.5 mr-1.5" />
-                        {t('Classify with AI')}
-                      </>
+
+                    {/* AI Classification */}
+                    {selectedFile && (
+                      <div className="rounded-lg border bg-muted/40 p-3 sm:p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-2">
+                            <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{t('AI Auto-Classification')}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {selectedFile.type.startsWith('image/') || selectedFile.type === 'application/pdf'
+                                  ? t('Uses Vision AI (4 credits)')
+                                  : t('Uses Text AI (2 credits)')}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="pointer-coarse:min-h-11"
+                            variant={aiResult ? 'outline' : 'default'}
+                            onClick={handleClassifyWithAI}
+                            disabled={isClassifying}
+                          >
+                            {isClassifying ? (
+                              <>
+                                <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                                {t('Analyzing...')}
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="size-3.5 mr-1.5" />
+                                {aiResult ? t('Re-classify') : t('Classify with AI')}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {aiResult && aiResult.hints.length > 0 && (
+                          <div className="mt-3">
+                            <AiHintsList hints={aiResult.hints} />
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </Button>
-                </div>
-                {aiResult && aiResult.hints.length > 0 && (
-                  <div className="mt-3">
-                    <AiHintsList hints={aiResult.hints} />
-                  </div>
-                )}
-              </div>
-            )}
+                  </>
+                ),
+              },
+              {
+                id: 'details',
+                title: t('Details'),
+                description: t('Name and type of the document'),
+                icon: FileText,
+                canNext: Boolean(newDoc.name),
+                content: (
+                  <FormGrid cols={2}>
+                    <FormField
+                      label={t('Document Name')}
+                      htmlFor="doc-name"
+                      required
+                      span="full"
+                      labelAside={aiResult && aiResult.confidence.name > 0 ? <AiSuggestionBadge confidence={aiResult.confidence.name} /> : undefined}
+                    >
+                      <Input
+                        id="doc-name"
+                        placeholder="CE_Declaration_of_Conformity.pdf"
+                        value={newDoc.name}
+                        onChange={(e) => setNewDoc({ ...newDoc, name: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField
+                      label={t('Category')}
+                      htmlFor="doc-category"
+                      labelAside={aiResult && aiResult.confidence.category > 0 ? <AiSuggestionBadge confidence={aiResult.confidence.category} /> : undefined}
+                      hint={aiResult && aiResult.certificationHints.length > 0 ? (
+                        <span className="flex flex-wrap gap-1">
+                          {aiResult.certificationHints.map((cert) => (
+                            <Badge key={cert} variant="secondary" className="text-xs">{cert}</Badge>
+                          ))}
+                        </span>
+                      ) : undefined}
+                    >
+                      <Select
+                        value={newDoc.category}
+                        onValueChange={(value) => setNewDoc({ ...newDoc, category: value as Document['category'] })}
+                      >
+                        <SelectTrigger id="doc-category" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {documentCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    <FormField
+                      label={t('Valid Until')}
+                      htmlFor="doc-valid"
+                      optional
+                      labelAside={aiResult && aiResult.validUntil && aiResult.confidence.validUntil > 0 ? <AiSuggestionBadge confidence={aiResult.confidence.validUntil} /> : undefined}
+                    >
+                      <Input
+                        id="doc-valid"
+                        type="date"
+                        value={newDoc.validUntil}
+                        onChange={(e) => setNewDoc({ ...newDoc, validUntil: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField
+                      label={t('Description')}
+                      htmlFor="doc-description"
+                      optional
+                      span="full"
+                      labelAside={aiResult && aiResult.description ? <AiSuggestionBadge confidence={aiResult.confidence.overall} /> : undefined}
+                    >
+                      <Textarea
+                        id="doc-description"
+                        placeholder={t('Short summary of the document content (optional)')}
+                        value={newDoc.description}
+                        onChange={(e) => setNewDoc({ ...newDoc, description: e.target.value })}
+                        rows={2}
+                      />
+                    </FormField>
+                  </FormGrid>
+                ),
+              },
+              {
+                id: 'visibility',
+                title: t('Visibility & Assignment'),
+                description: t('Who sees the document and where it belongs'),
+                icon: Eye,
+                content: (
+                  <>
+                    <FormField
+                      label={t('Visibility')}
+                      labelAside={aiResult && aiResult.confidence.visibility > 0 ? <AiSuggestionBadge confidence={aiResult.confidence.visibility} /> : undefined}
+                    >
+                      <ChoiceCards<VisibilityLevel>
+                        value={newDoc.visibility}
+                        onValueChange={(value) => setNewDoc({ ...newDoc, visibility: value })}
+                        columns={3}
+                        options={[
+                          { value: 'internal', label: t('Internal Only'), icon: Lock },
+                          { value: 'customs', label: t('Customs'), icon: ShieldCheck },
+                          { value: 'consumer', label: t('Consumer'), icon: Users },
+                        ]}
+                      />
+                    </FormField>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="doc-name">{t('Document Name')}</Label>
-                {aiResult && aiResult.confidence.name > 0 && (
-                  <AiSuggestionBadge confidence={aiResult.confidence.name} />
-                )}
-              </div>
-              <Input
-                id="doc-name"
-                placeholder="e.g. CE_Declaration_of_Conformity.pdf"
-                value={newDoc.name}
-                onChange={(e) => setNewDoc({ ...newDoc, name: e.target.value })}
-              />
-            </div>
+                    <FormField label={t('Assignment')}>
+                      <ChoiceCards<AssignmentType>
+                        value={assignmentType}
+                        onValueChange={(value) => { setAssignmentType(value); setAssignmentId(''); }}
+                        columns={4}
+                        options={[
+                          { value: 'none', label: t('No assignment') },
+                          { value: 'product', label: t('Product') },
+                          { value: 'supplier', label: t('Supplier') },
+                          { value: 'folder', label: t('Folder') },
+                        ]}
+                      />
+                    </FormField>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="doc-description">{t('Description')}</Label>
-                {aiResult && aiResult.description && (
-                  <AiSuggestionBadge confidence={aiResult.confidence.overall} />
-                )}
-              </div>
-              <Textarea
-                id="doc-description"
-                placeholder={t('Short summary of the document content (optional)')}
-                value={newDoc.description}
-                onChange={(e) => setNewDoc({ ...newDoc, description: e.target.value })}
-                rows={2}
-              />
-            </div>
+                    {assignmentType === 'product' && (
+                      <FormField label={t('Product')} htmlFor="doc-product">
+                        <Select value={assignmentId} onValueChange={setAssignmentId}>
+                          <SelectTrigger id="doc-product" className="w-full">
+                            <SelectValue placeholder={t('Select product...')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {productOptions.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="doc-category">{t('Category')}</Label>
-                {aiResult && aiResult.confidence.category > 0 && (
-                  <AiSuggestionBadge confidence={aiResult.confidence.category} />
-                )}
-              </div>
-              <Select
-                value={newDoc.category}
-                onValueChange={(value) => setNewDoc({ ...newDoc, category: value as Document['category'] })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {documentCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {aiResult && aiResult.certificationHints.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {aiResult.certificationHints.map((cert) => (
-                    <Badge key={cert} variant="secondary" className="text-[10px]">
-                      {cert}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {assignmentType === 'supplier' && (
+                      <FormField label={t('Supplier')} htmlFor="doc-supplier">
+                        <Select value={assignmentId} onValueChange={setAssignmentId}>
+                          <SelectTrigger id="doc-supplier" className="w-full">
+                            <SelectValue placeholder={t('Select supplier...')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {supplierOptions.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{t('Visibility')}</Label>
-                {aiResult && aiResult.confidence.visibility > 0 && (
-                  <AiSuggestionBadge confidence={aiResult.confidence.visibility} />
-                )}
-              </div>
-              <Select
-                value={newDoc.visibility}
-                onValueChange={(value) => setNewDoc({ ...newDoc, visibility: value as VisibilityLevel })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="internal">
-                    <div className="flex items-center gap-2">
-                      <Lock className="h-3.5 w-3.5" />
-                      {t('Internal Only')}
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="customs">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      {t('Customs')}
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="consumer">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-3.5 w-3.5" />
-                      {t('Consumer')}
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Assignment */}
-            <div className="space-y-2">
-              <Label>{t('Assignment')}</Label>
-              <Select
-                value={assignmentType}
-                onValueChange={(value) => { setAssignmentType(value as AssignmentType); setAssignmentId(''); }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('No assignment')}</SelectItem>
-                  <SelectItem value="product">{t('Product')}</SelectItem>
-                  <SelectItem value="supplier">{t('Supplier')}</SelectItem>
-                  <SelectItem value="folder">{t('Folder')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Assignment target */}
-            {assignmentType === 'product' && (
-              <div className="space-y-2">
-                <Label>{t('Product')}</Label>
-                <Select value={assignmentId} onValueChange={setAssignmentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('Select product...')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productOptions.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {assignmentType === 'supplier' && (
-              <div className="space-y-2">
-                <Label>{t('Supplier')}</Label>
-                <Select value={assignmentId} onValueChange={setAssignmentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('Select supplier...')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supplierOptions.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {assignmentType === 'folder' && (
-              <div className="space-y-2">
-                <Label>{t('Folder')}</Label>
-                <Select value={assignmentId} onValueChange={setAssignmentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('Select folder...')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {folders.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="doc-valid">{t('Valid Until (optional)')}</Label>
-                {aiResult && aiResult.validUntil && aiResult.confidence.validUntil > 0 && (
-                  <AiSuggestionBadge confidence={aiResult.confidence.validUntil} />
-                )}
-              </div>
-              <Input
-                id="doc-valid"
-                type="date"
-                value={newDoc.validUntil}
-                onChange={(e) => setNewDoc({ ...newDoc, validUntil: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeUploadDialog}>
-              {t('Cancel', { ns: 'common' })}
-            </Button>
-            <Button onClick={handleCreateDocument} disabled={!newDoc.name || isUploading}>
-              {isUploading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              {isUploading ? t('Uploading...') : selectedFile ? t('Upload') : t('Add')}
-            </Button>
-          </DialogFooter>
+                    {assignmentType === 'folder' && (
+                      <FormField label={t('Folder')} htmlFor="doc-folder">
+                        <Select value={assignmentId} onValueChange={setAssignmentId}>
+                          <SelectTrigger id="doc-folder" className="w-full">
+                            <SelectValue placeholder={t('Select folder...')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {folders.map((f) => (
+                              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    )}
+                  </>
+                ),
+              },
+            ]}
+          />
         </DialogContent>
       </Dialog>
 

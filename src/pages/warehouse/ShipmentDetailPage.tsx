@@ -833,7 +833,7 @@ export function ShipmentDetailPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`snap-start px-3 sm:px-4 py-2.5 sm:py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+              className={`snap-start min-h-11 px-3 sm:px-4 py-2.5 sm:py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                 activeTab === tab.key
                   ? 'border-primary text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground'

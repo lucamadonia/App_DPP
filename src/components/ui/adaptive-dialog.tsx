@@ -85,13 +85,14 @@ function AdaptiveDialogContent({
         ref={setContentRef}
         {...dragHandlers}
       >
-        {/* Grabber: visual cue and drag handle. Sits in the top padding. */}
+        {/* Grabber: the only one (mobile-app.css draws no ::before pill). Visual
+            cue and drag handle, pinned into the sheet's top padding. */}
         <div
           data-drag-handle
-          className="-mx-6 -mt-6 mb-[-0.5rem] flex h-6 shrink-0 items-end justify-center"
+          className="absolute inset-x-0 top-0 flex h-8 items-start justify-center pt-2.5"
           aria-hidden="true"
         >
-          <div className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/30" />
         </div>
         {children}
         {/* Hidden programmatic close for drag-dismiss (and no X button case). */}

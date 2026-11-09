@@ -135,17 +135,8 @@ html[data-native="true"]:has(.app-content),
     animation-duration: 220ms;
   }
 
-  [data-slot="dialog-content"].bottom-0::before {
-    content: '';
-    position: absolute;
-    top: 0.625rem;
-    left: calc(50% - 1.125rem);
-    width: 2.25rem;
-    height: 0.25rem;
-    border-radius: 1rem;
-    background: var(--muted-foreground);
-    opacity: 0.3;
-  }
+  /* The grabber pill is rendered by adaptive-dialog (it doubles as the drag
+     handle); a ::before pill here would draw a second one. */
 
   [data-slot="dialog-header"] { padding-right: 1.5rem; }
   [data-slot="popover-content"] { max-width: calc(100vw - 2rem); }
@@ -163,18 +154,18 @@ html[data-native="true"]:has(.app-content),
    (capacitor.config.ts overlaysWebView), so anything pinned to y=0 sits under
    the clock/battery where iOS swallows taps. Full-height sheets reserve the
    inset and move their close button below it. */
-[data-slot="sheet-content"]:is([data-side="left"], [data-side="right"], [data-side="top"]) {
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"]):is([data-side="left"], [data-side="right"], [data-side="top"]) {
   padding-top: var(--safe-top);
 }
-[data-slot="sheet-content"]:is([data-side="left"], [data-side="right"], [data-side="bottom"]) {
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"]):is([data-side="left"], [data-side="right"], [data-side="bottom"]) {
   padding-bottom: var(--safe-bottom);
 }
-[data-slot="sheet-content"][data-side="right"] { padding-right: var(--safe-right); }
-[data-slot="sheet-content"][data-side="left"] { padding-left: var(--safe-left); }
-[data-slot="sheet-content"]:is([data-side="left"], [data-side="right"], [data-side="top"]) > [data-slot="sheet-close"] {
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"])[data-side="right"] { padding-right: var(--safe-right); }
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"])[data-side="left"] { padding-left: var(--safe-left); }
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"]):is([data-side="left"], [data-side="right"], [data-side="top"]) > [data-slot="sheet-close"] {
   top: calc(var(--safe-top) + 0.75rem);
 }
-[data-slot="sheet-content"][data-side="right"] > [data-slot="sheet-close"] {
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"])[data-side="right"] > [data-slot="sheet-close"] {
   right: calc(var(--safe-right) + 0.75rem);
 }
 
@@ -190,6 +181,42 @@ html[data-native="true"]:has(.app-content),
 }
 
 @media (pointer: coarse) {
+  /* Inputs inside an InputAffix/SecretInput frame fill the frame (which is
+     itself 44px); the generic 44px input rule below would overflow it. */
+  [data-slot="input-affix"] [data-slot="input"] {
+    min-height: 0;
+  }
+
+  /* Sidebar nav rows (iPad shows the desktop sidebar): 44px rows on touch.
+     Mouse density is unchanged; the collapsed icon rail (32px buttons in a
+     48px rail) keeps its square buttons. */
+  /* data-sidebar, not data-slot: CollapsibleTrigger asChild replaces data-slot. */
+  :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):not([data-collapsible="icon"] *) {
+    min-height: 44px;
+  }
+
+  /* Invisible 44x44 hit area for controls that must stay visually small
+     (switch 36x20, checkbox 16x16) and for opt-in elements (.touch-hit: small
+     chips, "Alle" links, breadcrumbs). Centered ::after, no layout shift. */
+  [data-slot="switch"],
+  [data-slot="checkbox"],
+  [data-slot="breadcrumb-link"],
+  .touch-hit {
+    position: relative;
+  }
+  [data-slot="switch"]::after,
+  [data-slot="checkbox"]::after,
+  [data-slot="breadcrumb-link"]::after,
+  .touch-hit::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
   /* 44pt close targets, pulled into the corner so the glyph stays where it was. */
   [data-slot="dialog-close"].absolute,
   [data-slot="sheet-close"] {

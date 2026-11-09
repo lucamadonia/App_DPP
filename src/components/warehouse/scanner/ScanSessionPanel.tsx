@@ -38,7 +38,7 @@ export function ScanSessionPanel({
               <ArrowUpFromLine className="h-3.5 w-3.5 text-blue-400" />
               <span className="text-blue-400 font-bold">{totalOut}</span>
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 whitespace-nowrap">
               ({totalCount} {t('scans')})
             </span>
           </div>
@@ -48,7 +48,7 @@ export function ScanSessionPanel({
             type="button"
             onClick={onUndo}
             disabled={undoDisabled}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-11 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30"
             title={t('Undo last')}
           >
             <Undo2 className="h-3.5 w-3.5" />
@@ -58,7 +58,8 @@ export function ScanSessionPanel({
             type="button"
             onClick={onClear}
             disabled={entries.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30"
+            aria-label={t('Clear session')}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-11 min-w-11 rounded-lg text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30"
             title={t('Clear session')}
           >
             <Trash2 className="h-3.5 w-3.5" />

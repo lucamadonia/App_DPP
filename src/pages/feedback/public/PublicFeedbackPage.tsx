@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FormField } from '@/components/ui/form-layout';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -306,11 +307,7 @@ export function PublicFeedbackPage() {
                 {hasRating && (
                   <div className="space-y-3 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {r.rating >= 4 ? (
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium">
-                          Was war für dich besonders an {item.product_name}?{' '}
-                          <span className="text-muted-foreground font-normal">(optional)</span>
-                        </label>
+                      <FormField label={`Was war für dich besonders an ${item.product_name}?`} htmlFor={`fb-comment-${item.request_id}`} optional>
                         <Textarea
                           value={r.comment}
                           onChange={e => updateRating(item.request_id, { comment: e.target.value })}
@@ -319,11 +316,10 @@ export function PublicFeedbackPage() {
                           rows={3}
                           className="text-sm resize-none"
                         />
-                      </div>
+                      </FormField>
                     ) : (
                       <div className="space-y-3">
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium">Was hat nicht gepasst?</label>
+                        <FormField label="Was hat nicht gepasst?" htmlFor={`fb-low-what-${item.request_id}`}>
                           <Textarea
                             value={r.lowWhat}
                             onChange={e => updateRating(item.request_id, { lowWhat: e.target.value })}
@@ -332,9 +328,8 @@ export function PublicFeedbackPage() {
                             rows={2}
                             className="text-sm resize-none"
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium">Was hättest du dir anders vorgestellt?</label>
+                        </FormField>
+                        <FormField label="Was hättest du dir anders vorgestellt?" htmlFor={`fb-low-expected-${item.request_id}`}>
                           <Textarea
                             value={r.lowExpected}
                             onChange={e => updateRating(item.request_id, { lowExpected: e.target.value })}
@@ -343,7 +338,7 @@ export function PublicFeedbackPage() {
                             rows={2}
                             className="text-sm resize-none"
                           />
-                        </div>
+                        </FormField>
                       </div>
                     )}
                     <Input
@@ -386,7 +381,7 @@ export function PublicFeedbackPage() {
                 type="button" aria-label="Weniger Kinder"
                 onClick={() => setChildrenAges(a => a.slice(0, Math.max(0, a.length - 1)))}
                 disabled={childrenAges.length === 0}
-                className="h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
+                className="h-11 w-11 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -395,7 +390,7 @@ export function PublicFeedbackPage() {
                 type="button" aria-label="Mehr Kinder"
                 onClick={() => setChildrenAges(a => (a.length >= 6 ? a : [...a, 0]))}
                 disabled={childrenAges.length >= 6}
-                className="h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
+                className="h-11 w-11 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -412,7 +407,7 @@ export function PublicFeedbackPage() {
                         setChildrenAges(a => a.map((x, j) => (j === i ? v : x)));
                       }}
                       placeholder="Alter"
-                      className="h-9 w-[72px] text-sm"
+                      className="h-11 w-[72px] text-sm"
                       aria-label={`Alter Kind ${i + 1}`}
                     />
                     <span className="text-xs text-muted-foreground">J.</span>
@@ -466,16 +461,17 @@ export function PublicFeedbackPage() {
 
         {/* Overall experience */}
         {anyRated && (
-          <div className="rounded-xl border bg-card p-4 space-y-2">
-            <label className="block text-sm font-medium">Dein Gesamteindruck <span className="text-muted-foreground font-normal">(optional)</span></label>
-            <Textarea
-              value={overall}
-              onChange={e => setOverall(e.target.value)}
-              placeholder="Magst du uns mehr über dein Fambliss-Erlebnis erzählen?"
-              maxLength={2000}
-              rows={3}
-              className="text-sm resize-none"
-            />
+          <div className="rounded-xl border bg-card p-4">
+            <FormField label="Dein Gesamteindruck" htmlFor="fb-overall" optional>
+              <Textarea
+                value={overall}
+                onChange={e => setOverall(e.target.value)}
+                placeholder="Magst du uns mehr über dein Fambliss-Erlebnis erzählen?"
+                maxLength={2000}
+                rows={3}
+                className="text-sm resize-none"
+              />
+            </FormField>
           </div>
         )}
 
@@ -504,7 +500,7 @@ export function PublicFeedbackPage() {
               className="text-sm resize-none bg-background"
             />
             {ideaText.trim() && (
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <label className="flex min-h-11 items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <input type="checkbox" checked={ideaPublic} onChange={e => setIdeaPublic(e.target.checked)} className="rounded" />
                 Meine Idee darf öffentlich auf der Roadmap erscheinen
               </label>

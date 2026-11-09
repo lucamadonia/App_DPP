@@ -1,27 +1,24 @@
 /**
  * Supplier Registration Page
- * 4-step wizard for supplier self-registration via invitation link
+ * 6-step wizard (shared FormWizard) for supplier self-registration via invitation link
  */
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Briefcase, Building2, ClipboardCheck, Landmark, MapPin, UserRound } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { FormWizard, type WizardStep } from '@/components/ui/form-wizard';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierPortal } from '@/hooks/useSupplierPortal';
 import { publicSubmitSupplierRegistration } from '@/services/supabase/supplier-portal';
 import type { SupplierRegistrationData } from '@/types/supplier-portal';
 
-import { WizardStepIndicator } from '@/components/returns/public/WizardStepIndicator';
-import { CompanyBasicsStep } from '@/components/suppliers/public/CompanyBasicsStep';
+import { CompanyBasicsStep, ContactPersonStep } from '@/components/suppliers/public/CompanyBasicsStep';
 import { AddressStep } from '@/components/suppliers/public/AddressStep';
 import { LegalBankingStep } from '@/components/suppliers/public/LegalBankingStep';
-import { BusinessDetailsStep } from '@/components/suppliers/public/BusinessDetailsStep';
-
-const STEP_LABELS = ['Company Basics', 'Address', 'Legal & Banking', 'Business Details'];
+import { BusinessDetailsStep, RegistrationReviewStep } from '@/components/suppliers/public/BusinessDetailsStep';
 
 export function SupplierRegisterPage() {
   const { t } = useTranslation('supplier-portal');
@@ -44,68 +41,13 @@ export function SupplierRegisterPage() {
     mode: 'onBlur',
   });
 
-  const { trigger } = form;
-
-  // Field validation per step
-  const getStepFields = (step: number): (keyof SupplierRegistrationData)[] => {
-    switch (step) {
-      case 0:
-        return ['companyName', 'contactName', 'email'];
-      case 1:
-        return ['street', 'city', 'country', 'postalCode'];
-      case 2:
-        return ['taxNumber', 'vatNumber', 'iban', 'bic'];
-      case 3:
-        return ['termsAccepted'];
-      default:
-        return [];
-    }
-  };
-
-  const validateStep = async (step: number): Promise<boolean> => {
-    const fields = getStepFields(step);
-    if (fields.length === 0) return true;
-
-    const result = await trigger(fields);
-    return result;
-  };
-
-  const handleNext = async () => {
-    const isValid = await validateStep(currentStep);
-    if (!isValid) {
-      toast({
-        title: t('Validation Error'),
-        description: t('Please fill in all required fields correctly'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (currentStep < STEP_LABELS.length - 1) {
-      setCurrentStep((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    }
-  };
+  const { trigger, watch } = form;
+  const termsAccepted = watch('termsAccepted');
 
   const handleSubmit = async () => {
-    // Validate final step
-    const isValid = await validateStep(currentStep);
-    if (!isValid) {
-      toast({
-        title: t('Validation Error'),
-        description: t('Please fill in all required fields correctly'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validate entire form
-    const allValid = await form.trigger();
+    // Validate final step, then the entire form
+    const isValid = await trigger(['termsAccepted']);
+    const allValid = isValid && (await trigger());
     if (!allValid) {
       toast({
         title: t('Validation Error'),
@@ -124,11 +66,11 @@ export function SupplierRegisterPage() {
       if (result.success) {
         navigate(`/suppliers/register/${invitationCode}/success`, { replace: true });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to submit supplier registration:', err);
       toast({
         title: t('Submission Failed'),
-        description: err.message || t('An error occurred while submitting your registration'),
+        description: (err instanceof Error && err.message) || t('An error occurred while submitting your registration'),
         variant: 'destructive',
       });
     } finally {
@@ -136,69 +78,72 @@ export function SupplierRegisterPage() {
     }
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return <CompanyBasicsStep form={form} />;
-      case 1:
-        return <AddressStep form={form} />;
-      case 2:
-        return <LegalBankingStep form={form} />;
-      case 3:
-        return <BusinessDetailsStep form={form} onEditStep={setCurrentStep} />;
-      default:
-        return null;
-    }
-  };
+  // Per-step validation: inline errors show on the fields themselves.
+  const steps: WizardStep[] = [
+    {
+      id: 'company', title: t('Company Basics'), shortTitle: t('Company'),
+      description: t('Please provide your company information'), icon: Building2,
+      validate: () => trigger(['companyName']),
+      content: <CompanyBasicsStep form={form} />,
+    },
+    {
+      id: 'contact', title: t('Contact Person'),
+      description: t('Who we should contact about orders and documents.'), icon: UserRound,
+      validate: () => trigger(['contactName', 'email']),
+      content: <ContactPersonStep form={form} />,
+    },
+    {
+      id: 'address', title: t('Address Information'), shortTitle: t('Address'),
+      description: t('Please provide your business address'), icon: MapPin,
+      validate: () => trigger([
+        'street', 'city', 'country', 'postalCode',
+        ...(form.getValues('shippingAddressDifferent')
+          ? (['shippingStreet', 'shippingCity', 'shippingPostalCode', 'shippingCountry'] as const)
+          : []),
+      ]),
+      content: <AddressStep form={form} />,
+    },
+    {
+      id: 'legal', title: t('Legal & Banking Information'), shortTitle: t('Legal & Banking'),
+      description: t('Please provide your legal and banking details'), icon: Landmark,
+      validate: () => trigger(['taxNumber', 'vatNumber', 'iban', 'bic']),
+      content: <LegalBankingStep form={form} />,
+    },
+    {
+      id: 'business', title: t('Business Details'),
+      description: t('Tell us more about your business'), icon: Briefcase,
+      content: <BusinessDetailsStep form={form} />,
+    },
+    {
+      id: 'review', title: t('Review Your Information'), shortTitle: t('Review'),
+      description: t('Please review your information before submitting'), icon: ClipboardCheck,
+      canNext: !!termsAccepted,
+      content: <RegistrationReviewStep form={form} />,
+    },
+  ];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
       {/* Welcome Message */}
       {currentStep === 0 && portalSettings.welcomeMessage && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-900">{portalSettings.welcomeMessage}</p>
+        <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm text-foreground">{portalSettings.welcomeMessage}</p>
         </div>
       )}
 
-      {/* Step Indicator */}
-      <div className="mb-6 sm:mb-8">
-        <WizardStepIndicator
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          labels={STEP_LABELS}
-        />
-      </div>
-
-      {/* Step Content */}
       <Card>
-        <CardContent className="p-6">
-          {renderStep()}
+        <CardContent className="px-5 sm:px-8">
+          <FormWizard
+            variant="page"
+            step={currentStep}
+            onStepChange={(_, index) => setCurrentStep(index)}
+            steps={steps}
+            onFinish={handleSubmit}
+            finishing={submitting}
+            finishLabel={t('Submit Registration')}
+          />
         </CardContent>
       </Card>
-
-      {/* Navigation */}
-      <div className="flex justify-between mt-6">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentStep === 0 || submitting}
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          {t('Previous')}
-        </Button>
-
-        {currentStep < STEP_LABELS.length - 1 ? (
-          <Button onClick={handleNext} disabled={submitting}>
-            {t('Next')}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        ) : (
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {t('Submit Registration')}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

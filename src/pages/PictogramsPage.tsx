@@ -27,7 +27,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormGrid, FormField, FormActions } from '@/components/ui/form-layout';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
@@ -38,7 +38,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/adaptive-dialog';
@@ -798,7 +797,7 @@ export function PictogramsPage() {
 
         {/* ── Upload Dialog ──────────────────────────────────────────────── */}
         <Dialog open={showUpload} onOpenChange={(open) => { if (!open) resetUploadForm(); setShowUpload(open); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto pb-0">
             <DialogHeader>
               <DialogTitle>{t('pictograms.upload', 'Upload Pictogram')}</DialogTitle>
               <DialogDescription>
@@ -811,9 +810,9 @@ export function PictogramsPage() {
               {!uploadFile ? (
                 <div
                   className={cn(
-                    'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-10 cursor-pointer transition duration-200',
+                    'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-8 cursor-pointer transition-[border-color,background-color] duration-150 ease-out',
                     isDragOver
-                      ? 'border-primary bg-primary/5 scale-[1.02]'
+                      ? 'border-primary bg-primary/5'
                       : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30',
                   )}
                   onClick={() => fileInputRef.current?.click()}
@@ -863,7 +862,7 @@ export function PictogramsPage() {
                     <p className="text-sm font-medium truncate">{uploadFile.name}</p>
                     <p className="text-xs text-muted-foreground">{formatBytes(uploadFile.size)}</p>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={resetUploadForm}>
+                  <Button size="icon" variant="ghost" className="shrink-0 pointer-coarse:size-11" aria-label={t('Remove', { ns: 'common' })} onClick={resetUploadForm}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -876,24 +875,13 @@ export function PictogramsPage() {
                 onChange={handleFileSelect}
               />
 
-              {/* Name */}
-              <div className="space-y-1.5">
-                <Label>{t('pictograms.name', 'Name')} *</Label>
-                <Input value={uploadName} onChange={(e) => setUploadName(e.target.value)} />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-1.5">
-                <Label>{t('pictograms.description', 'Description')}</Label>
-                <Textarea value={uploadDescription} onChange={(e) => setUploadDescription(e.target.value)} rows={2} />
-              </div>
-
-              {/* Category + Regulation Year */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>{t('pictograms.category', 'Category')}</Label>
+              <FormGrid cols={2}>
+                <FormField label={t('pictograms.name', 'Name')} required span="full">
+                  <Input value={uploadName} onChange={(e) => setUploadName(e.target.value)} />
+                </FormField>
+                <FormField label={t('pictograms.category', 'Category')} htmlFor="picto-pictograms-category">
                   <Select value={uploadCategory} onValueChange={setUploadCategory}>
-                    <SelectTrigger>
+                    <SelectTrigger id="picto-pictograms-category" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -911,29 +899,24 @@ export function PictogramsPage() {
                       })}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t('pictograms.regulationYear', 'Regulation Year')}</Label>
+                </FormField>
+                <FormField label={t('pictograms.regulationYear', 'Regulation Year')} optional>
+                  <Input value={uploadRegulationYear} onChange={(e) => setUploadRegulationYear(e.target.value)} placeholder="e.g. ESPR 2024" />
+                </FormField>
+                <FormField label={t('pictograms.description', 'Description')} optional span="full">
+                  <Textarea value={uploadDescription} onChange={(e) => setUploadDescription(e.target.value)} rows={2} />
+                </FormField>
+                <FormField label={t('pictograms.tags', 'Tags')} optional span="full" hint={t('pictograms.tagsPlaceholder', 'Comma-separated, e.g. CE, WEEE, RoHS')}>
                   <Input
-                    value={uploadRegulationYear}
-                    onChange={(e) => setUploadRegulationYear(e.target.value)}
-                    placeholder="e.g. ESPR 2024"
+                    value={uploadTags}
+                    onChange={(e) => setUploadTags(e.target.value)}
+                    placeholder="CE, WEEE, RoHS"
                   />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-1.5">
-                <Label>{t('pictograms.tags', 'Tags')}</Label>
-                <Input
-                  value={uploadTags}
-                  onChange={(e) => setUploadTags(e.target.value)}
-                  placeholder={t('pictograms.tagsPlaceholder', 'Comma-separated, e.g. CE, WEEE, RoHS')}
-                />
-              </div>
+                </FormField>
+              </FormGrid>
             </div>
 
-            <DialogFooter>
+            <FormActions sticky="dialog">
               <Button variant="outline" onClick={() => { resetUploadForm(); setShowUpload(false); }}>
                 {t('Cancel', { ns: 'common' })}
               </Button>
@@ -941,13 +924,13 @@ export function PictogramsPage() {
                 {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('pictograms.upload', 'Upload Pictogram')}
               </Button>
-            </DialogFooter>
+            </FormActions>
           </DialogContent>
         </Dialog>
 
         {/* ── Edit Dialog ────────────────────────────────────────────────── */}
         <Dialog open={!!editingPictogram} onOpenChange={(open) => { if (!open) setEditingPictogram(null); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto pb-0">
             <DialogHeader>
               <DialogTitle>{t('pictograms.edit.title', 'Edit Pictogram')}</DialogTitle>
             </DialogHeader>
@@ -968,21 +951,13 @@ export function PictogramsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>{t('pictograms.name', 'Name')} *</Label>
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>{t('pictograms.description', 'Description')}</Label>
-                  <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>{t('pictograms.category', 'Category')}</Label>
+                <FormGrid cols={2}>
+                  <FormField label={t('pictograms.name', 'Name')} required span="full">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                  </FormField>
+                  <FormField label={t('pictograms.category', 'Category')} htmlFor="picto-pictograms-category-2">
                     <Select value={editCategory} onValueChange={setEditCategory}>
-                      <SelectTrigger>
+                      <SelectTrigger id="picto-pictograms-category-2" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1000,25 +975,25 @@ export function PictogramsPage() {
                         })}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>{t('pictograms.regulationYear', 'Regulation Year')}</Label>
+                  </FormField>
+                  <FormField label={t('pictograms.regulationYear', 'Regulation Year')} optional>
                     <Input value={editRegulationYear} onChange={(e) => setEditRegulationYear(e.target.value)} placeholder="e.g. ESPR 2024" />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>{t('pictograms.tags', 'Tags')}</Label>
-                  <Input
-                    value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
-                    placeholder={t('pictograms.tagsPlaceholder', 'Comma-separated, e.g. CE, WEEE, RoHS')}
-                  />
-                </div>
+                  </FormField>
+                  <FormField label={t('pictograms.description', 'Description')} optional span="full">
+                    <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
+                  </FormField>
+                  <FormField label={t('pictograms.tags', 'Tags')} optional span="full" hint={t('pictograms.tagsPlaceholder', 'Comma-separated, e.g. CE, WEEE, RoHS')}>
+                    <Input
+                      value={editTags}
+                      onChange={(e) => setEditTags(e.target.value)}
+                      placeholder="CE, WEEE, RoHS"
+                    />
+                  </FormField>
+                </FormGrid>
               </div>
             )}
 
-            <DialogFooter>
+            <FormActions sticky="dialog">
               <Button variant="outline" onClick={() => setEditingPictogram(null)}>
                 {t('Cancel', { ns: 'common' })}
               </Button>
@@ -1026,7 +1001,7 @@ export function PictogramsPage() {
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('Save', { ns: 'common' })}
               </Button>
-            </DialogFooter>
+            </FormActions>
           </DialogContent>
         </Dialog>
 

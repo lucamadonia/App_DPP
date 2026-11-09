@@ -945,7 +945,7 @@ export function InventoryListPage() {
           type="button"
           onClick={() => setLowStockOnly(v => !v)}
           aria-pressed={lowStockOnly}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors min-h-11 sm:min-h-7 sm:px-2.5 ${
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors min-h-11 sm:px-2.5 sm:pointer-fine:min-h-7 ${
             lowStockOnly
               ? 'bg-primary text-primary-foreground border-primary'
               : 'bg-background text-foreground hover:bg-muted'

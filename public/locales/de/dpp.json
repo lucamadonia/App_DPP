@@ -367,5 +367,7 @@
   "Archived": "Archiviert",
   "Create First Product": "Erstes Produkt anlegen",
   "URL Preview": "URL-Vorschau",
-  "Batches": "Chargen"
+  "Batches": "Chargen",
+  "Custom size": "Eigene Größe",
+  "Path Prefix": "Pfad-Präfix"
 }

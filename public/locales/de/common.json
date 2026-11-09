@@ -263,5 +263,15 @@
   "Campaign not found": "Kampagne nicht gefunden",
   "is required": "ist erforderlich",
   "Deleted": "Gelöscht",
-  "Creating...": "Wird erstellt..."
+  "Creating...": "Wird erstellt...",
+  "Required": "Pflichtfeld",
+  "Optional": "Optional",
+  "Unsaved changes": "Ungespeicherte Änderungen",
+  "More details (optional)": "Weitere Angaben (optional)",
+  "Show value": "Wert anzeigen",
+  "Hide value": "Wert verbergen",
+  "Sections": "Abschnitte",
+  "Step {{current}} of {{total}}": "Schritt {{current}} von {{total}}",
+  "Progress": "Fortschritt",
+  "Back to overview": "Zurück zur Übersicht"
 }

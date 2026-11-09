@@ -4,6 +4,7 @@ import { AlertTriangle, Download, FileCode2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FormField, FormGrid } from '@/components/ui/form-layout';
 import { GlassCard } from '@/components/ui/glass-card';
 import { toast } from 'sonner';
 import {
@@ -251,41 +252,38 @@ export function GuestQRPage() {
 
       <GlassCard className="space-y-4 p-4">
         {s.mode === 'url' && (
-          <div className="space-y-1.5">
-            <Label htmlFor="qr-url">{t('discover.qr.url')}</Label>
+          <FormField label={t('discover.qr.url')} htmlFor="qr-url">
             <Input
               id="qr-url"
               inputMode="url"
               value={s.url}
               onChange={(e) => patch({ url: e.target.value })}
             />
-          </div>
+          </FormField>
         )}
 
         {s.mode === 'gs1' && (
           <>
-            <div className="space-y-1.5">
-              <Label htmlFor="qr-gtin">{t('discover.qr.gtin')}</Label>
+            <FormField
+              label={t('discover.qr.gtin')}
+              htmlFor="qr-gtin"
+              error={!gtinOk ? t('discover.qr.gtinInvalid') : undefined}
+            >
               <Input
                 id="qr-gtin"
                 inputMode="numeric"
                 placeholder="04012345678901"
                 value={s.gtin}
                 onChange={(e) => patch({ gtin: e.target.value.replace(/\D/g, '') })}
-                aria-invalid={!gtinOk}
               />
-              {!gtinOk && (
-                <p className="text-caption text-destructive">{t('discover.qr.gtinInvalid')}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qr-serial">{t('discover.qr.serial')}</Label>
+            </FormField>
+            <FormField label={t('discover.qr.serial')} htmlFor="qr-serial">
               <Input
                 id="qr-serial"
                 value={s.serial}
                 onChange={(e) => patch({ serial: e.target.value })}
               />
-            </div>
+            </FormField>
             <p className="break-all rounded-lg bg-muted p-2.5 font-mono text-caption text-muted-foreground">
               {payload}
             </p>
@@ -293,34 +291,34 @@ export function GuestQRPage() {
         )}
 
         {s.mode === 'vcard' && (
-          <>
-            <div className="space-y-1.5">
-              <Label htmlFor="qr-fn">{t('discover.qr.name')}</Label>
-              <Input id="qr-fn" value={s.fn} onChange={(e) => patch({ fn: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qr-org">{t('discover.qr.org')}</Label>
-              <Input id="qr-org" value={s.org} onChange={(e) => patch({ org: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qr-email">{t('discover.qr.email')}</Label>
+          <FormGrid cols={2}>
+            <FormField label={t('discover.qr.name')} htmlFor="qr-fn">
+              <Input id="qr-fn" autoComplete="name" value={s.fn} onChange={(e) => patch({ fn: e.target.value })} />
+            </FormField>
+            <FormField label={t('discover.qr.org')} htmlFor="qr-org">
+              <Input id="qr-org" autoComplete="organization" value={s.org} onChange={(e) => patch({ org: e.target.value })} />
+            </FormField>
+            <FormField label={t('discover.qr.email')} htmlFor="qr-email">
               <Input
                 id="qr-email"
+                type="email"
                 inputMode="email"
+                autoComplete="email"
                 value={s.email}
                 onChange={(e) => patch({ email: e.target.value })}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qr-phone">{t('discover.qr.phone')}</Label>
+            </FormField>
+            <FormField label={t('discover.qr.phone')} htmlFor="qr-phone">
               <Input
                 id="qr-phone"
+                type="tel"
                 inputMode="tel"
+                autoComplete="tel"
                 value={s.phone}
                 onChange={(e) => patch({ phone: e.target.value })}
               />
-            </div>
-          </>
+            </FormField>
+          </FormGrid>
         )}
       </GlassCard>
 
@@ -356,14 +354,13 @@ export function GuestQRPage() {
           </p>
         )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="qr-caption">{t('discover.qr.caption')}</Label>
+        <FormField label={t('discover.qr.caption')} htmlFor="qr-caption">
           <Input
             id="qr-caption"
             value={s.caption}
             onChange={(e) => patch({ caption: e.target.value })}
           />
-        </div>
+        </FormField>
       </GlassCard>
 
       <div className="flex gap-2">

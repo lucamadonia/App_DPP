@@ -32,19 +32,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/adaptive-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import {
   getLocation,
   getLocationStats,
@@ -58,6 +47,13 @@ import { ZoneDialog } from '@/components/warehouse/ZoneDialog';
 import { ZoneFurnitureManager } from '@/components/warehouse/ZoneFurnitureManager';
 import { ShelfContentsView } from '@/components/warehouse/ShelfContentsView';
 import { FloorMapTab } from '@/components/warehouse/floor-map';
+import {
+  LocationAddressFields,
+  LocationCapacityFields,
+  LocationIdentityFields,
+  LocationNotesField,
+} from '@/components/warehouse/LocationFormFields';
+import { FormActions, FormSectionNav, FormToggleRow } from '@/components/ui/form-layout';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
 import { formatBinLocation } from '@/lib/warehouse-utils';
@@ -72,16 +68,8 @@ import type {
   LocationStats,
   WhStockLevel,
   WhStockTransaction,
-  WarehouseLocationType,
 } from '@/types/warehouse';
 
-const LOCATION_TYPES: WarehouseLocationType[] = [
-  'main',
-  'external',
-  'dropship',
-  'consignment',
-  'returns',
-];
 
 // ---------------------------------------------------------------------------
 // KPI Card
@@ -140,6 +128,9 @@ export function LocationDetailPage() {
   const [furnitureManagerZoneIdx, setFurnitureManagerZoneIdx] = useState<number | null>(null);
   const [shelfViewFurniture, setShelfViewFurniture] = useState<{ furniture: ZoneFurniture; zoneName: string } | null>(null);
   const [editForm, setEditForm] = useState<WhLocationInput>({ name: '' });
+  const updateEditForm = (updates: Partial<WhLocationInput>) =>
+    setEditForm((prev) => ({ ...prev, ...updates }));
+  const [editSection, setEditSection] = useState('overview');
 
   // ------- Load -------
   // In-flight guard (ref, not state, to avoid re-renders and stale-closure
@@ -197,6 +188,7 @@ export function LocationDetailPage() {
       isActive: location.isActive,
       notes: location.notes,
     });
+    setEditSection('overview');
     setEditOpen(true);
   };
 
@@ -913,190 +905,58 @@ export function LocationDetailPage() {
 
       {/* ---- Edit Location Dialog ---- */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto pb-0">
           <DialogHeader>
             <DialogTitle>{t('Edit Location')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Location Name')}</Label>
-                <Input
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, name: e.target.value })
-                  }
-                />
+          <FormSectionNav
+            sections={[
+              { id: 'overview', label: t('Overview'), icon: MapPin },
+              { id: 'address', label: t('Address'), icon: Map },
+              { id: 'capacity', label: t('Capacity'), icon: Ruler },
+            ]}
+            value={editSection}
+            onValueChange={setEditSection}
+          >
+            {editSection === 'overview' && (
+              <div className="space-y-5">
+                <LocationIdentityFields form={editForm} onChange={updateEditForm} />
+                <FormToggleRow
+                  htmlFor="location-active"
+                  label={t('Active')}
+                  description={t('Inactive locations are hidden from stock and shipment pickers.')}
+                >
+                  <Switch
+                    id="location-active"
+                    aria-describedby="location-active-description"
+                    checked={editForm.isActive !== false}
+                    onCheckedChange={(v) => updateEditForm({ isActive: v })}
+                  />
+                </FormToggleRow>
               </div>
-              <div className="space-y-2">
-                <Label>{t('Location Code')}</Label>
-                <Input
-                  value={editForm.code || ''}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, code: e.target.value })
-                  }
-                  placeholder="WH-01"
-                />
+            )}
+            {editSection === 'address' && (
+              <LocationAddressFields form={editForm} onChange={updateEditForm} withStreet />
+            )}
+            {editSection === 'capacity' && (
+              <div className="space-y-5">
+                <LocationCapacityFields form={editForm} onChange={updateEditForm} />
+                <LocationNotesField form={editForm} onChange={updateEditForm} />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Location Type')}</Label>
-              <Select
-                value={editForm.type || 'main'}
-                onValueChange={(v) =>
-                  setEditForm({
-                    ...editForm,
-                    type: v as WarehouseLocationType,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LOCATION_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {t(type)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Street')}</Label>
-                <Input
-                  value={editForm.street || ''}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, street: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('City')}</Label>
-                <Input
-                  value={editForm.city || ''}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, city: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Postal Code')}</Label>
-                <Input
-                  value={editForm.postalCode || ''}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, postalCode: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Country')}</Label>
-                <Input
-                  value={editForm.country || ''}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, country: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Facility Identifier')}</Label>
-              <Input
-                value={editForm.facilityIdentifier || ''}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    facilityIdentifier: e.target.value,
-                  })
-                }
-                placeholder="GLN"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>{t('Capacity Units')}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={editForm.capacityUnits ?? ''}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      capacityUnits: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Area (m\u00B2)')}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="any"
-                  value={editForm.areaM2 ?? ''}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      areaM2: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Volume (m\u00B3)')}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="any"
-                  value={editForm.capacityVolumeM3 ?? ''}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      capacityVolumeM3: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Notes')}</Label>
-              <Textarea
-                value={editForm.notes || ''}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, notes: e.target.value })
-                }
-                rows={2}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={editForm.isActive !== false}
-                onCheckedChange={(v) =>
-                  setEditForm({ ...editForm, isActive: v })
-                }
-              />
-              <Label>{t('Active')}</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
+            )}
+          </FormSectionNav>
+
+          <FormActions sticky="dialog">
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>
               {t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleEditSave} disabled={!editForm.name}>
               {t('Save', { ns: 'common' })}
             </Button>
-          </DialogFooter>
+          </FormActions>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

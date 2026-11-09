@@ -7,12 +7,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogDescription,
 } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormActions, FormField } from '@/components/ui/form-layout';
 import {
   Select,
   SelectContent,
@@ -52,10 +51,10 @@ interface BatchOption {
 }
 
 const MODE_CONFIG = {
-  add: { icon: Package, color: 'text-green-600', variant: 'default' as const },
-  adjust: { icon: Pencil, color: 'text-blue-600', variant: 'default' as const },
-  move: { icon: ArrowRightLeft, color: 'text-amber-600', variant: 'default' as const },
-  remove: { icon: Trash2, color: 'text-red-600', variant: 'destructive' as const },
+  add: { icon: Package, color: 'text-primary', variant: 'default' as const },
+  adjust: { icon: Pencil, color: 'text-primary', variant: 'default' as const },
+  move: { icon: ArrowRightLeft, color: 'text-primary', variant: 'default' as const },
+  remove: { icon: Trash2, color: 'text-destructive', variant: 'destructive' as const },
 };
 
 export function FloorMapQuickStockDialog({
@@ -243,7 +242,7 @@ export function FloorMapQuickStockDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto pb-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Icon className={`h-4 w-4 ${config.color}`} />
@@ -254,14 +253,13 @@ export function FloorMapQuickStockDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-5">
           {/* ===== ADD MODE ===== */}
           {mode === 'add' && (
             <>
-              <div className="space-y-2">
-                <Label className="text-xs">{t('Select Product')}</Label>
+              <FormField label={t('Select Product')} htmlFor="qs-product">
                 <Select value={selectedProductId} onValueChange={(v) => { setSelectedProductId(v); setSelectedBatchId(''); }}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger id="qs-product" className="w-full">
                     <SelectValue placeholder={loadingProducts ? '...' : t('Select Product')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -273,12 +271,11 @@ export function FloorMapQuickStockDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
-              <div className="space-y-2">
-                <Label className="text-xs">{t('Select Batch')}</Label>
+              <FormField label={t('Select Batch')} htmlFor="qs-batch">
                 <Select value={selectedBatchId} onValueChange={setSelectedBatchId} disabled={!selectedProductId}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger id="qs-batch" className="w-full">
                     <SelectValue placeholder={loadingBatches ? '...' : t('Select Batch')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -290,12 +287,11 @@ export function FloorMapQuickStockDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
-              <div className="space-y-2">
-                <Label className="text-xs">{t('Target Section')}</Label>
+              <FormField label={t('Target Section')} htmlFor="qs-section">
                 <Select value={selectedSectionId} onValueChange={setSelectedSectionId}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger id="qs-section" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -304,13 +300,12 @@ export function FloorMapQuickStockDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
               <QuantityStepper
                 value={quantity}
                 onChange={setQuantity}
                 min={1}
-                variant="green"
                 label={t('Quantity')}
               />
             </>
@@ -329,18 +324,15 @@ export function FloorMapQuickStockDialog({
                 value={adjustQuantity}
                 onChange={setAdjustQuantity}
                 min={0}
-                variant="orange"
                 label={t('Quantity')}
               />
-              <div className="space-y-2">
-                <Label className="text-xs">{t('Adjustment reason')}</Label>
+              <FormField label={t('Adjustment reason')} htmlFor="qs-adjust-reason" optional>
                 <Input
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
                   placeholder={t('Adjustment reason')}
-                  className="h-9 text-sm"
                 />
-              </div>
+              </FormField>
             </>
           )}
 
@@ -355,10 +347,9 @@ export function FloorMapQuickStockDialog({
                 <span className="text-muted-foreground ml-2">({stockItem.quantityAvailable} {t('available')})</span>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs">{t('Target Furniture')}</Label>
+              <FormField label={t('Target Furniture')} htmlFor="qs-target-furniture">
                 <Select value={targetFurnitureId} onValueChange={(v) => { setTargetFurnitureId(v); setTargetSectionId(''); }}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger id="qs-target-furniture" className="w-full">
                     <SelectValue placeholder={t('Target Furniture')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -367,13 +358,12 @@ export function FloorMapQuickStockDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
               {targetSections.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs">{t('Target Section')}</Label>
+                <FormField label={t('Target Section')} htmlFor="qs-target-section">
                   <Select value={targetSectionId} onValueChange={setTargetSectionId}>
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger id="qs-target-section" className="w-full">
                       <SelectValue placeholder={t('Target Section')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -382,7 +372,7 @@ export function FloorMapQuickStockDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               )}
 
               <QuantityStepper
@@ -390,7 +380,6 @@ export function FloorMapQuickStockDialog({
                 onChange={setMoveQuantity}
                 min={1}
                 max={stockItem.quantityAvailable}
-                variant="orange"
                 label={t('Quantity to move')}
               />
             </>
@@ -408,21 +397,20 @@ export function FloorMapQuickStockDialog({
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs">{t('Remove reason')}</Label>
+              <FormField label={t('Remove reason')} htmlFor="qs-remove-reason" optional>
                 <Textarea
                   value={removeReason}
                   onChange={(e) => setRemoveReason(e.target.value)}
                   placeholder={t('Remove reason')}
-                  className="text-sm min-h-[60px]"
+                  className="min-h-[60px]"
                 />
-              </div>
+              </FormField>
             </>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
+        <FormActions sticky="dialog">
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
             {t('Cancel', { ns: 'common' })}
           </Button>
           <Button
@@ -432,7 +420,7 @@ export function FloorMapQuickStockDialog({
           >
             {loading ? '...' : modeTitle[mode]}
           </Button>
-        </DialogFooter>
+        </FormActions>
       </DialogContent>
     </Dialog>
   );

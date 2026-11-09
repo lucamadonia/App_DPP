@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mail, Shield, Loader2, Info } from 'lucide-react';
+import { Mail, Shield, Loader2, Info, PenLine, Eye, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { FormField, ChoiceCards, OptionalDisclosure } from '@/components/ui/form-layout';
 import { createInvitation } from '@/services/supabase';
 
 interface Props {
@@ -68,10 +67,10 @@ export function InviteUserDialog({ open, onOpenChange, onInvited }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+            <Mail className="h-5 w-5 text-primary" aria-hidden="true" />
             {t('Invite User')}
           </DialogTitle>
           <DialogDescription>
@@ -79,75 +78,75 @@ export function InviteUserDialog({ open, onOpenChange, onInvited }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('Email')} *</label>
+        <div className="space-y-5">
+          <FormField label={t('Email')} htmlFor="invite-email" required>
             <Input
+              id="invite-email"
               type="email"
+              inputMode="email"
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
               placeholder="colleague@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('Role')} *</label>
-            <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-3 w-3" />
-                    {t('Admin')}
-                  </div>
-                </SelectItem>
-                <SelectItem value="editor">{t('Editor')}</SelectItem>
-                <SelectItem value="viewer">{t('Viewer')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {t(ROLE_DESCRIPTIONS[role])}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('Name')} ({t('optional')})</label>
-            <Input
-              placeholder={t('Full name')}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+          <FormField label={t('Role')} required>
+            <ChoiceCards
+              value={role}
+              onValueChange={(v) => setRole(v)}
+              columns={1}
+              options={[
+                { value: 'admin' as const, label: t('Admin'), description: t(ROLE_DESCRIPTIONS.admin), icon: Shield },
+                { value: 'editor' as const, label: t('Editor'), description: t(ROLE_DESCRIPTIONS.editor), icon: PenLine },
+                { value: 'viewer' as const, label: t('Viewer'), description: t(ROLE_DESCRIPTIONS.viewer), icon: Eye },
+              ]}
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('Personal Message')} ({t('optional')})</label>
-            <textarea
-              className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder={t('Add a personal message to the invitation...')}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-          </div>
+          <OptionalDisclosure
+            filledCount={[name, message].filter(Boolean).length}
+            description={`${t('Name')}, ${t('Personal Message')}`}
+          >
+            <FormField label={t('Name')} htmlFor="invite-name" optional>
+              <Input
+                id="invite-name"
+                autoComplete="off"
+                placeholder={t('Full name')}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </FormField>
+            <FormField label={t('Personal Message')} htmlFor="invite-message" optional>
+              <Textarea
+                id="invite-message"
+                rows={3}
+                placeholder={t('Add a personal message to the invitation...')}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+            </FormField>
+          </OptionalDisclosure>
 
           {error && (
-            <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
+            <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 text-pretty">{error}</span>
             </div>
           )}
 
           {info && (
-            <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              {info}
+            <div role="status" className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span className="min-w-0 text-pretty">{info}</span>
             </div>
           )}
-
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t('Cancel', { ns: 'common' })}
           </Button>
           <Button onClick={handleSubmit} disabled={!email || isSubmitting}>

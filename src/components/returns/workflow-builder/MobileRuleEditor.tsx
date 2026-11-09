@@ -184,7 +184,7 @@ export function MobileRuleEditor({
                   'This workflow has branches that merge back together, which can\'t be edited on mobile. Please switch to desktop to edit.'
                 )}
               </p>
-              <Button variant="outline" size="sm" onClick={onViewGraph} className="mt-2">
+              <Button variant="outline" size="sm" onClick={onViewGraph} className="mt-2 h-auto min-h-11 max-w-full whitespace-normal text-left">
                 <Eye className="size-4 mr-2" />
                 {t('View graph (read-only)')}
               </Button>
@@ -229,11 +229,11 @@ export function MobileRuleEditor({
 
   return (
     <div className="p-3 sm:p-4 pb-[calc(var(--safe-bottom)+6rem)] space-y-2">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 mb-2">
+        <div className="min-w-0 text-xs text-muted-foreground">
           {t('Tap a step to edit. Add steps between existing ones.')}
         </div>
-        <Button variant="ghost" size="sm" onClick={onViewGraph} className="text-xs h-7">
+        <Button variant="ghost" size="sm" onClick={onViewGraph} className="-mr-2 h-11 shrink-0 text-xs">
           <Eye className="size-3.5 mr-1" />
           {t('View graph (read-only)')}
         </Button>

@@ -365,5 +365,7 @@
   "Archived": "Archived",
   "Create First Product": "Create First Product",
   "URL Preview": "URL Preview",
-  "Batches": "Batches"
+  "Batches": "Batches",
+  "Custom size": "Custom size",
+  "Path Prefix": "Path Prefix"
 }

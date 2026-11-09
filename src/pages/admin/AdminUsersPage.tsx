@@ -167,7 +167,7 @@ export function AdminUsersPage() {
       mobilePriority: 'badge',
       // Role is edited in the detail sheet on mobile (no nested control inside the card button).
       cell: (user) => (isMobile ? (
-        <Badge variant="outline" className="text-[10px] h-5 px-2">{t(ROLE_LABELS[user.role] ?? user.role)}</Badge>
+        <Badge variant="outline" className="text-xs h-5 px-2">{t(ROLE_LABELS[user.role] ?? user.role)}</Badge>
       ) : (
         <Select
           value={user.role}
@@ -281,7 +281,7 @@ export function AdminUsersPage() {
                   <div className="font-semibold truncate flex items-center gap-1.5">
                     {selectedUser.fullName || selectedUser.email.split('@')[0]}
                     {selectedUser.isSuperAdmin && (
-                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] h-5 gap-1">
+                      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-xs h-5 gap-1">
                         <Shield className="h-2.5 w-2.5" /> Super
                       </Badge>
                     )}
@@ -323,7 +323,7 @@ export function AdminUsersPage() {
 
               {/* Actions */}
               <div className="border-t pt-4 space-y-3">
-                <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">
                   Admin-Aktionen
                 </div>
 
@@ -331,10 +331,10 @@ export function AdminUsersPage() {
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="min-w-0 flex-1 pr-3">
                     <div className="font-medium text-sm flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5 text-red-500" />
+                      <Shield className="h-3.5 w-3.5 text-destructive" />
                       Super-Admin
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Zugriff auf das gesamte Admin-Portal — mit Vorsicht vergeben.
                     </p>
                   </div>
@@ -353,7 +353,7 @@ export function AdminUsersPage() {
                         <KeyRound className="h-3.5 w-3.5" />
                         Passwort-Reset
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Generiert einen Reset-Link — Nutzer kann neues Passwort setzen.
                       </p>
                     </div>
@@ -363,7 +363,7 @@ export function AdminUsersPage() {
                   </div>
                   {resetLink && (
                     <div className="mt-3 rounded-md bg-muted/60 p-2 flex items-center gap-2">
-                      <code className="flex-1 min-w-0 truncate text-[11px] font-mono">{resetLink}</code>
+                      <code className="flex-1 min-w-0 truncate text-xs font-mono">{resetLink}</code>
                       <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copyLink(resetLink)}>
                         <Copy className="h-3.5 w-3.5" />
                       </Button>

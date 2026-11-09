@@ -121,7 +121,7 @@ export function PlatformCard({ platform, connection, locked, onConnect, onSync, 
             <button
               type="button"
               onClick={onConnect}
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="inline-flex min-h-11 items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Plug className="h-3.5 w-3.5" />
               {t('Connect')}

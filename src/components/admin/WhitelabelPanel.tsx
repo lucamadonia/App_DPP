@@ -13,10 +13,9 @@ import {
   Globe, CheckCircle2, AlertCircle, Copy, Save, Mail, Palette,
   RefreshCw, TestTube, ShieldCheck, Link2, Send,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormSections, FormSection, FormGrid, FormField, FormActions, FormToggleRow, InputAffix, SecretInput, OptionalDisclosure } from '@/components/ui/form-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
@@ -199,96 +198,93 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
   const subdomainHost = subdomain ? `${subdomain}.trackbliss.eu` : null;
 
   return (
-    <div className="space-y-5">
+    <FormSections>
       {/* Subdomain + Custom Domain */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Globe className="h-4 w-4 text-primary" />
-            Domain & Subdomain
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Lege fest, unter welcher Adresse {tenantName} erreichbar ist.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-5">
+      <FormSection
+        icon={Globe}
+        title="Domain & Subdomain"
+        description={<>Lege fest, unter welcher Adresse {tenantName} erreichbar ist.</>}
+      >
+        <div className="space-y-6">
           {/* Subdomain block */}
-          <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Trackbliss-Subdomain
-            </Label>
-            <div className="flex items-stretch gap-2">
-              <div className="flex items-stretch rounded-md border bg-background flex-1 focus-within:ring-2 focus-within:ring-ring">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+            <FormField
+              className="flex-1"
+              label="Trackbliss-Subdomain"
+              htmlFor="awl-subdomain"
+              hint={subdomainHost ? (
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+                  Live unter <code className="rounded bg-muted px-1.5 py-0.5">{subdomainHost}</code>
+                  <button
+                    type="button"
+                    onClick={() => copy(`https://${subdomainHost}`)}
+                    aria-label="Kopieren"
+                    className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ) : undefined}
+            >
+              <InputAffix suffix=".trackbliss.eu" variant="addon">
                 <Input
+                  id="awl-subdomain"
                   value={subdomain}
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="z.B. fambliss"
-                  className="border-0 rounded-r-none focus-visible:ring-0 flex-1"
                   maxLength={32}
+                  autoCapitalize="none"
+                  spellCheck={false}
                 />
-                <div className="flex items-center px-3 text-sm text-muted-foreground bg-muted border-l rounded-r-md">
-                  .trackbliss.eu
-                </div>
-              </div>
-              <Button onClick={saveSubdomain} disabled={saving} size="sm">
-                <Save className="h-3.5 w-3.5 mr-1" />
-                Speichern
-              </Button>
-            </div>
-            {subdomainHost && (
-              <div className="text-xs text-muted-foreground flex items-center gap-2 pt-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                Live unter <code className="bg-muted px-1.5 py-0.5 rounded">{subdomainHost}</code>
-                <button
-                  type="button"
-                  onClick={() => copy(`https://${subdomainHost}`)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Copy className="h-3 w-3" />
-                </button>
-              </div>
-            )}
+              </InputAffix>
+            </FormField>
+            <Button onClick={saveSubdomain} disabled={saving} className="shrink-0 sm:mt-7">
+              <Save className="h-4 w-4 mr-2" />
+              Speichern
+            </Button>
           </div>
 
-          <div className="border-t" />
-
           {/* Custom domain block */}
-          <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
-              <Link2 className="h-3 w-3" />
-              Eigene Domain
-            </Label>
-            <div className="flex items-stretch gap-2">
-              <Input
-                value={customDomain}
-                onChange={(e) => setCustomDomain(e.target.value.toLowerCase())}
-                placeholder="z.B. app.deine-firma.de"
+          <div className="space-y-3 border-t pt-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+              <FormField
                 className="flex-1"
-              />
-              <Button onClick={saveCustomDomainHandler} disabled={saving} size="sm" variant={customDomain ? 'default' : 'outline'}>
-                <Save className="h-3.5 w-3.5 mr-1" />
+                label={<span className="inline-flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" aria-hidden="true" />Eigene Domain</span>}
+                htmlFor="awl-custom-domain"
+              >
+                <Input
+                  id="awl-custom-domain"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value.toLowerCase())}
+                  placeholder="z.B. app.deine-firma.de"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </FormField>
+              <Button onClick={saveCustomDomainHandler} disabled={saving} variant={customDomain ? 'default' : 'outline'} className="shrink-0 sm:mt-7">
+                <Save className="h-4 w-4 mr-2" />
                 Speichern
               </Button>
             </div>
 
             {customDomain && dnsToken && (
-              <div className="mt-3 space-y-3 rounded-lg border bg-muted/30 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {customDomainVerified ? (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-                        <ShieldCheck className="h-3 w-3" />
-                        Verifiziert
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        Nicht verifiziert
-                      </Badge>
-                    )}
-                  </div>
-                  <Button size="sm" variant="outline" onClick={verifyDomain} disabled={verifyingDomain}>
-                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${verifyingDomain ? 'animate-spin' : ''}`} />
+              <div className="space-y-3 rounded-lg border bg-muted/30 p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {customDomainVerified ? (
+                    <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success">
+                      <ShieldCheck className="h-3 w-3" />
+                      Verifiziert
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1 border-warning/30 bg-warning/10 text-warning">
+                      <AlertCircle className="h-3 w-3" />
+                      Nicht verifiziert
+                    </Badge>
+                  )}
+                  <Button variant="outline" onClick={verifyDomain} disabled={verifyingDomain}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${verifyingDomain ? 'animate-spin' : ''}`} />
                     DNS prüfen
                   </Button>
                 </div>
@@ -312,7 +308,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                         onCopy={copy}
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground italic">
+                    <p className="text-xs text-muted-foreground">
                       DNS-Propagation kann bis zu 24 Std dauern. Meistens schon nach Minuten aktiv.
                     </p>
                   </>
@@ -320,230 +316,252 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
       {/* Branding */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Palette className="h-4 w-4 text-primary" />
-            Branding
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">App-Name</Label>
+      <FormSection icon={Palette} title="Branding">
+        <div className="space-y-5">
+          <FormGrid cols={2}>
+            <FormField label="App-Name" htmlFor="awl-app-name">
               <Input
+                id="awl-app-name"
                 value={brand.appName || ''}
                 onChange={e => setBrand({ ...brand, appName: e.target.value })}
                 placeholder="z.B. FamBliss Hub"
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Support-E-Mail</Label>
+            </FormField>
+            <FormField label="Support-E-Mail" htmlFor="awl-support-email">
               <Input
+                id="awl-support-email"
                 type="email"
+                inputMode="email"
                 value={brand.supportEmail || ''}
                 onChange={e => setBrand({ ...brand, supportEmail: e.target.value })}
                 placeholder="support@firma.de"
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Primärfarbe</Label>
-              <div className="flex gap-2">
+            </FormField>
+            <FormField label="Primärfarbe" htmlFor="awl-primary">
+              <InputAffix
+                variant="addon"
+                prefix={
+                  <input
+                    type="color"
+                    tabIndex={-1}
+                    aria-label="Primärfarbe"
+                    value={brand.primaryColor || '#4A4E42'}
+                    onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
+                    className="size-7 cursor-pointer rounded border-0 bg-transparent p-0"
+                  />
+                }
+              >
                 <Input
-                  type="color"
-                  value={brand.primaryColor || '#4A4E42'}
-                  onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
-                  className="w-16 h-10 p-1 cursor-pointer"
-                />
-                <Input
+                  id="awl-primary"
                   value={brand.primaryColor || ''}
                   onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
                   placeholder="#4A4E42"
-                  className="flex-1 font-mono"
+                  className="font-mono"
+                  spellCheck={false}
                 />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Akzentfarbe</Label>
-              <div className="flex gap-2">
+              </InputAffix>
+            </FormField>
+            <FormField label="Akzentfarbe" htmlFor="awl-accent">
+              <InputAffix
+                variant="addon"
+                prefix={
+                  <input
+                    type="color"
+                    tabIndex={-1}
+                    aria-label="Akzentfarbe"
+                    value={brand.accentColor || '#B8A88A'}
+                    onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
+                    className="size-7 cursor-pointer rounded border-0 bg-transparent p-0"
+                  />
+                }
+              >
                 <Input
-                  type="color"
-                  value={brand.accentColor || '#B8A88A'}
-                  onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
-                  className="w-16 h-10 p-1 cursor-pointer"
-                />
-                <Input
+                  id="awl-accent"
                   value={brand.accentColor || ''}
                   onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
                   placeholder="#B8A88A"
-                  className="flex-1 font-mono"
+                  className="font-mono"
+                  spellCheck={false}
                 />
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Logo-URL</Label>
+              </InputAffix>
+            </FormField>
+            <FormField label="Logo-URL" htmlFor="awl-logo" span="full">
               <Input
+                id="awl-logo"
+                type="url"
+                inputMode="url"
                 value={brand.logoUrl || ''}
                 onChange={e => setBrand({ ...brand, logoUrl: e.target.value })}
                 placeholder="https://cdn.firma.de/logo.png"
               />
-              {brand.logoUrl && (
-                <div className="mt-2 p-3 rounded-md border bg-muted/30 flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">Vorschau:</span>
-                  <img src={brand.logoUrl} alt="Logo" className="h-8 object-contain" />
-                </div>
-              )}
+            </FormField>
+          </FormGrid>
+          {brand.logoUrl && (
+            <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+              <span className="text-xs text-muted-foreground">Vorschau:</span>
+              <img src={brand.logoUrl} alt="Logo" className="h-8 object-contain" />
             </div>
-          </div>
-          <div className="flex justify-end pt-1">
-            <Button onClick={saveBrand} disabled={saving} size="sm">
-              <Save className="h-3.5 w-3.5 mr-1" />
+          )}
+          <FormActions>
+            <Button onClick={saveBrand} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
               Branding speichern
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </FormActions>
+        </div>
+      </FormSection>
 
       {/* Custom SMTP */}
-      <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              Eigener SMTP-Server
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Wenn aktiv, werden E-Mails von diesem Tenant über dessen Server verschickt.
-            </p>
-          </div>
-          {smtp?.enabled && (
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Aktiv
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-3">
+      <FormSection
+        icon={Mail}
+        title="Eigener SMTP-Server"
+        description="Wenn aktiv, werden E-Mails von diesem Tenant über dessen Server verschickt."
+        aside={smtp?.enabled ? (
+          <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success">
+            <CheckCircle2 className="h-3 w-3" /> Aktiv
+          </Badge>
+        ) : undefined}
+      >
+        <div className="space-y-5">
+          <FormToggleRow htmlFor="smtp-enabled" label="SMTP-Override aktivieren">
             <Switch
               id="smtp-enabled"
               checked={smtpForm.enabled}
               onCheckedChange={v => setSmtpForm({ ...smtpForm, enabled: v })}
             />
-            <Label htmlFor="smtp-enabled" className="font-medium">SMTP-Override aktivieren</Label>
-          </div>
+          </FormToggleRow>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Host</Label>
+          <FormGrid cols={6}>
+            <FormField label="Host" htmlFor="awl-smtp-host" span={4}>
               <Input
+                id="awl-smtp-host"
                 value={smtpForm.host}
                 onChange={e => setSmtpForm({ ...smtpForm, host: e.target.value })}
                 placeholder="smtp.deine-firma.de"
+                autoCapitalize="none"
+                spellCheck={false}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Port</Label>
+            </FormField>
+            <FormField label="Port" htmlFor="awl-smtp-port" span={2}>
               <Input
+                id="awl-smtp-port"
                 type="number"
+                inputMode="numeric"
                 value={smtpForm.port}
                 onChange={e => setSmtpForm({ ...smtpForm, port: parseInt(e.target.value) || 465 })}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Benutzername</Label>
+            </FormField>
+            <FormField label="Benutzername" htmlFor="awl-smtp-user" span={3}>
               <Input
+                id="awl-smtp-user"
                 value={smtpForm.username}
                 onChange={e => setSmtpForm({ ...smtpForm, username: e.target.value })}
                 placeholder="noreply@firma.de"
+                autoCapitalize="none"
+                autoComplete="off"
+                spellCheck={false}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Passwort {smtp && <span className="text-emerald-600 normal-case tracking-normal">(gesetzt, leer = behalten)</span>}
-              </Label>
-              <Input
-                type="password"
+            </FormField>
+            <FormField
+              label="Passwort"
+              htmlFor="awl-smtp-pass"
+              span={3}
+              labelAside={smtp ? <span className="text-success">gesetzt, leer = behalten</span> : undefined}
+            >
+              <SecretInput
+                id="awl-smtp-pass"
                 value={smtpForm.password}
                 onChange={e => setSmtpForm({ ...smtpForm, password: e.target.value })}
                 placeholder={smtp ? '••••••••' : 'App-Passwort'}
+                autoComplete="new-password"
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Absender-E-Mail</Label>
-              <Input
-                type="email"
-                value={smtpForm.fromAddress}
-                onChange={e => setSmtpForm({ ...smtpForm, fromAddress: e.target.value })}
-                placeholder="noreply@firma.de"
-              />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Absender-Name</Label>
-              <Input
-                value={smtpForm.fromName}
-                onChange={e => setSmtpForm({ ...smtpForm, fromName: e.target.value })}
-                placeholder={tenantName}
-              />
-            </div>
-            <div className="col-span-2 flex items-center gap-3">
+            </FormField>
+          </FormGrid>
+
+          <OptionalDisclosure
+            label="Absender & Verschlüsselung"
+            description="Absender-E-Mail, Absender-Name, TLS"
+            filledCount={[smtpForm.fromAddress, smtpForm.fromName].filter(Boolean).length}
+          >
+            <FormGrid cols={2}>
+              <FormField label="Absender-E-Mail" htmlFor="awl-smtp-from">
+                <Input
+                  id="awl-smtp-from"
+                  type="email"
+                  inputMode="email"
+                  value={smtpForm.fromAddress}
+                  onChange={e => setSmtpForm({ ...smtpForm, fromAddress: e.target.value })}
+                  placeholder="noreply@firma.de"
+                />
+              </FormField>
+              <FormField label="Absender-Name" htmlFor="awl-smtp-from-name">
+                <Input
+                  id="awl-smtp-from-name"
+                  value={smtpForm.fromName}
+                  onChange={e => setSmtpForm({ ...smtpForm, fromName: e.target.value })}
+                  placeholder={tenantName}
+                />
+              </FormField>
+            </FormGrid>
+            <FormToggleRow htmlFor="smtp-tls" label="TLS verwenden (empfohlen für Port 465)">
               <Switch
                 id="smtp-tls"
                 checked={smtpForm.useTls}
                 onCheckedChange={v => setSmtpForm({ ...smtpForm, useTls: v })}
               />
-              <Label htmlFor="smtp-tls" className="text-sm">TLS verwenden (empfohlen für Port 465)</Label>
-            </div>
-          </div>
+            </FormToggleRow>
+          </OptionalDisclosure>
 
-          <div className="flex flex-wrap gap-2 pt-2 border-t">
-            <Button onClick={saveSmtp} disabled={saving || !smtpForm.host || !smtpForm.username} size="sm">
-              <Save className="h-3.5 w-3.5 mr-1" />
-              Konfiguration speichern
-            </Button>
+          <FormActions>
             {smtp && (
-              <Button variant="outline" size="sm" onClick={handleDisableSmtp}>
+              <Button variant="outline" onClick={handleDisableSmtp}>
                 Deaktivieren (Fallback auf Trackbliss-SMTP)
               </Button>
             )}
-          </div>
+            <Button onClick={saveSmtp} disabled={saving || !smtpForm.host || !smtpForm.username}>
+              <Save className="h-4 w-4 mr-2" />
+              Konfiguration speichern
+            </Button>
+          </FormActions>
 
           {smtp && (
-            <div className="mt-3 rounded-lg border bg-muted/30 p-3">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
-                <TestTube className="h-3 w-3" />
-                Test-E-Mail senden
-              </Label>
-              <div className="flex gap-2 mt-2">
+            <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-start sm:p-4">
+              <FormField
+                className="flex-1"
+                label={<span className="inline-flex items-center gap-1.5"><TestTube className="h-3.5 w-3.5" aria-hidden="true" />Test-E-Mail senden</span>}
+                htmlFor="awl-smtp-test"
+                hint={smtp.lastTestedAt ? (
+                  <>
+                    Letzter Test:{' '}
+                    <span className={smtp.lastTestResult === 'ok' ? 'font-medium text-success' : 'font-medium text-destructive'}>
+                      {smtp.lastTestResult}
+                    </span>
+                    {' '}({new Date(smtp.lastTestedAt).toLocaleString('de-DE')})
+                  </>
+                ) : undefined}
+              >
                 <Input
+                  id="awl-smtp-test"
                   type="email"
+                  inputMode="email"
                   value={smtpTestEmail}
                   onChange={e => setSmtpTestEmail(e.target.value)}
                   placeholder="test@empfaenger.de"
-                  className="flex-1"
                 />
-                <Button onClick={handleTestSmtp} disabled={smtpTesting || !smtpTestEmail.trim()} size="sm">
-                  <Send className="h-3.5 w-3.5 mr-1" />
-                  {smtpTesting ? 'Sendet...' : 'Testen'}
-                </Button>
-              </div>
-              {smtp.lastTestedAt && (
-                <div className="mt-2 text-xs">
-                  <span className="text-muted-foreground">Letzter Test:</span>{' '}
-                  <span className={smtp.lastTestResult === 'ok' ? 'text-emerald-700 font-medium' : 'text-red-700 font-medium'}>
-                    {smtp.lastTestResult}
-                  </span>
-                  <span className="text-muted-foreground"> ({new Date(smtp.lastTestedAt).toLocaleString('de-DE')})</span>
-                </div>
-              )}
+              </FormField>
+              <Button variant="outline" onClick={handleTestSmtp} disabled={smtpTesting || !smtpTestEmail.trim()} className="shrink-0 sm:mt-7">
+                <Send className="h-4 w-4 mr-2" />
+                {smtpTesting ? 'Sendet...' : 'Testen'}
+              </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </FormSection>
+    </FormSections>
   );
 }
 
@@ -559,7 +577,7 @@ function DnsRecord({
     <div className="rounded-md bg-background border p-2 font-mono text-xs">
       <div className="flex items-center justify-between gap-2">
         <div className="grid grid-cols-[60px_1fr] gap-2 flex-1 min-w-0">
-          <Badge variant="outline" className="justify-center h-5 font-mono text-[10px]">{type}</Badge>
+          <Badge variant="outline" className="justify-center h-5 font-mono text-xs">{type}</Badge>
           <div className="min-w-0">
             <div className="truncate text-muted-foreground">{host}</div>
             <div className="truncate font-semibold">{value}</div>
@@ -568,8 +586,8 @@ function DnsRecord({
         <button
           type="button"
           onClick={() => onCopy(`${host}\t${type}\t${value}`)}
-          className="p-1.5 rounded hover:bg-muted cursor-pointer shrink-0"
-          title="Kopieren"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150 ease-out hover:bg-muted pointer-coarse:size-11"
+          aria-label="Kopieren"
         >
           <Copy className="h-3 w-3" />
         </button>

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Globe, Tag, Recycle, Bell, Plus, Pencil, Trash2, Save, X,
+  Globe, Tag, Recycle, Bell, Plus, Pencil, Trash2, Save,
   Loader2, Package, Shield, Search, RefreshCw, Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { FormGrid, FormField, FormActions, FormToggleRow, OptionalDisclosure } from '@/components/ui/form-layout';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
 import {
   ResponsiveTable, type ResponsiveTableColumn,
@@ -416,177 +417,244 @@ export function AdminMasterDataPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto pb-0">
           <DialogHeader>
-            <DialogTitle>{dialogMode === 'create' ? 'Create' : 'Edit'}: {tabConfig.find((t) => t.id === activeTab)?.label}</DialogTitle>
+            <DialogTitle>
+              {dialogMode === 'create' ? t('Create', { ns: 'common' }) : t('Edit', { ns: 'common' })}: {tabConfig.find((t) => t.id === activeTab)?.label}
+            </DialogTitle>
           </DialogHeader>
 
           {/* Country Form */}
           {activeTab === 'countries' && (
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Code</Label><Input value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} placeholder="DE" /></div>
-                <div><Label>Flag</Label><Input value={formData.flag || ''} onChange={(e) => updateForm('flag', e.target.value)} placeholder="🇩🇪" /></div>
-              </div>
-              <div><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
-              <div><Label>Description</Label><Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Regulations</Label><Input type="number" value={formData.regulations || 0} onChange={(e) => updateForm('regulations', parseInt(e.target.value))} /></div>
-                <div><Label>Checklists</Label><Input type="number" value={formData.checklists || 0} onChange={(e) => updateForm('checklists', parseInt(e.target.value))} /></div>
-              </div>
-              <div><Label>Authorities (JSON)</Label><Input value={formData.authorities || '[]'} onChange={(e) => updateForm('authorities', e.target.value)} /></div>
+            <div className="space-y-5">
+              <FormGrid cols={6}>
+                <FormField label={t('Code')} htmlFor="md-code" required span={2}>
+                  <Input id="md-code" value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} placeholder="DE" autoCapitalize="characters" className="font-mono" />
+                </FormField>
+                <FormField label={t('Flag')} htmlFor="md-flag" span={1}>
+                  <Input id="md-flag" value={formData.flag || ''} onChange={(e) => updateForm('flag', e.target.value)} placeholder="🇩🇪" />
+                </FormField>
+                <FormField label={t('Name')} htmlFor="md-name" required span={3}>
+                  <Input id="md-name" value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
+                </FormField>
+                <FormField label={t('Description')} htmlFor="md-description" span="full">
+                  <Input id="md-description" value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
+                </FormField>
+                <FormField label={t('Regulations')} htmlFor="md-regulations" span={3}>
+                  <Input id="md-regulations" type="number" inputMode="numeric" value={formData.regulations || 0} onChange={(e) => updateForm('regulations', parseInt(e.target.value))} />
+                </FormField>
+                <FormField label={t('Checklists')} htmlFor="md-checklists" span={3}>
+                  <Input id="md-checklists" type="number" inputMode="numeric" value={formData.checklists || 0} onChange={(e) => updateForm('checklists', parseInt(e.target.value))} />
+                </FormField>
+              </FormGrid>
+              <OptionalDisclosure label={t('Advanced (JSON)')} description={t('Authorities')}>
+                <FormField label={t('Authorities (JSON)')} htmlFor="md-authorities">
+                  <Input id="md-authorities" value={formData.authorities || '[]'} onChange={(e) => updateForm('authorities', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+              </OptionalDisclosure>
             </div>
           )}
 
           {/* Category Form */}
           {activeTab === 'categories' && (
-            <div className="grid gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div><Label>Icon</Label><Input value={formData.icon || ''} onChange={(e) => updateForm('icon', e.target.value)} /></div>
-                <div className="sm:col-span-3"><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
-              </div>
-              <div><Label>Description</Label><Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} /></div>
-              <div><Label>Sort Order</Label><Input type="number" value={formData.sort_order || 0} onChange={(e) => updateForm('sort_order', parseInt(e.target.value))} /></div>
-              <div><Label>Regulations (JSON)</Label><Input value={formData.regulations || '[]'} onChange={(e) => updateForm('regulations', e.target.value)} /></div>
+            <div className="space-y-5">
+              <FormGrid cols={6}>
+                <FormField label={t('Icon')} htmlFor="md-icon" span={2}>
+                  <Input id="md-icon" value={formData.icon || ''} onChange={(e) => updateForm('icon', e.target.value)} />
+                </FormField>
+                <FormField label={t('Name')} htmlFor="md-name" required span={4}>
+                  <Input id="md-name" value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
+                </FormField>
+                <FormField label={t('Description')} htmlFor="md-description" span="full">
+                  <Input id="md-description" value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
+                </FormField>
+                <FormField label={t('Sort Order')} htmlFor="md-sort" span={2}>
+                  <Input id="md-sort" type="number" inputMode="numeric" value={formData.sort_order || 0} onChange={(e) => updateForm('sort_order', parseInt(e.target.value))} />
+                </FormField>
+              </FormGrid>
+              <OptionalDisclosure label={t('Advanced (JSON)')} description={t('Regulations')}>
+                <FormField label={t('Regulations (JSON)')} htmlFor="md-regulations-json">
+                  <Input id="md-regulations-json" value={formData.regulations || '[]'} onChange={(e) => updateForm('regulations', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+              </OptionalDisclosure>
             </div>
           )}
 
           {/* Pictogram Form */}
           {activeTab === 'pictograms' && (
-            <div className="grid gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div><Label>Symbol</Label><Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} /></div>
-                <div className="sm:col-span-3"><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
-              </div>
-              <div><Label>Description</Label><Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Category</Label>
+            <div className="space-y-5">
+              <FormGrid cols={6}>
+                <FormField label={t('Symbol')} htmlFor="md-symbol" span={2}>
+                  <Input id="md-symbol" value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} />
+                </FormField>
+                <FormField label={t('Name')} htmlFor="md-name" required span={4}>
+                  <Input id="md-name" value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
+                </FormField>
+                <FormField label={t('Description')} htmlFor="md-description" span="full">
+                  <Input id="md-description" value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
+                </FormField>
+                <FormField label={t('Category')} htmlFor="md-category" span={3}>
                   <Select value={formData.category || 'safety'} onValueChange={(v) => updateForm('category', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="md-category" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="safety">Safety</SelectItem>
-                      <SelectItem value="recycling">Recycling</SelectItem>
-                      <SelectItem value="chemicals">Chemicals</SelectItem>
-                      <SelectItem value="energy">Energy</SelectItem>
-                      <SelectItem value="durability">Durability</SelectItem>
+                      <SelectItem value="safety">{t('Safety')}</SelectItem>
+                      <SelectItem value="recycling">{t('Recycling')}</SelectItem>
+                      <SelectItem value="chemicals">{t('Chemicals')}</SelectItem>
+                      <SelectItem value="energy">{t('Energy')}</SelectItem>
+                      <SelectItem value="durability">{t('Durability')}</SelectItem>
                     </SelectContent>
                   </Select>
+                </FormField>
+                <div className="@md:col-span-3 @md:pt-7">
+                  <FormToggleRow htmlFor="md-mandatory" label={t('Mandatory')} controlPosition="start">
+                    <Checkbox id="md-mandatory" checked={formData.mandatory || false} onCheckedChange={(v) => updateForm('mandatory', v)} />
+                  </FormToggleRow>
                 </div>
-                <div className="flex items-center gap-2 pt-6">
-                  <Checkbox checked={formData.mandatory || false} onCheckedChange={(v) => updateForm('mandatory', v)} />
-                  <Label>Mandatory</Label>
-                </div>
-              </div>
-              <div><Label>Countries (JSON)</Label><Input value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} /></div>
+              </FormGrid>
+              <OptionalDisclosure label={t('Advanced (JSON)')} description={t('Countries')}>
+                <FormField label={t('Countries (JSON)')} htmlFor="md-countries">
+                  <Input id="md-countries" value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+              </OptionalDisclosure>
             </div>
           )}
 
           {/* Recycling Code Form */}
           {activeTab === 'recycling_codes' && (
-            <div className="grid gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div><Label>Code</Label><Input value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} /></div>
-                <div><Label>Symbol</Label><Input value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} /></div>
-                <div><Label>{t('Name')}</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
+            <FormGrid cols={6}>
+              <FormField label={t('Code')} htmlFor="md-code" required span={2}>
+                <Input id="md-code" value={formData.code || ''} onChange={(e) => updateForm('code', e.target.value)} className="font-mono" />
+              </FormField>
+              <FormField label={t('Symbol')} htmlFor="md-symbol" span={2}>
+                <Input id="md-symbol" value={formData.symbol || ''} onChange={(e) => updateForm('symbol', e.target.value)} />
+              </FormField>
+              <FormField label={t('Name')} htmlFor="md-name" required span={2}>
+                <Input id="md-name" value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
+              </FormField>
+              <FormField label={t('Full Name')} htmlFor="md-fullname" span="full">
+                <Input id="md-fullname" value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} />
+              </FormField>
+              <FormField label={t('Examples')} htmlFor="md-examples" span="full">
+                <Input id="md-examples" value={formData.examples || ''} onChange={(e) => updateForm('examples', e.target.value)} />
+              </FormField>
+              <div className="col-span-full">
+                <FormToggleRow htmlFor="md-recyclable" label={t('Recyclable')} controlPosition="start">
+                  <Checkbox id="md-recyclable" checked={formData.recyclable || false} onCheckedChange={(v) => updateForm('recyclable', v)} />
+                </FormToggleRow>
               </div>
-              <div><Label>Full Name</Label><Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} /></div>
-              <div><Label>Examples</Label><Input value={formData.examples || ''} onChange={(e) => updateForm('examples', e.target.value)} /></div>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={formData.recyclable || false} onCheckedChange={(v) => updateForm('recyclable', v)} />
-                <Label>Recyclable</Label>
-              </div>
-            </div>
+            </FormGrid>
           )}
 
           {/* News Form */}
           {activeTab === 'news' && (
-            <div className="grid gap-4">
-              <div><Label>Title</Label><Input value={formData.title || ''} onChange={(e) => updateForm('title', e.target.value)} /></div>
-              <div><Label>Summary</Label><Input value={formData.summary || ''} onChange={(e) => updateForm('summary', e.target.value)} /></div>
-              <div><Label>Content</Label><Input value={formData.content || ''} onChange={(e) => updateForm('content', e.target.value)} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Category</Label>
+            <div className="space-y-5">
+              <FormGrid cols={2}>
+                <FormField label={t('Title')} htmlFor="md-title" required span="full">
+                  <Input id="md-title" value={formData.title || ''} onChange={(e) => updateForm('title', e.target.value)} />
+                </FormField>
+                <FormField label={t('Summary')} htmlFor="md-summary" span="full">
+                  <Input id="md-summary" value={formData.summary || ''} onChange={(e) => updateForm('summary', e.target.value)} />
+                </FormField>
+                <FormField label={t('Content')} htmlFor="md-content" span="full">
+                  <Textarea id="md-content" rows={4} value={formData.content || ''} onChange={(e) => updateForm('content', e.target.value)} />
+                </FormField>
+                <FormField label={t('Category')} htmlFor="md-category">
                   <Select value={formData.category || 'update'} onValueChange={(v) => updateForm('category', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="md-category" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="regulation">Regulation</SelectItem>
-                      <SelectItem value="deadline">Deadline</SelectItem>
-                      <SelectItem value="update">Update</SelectItem>
-                      <SelectItem value="warning">Warning</SelectItem>
+                      <SelectItem value="regulation">{t('Regulation')}</SelectItem>
+                      <SelectItem value="deadline">{t('Deadline')}</SelectItem>
+                      <SelectItem value="update">{t('Update')}</SelectItem>
+                      <SelectItem value="warning">{t('Warning')}</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
-                  <Label>Priority</Label>
+                </FormField>
+                <FormField label={t('Priority')} htmlFor="md-priority">
                   <Select value={formData.priority || 'medium'} onValueChange={(v) => updateForm('priority', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="md-priority" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="high">{t('High')}</SelectItem>
+                      <SelectItem value="medium">{t('Medium')}</SelectItem>
+                      <SelectItem value="low">{t('Low')}</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Published</Label><Input type="date" value={formData.publishedAt || ''} onChange={(e) => updateForm('publishedAt', e.target.value)} /></div>
-                <div><Label>Effective Date</Label><Input type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} /></div>
-              </div>
-              <div><Label>Countries (JSON)</Label><Input value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} /></div>
-              <div><Label>Tags (JSON)</Label><Input value={formData.tags || '[]'} onChange={(e) => updateForm('tags', e.target.value)} /></div>
+                </FormField>
+                <FormField label={t('Published')} htmlFor="md-published">
+                  <Input id="md-published" type="date" value={formData.publishedAt || ''} onChange={(e) => updateForm('publishedAt', e.target.value)} />
+                </FormField>
+                <FormField label={t('Effective Date')} htmlFor="md-effective">
+                  <Input id="md-effective" type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} />
+                </FormField>
+              </FormGrid>
+              <OptionalDisclosure label={t('Advanced (JSON)')} description={t('Countries, tags')}>
+                <FormField label={t('Countries (JSON)')} htmlFor="md-countries">
+                  <Input id="md-countries" value={formData.countries || '["EU"]'} onChange={(e) => updateForm('countries', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+                <FormField label={t('Tags (JSON)')} htmlFor="md-tags">
+                  <Input id="md-tags" value={formData.tags || '[]'} onChange={(e) => updateForm('tags', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+              </OptionalDisclosure>
             </div>
           )}
 
           {/* Regulation Form */}
           {activeTab === 'regulations_eu' && (
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Short Name</Label><Input value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} /></div>
-                <div>
-                  <Label>{t('Status')}</Label>
+            <div className="space-y-5">
+              <FormGrid cols={2}>
+                <FormField label={t('Short Name')} htmlFor="md-name" required>
+                  <Input id="md-name" value={formData.name || ''} onChange={(e) => updateForm('name', e.target.value)} />
+                </FormField>
+                <FormField label={t('Status')} htmlFor="md-status">
                   <Select value={formData.status || 'active'} onValueChange={(v) => updateForm('status', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="md-status" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">{t('Active')}</SelectItem>
-                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="upcoming">{t('Upcoming')}</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-              <div><Label>Full Name</Label><Input value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} /></div>
-              <div><Label>Description</Label><Input value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Category</Label>
+                </FormField>
+                <FormField label={t('Full Name')} htmlFor="md-fullname" span="full">
+                  <Input id="md-fullname" value={formData.fullName || ''} onChange={(e) => updateForm('fullName', e.target.value)} />
+                </FormField>
+                <FormField label={t('Description')} htmlFor="md-description" span="full">
+                  <Input id="md-description" value={formData.description || ''} onChange={(e) => updateForm('description', e.target.value)} />
+                </FormField>
+                <FormField label={t('Category')} htmlFor="md-category">
                   <Select value={formData.category || 'environment'} onValueChange={(v) => updateForm('category', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="md-category" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="environment">Environment</SelectItem>
-                      <SelectItem value="chemicals">Chemicals</SelectItem>
-                      <SelectItem value="recycling">Recycling</SelectItem>
-                      <SelectItem value="safety">Safety</SelectItem>
-                      <SelectItem value="energy">Energy</SelectItem>
+                      <SelectItem value="environment">{t('Environment')}</SelectItem>
+                      <SelectItem value="chemicals">{t('Chemicals')}</SelectItem>
+                      <SelectItem value="recycling">{t('Recycling')}</SelectItem>
+                      <SelectItem value="safety">{t('Safety')}</SelectItem>
+                      <SelectItem value="energy">{t('Energy')}</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div><Label>Effective Date</Label><Input type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} /></div>
-              </div>
-              <div><Label>Requirements (JSON)</Label><Input value={formData.keyRequirements || '[]'} onChange={(e) => updateForm('keyRequirements', e.target.value)} /></div>
-              <div><Label>Affected Products (JSON)</Label><Input value={formData.affectedProducts || '[]'} onChange={(e) => updateForm('affectedProducts', e.target.value)} /></div>
+                </FormField>
+                <FormField label={t('Effective Date')} htmlFor="md-effective">
+                  <Input id="md-effective" type="date" value={formData.effectiveDate || ''} onChange={(e) => updateForm('effectiveDate', e.target.value)} />
+                </FormField>
+              </FormGrid>
+              <OptionalDisclosure label={t('Advanced (JSON)')} description={t('Requirements, affected products')}>
+                <FormField label={t('Requirements (JSON)')} htmlFor="md-requirements">
+                  <Input id="md-requirements" value={formData.keyRequirements || '[]'} onChange={(e) => updateForm('keyRequirements', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+                <FormField label={t('Affected Products (JSON)')} htmlFor="md-affected">
+                  <Input id="md-affected" value={formData.affectedProducts || '[]'} onChange={(e) => updateForm('affectedProducts', e.target.value)} className="font-mono" spellCheck={false} />
+                </FormField>
+              </OptionalDisclosure>
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              <X className="mr-2 h-4 w-4" /> {t('Cancel')}
+          <FormActions sticky="dialog">
+            <Button variant="ghost" onClick={() => setDialogOpen(false)}>
+              {t('Cancel')}
             </Button>
             <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               {t('Confirm')}
             </Button>
-          </DialogFooter>
+          </FormActions>
         </DialogContent>
       </Dialog>
     </div>

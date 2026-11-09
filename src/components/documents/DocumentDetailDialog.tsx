@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Trash2, Lock, ShieldCheck, Users, Sparkles, History, UploadCloud } from 'lucide-react';
+import { Loader2, Trash2, Lock, ShieldCheck, Users, Sparkles, History, UploadCloud, FileText, Eye, Link2, Package, Truck, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
+import { FormSections, FormSection, FormGrid, FormField, ChoiceCards, FormActions } from '@/components/ui/form-layout';
 import { AiHintsList } from '@/components/documents/AiHintsList';
 import { DocumentVersionHistory } from '@/components/documents/DocumentVersionHistory';
 import type { DocumentHint } from '@/services/openrouter/document-classification-prompts';
@@ -13,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/adaptive-dialog';
@@ -175,7 +174,7 @@ export function DocumentDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto pb-0">
           <DialogHeader>
             <DialogTitle>{t('Document Details')}</DialogTitle>
             <DialogDescription>
@@ -183,29 +182,30 @@ export function DocumentDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <FormSections className="py-2">
             {/* AI Classification Info (read-only, prominent) */}
             {doc.aiClassifiedAt && (
-              <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-950/40 dark:to-violet-950/40 p-3 space-y-3">
+              <div className="space-y-3 rounded-xl border bg-muted/40 p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-blue-600 dark:text-blue-400" />
+                    <Sparkles className="size-4 text-primary" aria-hidden="true" />
                     <span className="text-sm font-medium">{t('AI classification')}</span>
                     {typeof doc.aiConfidence === 'number' && (
                       <Badge
+                        variant="outline"
                         className={
                           doc.aiConfidence >= 0.7
-                            ? 'bg-green-100 text-green-800 border-green-200'
+                            ? 'border-success/30 bg-success/10 text-success'
                             : doc.aiConfidence >= 0.5
-                            ? 'bg-amber-100 text-amber-800 border-amber-200'
-                            : 'bg-red-100 text-red-800 border-red-200'
+                            ? 'border-warning/30 bg-warning/10 text-warning'
+                            : 'border-destructive/30 bg-destructive/10 text-destructive'
                         }
                       >
                         {Math.round(doc.aiConfidence * 100)}%
                       </Badge>
                     )}
                   </div>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground tabular-nums">
                     {new Date(doc.aiClassifiedAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -215,103 +215,85 @@ export function DocumentDetailDialog({
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="detail-name">{t('Name')}</Label>
-              <Input
-                id="detail-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+            <FormSection title={t('Details')} icon={FileText} layout="stacked" variant="plain">
+              <FormGrid cols={2}>
+                <FormField label={t('Name')} htmlFor="detail-name" required span="full">
+                  <Input
+                    id="detail-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </FormField>
+                <FormField label={t('Category')} htmlFor="detail-category">
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="detail-category" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                <FormField label={t('Valid Until')} htmlFor="detail-valid" optional>
+                  <Input
+                    id="detail-valid"
+                    type="date"
+                    value={validUntil}
+                    onChange={(e) => setValidUntil(e.target.value)}
+                  />
+                </FormField>
+                <FormField label={t('Description')} htmlFor="detail-description" optional span="full">
+                  <Textarea
+                    id="detail-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={t('Short summary of the document content (optional)')}
+                    rows={2}
+                  />
+                </FormField>
+              </FormGrid>
+            </FormSection>
+
+            <FormSection
+              title={t('Visibility')}
+              description={t('Who can see this document in the product passport.')}
+              icon={Eye}
+              layout="stacked"
+              variant="plain"
+            >
+              <ChoiceCards<VisibilityLevel>
+                value={visibility}
+                onValueChange={setVisibility}
+                columns={3}
+                aria-label={t('Visibility')}
+                options={[
+                  { value: 'internal', label: t('Internal Only'), icon: Lock },
+                  { value: 'customs', label: t('Customs'), icon: ShieldCheck },
+                  { value: 'consumer', label: t('Consumer'), icon: Users },
+                ]}
               />
-            </div>
+            </FormSection>
 
-            <div className="space-y-2">
-              <Label htmlFor="detail-description">{t('Description')}</Label>
-              <Textarea
-                id="detail-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t('Short summary of the document content (optional)')}
-                rows={2}
+            <FormSection title={t('Assignment')} icon={Link2} layout="stacked" variant="plain">
+              <ChoiceCards<AssignmentType>
+                value={assignmentType}
+                onValueChange={(v) => { setAssignmentType(v); setAssignmentId(''); }}
+                columns={4}
+                aria-label={t('Assignment')}
+                options={[
+                  { value: 'none', label: t('No assignment') },
+                  { value: 'product', label: t('Product'), icon: Package },
+                  { value: 'supplier', label: t('Supplier'), icon: Truck },
+                  { value: 'folder', label: t('Folder'), icon: Folder },
+                ]}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t('Category')}</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOCUMENT_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t('Visibility')}</Label>
-              <Select value={visibility} onValueChange={(v) => setVisibility(v as VisibilityLevel)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="internal">
-                    <div className="flex items-center gap-2">
-                      <Lock className="h-3.5 w-3.5" />
-                      {t('Internal Only')}
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="customs">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      {t('Customs')}
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="consumer">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-3.5 w-3.5" />
-                      {t('Consumer')}
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="detail-valid">{t('Valid Until (optional)')}</Label>
-              <Input
-                id="detail-valid"
-                type="date"
-                value={validUntil}
-                onChange={(e) => setValidUntil(e.target.value)}
-              />
-            </div>
-
-            <div className="border-t pt-4 space-y-3">
-              <div className="space-y-2">
-                <Label>{t('Assignment')}</Label>
-                <Select
-                  value={assignmentType}
-                  onValueChange={(v) => { setAssignmentType(v as AssignmentType); setAssignmentId(''); }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t('No assignment')}</SelectItem>
-                    <SelectItem value="product">{t('Product')}</SelectItem>
-                    <SelectItem value="supplier">{t('Supplier')}</SelectItem>
-                    <SelectItem value="folder">{t('Folder')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               {assignmentType === 'product' && (
-                <div className="space-y-2">
-                  <Label>{t('Product')}</Label>
+                <FormField label={t('Product')} htmlFor="detail-product">
                   <Select value={assignmentId} onValueChange={setAssignmentId}>
-                    <SelectTrigger>
+                    <SelectTrigger id="detail-product" className="w-full">
                       <SelectValue placeholder={t('Select product...')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -320,14 +302,13 @@ export function DocumentDetailDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               )}
 
               {assignmentType === 'supplier' && (
-                <div className="space-y-2">
-                  <Label>{t('Supplier')}</Label>
+                <FormField label={t('Supplier')} htmlFor="detail-supplier">
                   <Select value={assignmentId} onValueChange={setAssignmentId}>
-                    <SelectTrigger>
+                    <SelectTrigger id="detail-supplier" className="w-full">
                       <SelectValue placeholder={t('Select supplier...')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -336,14 +317,13 @@ export function DocumentDetailDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               )}
 
               {assignmentType === 'folder' && (
-                <div className="space-y-2">
-                  <Label>{t('Folder')}</Label>
+                <FormField label={t('Folder')} htmlFor="detail-folder">
                   <Select value={assignmentId} onValueChange={setAssignmentId}>
-                    <SelectTrigger>
+                    <SelectTrigger id="detail-folder" className="w-full">
                       <SelectValue placeholder={t('Select folder...')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -352,40 +332,38 @@ export function DocumentDetailDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               )}
-            </div>
+            </FormSection>
 
-            <div className="border-t pt-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-muted-foreground" />
-                  <Label>{t('Version History')}</Label>
-                </div>
-                {onUploadNewVersion && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onUploadNewVersion(doc)}
-                  >
-                    <UploadCloud className="mr-2 h-3.5 w-3.5" />
-                    {t('Upload New Version')}
-                  </Button>
-                )}
-              </div>
+            <FormSection
+              title={t('Version History')}
+              icon={History}
+              layout="stacked"
+              variant="plain"
+              aside={onUploadNewVersion && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onUploadNewVersion(doc)}
+                >
+                  <UploadCloud className="mr-2 h-3.5 w-3.5" />
+                  {t('Upload New Version')}
+                </Button>
+              )}
+            >
               <DocumentVersionHistory
                 key={`${doc.id}-${versionRefreshKey ?? 0}`}
                 documentId={doc.id}
                 onCurrentChanged={onSaved}
               />
-            </div>
-          </div>
+            </FormSection>
+          </FormSections>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <FormActions sticky="dialog">
             <Button
-              variant="destructive"
-              size="sm"
-              className="mr-auto"
+              variant="ghost"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => setShowDeleteConfirm(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -398,7 +376,7 @@ export function DocumentDetailDialog({
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSaving ? t('Saving...') : t('Save', { ns: 'common' })}
             </Button>
-          </DialogFooter>
+          </FormActions>
         </DialogContent>
       </Dialog>
 

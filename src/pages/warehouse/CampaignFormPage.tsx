@@ -2,15 +2,20 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Loader2, X, Check } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ArrowLeft, Save, Loader2, X, Check, Search, Megaphone, CalendarDays, Wallet, Package, ClipboardCheck,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  ChoiceCards, FormActions, FormField, FormGrid, FormSectionNav, InputAffix, OptionalDisclosure, type ChoiceOption,
+} from '@/components/ui/form-layout';
+import { FormWizard, ReviewRow, ReviewSection, WizardReview } from '@/components/ui/form-wizard';
+import { cn } from '@/lib/utils';
 import { getCampaign, createCampaign, updateCampaign } from '@/services/supabase/wh-campaigns';
 import { getProducts } from '@/services/supabase/products';
 import type { WhCampaignInput, CampaignStatus } from '@/types/warehouse';
@@ -42,6 +47,7 @@ export function CampaignFormPage() {
   const [goals, setGoals] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [editSection, setEditSection] = useState('basics');
 
   // Load products for the picker
   useEffect(() => {
@@ -156,243 +162,318 @@ export function CampaignFormPage() {
     );
   }
 
+  const parsedTags = tagsInput
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  const statusOptions: ChoiceOption<CampaignStatus>[] = [
+    { value: 'draft', label: t('draft') },
+    { value: 'active', label: t('active') },
+    { value: 'completed', label: t('completed') },
+    { value: 'cancelled', label: t('cancelled') },
+  ];
+
+  const basicsFields = (
+    <FormGrid cols={1}>
+      <FormField label={t('Campaign Name')} htmlFor="campaign-name" required>
+        <Input
+          id="campaign-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t('Campaign Name')}
+        />
+      </FormField>
+      <FormField label={t('Campaign Description')} htmlFor="campaign-description" optional>
+        <Textarea
+          id="campaign-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={t('Campaign Description')}
+          rows={3}
+        />
+      </FormField>
+    </FormGrid>
+  );
+
+  const timingFields = (
+    <FormGrid cols={2}>
+      <FormField label={t('Campaign Status')} span="full">
+        <ChoiceCards value={status} onValueChange={setStatus} options={statusOptions} columns={4} />
+      </FormField>
+      <FormField label={t('Start Date')} htmlFor="campaign-start" optional>
+        <Input
+          id="campaign-start"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+      </FormField>
+      <FormField label={t('End Date')} htmlFor="campaign-end" optional>
+        <Input
+          id="campaign-end"
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+      </FormField>
+    </FormGrid>
+  );
+
+  const budgetFields = (
+    <div className="space-y-5">
+      <FormGrid cols={2}>
+        <FormField label={t('Budget')} htmlFor="campaign-budget" optional>
+          <InputAffix suffix={currency}>
+            <Input
+              id="campaign-budget"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              className="tabular-nums"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              placeholder="0.00"
+            />
+          </InputAffix>
+        </FormField>
+        <FormField label={t('Currency')}>
+          <ChoiceCards
+            value={currency}
+            onValueChange={setCurrency}
+            columns={4}
+            options={['EUR', 'USD', 'GBP', 'CHF'].map((c) => ({ value: c, label: c }))}
+          />
+        </FormField>
+      </FormGrid>
+      <OptionalDisclosure
+        description={[t('Goals'), t('Tags')].join(', ')}
+        filledCount={(goals.trim() ? 1 : 0) + (parsedTags.length > 0 ? 1 : 0)}
+        defaultOpen={isEdit && Boolean(goals.trim() || parsedTags.length)}
+      >
+        <FormField label={t('Goals')} htmlFor="campaign-goals" optional>
+          <Textarea
+            id="campaign-goals"
+            value={goals}
+            onChange={(e) => setGoals(e.target.value)}
+            placeholder={t('Goals')}
+            rows={3}
+          />
+        </FormField>
+        <FormField label={t('Tags')} htmlFor="campaign-tags" optional hint={t('Tags (comma-separated)')}>
+          <Input
+            id="campaign-tags"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder={t('Tags (comma-separated)')}
+          />
+        </FormField>
+        {parsedTags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {parsedTags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </OptionalDisclosure>
+    </div>
+  );
+
+  const productPicker = (
+    <div className="space-y-3">
+      <InputAffix prefix={<Search className="h-4 w-4" />}>
+        <Input
+          type="search"
+          enterKeyHint="search"
+          aria-label={t('Search products...')}
+          placeholder={t('Search products...')}
+          value={productSearch}
+          onChange={(e) => setProductSearch(e.target.value)}
+        />
+      </InputAffix>
+
+      {selectedProductIds.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" aria-label={t('Selected')}>
+          {selectedProductIds.map((pid) => {
+            const product = products.find((p) => p.id === pid);
+            return (
+              <button
+                key={pid}
+                type="button"
+                onClick={() => toggleProduct(pid)}
+                className="inline-flex min-h-8 items-center gap-1 rounded-full bg-primary/10 py-1 pr-1.5 pl-3 text-xs font-medium text-primary transition-colors duration-150 ease-out hover:bg-primary/15 pointer-coarse:min-h-9"
+              >
+                <span className="max-w-[12rem] truncate">{product?.name || pid.slice(0, 8)}</span>
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">{t('Remove', { ns: 'common' })}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div role="listbox" aria-multiselectable="true" aria-label={t('Campaign Products')} className="max-h-64 overflow-y-auto rounded-lg border divide-y">
+        {filteredProducts.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            {t('No results found')}
+          </p>
+        ) : (
+          filteredProducts.map((product) => {
+            const isSelected = selectedProductIds.includes(product.id);
+            return (
+              <button
+                key={product.id}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={cn(
+                  'flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors duration-150 ease-out hover:bg-muted/50',
+                  isSelected && 'bg-primary/5'
+                )}
+                onClick={() => toggleProduct(product.id)}
+              >
+                <span className={cn('truncate', isSelected && 'font-medium text-primary')}>{product.name}</span>
+                {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
+  const header = (
+    <div className="flex items-center gap-3 sm:gap-4">
+      <Button variant="ghost" size="icon" asChild>
+        <Link to="/warehouse/campaigns" aria-label={t('Back', { ns: 'common' })}>
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+      </Button>
+      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+        {isEdit ? t('Edit Campaign') : t('Create Campaign')}
+      </h1>
+    </div>
+  );
+
+  // ── Create: wizard ────────────────────────────────────────────────
+  if (!isEdit) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 sm:space-y-6">
+        {header}
+        <FormWizard
+          variant="page"
+          onCancel={() => navigate('/warehouse/campaigns')}
+          onFinish={handleSave}
+          finishing={saving}
+          finishLabel={t('Create Campaign')}
+          steps={[
+            {
+              id: 'basics',
+              title: t('Campaign Details'),
+              shortTitle: t('Details'),
+              icon: Megaphone,
+              canNext: Boolean(name.trim()),
+              content: basicsFields,
+            },
+            {
+              id: 'timing',
+              title: t('Timing'),
+              shortTitle: t('Timing'),
+              icon: CalendarDays,
+              content: timingFields,
+            },
+            {
+              id: 'budget',
+              title: t('Budget'),
+              shortTitle: t('Budget'),
+              icon: Wallet,
+              content: budgetFields,
+            },
+            {
+              id: 'products',
+              title: t('Campaign Products'),
+              shortTitle: t('Products'),
+              description: t('Pick the products this campaign promotes.'),
+              icon: Package,
+              content: productPicker,
+            },
+            {
+              id: 'review',
+              title: t('Review', { ns: 'common' }),
+              shortTitle: t('Review', { ns: 'common' }),
+              icon: ClipboardCheck,
+              content: (
+                <WizardReview>
+                  <ReviewSection title={t('Campaign Details')} step="basics">
+                    <ReviewRow label={t('Campaign Name')}>{name}</ReviewRow>
+                    <ReviewRow label={t('Campaign Description')}>{description}</ReviewRow>
+                  </ReviewSection>
+                  <ReviewSection title={t('Timing')} step="timing">
+                    <ReviewRow label={t('Campaign Status')}>{t(status)}</ReviewRow>
+                    <ReviewRow label={t('Start Date')}>{startDate}</ReviewRow>
+                    <ReviewRow label={t('End Date')}>{endDate}</ReviewRow>
+                  </ReviewSection>
+                  <ReviewSection title={t('Budget')} step="budget">
+                    <ReviewRow label={t('Budget')}>{budget ? `${budget} ${currency}` : ''}</ReviewRow>
+                    <ReviewRow label={t('Tags')}>{parsedTags.join(', ')}</ReviewRow>
+                  </ReviewSection>
+                  <ReviewSection title={t('Campaign Products')} step="products">
+                    <ReviewRow label={t('Selected')}>
+                      {selectedProductIds.length > 0 ? selectedProductIds.length : ''}
+                    </ReviewRow>
+                  </ReviewSection>
+                </WizardReview>
+              ),
+            },
+          ]}
+        />
+      </div>
+    );
+  }
+
+  // ── Edit: one section at a time ───────────────────────────────────
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/warehouse/campaigns">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+    <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+      {header}
+      <FormSectionNav
+        sections={[
+          { id: 'basics', label: t('Campaign Details'), icon: Megaphone },
+          { id: 'timing', label: t('Timing'), icon: CalendarDays },
+          { id: 'budget', label: t('Budget'), icon: Wallet },
+          {
+            id: 'products',
+            label: t('Campaign Products'),
+            icon: Package,
+          },
+        ]}
+        value={editSection}
+        onValueChange={setEditSection}
+      >
+        <div className="rounded-xl border bg-card p-4 shadow-xs sm:p-6">
+          {editSection === 'basics' && basicsFields}
+          {editSection === 'timing' && timingFields}
+          {editSection === 'budget' && budgetFields}
+          {editSection === 'products' && productPicker}
+        </div>
+      </FormSectionNav>
+      <FormActions sticky="page">
+        <Button variant="ghost" onClick={() => navigate('/warehouse/campaigns')}>
+          {t('Cancel', { ns: 'common' })}
         </Button>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          {isEdit ? t('Edit Campaign') : t('Create Campaign')}
-        </h1>
-      </div>
-
-      {/* Form */}
-      <div className="grid grid-cols-1 min-w-0 gap-4 sm:gap-6 lg:grid-cols-3">
-        {/* Main fields */}
-        <div className="min-w-0 lg:col-span-2 space-y-6">
-          <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
-            <CardHeader>
-              <CardTitle className="text-base">{t('Campaign Details')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label>{t('Campaign Name')} *</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('Campaign Name')}
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label>{t('Campaign Description')}</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t('Campaign Description')}
-                  rows={3}
-                />
-              </div>
-
-              {/* Status + Dates */}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>{t('Campaign Status')}</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as CampaignStatus)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">{t('draft')}</SelectItem>
-                      <SelectItem value="active">{t('active')}</SelectItem>
-                      <SelectItem value="completed">{t('completed')}</SelectItem>
-                      <SelectItem value="cancelled">{t('cancelled')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Start Date')}</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('End Date')}</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Budget + Currency */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('Budget')}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Currency')}</Label>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="CHF">CHF</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Goals */}
-              <div className="space-y-2">
-                <Label>{t('Goals')}</Label>
-                <Textarea
-                  value={goals}
-                  onChange={(e) => setGoals(e.target.value)}
-                  placeholder={t('Goals')}
-                  rows={3}
-                />
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-2">
-                <Label>{t('Tags')}</Label>
-                <Input
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                  placeholder={t('Tags (comma-separated)')}
-                />
-                {tagsInput && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {tagsInput
-                      .split(',')
-                      .map((t) => t.trim())
-                      .filter(Boolean)
-                      .map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar - Product Picker */}
-        <div className="space-y-6">
-          <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {t('Campaign Products')}
-                {selectedProductIds.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {selectedProductIds.length}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Product search */}
-              <Input
-                placeholder={t('Search products...')}
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-              />
-
-              {/* Selected products */}
-              {selectedProductIds.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {t('Selected')}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedProductIds.map((pid) => {
-                      const product = products.find((p) => p.id === pid);
-                      return (
-                        <Badge
-                          key={pid}
-                          variant="default"
-                          className="text-xs cursor-pointer pr-1"
-                          onClick={() => toggleProduct(pid)}
-                        >
-                          {product?.name || pid.slice(0, 8)}
-                          <X className="ml-1 h-3 w-3" />
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Product list */}
-              <div className="max-h-64 overflow-y-auto border rounded-md">
-                {filteredProducts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    {t('No results found')}
-                  </p>
-                ) : (
-                  filteredProducts.map((product) => {
-                    const isSelected = selectedProductIds.includes(product.id);
-                    return (
-                      <button
-                        key={product.id}
-                        type="button"
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between border-b last:border-b-0 ${
-                          isSelected ? 'bg-primary/5' : ''
-                        }`}
-                        onClick={() => toggleProduct(product.id)}
-                      >
-                        <span className="truncate">{product.name}</span>
-                        {isSelected && (
-                          <Check className="h-4 w-4 text-primary flex-shrink-0 ml-2" />
-                        )}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Save Button */}
-          <Button
-            onClick={handleSave}
-            disabled={!name.trim() || saving}
-            className="w-full"
-          >
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {saving
-              ? t('Saving...', { ns: 'common' })
-              : t('Save', { ns: 'common' })}
-          </Button>
-        </div>
-      </div>
+        <Button onClick={handleSave} disabled={!name.trim() || saving}>
+          {saving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {saving
+            ? t('Saving...', { ns: 'common' })
+            : t('Save', { ns: 'common' })}
+        </Button>
+      </FormActions>
     </div>
   );
 }

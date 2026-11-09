@@ -110,7 +110,7 @@ export function ReturnsHubDashboardPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{t('Recent Returns')}</CardTitle>
-                    <Link to="/returns/list" className="text-sm text-primary hover:underline">
+                    <Link to="/returns/list" className="touch-hit text-sm text-primary hover:underline">
                       {t('View all')}
                     </Link>
                   </div>

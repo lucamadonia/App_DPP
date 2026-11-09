@@ -74,6 +74,9 @@ const CHROME_FREE_PREFIXES = [
   '/privacy',
   '/terms',
   '/auth/',
+  // Immersive full-screen warehouse tools (own header + back button).
+  '/warehouse/scanner',
+  '/warehouse/stocktake',
 ];
 
 function isTabActive(pathname: string, tab: TabItem): boolean {

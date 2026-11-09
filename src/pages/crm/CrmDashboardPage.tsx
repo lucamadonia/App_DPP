@@ -194,7 +194,7 @@ export function CrmDashboardPage() {
               <Sparkles className="h-4 w-4 text-purple-600" />
               {t('Top-Kunden nach CLV')}
             </CardTitle>
-            <Link to="/crm/customers?sort=total_spent-desc" className="text-xs text-primary hover:underline flex items-center gap-1">
+            <Link to="/crm/customers?sort=total_spent-desc" className="touch-hit text-xs text-primary hover:underline flex items-center gap-1">
               {t('Alle')} <ArrowRight className="h-3 w-3" />
             </Link>
           </CardHeader>
@@ -245,7 +245,7 @@ export function CrmDashboardPage() {
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               {t('Risk-Alerts')}
             </CardTitle>
-            <Link to="/crm/customers?segment=at_risk" className="text-xs text-primary hover:underline flex items-center gap-1">
+            <Link to="/crm/customers?segment=at_risk" className="touch-hit text-xs text-primary hover:underline flex items-center gap-1">
               {t('Alle')} <ArrowRight className="h-3 w-3" />
             </Link>
           </CardHeader>
