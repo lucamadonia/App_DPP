@@ -2103,5 +2103,6 @@
   "Back to customers": "Zur Kundenübersicht",
   "Pick a Trackbliss product for each variant, then save below.": "Wähle für jede Variante ein Trackbliss-Produkt und speichere unten.",
   "Save {{count}} mappings_one": "{{count}} Zuordnung speichern",
-  "Save {{count}} mappings_other": "{{count}} Zuordnungen speichern"
+  "Save {{count}} mappings_other": "{{count}} Zuordnungen speichern",
+  "Select date": "Datum wählen"
 }

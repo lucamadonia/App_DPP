@@ -1429,12 +1429,21 @@ export function CreateShipmentPage() {
                 <Label className="text-xs font-medium text-muted-foreground">
                   {t('Estimated Delivery')}
                 </Label>
-                <Input
-                  type="date"
-                  value={estimatedDelivery}
-                  onChange={(e) => setEstimatedDelivery(e.target.value)}
-                  className="h-11 rounded-lg"
-                />
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={estimatedDelivery}
+                    onChange={(e) => setEstimatedDelivery(e.target.value)}
+                    aria-label={t('Estimated Delivery')}
+                    className={`h-11 rounded-lg ${estimatedDelivery ? '' : 'text-transparent'}`}
+                  />
+                  {!estimatedDelivery && (
+                    // iOS renders an empty date field blank; show a hint instead.
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                      {t('Select date')}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">

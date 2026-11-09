@@ -2103,5 +2103,6 @@
   "Back to customers": "Back to customers",
   "Pick a Trackbliss product for each variant, then save below.": "Pick a Trackbliss product for each variant, then save below.",
   "Save {{count}} mappings_one": "Save {{count}} mapping",
-  "Save {{count}} mappings_other": "Save {{count}} mappings"
+  "Save {{count}} mappings_other": "Save {{count}} mappings",
+  "Select date": "Select date"
 }

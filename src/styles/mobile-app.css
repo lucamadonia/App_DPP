@@ -263,3 +263,24 @@ html[data-native="true"] :is(
   touch-action: none;
 }
 [data-drag-dismiss] [data-drag-handle] { cursor: grab; }
+
+/* Native date/time inputs. WebKit on iOS gives them an intrinsic height,
+   centred text and a zero-height empty value, so they render taller than the
+   inputs beside them and look blank until a date is picked. Strip the native
+   chrome and let the field follow the same box as every other input. */
+:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"]) {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  line-height: 1.25;
+}
+:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"])::-webkit-date-and-time-value {
+  min-height: 1.25em;
+  margin: 0;
+  text-align: left;
+}
+:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"])::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+}
