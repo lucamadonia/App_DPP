@@ -31,8 +31,10 @@ export function DPPDisplayModeSelector({ options, value, onChange, columns = 3 }
       {options.map((opt) => (
         <button
           key={opt.value}
+          type="button"
+          aria-pressed={value === opt.value}
           onClick={() => onChange(opt.value)}
-          className={`p-2.5 rounded-lg border text-left text-sm transition ${
+          className={`min-w-0 min-h-11 p-2.5 rounded-lg border text-left text-sm transition-[border-color,box-shadow,scale] duration-150 ease-out ${
             value === opt.value
               ? 'border-primary bg-primary/5 ring-1 ring-primary/20 scale-[1.02]'
               : 'border-muted hover:border-muted-foreground/30'
@@ -44,7 +46,7 @@ export function DPPDisplayModeSelector({ options, value, onChange, columns = 3 }
           {opt.icon && !opt.preview && (
             <div className="mb-1.5 flex justify-center text-muted-foreground">{opt.icon}</div>
           )}
-          <p className="font-medium text-xs">{opt.label}</p>
+          <p className="font-medium text-xs leading-tight break-words hyphens-auto">{opt.label}</p>
           {opt.description && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{opt.description}</p>
           )}

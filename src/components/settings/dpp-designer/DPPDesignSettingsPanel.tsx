@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { ChoiceCards } from '@/components/ui/form-layout';
 import {
   Select,
   SelectContent,
@@ -654,8 +655,10 @@ export function DPPDesignSettingsPanel({
                 {Object.entries(DPP_THEME_PRESETS).map(([key, preset]) => (
                   <button
                     key={key}
+                    type="button"
+                    aria-pressed={designForm.preset === key}
                     onClick={() => applyPreset(key)}
-                    className={`p-2 rounded-lg border text-left transition ${
+                    className={`min-w-0 min-h-11 p-2 rounded-lg border text-left transition-[border-color,box-shadow] duration-150 ease-out ${
                       designForm.preset === key ? 'border-primary ring-1 ring-primary/20' : 'border-muted hover:border-muted-foreground/30'
                     }`}
                   >
@@ -664,7 +667,7 @@ export function DPPDesignSettingsPanel({
                         <div key={i} className="w-4 h-4 rounded-full" style={{ backgroundColor: c }} />
                       ))}
                     </div>
-                    <p className="text-xs font-medium truncate">{t(preset.name)}</p>
+                    <p className="text-xs font-medium leading-tight break-words hyphens-auto">{t(preset.name)}</p>
                   </button>
                 ))}
               </div>
@@ -680,11 +683,11 @@ export function DPPDesignSettingsPanel({
                 ['textColor', 'Text'],
                 ['headingColor', 'Heading'],
               ] as const).map(([key, label]) => (
-                <div key={key} className="space-y-1">
-                  <Label className="text-xs">{t(label)}</Label>
-                  <div className="flex items-center gap-1.5">
-                    <input type="color" value={resolved.colors[key]} onChange={(e) => updateColors(key, e.target.value)} className="w-7 h-7 rounded cursor-pointer" />
-                    <Input value={resolved.colors[key]} onChange={(e) => updateColors(key, e.target.value)} className="font-mono text-xs flex-1 h-7" maxLength={7} />
+                <div key={key} className="min-w-0 space-y-1">
+                  <Label htmlFor={`dpp-panel-color-${key}`} className="text-xs leading-tight break-words hyphens-auto">{t(label)}</Label>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <input type="color" aria-label={t(label)} value={resolved.colors[key]} onChange={(e) => updateColors(key, e.target.value)} className="size-9 shrink-0 rounded cursor-pointer pointer-coarse:size-11" />
+                    <Input id={`dpp-panel-color-${key}`} value={resolved.colors[key]} onChange={(e) => updateColors(key, e.target.value)} className="font-mono text-xs min-w-0 flex-1 h-9 pointer-coarse:h-11" maxLength={7} />
                   </div>
                 </div>
               ))}
@@ -694,7 +697,7 @@ export function DPPDesignSettingsPanel({
             <div className="space-y-2">
               <Label className="text-xs font-medium">{t('Font Family')}</Label>
               <Select value={resolved.typography.fontFamily} onValueChange={(v) => updateTypography('fontFamily', v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full text-xs pointer-coarse:h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="system">{t('System Default')}</SelectItem>
                   {(['Inter', 'Roboto', 'Poppins', 'Merriweather', 'Playfair Display'] as DPPFontFamily[]).map(f => (
@@ -704,35 +707,33 @@ export function DPPDesignSettingsPanel({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">{t('Heading Size')}</Label>
-                <div className="flex gap-0.5">
-                  {(['small', 'medium', 'large'] as DPPFontSize[]).map(s => (
-                    <button key={s} onClick={() => updateTypography('headingFontSize', s)}
-                      className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${resolved.typography.headingFontSize === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      {s.charAt(0).toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+                <Label id="dpp-panel-heading-size-label" className="text-xs">{t('Heading Size')}</Label>
+                <ChoiceCards
+                  id="dpp-panel-heading-size"
+                  columns={3}
+                  value={resolved.typography.headingFontSize}
+                  onValueChange={(v) => updateTypography('headingFontSize', v)}
+                  options={(['small', 'medium', 'large'] as DPPFontSize[]).map(s => ({ value: s, label: t({ small: 'Small', medium: 'Medium', large: 'Large' }[s]) }))}
+                />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">{t('Body Size')}</Label>
-                <div className="flex gap-0.5">
-                  {(['small', 'medium', 'large'] as DPPFontSize[]).map(s => (
-                    <button key={s} onClick={() => updateTypography('bodyFontSize', s)}
-                      className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${resolved.typography.bodyFontSize === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      {s.charAt(0).toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+                <Label id="dpp-panel-body-size-label" className="text-xs">{t('Body Size')}</Label>
+                <ChoiceCards
+                  id="dpp-panel-body-size"
+                  columns={3}
+                  value={resolved.typography.bodyFontSize}
+                  onValueChange={(v) => updateTypography('bodyFontSize', v)}
+                  options={(['small', 'medium', 'large'] as DPPFontSize[]).map(s => ({ value: s, label: t({ small: 'Small', medium: 'Medium', large: 'Large' }[s]) }))}
+                />
               </div>
             </div>
 
             <div className="space-y-1">
               <Label className="text-xs">{t('Heading Weight')}</Label>
               <Select value={resolved.typography.headingFontWeight} onValueChange={(v) => updateTypography('headingFontWeight', v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full text-xs pointer-coarse:h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(['normal', 'semibold', 'bold', 'extrabold'] as DPPFontWeight[]).map(w => (
                     <SelectItem key={w} value={w} style={{ fontWeight: FONT_WEIGHT_MAP[w] }}>
@@ -751,14 +752,14 @@ export function DPPDesignSettingsPanel({
           <AccordionContent className="px-4 pb-4 space-y-4">
             <div className="space-y-2">
               <Label className="text-xs font-medium">{t('Border Radius')}</Label>
-              <div className="flex gap-1.5">
+              <div role="group" className="grid grid-cols-5 gap-1.5">
                 {(['none', 'small', 'medium', 'large', 'full'] as DPPBorderRadius[]).map(r => (
-                  <button key={r} onClick={() => updateCards('borderRadius', r)}
-                    className={`flex-1 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition ${
+                  <button key={r} type="button" aria-pressed={resolved.cards.borderRadius === r} onClick={() => updateCards('borderRadius', r)}
+                    className={`min-w-0 min-h-11 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition-[background-color,border-color] duration-150 ease-out ${
                       resolved.cards.borderRadius === r ? 'border-primary bg-primary/5' : 'border-muted'
                     }`}>
                     <div className="w-6 h-6 bg-muted border" style={{ borderRadius: BORDER_RADIUS_MAP[r] }} />
-                    <span className="text-[10px]">{r.charAt(0).toUpperCase()}</span>
+                    <span className="max-w-full text-[11px] leading-tight break-words hyphens-auto text-center">{t({ none: 'None', small: 'Small', medium: 'Medium', large: 'Large', full: 'Full' }[r])}</span>
                   </button>
                 ))}
               </div>
@@ -766,14 +767,14 @@ export function DPPDesignSettingsPanel({
 
             <div className="space-y-2">
               <Label className="text-xs font-medium">{t('Shadow')}</Label>
-              <div className="flex gap-1.5">
+              <div role="group" className="grid grid-cols-4 gap-1.5">
                 {(['none', 'subtle', 'medium', 'strong'] as DPPShadowDepth[]).map(s => (
-                  <button key={s} onClick={() => updateCards('shadowDepth', s)}
-                    className={`flex-1 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition ${
+                  <button key={s} type="button" aria-pressed={resolved.cards.shadowDepth === s} onClick={() => updateCards('shadowDepth', s)}
+                    className={`min-w-0 min-h-11 p-1.5 flex flex-col items-center gap-1 rounded-lg border transition-[background-color,border-color] duration-150 ease-out ${
                       resolved.cards.shadowDepth === s ? 'border-primary bg-primary/5' : 'border-muted'
                     }`}>
                     <div className="w-6 h-6 bg-white rounded-md" style={{ boxShadow: SHADOW_MAP[s] }} />
-                    <span className="text-[10px]">{s.charAt(0).toUpperCase()}</span>
+                    <span className="max-w-full text-[11px] leading-tight break-words hyphens-auto text-center">{t({ none: 'None', subtle: 'Subtle', medium: 'Medium', strong: 'Strong' }[s])}</span>
                   </button>
                 ))}
               </div>
@@ -781,16 +782,12 @@ export function DPPDesignSettingsPanel({
 
             <div className="space-y-2">
               <Label className="text-xs font-medium">{t('Border')}</Label>
-              <div className="flex gap-1.5">
-                {(['none', 'thin', 'thick'] as DPPBorderStyle[]).map(b => (
-                  <button key={b} onClick={() => updateCards('borderStyle', b)}
-                    className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
-                      resolved.cards.borderStyle === b ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    }`}>
-                    {t(b.charAt(0).toUpperCase() + b.slice(1))}
-                  </button>
-                ))}
-              </div>
+              <ChoiceCards
+                columns={3}
+                value={resolved.cards.borderStyle}
+                onValueChange={(v) => updateCards('borderStyle', v)}
+                options={(['none', 'thin', 'thick'] as DPPBorderStyle[]).map(b => ({ value: b, label: t({ none: 'None', thin: 'Thin', thick: 'Thick' }[b]) }))}
+              />
             </div>
 
             <div className="space-y-1">
@@ -810,12 +807,12 @@ export function DPPDesignSettingsPanel({
                 const config = resolved.sections.configs[sectionId] ?? { visible: true, defaultCollapsed: false };
                 return (
                   <div key={sectionId} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                    <div className="flex flex-col gap-px">
-                      <button onClick={() => moveSection(index, 'up')} disabled={index === 0} className="p-0.5 hover:bg-muted rounded disabled:opacity-30">
-                        <ChevronUp className="h-3 w-3" />
+                    <div className="flex shrink-0 items-center">
+                      <button type="button" onClick={() => moveSection(index, 'up')} disabled={index === 0} aria-label={`${t('Move Up')}: ${t(section.labelKey)}`} className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground disabled:opacity-30 pointer-coarse:size-11">
+                        <ChevronUp className="h-4 w-4" />
                       </button>
-                      <button onClick={() => moveSection(index, 'down')} disabled={index === resolved.sections.order.length - 1} className="p-0.5 hover:bg-muted rounded disabled:opacity-30">
-                        <ChevronDown className="h-3 w-3" />
+                      <button type="button" onClick={() => moveSection(index, 'down')} disabled={index === resolved.sections.order.length - 1} aria-label={`${t('Move Down')}: ${t(section.labelKey)}`} className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground disabled:opacity-30 pointer-coarse:size-11">
+                        <ChevronDown className="h-4 w-4" />
                       </button>
                     </div>
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -823,7 +820,7 @@ export function DPPDesignSettingsPanel({
                       <span className="text-xs font-medium truncate">{t(section.labelKey)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Switch checked={config.visible} onCheckedChange={(v) => updateSectionConfig(sectionId, 'visible', v)} />
+                      <Switch aria-label={`${t('Visible')}: ${t(section.labelKey)}`} checked={config.visible} onCheckedChange={(v) => updateSectionConfig(sectionId, 'visible', v)} />
                     </div>
                   </div>
                 );

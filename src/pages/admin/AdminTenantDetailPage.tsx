@@ -332,7 +332,7 @@ export function AdminTenantDetailPage() {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold truncate">{tenant.name}</h1>
+            <h1 className="min-w-0 max-w-full text-2xl font-bold truncate">{tenant.name}</h1>
             <Badge className={PLAN_COLORS[tenant.plan] || ''} variant="secondary">
               {tenant.plan}
             </Badge>
@@ -342,7 +342,7 @@ export function AdminTenantDetailPage() {
               </div>
             )}
           </div>
-          <p className="text-muted-foreground text-sm font-mono">{tenant.slug}</p>
+          <p className="text-muted-foreground text-sm font-mono truncate" title={tenant.slug}>{tenant.slug}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -394,9 +394,9 @@ export function AdminTenantDetailPage() {
                   [t('Stripe Customer'), tenant.stripeCustomerId || '-'],
                   [t('Created'), formatDate(tenant.createdAt, locale)],
                 ].map(([label, value]) => (
-                  <div key={label as string}>
+                  <div key={label as string} className="min-w-0">
                     <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-                    <dd className="mt-1 text-sm">{value}</dd>
+                    <dd className="mt-1 text-sm break-words [overflow-wrap:anywhere]">{value}</dd>
                   </div>
                 ))}
               </dl>

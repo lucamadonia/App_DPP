@@ -162,7 +162,7 @@ export function ChoiceCards<V extends string = string>({
             value={optionValue}
             className={cn(
               'group relative flex min-h-11 w-full min-w-0 cursor-pointer gap-2.5 rounded-lg border bg-background outline-none',
-              compact ? 'items-center justify-center px-2 py-2 text-center sm:min-h-9' : 'items-start p-3 text-left',
+              compact ? 'items-center justify-center px-2 py-2 text-center sm:min-h-9 pointer-coarse:min-h-11' : 'items-start p-3 text-left',
               'transition-[border-color,background-color,box-shadow] duration-150 ease-out',
               'hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50',
               'data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 data-[state=checked]:ring-1 data-[state=checked]:ring-primary',

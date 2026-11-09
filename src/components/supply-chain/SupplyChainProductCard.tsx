@@ -139,8 +139,8 @@ export function SupplyChainProductCard({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
             <span className="font-semibold truncate min-w-0 max-w-full">{productName}</span>
-            <Badge variant="secondary" className="text-xs flex-shrink-0">
-              {entries.length} {t('Supply Chain Steps')}
+            <Badge variant="secondary" className="text-xs min-w-0 max-w-full">
+              <span className="truncate"><span className="tabular-nums">{entries.length}</span> {t('Supply Chain Steps')}</span>
             </Badge>
           </div>
           <div className="flex items-center gap-3">

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, BadgeCheck, Sparkles } from 'lucide-react';
 import { StarRating } from '@/components/feedback/StarRating';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ import { cn } from '@/lib/utils';
 export function EmbedFeedbackPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [params] = useSearchParams();
+  const { t } = useTranslation('warehouse');
 
   const mode = (params.get('mode') as FeedbackWidgetMode) || 'carousel';
   const productId = params.get('product') || undefined;
@@ -139,7 +141,7 @@ export function EmbedFeedbackPage() {
   if (reviews.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
-        Noch keine Bewertungen vorhanden.
+        {t('No reviews yet.')}
       </div>
     );
   }
@@ -157,7 +159,7 @@ export function EmbedFeedbackPage() {
         </div>
         <span className="text-xs text-muted-foreground">·</span>
         <span className="text-xs text-muted-foreground">
-          {totalCount} verifizierte Bewertung{totalCount === 1 ? '' : 'en'}
+          {totalCount === 1 ? t('{{count}} verified review', { count: totalCount }) : t('{{count}} verified reviews', { count: totalCount })}
         </span>
       </div>
     );
@@ -186,6 +188,7 @@ export function EmbedFeedbackPage() {
 }
 
 function Header({ avg, totalCount, accent }: { avg: number | null; totalCount: number; accent: string }) {
+  const { t } = useTranslation('warehouse');
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-2">
@@ -196,13 +199,13 @@ function Header({ avg, totalCount, accent }: { avg: number | null; totalCount: n
             <span className="text-sm font-normal text-muted-foreground"> / 5</span>
           </div>
           <div className="text-xs text-muted-foreground">
-            {totalCount} verifizierte Bewertung{totalCount === 1 ? '' : 'en'}
+            {totalCount === 1 ? t('{{count}} verified review', { count: totalCount }) : t('{{count}} verified reviews', { count: totalCount })}
           </div>
         </div>
       </div>
       <Badge variant="outline" className="gap-1 bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200">
         <BadgeCheck className="h-3 w-3" />
-        Verifizierte Kunden
+        {t('Verified customers')}
       </Badge>
     </div>
   );
@@ -210,6 +213,7 @@ function Header({ avg, totalCount, accent }: { avg: number | null; totalCount: n
 
 function Carousel({ reviews, accent }: { reviews: PublicFeedbackReviewItem[]; accent: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('warehouse');
 
   function scroll(dir: 1 | -1) {
     if (!ref.current) return;
@@ -237,7 +241,7 @@ function Carousel({ reviews, accent }: { reviews: PublicFeedbackReviewItem[]; ac
             size="icon"
             className="absolute -left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full shadow-md hidden sm:flex"
             onClick={() => scroll(-1)}
-            aria-label="Vorherige"
+            aria-label={t('Previous reviews')}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -246,7 +250,7 @@ function Carousel({ reviews, accent }: { reviews: PublicFeedbackReviewItem[]; ac
             size="icon"
             className="absolute -right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full shadow-md hidden sm:flex"
             onClick={() => scroll(1)}
-            aria-label="Nächste"
+            aria-label={t('Next reviews')}
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
@@ -266,6 +270,7 @@ function EmbedReviewCard({
   variant: 'carousel' | 'grid';
 }) {
   const variantHex = review.variant_title ? getVariantColorHex(review.variant_title) : null;
+  const { t } = useTranslation('warehouse');
   return (
     <Card className={cn('h-full overflow-hidden', variant === 'carousel' && 'min-h-[200px]')}>
       <CardContent className="p-4 space-y-2.5 h-full flex flex-col">
@@ -273,7 +278,7 @@ function EmbedReviewCard({
           <StarRating value={review.rating} size="sm" color={accent} />
           <Badge variant="outline" className="gap-1 text-[10px] bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200">
             <BadgeCheck className="h-3 w-3" />
-            Verifiziert
+            {t('Verified')}
           </Badge>
         </div>
         {(review.product_name || review.variant_title) && (
@@ -316,9 +321,11 @@ function EmbedReviewCard({
           {review.reviewer_city && <span>· {review.reviewer_city}</span>}
           {review.reviewer_children && review.reviewer_children.count > 0 && (
             <span>
-              · {review.reviewer_children.count} {review.reviewer_children.count === 1 ? 'Kind' : 'Kinder'}
+              · {review.reviewer_children.count === 1
+                ? t('{{count}} child', { count: review.reviewer_children.count })
+                : t('{{count}} children', { count: review.reviewer_children.count })}
               {review.reviewer_children.ages && review.reviewer_children.ages.length > 0
-                ? ` (${review.reviewer_children.ages.join(', ')} J.)`
+                ? ` (${t('{{ages}} yrs.', { ages: review.reviewer_children.ages.join(', ') })})`
                 : ''}
             </span>
           )}

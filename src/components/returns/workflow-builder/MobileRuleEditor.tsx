@@ -247,10 +247,10 @@ export function MobileRuleEditor({
               className="flex items-start gap-2"
               style={{ paddingLeft: step.depth * 16 }}
             >
-              <div className="flex flex-col items-center pt-1">
+              <div className="flex shrink-0 flex-col items-center pt-1">
                 <ArrowDown className="size-3 text-muted-foreground/50" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {step.branch && (
                   <Badge variant="outline" className="text-[10px] mb-1">
                     {step.branch === 'true' ? t('Yes branch') : t('No branch')}
@@ -260,7 +260,7 @@ export function MobileRuleEditor({
                   variant="outline"
                   size="sm"
                   onClick={() => handleRequestAddAfter(step.afterNodeId, step.branch)}
-                  className="w-full border-dashed h-10 text-muted-foreground"
+                  className="w-full min-w-0 border-dashed h-auto min-h-10 whitespace-normal text-muted-foreground"
                 >
                   <Plus className="size-4 mr-1.5" />
                   {t('Add step after this')}
@@ -317,8 +317,8 @@ export function MobileRuleEditor({
                     <Icon className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
                         {node.type}
                       </span>
                     </div>
@@ -327,7 +327,7 @@ export function MobileRuleEditor({
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="size-8 touch-target">
+                      <Button variant="ghost" size="icon" className="size-8 shrink-0 touch-target" aria-label={tc('Edit')}>
                         <MoreVertical className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -357,14 +357,14 @@ export function MobileRuleEditor({
                 className="flex items-start gap-2 mt-2"
                 style={{ paddingLeft: depth * 16 }}
               >
-                <div className="flex flex-col items-center pt-1">
+                <div className="flex shrink-0 flex-col items-center pt-1">
                   <ArrowDown className="size-3 text-muted-foreground/50" />
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleRequestAddAfter(node.id)}
-                  className="flex-1 border-dashed h-10 text-muted-foreground"
+                  className="flex-1 min-w-0 shrink border-dashed h-auto min-h-10 whitespace-normal text-muted-foreground"
                 >
                   <Plus className="size-4 mr-1.5" />
                   {t('Add step after this')}

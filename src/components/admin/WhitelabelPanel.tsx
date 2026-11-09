@@ -9,6 +9,7 @@
  * Kann später mit reduziertem Scope auch für Tenant-Self-Service recycled werden.
  */
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Globe, CheckCircle2, AlertCircle, Copy, Save, Mail, Palette,
   RefreshCw, TestTube, ShieldCheck, Link2, Send,
@@ -46,6 +47,7 @@ interface WhitelabelBrand {
 }
 
 export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) {
+  const { t, i18n } = useTranslation('admin');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [subdomain, setSubdomain] = useState('');
@@ -96,7 +98,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
     try {
       const res = await apiSetSubdomain(tenantId, subdomain.trim() || null);
       setSubdomain(res.subdomain || '');
-      toast.success(res.fullHost ? `Subdomain gesetzt: ${res.fullHost}` : 'Subdomain gelöscht');
+      toast.success(res.fullHost ? t('Subdomain set: {{host}}', { host: res.fullHost }) : t('Subdomain removed'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -111,7 +113,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
       setCustomDomain(res.customDomain || '');
       setDnsToken(res.verificationToken);
       setCustomDomainVerified(false);
-      toast.success(res.customDomain ? 'Custom Domain hinterlegt — jetzt DNS einrichten' : 'Custom Domain entfernt');
+      toast.success(res.customDomain ? t('Custom domain saved — now set up DNS') : t('Custom domain removed'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -124,8 +126,8 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
     try {
       const res = await apiVerifyDomain(tenantId);
       setCustomDomainVerified(res.verified);
-      if (res.verified) toast.success('Custom Domain erfolgreich verifiziert!');
-      else toast.error(res.error || 'Verifikation fehlgeschlagen');
+      if (res.verified) toast.success(t('Custom domain verified successfully!'));
+      else toast.error(res.error || t('Verification failed'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -137,7 +139,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
     setSaving(true);
     try {
       await apiUpdateBrand(tenantId, brand as Record<string, unknown>);
-      toast.success('Branding gespeichert');
+      toast.success(t('Branding saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -151,7 +153,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
       const res = await apiSetSmtp({ tenantId, ...smtpForm });
       setSmtp(res);
       setSmtpForm({ ...smtpForm, password: '' });
-      toast.success('SMTP-Konfiguration gespeichert');
+      toast.success(t('SMTP configuration saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -160,11 +162,11 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
   }
 
   async function handleTestSmtp() {
-    if (!smtpTestEmail.trim()) { toast.error('Test-E-Mail-Adresse fehlt'); return; }
+    if (!smtpTestEmail.trim()) { toast.error(t('Test email address missing')); return; }
     setSmtpTesting(true);
     try {
       const res = await apiTestSmtp(tenantId, smtpTestEmail.trim());
-      if (res.ok) toast.success(`Test-E-Mail erfolgreich an ${smtpTestEmail} gesendet!`);
+      if (res.ok) toast.success(t('Test email sent successfully to {{email}}!', { email: smtpTestEmail }));
       else toast.error(res.result);
       await load();
     } catch (e) {
@@ -175,15 +177,15 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
   }
 
   async function handleDisableSmtp() {
-    if (!confirm('SMTP-Override wirklich deaktivieren? Trackbliss-SMTP wird als Fallback genutzt.')) return;
+    if (!confirm(t('Really disable the SMTP override? Trackbliss SMTP will be used as fallback.'))) return;
     await apiDisableSmtp(tenantId);
-    toast.success('SMTP-Override deaktiviert');
+    toast.success(t('SMTP override disabled'));
     await load();
   }
 
   function copy(s: string) {
     navigator.clipboard.writeText(s);
-    toast.success('In Zwischenablage kopiert');
+    toast.success(t('Copied to clipboard'));
   }
 
   if (loading) {
@@ -202,24 +204,24 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
       {/* Subdomain + Custom Domain */}
       <FormSection
         icon={Globe}
-        title="Domain & Subdomain"
-        description={<>Lege fest, unter welcher Adresse {tenantName} erreichbar ist.</>}
+        title={t('Domain & subdomain')}
+        description={t('Define the address under which {{tenant}} can be reached.', { tenant: tenantName })}
       >
         <div className="space-y-6">
           {/* Subdomain block */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <FormField
               className="flex-1"
-              label="Trackbliss-Subdomain"
+              label={t('Trackbliss subdomain')}
               htmlFor="awl-subdomain"
               hint={subdomainHost ? (
                 <span className="inline-flex flex-wrap items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-                  Live unter <code className="rounded bg-muted px-1.5 py-0.5">{subdomainHost}</code>
+                  {t('Live at')} <code className="rounded bg-muted px-1.5 py-0.5">{subdomainHost}</code>
                   <button
                     type="button"
                     onClick={() => copy(`https://${subdomainHost}`)}
-                    aria-label="Kopieren"
+                    aria-label={t('Copy')}
                     className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground"
                   >
                     <Copy className="h-3.5 w-3.5" />
@@ -232,7 +234,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                   id="awl-subdomain"
                   value={subdomain}
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                  placeholder="z.B. fambliss"
+                  placeholder={t('e.g. fambliss')}
                   maxLength={32}
                   autoCapitalize="none"
                   spellCheck={false}
@@ -241,7 +243,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
             </FormField>
             <Button onClick={saveSubdomain} disabled={saving} className="shrink-0 sm:mt-7">
               <Save className="h-4 w-4 mr-2" />
-              Speichern
+              {t('Save')}
             </Button>
           </div>
 
@@ -250,14 +252,14 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
               <FormField
                 className="flex-1"
-                label={<span className="inline-flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" aria-hidden="true" />Eigene Domain</span>}
+                label={<span className="inline-flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" aria-hidden="true" />{t('Custom domain')}</span>}
                 htmlFor="awl-custom-domain"
               >
                 <Input
                   id="awl-custom-domain"
                   value={customDomain}
                   onChange={(e) => setCustomDomain(e.target.value.toLowerCase())}
-                  placeholder="z.B. app.deine-firma.de"
+                  placeholder={t('e.g. app.your-company.com')}
                   inputMode="url"
                   autoCapitalize="none"
                   spellCheck={false}
@@ -265,7 +267,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
               </FormField>
               <Button onClick={saveCustomDomainHandler} disabled={saving} variant={customDomain ? 'default' : 'outline'} className="shrink-0 sm:mt-7">
                 <Save className="h-4 w-4 mr-2" />
-                Speichern
+                {t('Save')}
               </Button>
             </div>
 
@@ -275,24 +277,24 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                   {customDomainVerified ? (
                     <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success">
                       <ShieldCheck className="h-3 w-3" />
-                      Verifiziert
+                      {t('Verified')}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="gap-1 border-warning/30 bg-warning/10 text-warning">
                       <AlertCircle className="h-3 w-3" />
-                      Nicht verifiziert
+                      {t('Not verified')}
                     </Badge>
                   )}
                   <Button variant="outline" onClick={verifyDomain} disabled={verifyingDomain}>
                     <RefreshCw className={`h-4 w-4 mr-2 ${verifyingDomain ? 'animate-spin' : ''}`} />
-                    DNS prüfen
+                    {t('Check DNS')}
                   </Button>
                 </div>
 
                 {!customDomainVerified && (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Lege folgende DNS-Records in deinem Provider an, dann „DNS prüfen" klicken:
+                      {t('Add the following DNS records at your provider, then click “Check DNS”:')}
                     </p>
                     <div className="space-y-1.5">
                       <DnsRecord
@@ -309,7 +311,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      DNS-Propagation kann bis zu 24 Std dauern. Meistens schon nach Minuten aktiv.
+                      {t('DNS propagation can take up to 24 hours, usually within a few minutes.')}
                     </p>
                   </>
                 )}
@@ -320,35 +322,35 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
       </FormSection>
 
       {/* Branding */}
-      <FormSection icon={Palette} title="Branding">
+      <FormSection icon={Palette} title={t('Branding')}>
         <div className="space-y-5">
           <FormGrid cols={2}>
-            <FormField label="App-Name" htmlFor="awl-app-name">
+            <FormField label={t('App name')} htmlFor="awl-app-name">
               <Input
                 id="awl-app-name"
                 value={brand.appName || ''}
                 onChange={e => setBrand({ ...brand, appName: e.target.value })}
-                placeholder="z.B. FamBliss Hub"
+                placeholder={t('e.g. FamBliss Hub')}
               />
             </FormField>
-            <FormField label="Support-E-Mail" htmlFor="awl-support-email">
+            <FormField label={t('Support email')} htmlFor="awl-support-email">
               <Input
                 id="awl-support-email"
                 type="email"
                 inputMode="email"
                 value={brand.supportEmail || ''}
                 onChange={e => setBrand({ ...brand, supportEmail: e.target.value })}
-                placeholder="support@firma.de"
+                placeholder={t('support@company.com')}
               />
             </FormField>
-            <FormField label="Primärfarbe" htmlFor="awl-primary">
+            <FormField label={t('Primary color')} htmlFor="awl-primary">
               <InputAffix
                 variant="addon"
                 prefix={
                   <input
                     type="color"
                     tabIndex={-1}
-                    aria-label="Primärfarbe"
+                    aria-label={t('Primary color')}
                     value={brand.primaryColor || '#4A4E42'}
                     onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
                     className="size-7 cursor-pointer rounded border-0 bg-transparent p-0"
@@ -365,14 +367,14 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                 />
               </InputAffix>
             </FormField>
-            <FormField label="Akzentfarbe" htmlFor="awl-accent">
+            <FormField label={t('Accent color')} htmlFor="awl-accent">
               <InputAffix
                 variant="addon"
                 prefix={
                   <input
                     type="color"
                     tabIndex={-1}
-                    aria-label="Akzentfarbe"
+                    aria-label={t('Accent color')}
                     value={brand.accentColor || '#B8A88A'}
                     onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
                     className="size-7 cursor-pointer rounded border-0 bg-transparent p-0"
@@ -389,27 +391,27 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                 />
               </InputAffix>
             </FormField>
-            <FormField label="Logo-URL" htmlFor="awl-logo" span="full">
+            <FormField label={t('Logo URL')} htmlFor="awl-logo" span="full">
               <Input
                 id="awl-logo"
                 type="url"
                 inputMode="url"
                 value={brand.logoUrl || ''}
                 onChange={e => setBrand({ ...brand, logoUrl: e.target.value })}
-                placeholder="https://cdn.firma.de/logo.png"
+                placeholder={t('https://cdn.company.com/logo.png')}
               />
             </FormField>
           </FormGrid>
           {brand.logoUrl && (
             <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground">Vorschau:</span>
+              <span className="text-xs text-muted-foreground">{t('Preview:')}</span>
               <img src={brand.logoUrl} alt="Logo" className="h-8 object-contain" />
             </div>
           )}
           <FormActions>
             <Button onClick={saveBrand} disabled={saving}>
               <Save className="h-4 w-4 mr-2" />
-              Branding speichern
+              {t('Save branding')}
             </Button>
           </FormActions>
         </div>
@@ -418,16 +420,16 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
       {/* Custom SMTP */}
       <FormSection
         icon={Mail}
-        title="Eigener SMTP-Server"
-        description="Wenn aktiv, werden E-Mails von diesem Tenant über dessen Server verschickt."
+        title={t('Custom SMTP server')}
+        description={t("When active, this tenant's emails are sent via its own server.")}
         aside={smtp?.enabled ? (
           <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success">
-            <CheckCircle2 className="h-3 w-3" /> Aktiv
+            <CheckCircle2 className="h-3 w-3" /> {t('Active')}
           </Badge>
         ) : undefined}
       >
         <div className="space-y-5">
-          <FormToggleRow htmlFor="smtp-enabled" label="SMTP-Override aktivieren">
+          <FormToggleRow htmlFor="smtp-enabled" label={t('Enable SMTP override')}>
             <Switch
               id="smtp-enabled"
               checked={smtpForm.enabled}
@@ -436,17 +438,17 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
           </FormToggleRow>
 
           <FormGrid cols={6}>
-            <FormField label="Host" htmlFor="awl-smtp-host" span={4}>
+            <FormField label={t('Host')} htmlFor="awl-smtp-host" span={4}>
               <Input
                 id="awl-smtp-host"
                 value={smtpForm.host}
                 onChange={e => setSmtpForm({ ...smtpForm, host: e.target.value })}
-                placeholder="smtp.deine-firma.de"
+                placeholder={t('smtp.your-company.com')}
                 autoCapitalize="none"
                 spellCheck={false}
               />
             </FormField>
-            <FormField label="Port" htmlFor="awl-smtp-port" span={2}>
+            <FormField label={t('Port')} htmlFor="awl-smtp-port" span={2}>
               <Input
                 id="awl-smtp-port"
                 type="number"
@@ -455,50 +457,50 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                 onChange={e => setSmtpForm({ ...smtpForm, port: parseInt(e.target.value) || 465 })}
               />
             </FormField>
-            <FormField label="Benutzername" htmlFor="awl-smtp-user" span={3}>
+            <FormField label={t('Username')} htmlFor="awl-smtp-user" span={3}>
               <Input
                 id="awl-smtp-user"
                 value={smtpForm.username}
                 onChange={e => setSmtpForm({ ...smtpForm, username: e.target.value })}
-                placeholder="noreply@firma.de"
+                placeholder={t('noreply@company.com')}
                 autoCapitalize="none"
                 autoComplete="off"
                 spellCheck={false}
               />
             </FormField>
             <FormField
-              label="Passwort"
+              label={t('Password')}
               htmlFor="awl-smtp-pass"
               span={3}
-              labelAside={smtp ? <span className="text-success">gesetzt, leer = behalten</span> : undefined}
+              labelAside={smtp ? <span className="text-success">{t('set, empty = keep')}</span> : undefined}
             >
               <SecretInput
                 id="awl-smtp-pass"
                 value={smtpForm.password}
                 onChange={e => setSmtpForm({ ...smtpForm, password: e.target.value })}
-                placeholder={smtp ? '••••••••' : 'App-Passwort'}
+                placeholder={smtp ? '••••••••' : t('App password')}
                 autoComplete="new-password"
               />
             </FormField>
           </FormGrid>
 
           <OptionalDisclosure
-            label="Absender & Verschlüsselung"
-            description="Absender-E-Mail, Absender-Name, TLS"
+            label={t('Sender & encryption')}
+            description={t('Sender email, sender name, TLS')}
             filledCount={[smtpForm.fromAddress, smtpForm.fromName].filter(Boolean).length}
           >
             <FormGrid cols={2}>
-              <FormField label="Absender-E-Mail" htmlFor="awl-smtp-from">
+              <FormField label={t('Sender email')} htmlFor="awl-smtp-from">
                 <Input
                   id="awl-smtp-from"
                   type="email"
                   inputMode="email"
                   value={smtpForm.fromAddress}
                   onChange={e => setSmtpForm({ ...smtpForm, fromAddress: e.target.value })}
-                  placeholder="noreply@firma.de"
+                  placeholder={t('noreply@company.com')}
                 />
               </FormField>
-              <FormField label="Absender-Name" htmlFor="awl-smtp-from-name">
+              <FormField label={t('Sender name')} htmlFor="awl-smtp-from-name">
                 <Input
                   id="awl-smtp-from-name"
                   value={smtpForm.fromName}
@@ -507,7 +509,7 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                 />
               </FormField>
             </FormGrid>
-            <FormToggleRow htmlFor="smtp-tls" label="TLS verwenden (empfohlen für Port 465)">
+            <FormToggleRow htmlFor="smtp-tls" label={t('Use TLS (recommended for port 465)')}>
               <Switch
                 id="smtp-tls"
                 checked={smtpForm.useTls}
@@ -519,12 +521,12 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
           <FormActions>
             {smtp && (
               <Button variant="outline" onClick={handleDisableSmtp}>
-                Deaktivieren (Fallback auf Trackbliss-SMTP)
+                {t('Disable (fall back to Trackbliss SMTP)')}
               </Button>
             )}
             <Button onClick={saveSmtp} disabled={saving || !smtpForm.host || !smtpForm.username}>
               <Save className="h-4 w-4 mr-2" />
-              Konfiguration speichern
+              {t('Save configuration')}
             </Button>
           </FormActions>
 
@@ -532,15 +534,15 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
             <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-start sm:p-4">
               <FormField
                 className="flex-1"
-                label={<span className="inline-flex items-center gap-1.5"><TestTube className="h-3.5 w-3.5" aria-hidden="true" />Test-E-Mail senden</span>}
+                label={<span className="inline-flex items-center gap-1.5"><TestTube className="h-3.5 w-3.5" aria-hidden="true" />{t('Send test email')}</span>}
                 htmlFor="awl-smtp-test"
                 hint={smtp.lastTestedAt ? (
                   <>
-                    Letzter Test:{' '}
+                    {t('Last test:')}{' '}
                     <span className={smtp.lastTestResult === 'ok' ? 'font-medium text-success' : 'font-medium text-destructive'}>
                       {smtp.lastTestResult}
                     </span>
-                    {' '}({new Date(smtp.lastTestedAt).toLocaleString('de-DE')})
+                    {' '}({new Date(smtp.lastTestedAt).toLocaleString(i18n.language)})
                   </>
                 ) : undefined}
               >
@@ -550,12 +552,12 @@ export function WhitelabelPanel({ tenantId, tenantName }: WhitelabelPanelProps) 
                   inputMode="email"
                   value={smtpTestEmail}
                   onChange={e => setSmtpTestEmail(e.target.value)}
-                  placeholder="test@empfaenger.de"
+                  placeholder={t('test@recipient.com')}
                 />
               </FormField>
               <Button variant="outline" onClick={handleTestSmtp} disabled={smtpTesting || !smtpTestEmail.trim()} className="shrink-0 sm:mt-7">
                 <Send className="h-4 w-4 mr-2" />
-                {smtpTesting ? 'Sendet...' : 'Testen'}
+                {smtpTesting ? t('Sending...') : t('Test')}
               </Button>
             </div>
           )}
@@ -573,6 +575,7 @@ function DnsRecord({
   value: string;
   onCopy: (s: string) => void;
 }) {
+  const { t } = useTranslation('admin');
   return (
     <div className="rounded-md bg-background border p-2 font-mono text-xs">
       <div className="flex items-center justify-between gap-2">
@@ -587,7 +590,7 @@ function DnsRecord({
           type="button"
           onClick={() => onCopy(`${host}\t${type}\t${value}`)}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150 ease-out hover:bg-muted pointer-coarse:size-11"
-          aria-label="Kopieren"
+          aria-label={t('Copy')}
         >
           <Copy className="h-3 w-3" />
         </button>

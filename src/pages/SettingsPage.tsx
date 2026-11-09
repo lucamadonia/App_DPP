@@ -586,13 +586,13 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
                   {(tenant?.settings?.productLanguages || ['en', 'de']).map((lang) => {
                     const langInfo = LANGUAGE_OPTIONS[lang];
                     return (
-                      <Badge key={lang} variant="secondary" className="h-9 gap-1.5 pl-3 pr-1">
+                      <Badge key={lang} variant="secondary" className="h-9 gap-1.5 pl-3 pr-1 pointer-coarse:h-11 pointer-coarse:pr-0">
                         <span className="uppercase text-xs font-semibold">{lang}</span>
                         {langInfo?.label || lang}
                         <button
                           type="button"
                           aria-label={t('Remove', { ns: 'common' })}
-                          className="ml-0.5 inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-destructive"
+                          className="ml-0.5 inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-destructive pointer-coarse:size-11"
                           onClick={async () => {
                             const current = tenant?.settings?.productLanguages || ['en', 'de'];
                             if (current.length <= 1) return;

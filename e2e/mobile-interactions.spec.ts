@@ -44,7 +44,7 @@ test('every product wizard step fits a narrow phone', async ({ page }) => {
   await page.goto('/products/new', { waitUntil: 'networkidle' });
   await page.getByPlaceholder(/Eco Sneaker Pro/).fill('Mobiler Produktpass');
   const main = page.locator('.app-content');
-  for (let step = 0; step < 12; step++) {
+  for (let step = 0; step < 20; step++) {
     await waitForAppScreen(page);
     const layout = await main.evaluate(el => ({
       overflow: el.scrollWidth - el.clientWidth,
@@ -100,13 +100,16 @@ test('product export downloads the loaded product and its batches', async ({ pag
 test('editing product rich text survives a form step change', async ({ page }) => {
   await page.goto(`/products/${fixtureId}/edit`, { waitUntil: 'networkidle' });
   await waitForAppScreen(page);
+  // Edit mode navigates by section chips, not Next/Back.
+  const sections = page.getByRole('navigation', { name: /Abschnitte|Sections/ });
+  await sections.getByRole('button', { name: /Beschreibung & Zoll|Description & Customs/ }).click();
+  await expect(page.locator('[data-form-step]')).toHaveAttribute('data-form-step', 'details');
   const editor = page.locator('.tiptap[contenteditable="true"]').first();
   await expect(editor).toBeVisible();
   await editor.fill('Mobile Beschreibung bleibt erhalten.');
-  // iPad uses the inline form toolbar; phones use its fixed counterpart.
-  await page.getByRole('button', { name: /Weiter|Next/, exact: true }).click();
+  await sections.getByRole('button', { name: /Bilder|Images/ }).click();
   await expect(page.locator('[data-form-step]')).toHaveAttribute('data-form-step', 'images');
-  await page.getByRole('button', { name: /Zurück|Back/, exact: true }).and(page.locator('[data-variant="outline"]')).click();
+  await sections.getByRole('button', { name: /Beschreibung & Zoll|Description & Customs/ }).click();
   await expect(editor).toHaveText('Mobile Beschreibung bleibt erhalten.');
 });
 

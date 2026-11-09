@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   Check, AlertCircle, Sparkles, Heart, Lightbulb, Baby, Plus, Minus, Star,
   Frown, Annoyed, Meh, Smile, Laugh, Leaf,
@@ -47,6 +48,7 @@ const FAMBLISS_LOGO = '/fambliss-logo-green.png';
  */
 export function PublicFeedbackPage() {
   const { token } = useParams<{ token: string }>();
+  const { t } = useTranslation('warehouse');
 
   const [status, setStatus] = useState<Status>(token ? 'loading' : 'error');
   const [errorCode, setErrorCode] = useState<string | null>(token ? null : 'missing_token');
@@ -296,7 +298,7 @@ export function PublicFeedbackPage() {
                     size="xl"
                     color={primaryColor}
                     onChange={n => updateRating(item.request_id, { rating: n })}
-                    label={`Bewertung für ${item.product_name}`}
+                    label={t('Rating for {{name}}', { name: item.product_name })}
                   />
                 </div>
 
@@ -307,11 +309,11 @@ export function PublicFeedbackPage() {
                 {hasRating && (
                   <div className="space-y-3 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {r.rating >= 4 ? (
-                      <FormField label={`Was war für dich besonders an ${item.product_name}?`} htmlFor={`fb-comment-${item.request_id}`} optional>
+                      <FormField label={t('What stood out to you about {{name}}?', { name: item.product_name })} htmlFor={`fb-comment-${item.request_id}`} optional>
                         <Textarea
                           value={r.comment}
                           onChange={e => updateRating(item.request_id, { comment: e.target.value })}
-                          placeholder="Erzähl uns, was dich begeistert hat …"
+                          placeholder={t('Tell us what delighted you …')}
                           maxLength={2000}
                           rows={3}
                           className="text-sm resize-none"
@@ -319,21 +321,21 @@ export function PublicFeedbackPage() {
                       </FormField>
                     ) : (
                       <div className="space-y-3">
-                        <FormField label="Was hat nicht gepasst?" htmlFor={`fb-low-what-${item.request_id}`}>
+                        <FormField label={t("What didn't work for you?")} htmlFor={`fb-low-what-${item.request_id}`}>
                           <Textarea
                             value={r.lowWhat}
                             onChange={e => updateRating(item.request_id, { lowWhat: e.target.value })}
-                            placeholder="Was hat dich gestört oder enttäuscht?"
+                            placeholder={t('What bothered or disappointed you?')}
                             maxLength={1000}
                             rows={2}
                             className="text-sm resize-none"
                           />
                         </FormField>
-                        <FormField label="Was hättest du dir anders vorgestellt?" htmlFor={`fb-low-expected-${item.request_id}`}>
+                        <FormField label={t('What would you have expected instead?')} htmlFor={`fb-low-expected-${item.request_id}`}>
                           <Textarea
                             value={r.lowExpected}
                             onChange={e => updateRating(item.request_id, { lowExpected: e.target.value })}
-                            placeholder="Wie wäre es für dich perfekt gewesen?"
+                            placeholder={t('What would have made it perfect for you?')}
                             maxLength={1000}
                             rows={2}
                             className="text-sm resize-none"
@@ -344,7 +346,7 @@ export function PublicFeedbackPage() {
                     <Input
                       value={r.title}
                       onChange={e => updateRating(item.request_id, { title: e.target.value })}
-                      placeholder="Kurze Überschrift (optional)"
+                      placeholder={t('Short headline (optional)')}
                       maxLength={120}
                       className="text-sm"
                     />
@@ -362,7 +364,7 @@ export function PublicFeedbackPage() {
           <Input
             value={city}
             onChange={e => setCity(e.target.value)}
-            placeholder="Aus welcher Stadt? (optional, max. 80)"
+            placeholder={t('Which city are you from? (optional, max. 80)')}
             maxLength={80}
             className="text-sm"
           />
@@ -373,12 +375,12 @@ export function PublicFeedbackPage() {
           <div className="rounded-xl border bg-card p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Baby className="h-4 w-4 text-muted-foreground" />
-              Hast du Kinder? <span className="text-muted-foreground font-normal">(optional)</span>
+              {t('Do you have children?')} <span className="text-muted-foreground font-normal">{t('(optional)')}</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Anzahl</span>
+              <span className="text-sm text-muted-foreground">{t('Number of children')}</span>
               <button
-                type="button" aria-label="Weniger Kinder"
+                type="button" aria-label={t('Fewer children')}
                 onClick={() => setChildrenAges(a => a.slice(0, Math.max(0, a.length - 1)))}
                 disabled={childrenAges.length === 0}
                 className="h-11 w-11 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
@@ -387,7 +389,7 @@ export function PublicFeedbackPage() {
               </button>
               <span className="w-6 text-center text-sm font-semibold tabular-nums">{childrenAges.length}</span>
               <button
-                type="button" aria-label="Mehr Kinder"
+                type="button" aria-label={t('More children')}
                 onClick={() => setChildrenAges(a => (a.length >= 6 ? a : [...a, 0]))}
                 disabled={childrenAges.length >= 6}
                 className="h-11 w-11 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 cursor-pointer"
@@ -406,11 +408,11 @@ export function PublicFeedbackPage() {
                         const v = Math.max(0, Math.min(17, parseInt(e.target.value) || 0));
                         setChildrenAges(a => a.map((x, j) => (j === i ? v : x)));
                       }}
-                      placeholder="Alter"
+                      placeholder={t('Age')}
                       className="h-11 w-[72px] text-sm"
-                      aria-label={`Alter Kind ${i + 1}`}
+                      aria-label={t('Age of child {{n}}', { n: i + 1 })}
                     />
-                    <span className="text-xs text-muted-foreground">J.</span>
+                    <span className="text-xs text-muted-foreground">{t('yrs.')}</span>
                   </div>
                 ))}
               </div>
@@ -425,16 +427,16 @@ export function PublicFeedbackPage() {
           const abbreviated = parts[0] + (parts.length > 1 ? ` ${parts[1].charAt(0)}.` : '');
           const previewName =
             nameVisibility === 'full' ? data.customer_name.trim()
-            : nameVisibility === 'anonymous' ? 'Anonym'
+            : nameVisibility === 'anonymous' ? t('Anonymous')
             : abbreviated;
           const OPTIONS: { value: typeof nameVisibility; label: string }[] = [
-            { value: 'full', label: 'Voller Name' },
-            { value: 'abbreviated', label: 'Vorname + Initial' },
-            { value: 'anonymous', label: 'Anonym' },
+            { value: 'full', label: t('Full name') },
+            { value: 'abbreviated', label: t('First name + initial') },
+            { value: 'anonymous', label: t('Anonymous') },
           ];
           return (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-center">Wie soll dein Name veröffentlicht werden?</p>
+              <p className="text-xs font-medium text-center">{t('How should your name be published?')}</p>
               <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
                 {OPTIONS.map(opt => (
                   <button
@@ -453,7 +455,9 @@ export function PublicFeedbackPage() {
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground text-center">
-                Angezeigt wird: „{previewName}"{city.trim() ? ` · „${city.trim()}"` : ''}.
+                {city.trim()
+                  ? t('Shown as: “{{name}}” · “{{city}}”.', { name: previewName, city: city.trim() })
+                  : t('Shown as: “{{name}}”.', { name: previewName })}
               </p>
             </div>
           );
@@ -462,11 +466,11 @@ export function PublicFeedbackPage() {
         {/* Overall experience */}
         {anyRated && (
           <div className="rounded-xl border bg-card p-4">
-            <FormField label="Dein Gesamteindruck" htmlFor="fb-overall" optional>
+            <FormField label={t('Your overall impression')} htmlFor="fb-overall" optional>
               <Textarea
                 value={overall}
                 onChange={e => setOverall(e.target.value)}
-                placeholder="Magst du uns mehr über dein Fambliss-Erlebnis erzählen?"
+                placeholder={t('Would you like to tell us more about your Fambliss experience?')}
                 maxLength={2000}
                 rows={3}
                 className="text-sm resize-none"
@@ -483,18 +487,18 @@ export function PublicFeedbackPage() {
           >
             <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: primaryColor }}>
               <Lightbulb className="h-4 w-4" />
-              Deine Idee für Fambliss
+              {t('Your idea for Fambliss')}
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Wir entwickeln Fambliss gemeinsam mit euch. Teile deine Idee — sie landet auf unserer Roadmap und wird von uns geprüft.
+              {t('We build Fambliss together with you. Share your idea — it lands on our roadmap and we review it.')}
             </p>
             <div className="flex items-center justify-center gap-2 py-1 text-[11px] font-medium text-muted-foreground">
-              <span>Idee</span><span aria-hidden>→</span><span>In Prüfung</span><span aria-hidden>→</span><span>Umgesetzt</span>
+              <span>{t('Idea')}</span><span aria-hidden>→</span><span>{t('In review')}</span><span aria-hidden>→</span><span>{t('Implemented')}</span>
             </div>
             <Textarea
               value={ideaText}
               onChange={e => setIdeaText(e.target.value)}
-              placeholder="Was würdest du dir von Fambliss wünschen?"
+              placeholder={t('What would you wish for from Fambliss?')}
               maxLength={1000}
               rows={3}
               className="text-sm resize-none bg-background"
@@ -502,7 +506,7 @@ export function PublicFeedbackPage() {
             {ideaText.trim() && (
               <label className="flex min-h-11 items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <input type="checkbox" checked={ideaPublic} onChange={e => setIdeaPublic(e.target.checked)} className="rounded" />
-                Meine Idee darf öffentlich auf der Roadmap erscheinen
+                {t('My idea may appear publicly on the roadmap')}
               </label>
             )}
           </div>
@@ -515,19 +519,19 @@ export function PublicFeedbackPage() {
           style={anyRated ? { backgroundColor: primaryColor } : undefined}
         >
           {status === 'submitting' ? (
-            <>Wird gesendet…</>
+            <>{t('Submitting…')}</>
           ) : (
             <>
               <Heart className="h-5 w-5" fill={anyRated ? 'currentColor' : 'none'} />
               {allRated || ratings.length === 1
-                ? 'Bewertung senden'
-                : `${ratings.filter(r => r.rating > 0).length} von ${ratings.length} Bewertungen senden`}
+                ? t('Submit review')
+                : t('Submit {{rated}} of {{total}} reviews', { rated: ratings.filter(r => r.rating > 0).length, total: ratings.length })}
             </>
           )}
         </Button>
 
         <p className="text-[11px] text-muted-foreground text-center pt-2 pb-8">
-          Diese Bewertung wird vor der Veröffentlichung von {data.tenant_name} geprüft.
+          {t('This review will be checked by {{tenant}} before it is published.', { tenant: data.tenant_name })}
         </p>
       </div>
     </PublicShell>
@@ -539,14 +543,15 @@ export function PublicFeedbackPage() {
 // ============================================
 
 const RATING_LABELS: Record<number, { icon: LucideIcon; label: string }> = {
-  1: { icon: Frown, label: 'Nicht so gut' },
-  2: { icon: Annoyed, label: 'Geht so' },
+  1: { icon: Frown, label: 'Not so good' },
+  2: { icon: Annoyed, label: 'So-so' },
   3: { icon: Meh, label: 'Okay' },
-  4: { icon: Smile, label: 'Sehr gut' },
-  5: { icon: Laugh, label: 'Begeistert!' },
+  4: { icon: Smile, label: 'Very good' },
+  5: { icon: Laugh, label: 'Delighted!' },
 };
 
 function RatingLabel({ rating }: { rating: number }) {
+  const { t } = useTranslation('warehouse');
   const entry = RATING_LABELS[rating];
   if (!entry) return null;
   const Icon = entry.icon;
@@ -554,7 +559,7 @@ function RatingLabel({ rating }: { rating: number }) {
   return (
     <div className="flex items-center justify-center gap-1.5 text-sm font-medium animate-in fade-in slide-in-from-bottom-1 duration-300">
       <Icon className="h-4 w-4" aria-hidden="true" />
-      {entry.label}
+      {t(entry.label)}
     </div>
   );
 }
@@ -625,6 +630,7 @@ interface HeroProps {
  * twinkling review-stars, with a curved bottom edge the cards rise into.
  */
 function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: HeroProps) {
+  const { t } = useTranslation('warehouse');
   const tint = (p: number) => `color-mix(in srgb, ${accent} ${p}%, transparent)`;
 
   return (
@@ -677,7 +683,7 @@ function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: 
             style={{ backgroundColor: 'rgba(255,255,255,0.7)', color: accent }}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Verifizierte Bewertung
+            {t('Verified review')}
           </span>
         </div>
 
@@ -685,14 +691,18 @@ function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: 
           className="mt-4 text-3xl sm:text-4xl font-bold tracking-tight animate-feedback-rise"
           style={{ animationDelay: '0.1s' }}
         >
-          Hallo {firstName}!
+          {t('Hi {{name}}!', { name: firstName })}
         </h1>
         <p
           className="mt-2.5 mx-auto max-w-md text-[15px] sm:text-base text-foreground/70 animate-feedback-rise"
           style={{ animationDelay: '0.16s' }}
         >
-          Wie war {variantCount === 1 ? 'dein Produkt' : 'deine Bestellung'} von{' '}
-          <span className="font-semibold text-foreground">{tenantName}</span>?
+          <Trans
+            t={t}
+            i18nKey={variantCount === 1 ? 'How was your product from <b>{{tenant}}</b>?' : 'How was your order from <b>{{tenant}}</b>?'}
+            values={{ tenant: tenantName }}
+            components={{ b: <span className="font-semibold text-foreground" /> }}
+          />
         </p>
 
         {/* Star hint chip */}
@@ -705,7 +715,7 @@ function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: 
               <Star key={i} className="h-3.5 w-3.5 fill-current" style={{ color: accent }} />
             ))}
           </span>
-          <span className="text-xs font-medium text-foreground/75">Tippe auf die Sterne</span>
+          <span className="text-xs font-medium text-foreground/75">{t('Tap the stars')}</span>
         </div>
       </div>
 
@@ -723,17 +733,18 @@ function FeedbackHero({ firstName, variantCount, tenantName, logoUrl, accent }: 
 }
 
 function ErrorState({ code }: { code: string | null }) {
-  let title = 'Hier ist etwas schiefgelaufen';
-  let message = 'Bitte versuche es später noch einmal.';
+  const { t } = useTranslation('warehouse');
+  let title = t('Something went wrong here');
+  let message = t('Please try again later.');
   if (code === 'expired') {
-    title = 'Dieser Link ist abgelaufen';
-    message = 'Der Bewertungs-Link ist nicht mehr gültig. Bitte kontaktiere den Händler, falls du noch Feedback geben möchtest.';
+    title = t('This link has expired');
+    message = t('This review link is no longer valid. Please contact the retailer if you would still like to give feedback.');
   } else if (code === 'not_found' || code === 'missing_token') {
-    title = 'Link nicht gefunden';
-    message = 'Der Link scheint ungültig zu sein. Bitte überprüfe deine Email noch einmal.';
+    title = t('Link not found');
+    message = t('The link seems to be invalid. Please check your email again.');
   } else if (code === 'already_submitted') {
-    title = 'Schon bewertet';
-    message = 'Du hast für diese Bestellung bereits eine Bewertung abgegeben. Vielen Dank!';
+    title = t('Already reviewed');
+    message = t('You have already submitted a review for this order. Thank you!');
   }
   return (
     <div className="max-w-md mx-auto px-4 pt-12">
@@ -749,6 +760,7 @@ function ErrorState({ code }: { code: string | null }) {
 }
 
 function SuccessState({ customerName, tenantName, tenantSlug }: { customerName?: string; tenantName?: string; tenantSlug?: string }) {
+  const { t } = useTranslation('warehouse');
   const firstName = (customerName || '').split(' ')[0];
   return (
     <div className="max-w-md mx-auto px-4 pt-16 text-center">
@@ -761,10 +773,10 @@ function SuccessState({ customerName, tenantName, tenantSlug }: { customerName?:
         </div>
       </div>
       <h1 className="mt-6 text-2xl sm:text-3xl font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
-        Danke{firstName ? `, ${firstName}` : ''}!
+        {firstName ? t('Thank you, {{name}}!', { name: firstName }) : t('Thank you!')}
       </h1>
       <p className="mt-3 text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100">
-        Deine Bewertung wurde gesendet. {tenantName} prüft sie und veröffentlicht sie in Kürze.
+        {t('Your review has been sent. {{tenant}} will check it and publish it shortly.', { tenant: tenantName })}
       </p>
       {tenantSlug && (
         <a
@@ -772,12 +784,12 @@ function SuccessState({ customerName, tenantName, tenantSlug }: { customerName?:
           className="mt-8 inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium hover:bg-muted transition-colors cursor-pointer"
         >
           <Lightbulb className="h-4 w-4" />
-          Schau dir unsere Roadmap an
+          {t('Check out our roadmap')}
         </a>
       )}
       <p className="mt-6 text-xs text-muted-foreground">
         <Leaf className="inline-block h-3.5 w-3.5 mr-1 -mt-0.5" aria-hidden="true" />
-        Danke, dass du Fambliss mitgestaltest. Du kannst diese Seite jetzt schließen.
+        {t('Thank you for helping shape Fambliss. You can close this page now.')}
       </p>
     </div>
   );

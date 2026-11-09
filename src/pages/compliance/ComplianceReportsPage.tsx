@@ -213,7 +213,7 @@ export function ComplianceReportsPage() {
                 type="month"
                 value={customMonth}
                 onChange={(e) => setCustomMonth(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
               />
             </div>
             <Button

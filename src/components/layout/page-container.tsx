@@ -148,7 +148,7 @@ export function PageContainer({
             )}
             {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
           </div>
-          {actions && <div className="flex min-w-0 max-w-full flex-wrap gap-2">{actions}</div>}
+          {actions && <div className="flex max-w-full shrink-0 flex-wrap gap-2">{actions}</div>}
         </motion.div>
       )}
 

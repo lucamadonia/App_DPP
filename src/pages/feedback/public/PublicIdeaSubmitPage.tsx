@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Lightbulb,
   Bug,
@@ -34,17 +35,17 @@ const CATEGORIES: Array<{
   icon: typeof Lightbulb;
   color: string;
 }> = [
-  { id: 'improvement', label: 'Verbesserung', icon: Sparkles, color: 'text-blue-600' },
-  { id: 'new_idea', label: 'Neue Idee', icon: Lightbulb, color: 'text-amber-600' },
-  { id: 'bug', label: 'Fehler', icon: Bug, color: 'text-red-600' },
-  { id: 'praise', label: 'Lob', icon: Heart, color: 'text-pink-600' },
-  { id: 'other', label: 'Sonstiges', icon: StarIcon, color: 'text-slate-600' },
+  { id: 'improvement', label: 'Improvement', icon: Sparkles, color: 'text-blue-600' },
+  { id: 'new_idea', label: 'New idea', icon: Lightbulb, color: 'text-amber-600' },
+  { id: 'bug', label: 'Bug', icon: Bug, color: 'text-red-600' },
+  { id: 'praise', label: 'Praise', icon: Heart, color: 'text-pink-600' },
+  { id: 'other', label: 'Other', icon: StarIcon, color: 'text-slate-600' },
 ];
 
 const AREAS: Array<{ id: FeedbackIdeaArea; label: string }> = [
   { id: 'app_portal', label: 'App & Portal' },
-  { id: 'products', label: 'Produkte' },
-  { id: 'general', label: 'Allgemein' },
+  { id: 'products', label: 'Products' },
+  { id: 'general', label: 'General' },
 ];
 
 type Status = 'loading' | 'ready' | 'submitting' | 'submitted' | 'error';
@@ -52,6 +53,7 @@ type Status = 'loading' | 'ready' | 'submitting' | 'submitted' | 'error';
 export function PublicIdeaSubmitPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('warehouse');
 
   const [status, setStatus] = useState<Status>(token ? 'loading' : 'error');
   const [errorCode, setErrorCode] = useState<string | null>(token ? null : 'missing_token');
@@ -151,14 +153,13 @@ export function PublicIdeaSubmitPage() {
       <div className="px-4 pt-8 pb-2 text-center">
         <Badge variant="outline" className="mb-3 gap-1 bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200">
           <Sparkles className="h-3 w-3" />
-          Deine Stimme gestaltet {invite.tenant_name}
+          {t('Your voice shapes {{tenant}}', { tenant: invite.tenant_name })}
         </Badge>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-          Feedback &amp; Produkt-Ideen
+          {t('Feedback & product ideas')}
         </h1>
         <p className="mt-2 text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
-          Hallo {firstName} — was würdest du verändern? Was fehlt? Was hast du gefeiert? Dein
-          Feedback fließt direkt in den Produkt-Roadmap-Prozess ein.
+          {t('Hi {{name}} — what would you change? What is missing? What did you love? Your feedback flows directly into our product roadmap process.', { name: firstName })}
         </p>
       </div>
 
@@ -166,11 +167,11 @@ export function PublicIdeaSubmitPage() {
       <div className="px-4 max-w-2xl mx-auto mt-4 pb-12">
         <Card>
           <CardContent className="p-5 sm:p-6 space-y-5">
-            <h2 className="text-lg font-semibold">Neu einreichen</h2>
+            <h2 className="text-lg font-semibold">{t('Submit new')}</h2>
 
             {/* Area */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Worum geht's?</label>
+              <label className="text-sm font-medium">{t("What's it about?")}</label>
               <div className="flex flex-wrap gap-2">
                 {AREAS.map(a => (
                   <button
@@ -184,7 +185,7 @@ export function PublicIdeaSubmitPage() {
                     }`}
                     style={area === a.id ? { backgroundColor: primaryColor, borderColor: primaryColor } : undefined}
                   >
-                    {a.label}
+                    {t(a.label)}
                   </button>
                 ))}
               </div>
@@ -192,7 +193,7 @@ export function PublicIdeaSubmitPage() {
 
             {/* Category */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Art des Feedbacks</label>
+              <label className="text-sm font-medium">{t('Type of feedback')}</label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {CATEGORIES.map(c => {
                   const Icon = c.icon;
@@ -210,7 +211,7 @@ export function PublicIdeaSubmitPage() {
                       style={selected ? { borderColor: primaryColor } : undefined}
                     >
                       <Icon className={`h-5 w-5 ${c.color}`} />
-                      <span className="font-medium">{c.label}</span>
+                      <span className="font-medium">{t(c.label)}</span>
                     </button>
                   );
                 })}
@@ -219,22 +220,22 @@ export function PublicIdeaSubmitPage() {
 
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Titel · kurz &amp; prägnant</label>
+              <label className="text-sm font-medium">{t('Title · short & to the point')}</label>
               <Input
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                placeholder="z. B. Dashboard sollte Streak anzeigen"
+                placeholder={t('e.g. Dashboard should show streak')}
                 maxLength={120}
               />
             </div>
 
             {/* Body */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Deine Idee / Dein Feedback</label>
+              <label className="text-sm font-medium">{t('Your idea / your feedback')}</label>
               <Textarea
                 value={body}
                 onChange={e => setBody(e.target.value)}
-                placeholder="Beschreibe so detailliert wie möglich: Was fällt dir auf? Was wünschst du dir? Welcher konkrete Use-Case steckt dahinter?"
+                placeholder={t('Describe it in as much detail as possible: What do you notice? What would you like? What concrete use case is behind it?')}
                 maxLength={6000}
                 rows={6}
               />
@@ -243,7 +244,7 @@ export function PublicIdeaSubmitPage() {
 
             {/* Optional rating */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Bewertung (optional)</label>
+              <label className="text-sm font-medium">{t('Rating (optional)')}</label>
               <StarRating value={rating} onChange={n => setRating(n)} size="md" color={primaryColor} />
             </div>
 
@@ -255,9 +256,9 @@ export function PublicIdeaSubmitPage() {
                 className="mt-0.5"
               />
               <span>
-                <span className="font-medium">Auf dem Ideen-Board veröffentlichen</span>
+                <span className="font-medium">{t('Publish on the idea board')}</span>
                 <span className="block text-xs text-muted-foreground mt-0.5">
-                  Andere Partner sehen deinen Vorschlag und können ihn mit einem ⭐ unterstützen.
+                  {t('Other partners will see your suggestion and can support it with a ⭐.')}
                 </span>
               </span>
             </label>
@@ -268,12 +269,12 @@ export function PublicIdeaSubmitPage() {
               className="w-full h-12 text-base font-semibold gap-2"
               style={valid ? { backgroundColor: primaryColor } : undefined}
             >
-              {status === 'submitting' ? 'Wird gesendet…' : 'Feedback abschicken'}
+              {status === 'submitting' ? t('Submitting…') : t('Submit feedback')}
               {valid && status !== 'submitting' && <ChevronRight className="h-5 w-5" />}
             </Button>
 
             <p className="text-[11px] text-muted-foreground text-center">
-              Dein Beitrag wird vor der Veröffentlichung von {invite.tenant_name} geprüft.
+              {t('Your submission will be checked by {{tenant}} before it is published.', { tenant: invite.tenant_name })}
             </p>
           </CardContent>
         </Card>
@@ -310,17 +311,18 @@ function Shell({
 }
 
 function IdeaErrorState({ code }: { code: string | null }) {
-  let title = 'Hier ist etwas schiefgelaufen';
-  let message = 'Bitte versuche es später noch einmal.';
+  const { t } = useTranslation('warehouse');
+  let title = t('Something went wrong here');
+  let message = t('Please try again later.');
   if (code === 'expired') {
-    title = 'Dieser Link ist abgelaufen';
-    message = 'Bitte kontaktiere den Händler für einen neuen Link.';
+    title = t('This link has expired');
+    message = t('Please contact the retailer for a new link.');
   } else if (code === 'not_found' || code === 'missing_token') {
-    title = 'Link nicht gefunden';
-    message = 'Der Link scheint ungültig zu sein.';
+    title = t('Link not found');
+    message = t('The link seems to be invalid.');
   } else if (code === 'cancelled') {
-    title = 'Einladung wurde widerrufen';
-    message = 'Diese Einladung wurde vom Händler beendet.';
+    title = t('Invitation was revoked');
+    message = t('This invitation was ended by the retailer.');
   }
   return (
     <div className="max-w-md mx-auto px-4 pt-12">
@@ -349,24 +351,24 @@ function IdeaSuccess({
   navigate: (path: string) => void;
 }) {
   const firstName = (partnerName || '').split(' ')[0];
+  const { t } = useTranslation('warehouse');
   return (
     <div className="max-w-md mx-auto px-4 pt-16 text-center">
       <div className="h-24 w-24 mx-auto rounded-full bg-emerald-500 flex items-center justify-center shadow-lg animate-in zoom-in-95 duration-300">
         <Check className="h-12 w-12 text-white" strokeWidth={3} />
       </div>
       <h1 className="mt-6 text-2xl sm:text-3xl font-bold">
-        Danke{firstName ? `, ${firstName}` : ''}!
+        {firstName ? t('Thank you, {{name}}!', { name: firstName }) : t('Thank you!')}
       </h1>
       <p className="mt-3 text-muted-foreground">
-        Dein Vorschlag wurde gesendet. {tenantName} prüft ihn und veröffentlicht ihn nach Freigabe
-        auf dem Ideen-Board.
+        {t('Your suggestion has been sent. {{tenant}} will check it and publish it on the idea board once approved.', { tenant: tenantName })}
       </p>
       {tenantSlug && (
         <Button
           className="mt-6"
           onClick={() => navigate(`/ideas/${tenantSlug}${token ? `?vote=${token}` : ''}`)}
         >
-          Ideen-Board ansehen
+          {t('View idea board')}
         </Button>
       )}
     </div>

@@ -273,5 +273,7 @@
   "Sections": "Sections",
   "Step {{current}} of {{total}}": "Step {{current}} of {{total}}",
   "Progress": "Progress",
-  "Back to overview": "Back to overview"
+  "Back to overview": "Back to overview",
+  "Batches": "Batches",
+  "Score": "Score"
 }

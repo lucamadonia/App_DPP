@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { installAppFixture, fixtureId } from './helpers/app-fixture';
-import { waitForAppScreen } from './helpers/app-ready';
+import { waitForAppScreen, SCREEN_ROOT } from './helpers/app-ready';
+import { auditMobileScreen, simulateSafeArea, SIMULATED_SAFE_AREA } from './helpers/mobile-audit';
 
 // Take the inventory from the owning router, so new screens cannot silently
 // fall out of coverage. Detail pages without a fixture exercise the empty state.
@@ -27,7 +28,7 @@ for (const path of routes) {
     await waitForAppScreen(page);
     await expect(page.locator('#boot-splash')).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
-    const problems = await page.locator('.app-content').evaluate(main => {
+    const problems = await page.locator(SCREEN_ROOT).evaluate(main => {
       const results: string[] = [];
       if (main.scrollWidth > main.clientWidth + 2) results.push(`main overflow: ${main.scrollWidth} > ${main.clientWidth}`);
       for (const element of main.querySelectorAll<HTMLElement>('button, input, textarea, [role="tablist"], [data-slot="card"]')) {
@@ -45,8 +46,36 @@ for (const path of routes) {
       }
       return results.slice(0, 12);
     });
-    await testInfo.attach('screen-coverage', { body: JSON.stringify({ path, viewport: page.viewportSize(), errors, problems }), contentType: 'application/json' });
+    // Design audit on a simulated notched phone; all categories are collected
+    // before any assertion, so one run reports everything.
+    const phone = (page.viewportSize()?.width ?? 0) < 768;
+    if (phone) await simulateSafeArea(page);
+    const audit = await auditMobileScreen(page, { safeTop: phone ? SIMULATED_SAFE_AREA.top : 0 });
+    const touch = audit.coarse || !!testInfo.project.use.hasTouch;
+    const report = { path, project: testInfo.project.name, viewport: page.viewportSize(), errors, problems, ...audit };
+    await testInfo.attach('screen-coverage', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
+    mkdirSync(testInfo.outputDir, { recursive: true });
+    writeFileSync(testInfo.outputPath('audit.json'), JSON.stringify(report));
+    // Opt-in: one PNG per route x project adds up quickly on disk.
+    if (process.env.MOBILE_AUDIT_SCREENSHOTS === '1') await testInfo.attach('screenshot', { body: await page.screenshot(), contentType: 'image/png' });
+    const list = (items: string[]) => '\n  ' + items.join('\n  ');
+    // Fatal everywhere: runtime errors and horizontal overflow. Design findings
+    // fail only with MOBILE_AUDIT_STRICT=1 (local audit runs); otherwise they are
+    // recorded as annotations plus audit.json so CI stays a regression net.
     expect(errors).toEqual([]);
-    expect(problems).toEqual([]);
+    expect(problems, `horizontal overflow on ${path}:${list(problems)}`).toEqual([]);
+    const design: [string, string[], boolean][] = [
+      ['clipped text', audit.clippedText, true],
+      ['tap targets < 44x44', audit.smallTapTargets, touch],
+      ['tab bar overlap', audit.tabBarOverlap, phone],
+      [`content inside top safe area (${SIMULATED_SAFE_AREA.top}px)`, audit.safeAreaIntrusions, phone],
+      ['inputs < 16px font (iOS focus zoom)', audit.smallInputs, touch],
+    ];
+    const strict = process.env.MOBILE_AUDIT_STRICT === '1';
+    for (const [label, items, applies] of design) {
+      if (!applies || !items.length) continue;
+      if (strict) expect.soft(items, `${label} on ${path}:${list(items)}`).toEqual([]);
+      else testInfo.annotations.push({ type: `design: ${label}`, description: items.join('; ') });
+    }
   });
 }

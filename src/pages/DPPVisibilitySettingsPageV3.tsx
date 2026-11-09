@@ -356,6 +356,7 @@ export function DPPVisibilitySettingsPageV3() {
 
         {/* Main Canvas (always visible) */}
         <ScrollArea className="min-w-0 flex-1">
+          <div className="pb-[calc(var(--bottom-nav-h)+var(--safe-bottom))] md:pb-0">
           <MainCanvas
             config={config}
             searchQuery={searchQuery}
@@ -364,6 +365,7 @@ export function DPPVisibilitySettingsPageV3() {
             onCategoryToggle={setExpandedCategories}
             onCategoryBulkToggle={handleCategoryBulkToggle}
           />
+          </div>
         </ScrollArea>
 
         {/* Desktop: Fixed Right Panel */}

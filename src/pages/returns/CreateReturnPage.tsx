@@ -210,6 +210,7 @@ export function CreateReturnPage() {
           <FormField label={t('Priority')} span="full">
             <ChoiceCards
               columns={4}
+              className="pointer-coarse:*:min-h-11!"
               value={priority}
               onValueChange={setPriority}
               options={['low', 'normal', 'high', 'urgent'].map((p) => ({ value: p, label: priorityLabels[p] }))}

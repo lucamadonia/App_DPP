@@ -11,6 +11,9 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Deliberately narrow: a regression net, not a design review.
  */
+/** Layout sweeps that are worth repeating on every phone width. */
+const PHONE_SWEEP = [/app-screens-mobile\.spec\.ts/, /mobile-overflow\.spec\.ts/, /mobile-overlays\.spec\.ts/];
+
 export default defineConfig({
   testDir: './e2e',
   // Overflow is deterministic; retrying would only hide a real failure.
@@ -22,8 +25,11 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4173',
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    // MOBILE_AUDIT_LEAN=1: the design-audit sweep fails by design on many
+    // routes; per-failure traces/screenshots would fill the disk.
+    trace: process.env.MOBILE_AUDIT_LEAN === '1' ? 'off' : 'retain-on-failure',
+    screenshot: process.env.MOBILE_AUDIT_LEAN === '1' ? 'off' : 'only-on-failure',
+    video: 'off',
   },
 
   projects: [
@@ -33,6 +39,32 @@ export default defineConfig({
       name: 'iPhone SE',
       use: { ...devices['iPhone SE'] },
     },
+    // Additional phone widths, local audit runs only (skipped when CI is set:
+    // ~4x the sweep runtime for findings that are non-fatal there anyway).
+    // Only the layout sweeps run here: the interaction/gesture specs pin their
+    // own viewport, so repeating them per project adds no coverage.
+    ...(process.env.CI ? [] : [{
+      name: 'Android 360',
+      testMatch: PHONE_SWEEP,
+      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 } },
+    },
+    {
+      // 375 gets the public sweep and overlays only; the full route sweep
+      // runs on 320/360/390/430, which bracket it.
+      name: 'iPhone 375',
+      testMatch: [/mobile-overflow\.spec\.ts/, /mobile-overlays\.spec\.ts/],
+      use: { ...devices['iPhone X'], viewport: { width: 375, height: 812 } },
+    },
+    {
+      name: 'iPhone 390',
+      testMatch: PHONE_SWEEP,
+      use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: 'iPhone 430',
+      testMatch: PHONE_SWEEP,
+      use: { ...devices['iPhone 14 Pro Max'], viewport: { width: 430, height: 932 } },
+    }]),
     {
       // 768 is the `md` breakpoint itself — where layouts switch, and where
       // off-by-one breakpoint bugs actually live.
