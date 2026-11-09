@@ -109,7 +109,7 @@ export function AppSplash({ ready, budget, children }: AppSplashProps) {
             onClick={() => setSkipped(true)}
           >
             <SplashStage
-              logoSrc="/icons/icon-256.png"
+              logoSrc="/icons/splash-mark.png"
               budget={budget}
               active={revealed}
               showWordmark

@@ -940,5 +940,10 @@
   "Override": "Override",
   "Danger Zone": "Danger Zone",
   "Delete this batch": "Delete this batch",
-  "Links to the public Digital Product Passport for this batch": "Links to the public Digital Product Passport for this batch"
+  "Links to the public Digital Product Passport for this batch": "Links to the public Digital Product Passport for this batch",
+  "No product image yet": "No product image yet",
+  "Product images": "Product images",
+  "Open image {{current}} of {{total}}": "Open image {{current}} of {{total}}",
+  "Show image {{current}} of {{total}}": "Show image {{current}} of {{total}}",
+  "View DPP": "View DPP"
 }

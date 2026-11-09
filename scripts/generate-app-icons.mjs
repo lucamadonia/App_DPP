@@ -86,7 +86,17 @@ async function main() {
   // Xcode consumes its catalog directly; generating public/resources assets
   // alone leaves the installed iPhone app with the old Capacitor icon.
   await copyFile(path.join(OUT, 'icon-1024.png'), 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
-  await copyFile(path.join(OUT, 'icon-256.png'), 'ios/App/App/Assets.xcassets/LaunchMark.imageset/launch-mark.png');
+  // Launch mark: the logo without its tile, so it stands free on the
+  // full-bleed launch background instead of reading as a square box.
+  const trimmedMark = await sharp(MASTER).trim().toBuffer();
+  const freeMark = (size) => sharp(trimmedMark)
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+  for (const [file, size] of [['launch-mark.png', 160], ['launch-mark@2x.png', 320], ['launch-mark@3x.png', 480]]) {
+    await writeFile(path.join('ios/App/App/Assets.xcassets/LaunchMark.imageset', file), await freeMark(size));
+  }
+  await writeFile(path.join(OUT, 'splash-mark.png'), await freeMark(512));
 
   // --- Capacitor assets pipeline sources ---
   // `npx @capacitor/assets generate` picks these up and produces every native

@@ -74,6 +74,7 @@ import { useProduct, useProducts, useProductSuppliers, useBatches, useBatchCosts
 import type { ProductComponent } from '@/types/product';
 import type { ProductImage } from '@/types/database';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
+import { ProductHero } from '@/components/product/ProductHero';
 import { ProductDocumentsTab } from '@/components/product/ProductDocumentsTab';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductComplianceTab } from '@/components/product/ProductComplianceTab';
@@ -219,6 +220,7 @@ export function ProductPage() {
   }
 
   const productStatus = batchStatusConfig[product.status ?? 'draft'];
+  const publicBatch = batches.find(b => b.status === 'live') ?? batches[0];
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -437,84 +439,126 @@ export function ProductPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div className="flex min-w-0 items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/products">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
-              <Badge variant="secondary" className={productStatus.className}>
-                <productStatus.icon className="mr-1 h-3 w-3" />
-                {t(productStatus.label, { ns: 'common' })}
-              </Badge>
+      {/* Phones get the native header's back chevron; this is the desktop equivalent. */}
+      <Button variant="ghost" size="sm" asChild className="-ml-2 hidden px-2 text-muted-foreground hover:text-foreground md:inline-flex">
+        <Link to="/products">
+          <ArrowLeft className="h-4 w-4" />
+          {t('Products', { ns: 'common' })}
+        </Link>
+      </Button>
+
+      {/* Hero / preview */}
+      <MotionDiv {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}>
+        <ProductHero
+          name={product.name}
+          images={productImages}
+          fallbackImageUrl={product.imageUrl}
+          eyebrow={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {product.category && <span>{product.category}</span>}
               {product.productType === 'set' && (
-                <Badge variant="outline" className="border-primary text-primary">
+                <Badge variant="outline" className="font-normal">
                   <Layers className="mr-1 h-3 w-3" />
                   {t('Set')}
                 </Badge>
               )}
-            </div>
-            <p className="text-muted-foreground">
-              {product.manufacturer} · {product.category}
+            </span>
+          }
+          meta={
+            <>
+              {product.manufacturer}
               {usedInSets.length > 0 && (
-                <span className="ml-2 text-xs">
-                  · {t('Used as component in {{count}} sets', { count: usedInSets.length })}
-                </span>
+                <span> · {t('Used as component in {{count}} sets', { count: usedInSets.length })}</span>
               )}
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          <Button variant="outline" asChild>
-            <Link to={`/products/${id}/batches/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('New Batch')}
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/dpp/qr-generator">
-              <QrCode className="mr-2 h-4 w-4" />
-              {t('QR Code')}
-            </Link>
-          </Button>
-          <Button variant="outline" onClick={handleExport} disabled={isExporting || batchesLoading}>
-            <Download className="mr-2 h-4 w-4" />
-            {t('Export')}
-          </Button>
-          <Button asChild>
-            <Link to={`/products/${id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              {t('Edit')}
-            </Link>
-          </Button>
-        </div>
-      </MotionDiv>
-
-      {/* Compliance Status Bar */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-2 font-medium">
-                <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
-                {t('Compliance Status')}
+            </>
+          }
+          status={
+            <Badge
+              variant="outline"
+              className={product.status === 'live'
+                ? 'border-success/25 bg-success/10 text-success'
+                : 'border-border bg-muted text-muted-foreground'}
+            >
+              <productStatus.icon className="mr-1 h-3 w-3" />
+              {t(productStatus.label, { ns: 'common' })}
+            </Badge>
+          }
+          description={product.description}
+          facts={[
+            { label: t('GTIN/EAN'), value: product.gtin, mono: true },
+            { label: t('Batches'), value: batches.length },
+            ...(product.countryOfOrigin
+              ? [{ label: t('Country of Origin'), value: product.countryOfOrigin }]
+              : []),
+          ]}
+          actions={
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                <Button asChild className="h-11 sm:h-9">
+                  <Link to={`/products/${id}/edit`}>
+                    <Edit className="h-4 w-4" />
+                    {t('Edit')}
+                  </Link>
+                </Button>
+                {publicBatch ? (
+                  <Button variant="outline" asChild className="h-11 sm:h-9">
+                    <a href={`/p/${product.gtin}/${publicBatch.serialNumber}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      {t('View DPP')}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button variant="outline" asChild className="h-11 sm:h-9">
+                    <Link to={`/products/${id}/batches/new`}>
+                      <Plus className="h-4 w-4" />
+                      {t('New Batch')}
+                    </Link>
+                  </Button>
+                )}
               </div>
-              <p className="text-sm text-muted-foreground">{t('Review compliance checks and documents before publishing.')}</p>
+              <div className="grid grid-cols-3 gap-1 sm:-ml-3 sm:flex sm:flex-wrap">
+                {publicBatch && (
+                  <Button variant="ghost" asChild className="h-auto min-h-11 flex-col gap-1 px-1 py-2 text-xs text-muted-foreground hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
+                    <Link to={`/products/${id}/batches/new`}>
+                      <Plus className="h-4 w-4" />
+                      {t('New Batch')}
+                    </Link>
+                  </Button>
+                )}
+                <Button variant="ghost" asChild className="h-auto min-h-11 flex-col gap-1 px-1 py-2 text-xs text-muted-foreground hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
+                  <Link to="/dpp/qr-generator">
+                    <QrCode className="h-4 w-4" />
+                    {t('QR Code')}
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleExport}
+                  disabled={isExporting || batchesLoading}
+                  className="h-auto min-h-11 flex-col gap-1 px-1 py-2 text-xs text-muted-foreground hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  {t('Export')}
+                </Button>
+              </div>
             </div>
-            <Button variant="outline" onClick={() => setActiveTab('ai-check')}>
-              {t('Open compliance check')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          }
+          footer={
+            <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{t('Compliance Status')}</p>
+                  <p className="text-sm text-muted-foreground">{t('Review compliance checks and documents before publishing.')}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-8" onClick={() => setActiveTab('ai-check')}>
+                {t('Open compliance check')}
+              </Button>
+            </div>
+          }
+        />
+      </MotionDiv>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -582,7 +626,7 @@ export function ProductPage() {
           <MotionDiv
             {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate' })}
           >
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>{t('Product Information')}</CardTitle>
@@ -624,26 +668,6 @@ export function ProductPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('Product Image')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {(productImages.length > 0 ? productImages.find(i => i.isPrimary)?.url || productImages[0]?.url : product.imageUrl) ? (
-                  <img
-                    src={productImages.length > 0 ? (productImages.find(i => i.isPrimary)?.url || productImages[0]?.url) : product.imageUrl}
-                    alt={product.name}
-                    className="aspect-square rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                    <div className="text-6xl font-bold text-muted-foreground/30">
-                      {product.name.charAt(0)}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
 
           {/* Images Gallery */}

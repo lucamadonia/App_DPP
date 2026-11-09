@@ -940,5 +940,10 @@
   "Override": "Überschrieben",
   "Danger Zone": "Gefahrenbereich",
   "Delete this batch": "Diese Charge löschen",
-  "Links to the public Digital Product Passport for this batch": "Links zum öffentlichen Digitalen Produktpass dieser Charge"
+  "Links to the public Digital Product Passport for this batch": "Links zum öffentlichen Digitalen Produktpass dieser Charge",
+  "No product image yet": "Noch kein Produktbild",
+  "Product images": "Produktbilder",
+  "Open image {{current}} of {{total}}": "Bild {{current}} von {{total}} öffnen",
+  "Show image {{current}} of {{total}}": "Bild {{current}} von {{total}} anzeigen",
+  "View DPP": "DPP ansehen"
 }

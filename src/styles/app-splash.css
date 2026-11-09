@@ -9,11 +9,9 @@
 
 .app-launch-mark {
   position: relative;
-  width: 128px;
-  height: 128px;
-  overflow: hidden;
-  border-radius: 28px;
-  box-shadow: 0 0 0 1px rgb(148 163 184 / 12%), 0 20px 60px rgb(0 0 0 / 20%);
+  width: 160px;
+  height: 160px;
+  filter: drop-shadow(0 18px 40px rgb(14 165 233 / 18%));
 }
 
 .app-launch-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -37,7 +35,7 @@
 
 .app-launch-orbit-inner { position: absolute; inset: 20px; border: 1px solid rgb(165 180 252 / 10%); border-radius: 50%; }
 .app-launch-orbit-light { position: absolute; left: calc(50% - 3px); top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #a5f3fc; box-shadow: 0 0 18px #22d3ee; }
-.app-launch-glint { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 20%, rgb(255 255 255 / 24%) 48%, transparent 70%); animation: launch-glint var(--launch-duration) var(--launch-ease) both; }
+.app-launch-glint { position: absolute; inset: 0; -webkit-mask: url(/icons/splash-mark.png) center / contain no-repeat; mask: url(/icons/splash-mark.png) center / contain no-repeat; background: linear-gradient(115deg, transparent 20%, rgb(255 255 255 / 24%) 48%, transparent 70%); animation: launch-glint var(--launch-duration) var(--launch-ease) both; }
 
 .app-launch-wordmark { position: absolute; top: calc(100% + 78px); left: -90px; right: -90px; text-align: center; color: #f8fafc; font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -0.035em; animation: launch-wordmark var(--launch-duration) var(--launch-ease) both; }
 .app-launch-subtitle { display: block; margin-top: 12px; color: #94a3b8; font-size: 9px; font-weight: 500; letter-spacing: 0.24em; }

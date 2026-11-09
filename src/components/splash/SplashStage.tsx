@@ -19,7 +19,7 @@ export function SplashStage({ logoSrc, budget, active, showWordmark }: SplashSta
         <span className="app-launch-orbit-light" />
       </div>
       <div className="app-launch-mark">
-        <img src={logoSrc} alt="" width={128} height={128} draggable={false} />
+        <img src={logoSrc} alt="" width={160} height={160} draggable={false} />
         <span className="app-launch-glint" aria-hidden />
       </div>
       {showWordmark && (
