@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { AppStylePicker } from '@/components/settings/AppStylePicker';
 import { TenantWhitelabelSelfService } from '@/components/settings/TenantWhitelabelSelfService';
 import { blurIn, useReducedMotion } from '@/lib/motion';
 import { UsersTab } from '@/components/settings/UsersTab';
@@ -659,6 +660,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
             value={brandingSection}
             onValueChange={setBrandingSection}
             sections={[
+              { id: 'appearance', label: t('Appearance'), icon: Eye },
               { id: 'identity', label: t('Brand Identity'), icon: Palette },
               { id: 'favicon', label: t('Favicon'), icon: Globe },
               { id: 'color', label: t('Theme Color'), icon: Palette },
@@ -666,12 +668,19 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
               { id: 'whitelabel', label: t('Whitelabel'), icon: Building2 },
             ]}
           >
+          {brandingSection === 'appearance' && (
+            /* Per-device app style — applies instantly, no save */
+            <FormSection layout="stacked" title={t('Appearance')} description={t('Choose how Trackbliss looks. Every style comes with a light and a dark variant.')}>
+              <AppStylePicker />
+            </FormSection>
+          )}
+
           {brandingSection === 'whitelabel' && (
             /* Self-Service Whitelabel (subdomain, custom domain info, brand, SMTP) — saves on its own */
             <TenantWhitelabelSelfService />
           )}
 
-          {brandingSection !== 'whitelabel' && (
+          {brandingSection !== 'whitelabel' && brandingSection !== 'appearance' && (
           <FormSections>
           {/* Section 1: Brand Identity */}
           {brandingSection === 'identity' && (
@@ -1181,7 +1190,7 @@ export function SettingsPage({ tab = 'company' }: { tab?: string }) {
           )}
           </FormSectionNav>
 
-          {brandingSection !== 'whitelabel' && (
+          {brandingSection !== 'whitelabel' && brandingSection !== 'appearance' && (
           <FormActions sticky="page">
             <Button onClick={handleSaveBranding} disabled={isSavingBranding}>
               {isSavingBranding ? (

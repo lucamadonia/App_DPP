@@ -40,6 +40,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useBillingOptional } from '@/contexts/BillingContext';
 import { useTheme } from '@/hooks/use-theme';
+import { originFromElement } from '@/lib/appearance-transition';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -538,7 +539,7 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleTheme}
+              onClick={(e) => toggleTheme(originFromElement(e.currentTarget))}
               className="h-10 w-10 sm:h-8 sm:w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
               title={resolvedTheme === 'dark' ? t('Light Mode') : t('Dark Mode')}
               aria-label={resolvedTheme === 'dark' ? t('Switch to light mode') : t('Switch to dark mode')}

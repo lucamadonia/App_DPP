@@ -1064,5 +1064,21 @@
   "Verification pending": "Verification pending",
   "Product Name": "Product Name",
   "Manufacturer Inc.": "Manufacturer Inc.",
-  "Hero image": "Hero image"
+  "Hero image": "Hero image",
+  "App Style": "App Style",
+  "Choose how Trackbliss looks. Every style comes with a light and a dark variant.": "Choose how Trackbliss looks. Every style comes with a light and a dark variant.",
+  "Applies to this device only. Light and dark mode and your brand colour work with every style.": "Applies to this device only. Light and dark mode and your brand colour work with every style.",
+  "Standard": "Standard",
+  "Cool slate with a deep navy sidebar": "Cool slate with a deep navy sidebar",
+  "Paper": "Paper",
+  "Warm, calm and softly rounded": "Warm, calm and softly rounded",
+  "Graphite": "Graphite",
+  "Neutral, crisp lines and tight corners": "Neutral, crisp lines and tight corners",
+  "Sage": "Sage",
+  "Natural green tones, gentle and organic": "Natural green tones, gentle and organic",
+  "Deep indigo, elegant and focused": "Deep indigo, elegant and focused",
+  "Appearance": "Appearance",
+  "Light": "Light",
+  "Dark": "Dark",
+  "System": "System"
 }

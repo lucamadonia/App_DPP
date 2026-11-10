@@ -311,3 +311,25 @@ html[data-native="true"] :is(
 :is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"])::-webkit-calendar-picker-indicator {
   opacity: 0.6;
 }
+
+/* Appearance reveal (src/lib/appearance-transition.ts). The new look grows out
+   of the tapped control; the WAAPI clip-path drives it, so the default
+   crossfade is switched off. Live transitions are paused for the snapshot so
+   colours land crisply instead of tweening inside the circle. */
+:root[data-appearance-transition] *,
+:root[data-appearance-transition] *::before,
+:root[data-appearance-transition] *::after {
+  transition: none !important;
+}
+:root[data-appearance-transition="reveal"]::view-transition-old(root),
+:root[data-appearance-transition="reveal"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root[data-appearance-transition="reveal"]::view-transition-new(root) {
+  z-index: 1;
+}
+:root[data-appearance-transition="fade"]::view-transition-old(root),
+:root[data-appearance-transition="fade"]::view-transition-new(root) {
+  animation-duration: 150ms;
+}

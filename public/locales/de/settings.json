@@ -1064,5 +1064,21 @@
   "Verification pending": "Verifikation steht aus",
   "Product Name": "Produktname",
   "Manufacturer Inc.": "Hersteller GmbH",
-  "Hero image": "Hero-Bild"
+  "Hero image": "Hero-Bild",
+  "App Style": "App-Stil",
+  "Choose how Trackbliss looks. Every style comes with a light and a dark variant.": "Wähle, wie Trackbliss aussieht. Jeder Stil hat eine helle und eine dunkle Variante.",
+  "Applies to this device only. Light and dark mode and your brand colour work with every style.": "Gilt nur für dieses Gerät. Hell- und Dunkelmodus sowie deine Markenfarbe funktionieren mit jedem Stil.",
+  "Standard": "Standard",
+  "Cool slate with a deep navy sidebar": "Kühles Schiefergrau mit dunkelblauer Seitenleiste",
+  "Paper": "Papier",
+  "Warm, calm and softly rounded": "Warm, ruhig und sanft abgerundet",
+  "Graphite": "Graphit",
+  "Neutral, crisp lines and tight corners": "Neutral, klare Linien und kantige Ecken",
+  "Sage": "Salbei",
+  "Natural green tones, gentle and organic": "Natürliche Grüntöne, sanft und organisch",
+  "Deep indigo, elegant and focused": "Tiefes Indigo, elegant und fokussiert",
+  "Appearance": "Darstellung",
+  "Light": "Hell",
+  "Dark": "Dunkel",
+  "System": "System"
 }
