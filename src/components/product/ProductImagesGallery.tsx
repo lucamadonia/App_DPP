@@ -25,6 +25,8 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
+  // Images whose URL no longer loads (e.g. removed at the external host).
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(() => new Set());
 
   const handleUpload = async (files: FileList) => {
     setUploadError(null);
@@ -123,11 +125,19 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
                 key={image.id}
                 className="group relative rounded-lg border overflow-hidden"
               >
-                <img
-                  src={image.url}
-                  alt={image.caption || ''}
-                  className="aspect-square w-full object-cover"
-                />
+                {brokenIds.has(image.id) ? (
+                  <div className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-muted/60 text-muted-foreground">
+                    <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                    <span className="px-2 text-center text-xs">{t('Image unavailable')}</span>
+                  </div>
+                ) : (
+                  <img
+                    src={image.url}
+                    alt={image.caption || ''}
+                    className="aspect-square w-full object-cover"
+                    onError={() => setBrokenIds((prev) => new Set(prev).add(image.id))}
+                  />
+                )}
 
                 {/* Overlay controls */}
                 {!readOnly && (

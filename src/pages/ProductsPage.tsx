@@ -148,11 +148,14 @@ function KPICard({
 // Product thumbnail
 // ---------------------------------------------------------------------------
 function ProductThumb({ src, name }: { src?: string; name: string }) {
-  if (src) {
+  // Remember which URL failed, so a new src gets a fresh attempt.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (src && failedSrc !== src) {
     return (
       <img
         src={src}
         alt={name}
+        onError={() => setFailedSrc(src)}
         className="h-10 w-10 rounded-lg bg-muted/60 object-cover ring-1 ring-inset ring-border/60"
         loading="lazy"
         decoding="async"

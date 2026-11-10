@@ -36,6 +36,8 @@ import { PageContainer } from '@/components/layout/page-container';
 
 const VIEW_STORAGE_KEY = 'wh-packaging-types-view';
 type ViewMode = 'table' | 'cards';
+/** Low-stock chips shown before "Show all". */
+const LOW_STOCK_PREVIEW = 4;
 
 function stockTone(row: WhPackagingType): { tone: string; label: string } {
   if (!row.stockTracked) return { tone: 'text-muted-foreground', label: '—' };
@@ -55,6 +57,9 @@ export function PackagingTypesPage() {
   const cardsContainerVariants = useMotionVariants(gridStagger);
   const [rows, setRows] = useState<WhPackagingType[]>([]);
   const [loading, setLoading] = useState(true);
+  // The low-stock banner lists a few chips; the rest open on request so a
+  // long list never pushes the actual table off screen.
+  const [showAllLowStock, setShowAllLowStock] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
     if (stored === 'table' || stored === 'cards') return stored;
@@ -341,7 +346,7 @@ export function PackagingTypesPage() {
       <KPIGrid items={kpiItems} cols={{ base: 2, lg: 4 }} compact />
 
       {lowStockRows.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50/80 backdrop-blur-md dark:bg-amber-950/40 dark:border-amber-900 max-sm:sticky max-sm:top-2 max-sm:z-30 max-sm:shadow-lg">
+        <Card className="border-amber-300 bg-amber-50/80 dark:bg-amber-950/40 dark:border-amber-900">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -350,7 +355,7 @@ export function PackagingTypesPage() {
                   {t('{{count}} Umverpackung(en) unter Schwelle', { count: lowStockRows.length })}
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {lowStockRows.map(r => {
+                  {(showAllLowStock ? lowStockRows : lowStockRows.slice(0, LOW_STOCK_PREVIEW)).map(r => {
                     const st = stockTone(r);
                     return (
                       <div key={r.id} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${st.tone}`}>
@@ -365,6 +370,19 @@ export function PackagingTypesPage() {
                     );
                   })}
                 </div>
+                {lowStockRows.length > LOW_STOCK_PREVIEW && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="mt-2 h-auto min-h-8 px-0 text-amber-900 dark:text-amber-100"
+                    aria-expanded={showAllLowStock}
+                    onClick={() => setShowAllLowStock(v => !v)}
+                  >
+                    {showAllLowStock
+                      ? t('Show less')
+                      : t('Show all ({{count}})', { count: lowStockRows.length })}
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>

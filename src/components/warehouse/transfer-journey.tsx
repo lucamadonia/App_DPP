@@ -127,7 +127,7 @@ export function TransferJourney({
   const lineClass = bothSelected ? 'stroke-primary' : 'stroke-border';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)] items-stretch">
+    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)] items-stretch">
       <LocationCard
         side="from"
         label={t('From Location')}

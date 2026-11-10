@@ -2241,5 +2241,7 @@
   "{{count}} children": "{{count}} children",
   "{{ages}} yrs.": "{{ages}} yrs.",
   "Next reviews": "Next reviews",
-  "Submitting…": "Submitting…"
+  "Submitting…": "Submitting…",
+  "Show less": "Show less",
+  "Show all ({{count}})": "Show all ({{count}})"
 }

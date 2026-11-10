@@ -24,12 +24,29 @@ interface ProductFadeImageProps {
  * aspect ratio, so the fade is opacity-only and never shifts layout.
  */
 export function ProductFadeImage({ src, alt, className, priority = false }: ProductFadeImageProps) {
+  const { t } = useTranslation('products');
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   // Cached images can finish before React attaches onLoad — check on mount.
   const imgRef = useCallback((node: HTMLImageElement | null) => {
     if (node?.complete && node.naturalWidth > 0) setLoaded(true);
   }, []);
+
+  // A dead link (e.g. an image deleted at its external host) shows a calm
+  // placeholder in the same box instead of the browser's broken-image glyph.
+  if (failed) {
+    return (
+      <div
+        role="img"
+        aria-label={alt}
+        className={cn('flex flex-col items-center justify-center gap-2 bg-muted/60 text-muted-foreground', className)}
+      >
+        <Package className="h-6 w-6" aria-hidden="true" />
+        <span className="px-2 text-center text-xs">{t('Image unavailable')}</span>
+      </div>
+    );
+  }
 
   return (
     <img
@@ -42,7 +59,7 @@ export function ProductFadeImage({ src, alt, className, priority = false }: Prod
       fetchPriority={priority ? 'high' : 'auto'}
       draggable={false}
       onLoad={() => setLoaded(true)}
-      onError={() => setLoaded(true)}
+      onError={() => setFailed(true)}
       className={cn(
         'transition-opacity duration-200 ease-out motion-reduce:transition-none',
         loaded ? 'opacity-100' : 'opacity-0',

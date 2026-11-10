@@ -311,7 +311,8 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                 <>
                   <div className="space-y-4 px-4 sm:px-6 pb-4">
                     {/* Product + batch */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* minmax(0,1fr): a long product name truncates instead of widening the column. */}
+                    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[repeat(2,minmax(0,1fr))] gap-3">
                       <FormField label={t('Product')} htmlFor="transfer-product" required>
                         <Select
                           value={productId}

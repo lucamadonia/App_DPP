@@ -2241,5 +2241,7 @@
   "{{count}} children": "{{count}} Kinder",
   "{{ages}} yrs.": "{{ages}} J.",
   "Next reviews": "Nächste Bewertungen",
-  "Submitting…": "Wird gesendet…"
+  "Submitting…": "Wird gesendet…",
+  "Show less": "Weniger anzeigen",
+  "Show all ({{count}})": "Alle anzeigen ({{count}})"
 }

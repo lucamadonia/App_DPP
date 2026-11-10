@@ -79,7 +79,9 @@ function AdaptiveDialogContent({
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-2xl border-t p-6 shadow-lg duration-300 outline-none",
           className,
           // Neutralise caller classes that would break the sheet.
-          "max-w-none overflow-y-auto rounded-b-none sm:max-w-none sm:rounded-b-none"
+          // overflow-x-hidden: with only overflow-y set, any child wider than
+          // the sheet makes the whole sheet pan sideways on iOS.
+          "max-w-none overflow-y-auto overflow-x-hidden overscroll-x-none rounded-b-none sm:max-w-none sm:rounded-b-none"
         )}
         {...props}
         ref={setContentRef}
